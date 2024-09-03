@@ -450,16 +450,20 @@ public class C8YNotificationSubscriber {
 	}
 
 	public void unsubscribeDeviceSubscriber(String tenant) {
-		if (deviceTokenPerConnector.get(tenant) != null)
+		if (deviceTokenPerConnector.get(tenant) != null) {
 			for (String token : deviceTokenPerConnector.get(tenant).values()) {
 				tokenApi.unsubscribe(new Token(token));
 			}
+			deviceTokenPerConnector.remove(tenant);
+		}
+
 	}
 
 	public void unsubscribeDeviceSubscriberByConnector(String tenant, String connectorIdent) {
 		if (deviceTokenPerConnector.get(tenant) != null) {
 			if (deviceTokenPerConnector.get(tenant).get(connectorIdent) != null) {
 				tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdent)));
+				deviceTokenPerConnector.get(tenant).remove(connectorIdent);
 			}
 		}
 	}
