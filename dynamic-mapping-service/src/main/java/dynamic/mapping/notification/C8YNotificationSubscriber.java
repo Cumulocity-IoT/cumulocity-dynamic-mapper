@@ -456,6 +456,14 @@ public class C8YNotificationSubscriber {
 			}
 	}
 
+	public void unsubscribeDeviceSubscriberByConnector(String tenant, String connectorIdent) {
+		if (deviceTokenPerConnector.get(tenant) != null) {
+			if (deviceTokenPerConnector.get(tenant).get(connectorIdent) != null) {
+				tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdent)));
+			}
+		}
+	}
+
 	//
 	// section 4: general helper methods
 	//
@@ -482,6 +490,8 @@ public class C8YNotificationSubscriber {
 	//
 
 	public void removeConnector(String tenant, String connectorIdent) {
+		//Unsubscribe from Notification 2.0 for that connector
+		unsubscribeDeviceSubscriberByConnector(tenant, connectorIdent);
 		// Remove Dispatcher from list
 		if (this.dispatcherOutboundMaps.get(tenant) != null)
 			this.dispatcherOutboundMaps.get(tenant).remove(connectorIdent);
