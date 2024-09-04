@@ -64,312 +64,313 @@ import org.springframework.core.io.ClassPathResource;
 // https://stackoverflow.com/questions/66103052/how-do-i-stop-a-previous-thread-that-is-listening-to-kafka-topic
 
 public class KafkaClient extends AConnectorClient {
-    public KafkaClient() throws FileNotFoundException, IOException {
-        Map<String, ConnectorProperty> configProps = new HashMap<>();
-        configProps.put("bootstrapServers",
-                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
-        configProps.put("username",
-                new ConnectorProperty(false, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
-        configProps.put("password",
-                new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
-                        null));
-        configProps.put("groupId",
-                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+	public KafkaClient() throws FileNotFoundException, IOException {
+		Map<String, ConnectorProperty> configProps = new HashMap<>();
+		configProps.put("bootstrapServers",
+				new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+		configProps.put("username",
+				new ConnectorProperty(false, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+		configProps.put("password",
+				new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
+						null));
+		configProps.put("groupId",
+				new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
 
-        Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
-        defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
-        StringWriter writerProducer = new StringWriter();
-        defaultPropertiesProducer.store(writerProducer,
-                "properties can only be edited in the property file: kafka-producer.properties");
-        configProps.put("propertiesProducer",
-                new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
-                        removeDateCommentLine(writerProducer.getBuffer().toString()), null));
+		Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
+		defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
+		StringWriter writerProducer = new StringWriter();
+		defaultPropertiesProducer.store(writerProducer,
+				"properties can only be edited in the property file: kafka-producer.properties");
+		configProps.put("propertiesProducer",
+				new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+						removeDateCommentLine(writerProducer.getBuffer().toString()), null));
 
-        Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
-        defaultPropertiesConsumer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
-        StringWriter writerConsumer = new StringWriter();
-        defaultPropertiesConsumer.store(writerConsumer,
-                "properties can only be edited in the property file: kafka-consumer.properties");
-        configProps.put("propertiesConsumer",
-                new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
-                        removeDateCommentLine(writerConsumer.getBuffer().toString()), null));
+		Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
+		defaultPropertiesConsumer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
+		StringWriter writerConsumer = new StringWriter();
+		defaultPropertiesConsumer.store(writerConsumer,
+				"properties can only be edited in the property file: kafka-consumer.properties");
+		configProps.put("propertiesConsumer",
+				new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+						removeDateCommentLine(writerConsumer.getBuffer().toString()), null));
 
-        String name = "Kafka";
+		String name = "Kafka";
 		String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.";
-        connectorType = ConnectorType.KAFKA;
-        supportsMessageContext = true;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, true);
-    }
+		connectorType = ConnectorType.KAFKA;
+		supportsMessageContext = true;
+		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, true);
+	}
 
-    private static String removeDateCommentLine(String pt) {
-        String result = pt;
-        String regex = "(?m)^[ ]*#.*$(\r?\n)?";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(pt);
-        // Find the second occurrence of the pattern
-        int count = 0;
-        while (matcher.find()) {
-            count++;
-            if (count == 2) {
-                break;
-            }
-        }
-        // Remove the second line starting with "#"
-        if (count == 2) {
-            result = pt.substring(0, matcher.start()) + pt.substring(matcher.end());
-        }
-        return result;
-    }
+	private static String removeDateCommentLine(String pt) {
+		String result = pt;
+		String regex = "(?m)^[ ]*#.*$(\r?\n)?";
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(pt);
+		// Find the second occurrence of the pattern
+		int count = 0;
+		while (matcher.find()) {
+			count++;
+			if (count == 2) {
+				break;
+			}
+		}
+		// Remove the second line starting with "#"
+		if (count == 2) {
+			result = pt.substring(0, matcher.start()) + pt.substring(matcher.end());
+		}
+		return result;
+	}
 
-    public KafkaClient(ConfigurationRegistry configurationRegistry,
-            ConnectorConfiguration connectorConfiguration,
-            AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
-            throws FileNotFoundException, IOException {
-        this();
-        this.configurationRegistry = configurationRegistry;
-        this.mappingComponent = configurationRegistry.getMappingComponent();
-        this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
-        this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
-        this.connectorConfiguration = connectorConfiguration;
-        // ensure the client knows its identity even if configuration is set to null
-        this.connectorIdent = connectorConfiguration.ident;
-        this.connectorName = connectorConfiguration.name;
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
-        this.objectMapper = configurationRegistry.getObjectMapper();
-        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
-        this.dispatcher = dispatcher;
-        this.tenant = tenant;
-        this.connectionState.setFalse();
+	public KafkaClient(ConfigurationRegistry configurationRegistry,
+			ConnectorConfiguration connectorConfiguration,
+			AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
+			throws FileNotFoundException, IOException {
+		this();
+		this.configurationRegistry = configurationRegistry;
+		this.mappingComponent = configurationRegistry.getMappingComponent();
+		this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
+		this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
+		this.connectorConfiguration = connectorConfiguration;
+		// ensure the client knows its identity even if configuration is set to null
+		this.connectorIdent = connectorConfiguration.ident;
+		this.connectorName = connectorConfiguration.name;
+		this.c8yAgent = configurationRegistry.getC8yAgent();
+		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+		this.objectMapper = configurationRegistry.getObjectMapper();
+		this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
+		this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
+		this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+		this.dispatcher = dispatcher;
+		this.tenant = tenant;
+		this.connectionState.setFalse();
 
-        // defaultPropertiesProducer = new Properties();
-        // String jaasTemplate =
-        // "org.apache.kafka.common.security.scram.ScramLoginModule required
-        // username=\"%s\" password=\"%s\";";
-        // String jaasCfg = String.format(jaasTemplate, username, password);
-        // String serializer = StringSerializer.class.getName();
-        // defaultPropertiesConsumer.put("bootstrap.servers",
-        // "glider.srvs.cloudkafka.com:9094");
-        // defaultPropertiesProducer.put("key.serializer", serializer);
-        // defaultPropertiesProducer.put("value.serializer", serializer);
-        // defaultPropertiesProducer.put("security.protocol", "SASL_SSL");
-        // defaultPropertiesProducer.put("sasl.mechanism", "SCRAM-SHA-256");
-        // defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
-        // defaultPropertiesProducer.put("linger.ms", 1);
-        // defaultPropertiesProducer.put("enable.idempotence", false);
+		// defaultPropertiesProducer = new Properties();
+		// String jaasTemplate =
+		// "org.apache.kafka.common.security.scram.ScramLoginModule required
+		// username=\"%s\" password=\"%s\";";
+		// String jaasCfg = String.format(jaasTemplate, username, password);
+		// String serializer = StringSerializer.class.getName();
+		// defaultPropertiesConsumer.put("bootstrap.servers",
+		// "glider.srvs.cloudkafka.com:9094");
+		// defaultPropertiesProducer.put("key.serializer", serializer);
+		// defaultPropertiesProducer.put("value.serializer", serializer);
+		// defaultPropertiesProducer.put("security.protocol", "SASL_SSL");
+		// defaultPropertiesProducer.put("sasl.mechanism", "SCRAM-SHA-256");
+		// defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
+		// defaultPropertiesProducer.put("linger.ms", 1);
+		// defaultPropertiesProducer.put("enable.idempotence", false);
 
-        // String deserializer = StringDeserializer.class.getName();
-        // defaultPropertiesConsumer = new Properties();
-        // defaultPropertiesConsumer.put("bootstrap.servers","glider.srvs.cloudkafka.com:9094");
-        // defaultPropertiesConsumer.put("group.id", username + "-consumer");
-        // defaultPropertiesConsumer.put("enable.auto.commit", "true");
-        // defaultPropertiesConsumer.put("auto.commit.interval.ms", "1000");
-        // defaultPropertiesConsumer.put("auto.offset.reset", "earliest");
-        // defaultPropertiesConsumer.put("session.timeout.ms", "30000");
-        // defaultPropertiesConsumer.put("key.deserializer", deserializer);
-        // defaultPropertiesConsumer.put("value.deserializer", deserializer);
-        // defaultPropertiesConsumer.put("key.serializer", serializer);
-        // defaultPropertiesConsumer.put("value.serializer", serializer);
-        // defaultPropertiesConsumer.put("security.protocol", "SASL_SSL");
-        // defaultPropertiesConsumer.put("sasl.mechanism", "SCRAM-SHA-256");
-        // defaultPropertiesConsumer.put("sasl.jaas.config", jaasCfg);
-        // defaultPropertiesConsumer.put("linger.ms", 1);
-        updateConnectorStatusAndSend(ConnectorStatus.UNKNOWN, true, true);
-    }
+		// String deserializer = StringDeserializer.class.getName();
+		// defaultPropertiesConsumer = new Properties();
+		// defaultPropertiesConsumer.put("bootstrap.servers","glider.srvs.cloudkafka.com:9094");
+		// defaultPropertiesConsumer.put("group.id", username + "-consumer");
+		// defaultPropertiesConsumer.put("enable.auto.commit", "true");
+		// defaultPropertiesConsumer.put("auto.commit.interval.ms", "1000");
+		// defaultPropertiesConsumer.put("auto.offset.reset", "earliest");
+		// defaultPropertiesConsumer.put("session.timeout.ms", "30000");
+		// defaultPropertiesConsumer.put("key.deserializer", deserializer);
+		// defaultPropertiesConsumer.put("value.deserializer", deserializer);
+		// defaultPropertiesConsumer.put("key.serializer", serializer);
+		// defaultPropertiesConsumer.put("value.serializer", serializer);
+		// defaultPropertiesConsumer.put("security.protocol", "SASL_SSL");
+		// defaultPropertiesConsumer.put("sasl.mechanism", "SCRAM-SHA-256");
+		// defaultPropertiesConsumer.put("sasl.jaas.config", jaasCfg);
+		// defaultPropertiesConsumer.put("linger.ms", 1);
+		updateConnectorStatusAndSend(ConnectorStatus.UNKNOWN, true, true);
+	}
 
-    private String bootstrapServers;
-    private String password;
-    private String username;
-    private String groupId;
+	private String bootstrapServers;
+	private String password;
+	private String username;
+	private String groupId;
 
-    private HashMap<String, TopicConsumer> consumerList = new HashMap<String, TopicConsumer>();
+	private HashMap<String, TopicConsumer> consumerList = new HashMap<String, TopicConsumer>();
 
-    private Properties defaultPropertiesConsumer;
-    private Properties defaultPropertiesProducer;
+	private Properties defaultPropertiesConsumer;
+	private Properties defaultPropertiesProducer;
 
-    private KafkaProducer<String, String> kafkaProducer;
+	private KafkaProducer<String, String> kafkaProducer;
 
-    private String KAFKA_CONSUMER_PROPERTIES = "/kafka-consumer.properties";
-    private String KAFKA_PRODUCER_PROPERTIES = "/kafka-producer.properties";
+	private String KAFKA_CONSUMER_PROPERTIES = "/kafka-consumer.properties";
+	private String KAFKA_PRODUCER_PROPERTIES = "/kafka-producer.properties";
 
-    @Override
-    public boolean initialize() {
-        loadConfiguration();
-        username = (String) connectorConfiguration.getProperties().get("username");
-        password = (String) connectorConfiguration.getProperties().get("password");
-        bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
-        return true;
-    }
+	@Override
+	public boolean initialize() {
+		loadConfiguration();
+		username = (String) connectorConfiguration.getProperties().get("username");
+		password = (String) connectorConfiguration.getProperties().get("password");
+		bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
+		return true;
+	}
 
-    @Override
-    public Boolean supportsWildcardsInTopic() {
-        return false;
-    }
+	@Override
+	public Boolean supportsWildcardsInTopic() {
+		return false;
+	}
 
-    @Override
-    public void connect() {
-        updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, true);
-        log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
-                tenant, getConnectorName(), isConnected(),
-                shouldConnect());
-        // stay in the loop until successful
-        boolean successful = false;
-        while (!successful) {
-            loadConfiguration();
-            username = (String) connectorConfiguration.getProperties().get("username");
-            password = (String) connectorConfiguration.getProperties().get("password");
-            groupId = (String) connectorConfiguration.getProperties().get("groupId");
-            bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
-            String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
-            String jaasCfg = String.format(jaasTemplate, username, password);
-            defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
-            defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-            defaultPropertiesProducer.put("group.id", groupId);
-            log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
-                    getConnectorName(),
-                    shouldConnect(), bootstrapServers);
-            log.info("Tenant {} - Successfully connected to broker {}", tenant,
-                    bootstrapServers);
-            try {
-                // test if the mqtt connection is configured and enabled
-                if (shouldConnect()) {
-                    mappingComponent.rebuildMappingOutboundCache(tenant);
-                    // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
-                    // sync, the ActiveSubscriptionMappingInbound is build on the
-                    // previously used updatedMappings
-                    kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
-                    connectionState.setTrue();
-                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                    updateActiveSubscriptionsInbound(updatedMappings, true);
-                }
-                successful = true;
-            } catch (Exception e) {
-                log.error("Tenant {} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
-                updateConnectorStatusToFailed(e);
-                sendConnectorLifecycle();
-                if (serviceConfiguration.logConnectorErrorInBackend) {
-                    log.error("Tenant {} - Stacktrace: ", tenant, e);
-                }
-                successful = false;
-            }
-        }
-    }
+	@Override
+	public void connect() {
+		log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+				tenant, getConnectorName(), isConnected(),
+				shouldConnect());
+		if (shouldConnect())
+			updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
+		// stay in the loop until successful
+		boolean successful = false;
+		while (!successful) {
+			loadConfiguration();
+			username = (String) connectorConfiguration.getProperties().get("username");
+			password = (String) connectorConfiguration.getProperties().get("password");
+			groupId = (String) connectorConfiguration.getProperties().get("groupId");
+			bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
+			String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
+			String jaasCfg = String.format(jaasTemplate, username, password);
+			defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
+			defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+			defaultPropertiesProducer.put("group.id", groupId);
+			log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
+					getConnectorName(),
+					shouldConnect(), bootstrapServers);
+			log.info("Tenant {} - Successfully connected to broker {}", tenant,
+					bootstrapServers);
+			try {
+				// test if the mqtt connection is configured and enabled
+				if (shouldConnect()) {
+					mappingComponent.rebuildMappingOutboundCache(tenant);
+					// in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
+					// sync, the ActiveSubscriptionMappingInbound is build on the
+					// previously used updatedMappings
+					kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
+					connectionState.setTrue();
+					updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
+					List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+					updateActiveSubscriptionsInbound(updatedMappings, true);
+				}
+				successful = true;
+			} catch (Exception e) {
+				log.error("Tenant {} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
+				updateConnectorStatusToFailed(e);
+				sendConnectorLifecycle();
+				if (serviceConfiguration.logConnectorErrorInBackend) {
+					log.error("Tenant {} - Stacktrace: ", tenant, e);
+				}
+				successful = false;
+			}
+		}
+	}
 
-    @Override
-    public boolean isConnected() {
-        return connectionState.getValue();
-    }
+	@Override
+	public boolean isConnected() {
+		return connectionState.getValue();
+	}
 
-    @Override
-    public void disconnect() {
-        if (isConnected()) {
-            updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
-            log.info("Tenant {} - Disconnecting  connector {} from broker: {}", tenant, getConnectorName(),
-                    bootstrapServers);
-            activeSubscriptions.entrySet().forEach(entry -> {
-                // only unsubscribe if still active subscriptions exist
-                String topic = entry.getKey();
-                MutableInt activeSubs = entry.getValue();
-                if (activeSubs.intValue() > 0) {
-                    try {
-                        unsubscribe(topic);
-                    } catch (Exception error) {
-                        log.error("Tenant {} - Error unsubscribing topic {} from broker: {}, error {}", tenant, topic,
-                                getConnectorName(),
-                                error);
-                    }
-                }
-            });
+	@Override
+	public void disconnect() {
+		if (isConnected()) {
+			updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
+			log.info("Tenant {} - Disconnecting  connector {} from broker: {}", tenant, getConnectorName(),
+					bootstrapServers);
+			activeSubscriptions.entrySet().forEach(entry -> {
+				// only unsubscribe if still active subscriptions exist
+				String topic = entry.getKey();
+				MutableInt activeSubs = entry.getValue();
+				if (activeSubs.intValue() > 0) {
+					try {
+						unsubscribe(topic);
+					} catch (Exception error) {
+						log.error("Tenant {} - Error unsubscribing topic {} from broker: {}, error {}", tenant, topic,
+								getConnectorName(),
+								error);
+					}
+				}
+			});
 
-            connectionState.setFalse();
-            updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptionsInbound(updatedMappings, true);
-            kafkaProducer.close();
-            log.info("Tenant {} - Disconnected from from broker: {}", tenant, getConnectorName(),
-                    bootstrapServers);
-        }
-    }
+			connectionState.setFalse();
+			updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
+			List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+			updateActiveSubscriptionsInbound(updatedMappings, true);
+			kafkaProducer.close();
+			log.info("Tenant {} - Disconnected from from broker: {}", tenant, getConnectorName(),
+					bootstrapServers);
+		}
+	}
 
-    @Override
-    public void close() {
-    }
+	@Override
+	public void close() {
+	}
 
-    @Override
-    public String getConnectorIdent() {
-        return connectorIdent;
-    }
+	@Override
+	public String getConnectorIdent() {
+		return connectorIdent;
+	}
 
-    @Override
-    public String getConnectorName() {
-        return connectorName;
-    }
+	@Override
+	public String getConnectorName() {
+		return connectorName;
+	}
 
-    @Override
-    public void subscribe(String topic, QOS qos) throws ConnectorException {
-        TopicConsumer kafkaConsumer = new TopicConsumer(
-                new TopicConfig(tenant, bootstrapServers, topic, username, password, groupId,
-                        defaultPropertiesConsumer));
-        consumerList.put(topic, kafkaConsumer);
-        TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
-                topic, true);
-        kafkaConsumer.start(topicConsumerCallback);
-    }
+	@Override
+	public void subscribe(String topic, QOS qos) throws ConnectorException {
+		TopicConsumer kafkaConsumer = new TopicConsumer(
+				new TopicConfig(tenant, bootstrapServers, topic, username, password, groupId,
+						defaultPropertiesConsumer));
+		consumerList.put(topic, kafkaConsumer);
+		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
+				topic, true);
+		kafkaConsumer.start(topicConsumerCallback);
+	}
 
-    @Override
-    public void monitorSubscriptions() {
+	@Override
+	public void monitorSubscriptions() {
 
-        // for (Iterator<Map.Entry<String, Mapping>> me =
-        // getMappingsDeployed().entrySet().iterator(); me.hasNext();) {
-        Iterator<String> it = getMappingsDeployedInbound().keySet().iterator();
-        while (it.hasNext()) {
-            String mapIdent = it.next();
-            Mapping map = getMappingsDeployedInbound().get(mapIdent);
-            // test if topicConsumer was started successfully
-            if (consumerList.containsKey(map.subscriptionTopic)) {
-                TopicConsumer kafkaConsumer = consumerList.get(map.subscriptionTopic);
-                if (kafkaConsumer.shouldStop()) {
-                    try {
-                        // kafkaConsumer.close();
-                        unsubscribe(mapIdent);
-                        getMappingsDeployedInbound().remove(map.ident);
-                        log.warn(
-                                "Tenant {} - Failed to subscribe to subscriptionTopic {} for mapping {} in connector {}!",
-                                tenant, map.subscriptionTopic, map, getConnectorName());
-                    } catch (Exception e) {
-                        // ignore interrupt
-                    }
-                }
-            }
-        }
-    }
+		// for (Iterator<Map.Entry<String, Mapping>> me =
+		// getMappingsDeployed().entrySet().iterator(); me.hasNext();) {
+		Iterator<String> it = getMappingsDeployedInbound().keySet().iterator();
+		while (it.hasNext()) {
+			String mapIdent = it.next();
+			Mapping map = getMappingsDeployedInbound().get(mapIdent);
+			// test if topicConsumer was started successfully
+			if (consumerList.containsKey(map.subscriptionTopic)) {
+				TopicConsumer kafkaConsumer = consumerList.get(map.subscriptionTopic);
+				if (kafkaConsumer.shouldStop()) {
+					try {
+						// kafkaConsumer.close();
+						unsubscribe(mapIdent);
+						getMappingsDeployedInbound().remove(map.ident);
+						log.warn(
+								"Tenant {} - Failed to subscribe to subscriptionTopic {} for mapping {} in connector {}!",
+								tenant, map.subscriptionTopic, map, getConnectorName());
+					} catch (Exception e) {
+						// ignore interrupt
+					}
+				}
+			}
+		}
+	}
 
-    @Override
-    public void unsubscribe(String topic) throws Exception {
-        TopicConsumer kafkaConsumer = consumerList.remove(topic);
-        if (kafkaConsumer != null)
-            kafkaConsumer.close();
-    }
+	@Override
+	public void unsubscribe(String topic) throws Exception {
+		TopicConsumer kafkaConsumer = consumerList.remove(topic);
+		if (kafkaConsumer != null)
+			kafkaConsumer.close();
+	}
 
-    @Override
-    public boolean isConfigValid(ConnectorConfiguration configuration) {
-        return true;
-    }
+	@Override
+	public boolean isConfigValid(ConnectorConfiguration configuration) {
+		return true;
+	}
 
-    @Override
-    public void publishMEAO(ProcessingContext<?> context) {
-        C8YRequest currentRequest = context.getCurrentRequest();
-        String payload = currentRequest.getRequest();
-        String key = currentRequest.getSource();
-        if (context.isSupportsMessageContext() && context.getKey() != null) {
-            key = new String(context.getKey());
-        }
-        kafkaProducer.send(new ProducerRecord<String, String>(context.getMapping().publishTopic, key, payload));
+	@Override
+	public void publishMEAO(ProcessingContext<?> context) {
+		C8YRequest currentRequest = context.getCurrentRequest();
+		String payload = currentRequest.getRequest();
+		String key = currentRequest.getSource();
+		if (context.isSupportsMessageContext() && context.getKey() != null) {
+			key = new String(context.getKey());
+		}
+		kafkaProducer.send(new ProducerRecord<String, String>(context.getMapping().publishTopic, key, payload));
 
-        log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
-                context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
-    }
+		log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
+				context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
+	}
 }
