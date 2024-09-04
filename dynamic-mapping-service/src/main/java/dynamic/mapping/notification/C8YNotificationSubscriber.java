@@ -162,16 +162,19 @@ public class C8YNotificationSubscriber {
 				if (dispatcherOutboundMaps.get(tenant) != null) {
 					for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
 							.values()) {
-						String tokenSeed = DEVICE_SUBSCRIBER
-								+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
-								+ additionalSubscriptionIdTest;
-						String token = createToken(DEVICE_SUBSCRIPTION,
-								tokenSeed);
-						deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
-						CustomWebSocketClient client = connect(token, dispatcherOutbound);
-						deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
-								client);
+						//Only connect if connector is enabled
+						if(dispatcherOutbound.getConnectorClient().getConnectorConfiguration().isEnabled()){
+							String tokenSeed = DEVICE_SUBSCRIBER
+									+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
+									+ additionalSubscriptionIdTest;
+							String token = createToken(DEVICE_SUBSCRIPTION,
+									tokenSeed);
+							deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
+							CustomWebSocketClient client = connect(token, dispatcherOutbound);
+							deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
+									client);
 
+						}
 					}
 				}
 				for (NotificationSubscriptionRepresentation subscription : deviceSubList) {
@@ -494,8 +497,6 @@ public class C8YNotificationSubscriber {
 	//
 
 	public void removeConnector(String tenant, String connectorIdent) {
-		//Unsubscribe from Notification 2.0 for that connector
-		unsubscribeDeviceSubscriberByConnector(tenant, connectorIdent);
 		// Remove Dispatcher from list
 		if (this.dispatcherOutboundMaps.get(tenant) != null)
 			this.dispatcherOutboundMaps.get(tenant).remove(connectorIdent);

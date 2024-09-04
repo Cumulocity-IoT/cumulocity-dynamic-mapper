@@ -190,16 +190,28 @@ public class BootstrapService {
             configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
             AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(
                     configurationRegistry, connectorClient);
-            configurationRegistry.getNotificationSubscriber().addConnector(tenant, connectorClient.getConnectorIdent(),
-                    dispatcherOutbound);
+            // Only initialize Connectors which are enabled
+            if(connectorClient.getConnectorConfiguration().isEnabled())
+                configurationRegistry.getNotificationSubscriber().addConnector(tenant, connectorClient.getConnectorIdent(),
+                        dispatcherOutbound);
             // Subscriber must be new initialized for the new added connector
             //configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 
         }
     }
 
-    public void shutdownConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
+    //shutdownAndRemoveConnector will unsubscribe the subscriber which drops all queues
+    public void shutdownAndRemoveConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
         connectorRegistry.unregisterClient(tenant, connectorIdent);
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        if (serviceConfiguration.isOutboundMappingEnabled()) {
+            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriberByConnector(tenant, connectorIdent);
+            configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
+        }
+    }
+
+    //DisableConnector will just clean-up maps and disconnects Notification 2.0 - queues will be kept
+    public void disableConnector(String tenant, String connectorIdent) {
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         if (serviceConfiguration.isOutboundMappingEnabled()) {
             configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);

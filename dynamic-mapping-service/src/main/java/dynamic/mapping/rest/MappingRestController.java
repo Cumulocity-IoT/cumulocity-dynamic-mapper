@@ -166,9 +166,6 @@ public class MappingRestController {
 		log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
 		try {
 			connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-			ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-			bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
-			configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration: ", tenant, ex);
@@ -218,7 +215,7 @@ public class MappingRestController {
 			if (client == null)
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Client with ident " + ident + " not found");
 			client.disconnect();
-			bootstrapService.shutdownConnector(tenant, ident);
+			bootstrapService.shutdownAndRemoveConnector(tenant, client.getConnectorIdent());
 			connectorConfigurationComponent.deleteConnectorConfiguration(ident);
 			mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
 		} catch (Exception ex) {
@@ -423,10 +420,14 @@ public class MappingRestController {
 				configuration.setEnabled(true);
 				connectorConfigurationComponent.saveConnectorConfiguration(configuration);
 
+				//Initialize Connector only when enabled.
+				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+				bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
+				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+
 				AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
 						connectorIdent);
-				// important to use reconnect, since it requires to go through the
-				// initialization phase
+
 				client.submitConnect();
 			} else if (operation.getOperation().equals(Operation.DISCONNECT)) {
 				String connectorIdent = operation.getParameter().get("connectorIdent");
@@ -438,6 +439,8 @@ public class MappingRestController {
 				AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
 						connectorIdent);
 				client.submitDisconnect();
+				bootstrapService.disableConnector(tenant, client.getConnectorIdent());
+				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			} else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
 				mappingComponent.sendMappingStatus(tenant);
 			} else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
