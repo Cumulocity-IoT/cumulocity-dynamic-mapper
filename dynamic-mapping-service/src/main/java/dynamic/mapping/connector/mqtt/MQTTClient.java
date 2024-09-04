@@ -351,6 +351,7 @@ public class MQTTClient extends AConnectorClient {
 			try {
 				// test if the mqtt connection is configured and enabled
 				if (shouldConnect()) {
+					/*
 					try {
 						// is not working for broker.emqx.io
 						subscribe("$SYS/#", QOS.AT_LEAST_ONCE);
@@ -359,7 +360,7 @@ public class MQTTClient extends AConnectorClient {
 								"Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
 								e.getMessage(), e);
 					}
-
+					*/
 					mappingComponent.rebuildMappingOutboundCache(tenant);
 					// in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
 					// sync, the ActiveSubscriptionMappingInbound is build on the
@@ -427,9 +428,9 @@ public class MQTTClient extends AConnectorClient {
 				}
 			});
 
-			if (mqttClient.getState().isConnected()) {
-				mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
-			}
+			//if (mqttClient.getState().isConnected()) {
+			//	mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
+			//}
 
 			try {
 				if (mqttClient != null && mqttClient.getState().isConnected())

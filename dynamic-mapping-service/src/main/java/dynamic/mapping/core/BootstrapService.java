@@ -211,7 +211,8 @@ public class BootstrapService {
     }
 
     //DisableConnector will just clean-up maps and disconnects Notification 2.0 - queues will be kept
-    public void disableConnector(String tenant, String connectorIdent) {
+    public void disableConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
+        connectorRegistry.unregisterClient(tenant, connectorIdent);
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         if (serviceConfiguration.isOutboundMappingEnabled()) {
             configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);

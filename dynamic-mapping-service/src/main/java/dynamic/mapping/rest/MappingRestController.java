@@ -440,6 +440,7 @@ public class MappingRestController {
 						connectorIdent);
 				client.submitDisconnect();
 				bootstrapService.disableConnector(tenant, client.getConnectorIdent());
+				//We might need to Reconnect other Notification Clients for other connectors
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			} else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
 				mappingComponent.sendMappingStatus(tenant);
@@ -480,9 +481,7 @@ public class MappingRestController {
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			}
 			return ResponseEntity.status(HttpStatus.CREATED).build();
-		} catch (
-
-		Exception ex) {
+		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
