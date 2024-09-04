@@ -208,13 +208,14 @@ public class MQTTClient extends AConnectorClient {
 
 	@Override
 	public void connect() {
-		updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
 		log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
 				tenant, getConnectorName(), isConnected(),
 				shouldConnect());
 		if (isConnected())
 			disconnect();
 
+		if (shouldConnect())
+			updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
 		String protocol = (String) connectorConfiguration.getProperties().getOrDefault("protocol", false);
 		boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
 				.getOrDefault("useSelfSignedCertificate", false);
