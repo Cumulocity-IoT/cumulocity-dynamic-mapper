@@ -164,23 +164,24 @@ public class BootstrapService {
     public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
             ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
         AConnectorClient connectorClient = null;
-        try {
-            connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
-                    additionalSubscriptionIdTest, tenant);
-        } catch (IOException e) {
-            log.error("Tenant {} - Error on creating connector {} {}", connectorConfiguration.getConnectorType(), e);
-            throw new ConnectorRegistryException(e.getMessage());
+        if(connectorConfiguration.isEnabled()) {
+            try {
+                connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
+                        additionalSubscriptionIdTest, tenant);
+            } catch (IOException e) {
+                log.error("Tenant {} - Error on creating connector {} {}", connectorConfiguration.getConnectorType(), e);
+                throw new ConnectorRegistryException(e.getMessage());
+            }
+            connectorRegistry.registerClient(tenant, connectorClient);
+            // initialize AsynchronousDispatcherInbound
+            AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry,
+                    connectorClient);
+            configurationRegistry.initializePayloadProcessorsInbound(tenant);
+            connectorClient.setDispatcher(dispatcherInbound);
+            connectorClient.reconnect();
+            connectorClient.submitHousekeeping();
+            initializeOutboundMapping(tenant, serviceConfiguration, connectorClient);
         }
-        connectorRegistry.registerClient(tenant, connectorClient);
-        // initialize AsynchronousDispatcherInbound
-        AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry,
-                connectorClient);
-        configurationRegistry.initializePayloadProcessorsInbound(tenant);
-        connectorClient.setDispatcher(dispatcherInbound);
-        connectorClient.reconnect();
-        connectorClient.submitHousekeeping();
-        initializeOutboundMapping(tenant, serviceConfiguration, connectorClient);
-
         return connectorClient;
     }
 
