@@ -438,7 +438,7 @@ public class MappingRestController {
 
 				AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
 						connectorIdent);
-				client.submitDisconnect();
+				//client.submitDisconnect();
 				bootstrapService.disableConnector(tenant, client.getConnectorIdent());
 				//We might need to Reconnect other Notification Clients for other connectors
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
