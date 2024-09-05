@@ -33,8 +33,8 @@ export class TreeTabFactory implements TabFactory {
       tabs.push({
         path: `sag-ps-pkg-dynamic-mapping/${NODE2}/tree`,
         priority: 600,
-        label: 'Mapping tree inbound',
-        icon: 'tree-structure',
+        label: 'Hierarchy inbound mapping',
+        icon: 'hierarchy',
         orientation: 'horizontal'
       } as Tab);
     }

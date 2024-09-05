@@ -568,17 +568,6 @@
                     </button>
                   </div>
                   <div class="col-lg-3 col-lg-offset-1">
-                    <!-- <button
-                      type="submit"
-                      name="togglePowermode"
-                      class="btn btn-default btn-sm"
-                      (click)="togglePowermode()"
-                      translate
-                      title="Expert mode"
-                    >
-                      <i c8yIcon="critical-thinking"></i
-                      ><span id="updateButton">&nbsp;Expert mode</span>
-                    </button> -->
                     <label class="c8y-switch">
                       <input
                         type="checkbox"
@@ -598,6 +587,50 @@
                     [fields]="substitutionFormlyFields"
                     [model]="substitutionModel"
                   ></formly-form>
+                  <div class="row">
+                    <div class="col-lg-5 col-lg-offset-1">
+                      <div class="form-group m-b-4">
+                        <label translate style="padding-left: 12px"
+                          >Source Result [{{
+                            substitutionModel.sourceExpression?.resultType
+                          }}]</label
+                        >
+                        <textarea
+                          class="form-control"
+                          c8y-textarea-autoresize
+                          readonly="true"
+                          style="padding-left: 12p;
+                            font-size: var(--c8y-font-size-small);
+                            line-height: var(--c8y-line-height-small);
+                          "
+                          >{{
+                            substitutionModel.sourceExpression?.result
+                          }}</textarea
+                        >
+                      </div>
+                    </div>
+					<div class="col-lg-5">
+						<div class="form-group m-b-4">
+						  <label translate style="padding-left: 12px"
+							>Target Result [{{
+							  substitutionModel.targetExpression?.resultType
+							}}]</label
+						  >
+						  <textarea
+							class="form-control"
+							c8y-textarea-autoresize
+							readonly="true"
+							style="padding-left: 12p;
+							  font-size: var(--c8y-font-size-small);
+							  line-height: var(--c8y-line-height-small);
+							"
+							>{{
+							  substitutionModel.targetExpression?.result
+							}}</textarea
+						  >
+						</div>
+					  </div>
+                  </div>
                 </div>
               </div>
               <div [formGroup]="templateForm">

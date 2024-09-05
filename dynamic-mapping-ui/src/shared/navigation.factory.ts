@@ -76,13 +76,13 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       });
       const mapping = new NavigatorNode({
         label: gettext('Mapping'),
-        icon: 'file-type-document',
+        icon: 'rules',
         path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
         priority: 400,
         preventDuplicates: true
       });
       const mappingMonitoring = new NavigatorNode({
-        label: gettext('Service monitoring'),
+        label: gettext('Monitoring'),
         icon: 'pie-chart',
         path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
         priority: 300,
@@ -115,7 +115,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       });
       const mappingMonitoring = new NavigatorNode({
         parent: gettext('Dynamic Data Mapper'),
-        label: gettext('Service monitoring'),
+        label: gettext('Monitoring'),
         icon: 'pie-chart',
         path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
         priority: 300,

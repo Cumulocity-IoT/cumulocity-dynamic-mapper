@@ -35,7 +35,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <revision>4.4.2-SNAPSHOT</revision>
+        <revision>4.4.1</revision>
         <c8y.version>1020.107.0</c8y.version>
         <lombok.version>1.18.34</lombok.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -90,7 +90,7 @@
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>4.27.2</version>
+                <version>4.28.0</version>
             </dependency>
             <dependency>
                 <groupId>com.hivemq</groupId>
@@ -117,12 +117,12 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.16.0</version>
+                <version>3.17.0</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>
-                <version>5.10.3</version>
+                <version>5.11.0</version>
             </dependency>
             <dependency>
                 <groupId>org.projectlombok</groupId>
@@ -147,12 +147,12 @@
             <dependency>
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
-                <version>3.7.1</version>
+                <version>3.8.0</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
                 <artifactId>spring-aspects</artifactId>
-                <version>6.1.11</version>
+                <version>6.1.12</version>
             </dependency>
             <dependency>
                 <groupId>io.opentelemetry</groupId>

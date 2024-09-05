@@ -162,16 +162,19 @@ public class C8YNotificationSubscriber {
 				if (dispatcherOutboundMaps.get(tenant) != null) {
 					for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
 							.values()) {
-						String tokenSeed = DEVICE_SUBSCRIBER
-								+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
-								+ additionalSubscriptionIdTest;
-						String token = createToken(DEVICE_SUBSCRIPTION,
-								tokenSeed);
-						deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
-						CustomWebSocketClient client = connect(token, dispatcherOutbound);
-						deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
-								client);
+						//Only connect if connector is enabled
+						if(dispatcherOutbound.getConnectorClient().getConnectorConfiguration().isEnabled()){
+							String tokenSeed = DEVICE_SUBSCRIBER
+									+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
+									+ additionalSubscriptionIdTest;
+							String token = createToken(DEVICE_SUBSCRIPTION,
+									tokenSeed);
+							deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
+							CustomWebSocketClient client = connect(token, dispatcherOutbound);
+							deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
+									client);
 
+						}
 					}
 				}
 				for (NotificationSubscriptionRepresentation subscription : deviceSubList) {
@@ -450,10 +453,22 @@ public class C8YNotificationSubscriber {
 	}
 
 	public void unsubscribeDeviceSubscriber(String tenant) {
-		if (deviceTokenPerConnector.get(tenant) != null)
+		if (deviceTokenPerConnector.get(tenant) != null) {
 			for (String token : deviceTokenPerConnector.get(tenant).values()) {
 				tokenApi.unsubscribe(new Token(token));
 			}
+			deviceTokenPerConnector.remove(tenant);
+		}
+
+	}
+
+	public void unsubscribeDeviceSubscriberByConnector(String tenant, String connectorIdent) {
+		if (deviceTokenPerConnector.get(tenant) != null) {
+			if (deviceTokenPerConnector.get(tenant).get(connectorIdent) != null) {
+				tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdent)));
+				deviceTokenPerConnector.get(tenant).remove(connectorIdent);
+			}
+		}
 	}
 
 	//

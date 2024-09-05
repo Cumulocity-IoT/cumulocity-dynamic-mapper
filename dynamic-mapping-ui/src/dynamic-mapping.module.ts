@@ -28,7 +28,7 @@ import {
   hookTab
 } from '@c8y/ngx-components';
 import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
-import { BrokerConfigurationModule } from './configuration/broker-configuration.module';
+import { BrokerConfigurationModule } from './configuration/service-configuration.module';
 import { ExtensionModule } from './extension/extension.module';
 import { MappingTreeModule } from './mapping-tree/tree.module';
 import { MappingModule } from './mapping/mapping.module';

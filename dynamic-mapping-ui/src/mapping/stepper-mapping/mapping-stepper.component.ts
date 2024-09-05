@@ -227,7 +227,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             wrappers: ['custom-form-field'],
             templateOptions: {
               label: 'Source Expression',
-              class: 'input-sm animate-background',
+              class: 'input-sm disabled-animate-background',
               customWrapperClass: 'm-b-24',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
@@ -254,7 +254,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                   model.pathSource == '' &&
                   model.stepperConfiguration.allowDefiningSubstitutions
                 ) {
-                  return 'input-sm animate-background';
+                  return 'input-sm disabled-animate-background';
                 } else {
                   return 'input-sm';
                 }
@@ -292,7 +292,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                   model.pathTarget == '' &&
                   model.stepperConfiguration.allowDefiningSubstitutions
                 ) {
-                  return 'input-sm animate-background';
+                  return 'input-sm disabled-animate-background';
                 } else {
                   return 'input-sm';
                 }
@@ -337,48 +337,48 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         ]
       },
 
-      {
-        fieldGroup: [
-          {
-            className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
-            key: 'sourceExpression.result',
-            type: 'textarea-custom',
-            wrappers: ['custom-form-wrapper'],
-            templateOptions: {
-              class: 'input',
-              disabled: true,
-              readonly: true,
-              customWrapperClass: 'm-b-4'
-            },
-            expressionProperties: {
-              'templateOptions.label': () =>
-                `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
-              'templateOptions.value': () => {
-                return `${this.substitutionModel.sourceExpression?.result}`;
-              }
-            }
-          },
-          {
-            className: 'col-lg-5 text-monospace font-smaller',
-            key: 'targetExpression.result',
-            type: 'textarea-custom',
-            wrappers: ['custom-form-wrapper'],
-            templateOptions: {
-              class: 'input',
-              disabled: true,
-              readonly: true,
-              customWrapperClass: 'm-b-4'
-            },
-            expressionProperties: {
-              'templateOptions.label': () =>
-                `Target Result [${this.substitutionModel.targetExpression?.resultType}]`,
-              'templateOptions.value': () => {
-                return `${this.substitutionModel.targetExpression?.result}`;
-              }
-            }
-          }
-        ]
-      }
+    //   {
+    //     fieldGroup: [
+    //       {
+    //         className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
+    //         key: 'sourceExpression.result',
+    //         type: 'textarea-custom',
+    //         wrappers: ['custom-form-wrapper'],
+    //         templateOptions: {
+    //           class: 'no-resize',
+    //           disabled: false,
+    //           readonly: false,
+    //           customWrapperClass: 'm-b-4'
+    //         },
+    //         expressionProperties: {
+    //           'templateOptions.label': () =>
+    //             `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
+    //           'templateOptions.value': () => {
+    //             return `${this.substitutionModel.sourceExpression?.result}`;
+    //           }
+    //         }
+    //       },
+    //       {
+    //         className: 'col-lg-5 text-monospace font-smaller',
+    //         key: 'targetExpression.result',
+    //         type: 'textarea-custom',
+    //         wrappers: ['custom-form-wrapper'],
+    //         templateOptions: {
+    //           class: 'input',
+    //           disabled: true,
+    //           readonly: true,
+    //           customWrapperClass: 'm-b-4'
+    //         },
+    //         expressionProperties: {
+    //           'templateOptions.label': () =>
+    //             `Target Result [${this.substitutionModel.targetExpression?.resultType}]`,
+    //           'templateOptions.value': () => {
+    //             return `${this.substitutionModel.targetExpression?.result}`;
+    //           }
+    //         }
+    //       }
+    //     ]
+    //   }
     ];
 
     this.setTemplateForm();

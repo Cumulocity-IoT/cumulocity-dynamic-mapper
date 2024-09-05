@@ -1,36 +1,42 @@
 <!--
-  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
-  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  ~
-  ~ @authors Christof Strack
-  -->
-
+   ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+   ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+   ~
+   ~ SPDX-License-Identifier: Apache-2.0
+   ~
+   ~ Licensed under the Apache License, Version 2.0 (the "License");
+   ~ you may not use this file except in compliance with the License.
+   ~ You may obtain a copy of the License at
+   ~
+   ~      http://www.apache.org/licenses/LICENSE-2.0
+   ~
+   ~ Unless required by applicable law or agreed to in writing, software
+   ~ distributed under the License is distributed on an "AS IS" BASIS,
+   ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   ~ See the License for the specific language governing permissions and
+   ~ limitations under the License.
+   ~
+   ~ @authors Christof Strack
+   -->
 <c8y-title>{{ 'Getting started' | translate }}</c8y-title>
-
 <div class="card">
-  <div class="card-header p-l-32 separator j-c-between">
-    <h5 class="card-title">
+  <div class="card-header">
+    <h3>
       {{ 'Overview' | translate }}
-    </h5>
+    </h3>
   </div>
   <div class="card-block">
-    <ul>
+    <div class="p-b-8 text-16">
+      Using the Cumulocity Dynamic Data Mapper you are able to connect to almost
+      any message broker. <br />
+      And map any payload received on a topic dynamically to the Cumulocity IoT
+      Domain Model in a graphical editor.
+      <br />
+      The following links help you get started with the Dynamic Data Mapper:
+    </div>
+    <ul class="text-16">
       <li>
-        Documentation for the
+        Detailed documentation for the
         <a
           href="https://github.com/SoftwareAG/cumulocity-dynamic-mapper"
           target="_blank"
@@ -41,58 +47,186 @@
       <li>
         The mappings use JSONata, a Lightweight query and transformation
         language for JSON data. Documentation can be found the
-        <a href="https://jsonata.org/" target="_blank">here</a>.
+        <a href="https://jsonata.org/" target="_blank">here</a>
+      </li>
+    </ul>
+    <div class="p-b-8 text-16">
+      The most important resources you work with in the Mapper are:
+      <b>connectors</b> and <b>mappings</b>.
+      <br />
+      If you want to receive messages from an Mqtt broker (Cumulocity Mqtt
+      Service, Hive MQ, mosquitto, ...) you use an <b>inbound mapping</b>. <br />
+      The rules of the mapping are applied and result in an transformed payload
+      for any of the
+      <a href="https://cumulocity.com/docs/concepts/domain-model/"
+        >Cumulocity APIs</a
+      ><br />
+      <br />
+
+      For the other direction you can define an <b>outbound mapping</b>. At runtime it
+      listens for changes of any of the core
+      <a href="https://cumulocity.com/docs/concepts/domain-model/"
+        >domain objects</a
+      >.
+      <br />
+      <br />
+      The following links help you find the resources in the Dynamic Data
+      Mapper:
+    </div>
+    <ul class="text-16">
+      <li>
+        Currently <b>{{ countMappingInbound$ | async }}</b>
+        <a [routerLink]="ROUTE_INBOUND"> inbound</a> and
+        <b>{{ countMappingOutbound$ | async }}</b>
+        <a [routerLink]="ROUTE_OUTBOUND"> outbound</a>
+        mappings are defined
       </li>
       <li>
-        Currently {{ countMappingInbound$ | async }}
-        <a [routerLink]="ROUTE_INBOUND">inbound</a> and
-        {{ countMappingOutbound$ | async }}
-        <a [routerLink]="ROUTE_OUTBOUND">outbound</a>
-        mappings are defined.
-      </li>
-      <li>
-        Currently {{ countConnector$ | async }}
-        <a [routerLink]="ROUTE_CONNECTORS">connectors</a> are defined.
+        Currently <b>{{ countConnector$ | async }}</b>
+        <a [routerLink]="ROUTE_CONNECTORS"> connectors</a> are defined
       </li>
     </ul>
   </div>
-  <div class="card-header p-l-32 separator j-c-between">
-    <h5 class="card-title">
-      {{ 'How to define a substitution ...' | translate }}
-    </h5>
+  <div class="card-header">
+    <h3>
+      {{ 'How to define a mapping ...' | translate }}
+    </h3>
   </div>
   <div class="card-block">
+    <div class="p-b-8 text-16">
+      The Dynamic Data Mapper offers you the choice to use different types of
+      mappings: JSON, Generic Binary, Flat File, Processor Extension. <br />
+      So before defining the actual mapping you have to choose which type of
+      mapping to use. <br />
+      In most cases this will be JSON if you want to map your custom JSON
+      payload from your device to the Cumulocity JSON format.<br />
+      You start the stepper by clicking on <b>Add mapping</b> to add a mapping
+      (Mapping -> Inbound Mapping -> Action Add mapping).<br />
+      <br />
+      <img
+        width="50%"
+        class="m-l-48 m-b-48"
+        src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Animated.gif"
+        alt="Define substitutions"
+      />
+    </div>
+    <div class="p-b-8 text-16">
+      The stepper leads you through the steps to define a mapping:
+    </div>
+    <ol class="text-16">
+      <li>
+        Add or select an existing connector for your mapping, where payloads
+        could come from
+      </li>
+      <li>
+        Define general settings, like the topic name this mapping should be
+        linked to
+      </li>
+      <li>
+        Select or enter the template for the expected source payload. This is
+        used as the source path of an substitution in the next step
+      </li>
+      <li>
+        Define substitution for copying content from the source to the target
+        payload. The will be applied later at runtime on the actual payload
+      </li>
+      <li>
+        Test the mapping by applying the substitutions and save the mapping
+      </li>
+    </ol>
+    <br />
     <img
       width="70%"
       class="m-l-48 m-b-48"
       src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution.png"
       alt="Define substitutions"
     />
+    <div class="p-b-8"></div>
+    <div class="card-header">
+      <h3>
+        {{ 'How to define a substitution ...' | translate }}
+      </h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        A substitution is a rule copy content from the source payload (most of
+        the time your custom JSON payload) to the target payload ( Cumulocity
+        JSON payload).<br />
+        When defining the substitution templates for the source and target
+        payload are used.<br />
+        At runtime these rules are applied to the actual payload received from
+        your defined broker. Defining a substitution consists of the following
+        steps:
+      </div>
+      div>
+      <ol class="p-b-8 text-16">
+        <li>
+          Select an node in the source payload. In the screenshot below this is:
+          _TOPIC_LEVEL_[0]
+        </li>
+        <li>
+          Select an node in the target payload. In the screenshot below this is:
+          source.id
+        </li>
+        <li>Press Add substitution</li>
+      </ol>
+      <p class="p-b-8 text-16">
+        At runtime this substitution copies the value extracted at the path
+        _TOPIC_LEVEL_[0] to the target payload at path source.id<br />
+      </p>
+    </div>
   </div>
 
-  <div class="card-header p-l-32 separator j-c-between">
-    <h5 class="card-title">
-      {{ 'How to define a mapping ...' | translate }}
-    </h5>
-  </div>
   <div class="card-block">
     <img
       width="70%"
       class="m-l-48 m-b-48"
-      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Process.png"
+      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Annotated.png"
       alt="Define mapping"
     />
   </div>
-
-  <div class="card-header p-l-32 separator j-c-between">
-    <h5 class="card-title">
+  <div class="card-header">
+    <h3>
       {{
         "How to you start when you don't know what your source payload looks like ..."
           | translate
       }}
-    </h5>
+    </h3>
   </div>
   <div class="card-block">
-	<img [src]="linkSnoopProcess" alt="SVG description"  width="700" height="250">
+    <div class="p-b-8 text-16">
+      If you don't know the payload of your device you start by snooping the
+      payload as a first step. <br />
+      Snooping will record the messages and you can use these in the next step
+      as source templates . <br />
+      When you select a mapping type you can enable snooping
+      <b>Enable snooping</b> for this mapping.<br />
+      You start the stepper by clicking on <b>Add mapping</b> (Mapping ->
+      Inbound Mapping -> Action Add mapping).<br />
+      <br />
+      The stepper when snooping leads you through the two steps:
+    </div>
+    <ol class="text-16">
+      <li>
+        Add or select an existing connector for your mapping, where messages are
+        snooped (recorded)
+      </li>
+      <li>
+        Define general settings, like the topic name this mapping should be
+        linked to
+      </li>
+    </ol>
+    <img
+      width="70%"
+      class="m-l-48 m-b-48"
+      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Snooping.png"
+      alt="Snoop process "
+    />
+    <!-- <img
+      [src]="linkSnoopProcess"
+      alt="SVG description"
+      width="700"
+      height="250"
+    /> -->
   </div>
 </div>

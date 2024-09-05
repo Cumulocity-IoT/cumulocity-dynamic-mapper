@@ -28,11 +28,11 @@ import { ServiceConfiguration } from './shared/configuration.model';
 import { ConnectorConfigurationService } from '../connector';
 
 @Component({
-  selector: 'd11r-mapping-broker-configuration',
-  styleUrls: ['./broker-configuration.component.style.css'],
-  templateUrl: 'broker-configuration.component.html'
+  selector: 'd11r-mapping-service-configuration',
+  styleUrls: ['./service-configuration.component.style.css'],
+  templateUrl: 'service-configuration.component.html'
 })
-export class BrokerConfigurationComponent implements OnInit {
+export class ServiceConfigurationComponent implements OnInit {
   version: string = packageJson.version;
   serviceForm: FormGroup;
   feature: Feature;

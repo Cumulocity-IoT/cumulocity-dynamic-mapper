@@ -69,7 +69,6 @@ import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.processor.model.ProcessingContext;
-import dynamic.mapping.rest.MappingRestController;
 
 @Slf4j
 public abstract class AConnectorClient {
@@ -419,7 +418,7 @@ public abstract class AConnectorClient {
 			}
 
 			if (mapping.isActive() && isDeployed) {
-				getMappingsDeployedInbound().put(mapping.ident, mapping);
+				getMappingsDeployedOutbound().put(mapping.ident, mapping);
 			}
 		});
 	}
@@ -678,20 +677,20 @@ public abstract class AConnectorClient {
 		List<String> subscribedMappingsInbound = getMappingsDeployedInbound().keySet().stream()
 				.collect(Collectors.toList());
 		// iterate over all mappings for specific client
-		subscribedMappingsInbound.forEach(ident -> {
-			DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
-					new DeploymentMapEntryDetailed(ident));
+		subscribedMappingsInbound.forEach(mappingIdent -> {
+			DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(mappingIdent,
+					new DeploymentMapEntryDetailed(mappingIdent));
 			mappingDeployed.getConnectors().add(cleanedConfiguration);
-			mappingsDeployed.put(ident, mappingDeployed);
+			mappingsDeployed.put(mappingIdent, mappingDeployed);
 		});
 		List<String> subscribedMappingsOutbound = getMappingsDeployedOutbound().keySet().stream()
 				.collect(Collectors.toList());
 		// iterate over all mappings for specific client
-		subscribedMappingsOutbound.forEach(ident -> {
-			DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
-					new DeploymentMapEntryDetailed(ident));
+		subscribedMappingsOutbound.forEach(mappingIdent -> {
+			DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(mappingIdent,
+					new DeploymentMapEntryDetailed(mappingIdent));
 			mappingDeployed.getConnectors().add(cleanedConfiguration);
-			mappingsDeployed.put(ident, mappingDeployed);
+			mappingsDeployed.put(mappingIdent, mappingDeployed);
 		});
 	}
 }

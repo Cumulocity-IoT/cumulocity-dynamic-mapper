@@ -92,7 +92,7 @@
               [disabled]="snoopDisabled$ | async"
             />
             <span class="m-r-8"></span>
-            Enable snoop
+            Enable snooping
           </label>
           <small class="text-muted"
             >Before defining a complete mapping with substitutions you can snoop
@@ -105,7 +105,7 @@
         </c8y-form-group>
         <!-- <label>Mapping type description</label> -->
         <c8y-form-group>
-          <textarea readonly rows="6" class="form-control fit-w">{{
+          <textarea readonly c8y-textarea-autoresize class="form-control fit-w">{{
             mappingTypeDescription
           }}</textarea>
         </c8y-form-group>

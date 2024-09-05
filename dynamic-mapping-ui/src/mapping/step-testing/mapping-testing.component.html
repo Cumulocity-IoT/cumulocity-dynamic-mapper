@@ -119,17 +119,17 @@
 <div class="col-lg-8 col-lg-offset-2 text-center p-b-24 p-t-24">
   <button
     type="button"
-    class="btn btn-default"
+    class="btn btn-default btn-sm"
     (click)="onTestTransformation()"
-    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation)"
+    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation) || isDisabled(testingModel.results.length > 0)"
   >
     Transform Test Message
   </button>
   <button
     type="button"
-    class="btn btn-default"
+    class="btn btn-default btn-sm"
     (click)="onNextTestResult()"
-    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation)"
+    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation) || isDisabled(testingModel.results.length <= 1)"
   >
     Show Next Test Result&nbsp;<span
       *ngIf="testingModel.results.length > 0"
@@ -140,16 +140,16 @@
   </button>
   <button
     type="button"
-    class="btn btn-default"
+    class="btn btn-default btn-sm"
     (click)="onResetTransformation()"
-    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation)"
+    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation) || isDisabled(testingModel.results.length == 0)"
   >
     Reset Transform
   </button>
   <button
     type="button"
-    class="btn btn-default"
-    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestSending)"
+    class="btn btn-default btn-sm"
+    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestSending) || isDisabled(testingModel.results.length == 0)"
     (click)="onSendTest()"
   >
     Send Test Message

@@ -174,12 +174,12 @@ public class ConfigurationRegistry {
             processorPerTenant = new HashMap<>();
             payloadProcessorsOutbound.put(connectorClient.getTenant(), processorPerTenant);
         }
-        if (!processorPerTenant.containsKey(connectorClient.getConnectorIdent())) {
+        //if (!processorPerTenant.containsKey(connectorClient.getConnectorIdent())) {
             // log.info("Tenant {} - HIER VI {} {}", connectorClient.getTenant(),
             // processorPerTenant);
             processorPerTenant.put(connectorClient.getConnectorIdent(),
                     createPayloadProcessorsOutbound(connectorClient));
-        }
+        //}
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {

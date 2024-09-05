@@ -102,9 +102,11 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 		ServiceConfiguration serviceConfiguration;
 		Timer inboundProcessingTimer;
 		Counter inboundProcessingCounter;
+		AConnectorClient connectorClient;
 
 		public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
-				ConnectorMessage message) {
+				ConnectorMessage message, AConnectorClient connectorClient) {
+			this.connectorClient = connectorClient;
 			this.resolvedMappings = resolvedMappings;
 			this.mappingComponent = configurationRegistry.getMappingComponent();
 			this.c8yAgent = configurationRegistry.getC8yAgent();
@@ -120,7 +122,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 					.tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
 					.tag("connector", connectorMessage.getConnectorIdent()).register(Metrics.globalRegistry);
 
-		}
+        }
 
 		@Override
 		public List<ProcessingContext<?>> call() throws Exception {
@@ -134,7 +136,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 					.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
 			resolvedMappings.forEach(mapping -> {
 				// only process active mappings
-				if (mapping.isActive()) {
+				if (mapping.isActive() && connectorClient.getMappingsDeployedInbound().containsKey(mapping.ident)) {
 					MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
 
 					ProcessingContext<?> context;
@@ -161,15 +163,14 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 							inboundProcessingCounter.increment();
 							processor.deserializePayload(context, connectorMessage);
 							if (serviceConfiguration.logPayload || mapping.debug) {
-								log.info(
-										"Tenant {} - New message on topic: {}, on connector: {},  wrapped message: {}",
+								log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",
 										tenant,
 										context.getTopic(),
-										connectorMessage.getConnectorIdent(),
+										connectorClient.getConnectorIdent(),
 										context.getPayload().toString());
 							} else {
 								log.info("Tenant {} - New message on topic: {}, on connector: {}", tenant,
-										context.getTopic(), connectorMessage.getConnectorIdent());
+										context.getTopic(), connectorClient.getConnectorIdent());
 							}
 							mappingStatus.messagesReceived++;
 							if (mapping.snoopStatus == SnoopStatus.ENABLED
@@ -240,8 +241,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 		if (topic != null && !topic.startsWith("$SYS")) {
 			if (message.getPayload() != null) {
 				try {
-					resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic,
-							message.getConnectorIdent());
+					resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
 				} catch (Exception e) {
 					log.warn(
 							"Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
@@ -258,7 +258,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
 		futureProcessingResult = cachedThreadPool.submit(
 				new MappingInboundTask(configurationRegistry, resolvedMappings,
-						message));
+						message, connectorClient));
 
 		return futureProcessingResult;
 

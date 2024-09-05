@@ -196,7 +196,7 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
   [MappingType.GENERIC_BINARY]: {
     key: MappingType.GENERIC_BINARY,
     description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x". 
-				Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157`,
+Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157`,
     properties: {
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
