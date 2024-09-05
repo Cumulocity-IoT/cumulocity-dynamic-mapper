@@ -20,7 +20,7 @@
  */
 import { NgModule } from '@angular/core';
 import {
-	CommonModule,
+  CommonModule,
   CoreModule,
   DynamicFormsModule,
   hookRoute,
