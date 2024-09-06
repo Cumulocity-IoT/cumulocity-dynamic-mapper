@@ -77,7 +77,7 @@ import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
-import dynamic.mapping.model.MappingDeployment;
+import dynamic.mapping.model.DeploymentMapEntryDetailed;
 
 @Slf4j
 @RestController
@@ -160,13 +160,12 @@ public class MappingRestController {
 					"Insufficient Permission, user does not have required permission to access this API");
 		}
 		// Remove sensitive data before printing to log
-		ConnectorConfiguration clonedConfig = getCleanedConfig(configuration);
+		ConnectorSpecification connectorSpecification = connectorRegistry
+		.getConnectorSpecification(configuration.connectorType);
+		ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
 		log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
 		try {
 			connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-			ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-			bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
-			configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration: ", tenant, ex);
@@ -177,7 +176,7 @@ public class MappingRestController {
 	@RequestMapping(value = "/configuration/connector/instances", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations() {
 		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Get connection details", tenant);
+		log.debug("Tenant {} - Get connection details", tenant);
 
 		try {
 			List<ConnectorConfiguration> configurations = connectorConfigurationComponent
@@ -186,8 +185,9 @@ public class MappingRestController {
 
 			// Remove sensitive data before sending to UI
 			for (ConnectorConfiguration config : configurations) {
-				ConnectorConfiguration clonedConfig = (ConnectorConfiguration) config.clone();
-				ConnectorConfiguration cleanedConfig = getCleanedConfig(clonedConfig);
+				ConnectorSpecification connectorSpecification = connectorRegistry
+				.getConnectorSpecification(config.connectorType);
+				ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
 				modifiedConfigs.add(cleanedConfig);
 			}
 			return ResponseEntity.ok(modifiedConfigs);
@@ -215,8 +215,9 @@ public class MappingRestController {
 			if (client == null)
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Client with ident " + ident + " not found");
 			client.disconnect();
-			bootstrapService.shutdownConnector(tenant, ident);
+			bootstrapService.shutdownAndRemoveConnector(tenant, client.getConnectorIdent());
 			connectorConfigurationComponent.deleteConnectorConfiguration(ident);
+			mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -239,15 +240,15 @@ public class MappingRestController {
 					"Insufficient Permission, user does not have required permission to access this API");
 		}
 		// Remove sensitive data before printing to log
-		ConnectorConfiguration clonedConfig = getCleanedConfig(configuration);
+		ConnectorSpecification connectorSpecification = connectorRegistry
+		.getConnectorSpecification(configuration.connectorType);
+		ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
 		log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
 		try {
 			// check if password filed was touched, e.g. != "****", then use password from
 			// new payload, otherwise copy password from previously saved configuration
 			ConnectorConfiguration originalConfiguration = connectorConfigurationComponent
 					.getConnectorConfiguration(configuration.ident, tenant);
-			ConnectorSpecification connectorSpecification = connectorRegistry
-					.getConnectorSpecification(configuration.connectorType);
 
 			for (String property : configuration.getProperties().keySet()) {
 				if (connectorSpecification.isPropertySensitive(property)
@@ -269,18 +270,6 @@ public class MappingRestController {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
 		return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
-	}
-
-	private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration) {
-		ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
-		ConnectorSpecification connectorSpecification = connectorRegistry
-				.getConnectorSpecification(configuration.connectorType);
-		for (String property : clonedConfig.getProperties().keySet()) {
-			if (connectorSpecification.isPropertySensitive(property)) {
-				clonedConfig.getProperties().replace(property, "****");
-			}
-		}
-		return clonedConfig;
 	}
 
 	@RequestMapping(value = "/configuration/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -340,6 +329,68 @@ public class MappingRestController {
 		}
 	}
 
+	@RequestMapping(value = "/deployment/effective", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Map<String, DeploymentMapEntryDetailed>> getMappingsDeployed() {
+		String tenant = contextService.getContext().getTenant();
+		Map<String, DeploymentMapEntryDetailed> mappingsDeployed = new HashMap<>();
+		try {
+			Map<String, AConnectorClient> connectorMap = connectorRegistry
+					.getClientsForTenant(tenant);
+			if (connectorMap != null) {
+				// iterate over all clients
+				for (AConnectorClient client : connectorMap.values()) {
+					client.collectSubscribedMappingsAll(mappingsDeployed);
+				}
+			}
+
+			log.debug("Tenant {} - Get active subscriptions!", tenant);
+			return ResponseEntity.status(HttpStatus.OK).body(mappingsDeployed);
+		} catch (ConnectorRegistryException e) {
+			throw new RuntimeException(e);
+		}
+
+	}
+
+	@RequestMapping(value = "/deployment/defined/{mappingIdent}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdent,
+			@Valid @RequestBody List<String> deployment) {
+		String tenant = contextService.getContext().getTenant();
+		log.info("Tenant {} - Update deployment for mapping: {} : {}", tenant, mappingIdent, deployment);
+		try {
+			mappingComponent.updateDeploymentMapEntry(tenant, mappingIdent, deployment);
+			return ResponseEntity.status(HttpStatus.CREATED).build();
+		} catch (Exception ex) {
+			log.error("Tenant {} - Error updating deployment for mapping: {}", tenant, mappingIdent, ex);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+		}
+	}
+
+	@RequestMapping(value = "/deployment/defined/{mappingIdent}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<List<String>> getDeploymentMapEntry(@PathVariable String mappingIdent) {
+		String tenant = contextService.getContext().getTenant();
+		log.info("Tenant {} - Get deployment for mapping: {}", tenant, mappingIdent);
+		try {
+			List<String> map = mappingComponent.getDeploymentMapEntry(tenant, mappingIdent);
+			return new ResponseEntity<List<String>>(map, HttpStatus.OK);
+		} catch (Exception ex) {
+			log.error("Tenant {} - Error getting deployment for mapping: {}", tenant, mappingIdent, ex);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+		}
+	}
+
+	@RequestMapping(value = "/deployment/defined", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Map<String, List<String>>> getDeploymentMap() {
+		String tenant = contextService.getContext().getTenant();
+		log.info("Tenant {} - Get complete deployment", tenant);
+		try {
+			Map<String, List<String>> map = mappingComponent.getDeploymentMap(tenant);
+			return new ResponseEntity<Map<String, List<String>>>(map, HttpStatus.OK);
+		} catch (Exception ex) {
+			log.error("Tenant {} - Error getting complete deployment!", tenant, ex);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+		}
+	}
+
 	@RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
 		String tenant = contextService.getContext().getTenant();
@@ -351,11 +402,16 @@ public class MappingRestController {
 				// sync, the ActiveSubscriptionMappingInbound is build on the
 				// previously used updatedMappings
 
-				List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+				List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
 				Map<String, AConnectorClient> connectorMap = connectorRegistry
 						.getClientsForTenant(tenant);
 				for (AConnectorClient client : connectorMap.values()) {
-					client.updateActiveSubscriptions(updatedMappings, false);
+					client.updateActiveSubscriptionsInbound(updatedMappingsInbound, false);
+				}
+				List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
+
+				for (AConnectorClient client : connectorMap.values()) {
+					client.updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 				}
 			} else if (operation.getOperation().equals(Operation.CONNECT)) {
 				String connectorIdent = operation.getParameter().get("connectorIdent");
@@ -364,10 +420,14 @@ public class MappingRestController {
 				configuration.setEnabled(true);
 				connectorConfigurationComponent.saveConnectorConfiguration(configuration);
 
+				//Initialize Connector only when enabled.
+				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+				bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
+				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+
 				AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
 						connectorIdent);
-				// important to use reconnect, since it requires to go through the
-				// initialization phase
+
 				client.submitConnect();
 			} else if (operation.getOperation().equals(Operation.DISCONNECT)) {
 				String connectorIdent = operation.getParameter().get("connectorIdent");
@@ -378,10 +438,15 @@ public class MappingRestController {
 
 				AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
 						connectorIdent);
-				client.submitDisconnect();
+				//client.submitDisconnect();
+				bootstrapService.disableConnector(tenant, client.getConnectorIdent());
+				//We might need to Reconnect other Notification Clients for other connectors
+				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			} else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
 				mappingComponent.sendMappingStatus(tenant);
 			} else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
+				mappingComponent.initializeMappingStatus(tenant, true);
+			} else if (operation.getOperation().equals(Operation.RESET_DEPLOYMENT_MAP)) {
 				mappingComponent.initializeMappingStatus(tenant, true);
 			} else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
 				configurationRegistry.getC8yAgent().reloadExtensions(tenant);
@@ -394,9 +459,11 @@ public class MappingRestController {
 						.getClientsForTenant(tenant);
 				// subscribe/unsubscribe respective subscriptionTopic of mapping only for
 				// outbound mapping
-				if (updatedMapping.direction == Direction.INBOUND) {
-					for (AConnectorClient client : connectorMap.values()) {
-						client.updateActiveSubscription(updatedMapping, false, true);
+				for (AConnectorClient client : connectorMap.values()) {
+					if (updatedMapping.direction == Direction.INBOUND) {
+						client.updateActiveSubscriptionInbound(updatedMapping, false, true);
+					} else {
+						client.updateActiveSubscriptionOutbound(updatedMapping);
 					}
 				}
 			} else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
@@ -407,6 +474,9 @@ public class MappingRestController {
 				String id = operation.getParameter().get("id");
 				SnoopStatus newSnoop = SnoopStatus.valueOf(operation.getParameter().get("snoopStatus"));
 				mappingComponent.setSnoopStatusMapping(tenant, id, newSnoop);
+			} else if (operation.getOperation().equals(Operation.SNOOP_RESET)) {
+				String id = operation.getParameter().get("id");
+				mappingComponent.resetSnoop(tenant, id);
 			} else if (operation.getOperation().equals(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS)) {
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			}
@@ -487,35 +557,6 @@ public class MappingRestController {
 
 	}
 
-	@RequestMapping(value = "/mappingDeployed", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, MappingDeployment>> getMappingsDeployed() {
-		String tenant = contextService.getContext().getTenant();
-		Map<String, MappingDeployment> mappingsDeployed = new HashMap<>();
-		try {
-			Map<String, AConnectorClient> connectorMap = connectorRegistry
-					.getClientsForTenant(tenant);
-			if (connectorMap != null) {
-				for (AConnectorClient client : connectorMap.values()) {
-					ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
-					List<String> subscribedMappings = client.getMappingsDeployed().keySet().stream()
-							.collect(Collectors.toList());
-					subscribedMappings.forEach(ident -> {
-						MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident,
-								new MappingDeployment(ident));
-						mappingDeployed.getDeployedToConnectors().add(cleanedConfiguration);
-						mappingsDeployed.put(ident, mappingDeployed);
-					});
-				}
-			}
-
-			log.debug("Tenant {} - Get active subscriptions!", tenant);
-			return ResponseEntity.status(HttpStatus.OK).body(mappingsDeployed);
-		} catch (ConnectorRegistryException e) {
-			throw new RuntimeException(e);
-		}
-
-	}
-
 	@RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<Mapping>> getMappings() {
 		String tenant = contextService.getContext().getTenant();
@@ -582,7 +623,7 @@ public class MappingRestController {
 				// occur in all of them.
 				Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
 				clients.keySet().stream().forEach(connector -> {
-					clients.get(connector).updateActiveSubscription(createdMapping, true, false);
+					clients.get(connector).updateActiveSubscriptionInbound(createdMapping, true, false);
 				});
 				mappingComponent.deleteFromCacheMappingInbound(tenant, createdMapping);
 				mappingComponent.addToCacheMappingInbound(tenant, createdMapping);
@@ -610,7 +651,7 @@ public class MappingRestController {
 			} else {
 				Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
 				clients.keySet().stream().forEach(connector -> {
-					clients.get(connector).updateActiveSubscription(updatedMapping, false, false);
+					clients.get(connector).updateActiveSubscriptionInbound(updatedMapping, false, false);
 				});
 				mappingComponent.deleteFromCacheMappingInbound(tenant, mapping);
 				mappingComponent.addToCacheMappingInbound(tenant, mapping);

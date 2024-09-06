@@ -139,6 +139,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public static final String MAPPING_FRAGMENT = "d11r_mapping";
 
     public static final String CONNECTOR_FRAGMENT = "d11r_connector";
+    public static final String DEPLOYMENT_MAP_FRAGMENT = "d11r_deploymentMap";
 
     public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
     public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";

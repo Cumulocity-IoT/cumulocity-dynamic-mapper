@@ -21,22 +21,15 @@
 
 package dynamic.mapping.model;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
-import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.commons.lang3.mutable.MutableInt;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableInt;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @ToString
@@ -121,8 +114,7 @@ public class MappingTreeNode {
                     results.addAll(node.resolveTopicPath(remainingLevels));
                 }
                 // test if single level wildcard "+" match exists for this level
-            }
-             else if (childNodes.containsKey(MappingRepresentation.TOPIC_WILDCARD_MULTI)) {
+            } else if (childNodes.containsKey(MappingRepresentation.TOPIC_WILDCARD_MULTI)) {
                 List<MappingTreeNode> revolvedNodes = childNodes.get(MappingRepresentation.TOPIC_WILDCARD_MULTI);
                 for (MappingTreeNode node : revolvedNodes) {
                     results.addAll(node.resolveTopicPath(remainingLevels));
@@ -216,6 +208,19 @@ public class MappingTreeNode {
         }
     }
 
+    /**
+     * @param mapping
+     * @param levels
+     * @param currentLevel
+     * @param branchingLevel the branchingLevel is an indicator if other valid
+     *                       mapping in siblings node exist.
+     *                       this is used when deleting nodes from the tree. In the case
+     *                       where  >0 the ancestor mapping node must not be deleted, as these
+     *                       sibling
+     *                       mapping would be deleted as well
+     * @return
+     * @throws ResolveException
+     */
     private boolean deleteMapping(Mapping mapping, List<String> levels, int currentLevel, MutableInt branchingLevel)
             throws ResolveException {
         MutableBoolean foundMapping = new MutableBoolean(false);
@@ -232,6 +237,13 @@ public class MappingTreeNode {
                     tn.getValue().removeIf(tnn -> {
                         if (tnn.isMappingNode()) {
                             if (tnn.getMapping().id.equals(mapping.id)) {
+                                // update the branchingLevel as indicator if other valid mapping in siblings
+                                // node exist
+                                // in this case the ancestor mapping node must not be deleted, as these sibling
+                                // mapping would be deleted as well
+                                if (getChildNodes().size() > 1) {
+                                    branchingLevel.setValue(currentLevel);
+                                }
                                 log.debug(
                                         "Tenant {} - Deleting mappingNode          : currentPathMonitoring: {}, branchingLevel: {}, mappingId: {}",
                                         tenant,
@@ -252,7 +264,7 @@ public class MappingTreeNode {
                 return foundMapping.booleanValue();
             } else if (currentLevel < levels.size() - 1) {
                 log.debug(
-                        "Tenant {} - Deleting innerNode  (?)       : currentPathMonitoring: {}, branchingLevel: {}",
+                        "Tenant {} - Deleting innerNode    (?)     : currentPathMonitoring: {}, branchingLevel: {}",
                         tenant,
                         currentPathMonitoring, branchingLevel);
                 if (getChildNodes().containsKey(levels.get(currentLevel))) {
@@ -260,6 +272,10 @@ public class MappingTreeNode {
                     tns.removeIf(tn -> {
                         boolean bm = false;
                         if (!tn.isMappingNode() && !foundMapping.booleanValue()) {
+                            // update the branchingLevel as indicator if other valid mapping in siblings
+                            // node exist
+                            // in this case the ancestor mapping node must not be deleted, as these sibling
+                            // mapping would be deleted as well
                             if (getChildNodes().size() > 1) {
                                 branchingLevel.setValue(currentLevel);
                             }

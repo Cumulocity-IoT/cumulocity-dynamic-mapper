@@ -9,3 +9,8 @@ export * from './mapping-tab.factory';
 export * from './overview.guard';
 export * from './admin.guard';
 export * from './camel-case.pipe';
+export * from './connector-log/connector-status.model';
+export * from './connector-configuration/connector.model';
+export * from './connector-log/connector-status.component';
+export * from './connector-configuration/connector-configuration-modal.component';
+

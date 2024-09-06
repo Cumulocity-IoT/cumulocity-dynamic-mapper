@@ -19,46 +19,38 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-title>{{ extension?.name }}</c8y-title>
+<c8y-title>{{ extension['name'] }}</c8y-title>
 
 <c8y-breadcrumb>
   <c8y-breadcrumb-item
     [icon]="'c8y-modules'"
     [label]="'Extensions' | translate"
-    [path]="'sag-ps-pkg-dynamic-mapping/extension'"
+    [path]="LINK"
   >
   </c8y-breadcrumb-item>
-  <c8y-breadcrumb-item [label]="extension?.name"></c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [label]="extension['name']"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
 
 <div class="col-lg-8">
   <div class="card">
     <div class="card-header p-l-32 separator j-c-between">
       <h4 class="card-title">
-        {{ 'Details extension ' + extension?.name | translate }}
+        {{ 'Details extension ' + extension['name'] | translate }}
       </h4>
     </div>
     <div class="card-block">
       <div class="row">
-        <div *ngIf="!isLoading" class="d-contents">
+        <div class="d-contents">
           <c8y-list-group>
             <c8y-li
-              *ngFor="
-                let entry of extension?.extensionEntries;
-                let i = index;
-                loadMore: 'show';
-                enableVirtualScroll: true;
-                virtualScrollElementSize: 40;
-                virtualScrollStrategy: 'fixed';
-                virtualScrollContainerHeight: 400
-              "
+              *ngFor="let entry of extension['extensionEntries']; let i = index"
               #li
             >
               <c8y-li-icon [icon]="'plugin'"></c8y-li-icon>
               <button class="btn-clean" (click)="li.collapsed = !li.collapsed">
                 <span>{{ entry.name }} </span>
                 <span class="label label-primary m-l-8">{{
-                  extension.external ? 'External' : 'Internal'
+                  extension['external'] ? 'External' : 'Internal'
                 }}</span>
               </button>
               <c8y-li-collapse>
@@ -88,8 +80,8 @@
             </c8y-li>
             <c8y-ui-empty-state
               *ngIf="
-                !extension.extensionEntries ||
-                extension.extensionEntries.length === 0
+                !extension['extensionEntries'] ||
+                extension['extensionEntries'].length === 0
               "
               [icon]="'plugin'"
               [title]="

@@ -1,0 +1,84 @@
+<!--
+  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ @authors Christof Strack
+  -->
+<div class="card pointer card--d-col">
+  <div (click)="detail()" class="card-block text-center card-column-40">
+    <div class="card-appicon">
+      <i c8yIcon="plugin"></i>
+    </div>
+    <p class="e2e-appCardName text-medium" title="{{ app['name'] }}">
+      {{ app['name'] }}
+    </p>
+    <small *ngIf="app['manifest']?.version" class="text-muted">
+      <em>{{ app['manifest'].version }}</em>
+    </small>
+  </div>
+
+  <div class="card-block no-min-height card--d-col card-column-80">
+    <div class="card-column-60 text-center-grid p-b-16">
+      <span class="label label-primary">{{
+        external ? 'External' : 'Internal'
+      }}</span>
+    </div>
+
+    <div class="card-footer separator card-column-60 p-b-8">
+      <div *ngIf="app['loaded'] === ExtensionStatus.COMPLETE">
+        <span class="badge badge-info">
+          {{ app['extensionEntries'].length }}</span
+        ><span class="text-muted">&nbsp;Loaded</span>
+      </div>
+      <div *ngIf="app['loaded'] === ExtensionStatus.NOT_LOADED">
+        <span class="text-muted">Not Loaded</span>
+      </div>
+      <div *ngIf="app['loaded'] === ExtensionStatus.PARTIALLY">
+        <span class="badge badge-info">
+          {{ app['extensionEntries'].length }}</span
+        ><span class="text-muted">Partially&nbsp;</span>
+      </div>
+      <div *ngIf="app['loaded'] === ExtensionStatus.UNKNOWN">
+        <span class="text-muted">Not Known</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-actions m-t-0">
+    <div class="dropdown" dropdown>
+      <button
+        class="dropdown-toggle c8y-dropdown"
+        dropdownToggle
+        title="{{ 'Settings' | translate }}"
+      >
+        <i c8yIcon="ellipsis-v"></i>
+      </button>
+      <ul *dropdownMenu class="dropdown-menu dropdown-menu-right">
+        <li>
+          <button
+            (click)="delete()"
+            title="{{ 'Delete' }}"
+            [disabled]="!external"
+          >
+            <i c8yIcon="trash" class="m-r-4"></i>
+            {{ 'Delete' | translate }}
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>

@@ -19,9 +19,11 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
-import { CoreModule, hookRoute } from '@c8y/ngx-components';
+import { CoreModule, hookRoute, hookTab } from '@c8y/ngx-components';
 import { MappingTreeComponent } from './tree.component';
-import { SharedModule } from '../shared';
+import { NODE2, SharedModule } from '../shared';
+import { TreeTabFactory } from './tree-tab.factory';
+import { treeResolver } from './utils';
 
 @NgModule({
   declarations: [MappingTreeComponent],
@@ -29,9 +31,11 @@ import { SharedModule } from '../shared';
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/tree',
-      component: MappingTreeComponent
-    })
+      path: `sag-ps-pkg-dynamic-mapping/${NODE2}/tree`,
+      component: MappingTreeComponent,
+      resolve: { mappingTree: treeResolver }
+    }),
+    hookTab(TreeTabFactory)
   ]
 })
 export class MappingTreeModule {}

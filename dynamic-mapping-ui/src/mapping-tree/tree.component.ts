@@ -18,26 +18,31 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ViewEncapsulation
+} from '@angular/core';
 import { MappingTreeService } from './tree.service';
 import { JsonEditor2Component } from '../shared';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'd11r-mapping-tree-grid',
   templateUrl: 'tree.component.html',
   styleUrls: ['./tree.style.css'],
-
   encapsulation: ViewEncapsulation.None
 })
 export class MappingTreeComponent implements OnInit {
-  constructor(private service: MappingTreeService) {}
+  constructor(private service: MappingTreeService, private route: ActivatedRoute) {}
+
   @ViewChild('editorTree', { static: false }) editorTree: JsonEditor2Component;
-  templateTree: any;
+  mappingTree: any = {};
   editorOptionsTree: any = {};
 
-  ngOnInit(): void {
+  ngOnInit() {
     this.editorOptionsTree = {
-      ...this.editorOptionsTree,
       mode: 'tree',
       mainMenuBar: true,
       navigationBar: false,
@@ -45,10 +50,16 @@ export class MappingTreeComponent implements OnInit {
       readOnly: false,
       name: 'root'
     };
-    this.loadMappingTree();
+	this.mappingTree = this.route.snapshot.data['mappingTree'];
   }
+
   async loadMappingTree() {
-    this.templateTree = await this.service.loadMappingTree();
-    // console.log('MappingTree:', this.templateTree);
+    this.mappingTree = await this.service.loadMappingTree();
   }
+
+//   ngAfterViewInit() {
+//     setTimeout(async () => {
+//       await this.loadMappingTree();
+//     }, 0);
+//   }
 }

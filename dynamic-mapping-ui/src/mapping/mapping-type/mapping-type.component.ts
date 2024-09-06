@@ -29,7 +29,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
-import { Subject } from 'rxjs';
+import { Subject, BehaviorSubject } from 'rxjs';
 import { Direction, MAPPING_TYPE_DESCRIPTION, MappingType } from '../../shared';
 import { isDisabled } from '../shared/util';
 
@@ -46,15 +46,18 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
   isDisabled = isDisabled;
+  MAPPING_TYPE_DESCRIPTION = MAPPING_TYPE_DESCRIPTION;
   formGroupStep: FormGroup;
   snoop: boolean = false;
+  snoopDisabled$: Subject<boolean>;
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
   Direction = Direction;
-  mappingType: MappingType.JSON;
+  mappingType: MappingType = MappingType.JSON;
   mappingTypeDescription: string =
     MAPPING_TYPE_DESCRIPTION[MappingType.JSON].description;
+  valid: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -63,19 +66,17 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     this.elementRef = elementRef;
   }
 
-  //   ngAfterViewInit(): void {
-  //     const selector = `button[title=${MappingType.JSON}]`;
-  //     const preSelectedMappingType =
-  //       this.elementRef.nativeElement.querySelector(selector);
-  //     preSelectedMappingType.click();
-  //   }
-
   ngOnInit(): void {
     this.closeSubject = new Subject();
     // console.log('Subject:', this.closeSubject, this.labels);
     this.formGroupStep = this.fb.group({
       mappingType: ['', Validators.required]
     });
+    // this.snoopDisabled$ = new BehaviorSubject(
+    //   !MAPPING_TYPE_DESCRIPTION[MappingType.JSON].properties[this.direction]
+    //     .snoopSupported
+    // );
+    this.snoopDisabled$ = new BehaviorSubject(true);
   }
 
   onDismiss() {
@@ -84,20 +85,23 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
-    this.closeSubject.next({ mappingType: this.mappingType, snoop: this.snoop });
+    const { snoopSupported } =
+      MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction];
+    this.closeSubject.next({
+      mappingType: this.mappingType,
+      snoop: this.snoop && snoopSupported
+    });
     this.closeSubject.complete();
   }
 
   onSelectMappingType(t) {
+    this.valid = true;
     this.mappingType = t;
     this.mappingTypeDescription = MAPPING_TYPE_DESCRIPTION[t].description;
+    this.snoopDisabled$.next(
+      !MAPPING_TYPE_DESCRIPTION[t].properties[this.direction].snoopSupported
+    );
   }
-
-  //   onSelectMappingType(t) {
-  //     this.mappingType = t;
-  //     this.closeSubject.next(this.mappingType);
-  //     this.closeSubject.complete();
-  //   }
 
   ngOnDestroy() {
     this.closeSubject.complete();

@@ -69,15 +69,16 @@ public class MQTTServiceClient extends MQTTClient {
                 new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null));
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null));
+				String name = "Cumulocity IoT MQTT Service";
         String description = "Specific connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QOS 'exactly once' is reduced to 'at least once'.";
-        connectorType = ConnectorType.MQTT_SERVICE;
-        specification = new ConnectorSpecification(description, connectorType, configProps, false);
+        connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE;
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false);
     }
 
     private static Random random = new Random();
 
     private static String nextId() {
-        return "MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
+        return "CUMULOCITY_MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
     }
     // return random.nextInt(max - min) + min;
 
@@ -103,9 +104,9 @@ public class MQTTServiceClient extends MQTTClient {
         this.tenant = tenant;
         MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
         String user = String.format("%s/%s", tenant, msc.getUsername());
-        getSpecification().getProperties().put("user",
+        getConnectorSpecification().getProperties().put("user",
                 new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true, user, null));
-        getSpecification().getProperties().put("password",
+        getConnectorSpecification().getProperties().put("password",
                 new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
                         msc.getPassword(), null));
         this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE);

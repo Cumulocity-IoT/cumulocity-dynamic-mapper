@@ -20,6 +20,7 @@
  */
 import { Injectable } from '@angular/core';
 import { ApplicationService } from '@c8y/client';
+import * as _ from 'lodash';
 import {
   AlertService,
   AppStateService,
@@ -28,36 +29,101 @@ import {
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
 import { SharedService } from './shared.service';
+import { NODE1, NODE2, NODE3 } from './model/util';
+import { Router } from '@angular/router';
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
   private static readonly APPLICATION_DYNAMIC_MAPPING_SERVICE =
     'dynamic-mapping-service';
-  private NAVIGATION_NODE_MQTT;
 
   appName: string;
+  isStandaloneApp: boolean = false;
 
   constructor(
     private applicationService: ApplicationService,
     private alertService: AlertService,
     private sharedService: SharedService,
-    private appStateService: AppStateService
+    private appStateService: AppStateService,
+    public router: Router
   ) {
-    appStateService.currentApplication.subscribe((c) => {
-      // console.log(c);
-      this.appName = c.name;
+    this.appStateService.currentApplication.subscribe((cur) => {
+      console.log('AppName in MappingNavigationFactory', cur, this.router.url);
+
+      if (_.has(cur?.manifest , 'exports')) {
+        this.isStandaloneApp = true;
+      }
+      this.appName = cur.name;
     });
   }
 
   get() {
-    this.NAVIGATION_NODE_MQTT = new NavigatorNode({
-      parent:  this.appName.startsWith('dynamic-mapping') ? undefined : gettext('Settings'),
-      label: gettext('Dynamic Mapping'),
-      icon: 'ftp-server',
-      path: '/sag-ps-pkg-dynamic-mapping/mappings/inbound',
-      priority: 99,
-      preventDuplicates: true
-    });
+    let navs;
+    if (this.isStandaloneApp) {
+      const parentMapping = new NavigatorNode({
+        label: gettext('Home'),
+        icon: 'home',
+        path: '/sag-ps-pkg-dynamic-mapping/landing',
+        priority: 600,
+        preventDuplicates: true
+      });
+      const mappingConfiguration = new NavigatorNode({
+        label: gettext('Configuration'),
+        icon: 'cog',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+        priority: 500,
+        preventDuplicates: true
+      });
+      const mapping = new NavigatorNode({
+        label: gettext('Mapping'),
+        icon: 'rules',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+        priority: 400,
+        preventDuplicates: true
+      });
+      const mappingMonitoring = new NavigatorNode({
+        label: gettext('Monitoring'),
+        icon: 'pie-chart',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
+        priority: 300,
+        preventDuplicates: true
+      });
+      navs = [parentMapping, mapping, mappingMonitoring, mappingConfiguration];
+    } else {
+      const parentMapping = new NavigatorNode({
+        label: gettext('Dynamic Data Mapper'),
+        icon: 'compare',
+        path: '/sag-ps-pkg-dynamic-mapping/landing',
+        priority: 99,
+        preventDuplicates: true
+      });
+      const mappingConfiguration = new NavigatorNode({
+        parent: gettext('Dynamic Data Mapper'),
+        label: gettext('Configuration'),
+        icon: 'cog',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+        priority: 500,
+        preventDuplicates: true
+      });
+      const mapping = new NavigatorNode({
+        parent: gettext('Dynamic Data Mapper'),
+        label: gettext('Mapping'),
+        icon: 'file-type-document',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+        priority: 400,
+        preventDuplicates: true
+      });
+      const mappingMonitoring = new NavigatorNode({
+        parent: gettext('Dynamic Data Mapper'),
+        label: gettext('Monitoring'),
+        icon: 'pie-chart',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
+        priority: 300,
+        preventDuplicates: true
+      });
+      navs = [parentMapping, mapping, mappingMonitoring, mappingConfiguration];
+    }
+
     const feature: any = this.sharedService.getFeatures();
     return this.applicationService
       .isAvailable(MappingNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)
@@ -69,7 +135,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
           console.error('dynamic-mapping-service microservice not subscribed!');
           return [];
         }
-        return this.NAVIGATION_NODE_MQTT;
+        return navs;
       });
   }
 }

@@ -19,14 +19,14 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-title>{{ 'All extensions' | translate }}</c8y-title>
+<c8y-title>{{ 'Configuration' | translate }}</c8y-title>
 
 <c8y-breadcrumb>
   <!-- <c8y-breadcrumb-item [icon]="'c8y-atom'" [label]="'Processor' | translate"></c8y-breadcrumb-item> -->
   <c8y-breadcrumb-item
     [icon]="'c8y-modules'"
     [label]="'Extensions' | translate"
-    [path]="'sag-ps-pkg-dynamic-mapping/extension'"
+    [path]="'sag-ps-pkg-dynamic-mapping/node3/extension'"
   >
     <!-- <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'Extensions' | translate"> -->
   </c8y-breadcrumb-item>
@@ -51,7 +51,7 @@
     (click)="addExtension()"
     class="btn btn-link"
     title="{{ 'Add extension' | translate }}"
-    [disabled]="!externalExtensionEnabled || !feature?.userHasMappingAdminRole"
+    [disabled]="!externalExtensionEnabled"
   >
     <i c8yIcon="plus-circle"></i>
     {{ 'Add extension' | translate }}
@@ -63,7 +63,6 @@
     (click)="reloadExtensions()"
     class="btn btn-link"
     title="{{ 'Reload' | translate }}"
-	[disabled]="!feature?.userHasMappingAdminRole"
   >
     <i [ngClass]="{ 'icon-spin': reloading }" c8yIcon="refresh"></i>
     {{ 'Reload' | translate }}

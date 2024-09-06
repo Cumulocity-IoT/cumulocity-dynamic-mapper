@@ -115,7 +115,7 @@ export const ValidationFormlyError = {
   }
 };
 
-export class C8YAPISubscription {
+export class C8YNotificationSubscription {
   api: string;
   devices: IIdentified[];
 }

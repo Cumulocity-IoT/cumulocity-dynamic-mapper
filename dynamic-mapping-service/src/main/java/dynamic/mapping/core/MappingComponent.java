@@ -31,6 +31,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import javax.validation.Valid;
+
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +66,9 @@ public class MappingComponent {
 
 	// structure: <tenant, < mappingId , status>>
 	private Map<String, Map<String, MappingStatus>> tenantStatusMapping = new HashMap<>();
+
+	// structure: <tenant, < mappingId ,list of connectorId>>
+	private Map<String, Map<String, List<String>>> tenantDeploymentMap = new HashMap<>();
 
 	private Map<String, Set<Mapping>> dirtyMappings = new HashMap<>();
 
@@ -131,6 +137,21 @@ public class MappingComponent {
 			cacheMappingInbound.put(tenant, new HashMap<>());
 		if (cacheMappingOutbound.get(tenant) == null)
 			cacheMappingOutbound.put(tenant, new HashMap<>());
+	}
+
+	public void initializeDeploymentMap(String tenant, boolean reset) {
+		MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
+				.getMappingServiceRepresentations().get(tenant);
+		if (mappingServiceRepresentation.getDeploymentMap() != null && !reset) {
+			log.debug("Tenant {} - Initializing deploymentMap: {}, {} ", tenant,
+					mappingServiceRepresentation.getDeploymentMap(),
+					(mappingServiceRepresentation.getDeploymentMap() == null
+							|| mappingServiceRepresentation.getDeploymentMap().size() == 0 ? 0
+									: mappingServiceRepresentation.getDeploymentMap().size()));
+			tenantDeploymentMap.put(tenant, mappingServiceRepresentation.getDeploymentMap());
+		} else {
+			tenantDeploymentMap.put(tenant, new HashMap<>());
+		}
 	}
 
 	public void cleanMappingStatus(String tenant) {
@@ -231,6 +252,8 @@ public class MappingComponent {
 			deleteMappingStatus(tenant, id);
 			return m.getC8yMQTTMapping();
 		});
+		if (result != null)
+			removeMappingFromDeploymentMap(tenant, result.ident);
 		// log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
 		return result;
 	}
@@ -349,7 +372,7 @@ public class MappingComponent {
 		}
 	}
 
-	public void rebuildMappingOutboundCache(String tenant) {
+	public List<Mapping> rebuildMappingOutboundCache(String tenant) {
 		// only add outbound mappings to the cache
 		List<Mapping> updatedMappings = getMappings(tenant).stream()
 				.filter(m -> Direction.OUTBOUND.equals(m.direction))
@@ -359,6 +382,7 @@ public class MappingComponent {
 				.collect(Collectors.toMap(Mapping::getId, Function.identity())));
 		resolverMappingOutbound.replace(tenant, updatedMappings.stream()
 				.collect(Collectors.groupingBy(Mapping::getFilterOutbound)));
+		return updatedMappings;
 	}
 
 	public List<Mapping> resolveMappingOutbound(String tenant, JsonNode message, API api) throws ResolveException {
@@ -484,7 +508,6 @@ public class MappingComponent {
 		}
 	}
 
-
 	public void setSnoopStatusMapping(String tenant, String id, SnoopStatus snoop) throws Exception {
 		// step 1. update debug for mapping
 		log.info("Tenant {} - Setting snoop: {} got mapping: {}", tenant, id, snoop);
@@ -513,7 +536,7 @@ public class MappingComponent {
 	public void cleanDirtyMappings(String tenant) throws Exception {
 		// test if for this tenant dirty mappings exist
 		log.debug("Tenant {} - Testing for dirty maps", tenant);
-		if (dirtyMappings.get(tenant) != null) {
+		if (dirtyMappings.get(tenant) != null && dirtyMappings.get(tenant).size() > 0) {
 			for (Mapping mapping : dirtyMappings.get(tenant)) {
 				log.info("Tenant {} - Found mapping to be saved: {}, {}", tenant, mapping.id, mapping.snoopStatus);
 				// no reload required
@@ -546,6 +569,109 @@ public class MappingComponent {
 				.resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
 		return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
 				.map(mn -> mn.getMapping()).collect(Collectors.toList());
+	}
+
+	// public List<Mapping> resolveMappingInbound(String tenant, String topic, String connectorIdent)
+	// 		throws ResolveException {
+	// 	List<Mapping> resolvedMappings = resolveMappingInbound(tenant, topic);
+	// 	resolvedMappings.removeIf(m -> !getDeploymentMapEntry(tenant, m.ident).contains(connectorIdent));
+	// 	return resolvedMappings;
+	// }
+
+	public void resetSnoop(String tenant, String id) throws Exception {
+		// step 1. update debug for mapping
+		log.info("Tenant {} - Reset snoop for mapping: {}", tenant, id);
+		Mapping mapping = getMapping(tenant, id);
+
+		// nothing to do for outbound mappings
+		if (Direction.INBOUND.equals(mapping.direction)) {
+			// step 2. retrieve collected snoopedTemplates
+			mapping.setSnoopedTemplates(new ArrayList<>());
+			// step 3. update mapping in inventory
+			// don't validate mapping when setting active = false, this allows to remove
+			// mappings that are not working
+			updateMapping(tenant, mapping, true, true);
+			// step 4. delete mapping from update cache
+			removeDirtyMapping(tenant, mapping);
+			// step 5. update caches
+			if (Direction.OUTBOUND.equals(mapping.direction)) {
+				rebuildMappingOutboundCache(tenant);
+			} else {
+				deleteFromCacheMappingInbound(tenant, mapping);
+				addToCacheMappingInbound(tenant, mapping);
+				cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+			}
+			configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
+					C8YAgent.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+					DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+					null);
+		}
+	}
+
+	public void updateDeploymentMapEntry(String tenant, String mappingIdent, @Valid List<String> deployment) {
+		if (!tenantDeploymentMap.containsKey(tenant)) {
+			tenantDeploymentMap.put(tenant, new HashMap<>());
+		}
+		Map<String, List<String>> map = tenantDeploymentMap.get(tenant);
+		map.put(mappingIdent, deployment);
+		saveDeploymentMap(tenant);
+	}
+
+	public List<String> getDeploymentMapEntry(String tenant, String mappingIdent) {
+		Map<String, List<String>> map = getDeploymentMap(tenant);
+		if (!map.containsKey(mappingIdent)) {
+			map.put(mappingIdent, new ArrayList<>());
+		}
+		return map.get(mappingIdent);
+	}
+
+	public Map<String, List<String>> getDeploymentMap(String tenant) {
+		if (!tenantDeploymentMap.containsKey(tenant)) {
+			tenantDeploymentMap.put(tenant, new HashMap<>());
+		}
+		Map<String, List<String>> map = tenantDeploymentMap.get(tenant);
+		return map;
+	}
+
+	public boolean removeConnectorFromDeploymentMap(String tenant, String connectorIdent) {
+		MutableBoolean result = new MutableBoolean(false);
+		if (!tenantDeploymentMap.containsKey(tenant)) {
+			return result.booleanValue();
+		}
+		for (List<String> deploymentList : tenantDeploymentMap.get(tenant).values()) {
+			result.setValue(deploymentList.remove(connectorIdent) || result.booleanValue());
+		}
+		if (result.getValue())
+			saveDeploymentMap(tenant);
+		return result.booleanValue();
+	}
+
+	public boolean removeMappingFromDeploymentMap(String tenant, String mappingIdent) {
+		MutableBoolean result = new MutableBoolean(false);
+		if (!tenantDeploymentMap.containsKey(tenant)) {
+			saveDeploymentMap(tenant);
+		}
+		List<String> remove = tenantDeploymentMap.get(tenant).remove(mappingIdent);
+		result.setValue(remove != null && remove.size() > 0);
+		if (result.getValue())
+			saveDeploymentMap(tenant);
+		return result.booleanValue();
+	}
+
+	public void saveDeploymentMap(String tenant) {
+		subscriptionsService.runForTenant(tenant, () -> {
+			MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
+					.getMappingServiceRepresentations().get(tenant);
+			// avoid sending empty monitoring events
+			log.info("Tenant {} - Saving deploymentMap: {}", tenant, tenantDeploymentMap.get(tenant).size());
+			Map<String, Object> map = new HashMap<String, Object>();
+			Map<String, List<String>> deploymentMapPerTenant = tenantDeploymentMap.get(tenant);
+			map.put(C8YAgent.DEPLOYMENT_MAP_FRAGMENT, deploymentMapPerTenant);
+			ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
+			updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
+			updateMor.setAttrs(map);
+			this.inventoryApi.update(updateMor);
+		});
 	}
 
 }

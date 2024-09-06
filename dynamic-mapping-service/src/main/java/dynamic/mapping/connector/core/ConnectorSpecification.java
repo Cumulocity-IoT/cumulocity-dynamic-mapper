@@ -16,6 +16,10 @@ import java.util.Map;
 @AllArgsConstructor
 public class ConnectorSpecification implements Cloneable {
 
+	@NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String name;
+
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public String description;

@@ -18,52 +18,26 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { NODE3 } from '../../shared';
 import { IManagedObject } from '@c8y/client';
-import { gettext } from '@c8y/ngx-components';
-import { ExtensionService } from '../share/extension.service';
 
 @Component({
   selector: 'd11r-mapping-extension-properties',
   templateUrl: './extension-properties.component.html'
 })
-export class ExtensionPropertiesComponent {
+export class ExtensionPropertiesComponent implements OnInit {
   extensionsEntryForm: FormGroup;
   extension: IManagedObject;
-  isLoading: boolean = true;
+  LINK = `sag-ps-pkg-dynamic-mapping/${NODE3}/extension`;
   breadcrumbConfig: { icon: string; label: string; path: string };
 
-  constructor(
-    private activatedRoute: ActivatedRoute,
-    private extensionService: ExtensionService
-  ) {
-    this.refresh();
-  }
+  constructor(private route: ActivatedRoute) {}
 
-  async refresh() {
-    await this.load();
-    this.setBreadcrumbConfig();
-  }
-
-  async load() {
-    this.isLoading = true;
-    await this.loadExtension();
-    this.isLoading = false;
-  }
-
-  async loadExtension() {
-    const { id } = this.activatedRoute.snapshot.params;
-    const result = await this.extensionService.getExtensionsEnriched(id);
-    this.extension = result[0];
-  }
-
-  private setBreadcrumbConfig() {
-    this.breadcrumbConfig = {
-      icon: 'c8y-modules',
-      label: gettext('Extensions'),
-      path: 'sag-ps-pkg-dynamic-mapping/extension'
-    };
+  ngOnInit() {
+    const {extensions} = this.route.snapshot.data;
+    this.extension = extensions[0];
   }
 }

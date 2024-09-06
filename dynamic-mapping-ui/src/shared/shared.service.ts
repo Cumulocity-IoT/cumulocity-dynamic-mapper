@@ -18,23 +18,38 @@
  *
  * @authors Christof Strack
  */
+
 import { Injectable } from '@angular/core';
-import { FetchClient, IdentityService, IExternalIdentity } from '@c8y/client';
-import { AGENT_ID, BASE_URL, Direction, PATH_FEATURE_ENDPOINT } from '.';
-import { Feature } from '../configuration/shared/configuration.model';
+import {
+  IFetchResponse,
+  IdentityService,
+  IExternalIdentity
+} from '@c8y/client';
+import {
+  AGENT_ID,
+  BASE_URL,
+  Direction,
+  Feature,
+  Operation,
+  PATH_CONFIGURATION_SERVICE_ENDPOINT,
+  PATH_FEATURE_ENDPOINT,
+  PATH_OPERATION_ENDPOINT
+} from '.';
 import { Subject, takeUntil, timer } from 'rxjs';
+import { FetchClient } from '@c8y/ngx-components/api';
+import { ServiceConfiguration } from '../configuration';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
   constructor(
     private client: FetchClient,
     private identity: IdentityService
-
   ) {}
   private _agentId: string;
   private _featurePromise: Promise<Feature>;
   reloadInbound$: Subject<void> = new Subject<void>();
   reloadOutbound$: Subject<void> = new Subject<void>();
+  private _serviceConfiguration: ServiceConfiguration;
 
   async getDynamicMappingServiceAgent(): Promise<string> {
     if (!this._agentId) {
@@ -52,19 +67,6 @@ export class SharedService {
     }
     return this._agentId;
   }
-
-  //   async getFeatures(): Promise<Feature> {
-  //     if (!this._feature) {
-  //       const response = await this.client.fetch(
-  //         `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
-  //         {
-  //           method: 'GET'
-  //         }
-  //       );
-  //       this._feature = await response.json();
-  //     }
-  //     return this._feature;
-  //   }
 
   async getFeatures(): Promise<Feature> {
     if (!this._featurePromise) {
@@ -100,5 +102,56 @@ export class SharedService {
         });
       // this.reloadOutbound$.next();
     }
+  }
+
+  async runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
+    let body: any = {
+      operation: op
+    };
+    if (parameter) {
+      body = {
+        ...body,
+        parameter: parameter
+      };
+    }
+    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(body),
+      method: 'POST'
+    });
+  }
+
+  async updateServiceConfiguration(
+    configuration: ServiceConfiguration
+  ): Promise<IFetchResponse> {
+    return this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(configuration),
+        method: 'PUT'
+      }
+    );
+  }
+
+  async getServiceConfiguration(): Promise<ServiceConfiguration> {
+    if (!this._serviceConfiguration) {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
+        {
+          headers: {
+            accept: 'application/json'
+          },
+          method: 'GET'
+        }
+      );
+      this._serviceConfiguration = await response.json();
+    }
+
+    return this._serviceConfiguration;
   }
 }

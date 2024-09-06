@@ -22,6 +22,7 @@ import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { SharedService } from './shared.service';
+import { NODE1, NODE2, NODE3 } from './model/util';
 @Injectable()
 export class MappingTabFactory implements TabFactory {
   constructor(
@@ -30,64 +31,58 @@ export class MappingTabFactory implements TabFactory {
   ) {}
 
   async get() {
-    // console.log("MappingTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
+    // console.log('MappingTabFactory',this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
     const feature = await this.sharedService.getFeatures();
 
     const tabs: Tab[] = [];
-    if (this.router.url.match(/sag-ps-pkg-dynamic-mapping/g)) {
-      // if (feature?.userHasMappingAdminRole) {
+    if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node1/g)) {
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/configuration',
+        path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
         priority: 930,
-        label: 'Connector',
-        icon: 'cog',
-        orientation: 'horizontal'
-      } as Tab);
-      // }
-
-      tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/mappings/inbound',
-        priority: 920,
-        label: 'Mapping inbound',
+        label: 'Inbound mapping',
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
 
       if (feature?.outputMappingEnabled) {
         tabs.push({
-          path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
-          priority: 910,
-          label: 'Mapping outbound',
+          path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
+          priority: 920,
+          label: 'Outbound mapping',
           icon: 'swipe-left',
           orientation: 'horizontal'
         } as Tab);
       }
-
+    } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node2/g)) {
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/testing',
-        priority: 900,
+        path: `sag-ps-pkg-dynamic-mapping/${NODE2}/testing`,
+        priority: 700,
         label: 'Test device',
         icon: 'reflector-bulb',
         orientation: 'horizontal'
       } as Tab);
-
+    } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node3/g)) {
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/tree',
-        priority: 890,
-        label: 'Mapping tree inbound',
-        icon: 'tree-structure',
+        path: `sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+        priority: 910,
+        label: 'Connector',
+        icon: 'connected',
         orientation: 'horizontal'
       } as Tab);
-
-      // if (feature?.userHasMappingAdminRole) {
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/extension',
-        priority: 880,
+        path: `sag-ps-pkg-dynamic-mapping/${NODE3}/extension`,
+        priority: 500,
         label: 'Processor extension',
         icon: 'plugin',
         orientation: 'horizontal'
       } as Tab);
-      //  }
+      tabs.push({
+        path: `sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+        priority: 500,
+        label: 'Service configuration',
+        icon: 'cog',
+        orientation: 'horizontal'
+      } as Tab);
     }
     return tabs;
   }

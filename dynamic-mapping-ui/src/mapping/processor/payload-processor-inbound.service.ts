@@ -136,9 +136,9 @@ export abstract class PayloadProcessorInbound {
                 context
               );
             } catch (e) {
-              //console.log(
+              // console.log(
               //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
-              //);
+              // );
             }
             if (!sourceId && mapping.createNonExistingDevice) {
               const request = {
@@ -242,9 +242,9 @@ export abstract class PayloadProcessorInbound {
           'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}'
         );
       }
-      //console.log(
+      // console.log(
       //  `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: ${deviceEntries.length}`
-      //);
+      // );
       i++;
     }
   }
@@ -278,7 +278,14 @@ export abstract class PayloadProcessorInbound {
         // jsonObject.put("$", keys, sub.typedValue());
         _.set(jsonObject, keys, getTypedValue(sub));
       } else {
-        _.set(jsonObject, keys, getTypedValue(sub));
+        if (_.has(jsonObject, keys)) {
+          _.set(jsonObject, keys, getTypedValue(sub));
+        } else {
+          this.alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
+          throw new Error(
+            `Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`
+          );
+        }
       }
     }
   }

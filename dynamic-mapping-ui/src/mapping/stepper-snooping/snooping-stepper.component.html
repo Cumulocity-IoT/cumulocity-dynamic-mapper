@@ -1,0 +1,74 @@
+<!--
+  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ @authors Christof Strack
+  -->
+
+<c8y-stepper
+  class="d-col no-align-items fit-h c8y-stepper--no-btns a-i-center"
+  [disableDefaultIcons]="{ edit: true, done: false }"
+  [customClasses]="[
+    'col-xs-10',
+    'col-sm-8',
+    'm-t-24',
+    'm-b-40',
+    'p-0',
+    'flex-no-shrink'
+  ]"
+>
+  <!-- override icons -->
+  <ng-template c8yStepperIcon="final">
+    <span [c8yIcon]="'hand-peace-o'"></span>
+  </ng-template>
+  <cdk-step label="Add and select connector">
+    <div class="col-xs-12 flex-grow no-gutter">
+      <d11r-mapping-connector
+        [stepperConfiguration]="stepperConfiguration"
+        [(deploymentMapEntry)]="deploymentMapEntry"
+      ></d11r-mapping-connector>
+    </div>
+    <c8y-stepper-buttons
+      class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+      (onCancel)="cancel.emit()"
+      (onNext)="onNextStep($event)"
+      [labels]="labels"
+    >
+    </c8y-stepper-buttons>
+  </cdk-step>
+  <cdk-step
+    label="Properties snooping"
+    state="final"
+    [stepControl]="propertyFormly"
+  >
+    <div class="col-xs-12 flex-grow no-gutter">
+      <d11r-mapping-properties
+        [mapping]="mapping"
+        [stepperConfiguration]="stepperConfiguration"
+        [propertyFormly]="propertyFormly"
+      >
+      </d11r-mapping-properties>
+    </div>
+    <c8y-stepper-buttons
+      class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+      (onCancel)="cancel.emit()"
+      (onCustom)="onCommitButton()"
+      [labels]="{ custom: 'Confirm' }"
+    >
+    </c8y-stepper-buttons>
+  </cdk-step>
+</c8y-stepper>

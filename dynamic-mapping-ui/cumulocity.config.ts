@@ -36,19 +36,19 @@ export default {
     //   ? []
     //   : [
     //       {
-    //         name: 'Dynamic Mapping Widget',
+    //         name: 'Dynamic Data Mapper',
     //         module: 'DynamicMappingModule',
     //         path: './src/dynamic-mapping.module',
-    //         description: 'Adds a Dynamic Mapping Plugin'
+    //         description: 'Adds a Dynamic Data Mapper Plugin'
     //       }
     //     ]
     // isPackage: true,
     exports: [
       {
-        name: 'Dynamic Mapping Widget',
+        name: 'Dynamic Mapping Mapper Plugin',
         module: 'DynamicMappingModule',
         path: './src/dynamic-mapping.module',
-        description: 'Adds a Dynamic Mapping Plugin'
+        description: 'Adds a Dynamic Mapping Mapper Plugin'
       }
     ]
     // comment end
@@ -60,16 +60,44 @@ export default {
         to: 'README.md'
       },
       {
-        from: '../resources/image/Generic_Mapping_AddMapping.png',
-        to: 'image/Generic_Mapping_AddMapping.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table_Add.png'
       },
       {
-        from: '../resources/image/Generic_Mapping_MappingTemplate.png',
-        to: 'image/Generic_Mapping_MappingTemplate.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Annotated.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Annotated.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Animated.gif',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Animated.gif'
       },
       {
         from: '../resources/image/DM_App-Icon_03.png',
         to: 'image/DM_App-Icon_03.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Process.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Process.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.png',
+        to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.svg',
+        to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
+      },
+      {
+        from: '../resources/image/Test.svg',
+        to: 'image/Test.svg'
       }
     ],
     federation: [

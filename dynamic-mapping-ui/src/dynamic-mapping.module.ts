@@ -28,7 +28,7 @@ import {
   hookTab
 } from '@c8y/ngx-components';
 import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
-import { BrokerConfigurationModule } from './configuration/broker-configuration.module';
+import { BrokerConfigurationModule } from './configuration/service-configuration.module';
 import { ExtensionModule } from './extension/extension.module';
 import { MappingTreeModule } from './mapping-tree/tree.module';
 import { MappingModule } from './mapping/mapping.module';
@@ -45,7 +45,7 @@ import {
 import { TestingModule } from './testing-device/testing.module';
 import './shared/styles/shared.css';
 import {
-  checkTopicsInboundAreValidWithOption,
+  checkTopicsInboundAreValid,
   checkTopicsOutboundAreValid
 } from './mapping/shared/util';
 import { WrapperFormlyHorizontal } from './mapping/shared/formly/horizontal.wrapper.component';
@@ -54,15 +54,19 @@ import { MessageField } from './mapping/shared/formly/message.type.component';
 import { FormlyTextField } from './mapping/shared/formly/text.type.component';
 import { FieldTextareaCustom } from './mapping/shared/formly/textarea.type.component';
 import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-field.wrapper.component';
+import { BrokerConnectorModule } from './connector';
+import { LandingModule } from './landing/landing.module';
 
 @NgModule({
   imports: [
     CoreModule,
+	LandingModule,
     TestingModule,
     MappingModule,
     MappingTreeModule,
     MonitoringModule,
     BrokerConfigurationModule,
+    BrokerConnectorModule,
     ExtensionModule,
     FormsModule,
     ModalModule,
@@ -71,7 +75,7 @@ import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-fiel
     CommonModule,
     DynamicFormsModule,
     FormlyPresetModule,
-    SharedModule
+    SharedModule,
   ],
   exports: [],
   declarations: [],
@@ -80,6 +84,7 @@ import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-fiel
     BsModalService,
     hookNavigator(MappingNavigationFactory),
     hookTab(MappingTabFactory),
+
     {
       provide: FORMLY_CONFIG,
       multi: true,
@@ -87,7 +92,7 @@ import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-fiel
         validators: [
           {
             name: 'checkTopicsInboundAreValid',
-            validation: checkTopicsInboundAreValidWithOption
+            validation: checkTopicsInboundAreValid
           },
           {
             name: 'checkTopicsOutboundAreValid',
@@ -104,7 +109,7 @@ import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-fiel
         ],
         wrappers: [
           { name: 'form-field-horizontal', component: WrapperFormlyHorizontal },
-          { name: 'custom-form-field', component: WrapperCustomFormField },
+          { name: 'custom-form-field', component: WrapperCustomFormField }
         ]
       }
     }

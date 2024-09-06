@@ -42,7 +42,7 @@ export class MonitoringService {
 
   async subscribeMonitoringChannel(): Promise<object> {
     const agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    console.log('Start subscription for monitoring:', agentId);
+    // console.log('Start subscription for monitoring:', agentId);
 
     const { data } = await this.inventory.detail(agentId);
     const monitoring: MappingStatus[] = data[MAPPING_FRAGMENT];
