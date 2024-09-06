@@ -41,7 +41,7 @@ import {
   Observable,
   Subject
 } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { Realtime } from '@c8y/ngx-components/api';
 
 @Injectable({ providedIn: 'root' })
@@ -51,18 +51,19 @@ export class ConnectorConfigurationService {
     private sharedService: SharedService
   ) {
     this.initConnectorConfigurations();
+    this.startConnectorStatusSubscriptions();
     this.realtime = new Realtime(this.client);
-    // console.log("Constructor:BrokerConfigurationService");
   }
 
   private _connectorConfigurations: ConnectorConfiguration[];
   private _connectorSpecifications: ConnectorSpecification[];
 
   private triggerConfigurations$: Subject<string> = new Subject();
-  private incomingRealtime$: Subject<IEvent> = new Subject();
+  private realtimeConnectorStatus$: Subject<IEvent> = new Subject();
   private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
 
   private _agentId: string;
+  private initialized: boolean = false;
   private realtime: Realtime;
   private subscriptionEvents: any;
 
@@ -77,29 +78,30 @@ export class ConnectorConfigurationService {
   }
 
   startConnectorConfigurations() {
-    this.triggerConfigurations$.next('');
-    this.incomingRealtime$.next({} as any);
-	this.startConnectorStatusSubscriptions();
+    const n = Date.now();
+    if (!this.initialized) {
+      this.initConnectorConfigurations();
+      this.startConnectorStatusSubscriptions();
+      this.initialized = true;
+    }
+	this.realtimeConnectorStatus$.next({} as any);
+	this.triggerConfigurations$.next('start' + '/' + n);
   }
 
-  reloadConnectorConfigurations() {
-    this.triggerConfigurations$.next('');
+  updateConnectorConfigurations() {
+    const n = Date.now();
+    this.triggerConfigurations$.next('refresh' + '/' + n);
   }
 
   stopConnectorConfigurations() {
     this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
-  refreshConnectorConfigurations() {
-    this.triggerConfigurations$.next('');
-  }
-
   initConnectorConfigurations() {
-    // console.log(
-    //   'Calling BrokerConfigurationService.initConnectorConfigurations()'
-    // );
     const connectorConfig$ = this.triggerConfigurations$.pipe(
-      // tap(() => console.log('New triggerConfigurations!')),
+      //   tap((state) =>
+      //     console.log('New triggerConfigurations:', state + '/' + Date.now())
+      //   ),
       switchMap(() => {
         const observableConfigurations = from(
           this.getConnectorConfigurations()
@@ -120,11 +122,12 @@ export class ConnectorConfigurationService {
           }
         });
         return configurations;
-      })
+      }),
+      shareReplay(1)
     );
     this.connectorConfigurations$ = combineLatest([
       connectorConfig$,
-      this.incomingRealtime$
+      this.realtimeConnectorStatus$
     ]).pipe(
       map((vars) => {
         const [configurations, payload] = vars;
@@ -245,6 +248,6 @@ export class ConnectorConfigurationService {
 
   private updateConnectorStatus = async (p: object) => {
     const payload = p['data']['data'];
-    this.incomingRealtime$.next(payload);
+    this.realtimeConnectorStatus$.next(payload);
   };
 }

@@ -65,22 +65,15 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     // console.log('Running version', this.version);
     this.feature = await this.sharedService.getFeatures();
+    this.statusLogs$ = this.connectorStatusService.getStatusLogs();
+    await this.connectorStatusService.startConnectorStatusLogs();
+
     this.connectorConfigurationService
       .getConnectorConfigurationsLive()
       .subscribe((confs) => {
         this.configurations = confs;
       });
-    // if (!this.feature.userHasMappingAdminRole) {
-    //   this.alertService.warning(
-    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
-    //   );
-    // }
-
-    this.connectorStatusService.getStatusLogs()?.subscribe((logs) => {
-      this.statusLogs = logs;
-    });
-    this.connectorStatusService.startConnectorStatusLogs();
-    this.statusLogs$ = this.connectorStatusService.getStatusLogs();
+    await this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   updateStatusLogs() {

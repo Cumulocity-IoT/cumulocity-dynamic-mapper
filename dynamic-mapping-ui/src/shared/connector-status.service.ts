@@ -29,7 +29,7 @@ import {
 } from '../shared';
 
 import { merge, Observable, Subject } from 'rxjs';
-import { filter, map, scan, switchMap } from 'rxjs/operators';
+import { filter, map, scan, share, switchMap, tap } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class ConnectorStatusService {
@@ -39,11 +39,10 @@ export class ConnectorStatusService {
     private sharedService: SharedService
   ) {
     this.realtime = new Realtime(this.client);
-    this.initConnectorLogsRealtime();
-    // console.log("Constructor:BrokerConfigurationService");
   }
 
   private _agentId: string;
+  private initialized: boolean = false;
   private realtime: Realtime;
   private subscriptionEvents: any;
   private filterStatusLog = {
@@ -52,17 +51,21 @@ export class ConnectorStatusService {
     connectorIdent: 'ALL'
   };
   private triggerLogs$: Subject<any> = new Subject();
-  private incomingRealtime$: Subject<IEvent> = new Subject();
-  private statusLogs$: Observable<any[]>;
+  private realtimeConnectorStatus$: Subject<IEvent> = new Subject();
+  private statusLogs$: Subject<any[]> = new Subject();
 
   getStatusLogs(): Observable<any[]> {
     return this.statusLogs$;
   }
 
-  startConnectorStatusLogs() {
-    this.startConnectorStatusSubscriptions();
-    this.triggerLogs$.next([{ type: 'reset' }]);
-    this.incomingRealtime$.next({} as any);
+  async startConnectorStatusLogs() {
+    // console.log('Calling: startConnectorStatusLogs');
+	if (!this.initialized) {
+		this.startConnectorStatusSubscriptions();
+		await this.initConnectorLogsRealtime();
+		this.initialized = true;
+	}
+	this.triggerLogs$.next([{ type: 'reset' }]);
   }
 
   updateStatusLogs(filter: any) {
@@ -78,10 +81,10 @@ export class ConnectorStatusService {
     if (!this._agentId) {
       this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
-    // console.log(
-    //  'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
-    //  this._agentId
-    // );
+    console.log(
+      'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
+      this._agentId
+    );
     const sourceList$ = this.triggerLogs$.pipe(
       // tap((x) => console.log('TriggerLogs In', x)),
       switchMap(() => {
@@ -110,11 +113,12 @@ export class ConnectorStatusService {
             ? true
             : event.connectorIdent == this.filterStatusLog.connectorIdent;
         })
-      )
+      ),
+      share()
       // tap((x) => console.log('TriggerLogs Out', x))
     );
 
-    const sourceRealtime$ = this.incomingRealtime$.pipe(
+    const sourceRealtime$ = this.realtimeConnectorStatus$.pipe(
       // tap((x) => console.log('IncomingRealtime In', x)),
       filter((event) => {
         return (
@@ -134,7 +138,7 @@ export class ConnectorStatusService {
       })
     );
 
-    this.statusLogs$ = merge(
+    const o: Observable<any> = merge(
       sourceList$,
       sourceRealtime$,
       this.triggerLogs$
@@ -152,6 +156,7 @@ export class ConnectorStatusService {
         return sortedAcc;
       }, [])
     );
+    o.subscribe((logs) => this.statusLogs$.next(logs));
   }
 
   async startConnectorStatusSubscriptions(): Promise<void> {
@@ -169,7 +174,7 @@ export class ConnectorStatusService {
 
   private updateConnectorStatus = async (p: object) => {
     const payload = p['data']['data'];
-    this.incomingRealtime$.next(payload);
+    this.realtimeConnectorStatus$.next(payload);
   };
 
   async getConnectorStatus(): Promise<ConnectorStatus> {

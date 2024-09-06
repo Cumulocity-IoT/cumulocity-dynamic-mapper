@@ -67,7 +67,7 @@ import { CheckedRendererComponent } from './checked-renderer.component';
   templateUrl: 'connector-grid.component.html'
 })
 export class ConnectorConfigurationComponent
-  implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked
+  implements OnInit, OnDestroy, AfterViewInit
 {
   @Input() selectable = true;
   @Input() readOnly = false;
@@ -107,10 +107,6 @@ export class ConnectorConfigurationComponent
     private el: ElementRef,
     private renderer: Renderer2
   ) {}
-  // eslint-disable-next-line @angular-eslint/no-empty-lifecycle-method
-  ngAfterViewChecked(): void {
-    // if (this.readOnly) this.updateCheckboxState();
-  }
 
   ngAfterViewInit(): void {
     setTimeout(async () => {
@@ -118,17 +114,6 @@ export class ConnectorConfigurationComponent
         this.connectorGrid.setItemsSelected(this.selected, true);
       }
     }, 0);
-  }
-
-  private updateCheckboxState() {
-    if (this.connectorGrid && this.el && this.el.nativeElement) {
-      const checkboxes = this.el.nativeElement.querySelectorAll(
-        'label.c8y-checkbox > input[type="checkbox"]'
-      );
-      checkboxes.forEach((checkbox: HTMLInputElement) => {
-        this.renderer.setProperty(checkbox, 'disabled', this.readOnly);
-      });
-    }
   }
 
   ngOnInit() {
@@ -242,7 +227,7 @@ export class ConnectorConfigurationComponent
           (conf) => (conf['checked'] = this.selected.includes(conf.ident))
         );
     });
-    this.loadData();
+	this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   public onSelectToggle(id: string) {
@@ -278,17 +263,11 @@ export class ConnectorConfigurationComponent
   }
 
   refresh() {
-    this.connectorConfigurationService.stopConnectorConfigurations();
-    this.connectorConfigurationService.resetCache();
-    this.connectorConfigurationService.startConnectorConfigurations();
-  }
-
-  loadData(): void {
-    this.connectorConfigurationService.startConnectorConfigurations();
+    this.connectorConfigurationService.updateConnectorConfigurations();
   }
 
   reloadData(): void {
-    this.connectorConfigurationService.reloadConnectorConfigurations();
+    this.connectorConfigurationService.updateConnectorConfigurations();
   }
 
   async onConfigurationUpdate(config: ConnectorConfiguration) {
@@ -427,6 +406,58 @@ export class ConnectorConfigurationComponent
         confirmDeletionModalRef.hide();
       }
     );
+  }
+
+  async onConfigurationAdd() {
+    const configuration: Partial<ConnectorConfiguration> = {
+      properties: {},
+      ident: uuidCustom()
+    };
+    const initialState = {
+      add: true,
+      configuration: configuration,
+      specifications: this.specifications,
+      configurationsCount: this.configurations?.length
+    };
+    const modalRef = this.bsModalService.show(
+      ConfigurationConfigurationModalComponent,
+      {
+        initialState
+      }
+    );
+    modalRef.content.closeSubject.subscribe(async (addedConfiguration) => {
+      // console.log('Configuration after edit:', addedConfiguration);
+      if (addedConfiguration) {
+        this.configurations.push(addedConfiguration);
+        // avoid to include status$
+        const clonedConfiguration = {
+          ident: addedConfiguration.ident,
+          connectorType: addedConfiguration.connectorType,
+          enabled: addedConfiguration.enabled,
+          name: addedConfiguration.name,
+          properties: addedConfiguration.properties
+        };
+        const response =
+          await this.connectorConfigurationService.createConnectorConfiguration(
+            clonedConfiguration
+          );
+        if (response.status < 300) {
+          this.alertService.success(
+            gettext('Added successfully configuration')
+          );
+        } else {
+          this.alertService.danger(
+            gettext('Failed to update connector configuration')
+          );
+        }
+      }
+      this.refresh();
+    });
+  }
+
+
+  findNameByIdent(ident: string): string {
+    return this.configurations?.find((conf) => conf.ident == ident)?.name;
   }
 
   ngOnDestroy(): void {
