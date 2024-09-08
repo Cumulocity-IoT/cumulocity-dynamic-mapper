@@ -1,5 +1,11 @@
-#divChart{
-    /* position: relative;  */
-    height:30vh; 
-    width:60vw
+#divChart {
+  /* position: relative;  */
+  height: 30vh;
+  width: 60vw;
+}
+
+.bar-chart {
+  /* height: 30vh;
+  width: 60vw; */
+  margin-top: 30px;
 }
