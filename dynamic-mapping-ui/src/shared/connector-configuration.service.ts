@@ -60,15 +60,18 @@ export class ConnectorConfigurationService {
 
   private triggerConfigurations$: Subject<string> = new Subject();
   private realtimeConnectorStatus$: Subject<IEvent> = new Subject();
-  private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
+  private realtimeConnectorConfigurations$: Observable<
+    ConnectorConfiguration[]
+  >;
+  private enrichedConnectorConfiguration$: Observable<ConnectorConfiguration[]>;
 
   private _agentId: string;
   private initialized: boolean = false;
   private realtime: Realtime;
   private subscriptionEvents: any;
 
-  getConnectorConfigurationsLive(): Observable<ConnectorConfiguration[]> {
-    return this.connectorConfigurations$;
+  getRealtimeConnectorConfigurations(): Observable<ConnectorConfiguration[]> {
+    return this.realtimeConnectorConfigurations$;
   }
 
   resetCache() {
@@ -84,8 +87,8 @@ export class ConnectorConfigurationService {
       this.startConnectorStatusSubscriptions();
       this.initialized = true;
     }
-	this.realtimeConnectorStatus$.next({} as any);
-	this.triggerConfigurations$.next('start' + '/' + n);
+    this.realtimeConnectorStatus$.next({} as any);
+    this.triggerConfigurations$.next('start' + '/' + n);
   }
 
   updateConnectorConfigurations() {
@@ -98,7 +101,7 @@ export class ConnectorConfigurationService {
   }
 
   initConnectorConfigurations() {
-    const connectorConfig$ = this.triggerConfigurations$.pipe(
+    this.enrichedConnectorConfiguration$ = this.triggerConfigurations$.pipe(
       //   tap((state) =>
       //     console.log('New triggerConfigurations:', state + '/' + Date.now())
       //   ),
@@ -125,8 +128,8 @@ export class ConnectorConfigurationService {
       }),
       shareReplay(1)
     );
-    this.connectorConfigurations$ = combineLatest([
-      connectorConfig$,
+    this.realtimeConnectorConfigurations$ = combineLatest([
+      this.enrichedConnectorConfiguration$,
       this.realtimeConnectorStatus$
     ]).pipe(
       map((vars) => {
@@ -242,11 +245,11 @@ export class ConnectorConfigurationService {
     // subscribe to event stream
     this.subscriptionEvents = this.realtime.subscribe(
       `/events/${this._agentId}`,
-      this.updateConnectorStatus
+      this.updateRealtimeConnectorStatus
     );
   }
 
-  private updateConnectorStatus = async (p: object) => {
+  private updateRealtimeConnectorStatus = async (p: object) => {
     const payload = p['data']['data'];
     this.realtimeConnectorStatus$.next(payload);
   };

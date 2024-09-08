@@ -60,12 +60,12 @@ export class ConnectorStatusService {
 
   async startConnectorStatusLogs() {
     // console.log('Calling: startConnectorStatusLogs');
-	if (!this.initialized) {
-		this.startConnectorStatusSubscriptions();
-		await this.initConnectorLogsRealtime();
-		this.initialized = true;
-	}
-	this.triggerLogs$.next([{ type: 'reset' }]);
+    if (!this.initialized) {
+      this.startConnectorStatusSubscriptions();
+      await this.initConnectorLogsRealtime();
+      this.initialized = true;
+    }
+    this.triggerLogs$.next([{ type: 'reset' }]);
   }
 
   updateStatusLogs(filter: any) {
@@ -81,11 +81,11 @@ export class ConnectorStatusService {
     if (!this._agentId) {
       this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
-    console.log(
-      'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
-      this._agentId
-    );
-    const sourceList$ = this.triggerLogs$.pipe(
+    // console.log(
+    //   'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
+    //   this._agentId
+    // );
+    const filteredConnectorStatus$ = this.triggerLogs$.pipe(
       // tap((x) => console.log('TriggerLogs In', x)),
       switchMap(() => {
         const filter = {
@@ -114,11 +114,11 @@ export class ConnectorStatusService {
             : event.connectorIdent == this.filterStatusLog.connectorIdent;
         })
       ),
-      share()
-      // tap((x) => console.log('TriggerLogs Out', x))
+      share(),
+      tap((x) => console.log('TriggerLogs Out', x))
     );
 
-    const sourceRealtime$ = this.realtimeConnectorStatus$.pipe(
+    const realtimeConnectorStatusRealtime$ = this.realtimeConnectorStatus$.pipe(
       // tap((x) => console.log('IncomingRealtime In', x)),
       filter((event) => {
         return (
@@ -138,25 +138,29 @@ export class ConnectorStatusService {
       })
     );
 
-    const o: Observable<any> = merge(
-      sourceList$,
-      sourceRealtime$,
+    //  const refreshedConnectorStatus$: Observable<any> =
+    merge(
+      filteredConnectorStatus$,
+      realtimeConnectorStatusRealtime$,
       this.triggerLogs$
-    ).pipe(
-      // tap((i) => console.log('Items', i)),
-      scan((acc, val) => {
-        let sortedAcc;
-        if (val[0]?.type == 'reset') {
-          // console.log('Reset loaded logs!');
-          sortedAcc = [];
-        } else {
-          sortedAcc = val.concat(acc);
-        }
-        sortedAcc = sortedAcc.slice(0, 9);
-        return sortedAcc;
-      }, [])
-    );
-    o.subscribe((logs) => this.statusLogs$.next(logs));
+    )
+      .pipe(
+        // tap((i) => console.log('Items', i)),
+        scan((acc, val) => {
+          let sortedAcc;
+          if (val[0]?.type == 'reset') {
+            // console.log('Reset loaded logs!');
+            sortedAcc = [];
+          } else {
+            sortedAcc = val.concat(acc);
+          }
+          sortedAcc = sortedAcc.slice(0, 9);
+          return sortedAcc;
+        }, []),
+        tap((logs) => this.statusLogs$.next(logs))
+      )
+      .subscribe();
+    // refreshedConnectorStatus$.subscribe((logs) => this.statusLogs$.next(logs));
   }
 
   async startConnectorStatusSubscriptions(): Promise<void> {
@@ -168,11 +172,11 @@ export class ConnectorStatusService {
     // subscribe to event stream
     this.subscriptionEvents = this.realtime.subscribe(
       `/events/${this._agentId}`,
-      this.updateConnectorStatus
+      this.updateRealtimeConnectorStatus
     );
   }
 
-  private updateConnectorStatus = async (p: object) => {
+  private updateRealtimeConnectorStatus = async (p: object) => {
     const payload = p['data']['data'];
     this.realtimeConnectorStatus$.next(payload);
   };

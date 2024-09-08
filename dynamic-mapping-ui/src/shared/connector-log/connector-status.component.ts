@@ -69,7 +69,7 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
     await this.connectorStatusService.startConnectorStatusLogs();
 
     this.connectorConfigurationService
-      .getConnectorConfigurationsLive()
+      .getRealtimeConnectorConfigurations()
       .subscribe((confs) => {
         this.configurations = confs;
       });

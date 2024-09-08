@@ -217,7 +217,7 @@ export class ConnectorConfigurationComponent
     });
 
     this.connectorConfigurationService
-      .getConnectorConfigurationsLive()
+      .getRealtimeConnectorConfigurations()
       .subscribe((confs) => this.configurations$.next(confs));
 
     this.configurations$.subscribe((confs) => {
@@ -227,7 +227,7 @@ export class ConnectorConfigurationComponent
           (conf) => (conf['checked'] = this.selected.includes(conf.ident))
         );
     });
-	this.connectorConfigurationService.startConnectorConfigurations();
+    this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   public onSelectToggle(id: string) {
@@ -454,7 +454,6 @@ export class ConnectorConfigurationComponent
       this.refresh();
     });
   }
-
 
   findNameByIdent(ident: string): string {
     return this.configurations?.find((conf) => conf.ident == ident)?.name;
