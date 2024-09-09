@@ -28,8 +28,16 @@ import {
   SharedService
 } from '../shared';
 
-import { merge, Observable, Subject } from 'rxjs';
-import { filter, map, scan, share, switchMap, tap } from 'rxjs/operators';
+import { merge, Observable, ReplaySubject, Subject } from 'rxjs';
+import {
+  filter,
+  map,
+  scan,
+  share,
+  shareReplay,
+  switchMap,
+  tap
+} from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class ConnectorStatusService {
@@ -39,6 +47,7 @@ export class ConnectorStatusService {
     private sharedService: SharedService
   ) {
     this.realtime = new Realtime(this.client);
+    this.startConnectorStatusLogs();
   }
 
   private _agentId: string;
@@ -52,14 +61,14 @@ export class ConnectorStatusService {
   };
   private triggerLogs$: Subject<any> = new Subject();
   private realtimeConnectorStatus$: Subject<IEvent> = new Subject();
-  private statusLogs$: Subject<any[]> = new Subject();
+  private statusLogs$: Subject<any[]> = new ReplaySubject(1);
 
   getStatusLogs(): Observable<any[]> {
     return this.statusLogs$;
   }
 
   async startConnectorStatusLogs() {
-    // console.log('Calling: startConnectorStatusLogs');
+    console.log('Calling: startConnectorStatusLogs', this.initialized);
     if (!this.initialized) {
       this.startConnectorStatusSubscriptions();
       await this.initConnectorLogsRealtime();
@@ -113,9 +122,8 @@ export class ConnectorStatusService {
             ? true
             : event.connectorIdent == this.filterStatusLog.connectorIdent;
         })
-      ),
-      share(),
-      tap((x) => console.log('TriggerLogs Out', x))
+      )
+      //   tap((x) => console.log('TriggerLogs Out', x))
     );
 
     const realtimeConnectorStatusRealtime$ = this.realtimeConnectorStatus$.pipe(
@@ -158,9 +166,9 @@ export class ConnectorStatusService {
           return sortedAcc;
         }, []),
         tap((logs) => this.statusLogs$.next(logs))
+        // shareReplay(1)
       )
       .subscribe();
-    // refreshedConnectorStatus$.subscribe((logs) => this.statusLogs$.next(logs));
   }
 
   async startConnectorStatusSubscriptions(): Promise<void> {

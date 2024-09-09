@@ -20,8 +20,8 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
   echartOptions: EChartsOption;
   echartUpdateOptions: EChartsOption;
-  subscription: object;
   echartsInstance: any;
+  subscription: object;
   textColor: string;
   fontFamily: string;
   fontWeight: number;
@@ -124,52 +124,9 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
               }
             ]
           };
-          this.echartsInstance?.setOption(this.echartUpdateOptions);
+          // this.echartsInstance?.setOption(this.echartUpdateOptions);
         }
       });
-
-    // const config = {
-    //   type: 'bar' as any,
-    //   data: data,
-    //   options: {
-    //     responsive: true,
-    //     maintainAspectRatio: false,
-    //     layout: {
-    //       padding: {
-    //         left: 0,
-    //         right: 0,
-    //         top: 0,
-    //         bottom: 0
-    //       }
-    //     },
-    //     plugins: {
-    //       legend: {
-    //         display: true,
-    //         position: 'left' as any,
-    //         font: {
-    //           family: this.fontFamily,
-    //           weight: 'normal' as any
-    //         }
-    //       }
-    //     },
-    //     indexAxis: 'y' as any,
-    //     color: this.textColor as any,
-    //     scales: {
-    //       y: {
-    //         ticks: {
-    //           color: this.textColor as any
-    //         }
-    //       },
-    //       x: {
-    //         ticks: {
-    //           color: this.textColor as any,
-    //           stepSize: 0
-    //         }
-    //       }
-    //     }
-    //   }
-    // };
-    // this.statusMappingChart = new Chart('monitoringChart', config);
 
     const yAxisData = [
       'Errors',

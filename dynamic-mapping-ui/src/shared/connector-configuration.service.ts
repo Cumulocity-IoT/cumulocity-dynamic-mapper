@@ -39,6 +39,7 @@ import {
   forkJoin,
   from,
   Observable,
+  ReplaySubject,
   Subject
 } from 'rxjs';
 import { map, shareReplay, switchMap, tap } from 'rxjs/operators';
@@ -50,8 +51,7 @@ export class ConnectorConfigurationService {
     private client: FetchClient,
     private sharedService: SharedService
   ) {
-    this.initConnectorConfigurations();
-    this.startConnectorStatusSubscriptions();
+    this.startConnectorConfigurations();
     this.realtime = new Realtime(this.client);
   }
 
@@ -60,9 +60,8 @@ export class ConnectorConfigurationService {
 
   private triggerConfigurations$: Subject<string> = new Subject();
   private realtimeConnectorStatus$: Subject<IEvent> = new Subject();
-  private realtimeConnectorConfigurations$: Observable<
-    ConnectorConfiguration[]
-  >;
+  private realtimeConnectorConfigurations$: Subject<ConnectorConfiguration[]> =
+    new ReplaySubject(1);
   private enrichedConnectorConfiguration$: Observable<ConnectorConfiguration[]>;
 
   private _agentId: string;
@@ -125,30 +124,33 @@ export class ConnectorConfigurationService {
           }
         });
         return configurations;
-      }),
-      shareReplay(1)
+      })
+      // shareReplay(1)
     );
-    this.realtimeConnectorConfigurations$ = combineLatest([
+    combineLatest([
       this.enrichedConnectorConfiguration$,
       this.realtimeConnectorStatus$
-    ]).pipe(
-      map((vars) => {
-        const [configurations, payload] = vars;
-        if (payload?.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
-          const statusLog: ConnectorStatusEvent = payload[CONNECTOR_FRAGMENT];
-          configurations.forEach((cc) => {
-            if (statusLog['connectorIdent'] == cc.ident) {
-              if (!cc['status$']) {
-                cc['status$'] = new BehaviorSubject<string>(statusLog.status);
-              } else {
-                cc['status$'].next(statusLog.status);
+    ])
+      .pipe(
+        map((vars) => {
+          const [configurations, payload] = vars;
+          if (payload?.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
+            const statusLog: ConnectorStatusEvent = payload[CONNECTOR_FRAGMENT];
+            configurations.forEach((cc) => {
+              if (statusLog['connectorIdent'] == cc.ident) {
+                if (!cc['status$']) {
+                  cc['status$'] = new BehaviorSubject<string>(statusLog.status);
+                } else {
+                  cc['status$'].next(statusLog.status);
+                }
               }
-            }
-          });
-        }
-        return configurations;
-      })
-    );
+            });
+          }
+          return configurations;
+        }),
+        tap((confs) => this.realtimeConnectorConfigurations$.next(confs))
+      )
+      .subscribe();
   }
 
   async getConnectorSpecifications(): Promise<ConnectorSpecification[]> {

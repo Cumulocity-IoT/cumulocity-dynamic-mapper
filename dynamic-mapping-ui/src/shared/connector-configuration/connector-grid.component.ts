@@ -41,7 +41,13 @@ import {
   Pagination
 } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, from, Observable, Subject } from 'rxjs';
+import {
+  BehaviorSubject,
+  from,
+  Observable,
+  ReplaySubject,
+  Subject
+} from 'rxjs';
 
 import * as _ from 'lodash';
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
@@ -66,9 +72,7 @@ import { CheckedRendererComponent } from './checked-renderer.component';
   styleUrls: ['./connector-grid.component.style.css'],
   templateUrl: 'connector-grid.component.html'
 })
-export class ConnectorConfigurationComponent
-  implements OnInit, OnDestroy, AfterViewInit
-{
+export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
   @Input() selectable = true;
   @Input() readOnly = false;
   @Input() deploy: string[];
@@ -88,7 +92,7 @@ export class ConnectorConfigurationComponent
   monitoring$: Observable<ConnectorStatus>;
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
-  configurations$: Subject<ConnectorConfiguration[]> = new Subject();
+  configurations$: Subject<ConnectorConfiguration[]> = new ReplaySubject(1);
   StatusEventTypes = StatusEventTypes;
   pagination: Pagination = {
     pageSize: 30,
@@ -218,7 +222,9 @@ export class ConnectorConfigurationComponent
 
     this.connectorConfigurationService
       .getRealtimeConnectorConfigurations()
-      .subscribe((confs) => this.configurations$.next(confs));
+      .subscribe((confs) => {
+        this.configurations$.next(confs);
+      });
 
     this.configurations$.subscribe((confs) => {
       this.configurations = confs;
@@ -227,7 +233,6 @@ export class ConnectorConfigurationComponent
           (conf) => (conf['checked'] = this.selected.includes(conf.ident))
         );
     });
-    this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   public onSelectToggle(id: string) {
@@ -457,9 +462,5 @@ export class ConnectorConfigurationComponent
 
   findNameByIdent(ident: string): string {
     return this.configurations?.find((conf) => conf.ident == ident)?.name;
-  }
-
-  ngOnDestroy(): void {
-    this.connectorConfigurationService.stopConnectorConfigurations();
   }
 }
