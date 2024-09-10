@@ -215,6 +215,7 @@ public class MappingRestController {
 						.body("Can't delete an enabled connector! Disable connector first.");
 			connectorConfigurationComponent.deleteConnectorConfiguration(ident);
 			mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
+			bootstrapService.shutdownAndRemoveConnector(tenant, ident);
 			// NOTE this block was disabled since a disabled connector is not registered in
 			// connectorRegistry
 
