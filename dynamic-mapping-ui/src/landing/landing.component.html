@@ -28,9 +28,11 @@
   <div class="card-block">
     <div class="p-b-8 text-16">
       Using the Cumulocity Dynamic Data Mapper you are able to connect to almost
-      any message broker. <br />
-      And map any payload received on a topic dynamically to the Cumulocity IoT
-      Domain Model in a graphical editor.
+      any message broker and map any payload to Cumulocity format.<br />
+      To do so you define a mapping in a intuitive graphical editor. During
+      operation, your custom payload is automatically converted <br />
+      to align with the Cumulocity IoT Domain Model, ensuring seamless
+      integration and data flow.
       <br />
       The following links help you get started with the Dynamic Data Mapper:
     </div>
@@ -55,7 +57,8 @@
       <b>connectors</b> and <b>mappings</b>.
       <br />
       If you want to receive messages from an Mqtt broker (Cumulocity Mqtt
-      Service, Hive MQ, mosquitto, ...) you use an <b>inbound mapping</b>. <br />
+      Service, Hive MQ, mosquitto, ...) you use an <b>inbound mapping</b>.
+      <br />
       The rules of the mapping are applied and result in an transformed payload
       for any of the
       <a href="https://cumulocity.com/docs/concepts/domain-model/"
@@ -63,8 +66,8 @@
       ><br />
       <br />
 
-      For the other direction you can define an <b>outbound mapping</b>. At runtime it
-      listens for changes of any of the core
+      For the other direction you can define an <b>outbound mapping</b>. At
+      runtime it listens for changes of any of the core
       <a href="https://cumulocity.com/docs/concepts/domain-model/"
         >domain objects</a
       >.
@@ -89,7 +92,7 @@
   </div>
   <div class="card-header">
     <h3>
-      {{ 'How to define a mapping ...' | translate }}
+      {{ 'How to define a mapping?' | translate }}
     </h3>
   </div>
   <div class="card-block">
@@ -144,7 +147,7 @@
     <div class="p-b-8"></div>
     <div class="card-header">
       <h3>
-        {{ 'How to define a substitution ...' | translate }}
+        {{ 'How to define a substitution?' | translate }}
       </h3>
     </div>
     <div class="card-block">
@@ -187,22 +190,21 @@
   </div>
   <div class="card-header">
     <h3>
-      {{
-        "How to you start when you don't know what your source payload looks like ..."
-          | translate
-      }}
+      {{ 'How to begin without knowing your source payload?' | translate }}
     </h3>
   </div>
   <div class="card-block">
     <div class="p-b-8 text-16">
-      If you don't know the payload of your device you start by snooping the
-      payload as a first step. <br />
-      Snooping will record the messages and you can use these in the next step
-      as source templates . <br />
-      When you select a mapping type you can enable snooping
-      <b>Enable snooping</b> for this mapping.<br />
-      You start the stepper by clicking on <b>Add mapping</b> (Mapping ->
-      Inbound Mapping -> Action Add mapping).<br />
+      When dealing with an unknown device payload, the initial step is to
+      capture and analyze the incoming data. <br />
+      This process, called snooping, records messages that can serve as source
+      templates for future mapping. <br />
+      To activate snooping for a specific mapping, select the
+      <b>Enable snooping</b> for this mapping option when choosing a mapping
+      type. <br />. You start the stepper by clicking on the action<b
+        >Add mapping</b
+      >
+      (Mapping -> Inbound Mapping -> Action Add mapping).<br />
       <br />
       The stepper when snooping leads you through the two steps:
     </div>

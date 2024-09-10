@@ -25,24 +25,21 @@ import {
   OnDestroy,
   OnInit,
   Output,
+  ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { AlertService, gettext } from '@c8y/ngx-components';
 import { BehaviorSubject } from 'rxjs';
 import {
-  ConfigurationConfigurationModalComponent,
-  ConnectorConfiguration,
-  ConnectorSpecification,
   DeploymentMapEntry,
   Direction,
   Feature,
-  StepperConfiguration,
-  uuidCustom
+  StepperConfiguration
 } from '../../shared';
 import { EditorMode } from '../shared/stepper-model';
 import { SharedService } from '../../shared/shared.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ConnectorConfigurationService } from '../../connector';
+import { ConnectorConfigurationComponent } from '../../shared/connector-configuration/connector-grid.component';
 
 @Component({
   selector: 'd11r-mapping-connector',
@@ -51,6 +48,8 @@ import { ConnectorConfigurationService } from '../../connector';
   encapsulation: ViewEncapsulation.None
 })
 export class MappingConnectorComponent implements OnInit, OnDestroy {
+  @ViewChild(ConnectorConfigurationComponent)
+  connectorGrid!: ConnectorConfigurationComponent;
   @Input() stepperConfiguration: StepperConfiguration;
   private _deploymentMapEntry: DeploymentMapEntry;
   @Input()
@@ -68,82 +67,25 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
   readOnly: boolean;
 
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
-  specifications: ConnectorSpecification[] = [];
-  configurations: ConnectorConfiguration[];
 
   constructor(
-    private alertService: AlertService,
     private sharedService: SharedService,
     public bsModalService: BsModalService,
     public connectorConfigurationService: ConnectorConfigurationService
   ) {}
 
   async ngOnInit() {
-	this.readOnly = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
+    this.readOnly =
+      this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
     this.feature = await this.sharedService.getFeatures();
-    this.specifications =
-      await this.connectorConfigurationService.getConnectorSpecifications();
-    this.connectorConfigurationService
-      .getConnectorConfigurationsLive()
-      .subscribe((confs) => {
-        this.configurations = confs;
-      });
-    this.loadData();
   }
 
   async onConfigurationAdd() {
-    const configuration: Partial<ConnectorConfiguration> = {
-      properties: {},
-      ident: uuidCustom()
-    };
-    const initialState = {
-      add: true,
-      configuration: configuration,
-      specifications: this.specifications,
-      configurationsCount: this.configurations?.length
-    };
-    const modalRef = this.bsModalService.show(
-      ConfigurationConfigurationModalComponent,
-      {
-        initialState
-      }
-    );
-    modalRef.content.closeSubject.subscribe(async (addedConfiguration) => {
-      // console.log('Configuration after edit:', addedConfiguration);
-      if (addedConfiguration) {
-        this.configurations.push(addedConfiguration);
-        // avoid to include status$
-        const clonedConfiguration = {
-          ident: addedConfiguration.ident,
-          connectorType: addedConfiguration.connectorType,
-          enabled: addedConfiguration.enabled,
-          name: addedConfiguration.name,
-          properties: addedConfiguration.properties
-        };
-        const response =
-          await this.connectorConfigurationService.createConnectorConfiguration(
-            clonedConfiguration
-          );
-        if (response.status < 300) {
-          this.alertService.success(
-            gettext('Added successfully configuration')
-          );
-        } else {
-          this.alertService.danger(
-            gettext('Failed to update connector configuration')
-          );
-        }
-      }
-      this.loadData();
-    });
+    this.connectorGrid.onConfigurationAdd();
   }
 
-  loadData(): void {
-    this.connectorConfigurationService.startConnectorConfigurations();
-  }
-
-  findNameByIdent(ident: string): string {
-    return this.configurations?.find((conf) => conf.ident == ident)?.name;
+  refresh() {
+    this.connectorGrid.refresh();
   }
 
   ngOnDestroy() {

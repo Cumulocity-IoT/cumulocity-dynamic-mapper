@@ -39,9 +39,10 @@ import {
   forkJoin,
   from,
   Observable,
+  ReplaySubject,
   Subject
 } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { Realtime } from '@c8y/ngx-components/api';
 
 @Injectable({ providedIn: 'root' })
@@ -50,24 +51,26 @@ export class ConnectorConfigurationService {
     private client: FetchClient,
     private sharedService: SharedService
   ) {
-    this.initConnectorConfigurations();
+    this.startConnectorConfigurations();
     this.realtime = new Realtime(this.client);
-    // console.log("Constructor:BrokerConfigurationService");
   }
 
   private _connectorConfigurations: ConnectorConfiguration[];
   private _connectorSpecifications: ConnectorSpecification[];
 
   private triggerConfigurations$: Subject<string> = new Subject();
-  private incomingRealtime$: Subject<IEvent> = new Subject();
-  private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
+  private realtimeConnectorStatus$: Subject<IEvent> = new Subject();
+  private realtimeConnectorConfigurations$: Subject<ConnectorConfiguration[]> =
+    new ReplaySubject(1);
+  private enrichedConnectorConfiguration$: Observable<ConnectorConfiguration[]>;
 
   private _agentId: string;
+  private initialized: boolean = false;
   private realtime: Realtime;
   private subscriptionEvents: any;
 
-  getConnectorConfigurationsLive(): Observable<ConnectorConfiguration[]> {
-    return this.connectorConfigurations$;
+  getRealtimeConnectorConfigurations(): Observable<ConnectorConfiguration[]> {
+    return this.realtimeConnectorConfigurations$;
   }
 
   resetCache() {
@@ -77,29 +80,30 @@ export class ConnectorConfigurationService {
   }
 
   startConnectorConfigurations() {
-    this.triggerConfigurations$.next('');
-    this.incomingRealtime$.next({} as any);
-	this.startConnectorStatusSubscriptions();
+    const n = Date.now();
+    if (!this.initialized) {
+      this.initConnectorConfigurations();
+      this.startConnectorStatusSubscriptions();
+      this.initialized = true;
+    }
+    this.realtimeConnectorStatus$.next({} as any);
+    this.triggerConfigurations$.next('start' + '/' + n);
   }
 
-  reloadConnectorConfigurations() {
-    this.triggerConfigurations$.next('');
+  updateConnectorConfigurations() {
+    const n = Date.now();
+    this.triggerConfigurations$.next('refresh' + '/' + n);
   }
 
   stopConnectorConfigurations() {
     this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
-  refreshConnectorConfigurations() {
-    this.triggerConfigurations$.next('');
-  }
-
   initConnectorConfigurations() {
-    // console.log(
-    //   'Calling BrokerConfigurationService.initConnectorConfigurations()'
-    // );
-    const connectorConfig$ = this.triggerConfigurations$.pipe(
-      // tap(() => console.log('New triggerConfigurations!')),
+    this.enrichedConnectorConfiguration$ = this.triggerConfigurations$.pipe(
+      //   tap((state) =>
+      //     console.log('New triggerConfigurations:', state + '/' + Date.now())
+      //   ),
       switchMap(() => {
         const observableConfigurations = from(
           this.getConnectorConfigurations()
@@ -121,28 +125,32 @@ export class ConnectorConfigurationService {
         });
         return configurations;
       })
+      // shareReplay(1)
     );
-    this.connectorConfigurations$ = combineLatest([
-      connectorConfig$,
-      this.incomingRealtime$
-    ]).pipe(
-      map((vars) => {
-        const [configurations, payload] = vars;
-        if (payload?.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
-          const statusLog: ConnectorStatusEvent = payload[CONNECTOR_FRAGMENT];
-          configurations.forEach((cc) => {
-            if (statusLog['connectorIdent'] == cc.ident) {
-              if (!cc['status$']) {
-                cc['status$'] = new BehaviorSubject<string>(statusLog.status);
-              } else {
-                cc['status$'].next(statusLog.status);
+    combineLatest([
+      this.enrichedConnectorConfiguration$,
+      this.realtimeConnectorStatus$
+    ])
+      .pipe(
+        map((vars) => {
+          const [configurations, payload] = vars;
+          if (payload?.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
+            const statusLog: ConnectorStatusEvent = payload[CONNECTOR_FRAGMENT];
+            configurations.forEach((cc) => {
+              if (statusLog['connectorIdent'] == cc.ident) {
+                if (!cc['status$']) {
+                  cc['status$'] = new BehaviorSubject<string>(statusLog.status);
+                } else {
+                  cc['status$'].next(statusLog.status);
+                }
               }
-            }
-          });
-        }
-        return configurations;
-      })
-    );
+            });
+          }
+          return configurations;
+        }),
+        tap((confs) => this.realtimeConnectorConfigurations$.next(confs))
+      )
+      .subscribe();
   }
 
   async getConnectorSpecifications(): Promise<ConnectorSpecification[]> {
@@ -239,12 +247,12 @@ export class ConnectorConfigurationService {
     // subscribe to event stream
     this.subscriptionEvents = this.realtime.subscribe(
       `/events/${this._agentId}`,
-      this.updateConnectorStatus
+      this.updateRealtimeConnectorStatus
     );
   }
 
-  private updateConnectorStatus = async (p: object) => {
+  private updateRealtimeConnectorStatus = async (p: object) => {
     const payload = p['data']['data'];
-    this.incomingRealtime$.next(payload);
+    this.realtimeConnectorStatus$.next(payload);
   };
 }

@@ -74,7 +74,6 @@ export class ServiceConfigurationComponent implements OnInit {
   async loadData(): Promise<void> {
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
-	// this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   async clickedReconnect2NotificationEndpoint() {
