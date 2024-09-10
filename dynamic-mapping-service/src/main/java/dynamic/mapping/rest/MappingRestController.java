@@ -273,9 +273,9 @@ public class MappingRestController {
 				}
 			}
 			connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-			AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-					configuration.getIdent());
-			client.reconnect();
+			//AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+			//		configuration.getIdent());
+			//client.reconnect();
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
