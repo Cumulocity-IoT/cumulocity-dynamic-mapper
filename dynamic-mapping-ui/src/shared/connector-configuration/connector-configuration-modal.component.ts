@@ -13,7 +13,7 @@ import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.c
 
 @Component({
   selector: 'd11r-edit-connector-modal',
-  template: ` <div class="modal-header dialog-header animated fadeIn">
+  template: `<div class="modal-header dialog-header animated fadeIn">
       <h1 c8yIcon="connected"></h1>
       <h4>Edit connector configuration</h4>
     </div>
