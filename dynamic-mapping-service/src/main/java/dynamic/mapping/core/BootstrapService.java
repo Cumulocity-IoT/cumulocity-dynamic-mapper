@@ -202,7 +202,7 @@ public class BootstrapService {
 
     //shutdownAndRemoveConnector will unsubscribe the subscriber which drops all queues
     public void shutdownAndRemoveConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
-        connectorRegistry.unregisterClient(tenant, connectorIdent);
+        //connectorRegistry.unregisterClient(tenant, connectorIdent);
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         if (serviceConfiguration.isOutboundMappingEnabled()) {
             configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriberByConnector(tenant, connectorIdent);

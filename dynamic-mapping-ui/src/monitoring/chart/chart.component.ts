@@ -1,13 +1,10 @@
 import { Component, ElementRef, OnDestroy, OnInit } from '@angular/core';
-import { Chart, registerables } from 'chart.js';
-import { CHART_COLORS, transparentize } from './util';
+import { CHART_COLORS } from './util';
 import { Subject } from 'rxjs';
 import { Direction, MappingStatus } from '../../shared';
 import { map } from 'rxjs/operators';
 import { MonitoringService } from '../shared/monitoring.service';
-Chart.register(...registerables);
-// Chart.defaults.font.family = 'Roboto, Helvetica, Arial, sans-serif';
-// Chart.defaults.color = 'green';
+import { ECharts, EChartsOption } from 'echarts';
 
 @Component({
   selector: 'd11r-monitoring-chart',
@@ -21,11 +18,13 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   ) {}
 
   mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
+  echartOptions: EChartsOption;
+  echartUpdateOptions: EChartsOption;
+  echartsInstance: any;
   subscription: object;
-  statusMappingChart: Chart;
   textColor: string;
   fontFamily: string;
-  fontWeight: string;
+  fontWeight: number;
   fontSize: number;
 
   ngOnInit() {
@@ -38,37 +37,16 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
     this.fontFamily = getComputedStyle(root)
       .getPropertyValue('--c8y-font-family-sans-serif')
       .trim();
-    this.fontWeight = getComputedStyle(root)
-      .getPropertyValue('--c8y-font-weight-headings')
-      .trim();
-    this.fontSize = parseInt(
-      getComputedStyle(root).getPropertyValue('--c8y-font-size-base').trim(),
-      12
+    this.fontWeight = parseInt(
+      getComputedStyle(root)
+        .getPropertyValue('--c8y-font-weight-headings')
+        .trim()
     );
-    // rgb(100, 31, 61), 'Roboto, Helvetica, Arial, sans-serif'
-    // console.log('Text Color', this.textColor);
+    this.fontSize = parseInt(
+      getComputedStyle(root).getPropertyValue('--c8y-font-size-base').trim()
+    );
 
-    const statistic = [0, 0, 0, 0];
-    const data = {
-      labels: [
-        'Errors',
-        'Messages received',
-        'Snooped templates total',
-        'Snooped templates active'
-      ],
-      datasets: [
-        {
-          label: 'Inbound',
-          data: statistic,
-          backgroundColor: transparentize(CHART_COLORS.green, 0.3)
-        },
-        {
-          label: 'Outbound',
-          data: statistic,
-          backgroundColor: transparentize(CHART_COLORS.orange, 0.3)
-        }
-      ]
-    };
+    const data = [undefined, undefined];
     this.mappingStatus$
       .pipe(
         map((data01) => {
@@ -121,64 +99,99 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
         // console.log('Statistic', total);
         if (total) {
           const [inbound, outbound] = total;
-          data.datasets[0].data = [
+          data[0] = [
             inbound.errors,
             inbound.messagesReceived,
             inbound.snoopedTemplatesTotal,
             inbound.snoopedTemplatesActive
           ];
-          data.datasets[1].data = [
+          data[1] = [
             outbound.errors,
             outbound.messagesReceived,
             outbound.snoopedTemplatesTotal,
             outbound.snoopedTemplatesActive
           ];
-          this.statusMappingChart.update();
+          //   this.statusMappingChart.update();
+          this.echartUpdateOptions = {
+            series: [
+              {
+                type: 'bar',
+                data: data[0]
+              },
+              {
+                type: 'bar',
+                data: data[1]
+              }
+            ]
+          };
+          // this.echartsInstance?.setOption(this.echartUpdateOptions);
         }
       });
 
-    const config = {
-      type: 'bar' as any,
-      data: data,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: {
-          padding: {
-            left: 0,
-            right: 0,
-            top: 0,
-            bottom: 0
-          }
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'left' as any,
-            font: {
-              family: this.fontFamily,
-              weight: 'normal' as any
-            }
-          }
-        },
-        indexAxis: 'y' as any,
-        color: this.textColor as any,
-        scales: {
-          y: {
-            ticks: {
-              color: this.textColor as any
-            }
-          },
-          x: {
-            ticks: {
-              color: this.textColor as any,
-              stepSize: 0
-            }
-          }
+    const yAxisData = [
+      'Errors',
+      'Messages received',
+      'Snooped templates total',
+      'Snooped templates active'
+    ];
+
+    this.echartOptions = {
+      title: {
+        show: false,
+        text: 'Messages processed by mappings',
+        textStyle: {
+          color: this.textColor,
+          fontFamily: this.fontFamily,
+          fontSize: this.fontSize + 4,
+          fontWeight: this.fontWeight
         }
-      }
+      },
+      legend: {
+        data: ['Inbound', 'Outbound'],
+        align: 'left'
+      },
+      tooltip: {},
+      grid: {
+        left: '20%' // Adjust this value as needed
+      },
+      xAxis: {
+        type: 'value',
+        boundaryGap: [0, 0.01]
+      },
+      yAxis: {
+        axisTick: {
+          show: false
+        },
+        type: 'category',
+        data: yAxisData,
+        silent: false,
+        splitLine: {
+          show: true
+        }
+      },
+      series: [
+        {
+          name: 'Inbound',
+          color: CHART_COLORS.green,
+          type: 'bar',
+          data: data[0]
+          //   animationDelay: (idx) => idx * 10 + 100
+        },
+        {
+          name: 'Outbound',
+          color: CHART_COLORS.orange,
+          type: 'bar',
+          data: data[1]
+          //   animationDelay: (idx) => idx * 10
+        }
+      ]
+      //   animationEasing: 'elasticOut',
+      //   animationDelayUpdate: (idx) => idx * 5
     };
-    this.statusMappingChart = new Chart('monitoringChart', config);
+  }
+
+  onChartInit(ec: ECharts) {
+    this.echartsInstance = ec;
   }
 
   private async initializeMonitoringService() {
@@ -192,5 +205,10 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     // console.log('Stop subscription');
     this.monitoringService.unsubscribeFromMonitoringChannel(this.subscription);
+  }
+
+  randomIntFromInterval(min, max) {
+    // min and max included
+    return Math.floor(Math.random() * (max - min + 1) + min);
   }
 }

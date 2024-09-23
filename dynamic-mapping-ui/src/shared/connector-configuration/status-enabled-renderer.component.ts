@@ -79,6 +79,6 @@ export class StatusEnabledRendererComponent {
     this.sharedService.refreshMappings(Direction.OUTBOUND);
   }
   reloadData(): void {
-    this.connectorConfigurationService.reloadConnectorConfigurations();
+    this.connectorConfigurationService.updateConnectorConfigurations();
   }
 }

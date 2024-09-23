@@ -1,6 +1,6 @@
 {
   "name": "dynamic-mapping",
-  "version": "4.4.1",
+  "version": "4.5.1",
   "author": "christof.strack@softwareag.com, stefan.witschel@softwareag.com",
   "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.The plugin support both directions: inbound/outbound. Currently MQTT is supported ",
   "repository": {
@@ -33,10 +33,11 @@
     "@c8y/ngx-components": "^1020.18.1",
     "@c8y/options": "^1020.18.1",
     "@ngx-translate/core": "15.0.0",
-    "chart.js": "^4.4.1",
     "css-loader": "^7.1.2",
+    "echarts": "^5.5.1",
     "jsonata": "^2.0.3",
     "ngx-bootstrap": "^12.0.0",
+    "ngx-echarts": "^18.0.0",
     "postcss-loader": "^8.1.0",
     "rxjs": "~7.8.1",
     "style-loader": "^4.0.0",

@@ -18,27 +18,27 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit } from '@angular/core';
-import { AlertService, gettext } from '@c8y/ngx-components';
+import { Component, ViewChild } from '@angular/core';
+import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { from, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 import packageJson from '../../package.json';
 import {
   ConnectorConfiguration,
   ConnectorSpecification,
   ConnectorStatus,
-  Feature,
-  uuidCustom
+  Feature
 } from '../shared';
 import { ConnectorConfigurationService } from '../shared/connector-configuration.service';
-import { ConfigurationConfigurationModalComponent } from '../shared';
+import { ConnectorConfigurationComponent } from '../shared/connector-configuration/connector-grid.component';
 
 @Component({
   selector: 'd11r-mapping-broker-connector',
   styleUrls: ['./broker-connector.component.style.css'],
   templateUrl: 'broker-connector.component.html'
 })
-export class BrokerConnectorComponent implements OnInit {
+export class BrokerConnectorComponent {
+  @ViewChild(ConnectorConfigurationComponent) connectorGrid!: ConnectorConfigurationComponent;
   version: string = packageJson.version;
   monitoring$: Observable<ConnectorStatus>;
   feature: Feature;
@@ -51,73 +51,11 @@ export class BrokerConnectorComponent implements OnInit {
     public alertService: AlertService
   ) {}
 
-  ngOnInit() {
-    // console.log('Running version', this.version);
-    from(
-      this.connectorConfigurationService.getConnectorSpecifications()
-    ).subscribe((specs) => {
-      this.specifications = specs;
-    });
-    this.connectorConfigurationService
-      .getConnectorConfigurationsLive()
-      .subscribe((confs) => {
-        this.configurations = confs;
-      });
-    this.loadData();
-  }
-
   refresh() {
-    this.connectorConfigurationService.resetCache();
-    this.loadData();
-  }
-
-  loadData(): void {
-    this.connectorConfigurationService.startConnectorConfigurations();
+    this.connectorGrid.refresh();
   }
 
   async onConfigurationAdd() {
-    const configuration: Partial<ConnectorConfiguration> = {
-      properties: {},
-      ident: uuidCustom()
-    };
-    const initialState = {
-      add: true,
-      configuration: configuration,
-      specifications: this.specifications,
-      configurationsCount: this.configurations.length
-    };
-    const modalRef = this.bsModalService.show(
-      ConfigurationConfigurationModalComponent,
-      {
-        initialState
-      }
-    );
-    modalRef.content.closeSubject.subscribe(async (addedConfiguration) => {
-      // console.log('Configuration after edit:', addedConfiguration);
-      if (addedConfiguration) {
-        // avoid to include status$
-        const clonedConfiguration = {
-          ident: addedConfiguration.ident,
-          connectorType: addedConfiguration.connectorType,
-          enabled: addedConfiguration.enabled,
-          name: addedConfiguration.name,
-          properties: addedConfiguration.properties
-        };
-        const response =
-          await this.connectorConfigurationService.createConnectorConfiguration(
-            clonedConfiguration
-          );
-        if (response.status < 300) {
-          this.alertService.success(
-            gettext('Added successfully configuration')
-          );
-        } else {
-          this.alertService.danger(
-            gettext('Failed to update connector configuration')
-          );
-        }
-        this.loadData();
-      }
-    });
+    this.connectorGrid.onConfigurationAdd();
   }
 }

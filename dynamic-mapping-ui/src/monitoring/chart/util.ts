@@ -1,5 +1,3 @@
-import colorLib from '@kurkle/color';
-
 // Adapted from http://indiegamr.com/generate-repeatable-random-numbers-in-js/
 let _seed = Date.now();
 
@@ -32,7 +30,7 @@ export function numbers(config) {
 
   for (i = 0; i < count; ++i) {
     value = (from[i] || 0) + rand(min, max);
-    if (rand(0,0) <= continuity) {
+    if (rand(0, 0) <= continuity) {
       data.push(Math.round(dfactor * value) / dfactor);
     } else {
       data.push(null);
@@ -77,11 +75,6 @@ export function color(index) {
   return COLORS[index % COLORS.length];
 }
 
-export function transparentize(value, opacity) {
-  const alpha = opacity === undefined ? 0.5 : 1 - opacity;
-  return colorLib(value).alpha(alpha).rgbString();
-}
-
 // export const CHART_COLORS = {
 //   red: 'rgb(255, 99, 132)',
 //   orange: 'rgb(255, 159, 64)',
@@ -93,14 +86,14 @@ export function transparentize(value, opacity) {
 // };
 
 export const CHART_COLORS = {
-    red: 'red',
-    orange: 'orange',
-    yellow: 'yellow',
-    green: 'green',
-    blue: 'blue',
-    purple: 'purple',
-    grey: 'grey'
-  };
+  red: 'red',
+  orange: 'orange',
+  yellow: 'yellow',
+  green: 'green',
+  blue: 'blue',
+  purple: 'purple',
+  grey: 'grey'
+};
 
 const NAMED_COLORS = [
   CHART_COLORS.red,

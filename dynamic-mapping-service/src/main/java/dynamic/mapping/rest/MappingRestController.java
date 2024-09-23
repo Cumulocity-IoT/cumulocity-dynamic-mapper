@@ -161,7 +161,7 @@ public class MappingRestController {
 		}
 		// Remove sensitive data before printing to log
 		ConnectorSpecification connectorSpecification = connectorRegistry
-		.getConnectorSpecification(configuration.connectorType);
+				.getConnectorSpecification(configuration.connectorType);
 		ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
 		log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
 		try {
@@ -186,7 +186,7 @@ public class MappingRestController {
 			// Remove sensitive data before sending to UI
 			for (ConnectorConfiguration config : configurations) {
 				ConnectorSpecification connectorSpecification = connectorRegistry
-				.getConnectorSpecification(config.connectorType);
+						.getConnectorSpecification(config.connectorType);
 				ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
 				modifiedConfigs.add(cleanedConfig);
 			}
@@ -210,14 +210,25 @@ public class MappingRestController {
 		try {
 			ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(ident,
 					tenant);
-			AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-					configuration.getIdent());
-			if (client == null)
-				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Client with ident " + ident + " not found");
-			client.disconnect();
-			bootstrapService.shutdownAndRemoveConnector(tenant, client.getConnectorIdent());
+			if (configuration.enabled)
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+						.body("Can't delete an enabled connector! Disable connector first.");
 			connectorConfigurationComponent.deleteConnectorConfiguration(ident);
 			mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
+			bootstrapService.shutdownAndRemoveConnector(tenant, ident);
+			// NOTE this block was disabled since a disabled connector is not registered in
+			// connectorRegistry
+
+			// AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+			// configuration.getIdent());
+			// if (client == null)
+			// return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Client with ident
+			// " + ident + " not found");
+			// client.disconnect();
+			// bootstrapService.shutdownAndRemoveConnector(tenant,
+			// client.getConnectorIdent());
+			// connectorConfigurationComponent.deleteConnectorConfiguration(ident);
+			// mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -241,7 +252,7 @@ public class MappingRestController {
 		}
 		// Remove sensitive data before printing to log
 		ConnectorSpecification connectorSpecification = connectorRegistry
-		.getConnectorSpecification(configuration.connectorType);
+				.getConnectorSpecification(configuration.connectorType);
 		ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
 		log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
 		try {
@@ -262,9 +273,9 @@ public class MappingRestController {
 				}
 			}
 			connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-			AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-					configuration.getIdent());
-			client.reconnect();
+			//AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+			//		configuration.getIdent());
+			//client.reconnect();
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -420,8 +431,9 @@ public class MappingRestController {
 				configuration.setEnabled(true);
 				connectorConfigurationComponent.saveConnectorConfiguration(configuration);
 
-				//Initialize Connector only when enabled.
-				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+				// Initialize Connector only when enabled.
+				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent
+						.getServiceConfiguration(tenant);
 				bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 
@@ -438,9 +450,9 @@ public class MappingRestController {
 
 				AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
 						connectorIdent);
-				//client.submitDisconnect();
+				// client.submitDisconnect();
 				bootstrapService.disableConnector(tenant, client.getConnectorIdent());
-				//We might need to Reconnect other Notification Clients for other connectors
+				// We might need to Reconnect other Notification Clients for other connectors
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			} else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
 				mappingComponent.sendMappingStatus(tenant);

@@ -46,7 +46,7 @@ import { FieldInputCustom } from './shared/formly/input-custom.type.component';
 import { MessageField } from './shared/formly/message.type.component';
 import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
-import { MappingStepPropertiesComponent } from './step-topic/mapping-properties.component';
+import { MappingStepPropertiesComponent } from './step-property/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
 import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
@@ -55,7 +55,10 @@ import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.co
 import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { FieldTextareaCustom } from './shared/formly/textarea.type.component';
-import { checkTopicsOutboundAreValid, checkTopicsInboundAreValid } from './shared/util';
+import {
+  checkTopicsOutboundAreValid,
+  checkTopicsInboundAreValid
+} from './shared/util';
 import { NODE1 } from '../shared/model/util';
 
 @NgModule({
@@ -86,7 +89,7 @@ import { NODE1 } from '../shared/model/util';
   ],
   imports: [
     CoreModule,
-	CommonModule,
+    CommonModule,
     AssetSelectorModule,
     PopoverModule,
     DynamicFormsModule,
