@@ -221,13 +221,12 @@
                       <d11r-mapping-json-editor2
                         *ngIf="stepperConfiguration.showEditorSource"
                         [schemaUpdate]="schemaUpdateSource"
-                        [options]="editorOptionsSource"
+                        [options]="editorOptionsSourceStep3"
                         [class]="'jse-main-small'"
                         (contentChanged)="onTemplateSourceChanged($event)"
-                        (pathChanged)="onSelectedPathSourceChanged($event)"
                         (initialized)="onEditorSourceInitialized()"
                         [data]="templateSource"
-                        #editorSourceStep2
+                        #editorSourceStep3
                       ></d11r-mapping-json-editor2>
                       <div *ngIf="stepperConfiguration.showProcessorExtensions">
                         <div class="form-group">
@@ -311,10 +310,9 @@
                       </div>
                       <d11r-mapping-json-editor2
                         [schemaUpdate]="schemaUpdateTarget"
-                        [options]="editorOptionsTarget"
+                        [options]="editorOptionsTargetStep3"
                         [class]="'jse-main-small'"
                         (contentChanged)="onTemplateTargetChanged($event)"
-                        (pathChanged)="onSelectedPathTargetChanged($event)"
                         (initialized)="onEditorTargetInitialized()"
                         [data]="templateTarget"
                         #editorTargetStep3
@@ -357,13 +355,12 @@
                       <d11r-mapping-json-editor2
                         *ngIf="stepperConfiguration.showEditorSource"
                         [schemaUpdate]="schemaUpdateSource"
-                        [options]="editorOptionsSource"
+                        [options]="editorOptionsSourceStep4"
                         [class]="'jse-main-small'"
-                        (contentChanged)="onTemplateSourceChanged($event)"
                         (pathChanged)="onSelectedPathSourceChanged($event)"
                         (initialized)="onEditorSourceInitialized()"
                         [data]="templateSource"
-                        #editorSource
+                        #editorSourceStep4
                       ></d11r-mapping-json-editor2>
                       <div
                         *ngIf="
@@ -488,13 +485,12 @@
                       </div>
                       <d11r-mapping-json-editor2
                         [schemaUpdate]="schemaUpdateTarget"
-                        [options]="editorOptionsTarget"
+                        [options]="editorOptionsTargetStep4"
                         [class]="'jse-main-small'"
-                        (contentChanged)="onTemplateTargetChanged($event)"
                         (pathChanged)="onSelectedPathTargetChanged($event)"
                         (initialized)="onEditorTargetInitialized()"
                         [data]="templateTarget"
-                        #editorTarget
+                        #editorTargetStep4
                       >
                       </d11r-mapping-json-editor2>
                       <span
