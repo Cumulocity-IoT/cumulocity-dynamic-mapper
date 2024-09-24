@@ -322,7 +322,7 @@ public class KafkaClient extends AConnectorClient {
 	@Override
 	public void subscribe(String topic, QOS qos) throws ConnectorException {
 		TopicConsumer kafkaConsumer = new TopicConsumer(
-				new TopicConfig(tenant, bootstrapServers, topic, username, password, groupId,
+				new TopicConfig(tenant, bootstrapServers, topic, username, password, saslMechanism, groupId,
 						defaultPropertiesConsumer));
 		consumerList.put(topic, kafkaConsumer);
 		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
