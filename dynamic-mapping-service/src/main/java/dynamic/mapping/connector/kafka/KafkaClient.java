@@ -80,7 +80,7 @@ public class KafkaClient extends AConnectorClient {
 								new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-256", "SCRAM-SHA-256"),
 								new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-512", "SCRAM-SHA-512"))));
 		configProps.put("groupId",
-				new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
 
 		Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
 		defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
@@ -88,7 +88,7 @@ public class KafkaClient extends AConnectorClient {
 		defaultPropertiesProducer.store(writerProducer,
 				"properties can only be edited in the property file: kafka-producer.properties");
 		configProps.put("propertiesProducer",
-				new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+				new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
 						removeDateCommentLine(writerProducer.getBuffer().toString()), null));
 
 		Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
@@ -97,7 +97,7 @@ public class KafkaClient extends AConnectorClient {
 		defaultPropertiesConsumer.store(writerConsumer,
 				"properties can only be edited in the property file: kafka-consumer.properties");
 		configProps.put("propertiesConsumer",
-				new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+				new ConnectorProperty(false, 6, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
 						removeDateCommentLine(writerConsumer.getBuffer().toString()), null));
 
 		String name = "Kafka";

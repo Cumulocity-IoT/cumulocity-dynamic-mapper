@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "ng serve",
-    "start:admin": "npm start -- --shell administration",
+    "start:admin": "ng serve --shell administration",
     "build": "ng build",
     "deploy": "ng deploy",
     "format": "prettier --write 'src/**/*.ts'",
