@@ -23,8 +23,10 @@ import {
   CommonModule,
   CoreModule,
   DynamicFormsModule,
+  EventRealtimeService,
   hookRoute,
-  ModalModule
+  ModalModule,
+  RealtimeModule
 } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -48,7 +50,7 @@ import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.compo
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 import { MappingStepPropertiesComponent } from './step-property/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
-import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
+import { DeviceSelectorSubscriptionComponent } from './subscription-grid/device-selector/device-selector-subscription.component';
 import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
 import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment.renderer.component';
 import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
@@ -60,6 +62,7 @@ import {
   checkTopicsInboundAreValid
 } from './shared/util';
 import { NODE1 } from '../shared/model/util';
+import { MappingSubscriptionComponent } from './subscription-grid/subscription.component';
 
 @NgModule({
   declarations: [
@@ -68,7 +71,7 @@ import { NODE1 } from '../shared/model/util';
     SnoopingStepperComponent,
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
-    MappingSubscriptionComponent,
+    DeviceSelectorSubscriptionComponent,
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,
@@ -85,7 +88,9 @@ import { NODE1 } from '../shared/model/util';
     WrapperFormlyHorizontal,
     WrapperCustomFormField,
     FieldInputCustom,
-    MappingConnectorComponent
+    MappingConnectorComponent,
+    MappingSubscriptionComponent,
+    DeviceSelectorSubscriptionComponent
   ],
   imports: [
     CoreModule,
@@ -106,6 +111,10 @@ import { NODE1 } from '../shared/model/util';
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
       component: MappingComponent
+    }),
+    hookRoute({
+      path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outboundSubscription`,
+      component: MappingSubscriptionComponent
     }),
     {
       provide: FORMLY_CONFIG,

@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { FetchClient, IEvent, IFetchResponse } from '@c8y/client';
 import {
   BASE_URL,
@@ -40,10 +40,14 @@ import {
   from,
   Observable,
   ReplaySubject,
-  Subject
+  Subject,
+  Subscription
 } from 'rxjs';
-import { map, shareReplay, switchMap, tap } from 'rxjs/operators';
-import { Realtime } from '@c8y/ngx-components/api';
+import { map, switchMap, tap } from 'rxjs/operators';
+import {
+  EventRealtimeService,
+  RealtimeSubjectService
+} from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class ConnectorConfigurationService {
@@ -51,8 +55,10 @@ export class ConnectorConfigurationService {
     private client: FetchClient,
     private sharedService: SharedService
   ) {
+    this.eventRealtimeService = new EventRealtimeService(
+      inject(RealtimeSubjectService)
+    );
     this.startConnectorConfigurations();
-    this.realtime = new Realtime(this.client);
   }
 
   private _connectorConfigurations: ConnectorConfiguration[];
@@ -66,8 +72,8 @@ export class ConnectorConfigurationService {
 
   private _agentId: string;
   private initialized: boolean = false;
-  private realtime: Realtime;
-  private subscriptionEvents: any;
+  private eventRealtimeService: EventRealtimeService;
+  private subscription: Subscription;
 
   getRealtimeConnectorConfigurations(): Observable<ConnectorConfiguration[]> {
     return this.realtimeConnectorConfigurations$;
@@ -96,7 +102,7 @@ export class ConnectorConfigurationService {
   }
 
   stopConnectorConfigurations() {
-    this.realtime.unsubscribe(this.subscriptionEvents);
+    if (this.subscription) this.subscription.unsubscribe();
   }
 
   initConnectorConfigurations() {
@@ -245,14 +251,12 @@ export class ConnectorConfigurationService {
     // console.log('Started subscriptions:', this._agentId);
 
     // subscribe to event stream
-    this.subscriptionEvents = this.realtime.subscribe(
-      `/events/${this._agentId}`,
-      this.updateRealtimeConnectorStatus
-    );
+    this.eventRealtimeService.start();
+    this.subscription = this.eventRealtimeService
+      .onAll$(this._agentId)
+      .pipe(map((p) => p['data']))
+      .subscribe((payload) =>
+        this.realtimeConnectorStatus$.next(payload as any)
+      );
   }
-
-  private updateRealtimeConnectorStatus = async (p: object) => {
-    const payload = p['data']['data'];
-    this.realtimeConnectorStatus$.next(payload);
-  };
 }
