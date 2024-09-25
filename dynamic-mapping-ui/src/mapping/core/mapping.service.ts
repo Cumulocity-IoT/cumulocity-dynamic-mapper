@@ -306,7 +306,9 @@ export class MappingService {
     }
   }
 
-  async updateSubscriptions(sub: C8YNotificationSubscription): Promise<C8YNotificationSubscription> {
+  async updateSubscriptions(
+    sub: C8YNotificationSubscription
+  ): Promise<C8YNotificationSubscription> {
     const response = this.client.fetch(
       `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
       {
@@ -482,12 +484,12 @@ export class MappingService {
     if (!this._agentId) {
       this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
-    // console.log('Started subscriptions:', this._agentId);
+    console.log('Started subscriptions:', this._agentId);
 
     // subscribe to event stream
     this.subscriptionEvents = this.realtime.subscribe(
       `/events/${this._agentId}`,
-      this.initiateRefreshMapping
+      this.initiateRefreshMapping.bind(this)
     );
   }
 
