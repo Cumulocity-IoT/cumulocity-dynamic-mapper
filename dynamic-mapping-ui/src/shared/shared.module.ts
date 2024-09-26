@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
-import { CoreModule, EventRealtimeService } from '@c8y/ngx-components';
+import { CoreModule } from '@c8y/ngx-components';
 import { JsonEditor2Component } from './editor2/jsoneditor2.component';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { PaginationModule } from 'ngx-bootstrap/pagination';

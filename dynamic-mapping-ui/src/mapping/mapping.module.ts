@@ -23,10 +23,8 @@ import {
   CommonModule,
   CoreModule,
   DynamicFormsModule,
-  EventRealtimeService,
   hookRoute,
-  ModalModule,
-  RealtimeModule
+  ModalModule
 } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { PopoverModule } from 'ngx-bootstrap/popover';

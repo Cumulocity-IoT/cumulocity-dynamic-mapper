@@ -36,14 +36,16 @@ import {
 import {
   BehaviorSubject,
   combineLatest,
+  concat,
   forkJoin,
   from,
   Observable,
+  of,
   ReplaySubject,
   Subject,
   Subscription
 } from 'rxjs';
-import { map, switchMap, tap } from 'rxjs/operators';
+import { filter, map, switchMap, tap } from 'rxjs/operators';
 import {
   EventRealtimeService,
   RealtimeSubjectService
@@ -65,12 +67,10 @@ export class ConnectorConfigurationService {
   private _connectorSpecifications: ConnectorSpecification[];
 
   private triggerConfigurations$: Subject<string> = new Subject();
-  private realtimeConnectorStatus$: Subject<IEvent> = new Subject();
   private realtimeConnectorConfigurations$: Subject<ConnectorConfiguration[]> =
     new ReplaySubject(1);
   private enrichedConnectorConfiguration$: Observable<ConnectorConfiguration[]>;
 
-  private _agentId: string;
   private initialized: boolean = false;
   private eventRealtimeService: EventRealtimeService;
   private subscription: Subscription;
@@ -89,10 +89,9 @@ export class ConnectorConfigurationService {
     const n = Date.now();
     if (!this.initialized) {
       this.initConnectorConfigurations();
-      this.startConnectorStatusSubscriptions();
       this.initialized = true;
+      this.testRealtime();
     }
-    this.realtimeConnectorStatus$.next({} as any);
     this.triggerConfigurations$.next('start' + '/' + n);
   }
 
@@ -135,15 +134,15 @@ export class ConnectorConfigurationService {
     );
     combineLatest([
       this.enrichedConnectorConfiguration$,
-      this.realtimeConnectorStatus$
+      this.getConnectorStatusEvents()
     ])
       .pipe(
         map((vars) => {
           const [configurations, payload] = vars;
-          if (payload?.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
+          if (payload) {
             const statusLog: ConnectorStatusEvent = payload[CONNECTOR_FRAGMENT];
             configurations.forEach((cc) => {
-              if (statusLog['connectorIdent'] == cc.ident) {
+              if (statusLog && statusLog['connectorIdent'] == cc.ident) {
                 if (!cc['status$']) {
                   cc['status$'] = new BehaviorSubject<string>(statusLog.status);
                 } else {
@@ -244,19 +243,77 @@ export class ConnectorConfigurationService {
     return this._connectorConfigurations;
   }
 
-  async startConnectorStatusSubscriptions(): Promise<void> {
-    if (!this._agentId) {
-      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    }
-    // console.log('Started subscriptions:', this._agentId);
-
+  private getConnectorStatusEvents(): Observable<number | IEvent> {
     // subscribe to event stream
     this.eventRealtimeService.start();
-    this.subscription = this.eventRealtimeService
-      .onAll$(this._agentId)
-      .pipe(map((p) => p['data']))
-      .subscribe((payload) =>
-        this.realtimeConnectorStatus$.next(payload as any)
-      );
+    return from(this.sharedService.getDynamicMappingServiceAgent()).pipe(
+      switchMap((agentId) => {
+        // Emit an initial value immediately
+        const initialValue: IEvent = {
+          type: 'INITIAL',
+          data: null,
+          source: undefined,
+          time: '',
+          text: ''
+        };
+        return concat(
+          of(initialValue),
+          this.eventRealtimeService.onAll$(agentId).pipe(
+            map((p) => p['data']),
+            filter(
+              (p) => p['type'] == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE
+            ),
+            tap((p) => {
+              console.log('Status change connector original:', p);
+            })
+          )
+        );
+      })
+    );
+  }
+
+  private testRealtime() {
+    console.log('Calling testRealtime');
+
+    // const eventRealtimeService1 = new EventRealtimeService(
+    //   inject(RealtimeSubjectService)
+    // );
+    // eventRealtimeService1.start();
+
+    const eventRealtimeService2 = new EventRealtimeService(
+      inject(RealtimeSubjectService)
+    );
+    eventRealtimeService2.start();
+
+    // const initialValue: IEvent = {
+    //   type: 'INITIAL',
+    //   data: null,
+    //   source: undefined,
+    //   time: '',
+    //   text: ''
+    // };
+    // concat(
+    //   of(initialValue),
+    //   eventRealtimeService1.onAll$('9262685372').pipe(
+    //     map((p) => p['data']),
+    //     filter(
+    //       (p) => p['type'] == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE
+    //     ),
+    //     tap((p) => {
+    //       console.log('Status change connector:', p);
+    //     })
+    //   )
+    // ).subscribe((p) => console.log('Status change connector combined:', p));
+
+    eventRealtimeService2
+      .onAll$('9262685372')
+      .pipe(
+        //  map((p) => p['data']),
+        // filter((p) => p['type'] == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE),
+        tap((p) => {
+          console.log('Status change connector simple:', p);
+        })
+      )
+      .subscribe();
   }
 }
