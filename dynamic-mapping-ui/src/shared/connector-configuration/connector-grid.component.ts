@@ -221,7 +221,8 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
     });
 
     this.connectorConfigurationService
-      .getRealtimeConnectorConfigurations()
+      // .getRealtimeConnectorConfigurations()
+      .getConnectorConfigurationsWithLiveStatus()
       .subscribe((confs) => {
         this.configurations$.next(confs);
       });

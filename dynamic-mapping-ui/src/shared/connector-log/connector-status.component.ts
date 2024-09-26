@@ -68,7 +68,8 @@ export class ConnectorStatusComponent implements OnInit {
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
 
     this.connectorConfigurationService
-      .getRealtimeConnectorConfigurations()
+      // .getRealtimeConnectorConfigurations()
+      .getConnectorConfigurationsWithLiveStatus()
       .subscribe((confs) => {
         this.configurations = confs;
       });

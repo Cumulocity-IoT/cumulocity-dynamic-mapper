@@ -66,6 +66,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.BootstrapService;
 import dynamic.mapping.core.ConfigurationRegistry;
+import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.Operation;
@@ -273,9 +274,9 @@ public class MappingRestController {
 				}
 			}
 			connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-			//AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-			//		configuration.getIdent());
-			//client.reconnect();
+			// AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+			// configuration.getIdent());
+			// client.reconnect();
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -518,6 +519,11 @@ public class MappingRestController {
 		Map<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
 		String tenant = contextService.getContext().getTenant();
 		try {
+			List<ConnectorConfiguration> configurationList = connectorConfigurationComponent.getConnectorConfigurations(
+					tenant);
+			for (ConnectorConfiguration conf : configurationList) {
+				connectorsStatus.put(conf.getIdent(), ConnectorStatusEvent.unknown());
+			}
 			Map<String, AConnectorClient> connectorMap = connectorRegistry
 					.getClientsForTenant(tenant);
 			if (connectorMap != null) {

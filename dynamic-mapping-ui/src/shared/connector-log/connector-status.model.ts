@@ -19,25 +19,26 @@
  * @authors Christof Strack
  */
 
-
 export interface ConnectorStatusEvent {
-	status: ConnectorStatus;
-	message: string;
-}export enum ConnectorStatus {
-	UNKNOWN = 'UNKNOWN',
-	CONFIGURED = 'CONFIGURED',
-	ENABLED = 'ENABLED',
-	CONNECTING = 'CONNECTING',
-	CONNECTED = 'CONNECTED',
-	DISCONNECTED = 'DISCONNECTED',
-	DISCONNECTING = 'DISCONNECTING',
-	FAILED = 'FAILED'
+  ident: string;
+  status: ConnectorStatus;
+  message: string;
+}
+
+export enum ConnectorStatus {
+  UNKNOWN = 'UNKNOWN',
+  CONFIGURED = 'CONFIGURED',
+  ENABLED = 'ENABLED',
+  CONNECTING = 'CONNECTING',
+  CONNECTED = 'CONNECTED',
+  DISCONNECTED = 'DISCONNECTED',
+  DISCONNECTING = 'DISCONNECTING',
+  FAILED = 'FAILED'
 }
 export enum StatusEventTypes {
-	STATUS_CONNECTOR_EVENT_TYPE = 'd11r_connectorStatusEvent',
-	STATUS_MAPPING_CHANGED_EVENT_TYPE = 'd11r_mappingChangedEvent',
-	STATUS_SUBSCRIPTION_EVENT_TYPE = 'd11r_subscriptionEvent',
-	STATUS_NOTIFICATION_EVENT_TYPE = 'd11r_notificationStatusEvent',
-	ALL = 'ALL'
+  STATUS_CONNECTOR_EVENT_TYPE = 'd11r_connectorStatusEvent',
+  STATUS_MAPPING_CHANGED_EVENT_TYPE = 'd11r_mappingChangedEvent',
+  STATUS_SUBSCRIPTION_EVENT_TYPE = 'd11r_subscriptionEvent',
+  STATUS_NOTIFICATION_EVENT_TYPE = 'd11r_notificationStatusEvent',
+  ALL = 'ALL'
 }
-
