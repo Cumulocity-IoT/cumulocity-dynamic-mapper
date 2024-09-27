@@ -65,9 +65,10 @@ export class ConnectorStatusComponent implements OnInit {
   async ngOnInit() {
     // console.log('Running version', this.version);
     this.feature = await this.sharedService.getFeatures();
-    this.statusLogs$ = this.connectorStatusService.getStatusLogs();
+    await this.connectorStatusService.startConnectorStatusLogs();
     this.configurations$ =
       this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
+    this.statusLogs$ = this.connectorStatusService.getStatusLogs();
   }
 
   updateStatusLogs() {
