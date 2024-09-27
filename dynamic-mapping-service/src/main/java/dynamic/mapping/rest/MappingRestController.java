@@ -66,7 +66,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.BootstrapService;
 import dynamic.mapping.core.ConfigurationRegistry;
-import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.Operation;

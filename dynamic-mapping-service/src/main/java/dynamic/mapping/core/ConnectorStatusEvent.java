@@ -32,52 +32,59 @@ import lombok.Data;
 
 @Data
 public class ConnectorStatusEvent implements Serializable {
-    @NotNull
-    public ConnectorStatus status;
+	@NotNull
+	public String connectorName;
 
-    @NotNull
-    public String message;
+	@NotNull
+	public String connectorIdent;
 
-    @NotNull
-    public String date;
+	@NotNull
+	public ConnectorStatus status;
 
-    public ConnectorStatusEvent() {
-        this.status = ConnectorStatus.UNKNOWN;
-    }
+	@NotNull
+	public String message;
 
-    public ConnectorStatusEvent(ConnectorStatus status) {
-        this.status = status;
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date now = new Date();
-        this.date = dateFormat.format(now);
-        this.message = "";
-    }
+	@NotNull
+	public String date;
 
-    public static ConnectorStatusEvent connected() {
-        return new ConnectorStatusEvent(ConnectorStatus.CONNECTED);
-    }
+	public ConnectorStatusEvent() {
+		this.status = ConnectorStatus.UNKNOWN;
+	}
 
-    public static ConnectorStatusEvent disconnected() {
-        return new ConnectorStatusEvent(ConnectorStatus.DISCONNECTED);
-    }
+	public ConnectorStatusEvent(ConnectorStatus status) {
+		this.status = status;
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Date now = new Date();
+		this.date = dateFormat.format(now);
+		this.message = "";
+	}
 
-    public static ConnectorStatusEvent enabled() {
-        return new ConnectorStatusEvent(ConnectorStatus.ENABLED);
-    }
+	public static ConnectorStatusEvent connected() {
+		return new ConnectorStatusEvent(ConnectorStatus.CONNECTED);
+	}
 
-    public static ConnectorStatusEvent failed(String errorMessage) {
-        return new ConnectorStatusEvent(ConnectorStatus.FAILED);
-    }
+	public static ConnectorStatusEvent disconnected() {
+		return new ConnectorStatusEvent(ConnectorStatus.DISCONNECTED);
+	}
 
-    public static ConnectorStatusEvent unknown() {
-        return new ConnectorStatusEvent(ConnectorStatus.UNKNOWN);
-    }
+	public static ConnectorStatusEvent enabled() {
+		return new ConnectorStatusEvent(ConnectorStatus.ENABLED);
+	}
 
-    public void updateStatus(ConnectorStatus st, boolean clearMessage) {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date now = new Date();
-        date = dateFormat.format(now);
-        status = st;
-        if (clearMessage) message = "";
-    }
+	public static ConnectorStatusEvent failed(String errorMessage) {
+		return new ConnectorStatusEvent(ConnectorStatus.FAILED);
+	}
+
+	public static ConnectorStatusEvent unknown() {
+		return new ConnectorStatusEvent(ConnectorStatus.UNKNOWN);
+	}
+
+	public void updateStatus(ConnectorStatus st, boolean clearMessage) {
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Date now = new Date();
+		date = dateFormat.format(now);
+		status = st;
+		if (clearMessage)
+			message = "";
+	}
 }

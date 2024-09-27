@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable } from 'rxjs';
@@ -44,7 +44,7 @@ export class ConnectorStatusComponent implements OnInit {
   monitorings$: Observable<ConnectorStatus>;
   feature: Feature;
   specifications: ConnectorSpecification[] = [];
-  configurations: ConnectorConfiguration[];
+  configurations$: Observable<ConnectorConfiguration[]> = new Observable();
   statusLogs$: Observable<any[]>;
   statusLogs: any[] = [];
   filterStatusLog = {
@@ -66,13 +66,8 @@ export class ConnectorStatusComponent implements OnInit {
     // console.log('Running version', this.version);
     this.feature = await this.sharedService.getFeatures();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
-
-    this.connectorConfigurationService
-      // .getRealtimeConnectorConfigurations()
-      .getConnectorConfigurationsWithLiveStatus()
-      .subscribe((confs) => {
-        this.configurations = confs;
-      });
+    this.configurations$ =
+      this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
   }
 
   updateStatusLogs() {

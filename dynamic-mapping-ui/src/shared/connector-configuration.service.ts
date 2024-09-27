@@ -39,7 +39,6 @@ import {
   from,
   merge,
   Observable,
-  of,
   Subject,
   Subscription
 } from 'rxjs';
@@ -67,6 +66,30 @@ export class ConnectorConfigurationService {
       inject(RealtimeSubjectService)
     );
     this.startConnectorConfigurations();
+    this.sharedConnectorConfigurations$ = this.connectorConfigurations$.pipe(
+      // tap(() => console.log('Further up I')),
+      shareReplay(1),
+      switchMap((configurations: ConnectorConfiguration[]) => {
+        return combineLatest([
+          from([configurations]),
+          this.getCombinedConnectorStatus()
+        ]).pipe(
+          map(([configs, statusMap]) => {
+            // console.log('Changes configs:', configs);
+            // console.log('Changes statusMap:', statusMap);
+            return configs.map((config) => ({
+              ...config,
+              status$: new Observable<ConnectorStatus>((observer) => {
+                if (statusMap[config.ident]) {
+                  observer.next(statusMap[config.ident].status);
+                }
+                return () => {}; // Cleanup function
+              })
+            }));
+          })
+        );
+      })
+    );
   }
 
   private _connectorConfigurations: ConnectorConfiguration[];
@@ -78,6 +101,7 @@ export class ConnectorConfigurationService {
   private eventRealtimeService: EventRealtimeService;
   private subscription: Subscription;
   private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
+  private sharedConnectorConfigurations$: Observable<ConnectorConfiguration[]>;
 
   resetCache() {
     // console.log('Calling: BrokerConfigurationService.resetCache()');
@@ -86,29 +110,17 @@ export class ConnectorConfigurationService {
   }
 
   startConnectorConfigurations() {
-    const n = Date.now();
     if (!this.initialized) {
       this.initialized = true;
-      this.connectorConfigurations$ =
-        // 		from(
-        //     this.getConnectorConfigurations()
-        //   ).pipe(
-        //     tap(() => console.log('Something happened I')),
-        //     shareReplay(1)
-        //   );
-        merge(
-          from(this.getConnectorConfigurations())
-            .pipe
-            //  tap(() => console.log('Something happened I'))
-            (),
-          this.triggerConfigurations$.pipe(
-            switchMap(() => from(this.getConnectorConfigurations()))
-            // tap(() => console.log('Something happened II'))
-          )
-        ).pipe(
-          tap(() => console.log('Something happened')),
-          shareReplay(1)
-        );
+      this.connectorConfigurations$ = merge(
+        from(this.getConnectorConfigurations()),
+        this.triggerConfigurations$.pipe(
+          switchMap(() => from(this.getConnectorConfigurations()))
+        )
+      ).pipe(
+        tap(() => console.log('Something happened')),
+        shareReplay(1)
+      );
       // this.testRealtime();
     }
   }
@@ -224,9 +236,11 @@ export class ConnectorConfigurationService {
             map((p) => {
               const connectorFragment = p['data'][CONNECTOR_FRAGMENT];
               return {
-                ident: connectorFragment.connectorIdent,
+                connectorIdent: connectorFragment.connectorIdent,
+                connectorName: connectorFragment.connectorName,
                 status: connectorFragment.status,
-                message: connectorFragment.status
+                message: connectorFragment.message,
+                type: connectorFragment.type
               };
             }),
             tap((p) => {
@@ -238,7 +252,7 @@ export class ConnectorConfigurationService {
     );
   }
 
-  private testRealtime() {
+  private async testRealtime() {
     console.log('Calling testRealtime');
 
     const eventRealtimeService = new EventRealtimeService(
@@ -258,34 +272,38 @@ export class ConnectorConfigurationService {
       .subscribe();
   }
 
+  private updateRealtimeConnectorStatus = async (p: object) => {
+    const payload = p['data']['data'];
+    console.log('Status change connector old fashin:', payload);
+  };
+
   getCombinedConnectorStatus(): Observable<{
     [ident: string]: ConnectorStatusEvent;
   }> {
-    // Convert the initial status Promise to an Observable
-    const initialStatus$ = from(this.getConnectorStatus()).pipe(
-      tap((res) => {
-        console.log('Changes getConnectorStatus:', res);
-      })
-    );
-
+    console.log('Calling - getCombinedConnectorStatus:');
     // Create an Observable that combines initial status with real-time updates
     return combineLatest([
-      initialStatus$,
+      from(this.getConnectorStatus()),
       this.getConnectorStatusEvents().pipe(
+        tap(() => console.log('Source IIb')),
         // // Start with an empty event to trigger initial emission
         startWith({
-          ident: 'EMPTY',
+          connectorIdent: 'EMPTY',
           status: ConnectorStatus.UNKNOWN,
           message: 'EMPTY_FROM_BEFORE_SCAN'
         } as ConnectorStatusEvent),
         // Accumulate status updates
         scan(
           (acc, event) => {
-            console.log('Changes acc:', acc);
-            console.log('Changes event:', event);
+            // console.log('Changes acc I:', acc);
+            // console.log('Changes event I:', event);
+            // console.log('Changes merged I:', {
+            //   ...acc,
+            //   [event.ident]: event
+            // });
             return {
               ...acc,
-              [event.ident]: event
+              [event.connectorIdent]: event
             };
           },
           {} as { [ident: string]: ConnectorStatusEvent }
@@ -294,12 +312,12 @@ export class ConnectorConfigurationService {
     ]).pipe(
       // Combine initial status with accumulated updates
       map(([initial, updates]) => {
-        console.log('Changes initial:', initial);
-        console.log('Changes updates:', updates);
-        console.log('Changes merged:', {
-          ...initial,
-          ...updates
-        });
+        // console.log('Changes initial II:', initial);
+        // console.log('Changes updates II:', updates);
+        // console.log('Changes merged II:', {
+        //   ...initial,
+        //   ...updates
+        // });
         return {
           ...initial,
           ...updates
@@ -313,28 +331,7 @@ export class ConnectorConfigurationService {
   getConnectorConfigurationsWithLiveStatus(): Observable<
     ConnectorConfiguration[]
   > {
-    return this.connectorConfigurations$.pipe(
-      switchMap((configurations: ConnectorConfiguration[]) => {
-        return combineLatest([
-          from([configurations]),
-          this.getCombinedConnectorStatus()
-        ]).pipe(
-          map(([configs, statusMap]) => {
-            // console.log('Changes configs:', configs);
-            // console.log('Changes statusMap:', statusMap);
-            return configs.map((config) => ({
-              ...config,
-              status$: new Observable<ConnectorStatus>((observer) => {
-                if (statusMap[config.ident]) {
-                  observer.next(statusMap[config.ident].status);
-                }
-                return () => {}; // Cleanup function
-              })
-            }));
-          })
-        );
-      })
-      // shareReplay(1)
-    );
+    console.log('Further up 0');
+    return this.sharedConnectorConfigurations$;
   }
 }

@@ -20,9 +20,12 @@
  */
 
 export interface ConnectorStatusEvent {
-  ident: string;
+  connectorIdent: string;
+  connectorName: string;
+  date?: string;
   status: ConnectorStatus;
   message: string;
+  type: StatusEventTypes;
 }
 
 export enum ConnectorStatus {

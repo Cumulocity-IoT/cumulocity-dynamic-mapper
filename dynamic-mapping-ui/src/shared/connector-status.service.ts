@@ -24,6 +24,7 @@ import {
   BASE_URL,
   CONNECTOR_FRAGMENT,
   ConnectorStatus,
+  ConnectorStatusEvent,
   PATH_STATUS_CONNECTORS_ENDPOINT,
   SharedService
 } from '../shared';
@@ -155,7 +156,7 @@ export class ConnectorStatusService {
       .subscribe();
   }
 
-  private getAllConnectorStatusEvents(): Observable<any[]> {
+  private getAllConnectorStatusEvents(): Observable<ConnectorStatusEvent[]> {
     // console.log('Started subscriptions:', this._agentId);
 
     // subscribe to event stream
@@ -180,18 +181,8 @@ export class ConnectorStatusService {
       map((event) => {
         event[CONNECTOR_FRAGMENT].type = event['type'];
         return [event[CONNECTOR_FRAGMENT]];
-      })
+      }),
+      tap((l) => console.log('StatusLogs:', l))
     );
-  }
-
-  async getConnectorStatus(): Promise<ConnectorStatus> {
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_STATUS_CONNECTORS_ENDPOINT}`,
-      {
-        method: 'GET'
-      }
-    );
-    const result = await response.json();
-    return result;
   }
 }
