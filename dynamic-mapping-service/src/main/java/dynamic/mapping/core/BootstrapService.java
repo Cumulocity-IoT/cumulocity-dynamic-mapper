@@ -1,6 +1,7 @@
 package dynamic.mapping.core;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
@@ -42,181 +43,192 @@ import javax.annotation.PreDestroy;
 @Slf4j
 public class BootstrapService {
 
-    @Autowired
-    ConnectorRegistry connectorRegistry;
+	@Autowired
+	ConnectorRegistry connectorRegistry;
 
-    @Autowired
-    ConfigurationRegistry configurationRegistry;
+	@Autowired
+	ConfigurationRegistry configurationRegistry;
 
-    @Autowired
-    private MappingComponent mappingComponent;
+	@Autowired
+	private MappingComponent mappingComponent;
 
-    @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
+	@Autowired
+	ServiceConfigurationComponent serviceConfigurationComponent;
 
-    @Autowired
-    ConnectorConfigurationComponent connectorConfigurationComponent;
+	@Autowired
+	ConnectorConfigurationComponent connectorConfigurationComponent;
 
-    @Qualifier("cachedThreadPool")
-    private ExecutorService cachedThreadPool;
+	@Qualifier("cachedThreadPool")
+	private ExecutorService cachedThreadPool;
 
-    @Autowired
-    public void setCachedThreadPool(ExecutorService cachedThreadPool) {
-        this.cachedThreadPool = cachedThreadPool;
-    }
+	@Autowired
+	public void setCachedThreadPool(ExecutorService cachedThreadPool) {
+		this.cachedThreadPool = cachedThreadPool;
+	}
 
-    @Value("${APP.additionalSubscriptionIdTest}")
-    private String additionalSubscriptionIdTest;
+	@Value("${APP.additionalSubscriptionIdTest}")
+	private String additionalSubscriptionIdTest;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+	@Autowired
+	private MicroserviceSubscriptionsService subscriptionsService;
 
-    @PreDestroy
-    public void destroy() {
-        log.info("Shutting down mapper...");
-        subscriptionsService.runForEachTenant(() -> {
-            String tenant =  subscriptionsService.getTenant();
-            configurationRegistry.getNotificationSubscriber().disconnect(tenant);
-        });
-    }
+	@PreDestroy
+	public void destroy() {
+		log.info("Shutting down mapper...");
+		subscriptionsService.runForEachTenant(() -> {
+			String tenant = subscriptionsService.getTenant();
+			configurationRegistry.getNotificationSubscriber().disconnect(tenant);
+		});
+	}
 
-    @EventListener
-    public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
-        log.info("Tenant {} - Microservice unsubscribed", event.getTenant());
-        String tenant = event.getTenant();
-        configurationRegistry.getNotificationSubscriber().disconnect(tenant);
-        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriber(tenant);
+	@EventListener
+	public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
+		log.info("Tenant {} - Microservice unsubscribed", event.getTenant());
+		String tenant = event.getTenant();
+		configurationRegistry.getNotificationSubscriber().disconnect(tenant);
+		configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriber(tenant);
 
-        try {
-            connectorRegistry.unregisterAllClientsForTenant(tenant);
-        } catch (ConnectorRegistryException e) {
-            log.error("Tenant {} - Error on cleaning up connector clients", event.getTenant());
-        }
+		try {
+			connectorRegistry.unregisterAllClientsForTenant(tenant);
+		} catch (ConnectorRegistryException e) {
+			log.error("Tenant {} - Error on cleaning up connector clients", event.getTenant());
+		}
 
-        // delete configurations
-        configurationRegistry.getServiceConfigurations().remove(tenant);
-        configurationRegistry.getMappingServiceRepresentations().remove(tenant);
-        mappingComponent.cleanMappingStatus(tenant);
-        configurationRegistry.getPayloadProcessorsInbound().remove(tenant);
-        configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
-    }
+		// delete configurations
+		configurationRegistry.getServiceConfigurations().remove(tenant);
+		configurationRegistry.getMappingServiceRepresentations().remove(tenant);
+		mappingComponent.cleanMappingStatus(tenant);
+		configurationRegistry.getPayloadProcessorsInbound().remove(tenant);
+		configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
+	}
 
-    @EventListener
-    public void initialize(MicroserviceSubscriptionAddedEvent event) {
-        // Executed for each tenant subscribed
-        String tenant = event.getCredentials().getTenant();
-        configurationRegistry.getMicroserviceCredentials().put(tenant, event.getCredentials());
-        log.info("Tenant {} - Microservice subscribed", tenant);
-        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
-        ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()
-                .initializeMappingServiceObject(tenant);
+	@EventListener
+	public void initialize(MicroserviceSubscriptionAddedEvent event) {
+		// Executed for each tenant subscribed
+		String tenant = event.getCredentials().getTenant();
+		configurationRegistry.getMicroserviceCredentials().put(tenant, event.getCredentials());
+		log.info("Tenant {} - Microservice subscribed", tenant);
+		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
+		ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()
+				.initializeMappingServiceObject(tenant);
 
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
-        configurationRegistry.getC8yAgent().createExtensibleProcessor(tenant);
-        configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
+		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+		configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+		configurationRegistry.getC8yAgent().createExtensibleProcessor(tenant);
+		configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
 
-        MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
-                .convertValue(mappingServiceMOR,
-                        MappingServiceRepresentation.class);
-        configurationRegistry.getMappingServiceRepresentations().put(tenant, mappingServiceRepresentation);
-        mappingComponent.initializeMappingStatus(tenant, false);
-        mappingComponent.initializeDeploymentMap(tenant, false);
-        mappingComponent.initializeMappingCaches(tenant);
-        mappingComponent.rebuildMappingOutboundCache(tenant);
-        mappingComponent.rebuildMappingInboundCache(tenant);
+		MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
+				.convertValue(mappingServiceMOR,
+						MappingServiceRepresentation.class);
+		configurationRegistry.getMappingServiceRepresentations().put(tenant, mappingServiceRepresentation);
+		mappingComponent.initializeMappingStatus(tenant, false);
+		mappingComponent.initializeDeploymentMap(tenant, false);
+		mappingComponent.initializeMappingCaches(tenant);
+		mappingComponent.rebuildMappingOutboundCache(tenant);
+		mappingComponent.rebuildMappingInboundCache(tenant);
 
-        try {
-            // TODO Add other clients static property definition here
-            connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getConnectorSpecification());
-            connectorRegistry.registerConnector(ConnectorType.CUMULOCITY_MQTT_SERVICE, new MQTTServiceClient().getConnectorSpecification());
-            connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
-            if (serviceConfiguration != null) {
-                List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
-                        .getConnectorConfigurations(tenant);
-                // For each connector configuration create a new instance of the connector
-                for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                    initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
-                            tenant);
-                }
-            }
+		try {
+			// TODO Add other clients static property definition here
+			if (connectorRegistry.getConnectorStatusMap().get(tenant) == null) {
+				connectorRegistry.getConnectorStatusMap().put(tenant, new HashMap<String, ConnectorStatusEvent>());
+			}
+			connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getConnectorSpecification());
+			connectorRegistry.registerConnector(ConnectorType.CUMULOCITY_MQTT_SERVICE,
+					new MQTTServiceClient().getConnectorSpecification());
+			connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
+			if (serviceConfiguration != null) {
+				List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
+						.getConnectorConfigurations(tenant);
+				// For each connector configuration create a new instance of the connector
+				for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
+					initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
+							tenant);
+				}
+			}
 
-        } catch (Exception e) {
-            log.error("Tenant {} - Error on initializing connectors: ", tenant, e);
-            // mqttClient.submitConnect();
-        }
+		} catch (Exception e) {
+			log.error("Tenant {} - Error on initializing connectors: ", tenant, e);
+			// mqttClient.submitConnect();
+		}
 
-        log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, serviceConfiguration.isOutboundMappingEnabled());
-        if (serviceConfiguration.isOutboundMappingEnabled()) {
-            if(!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
-                try {
-                    serviceConfiguration.setOutboundMappingEnabled(false);
-                    serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
-                } catch (JsonProcessingException e) {
-                    log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
-                }
-            } else {
-                configurationRegistry.getNotificationSubscriber().initDeviceClient();
-            }
-        }
-    }
+		log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant,
+				serviceConfiguration.isOutboundMappingEnabled());
+		if (serviceConfiguration.isOutboundMappingEnabled()) {
+			if (!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
+				try {
+					serviceConfiguration.setOutboundMappingEnabled(false);
+					serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+				} catch (JsonProcessingException e) {
+					log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
+				}
+			} else {
+				configurationRegistry.getNotificationSubscriber().initDeviceClient();
+			}
+		}
+	}
 
-    public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
-            ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
-        AConnectorClient connectorClient = null;
-        if(connectorConfiguration.isEnabled()) {
-            try {
-                connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
-                        additionalSubscriptionIdTest, tenant);
-            } catch (IOException e) {
-                log.error("Tenant {} - Error on creating connector {} {}", connectorConfiguration.getConnectorType(), e);
-                throw new ConnectorRegistryException(e.getMessage());
-            }
-            connectorRegistry.registerClient(tenant, connectorClient);
-            // initialize AsynchronousDispatcherInbound
-            AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry,
-                    connectorClient);
-            configurationRegistry.initializePayloadProcessorsInbound(tenant);
-            connectorClient.setDispatcher(dispatcherInbound);
-            connectorClient.reconnect();
-            connectorClient.submitHousekeeping();
-            initializeOutboundMapping(tenant, serviceConfiguration, connectorClient);
-        }
-        return connectorClient;
-    }
+	public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
+			ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
+		AConnectorClient connectorClient = null;
+		if (connectorConfiguration.isEnabled()) {
+			try {
+				connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
+						additionalSubscriptionIdTest, tenant);
+			} catch (IOException e) {
+				log.error("Tenant {} - Error on creating connector {} {}", connectorConfiguration.getConnectorType(),
+						e);
+				throw new ConnectorRegistryException(e.getMessage());
+			}
+			connectorRegistry.registerClient(tenant, connectorClient);
+			// initialize AsynchronousDispatcherInbound
+			AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry,
+					connectorClient);
+			configurationRegistry.initializePayloadProcessorsInbound(tenant);
+			connectorClient.setDispatcher(dispatcherInbound);
+			connectorClient.reconnect();
+			connectorClient.submitHousekeeping();
+			initializeOutboundMapping(tenant, serviceConfiguration, connectorClient);
+		}
+		return connectorClient;
+	}
 
-    public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration, AConnectorClient connectorClient) {
-        if (serviceConfiguration.isOutboundMappingEnabled()) {
-            // initialize AsynchronousDispatcherOutbound
-            configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
-            AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(
-                    configurationRegistry, connectorClient);
-            // Only initialize Connectors which are enabled
-            if(connectorClient.getConnectorConfiguration().isEnabled())
-                configurationRegistry.getNotificationSubscriber().addConnector(tenant, connectorClient.getConnectorIdent(),
-                        dispatcherOutbound);
-            // Subscriber must be new initialized for the new added connector
-            //configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+	public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
+			AConnectorClient connectorClient) {
+		if (serviceConfiguration.isOutboundMappingEnabled()) {
+			// initialize AsynchronousDispatcherOutbound
+			configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
+			AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(
+					configurationRegistry, connectorClient);
+			// Only initialize Connectors which are enabled
+			if (connectorClient.getConnectorConfiguration().isEnabled())
+				configurationRegistry.getNotificationSubscriber().addConnector(tenant,
+						connectorClient.getConnectorIdent(),
+						dispatcherOutbound);
+			// Subscriber must be new initialized for the new added connector
+			// configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 
-        }
-    }
+		}
+	}
 
-    //shutdownAndRemoveConnector will unsubscribe the subscriber which drops all queues
-    public void shutdownAndRemoveConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
-        //connectorRegistry.unregisterClient(tenant, connectorIdent);
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        if (serviceConfiguration.isOutboundMappingEnabled()) {
-            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriberByConnector(tenant, connectorIdent);
-            configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
-        }
-    }
+	// shutdownAndRemoveConnector will unsubscribe the subscriber which drops all
+	// queues
+	public void shutdownAndRemoveConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
+		// connectorRegistry.unregisterClient(tenant, connectorIdent);
+		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+		if (serviceConfiguration.isOutboundMappingEnabled()) {
+			configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriberByConnector(tenant,
+					connectorIdent);
+			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
+		}
+	}
 
-    //DisableConnector will just clean-up maps and disconnects Notification 2.0 - queues will be kept
-    public void disableConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
-        connectorRegistry.unregisterClient(tenant, connectorIdent);
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        if (serviceConfiguration.isOutboundMappingEnabled()) {
-            configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
-        }
-    }
+	// DisableConnector will just clean-up maps and disconnects Notification 2.0 -
+	// queues will be kept
+	public void disableConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
+		connectorRegistry.unregisterClient(tenant, connectorIdent);
+		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+		if (serviceConfiguration.isOutboundMappingEnabled()) {
+			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
+		}
+	}
 }

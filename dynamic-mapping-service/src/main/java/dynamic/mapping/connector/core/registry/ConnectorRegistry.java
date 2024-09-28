@@ -44,9 +44,6 @@ public class ConnectorRegistry {
 			throw new ConnectorRegistryException("Tenant is missing!");
 		if (client.getConnectorIdent() == null)
 			throw new ConnectorRegistryException("Connector ident is missing!");
-		if (connectorStatusMap.get(tenant) == null) {
-			connectorStatusMap.put(tenant, new HashMap<String, ConnectorStatusEvent>());
-		}
 		if (connectorTenantMap.get(tenant) == null) {
 			Map<String, AConnectorClient> connectorMap = new HashMap<>();
 			connectorMap.put(client.getConnectorIdent(), client);
