@@ -158,7 +158,7 @@ public abstract class AConnectorClient {
 
 	@Getter
 	@Setter
-	public ConnectorStatusEvent connectorStatus = ConnectorStatusEvent.unknown();
+	public ConnectorStatusEvent connectorStatus;
 
 	@Getter
 	@Setter
@@ -673,7 +673,8 @@ public abstract class AConnectorClient {
 	}
 
 	public void collectSubscribedMappingsAll(Map<String, DeploymentMapEntryDetailed> mappingsDeployed) {
-		ConnectorConfiguration cleanedConfiguration = getConnectorConfiguration().getCleanedConfig(connectorSpecification);
+		ConnectorConfiguration cleanedConfiguration = getConnectorConfiguration()
+				.getCleanedConfig(connectorSpecification);
 		List<String> subscribedMappingsInbound = getMappingsDeployedInbound().keySet().stream()
 				.collect(Collectors.toList());
 		// iterate over all mappings for specific client

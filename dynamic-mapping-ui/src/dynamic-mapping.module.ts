@@ -24,7 +24,6 @@ import {
   CommonModule,
   CoreModule,
   DynamicFormsModule,
-  EventRealtimeService,
   hookNavigator,
   hookTab,
   RealtimeModule
@@ -85,7 +84,6 @@ import { LandingModule } from './landing/landing.module';
   providers: [
     OverviewGuard,
     BsModalService,
-    EventRealtimeService,
     hookNavigator(MappingNavigationFactory),
     hookTab(MappingTabFactory),
 

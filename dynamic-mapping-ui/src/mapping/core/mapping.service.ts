@@ -515,11 +515,5 @@ export class MappingService {
       .subscribe(() => this.reloadInbound$.next());
   }
 
-  async stopChangedMappingEvents() {
-    if (!this._agentId) {
-      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    }
-    // console.log('Stop subscriptions:', this._agentId);
-    if (this.subscription) this.subscription.unsubscribe();
-  }
+  async stopChangedMappingEvents() {}
 }

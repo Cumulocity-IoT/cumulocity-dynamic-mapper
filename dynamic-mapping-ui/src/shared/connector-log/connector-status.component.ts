@@ -39,12 +39,12 @@ import { ConnectorConfigurationService } from '../connector-configuration.servic
   styleUrls: ['./connector-status.component.style.css'],
   templateUrl: 'connector-status.component.html'
 })
-export class ConnectorStatusComponent implements OnInit {
+export class ConnectorStatusComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
   monitorings$: Observable<ConnectorStatus>;
   feature: Feature;
   specifications: ConnectorSpecification[] = [];
-  configurations: ConnectorConfiguration[];
+  configurations$: Observable<ConnectorConfiguration[]> = new Observable();
   statusLogs$: Observable<any[]>;
   statusLogs: any[] = [];
   filterStatusLog = {
@@ -65,13 +65,13 @@ export class ConnectorStatusComponent implements OnInit {
   async ngOnInit() {
     // console.log('Running version', this.version);
     this.feature = await this.sharedService.getFeatures();
+    await this.connectorStatusService.startConnectorStatusLogs();
+    this.configurations$ =
+      this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
-
-    this.connectorConfigurationService
-      .getRealtimeConnectorConfigurations()
-      .subscribe((confs) => {
-        this.configurations = confs;
-      });
+  }
+  ngOnDestroy(): void {
+    this.connectorStatusService.stopConnectorStatusLogs();
   }
 
   updateStatusLogs() {

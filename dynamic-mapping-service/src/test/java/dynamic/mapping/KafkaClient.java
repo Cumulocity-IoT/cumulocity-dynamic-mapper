@@ -51,8 +51,8 @@ public class KafkaClient {
 		props.put("key.serializer", serializer);
 		props.put("value.serializer", serializer);
 		props.put("security.protocol", "SASL_SSL");
-		// props.put("sasl.mechanism", "SCRAM-SHA-256");
-		props.put("sasl.mechanism", sasl_mechanism);
+		props.put("sasl.mechanism", "SCRAM-SHA-512");
+		// props.put("sasl.mechanism", sasl_mechanism);
 		// props.put("linger.ms", 1);
 		// props.put("enable.idempotence", false);
 		props.put("bootstrap.servers", kafka_broker_host);

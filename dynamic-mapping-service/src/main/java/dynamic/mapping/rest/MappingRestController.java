@@ -273,9 +273,9 @@ public class MappingRestController {
 				}
 			}
 			connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-			//AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-			//		configuration.getIdent());
-			//client.reconnect();
+			// AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+			// configuration.getIdent());
+			// client.reconnect();
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -518,10 +518,18 @@ public class MappingRestController {
 		Map<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
 		String tenant = contextService.getContext().getTenant();
 		try {
-			Map<String, AConnectorClient> connectorMap = connectorRegistry
-					.getClientsForTenant(tenant);
-			if (connectorMap != null) {
-				for (AConnectorClient client : connectorMap.values()) {
+			// initialize list with all known connectors
+			List<ConnectorConfiguration> configurationList = connectorConfigurationComponent.getConnectorConfigurations(
+					tenant);
+			for (ConnectorConfiguration conf : configurationList) {
+				connectorsStatus.put(conf.getIdent(), ConnectorStatusEvent.unknown(conf.name, conf.ident));
+			}
+
+			// overwrite status with last remembered status of once enabled connectors
+			connectorsStatus.putAll(connectorRegistry.getConnectorStatusMap().get(tenant));
+			// overwrite with / add status of currently enabled connectors
+			if (connectorRegistry.getClientsForTenant(tenant) != null) {
+				for (AConnectorClient client : connectorRegistry.getClientsForTenant(tenant).values()) {
 					ConnectorStatusEvent st = client.getConnectorStatus();
 					connectorsStatus.put(client.getConnectorIdent(), st);
 				}
