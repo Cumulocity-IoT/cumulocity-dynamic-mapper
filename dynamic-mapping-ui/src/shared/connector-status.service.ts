@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { inject, Injectable, Injector } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { EventService, FetchClient } from '@c8y/client';
 import {
   CONNECTOR_FRAGMENT,
@@ -31,7 +31,6 @@ import {
   from,
   merge,
   Observable,
-  ReplaySubject,
   Subject,
   Subscription
 } from 'rxjs';
@@ -59,16 +58,17 @@ export class ConnectorStatusService {
   private _agentId: string;
   private initialized: boolean = false;
   private subscription: Subscription;
+  private readonly ALL = 'ALL';
+
   private filterStatusLog = {
-    eventType: 'ALL',
-    // eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
-    connectorIdent: 'ALL'
+    eventType: this.ALL,
+    connectorIdent: this.ALL
   };
   private triggerLogs$: Subject<any> = new Subject();
 
-  private statusLogs$: Observable<any[]>;
+  private statusLogs$: Observable<ConnectorStatusEvent[]>;
 
-  getStatusLogs(): Observable<any[]> {
+  getStatusLogs(): Observable<ConnectorStatusEvent[]> {
     console.log('Calling: getStatusLogs', this.initialized);
     return this.statusLogs$;
   }
@@ -107,7 +107,7 @@ export class ConnectorStatusService {
           withTotalPages: false,
           source: this._agentId
         };
-        if (this.filterStatusLog.eventType !== 'ALL') {
+        if (this.filterStatusLog.eventType !== this.ALL) {
           filter['type'] = this.filterStatusLog.eventType;
         }
         return this.eventService.list(filter);
@@ -123,7 +123,7 @@ export class ConnectorStatusService {
       ),
       map((events) =>
         events.filter((event) => {
-          return this.filterStatusLog.connectorIdent == 'ALL'
+          return this.filterStatusLog.connectorIdent == this.ALL
             ? true
             : event.connectorIdent == this.filterStatusLog.connectorIdent;
         })
@@ -149,9 +149,10 @@ export class ConnectorStatusService {
         sortedAcc = sortedAcc.slice(0, 9);
         return sortedAcc;
       }, []),
+      // tap(() => console.log('Dummy log stmt to simulate a subscribe')),
       shareReplay(1)
     );
-    firstValueFrom(this.statusLogs$);
+    this.subscription = this.statusLogs$.subscribe();
   }
 
   private getAllConnectorStatusEvents(): Observable<ConnectorStatusEvent[]> {
@@ -169,12 +170,12 @@ export class ConnectorStatusService {
         return e[CONNECTOR_FRAGMENT];
       }),
       filter((e) =>
-        this.filterStatusLog.eventType == 'ALL'
+        this.filterStatusLog.eventType == this.ALL
           ? true
           : e['type'] == this.filterStatusLog.eventType
       ),
       filter((e) =>
-        this.filterStatusLog.connectorIdent == 'ALL'
+        this.filterStatusLog.connectorIdent == this.ALL
           ? true
           : e.connectorIdent == this.filterStatusLog.connectorIdent
       ),

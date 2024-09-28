@@ -46,6 +46,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
+import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
@@ -138,8 +139,9 @@ public class KafkaClient extends AConnectorClient {
 		this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
 		this.connectorConfiguration = connectorConfiguration;
 		// ensure the client knows its identity even if configuration is set to null
-		this.connectorIdent = connectorConfiguration.ident;
 		this.connectorName = connectorConfiguration.name;
+		this.connectorIdent = connectorConfiguration.ident;
+		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
 		this.c8yAgent = configurationRegistry.getC8yAgent();
 		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();

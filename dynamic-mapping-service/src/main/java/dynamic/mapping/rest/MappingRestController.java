@@ -518,15 +518,18 @@ public class MappingRestController {
 		Map<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
 		String tenant = contextService.getContext().getTenant();
 		try {
+			// initialize list with all known connectors
 			List<ConnectorConfiguration> configurationList = connectorConfigurationComponent.getConnectorConfigurations(
 					tenant);
 			for (ConnectorConfiguration conf : configurationList) {
-				connectorsStatus.put(conf.getIdent(), ConnectorStatusEvent.unknown());
+				connectorsStatus.put(conf.getIdent(), ConnectorStatusEvent.unknown(conf.name, conf.ident));
 			}
-			Map<String, AConnectorClient> connectorMap = connectorRegistry
-					.getClientsForTenant(tenant);
-			if (connectorMap != null) {
-				for (AConnectorClient client : connectorMap.values()) {
+
+			// overwrite status with last remembered status of once enabled connectors
+			connectorsStatus.putAll(connectorRegistry.getConnectorStatusMap().get(tenant));
+			// overwrite with / add status of currently enabled connectors
+			if (connectorRegistry.getClientsForTenant(tenant) != null) {
+				for (AConnectorClient client : connectorRegistry.getClientsForTenant(tenant).values()) {
 					ConnectorStatusEvent st = client.getConnectorStatus();
 					connectorsStatus.put(client.getConnectorIdent(), st);
 				}

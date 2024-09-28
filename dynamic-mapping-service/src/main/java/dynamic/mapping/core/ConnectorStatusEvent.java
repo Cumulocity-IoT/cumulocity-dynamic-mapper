@@ -59,24 +59,12 @@ public class ConnectorStatusEvent implements Serializable {
 		this.message = "";
 	}
 
-	public static ConnectorStatusEvent connected() {
-		return new ConnectorStatusEvent(ConnectorStatus.CONNECTED);
-	}
+	public static ConnectorStatusEvent unknown(String name, String ident) {
+		var res = new ConnectorStatusEvent(ConnectorStatus.UNKNOWN);
+		res.connectorName = name;
+		res.connectorIdent = ident;
 
-	public static ConnectorStatusEvent disconnected() {
-		return new ConnectorStatusEvent(ConnectorStatus.DISCONNECTED);
-	}
-
-	public static ConnectorStatusEvent enabled() {
-		return new ConnectorStatusEvent(ConnectorStatus.ENABLED);
-	}
-
-	public static ConnectorStatusEvent failed(String errorMessage) {
-		return new ConnectorStatusEvent(ConnectorStatus.FAILED);
-	}
-
-	public static ConnectorStatusEvent unknown() {
-		return new ConnectorStatusEvent(ConnectorStatus.UNKNOWN);
+		return res;
 	}
 
 	public void updateStatus(ConnectorStatus st, boolean clearMessage) {
