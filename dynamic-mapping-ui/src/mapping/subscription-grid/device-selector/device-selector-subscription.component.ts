@@ -28,12 +28,12 @@ import {
 import { IIdentified } from '@c8y/client';
 
 @Component({
-  selector: 'd11r-mapping-subscription',
-  templateUrl: 'mapping-subscription.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  selector: 'd11r-device-selector-subscription',
+  templateUrl: 'device-selector-subscription.component.html',
+  styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class MappingSubscriptionComponent {
+export class DeviceSelectorSubscriptionComponent {
   @Input() deviceList: IIdentified[];
 
   @Output() cancel = new EventEmitter<any>();

@@ -18,7 +18,7 @@
   ~
   ~ @authors Christof Strack
   -->
-  
+
 <c8y-title translate>Monitoring</c8y-title>
 
 <div class="card">
@@ -27,9 +27,13 @@
   </div>
   <div class="card-block">
     <div class="col-lg-10 col-lg-offset-1">
-      <div class="chart-container" id="divChart" #divChart>
-        <canvas id="monitoringChart"></canvas>
-      </div>
+      <div
+        echarts
+        [options]="echartOptions"
+        [merge]="echartUpdateOptions"
+        class="bar-chart"
+        (chartInit)="onChartInit($event)"
+      ></div>
     </div>
   </div>
 </div>

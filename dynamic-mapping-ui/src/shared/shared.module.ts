@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
-import { CoreModule } from '@c8y/ngx-components';
+import { CoreModule, EventRealtimeService } from '@c8y/ngx-components';
 import { JsonEditor2Component } from './editor2/jsoneditor2.component';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { PaginationModule } from 'ngx-bootstrap/pagination';
@@ -37,7 +37,7 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
 
 @NgModule({
   declarations: [
-	CheckedRendererComponent,
+    CheckedRendererComponent,
     JsonEditor2Component,
     ConfirmationModalComponent,
     CamelCasePipe,
@@ -46,8 +46,8 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
     ConnectorStatusComponent,
     ConnectorConfigurationComponent,
     ConfigurationConfigurationModalComponent,
-	StatusEnabledRendererComponent,
-	ConnectorStatusRendererComponent
+    StatusEnabledRendererComponent,
+    ConnectorStatusRendererComponent
   ],
   imports: [
     CoreModule,
@@ -80,5 +80,5 @@ export enum Operation {
   DEBUG_MAPPING = 'DEBUG_MAPPING',
   SNOOP_MAPPING = 'SNOOP_MAPPING',
   SNOOP_RESET = 'SNOOP_RESET',
-  RESET_DEPLOYMENT_MAP = 'RESET_DEPLOYMENT_MAP',
+  RESET_DEPLOYMENT_MAP = 'RESET_DEPLOYMENT_MAP'
 }

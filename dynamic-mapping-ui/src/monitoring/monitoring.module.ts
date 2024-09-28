@@ -29,6 +29,7 @@ import { DirectionRendererComponent } from './renderer/direction.renderer.compon
 import { MonitoringChartComponent } from './chart/chart.component';
 import { MonitoringTabFactory } from './monitoring-tab.factory';
 import { NODE2 } from '../shared/model/util';
+import { NgxEchartsModule } from 'ngx-echarts';
 
 @NgModule({
   declarations: [
@@ -38,7 +39,13 @@ import { NODE2 } from '../shared/model/util';
     DirectionRendererComponent,
     MonitoringChartComponent
   ],
-  imports: [CoreModule, BrokerConfigurationModule],
+  imports: [
+    CoreModule,
+    BrokerConfigurationModule,
+    NgxEchartsModule.forRoot({
+      echarts: () => import('echarts')
+    })
+  ],
   exports: [],
   providers: [
     hookRoute({

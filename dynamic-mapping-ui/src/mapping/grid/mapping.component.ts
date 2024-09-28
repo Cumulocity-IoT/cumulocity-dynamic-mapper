@@ -87,11 +87,9 @@ import { EditorMode } from '../shared/stepper-model';
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid: DataGridComponent;
-  @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
   isSubstitutionValid: boolean;
 
   showConfigMapping: boolean = false;
-  showConfigSubscription: boolean = false;
   showSnoopingMapping: boolean = false;
 
   isConnectionToMQTTEstablished: boolean;
@@ -106,7 +104,6 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   stepperConfiguration: StepperConfiguration = {};
   titleMapping: string;
-  titleSubscription: string = 'Subscription on devices for mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
 
   displayOptions: DisplayOptions = {
@@ -144,8 +141,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     currentPage: 1
   };
   actionControls: ActionControl[] = [];
-  actionControlSubscription: ActionControl[] = [];
-  bulkActionControlSubscription: BulkActionControl[] = [];
   bulkActionControls: BulkActionControl[] = [];
 
   constructor(
@@ -172,7 +167,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.subscription = await this.mappingService.getSubscriptions();
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     // console.log('ngOnInit');
     this.actionControls.push(
       {
@@ -233,10 +228,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: (item) =>
           item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
-          (
-            item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED
-          )
+          (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
       },
       {
         type: 'DISABLE_SNOOPING',
@@ -293,14 +286,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.exportMappingBulk.bind(this)
       }
     );
-    this.bulkActionControlSubscription.push({
-      type: BuiltInActionType.Delete,
-      callback: this.deleteSubscriptionBulkWithConfirmation.bind(this)
-    });
-    this.actionControlSubscription.push({
-      type: BuiltInActionType.Delete,
-      callback: this.deleteSubscriptionWithConfirmation.bind(this)
-    });
     this.mappingsEnriched$ = this.mappingService.getMappingsObservable(
       this.stepperConfiguration.direction
     );
@@ -308,7 +293,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingsEnriched$.subscribe((maps) => {
       this.mappingsCount = maps.length;
     });
-    this.mappingService.startChangedMappingEvents();
+    await this.mappingService.startChangedMappingEvents();
   }
 
   getColumnsMappings(): Column[] {
@@ -404,7 +389,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   onAddMapping() {
-	this.snoopStatus = SnoopStatus.NONE;
+    this.snoopStatus = SnoopStatus.NONE;
     const initialState = {
       direction: this.stepperConfiguration.direction
     };
@@ -424,12 +409,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     });
   }
 
-  onDefineSubscription() {
-    this.showConfigSubscription = !this.showConfigSubscription;
-  }
-
   async addMapping() {
-	// console.log('Snoop status:', this.snoopStatus);
+    // console.log('Snoop status:', this.snoopStatus);
     this.setStepperConfiguration(
       this.mappingType,
       this.stepperConfiguration.direction,
@@ -536,58 +517,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         gettext('Failed to delete subscription:') + error
       );
     }
-  }
-
-  private async deleteSubscriptionBulkWithConfirmation(ids: string[]) {
-    let continueDelete: boolean = false;
-    for (let index = 0; index < ids.length; index++) {
-      const device2Delete = this.subscription?.devices.find(
-        (de) => de.id == ids[index]
-      );
-      if (index == 0) {
-        continueDelete = await this.deleteSubscriptionWithConfirmation(
-          device2Delete,
-          true,
-          true
-        );
-      } else if (continueDelete) {
-        this.deleteSubscription(device2Delete);
-      }
-    }
-    this.isConnectionToMQTTEstablished = true;
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    this.subscriptionGrid.setAllItemsSelected(false);
-  }
-
-  private async deleteSubscriptionWithConfirmation(
-    device2Delete: IIdentified,
-    confirmation: boolean = true,
-    multiple: boolean = false
-  ): Promise<boolean | PromiseLike<boolean>> {
-    let result: boolean = false;
-    if (confirmation) {
-      const initialState = {
-        title: multiple ? 'Delete subscriptions' : 'Delete subscription',
-        message: multiple
-          ? 'You are about to delete subscriptions. Do you want to proceed to delete ALL?'
-          : 'You are about to delete a subscription. Do you want to proceed?',
-        labels: {
-          ok: 'Delete',
-          cancel: 'Cancel'
-        }
-      };
-      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-        ConfirmationModalComponent,
-        { initialState }
-      );
-
-      result = await confirmDeletionModalRef.content.closeSubject.toPromise();
-      if (result) {
-        await this.deleteSubscription(device2Delete);
-      }
-    }
-    this.subscriptionGrid.setAllItemsSelected(false);
-    return result;
   }
 
   async updateMapping(m: MappingEnriched) {
@@ -822,25 +751,6 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;
-  }
-
-  async onCommitSubscriptions(deviceList: IIdentified[]) {
-    this.subscription = {
-      api: API.ALL.name,
-      devices: deviceList
-    };
-    // console.log('Changed deviceList:', this.subscription.devices);
-    try {
-      this.subscription = await this.mappingService.updateSubscriptions(
-        this.subscription
-      );
-      this.alertService.success(gettext('Subscriptions updated successfully'));
-    } catch (error) {
-      this.alertService.danger(
-        gettext('Failed to update subscriptions:') + error
-      );
-    }
-    this.showConfigSubscription = false;
   }
 
   async onReload() {

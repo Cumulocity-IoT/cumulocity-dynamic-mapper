@@ -80,7 +80,8 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     )
       ? '* '
       : '';
-    this.substitutionText = `[ ${marksDeviceIdentifier}${this.duplicate.pathSource} -> ${this.duplicate.pathTarget} ]`;
+    if (this.isDuplicate)
+      this.substitutionText = `[ ${marksDeviceIdentifier}${this.duplicate.pathSource} -> ${this.duplicate.pathTarget} ]`;
     this.disabled$.next(this.isDuplicate);
     // console.log("Repair Options:", this.repairStrategyOptions);
     // console.log('Existing substitution:', this.existingSubstitution);

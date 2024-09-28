@@ -18,10 +18,14 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { FetchClient, InventoryService, Realtime } from '@c8y/client';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, map, Observable, Subscription } from 'rxjs';
 import { MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
+import {
+  ManagedObjectRealtimeService,
+  RealtimeSubjectService
+} from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class MonitoringService {
@@ -30,36 +34,36 @@ export class MonitoringService {
     private inventory: InventoryService,
     private sharedService: SharedService
   ) {
-    this.realtime = new Realtime(this.client);
+    this.managedObjectRealtimeService = new ManagedObjectRealtimeService(
+      inject(RealtimeSubjectService)
+    );
   }
 
   private realtime: Realtime;
+  private subscription: Subscription;
+  private managedObjectRealtimeService: ManagedObjectRealtimeService;
   private mappingStatus$ = new BehaviorSubject<MappingStatus[]>([]);
 
   getCurrentMappingStatus(): Observable<MappingStatus[]> {
     return this.mappingStatus$;
   }
 
-  async subscribeMonitoringChannel(): Promise<object> {
+  async startMonitoring(): Promise<void> {
     const agentId = await this.sharedService.getDynamicMappingServiceAgent();
     // console.log('Start subscription for monitoring:', agentId);
 
     const { data } = await this.inventory.detail(agentId);
     const monitoring: MappingStatus[] = data[MAPPING_FRAGMENT];
     this.mappingStatus$.next(monitoring);
-    return this.realtime.subscribe(
-      `/managedobjects/${agentId}`,
-      this.updateStatus.bind(this)
-    );
-  }
 
-  unsubscribeFromMonitoringChannel(subscription: any) {
-    this.realtime.unsubscribe(subscription);
+    // subscribe to event stream
+    this.managedObjectRealtimeService.start();
+    this.subscription = this.managedObjectRealtimeService
+      .onAll$(agentId)
+      .pipe(map((p) => p['data'][MAPPING_FRAGMENT]))
+      .subscribe((m) => this.mappingStatus$.next(m));
   }
-
-  private updateStatus(p: object): void {
-    const payload = p['data']['data'];
-    const monitoring: MappingStatus[] = payload[MAPPING_FRAGMENT];
-    this.mappingStatus$.next(monitoring);
+  stopMonitoring() {
+    if (this.subscription) this.subscription.unsubscribe();
   }
 }

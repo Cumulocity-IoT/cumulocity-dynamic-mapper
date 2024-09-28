@@ -137,8 +137,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   sourceSystem: string;
   targetSystem: string;
 
-  editorOptionsSource: any = {};
-  editorOptionsTarget: any = {};
+  editorOptionsSourceStep3: any = {};
+  editorOptionsSourceStep4: any = {};
+  editorOptionsTargetStep4: any = {};
+  editorOptionsTargetStep3: any = {};
   editorOptionsTesting: any = {};
 
   selectedSubstitution: number = -1;
@@ -148,10 +150,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   expertMode: boolean = false;
   templatesInitialized: boolean = false;
 
-  @ViewChild('editorSource', { static: false })
-  editorSource: JsonEditor2Component;
-  @ViewChild('editorTarget', { static: false })
-  editorTarget: JsonEditor2Component;
+  @ViewChild('editorSourceStep4', { static: false })
+  editorSourceStep4: JsonEditor2Component;
+  @ViewChild('editorTargetStep4', { static: false })
+  editorTargetStep4: JsonEditor2Component;
+  @ViewChild('editorSourceStep3', { static: false })
+  editorSourceStep3: JsonEditor2Component;
+  @ViewChild('editorTargetStep3', { static: false })
+  editorTargetStep3: JsonEditor2Component;
   editorTestingResponse: JsonEditor2Component;
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
@@ -335,55 +341,55 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             }
           }
         ]
-      },
+      }
 
-    //   {
-    //     fieldGroup: [
-    //       {
-    //         className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
-    //         key: 'sourceExpression.result',
-    //         type: 'textarea-custom',
-    //         wrappers: ['custom-form-wrapper'],
-    //         templateOptions: {
-    //           class: 'no-resize',
-    //           disabled: false,
-    //           readonly: false,
-    //           customWrapperClass: 'm-b-4'
-    //         },
-    //         expressionProperties: {
-    //           'templateOptions.label': () =>
-    //             `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
-    //           'templateOptions.value': () => {
-    //             return `${this.substitutionModel.sourceExpression?.result}`;
-    //           }
-    //         }
-    //       },
-    //       {
-    //         className: 'col-lg-5 text-monospace font-smaller',
-    //         key: 'targetExpression.result',
-    //         type: 'textarea-custom',
-    //         wrappers: ['custom-form-wrapper'],
-    //         templateOptions: {
-    //           class: 'input',
-    //           disabled: true,
-    //           readonly: true,
-    //           customWrapperClass: 'm-b-4'
-    //         },
-    //         expressionProperties: {
-    //           'templateOptions.label': () =>
-    //             `Target Result [${this.substitutionModel.targetExpression?.resultType}]`,
-    //           'templateOptions.value': () => {
-    //             return `${this.substitutionModel.targetExpression?.result}`;
-    //           }
-    //         }
-    //       }
-    //     ]
-    //   }
+      //   {
+      //     fieldGroup: [
+      //       {
+      //         className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
+      //         key: 'sourceExpression.result',
+      //         type: 'textarea-custom',
+      //         wrappers: ['custom-form-wrapper'],
+      //         templateOptions: {
+      //           class: 'no-resize',
+      //           disabled: false,
+      //           readonly: false,
+      //           customWrapperClass: 'm-b-4'
+      //         },
+      //         expressionProperties: {
+      //           'templateOptions.label': () =>
+      //             `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
+      //           'templateOptions.value': () => {
+      //             return `${this.substitutionModel.sourceExpression?.result}`;
+      //           }
+      //         }
+      //       },
+      //       {
+      //         className: 'col-lg-5 text-monospace font-smaller',
+      //         key: 'targetExpression.result',
+      //         type: 'textarea-custom',
+      //         wrappers: ['custom-form-wrapper'],
+      //         templateOptions: {
+      //           class: 'input',
+      //           disabled: true,
+      //           readonly: true,
+      //           customWrapperClass: 'm-b-4'
+      //         },
+      //         expressionProperties: {
+      //           'templateOptions.label': () =>
+      //             `Target Result [${this.substitutionModel.targetExpression?.resultType}]`,
+      //           'templateOptions.value': () => {
+      //             return `${this.substitutionModel.targetExpression?.result}`;
+      //           }
+      //         }
+      //       }
+      //     ]
+      //   }
     ];
 
     this.setTemplateForm();
-    this.editorOptionsSource = {
-      ...this.editorOptionsSource,
+    this.editorOptionsSourceStep3 = {
+      ...this.editorOptionsSourceStep3,
       mode: 'tree',
       mainMenuBar: true,
       navigationBar: false,
@@ -392,11 +398,30 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       name: 'message'
     };
 
-    this.editorOptionsTarget = {
-      ...this.editorOptionsTarget,
+    this.editorOptionsTargetStep3 = {
+      ...this.editorOptionsTargetStep3,
       mode: 'tree',
       mainMenuBar: true,
       navigationBar: false,
+      statusBar: true
+    };
+
+    this.editorOptionsSourceStep4 = {
+      ...this.editorOptionsSourceStep4,
+      mode: 'tree',
+      mainMenuBar: true,
+      navigationBar: false,
+      statusBar: false,
+      readOnly: true,
+      name: 'message'
+    };
+
+    this.editorOptionsTargetStep4 = {
+      ...this.editorOptionsTargetStep4,
+      mode: 'tree',
+      mainMenuBar: true,
+      navigationBar: false,
+      readOnly: true,
       statusBar: true
     };
 
@@ -465,7 +490,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.substitutionFormly.get('pathSource').setErrors(null);
 
       const r: JSON = await this.mappingService.evaluateExpression(
-        this.editorSource?.get(),
+        this.editorSourceStep4?.get(),
         this.substitutionFormly.get('pathSource').value
       );
       this.substitutionModel.sourceExpression = {
@@ -512,23 +537,23 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onTemplateSourceChanged(content: Content) {
-    if (_.has(content, 'text') && content['text']) {
-      this.templateSource = JSON.parse(content['text']);
-      // this.mapping.source = content['text'];‚
-    } else {
-      this.templateSource = content['json'];
-      // this.mapping.source = JSON.stringify(content['json']);
-    }
+    // if (_.has(content, 'text') && content['text']) {
+    //   this.templateSource = JSON.parse(content['text']);
+    //   // this.mapping.source = content['text'];‚
+    // } else {
+    //   this.templateSource = content['json'];
+    //   // this.mapping.source = JSON.stringify(content['json']);
+    // }
   }
 
   onTemplateTargetChanged(content: Content) {
-    if (_.has(content, 'text') && content['text']) {
-      this.templateTarget = JSON.parse(content['text']);
-      // this.mapping.target = content['text'];
-    } else {
-      this.templateTarget = content['json'];
-      // this.mapping.target = JSON.stringify(content['json']);
-    }
+    // if (_.has(content, 'text') && content['text']) {
+    //   this.templateTarget = JSON.parse(content['text']);
+    //   // this.mapping.target = content['text'];
+    // } else {
+    //   this.templateTarget = content['json'];
+    //   // this.mapping.target = JSON.stringify(content['json']);
+    // }
   }
 
   async updateTargetExpressionResult() {
@@ -540,7 +565,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       };
       this.substitutionFormly.get('pathTarget').setErrors(null);
       const r: JSON = await this.mappingService.evaluateExpression(
-        this.editorTarget?.get(),
+        this.editorTargetStep4?.get(),
         path
       );
       this.substitutionModel.targetExpression = {
@@ -582,10 +607,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     return {
       ...this.mapping,
       source: reduceSourceTemplate(
-        this.editorSource ? this.editorSource?.get() : {},
+        this.editorSourceStep4 ? this.editorSourceStep4?.get() : {},
         patched
       ), // remove array "_TOPIC_LEVEL_" since it should not be stored
-      target: reduceTargetTemplate(this.editorTarget?.get(), patched), // remove patched attributes, since it should not be stored
+      target: reduceTargetTemplate(this.editorTargetStep4?.get(), patched), // remove patched attributes, since it should not be stored
       lastUpdate: Date.now()
     };
   }
@@ -610,7 +635,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         levels
       );
     }
-    this.editorTarget.set(this.templateTarget);
+    this.editorTargetStep4.set(this.templateTarget);
   }
 
   async onCancelButton() {
@@ -667,11 +692,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       event.stepper.next();
     } else if (this.step == 'Define substitutions') {
       this.getTemplateForm();
-      const testSourceTemplate = this.editorSource
-        ? this.editorSource.get()
+      const testSourceTemplate = this.editorSourceStep4
+        ? this.editorSourceStep4.get()
         : {};
       this.editorTestingPayloadTemplateEmitter.emit(testSourceTemplate);
       this.onSelectSubstitution(0);
+      event.stepper.next();
+    } else if (this.step == 'Select templates') {
+      this.templateSource = this.editorSourceStep3.get();
+      this.templateTarget = this.editorTargetStep3.get();
       event.stepper.next();
     } else {
       event.stepper.next();
@@ -902,7 +931,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.mapping.substitutions.forEach((s, index) => {
       if (sub.pathTarget == s.pathTarget) {
         duplicateSubstitutionIndex = index;
-		duplicate = this.mapping.substitutions[index];
+        duplicate = this.mapping.substitutions[index];
       }
     });
     const isDuplicate = duplicateSubstitutionIndex != -1;
@@ -939,17 +968,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.selectedSubstitution = selected;
       this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      await this.editorSource?.setSelectionToPath(
+      await this.editorSourceStep4?.setSelectionToPath(
         this.substitutionModel.pathSource
       );
-      await this.editorTarget.setSelectionToPath(
+      await this.editorTargetStep4.setSelectionToPath(
         this.substitutionModel.pathTarget
       );
     }
   }
 
   onTemplateChanged(templateTarget: any): void {
-    this.editorTarget.set(templateTarget);
+    this.editorTargetStep4.set(templateTarget);
   }
 
   ngOnDestroy() {

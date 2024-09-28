@@ -162,16 +162,19 @@ public class C8YNotificationSubscriber {
 				if (dispatcherOutboundMaps.get(tenant) != null) {
 					for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
 							.values()) {
-						String tokenSeed = DEVICE_SUBSCRIBER
-								+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
-								+ additionalSubscriptionIdTest;
-						String token = createToken(DEVICE_SUBSCRIPTION,
-								tokenSeed);
-						deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
-						CustomWebSocketClient client = connect(token, dispatcherOutbound);
-						deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
-								client);
+						//Only connect if connector is enabled
+						if(dispatcherOutbound.getConnectorClient().getConnectorConfiguration().isEnabled()){
+							String tokenSeed = DEVICE_SUBSCRIBER
+									+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
+									+ additionalSubscriptionIdTest;
+							String token = createToken(DEVICE_SUBSCRIPTION,
+									tokenSeed);
+							deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
+							CustomWebSocketClient client = connect(token, dispatcherOutbound);
+							deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
+									client);
 
+						}
 					}
 				}
 				for (NotificationSubscriptionRepresentation subscription : deviceSubList) {
@@ -450,10 +453,27 @@ public class C8YNotificationSubscriber {
 	}
 
 	public void unsubscribeDeviceSubscriber(String tenant) {
-		if (deviceTokenPerConnector.get(tenant) != null)
+		if (deviceTokenPerConnector.get(tenant) != null) {
 			for (String token : deviceTokenPerConnector.get(tenant).values()) {
 				tokenApi.unsubscribe(new Token(token));
 			}
+			deviceTokenPerConnector.remove(tenant);
+		}
+
+	}
+
+	public void unsubscribeDeviceSubscriberByConnector(String tenant, String connectorIdent) {
+		if (deviceTokenPerConnector.get(tenant) != null) {
+			if (deviceTokenPerConnector.get(tenant).get(connectorIdent) != null) {
+				try {
+					tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdent)));
+					log.info("Tenant {} - Subscriber for Connector {} successfully unsubscribed for Notification 2.0!", tenant, connectorIdent);
+					deviceTokenPerConnector.get(tenant).remove(connectorIdent);
+				} catch (SDKException e) {
+					log.error("Tenant {} - Could not unsubscribe subscriber for connector {}:", tenant, connectorIdent, e);
+				}
+			}
+		}
 	}
 
 	//
@@ -606,7 +626,7 @@ public class C8YNotificationSubscriber {
 								if (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) == 401
 										|| deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
 									log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
-									subscriptionsService.runForEachTenant(() -> {
+									subscriptionsService.runForTenant(tenant, () -> {
 										initDeviceClient();
 									});
 								} else if (deviceClient.getReadyState().equals(ReadyState.CLOSING)

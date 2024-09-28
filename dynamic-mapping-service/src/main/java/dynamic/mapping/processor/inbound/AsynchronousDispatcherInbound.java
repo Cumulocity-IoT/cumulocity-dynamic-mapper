@@ -122,7 +122,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 					.tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
 					.tag("connector", connectorMessage.getConnectorIdent()).register(Metrics.globalRegistry);
 
-		}
+        }
 
 		@Override
 		public List<ProcessingContext<?>> call() throws Exception {

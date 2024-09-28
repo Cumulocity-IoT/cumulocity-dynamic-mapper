@@ -29,7 +29,13 @@ import {
   Pagination
 } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { ConfirmationModalComponent, Feature, MappingStatus, Operation, SharedService } from '../../shared';
+import {
+  ConfirmationModalComponent,
+  Feature,
+  MappingStatus,
+  Operation,
+  SharedService
+} from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
 import { NumberRendererComponent } from '../renderer/number.renderer.component';
 import { DirectionRendererComponent } from '../renderer/direction.renderer.component';
@@ -45,7 +51,6 @@ import { NameRendererComponent } from '../../mapping/renderer/name.renderer.comp
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
   mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
-  subscription: object;
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -141,24 +146,21 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     public monitoringService: MonitoringService,
     public brokerConnectorService: ConnectorConfigurationService,
     public alertService: AlertService,
-	public bsModalService: BsModalService,
-	private sharedService: SharedService
+    public bsModalService: BsModalService,
+    private sharedService: SharedService
   ) {}
 
   async ngOnInit() {
     this.initializeMonitoringService();
-	this.feature = await this.sharedService.getFeatures();
+    this.feature = await this.sharedService.getFeatures();
   }
 
   async refreshMappingStatus(): Promise<void> {
-    await this.sharedService.runOperation(
-      Operation.REFRESH_STATUS_MAPPING
-    );
+    await this.sharedService.runOperation(Operation.REFRESH_STATUS_MAPPING);
   }
 
   private async initializeMonitoringService() {
-    this.subscription =
-      await this.monitoringService.subscribeMonitoringChannel();
+    await this.monitoringService.startMonitoring();
     this.monitoringService
       .getCurrentMappingStatus()
       .subscribe((status) => this.mappingStatus$.next(status));
@@ -200,7 +202,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // console.log('Stop subscription');
-    this.monitoringService.unsubscribeFromMonitoringChannel(this.subscription);
+    this.monitoringService.stopMonitoring();
   }
 }

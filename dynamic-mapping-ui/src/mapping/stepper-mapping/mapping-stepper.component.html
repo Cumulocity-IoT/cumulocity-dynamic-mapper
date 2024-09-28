@@ -221,13 +221,12 @@
                       <d11r-mapping-json-editor2
                         *ngIf="stepperConfiguration.showEditorSource"
                         [schemaUpdate]="schemaUpdateSource"
-                        [options]="editorOptionsSource"
+                        [options]="editorOptionsSourceStep3"
                         [class]="'jse-main-small'"
                         (contentChanged)="onTemplateSourceChanged($event)"
-                        (pathChanged)="onSelectedPathSourceChanged($event)"
                         (initialized)="onEditorSourceInitialized()"
                         [data]="templateSource"
-                        #editorSourceStep2
+                        #editorSourceStep3
                       ></d11r-mapping-json-editor2>
                       <div *ngIf="stepperConfiguration.showProcessorExtensions">
                         <div class="form-group">
@@ -311,10 +310,9 @@
                       </div>
                       <d11r-mapping-json-editor2
                         [schemaUpdate]="schemaUpdateTarget"
-                        [options]="editorOptionsTarget"
+                        [options]="editorOptionsTargetStep3"
                         [class]="'jse-main-small'"
                         (contentChanged)="onTemplateTargetChanged($event)"
-                        (pathChanged)="onSelectedPathTargetChanged($event)"
                         (initialized)="onEditorTargetInitialized()"
                         [data]="templateTarget"
                         #editorTargetStep3
@@ -357,13 +355,12 @@
                       <d11r-mapping-json-editor2
                         *ngIf="stepperConfiguration.showEditorSource"
                         [schemaUpdate]="schemaUpdateSource"
-                        [options]="editorOptionsSource"
+                        [options]="editorOptionsSourceStep4"
                         [class]="'jse-main-small'"
-                        (contentChanged)="onTemplateSourceChanged($event)"
                         (pathChanged)="onSelectedPathSourceChanged($event)"
                         (initialized)="onEditorSourceInitialized()"
                         [data]="templateSource"
-                        #editorSource
+                        #editorSourceStep4
                       ></d11r-mapping-json-editor2>
                       <div
                         *ngIf="
@@ -488,13 +485,12 @@
                       </div>
                       <d11r-mapping-json-editor2
                         [schemaUpdate]="schemaUpdateTarget"
-                        [options]="editorOptionsTarget"
+                        [options]="editorOptionsTargetStep4"
                         [class]="'jse-main-small'"
-                        (contentChanged)="onTemplateTargetChanged($event)"
                         (pathChanged)="onSelectedPathTargetChanged($event)"
                         (initialized)="onEditorTargetInitialized()"
                         [data]="templateTarget"
-                        #editorTarget
+                        #editorTargetStep4
                       >
                       </d11r-mapping-json-editor2>
                       <span
@@ -589,8 +585,8 @@
                   ></formly-form>
                   <div class="row">
                     <div class="col-lg-5 col-lg-offset-1">
-                      <div class="form-group m-b-4">
-                        <label translate style="padding-left: 12px"
+                      <div class="form-group m-b-4" style="margin-left: 10px">
+                        <label translate style="padding-left: 6px"
                           >Source Result [{{
                             substitutionModel.sourceExpression?.resultType
                           }}]</label
@@ -599,7 +595,7 @@
                           class="form-control"
                           c8y-textarea-autoresize
                           readonly="true"
-                          style="padding-left: 12p;
+                          style="
                             font-size: var(--c8y-font-size-small);
                             line-height: var(--c8y-line-height-small);
                           "
@@ -609,27 +605,27 @@
                         >
                       </div>
                     </div>
-					<div class="col-lg-5">
-						<div class="form-group m-b-4">
-						  <label translate style="padding-left: 12px"
-							>Target Result [{{
-							  substitutionModel.targetExpression?.resultType
-							}}]</label
-						  >
-						  <textarea
-							class="form-control"
-							c8y-textarea-autoresize
-							readonly="true"
-							style="padding-left: 12p;
-							  font-size: var(--c8y-font-size-small);
-							  line-height: var(--c8y-line-height-small);
-							"
-							>{{
-							  substitutionModel.targetExpression?.result
-							}}</textarea
-						  >
-						</div>
-					  </div>
+                    <div class="col-lg-5">
+                      <div class="form-group m-b-4" style="margin-right: 10px">
+                        <label translate style="padding-left: 6px"
+                          >Target Result [{{
+                            substitutionModel.targetExpression?.resultType
+                          }}]</label
+                        >
+                        <textarea
+                          class="form-control"
+                          c8y-textarea-autoresize
+                          readonly="true"
+                          style="
+                            font-size: var(--c8y-font-size-small);
+                            line-height: var(--c8y-line-height-small);
+                          "
+                          >{{
+                            substitutionModel.targetExpression?.result
+                          }}</textarea
+                        >
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
