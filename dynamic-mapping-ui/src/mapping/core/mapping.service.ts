@@ -512,7 +512,10 @@ export class MappingService {
             StatusEventTypes.STATUS_MAPPING_CHANGED_EVENT_TYPE
         )
       )
-      .subscribe(() => this.reloadInbound$.next());
+      .subscribe(() => {
+        this.reloadInbound$.next();
+        this.reloadOutbound$.next();
+      });
   }
 
   async stopChangedMappingEvents() {}

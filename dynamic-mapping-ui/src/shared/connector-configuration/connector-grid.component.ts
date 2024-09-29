@@ -24,12 +24,10 @@ import {
   Input,
   OnInit,
   Output,
-  OnDestroy,
   ViewChild,
   AfterViewInit,
   ElementRef,
-  Renderer2,
-  AfterViewChecked
+  Renderer2
 } from '@angular/core';
 import {
   ActionControl,
@@ -175,7 +173,8 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         path: 'name',
         filterable: false,
         sortOrder: 'asc',
-        visible: true
+        visible: true,
+        gridTrackSize: '30%'
       },
       {
         name: 'connectorType',
@@ -184,7 +183,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortOrder: 'asc',
         visible: true,
-        gridTrackSize: '20%'
+        gridTrackSize: '30%'
       },
       {
         header: 'Status',

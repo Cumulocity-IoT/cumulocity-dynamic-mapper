@@ -42,15 +42,7 @@ import {
   Subject,
   Subscription
 } from 'rxjs';
-import {
-  filter,
-  map,
-  scan,
-  shareReplay,
-  startWith,
-  switchMap,
-  tap
-} from 'rxjs/operators';
+import { filter, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import {
   EventRealtimeService,
   RealtimeSubjectService
@@ -72,7 +64,7 @@ export class ConnectorConfigurationService {
       switchMap((configurations: ConnectorConfiguration[]) => {
         return combineLatest([
           from([configurations]),
-          this.getCombinedConnectorStatus()
+          from(this.getConnectorStatus())
         ]).pipe(
           map(([configs, statusMap]) => {
             // console.log('Changes configs:', configs);
@@ -245,6 +237,7 @@ export class ConnectorConfigurationService {
             }),
             tap((p) => {
               console.log('Status change connector original:', p);
+              this.updateConnectorConfigurations();
             })
           )
         );
@@ -276,57 +269,6 @@ export class ConnectorConfigurationService {
     const payload = p['data']['data'];
     console.log('Status change connector old fashin:', payload);
   };
-
-  getCombinedConnectorStatus(): Observable<{
-    [ident: string]: ConnectorStatusEvent;
-  }> {
-    console.log('Calling - getCombinedConnectorStatus:');
-    // Create an Observable that combines initial status with real-time updates
-    return combineLatest([
-      from(this.getConnectorStatus()),
-      this.getConnectorStatusEvents().pipe(
-        tap(() => console.log('Source IIb')),
-        // // Start with an empty event to trigger initial emission
-        startWith({
-          connectorIdent: 'EMPTY',
-          status: ConnectorStatus.UNKNOWN,
-          message: 'EMPTY_FROM_BEFORE_SCAN'
-        } as ConnectorStatusEvent),
-        // Accumulate status updates
-        scan(
-          (acc, event) => {
-            // console.log('Changes acc I:', acc);
-            // console.log('Changes event I:', event);
-            // console.log('Changes merged I:', {
-            //   ...acc,
-            //   [event.ident]: event
-            // });
-            return {
-              ...acc,
-              [event.connectorIdent]: event
-            };
-          },
-          {} as { [ident: string]: ConnectorStatusEvent }
-        )
-      )
-    ]).pipe(
-      // Combine initial status with accumulated updates
-      map(([initial, updates]) => {
-        // console.log('Changes initial II:', initial);
-        // console.log('Changes updates II:', updates);
-        // console.log('Changes merged II:', {
-        //   ...initial,
-        //   ...updates
-        // });
-        return {
-          ...initial,
-          ...updates
-        };
-      }),
-      // Share the result to multiple subscribers
-      shareReplay(1)
-    );
-  }
 
   getConnectorConfigurationsWithLiveStatus(): Observable<
     ConnectorConfiguration[]
