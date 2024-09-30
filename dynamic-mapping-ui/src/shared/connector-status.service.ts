@@ -28,7 +28,7 @@ import {
   StatusEventTypes
 } from '../shared';
 
-import { BehaviorSubject, from, merge, Observable, Subscription } from 'rxjs';
+import { BehaviorSubject, from, merge, Observable } from 'rxjs';
 import { filter, map, scan, shareReplay, switchMap, tap } from 'rxjs/operators';
 import {
   EventRealtimeService,
@@ -47,23 +47,22 @@ export class ConnectorStatusService {
     this.eventRealtimeService = new EventRealtimeService(
       inject(RealtimeSubjectService)
     );
+    this.startConnectorStatusLogs();
   }
   private eventRealtimeService: EventRealtimeService;
 
   private _agentId: string;
-  private readonly ALL = 'ALL';
+  private readonly ALL: string = 'ALL';
 
-  private filterStatusLog = {
-    eventType: this.ALL,
-    connectorIdent: this.ALL
-  };
   private readonly RESET = {
-    connectorIdent: 'EMPTY',
+    connectorIdent: this.ALL,
     connectorName: 'EMPTY',
     status: ConnectorStatus.UNKNOWN,
     type: StatusEventTypes.ALL,
     message: '_RESET_'
   };
+
+  private filterStatusLog = this.RESET;
 
   private triggerLogs$: BehaviorSubject<ConnectorStatusEvent[]> =
     new BehaviorSubject([this.RESET]);
@@ -83,8 +82,12 @@ export class ConnectorStatusService {
   }
 
   updateStatusLogs(filter: any) {
-    this.triggerLogs$.next([this.RESET]);
-    this.filterStatusLog = filter;
+    const updatedFilter = {
+      ...this.RESET,
+      ...filter
+    };
+    this.filterStatusLog = updatedFilter;
+    this.triggerLogs$.next([updatedFilter]);
   }
 
   async initConnectorLogsRealtime() {
@@ -97,14 +100,14 @@ export class ConnectorStatusService {
     // );
     const filteredConnectorStatus$ = this.triggerLogs$.pipe(
       tap((x) => console.log('TriggerLogs In', x)),
-      switchMap(() => {
+      switchMap((x) => {
         const filter = {
           pageSize: 5,
           withTotalPages: false,
           source: this._agentId
         };
-        if (this.filterStatusLog.eventType !== this.ALL) {
-          filter['type'] = this.filterStatusLog.eventType;
+        if (x[0]?.type !== this.ALL) {
+          filter['type'] = x[0]?.type;
         }
         return this.eventService.list(filter);
       }),
@@ -164,9 +167,9 @@ export class ConnectorStatusService {
         return e[CONNECTOR_FRAGMENT];
       }),
       filter((e) =>
-        this.filterStatusLog.eventType == this.ALL
+        this.filterStatusLog.type == this.ALL
           ? true
-          : e['type'] == this.filterStatusLog.eventType
+          : e['type'] == this.filterStatusLog.type
       ),
       filter((e) =>
         this.filterStatusLog.connectorIdent == this.ALL
