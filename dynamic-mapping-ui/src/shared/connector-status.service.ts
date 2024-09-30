@@ -22,18 +22,13 @@ import { inject, Injectable } from '@angular/core';
 import { EventService, FetchClient } from '@c8y/client';
 import {
   CONNECTOR_FRAGMENT,
+  ConnectorStatus,
   ConnectorStatusEvent,
-  SharedService
+  SharedService,
+  StatusEventTypes
 } from '../shared';
 
-import {
-  firstValueFrom,
-  from,
-  merge,
-  Observable,
-  Subject,
-  Subscription
-} from 'rxjs';
+import { BehaviorSubject, from, merge, Observable, Subscription } from 'rxjs';
 import { filter, map, scan, shareReplay, switchMap, tap } from 'rxjs/operators';
 import {
   EventRealtimeService,
@@ -56,39 +51,40 @@ export class ConnectorStatusService {
   private eventRealtimeService: EventRealtimeService;
 
   private _agentId: string;
-  private initialized: boolean = false;
-  private subscription: Subscription;
   private readonly ALL = 'ALL';
 
   private filterStatusLog = {
     eventType: this.ALL,
     connectorIdent: this.ALL
   };
-  private triggerLogs$: Subject<any> = new Subject();
+  private readonly RESET = {
+    connectorIdent: 'EMPTY',
+    connectorName: 'EMPTY',
+    status: ConnectorStatus.UNKNOWN,
+    type: StatusEventTypes.ALL,
+    message: '_RESET_'
+  };
+
+  private triggerLogs$: BehaviorSubject<ConnectorStatusEvent[]> =
+    new BehaviorSubject([this.RESET]);
 
   private statusLogs$: Observable<ConnectorStatusEvent[]>;
 
   getStatusLogs(): Observable<ConnectorStatusEvent[]> {
-    console.log('Calling: getStatusLogs', this.initialized);
+    console.log('Calling: getStatusLogs');
     return this.statusLogs$;
   }
 
   async startConnectorStatusLogs() {
-    console.log('Calling: startConnectorStatusLogs', this.initialized);
-    if (!this.initialized) {
+    console.log('Calling: startConnectorStatusLogs');
+    if (!this.statusLogs$) {
       await this.initConnectorLogsRealtime();
-      this.initialized = true;
     }
-    this.triggerLogs$.next([{ type: 'reset' }]);
   }
 
   updateStatusLogs(filter: any) {
-    this.triggerLogs$.next([{ type: 'reset' }]);
+    this.triggerLogs$.next([this.RESET]);
     this.filterStatusLog = filter;
-  }
-
-  async stopConnectorStatusLogs() {
-    if (this.subscription) this.subscription.unsubscribe();
   }
 
   async initConnectorLogsRealtime() {
@@ -100,7 +96,7 @@ export class ConnectorStatusService {
     //   this._agentId
     // );
     const filteredConnectorStatus$ = this.triggerLogs$.pipe(
-      // tap((x) => console.log('TriggerLogs In', x)),
+      tap((x) => console.log('TriggerLogs In', x)),
       switchMap(() => {
         const filter = {
           pageSize: 5,
@@ -140,7 +136,7 @@ export class ConnectorStatusService {
       // tap((i) => console.log('Items', i)),
       scan((acc, val) => {
         let sortedAcc;
-        if (val[0]?.type == 'reset') {
+        if (val[0]?.message == '_RESET_') {
           // console.log('Reset loaded logs!');
           sortedAcc = [];
         } else {
@@ -149,10 +145,8 @@ export class ConnectorStatusService {
         sortedAcc = sortedAcc.slice(0, 9);
         return sortedAcc;
       }, []),
-      // tap(() => console.log('Dummy log stmt to simulate a subscribe')),
       shareReplay(1)
     );
-    this.subscription = this.statusLogs$.subscribe();
   }
 
   private getAllConnectorStatusEvents(): Observable<ConnectorStatusEvent[]> {

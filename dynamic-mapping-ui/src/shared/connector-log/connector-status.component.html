@@ -90,7 +90,9 @@
         <c8y-li-body>
           <div class="d-flex">
             <div class="col-md-1">
-              <div class="label label-primary">{{ event.status }}</div>
+              <div class="label label-primary">
+                {{ event.status ? event.status : '-' }}
+              </div>
             </div>
             <div class="col-md-2">{{ event.connectorName }}</div>
             <div class="col-md-9">

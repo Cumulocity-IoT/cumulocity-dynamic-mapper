@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable } from 'rxjs';
@@ -39,7 +39,7 @@ import { ConnectorConfigurationService } from '../connector-configuration.servic
   styleUrls: ['./connector-status.component.style.css'],
   templateUrl: 'connector-status.component.html'
 })
-export class ConnectorStatusComponent implements OnInit, OnDestroy {
+export class ConnectorStatusComponent implements OnInit {
   version: string = packageJson.version;
   monitorings$: Observable<ConnectorStatus>;
   feature: Feature;
@@ -69,9 +69,6 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
     this.configurations$ =
       this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
-  }
-  ngOnDestroy(): void {
-    this.connectorStatusService.stopConnectorStatusLogs();
   }
 
   updateStatusLogs() {
