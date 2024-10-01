@@ -48,7 +48,7 @@
     "@angular-devkit/build-angular": "^17.3.8",
     "@angular-eslint/eslint-plugin": "^18.1.0",
     "@angular-eslint/eslint-plugin-template": "^18.3.0",
-    "@angular-eslint/template-parser": "^17.1.1",
+    "@angular-eslint/template-parser": "^18.3.0",
     "@angular/compiler-cli": "^17.3.11",
     "@angular/language-service": "^18.2.2",
     "@angular/localize": "^17.3.0",
