@@ -409,7 +409,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'If this is enabled then the device id is treated as an external id which is looked up and translated using th externalIdType.',
+                'If this is enabled then the device id is treated as an external id which is looked up and translated using the externalIdType.',
               indeterminate: false,
               hideLabel: true
             }
