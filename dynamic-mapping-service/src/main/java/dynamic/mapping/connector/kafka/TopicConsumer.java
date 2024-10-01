@@ -142,6 +142,7 @@ public class TopicConsumer {
 
 				try {
 					listener.onStoppedByErrorAndReconnecting(error);
+					updateConnectorStatusToFailed(error, topicConfig.getTopic());
 				} catch (final Exception e) {
 					// log ("Unexpected error while onStoppedByErrorAndReconnecting() notification",
 					// e)
@@ -163,6 +164,16 @@ public class TopicConsumer {
 				// log ("Unexpected error while onStoppedByErrorAndReconnecting() notification",
 				// e);
 			}
+		}
+
+		protected void updateConnectorStatusToFailed(Exception e, String topic) {
+			String msg = "Topic:" + topic + " --- " + e.getClass().getName() + ": "
+					+ e.getMessage();
+			if (!(e.getCause() == null)) {
+				msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
+			}
+			connectorStatus.setMessage(msg);
+			connectorStatus.updateStatus(ConnectorStatus.FAILED, false);
 		}
 
 		void close() {
