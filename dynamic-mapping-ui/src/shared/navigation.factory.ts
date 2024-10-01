@@ -48,10 +48,10 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     public router: Router
   ) {
     this.appStateService.currentApplication.subscribe((cur) => {
-      // console.log('AppName in MappingNavigationFactory', cur, this.router.url);
+      console.log('AppName in MappingNavigationFactory', cur, this.router.url);
 
-      if (_.has(cur?.manifest , 'exports')) {
-        this.isStandaloneApp = true;
+      if (_.has(cur?.manifest, 'isPackage')) {
+        this.isStandaloneApp = cur?.manifest?.isPackage;
       }
       this.appName = cur.name;
     });
