@@ -587,7 +587,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel.targetExpression.severity = 'text-info';
       } else if (path == '$') {
         this.substitutionModel.targetExpression.msgTxt = `By specifying "$" you selected the root of the target 
-        template and this rersults in merging the source expression with the target template.`;
+        template and this result in merging the source expression with the target template.`;
         this.substitutionModel.targetExpression.severity = 'text-warning';
       }
     } catch (error) {
@@ -661,7 +661,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }): Promise<void> {
     // ('OnNextStep', event.step.label, this.mapping);
     this.step = event.step.label;
-    if (this.step == 'General settings') {
+    if (this.step == 'Add and select connector') {
+      if (
+        this.deploymentMapEntry.connectors &&
+        this.deploymentMapEntry.connectors.length == 0
+      ) {
+        this.alertService.warning(
+          'To apply the mapping to messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
+        );
+      }
+      event.stepper.next();
+    } else if (this.step == 'General settings') {
       this.templateModel.mapping = this.mapping;
       // console.log(
       //  'Populate jsonPath if wildcard:',
