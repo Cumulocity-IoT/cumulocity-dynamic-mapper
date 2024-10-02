@@ -35,8 +35,7 @@ import {
   map,
   shareReplay,
   switchMap,
-  take,
-  tap
+  take
 } from 'rxjs';
 import {
   BASE_URL,
@@ -69,7 +68,6 @@ import { C8YNotificationSubscription } from '../shared/mapping.model';
 import {
   AlertService,
   EventRealtimeService,
-  RealtimeMessage,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
 import { ConnectorConfigurationService } from '../../connector';
@@ -111,13 +109,7 @@ export class MappingService {
   reloadOutbound$: Subject<void>; // = new Subject<void>();
 
   async changeActivationMapping(parameter: any) {
-    const conf = await this.brokerConnectorService.getConnectorConfigurations();
-    if (parameter.active && conf.length == 0) {
-      this.alertService.warning(
-        'Mapping was activated, but no connector is configured. Please add connector on the Connector tab!'
-      );
-    }
-    await this.sharedService.runOperation(
+    return await this.sharedService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
     );

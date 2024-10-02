@@ -597,9 +597,18 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     const newActive = !mapping.active;
     const action = newActive ? 'Activated' : 'Deactivated';
-    this.alertService.success(`${action} mapping: ${mapping.id}`);
     const parameter = { id: mapping.id, active: newActive };
-    await this.mappingService.changeActivationMapping(parameter);
+    const response =
+      await this.mappingService.changeActivationMapping(parameter);
+    if (response.status != 200) {
+      const failedMap = await response.json();
+      const failedList = Object.values(failedMap).join(',');
+      this.alertService.warning(
+        `Mapping could only activate partially. It failed for the following connectors: ${failedList}`
+      );
+    } else {
+      this.alertService.success(`${action} mapping: ${mapping.id}`);
+    }
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 

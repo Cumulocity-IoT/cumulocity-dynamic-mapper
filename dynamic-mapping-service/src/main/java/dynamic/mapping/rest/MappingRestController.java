@@ -45,6 +45,7 @@ import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -65,6 +66,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.BootstrapService;
+import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
@@ -403,7 +405,7 @@ public class MappingRestController {
 	}
 
 	@RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
+	public ResponseEntity<?> runOperation(@Valid @RequestBody ServiceOperation operation) {
 		String tenant = contextService.getContext().getTenant();
 		log.info("Tenant {} - Post operation: {}", tenant, operation.toString());
 		try {
@@ -471,13 +473,30 @@ public class MappingRestController {
 						.getClientsForTenant(tenant);
 				// subscribe/unsubscribe respective subscriptionTopic of mapping only for
 				// outbound mapping
+				Map<String, String> failed = new HashMap<>();
 				for (AConnectorClient client : connectorMap.values()) {
 					if (updatedMapping.direction == Direction.INBOUND) {
-						client.updateActiveSubscriptionInbound(updatedMapping, false, true);
+						if (!client.updateActiveSubscriptionInbound(updatedMapping, false, true)) {
+							ConnectorConfiguration conf = client.getConnectorConfiguration();
+							failed.put(conf.getIdent(), conf.getName());
+						}
+						;
 					} else {
 						client.updateActiveSubscriptionOutbound(updatedMapping);
 					}
 				}
+
+				if (failed.size() > 0) {
+					// configurationRegistry.getC8yAgent().createEvent("Activation of mapping: " +
+					// updatedMapping.name,
+					// C8YAgent.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
+					// DateTime.now(),
+					// configurationRegistry.getMappingServiceRepresentations().get(tenant),
+					// tenant,
+					// failed);
+					return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
+				}
+
 			} else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
 				String id = operation.getParameter().get("id");
 				Boolean debugBoolean = Boolean.parseBoolean(operation.getParameter().get("debug"));
