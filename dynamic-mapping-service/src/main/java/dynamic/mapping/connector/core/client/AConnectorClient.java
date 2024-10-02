@@ -503,7 +503,10 @@ public abstract class AConnectorClient {
 						}
 					}
 				}
+			} else {
+				log.warn("Tenant {} - Mapping {} contains wildcards like #,+ which are not support by connector {}",tenant, mapping.getId(), connectorName);
 			}
+
 		}
 	}
 
@@ -525,6 +528,8 @@ public abstract class AConnectorClient {
 			updatedMappings.forEach(mapping -> {
 				Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
 				boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
+				if(!validDeployment)
+					log.warn("Tenant {} - Mapping {} contains wildcards like #,+ which are not support by connector {}",tenant, mapping.getId(), connectorName);
 				List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.ident);
 				boolean isDeployed = false;
 				if (deploymentMapEntry != null) {
