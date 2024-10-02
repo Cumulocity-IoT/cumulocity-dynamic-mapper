@@ -360,7 +360,7 @@ public class MappingComponent {
 		try {
 			resolverMappingInbound.get(tenant).addMapping(mapping);
 		} catch (ResolveException e) {
-			log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, mapping);
+			log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, mapping, e);
 		}
 	}
 
@@ -368,7 +368,7 @@ public class MappingComponent {
 		try {
 			resolverMappingInbound.get(tenant).deleteMapping(mapping);
 		} catch (ResolveException e) {
-			log.error("Tenant {} - Could not delete mapping {}, ignoring mapping", tenant, mapping);
+			log.error("Tenant {} - Could not delete mapping {}, ignoring mapping", tenant, mapping, e);
 		}
 	}
 
@@ -434,7 +434,7 @@ public class MappingComponent {
 			try {
 				in.addMapping(m);
 			} catch (ResolveException e) {
-				log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, m);
+				log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, m, e);
 			}
 		});
 		return in;
