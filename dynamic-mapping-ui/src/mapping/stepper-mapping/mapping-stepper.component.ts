@@ -34,13 +34,14 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
-import { BsModalService } from 'ngx-bootstrap/modal';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { Content } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
   API,
   COLOR_HIGHLIGHTED,
+  ConfirmationModalComponent,
   DeploymentMapEntry,
   Direction,
   Extension,
@@ -587,7 +588,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel.targetExpression.severity = 'text-info';
       } else if (path == '$') {
         this.substitutionModel.targetExpression.msgTxt = `By specifying "$" you selected the root of the target 
-        template and this rersults in merging the source expression with the target template.`;
+        template and this result in merging the source expression with the target template.`;
         this.substitutionModel.targetExpression.severity = 'text-warning';
       }
     } catch (error) {
@@ -661,7 +662,39 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }): Promise<void> {
     // ('OnNextStep', event.step.label, this.mapping);
     this.step = event.step.label;
-    if (this.step == 'General settings') {
+    if (this.step == 'Add and select connector') {
+      if (
+        this.deploymentMapEntry.connectors &&
+        this.deploymentMapEntry.connectors.length == 0
+      ) {
+        const initialState = {
+          title: 'No connector selected',
+          message:
+            'To apply the mapping to messages you should select at least one connector, unless you want to change this later! Do you want to continue?',
+          labels: {
+            ok: 'Continue',
+            cancel: 'Close'
+          }
+        };
+        const confirmContinuingModalRef: BsModalRef = this.bsModalService.show(
+          ConfirmationModalComponent,
+          { initialState }
+        );
+        confirmContinuingModalRef.content.closeSubject.subscribe(
+          async (confirmation: boolean) => {
+            // console.log('Confirmation result:', confirmation);
+            if (confirmation) {
+              event.stepper.next();
+            }
+            confirmContinuingModalRef.hide();
+          }
+        );
+        // this.alertService.warning(
+        //   'To apply the mapping to messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
+        // );
+      }
+      event.stepper.next();
+    } else if (this.step == 'General settings') {
       this.templateModel.mapping = this.mapping;
       // console.log(
       //  'Populate jsonPath if wildcard:',

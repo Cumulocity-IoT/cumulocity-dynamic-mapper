@@ -184,7 +184,7 @@ public class KafkaClient extends AConnectorClient {
 		// defaultPropertiesConsumer.put("sasl.mechanism", "SCRAM-SHA-256");
 		// defaultPropertiesConsumer.put("sasl.jaas.config", jaasCfg);
 		// defaultPropertiesConsumer.put("linger.ms", 1);
-		updateConnectorStatusAndSend(ConnectorStatus.UNKNOWN, true, true);
+		// updateConnectorStatusAndSend(ConnectorStatus.UNKNOWN, true, true);
 	}
 
 	private String bootstrapServers;
@@ -325,7 +325,8 @@ public class KafkaClient extends AConnectorClient {
 	public void subscribe(String topic, QOS qos) throws ConnectorException {
 		TopicConsumer kafkaConsumer = new TopicConsumer(
 				new TopicConfig(tenant, bootstrapServers, topic, username, password, saslMechanism, groupId,
-						defaultPropertiesConsumer));
+						defaultPropertiesConsumer),
+				connectorStatus);
 		consumerList.put(topic, kafkaConsumer);
 		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
 				topic, true);

@@ -25,9 +25,7 @@ import {
   OnInit,
   Output,
   ViewChild,
-  AfterViewInit,
-  ElementRef,
-  Renderer2
+  AfterViewInit
 } from '@angular/core';
 import {
   ActionControl,
@@ -105,9 +103,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
   constructor(
     private bsModalService: BsModalService,
     private connectorConfigurationService: ConnectorConfigurationService,
-    private alertService: AlertService,
-    private el: ElementRef,
-    private renderer: Renderer2
+    private alertService: AlertService
   ) {}
 
   ngAfterViewInit(): void {
@@ -192,7 +188,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortable: true,
         cellRendererComponent: ConnectorStatusRendererComponent,
-        gridTrackSize: '20%'
+        gridTrackSize: '10%'
       },
       {
         header: 'Enabled',
@@ -201,7 +197,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortable: true,
         cellRendererComponent: StatusEnabledRendererComponent,
-        gridTrackSize: '15%'
+        gridTrackSize: '10%'
       }
     );
     this.selected = this.deploymentMapEntry?.connectors ?? [];

@@ -28,10 +28,15 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { C8yStepper } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
+import { AlertService, C8yStepper } from '@c8y/ngx-components';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { Direction, Mapping, SharedService } from '../../shared';
+import {
+  ConfirmationModalComponent,
+  Direction,
+  Mapping,
+  SharedService
+} from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { countDeviceIdentifiers, isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
@@ -85,6 +90,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
+    public alertService: AlertService,
     public sharedService: SharedService
   ) {}
 
@@ -120,7 +126,36 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
     if (this.step == 'Properties snooping') {
       event.stepper.next();
     } else {
-      event.stepper.next();
+      if (
+        this.deploymentMapEntry.connectors &&
+        this.deploymentMapEntry.connectors.length == 0
+      ) {
+        const initialState = {
+          title: 'No connector selected',
+          message:
+            'To snoop for messages you should select at least one connector, unless you want to change this later! Do you want to continue?',
+          labels: {
+            ok: 'Continue',
+            cancel: 'Close'
+          }
+        };
+        const confirmContinuingModalRef: BsModalRef = this.bsModalService.show(
+          ConfirmationModalComponent,
+          { initialState }
+        );
+        confirmContinuingModalRef.content.closeSubject.subscribe(
+          async (confirmation: boolean) => {
+            // console.log('Confirmation result:', confirmation);
+            if (confirmation) {
+              event.stepper.next();
+            }
+            confirmContinuingModalRef.hide();
+          }
+        );
+        // this.alertService.warning(
+        //   'To snoop for messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
+        // );
+      }
     }
   }
 
