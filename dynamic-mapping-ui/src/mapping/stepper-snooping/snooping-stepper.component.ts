@@ -130,24 +130,32 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
         this.deploymentMapEntry.connectors &&
         this.deploymentMapEntry.connectors.length == 0
       ) {
-        // const initialState = {
-        //   title: 'No connector selected',
-        //   message:
-        //     'To snoop for messages you have to select at least one connector!',
-        //   labels: {
-        //     cancel: 'Close'
-        //   }
-        // };
-        // // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        // const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-        //   ConfirmationModalComponent,
-        //   { initialState }
-        // );
-        this.alertService.warning(
-          'To snoop for messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
+        const initialState = {
+          title: 'No connector selected',
+          message:
+            'To snoop for messages you should select at least one connector, unless you want to change this later! Do you want to continue?',
+          labels: {
+            ok: 'Continue',
+            cancel: 'Close'
+          }
+        };
+        const confirmContinuingModalRef: BsModalRef = this.bsModalService.show(
+          ConfirmationModalComponent,
+          { initialState }
         );
+        confirmContinuingModalRef.content.closeSubject.subscribe(
+          async (confirmation: boolean) => {
+            // console.log('Confirmation result:', confirmation);
+            if (confirmation) {
+              event.stepper.next();
+            }
+            confirmContinuingModalRef.hide();
+          }
+        );
+        // this.alertService.warning(
+        //   'To snoop for messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
+        // );
       }
-      event.stepper.next();
     }
   }
 
