@@ -110,7 +110,7 @@ export class ConnectorConfigurationService {
           switchMap(() => from(this.getConnectorConfigurations()))
         )
       ).pipe(
-        tap(() => console.log('Something happened')),
+        // tap(() => console.log('Something happened')),
         shareReplay(1)
       );
       // this.testRealtime();
@@ -273,7 +273,7 @@ export class ConnectorConfigurationService {
   getConnectorConfigurationsWithLiveStatus(): Observable<
     ConnectorConfiguration[]
   > {
-    console.log('Further up 0');
+    // console.log('Further up 0');
     return this.sharedConnectorConfigurations$;
   }
 }

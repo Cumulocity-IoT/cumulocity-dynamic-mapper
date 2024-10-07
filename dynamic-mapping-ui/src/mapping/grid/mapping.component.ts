@@ -64,7 +64,6 @@ import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { NameRendererComponent } from '../renderer/name.renderer.component';
-// import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
@@ -265,7 +264,11 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.bulkActionControls.push(
       {
         type: BuiltInActionType.Delete,
-        callback: this.deleteMappingBulkWithConfirmation.bind(this)
+        callback: this.deleteMappingBulkWithConfirmation.bind(this),
+        showIf: (selectedItemIds) => {
+          console.log('Selected mappings (showIf):', selectedItemIds);
+          return true;
+        }
       },
       {
         type: 'ACTIVATE',
