@@ -164,7 +164,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 		}
 		ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
 			try {
-				return identityApi.resolveExternalId2GlobalId(identity, context);
+				ExternalIDRepresentation resultInner = configurationRegistry.getExternalIdCache(tenant)
+						.getIdByExternalId(identity);
+				if (resultInner == null) {
+					resultInner = identityApi.resolveExternalId2GlobalId(identity, context);
+					configurationRegistry.getExternalIdCache(tenant).putIdForExternalId(identity,
+							resultInner);
+				}
+				return resultInner;
 			} catch (SDKException e) {
 				log.warn("Tenant {} - External ID {} not found", tenant, identity.getValue());
 			}

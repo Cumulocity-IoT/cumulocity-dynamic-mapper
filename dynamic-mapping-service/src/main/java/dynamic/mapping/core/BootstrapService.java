@@ -35,6 +35,7 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
+import dynamic.mapping.core.cache.InboundExternalIdCache;
 
 import javax.annotation.PreDestroy;
 
@@ -69,6 +70,9 @@ public class BootstrapService {
 	@Value("${APP.additionalSubscriptionIdTest}")
 	private String additionalSubscriptionIdTest;
 
+	@Value("${APP.externalIdCacheSize")
+	private int externalIdCacheSize;
+
 	@Autowired
 	private MicroserviceSubscriptionsService subscriptionsService;
 
@@ -100,6 +104,9 @@ public class BootstrapService {
 		mappingComponent.cleanMappingStatus(tenant);
 		configurationRegistry.getPayloadProcessorsInbound().remove(tenant);
 		configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
+
+		// delete cache
+		configurationRegistry.deleteExternalIdCache(tenant);
 	}
 
 	@EventListener
@@ -116,6 +123,7 @@ public class BootstrapService {
 		configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
 		configurationRegistry.getC8yAgent().createExtensibleProcessor(tenant);
 		configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
+		configurationRegistry.initializeExternalIdCache(tenant, externalIdCacheSize);
 
 		MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
 				.convertValue(mappingServiceMOR,
