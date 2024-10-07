@@ -266,8 +266,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         type: BuiltInActionType.Delete,
         callback: this.deleteMappingBulkWithConfirmation.bind(this),
         showIf: (selectedItemIds) => {
+          const result = true;
+          // depending on seleted id hide the bulkDelete
           console.log('Selected mappings (showIf):', selectedItemIds);
-          return true;
+          return result;
         }
       },
       {
