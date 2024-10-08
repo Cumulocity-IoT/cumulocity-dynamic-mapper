@@ -281,10 +281,11 @@ public class BootstrapService {
 				Instant cacheRetentionStart = cacheRetentionStartMap.get(tenant);
 				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 				int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
-
-				if (Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
+				int cacheSize = Integer.valueOf(configurationRegistry.getInboundExternalIdCache(tenant).getCacheSize());
+				if (inboundCacheRetention > 0 && Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
 					configurationRegistry.getInboundExternalIdCache(tenant).clearCache();
-					cacheRetentionStart = Instant.now();
+					cacheRetentionStartMap.put(tenant, Instant.now());
+					log.info("Tenant {} - Identity Cache cleared by scheduler. Old Size: {}, New size: {}", tenant, cacheSize, configurationRegistry.getInboundExternalIdCache(tenant).getCacheSize());
 				}
 			}
 		});
