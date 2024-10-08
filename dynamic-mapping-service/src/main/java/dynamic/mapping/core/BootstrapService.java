@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 
-
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -39,7 +38,6 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
-import dynamic.mapping.core.cache.InboundExternalIdCache;
 
 import javax.annotation.PreDestroy;
 
@@ -81,7 +79,6 @@ public class BootstrapService {
 	private MicroserviceSubscriptionsService subscriptionsService;
 
 	private HashMap<String, Instant> cacheRetentionStartMap = new HashMap<>();
-
 
 	@PreDestroy
 	public void destroy() {
@@ -125,7 +122,6 @@ public class BootstrapService {
 
 		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 		var cacheSize = inboundExternalIdCacheSize;
-		int cacheRetention = 0;
 		boolean saveServiceConfiguration = false;
 		if (serviceConfiguration.inboundExternalIdCacheSize != null
 				&& serviceConfiguration.inboundExternalIdCacheSize.intValue() != 0) {
@@ -135,13 +131,11 @@ public class BootstrapService {
 			serviceConfiguration.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
 			saveServiceConfiguration = true;
 		}
-		if(serviceConfiguration.inboundExternalIdCacheRetention != null)
-			cacheRetention = serviceConfiguration.inboundExternalIdCacheRetention.intValue();
-		else {
+		if (serviceConfiguration.inboundExternalIdCacheRetention == null) {
 			serviceConfiguration.inboundExternalIdCacheSize = 1;
 			saveServiceConfiguration = true;
 		}
-		if(saveServiceConfiguration) {
+		if (saveServiceConfiguration) {
 			try {
 				serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
 			} catch (JsonProcessingException e) {
@@ -273,16 +267,19 @@ public class BootstrapService {
 			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
 		}
 	}
+
 	@Scheduled(cron = "0 * * * * *")
 	public void cleanUpCaches() {
 		subscriptionsService.runForEachTenant(() -> {
 			String tenant = subscriptionsService.getTenant();
 			if (cacheRetentionStartMap.get(tenant) != null) {
 				Instant cacheRetentionStart = cacheRetentionStartMap.get(tenant);
-				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent
+						.getServiceConfiguration(tenant);
 				int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
 
-				if (Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
+				if (Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration
+						.ofDays(inboundCacheRetention).getSeconds()) {
 					configurationRegistry.getInboundExternalIdCache(tenant).clearCache();
 					cacheRetentionStart = Instant.now();
 				}
