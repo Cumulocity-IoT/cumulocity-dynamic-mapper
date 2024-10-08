@@ -1,6 +1,7 @@
 package dynamic.mapping.core.cache;
 
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -15,7 +16,6 @@ public class InboundExternalIdCache {
 
 	//private final LRUMap<ID, ExternalIDRepresentation> cache;
 	private final Map<ID, ExternalIDRepresentation> cache;
-	private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
 	// Constructor with default cache size
 	public InboundExternalIdCache(String tenant) {
@@ -35,7 +35,7 @@ public class InboundExternalIdCache {
 		Tags tag = Tags.of("tenant", tenant);
 		Gauge.builder("dynmapper_inbound_identity_cache_size", this.cache, Map::size)
 				.tags(tag)
-				.register(registry);
+				.register(Metrics.globalRegistry);
 	}
 
 	// Method to get ID by external ID

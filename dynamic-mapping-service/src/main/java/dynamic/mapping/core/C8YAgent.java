@@ -63,6 +63,7 @@ import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -159,8 +160,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 	@Value("${application.version}")
 	private String version;
 
-	private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
-
 	public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
 			ProcessingContext<?> context) {
 		if (identity.getType() == null) {
@@ -170,7 +169,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 			try {
 				ExternalIDRepresentation resultInner = configurationRegistry.getInboundExternalIdCache(tenant)
 						.getIdByExternalId(identity);
-				Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant).register(registry).increment();
+				Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant).register(Metrics.globalRegistry).increment();
 				if (resultInner == null) {
 					resultInner = identityApi.resolveExternalId2GlobalId(identity, context);
 					configurationRegistry.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
@@ -180,7 +179,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 				} else {
 					log.debug("Tenant {} - Cache hit for external ID {} -> {}", tenant, identity.getValue(),
 							resultInner.getManagedObject().getId().getValue());
-					Counter.builder("dynmapper_inbound_identity_cache_hits_total").tag("tenant", tenant).register(registry).increment();
+					Counter.builder("dynmapper_inbound_identity_cache_hits_total").tag("tenant", tenant).register(Metrics.globalRegistry).increment();
 				}
 				return resultInner;
 			} catch (SDKException e) {
