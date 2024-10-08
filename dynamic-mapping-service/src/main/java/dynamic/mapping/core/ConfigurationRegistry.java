@@ -192,7 +192,7 @@ public class ConfigurationRegistry {
 	}
 
 	public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
-		log.info("Tenant {} - Initialize cache for {} {}", tenant, inboundExternalIdCacheSize);
+		log.info("Tenant {} - Initialize cache {}", tenant, inboundExternalIdCacheSize);
 		inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize));
 	}
 

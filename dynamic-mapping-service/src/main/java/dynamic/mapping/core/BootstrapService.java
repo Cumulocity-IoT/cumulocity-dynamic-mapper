@@ -121,6 +121,14 @@ public class BootstrapService {
 		if (serviceConfiguration.inboundExternalIdCacheSize != null
 				&& serviceConfiguration.inboundExternalIdCacheSize.intValue() != 0) {
 			cacheSize = serviceConfiguration.inboundExternalIdCacheSize.intValue();
+		} else if (serviceConfiguration.inboundExternalIdCacheSize != null
+				&& serviceConfiguration.inboundExternalIdCacheSize.intValue() == 0) {
+			serviceConfiguration.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
+			try {
+				serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+			} catch (JsonProcessingException e) {
+				log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
+			}
 		}
 		configurationRegistry.initializeInboundExternalIdCache(tenant, cacheSize);
 		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
