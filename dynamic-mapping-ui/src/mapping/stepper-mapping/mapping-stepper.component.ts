@@ -692,8 +692,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         // this.alertService.warning(
         //   'To apply the mapping to messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
         // );
+      } else {
+        event.stepper.next();
       }
-      event.stepper.next();
     } else if (this.step == 'General settings') {
       this.templateModel.mapping = this.mapping;
       // console.log(
