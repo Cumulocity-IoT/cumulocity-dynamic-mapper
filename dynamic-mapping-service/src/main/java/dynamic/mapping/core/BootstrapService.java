@@ -1,10 +1,13 @@
 package dynamic.mapping.core;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
+
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -24,6 +27,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
@@ -75,6 +79,9 @@ public class BootstrapService {
 
 	@Autowired
 	private MicroserviceSubscriptionsService subscriptionsService;
+
+	private HashMap<String, Instant> cacheRetentionStartMap = new HashMap<>();
+
 
 	@PreDestroy
 	public void destroy() {
@@ -141,6 +148,7 @@ public class BootstrapService {
 				log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
 			}
 		}
+		cacheRetentionStartMap.put(tenant, Instant.now());
 
 		configurationRegistry.initializeInboundExternalIdCache(tenant, cacheSize);
 		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
@@ -264,5 +272,21 @@ public class BootstrapService {
 		if (serviceConfiguration.isOutboundMappingEnabled()) {
 			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
 		}
+	}
+	@Scheduled(cron = "0 * * * * *")
+	public void cleanUpCaches() {
+		subscriptionsService.runForEachTenant(() -> {
+			String tenant = subscriptionsService.getTenant();
+			if (cacheRetentionStartMap.get(tenant) != null) {
+				Instant cacheRetentionStart = cacheRetentionStartMap.get(tenant);
+				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+				int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
+
+				if (Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
+					configurationRegistry.getInboundExternalIdCache(tenant).clearCache();
+					cacheRetentionStart = Instant.now();
+				}
+			}
+		});
 	}
 }

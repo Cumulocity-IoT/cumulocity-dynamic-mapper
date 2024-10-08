@@ -145,7 +145,7 @@ public abstract class AConnectorClient {
 	private Map<String, Mapping> mappingsDeployedOutbound = new ConcurrentHashMap<>();
 
 	private Instant start = Instant.now();
-	private Instant cacheRetentionStart = Instant.now();
+
 
 	private ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 
@@ -304,11 +304,6 @@ public abstract class AConnectorClient {
 				log.debug("Tenant {} - Status: connectTask: {}, initializeTask: {}, isConnected: {}", tenant,
 						statusConnectTask,
 						statusInitializeTask, isConnected());
-			}
-			int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
-			if (Duration.between(cacheRetentionStart, now).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
-				configurationRegistry.getInboundExternalIdCache(tenant).clearCache();
-				cacheRetentionStart = Instant.now();
 			}
 			mappingComponent.cleanDirtyMappings(tenant);
 			mappingComponent.sendMappingStatus(tenant);
