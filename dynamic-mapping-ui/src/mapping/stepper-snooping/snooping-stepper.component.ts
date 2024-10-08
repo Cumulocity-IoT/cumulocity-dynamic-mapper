@@ -155,6 +155,8 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
         // this.alertService.warning(
         //   'To snoop for messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
         // );
+      } else {
+        event.stepper.next();
       }
     }
   }
