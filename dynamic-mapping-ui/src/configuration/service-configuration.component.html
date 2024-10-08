@@ -247,6 +247,34 @@
             </label>
           </div>
         </c8y-li>
+
+        <c8y-li>
+          <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Size size inbound Id cache' | translate }}</p>
+              <p>
+                <small translate
+                  >Set size inbound Id cache, after changing the size you have
+                  to clear the cache</small
+                >
+              </p>
+            </div>
+            <label
+              class="editable m-l-auto"
+              title="{{ 'Outbound mappings' | translate }}"
+              [ngClass]="{ updated: editable2updated }"
+            >
+              <input
+                class="form-control"
+                name="inboundExternalIdCacheSize"
+                type="number"
+                [(ngModel)]="serviceConfiguration.inboundExternalIdCacheSize"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
       </c8y-list-group>
     </div>
   </div>

@@ -191,8 +191,9 @@ public class ConfigurationRegistry {
 		return ms;
 	}
 
-	public void initializeInboundExternalIdCache(String tenant, int externalIdCacheSize) {
-		inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(externalIdCacheSize));
+	public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
+		log.info("Tenant {} - Initialize cache for {} {}", tenant, inboundExternalIdCacheSize);
+		inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize));
 	}
 
 	public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
@@ -203,10 +204,14 @@ public class ConfigurationRegistry {
 		return inboundExternalIdCaches.get(tenant);
 	}
 
-	public void clearInboundExternalIdCache(String tenant) {
+	public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
 		InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
 		if (inboundExternalIdCache != null) {
-			inboundExternalIdCache.clearCache();
+			if (recreate) {
+				inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize));
+			} else {
+				inboundExternalIdCache.clearCache();
+			}
 		}
 	}
 

@@ -46,8 +46,10 @@ export class ServiceConfigurationComponent implements OnInit {
     sendMappingStatus: true,
     sendSubscriptionEvents: false,
     sendNotificationLifecycle: false,
-    outboundMappingEnabled: true
+    outboundMappingEnabled: true,
+    inboundExternalIdCacheSize: 0
   };
+  editable2updated: boolean = false;
 
   constructor(
     public bsModalService: BsModalService,
@@ -66,7 +68,8 @@ export class ServiceConfigurationComponent implements OnInit {
       sendMappingStatus: new FormControl(''),
       sendSubscriptionEvents: new FormControl(''),
       sendNotificationLifecycle: new FormControl(''),
-      outboundMappingEnabled: new FormControl('')
+      outboundMappingEnabled: new FormControl(''),
+      inboundExternalIdCacheSize: new FormControl('')
     });
 
     this.loadData();

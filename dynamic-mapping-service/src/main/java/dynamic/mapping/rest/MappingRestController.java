@@ -511,7 +511,9 @@ public class MappingRestController {
 			} else if (operation.getOperation().equals(Operation.CLEAR_CACHE)) {
 				String cacheId = operation.getParameter().get("cacheId");
 				if ("INBOUND_ID_CACHE".equals(cacheId)) {
-					configurationRegistry.clearInboundExternalIdCache(tenant);
+					Integer cacheSize = serviceConfigurationComponent
+							.getServiceConfiguration(tenant).inboundExternalIdCacheSize;
+					configurationRegistry.clearInboundExternalIdCache(tenant, true, cacheSize);
 					log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
 				} else {
 					String errorMsgTemplate = "Tenant %s - Unknown cache: %s";

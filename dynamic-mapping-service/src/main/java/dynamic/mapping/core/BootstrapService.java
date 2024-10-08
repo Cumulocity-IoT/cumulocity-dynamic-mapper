@@ -70,8 +70,8 @@ public class BootstrapService {
 	@Value("${APP.additionalSubscriptionIdTest}")
 	private String additionalSubscriptionIdTest;
 
-	@Value("#{new Integer('${APP.externalIdCacheSize}')}")
-	private Integer externalIdCacheSize;
+	@Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}")
+	private Integer inboundExternalIdCacheSize;
 
 	@Autowired
 	private MicroserviceSubscriptionsService subscriptionsService;
@@ -115,12 +115,18 @@ public class BootstrapService {
 		String tenant = event.getCredentials().getTenant();
 		log.info("Tenant {} - Microservice subscribed", tenant);
 		configurationRegistry.getMicroserviceCredentials().put(tenant, event.getCredentials());
-		configurationRegistry.initializeInboundExternalIdCache(tenant, externalIdCacheSize);
+
+		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+		var cacheSize = inboundExternalIdCacheSize;
+		if (serviceConfiguration.inboundExternalIdCacheSize != null
+				&& serviceConfiguration.inboundExternalIdCacheSize.intValue() != 0) {
+			cacheSize = serviceConfiguration.inboundExternalIdCacheSize.intValue();
+		}
+		configurationRegistry.initializeInboundExternalIdCache(tenant, cacheSize);
 		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
 		ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()
 				.initializeMappingServiceObject(tenant);
 
-		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 		configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
 		configurationRegistry.getC8yAgent().createExtensibleProcessor(tenant);
 		configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
