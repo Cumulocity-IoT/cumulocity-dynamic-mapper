@@ -29,4 +29,5 @@ export interface ServiceConfiguration {
   externalExtensionEnabled?: boolean;
   outboundMappingEnabled: boolean;
   inboundExternalIdCacheSize: number;
+  inboundExternalIdCacheRetention: number;
 }

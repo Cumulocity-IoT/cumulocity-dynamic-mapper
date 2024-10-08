@@ -125,7 +125,6 @@ public class BootstrapService {
 
 		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 		var cacheSize = inboundExternalIdCacheSize;
-		int cacheRetention = 0;
 		boolean saveServiceConfiguration = false;
 		if (serviceConfiguration.inboundExternalIdCacheSize != null
 				&& serviceConfiguration.inboundExternalIdCacheSize.intValue() != 0) {
@@ -135,13 +134,11 @@ public class BootstrapService {
 			serviceConfiguration.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
 			saveServiceConfiguration = true;
 		}
-		if(serviceConfiguration.inboundExternalIdCacheRetention != null)
-			cacheRetention = serviceConfiguration.inboundExternalIdCacheRetention.intValue();
-		else {
+		if (serviceConfiguration.inboundExternalIdCacheRetention == null) {
 			serviceConfiguration.inboundExternalIdCacheSize = 1;
 			saveServiceConfiguration = true;
 		}
-		if(saveServiceConfiguration) {
+		if (saveServiceConfiguration) {
 			try {
 				serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
 			} catch (JsonProcessingException e) {
@@ -279,7 +276,8 @@ public class BootstrapService {
 			String tenant = subscriptionsService.getTenant();
 			if (cacheRetentionStartMap.get(tenant) != null) {
 				Instant cacheRetentionStart = cacheRetentionStartMap.get(tenant);
-				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent
+						.getServiceConfiguration(tenant);
 				int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
 				int cacheSize = Integer.valueOf(configurationRegistry.getInboundExternalIdCache(tenant).getCacheSize());
 				if (inboundCacheRetention > 0 && Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
