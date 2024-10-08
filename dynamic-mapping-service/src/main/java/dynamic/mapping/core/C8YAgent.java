@@ -170,6 +170,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 					resultInner = identityApi.resolveExternalId2GlobalId(identity, context);
 					configurationRegistry.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
 							resultInner);
+				} else {
+					log.debug("Tenant {} - Cache hit for external ID {} -> {}", tenant, identity.getValue(),
+							resultInner.getManagedObject().getId().getValue());
 				}
 				return resultInner;
 			} catch (SDKException e) {
