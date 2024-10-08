@@ -118,18 +118,30 @@ public class BootstrapService {
 
 		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 		var cacheSize = inboundExternalIdCacheSize;
+		int cacheRetention = 0;
+		boolean saveServiceConfiguration = false;
 		if (serviceConfiguration.inboundExternalIdCacheSize != null
 				&& serviceConfiguration.inboundExternalIdCacheSize.intValue() != 0) {
 			cacheSize = serviceConfiguration.inboundExternalIdCacheSize.intValue();
 		} else if (serviceConfiguration.inboundExternalIdCacheSize != null
 				&& serviceConfiguration.inboundExternalIdCacheSize.intValue() == 0) {
 			serviceConfiguration.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
+			saveServiceConfiguration = true;
+		}
+		if(serviceConfiguration.inboundExternalIdCacheRetention != null)
+			cacheRetention = serviceConfiguration.inboundExternalIdCacheRetention.intValue();
+		else {
+			serviceConfiguration.inboundExternalIdCacheSize = 1;
+			saveServiceConfiguration = true;
+		}
+		if(saveServiceConfiguration) {
 			try {
 				serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
 			} catch (JsonProcessingException e) {
 				log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
 			}
 		}
+
 		configurationRegistry.initializeInboundExternalIdCache(tenant, cacheSize);
 		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
 		ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()

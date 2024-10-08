@@ -193,7 +193,7 @@ public class ConfigurationRegistry {
 
 	public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
 		log.info("Tenant {} - Initialize cache {}", tenant, inboundExternalIdCacheSize);
-		inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize));
+		inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
 	}
 
 	public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
@@ -208,7 +208,7 @@ public class ConfigurationRegistry {
 		InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
 		if (inboundExternalIdCache != null) {
 			if (recreate) {
-				inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize));
+				inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
 			} else {
 				inboundExternalIdCache.clearCache();
 			}

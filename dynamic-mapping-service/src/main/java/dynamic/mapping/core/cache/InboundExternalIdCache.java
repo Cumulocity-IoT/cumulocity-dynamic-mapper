@@ -1,27 +1,46 @@
 package dynamic.mapping.core.cache;
 
-import org.apache.commons.collections4.map.LRUMap;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 public class InboundExternalIdCache {
 
-	private final LRUMap<ID, ExternalIDRepresentation> cache;
+	//private final LRUMap<ID, ExternalIDRepresentation> cache;
+	private final Map<ID, ExternalIDRepresentation> cache;
+	private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
 	// Constructor with default cache size
-	public InboundExternalIdCache() {
-		this(1000); // Default size of 1000
+	public InboundExternalIdCache(String tenant) {
+		this(1000, tenant); // Default size of 1000
 	}
 
 	// Constructor with custom cache size
-	public InboundExternalIdCache(int cacheSize) {
-		this.cache = new LRUMap<>(cacheSize);
+	public InboundExternalIdCache(int cacheSize,  String tenant) {
+		//Making it thread-safe
+		this.cache = Collections.synchronizedMap(new LinkedHashMap<ID, ExternalIDRepresentation>() {
+			//Removing oldest entries
+			@Override
+			protected boolean removeEldestEntry(Map.Entry<ID, ExternalIDRepresentation> eldest) {
+				return size() > cacheSize;
+			}
+		});
+		Tags tag = Tags.of("tenant", tenant);
+		Gauge.builder("dynmapper_inbound_identity_cache_size", this.cache, Map::size)
+				.tags(tag)
+				.register(registry);
 	}
 
 	// Method to get ID by external ID
 	public ExternalIDRepresentation getIdByExternalId(ID key) {
-		return cache.get(key, true);
+		return cache.get(key);
 	}
 
 	// Method to put a new entry in the cache
