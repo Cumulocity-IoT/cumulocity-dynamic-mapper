@@ -52,7 +52,7 @@ export class ServiceConfigurationComponent implements OnInit {
     public bsModalService: BsModalService,
     public alertService: AlertService,
     private sharedService: SharedService,
-	public connectorConfigurationService: ConnectorConfigurationService
+    public connectorConfigurationService: ConnectorConfigurationService
   ) {}
 
   ngOnInit() {
@@ -85,6 +85,18 @@ export class ServiceConfigurationComponent implements OnInit {
       this.alertService.success(gettext('Reconnected successfully.'));
     } else {
       this.alertService.danger(gettext('Failed to reconnect!'));
+    }
+  }
+
+  async clickedClearInboundExternalIdCache() {
+    const response1 = await this.sharedService.runOperation(
+      Operation.CLEAR_CACHE,
+      { cacheId: 'INBOUND_ID' }
+    );
+    if (response1.status === 201) {
+      this.alertService.success(gettext('Cache cleared.'));
+    } else {
+      this.alertService.danger(gettext('Failed to clear cache!'));
     }
   }
 

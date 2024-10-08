@@ -45,7 +45,6 @@ import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -66,7 +65,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.BootstrapService;
-import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
@@ -510,6 +508,17 @@ public class MappingRestController {
 				mappingComponent.resetSnoop(tenant, id);
 			} else if (operation.getOperation().equals(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS)) {
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+			} else if (operation.getOperation().equals(Operation.CLEAR_CACHE)) {
+				String cacheId = operation.getParameter().get("cacheId");
+				if ("INBOUND_ID".equals(cacheId)) {
+					configurationRegistry.clearInboundExternalIdCache(tenant);
+					log.info("Tenant {} - Cache cleared {}: {}", tenant, cacheId);
+				} else {
+					String errorMsgTemplate = "Tenant %s - Unknown cache: %s";
+					String errorMsg = String.format(errorMsgTemplate, tenant, cacheId);
+					log.error(errorMsg);
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg);
+				}
 			}
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
@@ -766,6 +775,22 @@ public class MappingRestController {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
 					"Extension with id " + extensionName + " could not be found.");
 		return ResponseEntity.status(HttpStatus.OK).body(result);
+	}
+
+	@RequestMapping(value = "/monitoring/cache/{cacheId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Integer> getCacheSize(@PathVariable @NotNull String cacheId) {
+		String tenant = contextService.getContext().getTenant();
+		Integer s = 0;
+		if ("INBOUND_ID_CACHE".equals(cacheId)) {
+			s = configurationRegistry.getSizeInboundExternalIdCache(tenant);
+			log.info("Tenant {} - Get cache size for cache {}: {}", tenant, cacheId, s);
+		} else {
+			String errorMsgTemplate = "Tenant %s - Unknown cache: %s";
+			String errorMsg = String.format(errorMsgTemplate, tenant, cacheId);
+			log.error(errorMsg);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg);
+		}
+		return new ResponseEntity<>(s, HttpStatus.OK);
 	}
 
 	private boolean userHasMappingAdminRole() {

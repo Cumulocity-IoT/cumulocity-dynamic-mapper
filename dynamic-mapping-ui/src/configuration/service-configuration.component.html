@@ -23,6 +23,16 @@
 <c8y-action-bar-item [placement]="'right'">
   <button
     class="btn btn-link"
+    title="{{ 'Clear inbound cache' | translate }}"
+    (click)="clickedClearInboundExternalIdCache()"
+  >
+    <i c8yIcon="clear"></i>
+    {{ 'Clear inbound cache' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button
+    class="btn btn-link"
     title="{{ 'Reconnect notification endpoint' | translate }}"
     (click)="clickedReconnect2NotificationEndpoint()"
   >
@@ -219,16 +229,14 @@
           <c8y-li-icon icon="swipe-left"></c8y-li-icon>
           <div class="d-flex a-i-center">
             <div>
-              <p>{{  'Outbound mappings' | translate }}</p>
+              <p>{{ 'Outbound mappings' | translate }}</p>
               <p>
-                <small translate
-                  >Outbound mappings</small
-                >
+                <small translate>Outbound mappings</small>
               </p>
             </div>
             <label
               class="c8y-switch c8y-switch--inline m-l-auto"
-              title="{{  'Outbound mappings' | translate }}"
+              title="{{ 'Outbound mappings' | translate }}"
             >
               <input
                 name="sendNotificationLifecycle"
