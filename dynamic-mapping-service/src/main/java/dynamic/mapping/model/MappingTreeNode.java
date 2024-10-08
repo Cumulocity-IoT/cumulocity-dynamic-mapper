@@ -86,7 +86,6 @@ public class MappingTreeNode {
 		node.setTenant(parent.getTenant());
 		node.setAbsolutePath(parent.getAbsolutePath() + level);
 		node.setDepthIndex(parent.getDepthIndex() + 1);
-		node.setMapping(mapping);
 		node.setMappingNode(true);
 		return node;
 	}
@@ -158,18 +157,37 @@ public class MappingTreeNode {
 					tenant, currentPathMonitoring, getLevel(), getAbsolutePath());
 			MappingTreeNode child;
 			if (getChildNodes().containsKey(levels.get(currentLevel))) {
-				if (specificChildren.size() == 1) {
-					if (!specificChildren.get(0).isMappingNode()) {
-						child = specificChildren.get(0);
-					} else {
-						throw new ResolveException(String.format(
-								"Could not add mapping to tree, since at this node is already blocked by mappingId : %s",
-								specificChildren.get(0).toString()));
-					}
-				} else {
+				// if (specificChildren.size() == 1) {
+				// if (!specificChildren.get(0).isMappingNode()) {
+				// child = specificChildren.get(0);
+				// } else {
+				// throw new ResolveException(String.format(
+				// "Could not add mapping to tree, since at this node is already blocked by
+				// mappingId : %s",
+				// specificChildren.get(0).toString()));
+				// }
+				// } else {
+				// throw new ResolveException(String.format(
+				// "Could not add mapping to tree, multiple mappings are only allowed at the end
+				// of the tree. This node already contains: %s nodes",
+				// specificChildren.size()));
+				// }
+
+				// find the one node that is an inner node, so that we can descend further in
+				// the tree
+				List<MappingTreeNode> innerNodes = specificChildren.stream()
+						.filter(node -> !node.isMappingNode())
+						.collect(Collectors.toList());
+				if (innerNodes != null && innerNodes.size() > 1) {
 					throw new ResolveException(String.format(
-							"Could not add mapping to tree, multiple mappings are only allowed at the end of the tree. This node already contains: %s nodes",
-							specificChildren.size()));
+							"multiple inner nodes are registered : %s",
+							specificChildren.toString()));
+				} else if (innerNodes.size() == 1) {
+					child = innerNodes.get(0);
+				} else {
+					child = MappingTreeNode.createInnerNode(this, levels.get(currentLevel));
+					specificChildren.add(child);
+					getChildNodes().put(levels.get(currentLevel), specificChildren);
 				}
 			} else {
 				child = MappingTreeNode.createInnerNode(this, levels.get(currentLevel));
