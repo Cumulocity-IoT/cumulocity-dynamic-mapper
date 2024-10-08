@@ -510,9 +510,9 @@ public class MappingRestController {
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			} else if (operation.getOperation().equals(Operation.CLEAR_CACHE)) {
 				String cacheId = operation.getParameter().get("cacheId");
-				if ("INBOUND_ID".equals(cacheId)) {
+				if ("INBOUND_ID_CACHE".equals(cacheId)) {
 					configurationRegistry.clearInboundExternalIdCache(tenant);
-					log.info("Tenant {} - Cache cleared {}: {}", tenant, cacheId);
+					log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
 				} else {
 					String errorMsgTemplate = "Tenant %s - Unknown cache: %s";
 					String errorMsg = String.format(errorMsgTemplate, tenant, cacheId);

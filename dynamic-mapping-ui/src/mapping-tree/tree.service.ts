@@ -23,6 +23,7 @@ import { FetchClient, InventoryService } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
 import { BASE_URL, PATH_MAPPING_TREE_ENDPOINT, whatIsIt } from '../shared';
 import * as _ from 'lodash';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class MappingTreeService {
@@ -47,7 +48,7 @@ export class MappingTreeService {
       }
     );
 
-    if (response.status != 200) {
+    if (response.status != HttpStatusCode.Ok) {
       return undefined;
     }
     let tree = (await response.json()) as JSON;

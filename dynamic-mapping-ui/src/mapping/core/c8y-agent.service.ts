@@ -37,6 +37,7 @@ import { FacadeAlarmService } from './facade/facade-alarm.service';
 import { FacadeEventService } from './facade/facade-event.service';
 import { FacadeMeasurementService } from './facade/facade-measurement.service';
 import { FacadeOperationService } from './facade/facade-operation.service';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class C8YAgent {
@@ -108,7 +109,10 @@ export class C8YAgent {
 
     try {
       const { data, res } = await result;
-      if (res.status == 200 || res.status == 201) {
+      if (
+        res.status == HttpStatusCode.Ok ||
+        res.status == HttpStatusCode.Created
+      ) {
         // this.alert.success("Successfully tested mapping!");
         return data;
       } else {
@@ -134,9 +138,9 @@ export class C8YAgent {
     try {
       deviceId = await this.resolveExternalId2GlobalId(identity, context);
     } catch (e) {
-      //console.log(
+      // console.log(
       //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
-      //);
+      // );
     }
 
     const currentRequest =

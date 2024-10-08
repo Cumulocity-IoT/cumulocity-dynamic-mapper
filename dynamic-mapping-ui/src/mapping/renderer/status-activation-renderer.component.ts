@@ -22,6 +22,7 @@ import { Component, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext } from '@c8y/ngx-components';
 import { MappingService } from '../core/mapping.service';
 import { Direction } from '../../shared';
+import { HttpStatusCode } from '@angular/common/http';
 
 /**
  * The example component for custom cell renderer.
@@ -72,7 +73,7 @@ export class StatusActivationRendererComponent {
     const parameter = { id: mapping.id, active: newActive };
     const response =
       await this.mappingService.changeActivationMapping(parameter);
-    if (response.status != 200) {
+    if (response.status != HttpStatusCode.Created) {
       const failedMap = await response.json();
       const failedList = Object.values(failedMap).join(',');
       this.alertService.warning(

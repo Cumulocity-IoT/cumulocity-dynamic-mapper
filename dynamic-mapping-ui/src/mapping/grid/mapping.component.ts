@@ -77,6 +77,7 @@ import {
   PayloadWrapper
 } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -605,7 +606,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const parameter = { id: mapping.id, active: newActive };
     const response =
       await this.mappingService.changeActivationMapping(parameter);
-    if (response.status != 200) {
+    if (response.status != HttpStatusCode.Ok) {
       const failedMap = await response.json();
       const failedList = Object.values(failedMap).join(',');
       this.alertService.warning(

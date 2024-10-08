@@ -21,15 +21,13 @@
 import { Injectable } from '@angular/core';
 import { IAlarm, IResult, AlarmService, IFetchResponse } from '@c8y/client';
 import { ProcessingContext } from '../../processor/processor.model';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class FacadeAlarmService {
   constructor(private alarm: AlarmService) {}
 
-  create(
-    alarm: IAlarm,
-    context: ProcessingContext
-  ): Promise<IResult<IAlarm>> {
+  create(alarm: IAlarm, context: ProcessingContext): Promise<IResult<IAlarm>> {
     if (context.sendPayload) {
       return this.alarm.create(alarm);
     } else {
@@ -40,7 +38,7 @@ export class FacadeAlarmService {
       };
       const promise = Promise.resolve({
         data: copyAlarm,
-        res: { status: 200 } as IFetchResponse
+        res: { status: HttpStatusCode.Ok } as IFetchResponse
       });
       return promise;
     }

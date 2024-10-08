@@ -18,6 +18,7 @@
  *
  * @authors Christof Strack
  */
+import { HttpStatusCode } from '@angular/common/http';
 import { Component, Input } from '@angular/core';
 
 @Component({
@@ -152,7 +153,7 @@ export class HelpComponent {
       if (req.status === 404) {
         this.open();
       }
-      if (req.status === 200) {
+      if (req.status === HttpStatusCode.Ok) {
         this.hasError = false;
       } else {
         this.hasError = true;

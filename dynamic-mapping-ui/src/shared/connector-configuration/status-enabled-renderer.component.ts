@@ -26,6 +26,7 @@ import {
 } from '@c8y/ngx-components';
 import { Direction, Operation, SharedService } from '..';
 import { ConnectorConfigurationService } from '../connector-configuration.service';
+import { HttpStatusCode } from '@angular/common/http';
 
 /**
  * The example component for custom cell renderer.
@@ -68,8 +69,8 @@ export class StatusEnabledRendererComponent {
       { connectorIdent: configuration.ident }
     );
     // console.log('Details toggle activation to broker', response1);
-    if (response1.status === 201) {
-      // if (response1.status === 201 && response2.status === 201) {
+    if (response1.status === HttpStatusCode.Created) {
+      // if (response1.status === HttpStatusCode.Created && response2.status === HttpStatusCode.Created) {
       this.alertService.success(gettext('Connection updated successfully.'));
     } else {
       this.alertService.danger(gettext('Failed to establish connection!'));

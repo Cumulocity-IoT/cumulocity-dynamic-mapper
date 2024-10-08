@@ -26,6 +26,7 @@ import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 import { ConnectorConfigurationService } from '../connector';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -81,7 +82,7 @@ export class ServiceConfigurationComponent implements OnInit {
       Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === 201) {
+    if (response1.status === HttpStatusCode.Created) {
       this.alertService.success(gettext('Reconnected successfully.'));
     } else {
       this.alertService.danger(gettext('Failed to reconnect!'));
@@ -91,9 +92,9 @@ export class ServiceConfigurationComponent implements OnInit {
   async clickedClearInboundExternalIdCache() {
     const response1 = await this.sharedService.runOperation(
       Operation.CLEAR_CACHE,
-      { cacheId: 'INBOUND_ID' }
+      { cacheId: 'INBOUND_ID_CACHE' }
     );
-    if (response1.status === 201) {
+    if (response1.status === HttpStatusCode.Created) {
       this.alertService.success(gettext('Cache cleared.'));
     } else {
       this.alertService.danger(gettext('Failed to clear cache!'));
@@ -105,7 +106,7 @@ export class ServiceConfigurationComponent implements OnInit {
       Operation.RESET_DEPLOYMENT_MAP
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === 201) {
+    if (response1.status === HttpStatusCode.Created) {
       this.alertService.success(gettext('Reset deploymentMap.'));
     } else {
       this.alertService.danger(gettext('Failed to reset deploymentMap!'));
