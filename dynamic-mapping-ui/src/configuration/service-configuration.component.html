@@ -262,7 +262,7 @@
             </div>
             <label
               class="editable m-l-auto"
-              title="{{ 'Outbound mappings' | translate }}"
+              title="{{ 'Size inbound Id cache' | translate }}"
               [ngClass]="{ updated: editable2updated }"
             >
               <input
@@ -270,6 +270,37 @@
                 name="inboundExternalIdCacheSize"
                 type="number"
                 [(ngModel)]="serviceConfiguration.inboundExternalIdCacheSize"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+
+        <c8y-li>
+          <c8y-li-icon icon="time-machine"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Days lifetime inbound Id cache' | translate }}</p>
+              <p>
+                <small translate
+                  >Set time after which complete cache in cleared. This is
+                  useful when you plan to delete a device or assign an external
+                  id to different device</small
+                >
+              </p>
+            </div>
+            <label
+              class="editable m-l-auto"
+              title="{{ 'Outbound mappings' | translate }}"
+              [ngClass]="{ updated: editable2updated }"
+            >
+              <input
+                class="form-control"
+                name="inboundExternalIdCacheRetention"
+                type="number"
+                [(ngModel)]="
+                  serviceConfiguration.inboundExternalIdCacheRetention
+                "
               />
               <span></span>
             </label>

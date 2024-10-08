@@ -47,7 +47,8 @@ export class ServiceConfigurationComponent implements OnInit {
     sendSubscriptionEvents: false,
     sendNotificationLifecycle: false,
     outboundMappingEnabled: true,
-    inboundExternalIdCacheSize: 0
+    inboundExternalIdCacheSize: 0,
+    inboundExternalIdCacheRetention: 0
   };
   editable2updated: boolean = false;
 
@@ -69,7 +70,8 @@ export class ServiceConfigurationComponent implements OnInit {
       sendSubscriptionEvents: new FormControl(''),
       sendNotificationLifecycle: new FormControl(''),
       outboundMappingEnabled: new FormControl(''),
-      inboundExternalIdCacheSize: new FormControl('')
+      inboundExternalIdCacheSize: new FormControl(''),
+      inboundExternalIdCacheRetention: new FormControl('')
     });
 
     this.loadData();
