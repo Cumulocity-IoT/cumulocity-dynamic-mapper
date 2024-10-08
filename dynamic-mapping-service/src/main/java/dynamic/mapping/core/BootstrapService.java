@@ -1,10 +1,13 @@
 package dynamic.mapping.core;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
+
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -24,6 +27,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
@@ -35,6 +39,7 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
+import dynamic.mapping.core.cache.InboundExternalIdCache;
 
 import javax.annotation.PreDestroy;
 
@@ -69,8 +74,14 @@ public class BootstrapService {
 	@Value("${APP.additionalSubscriptionIdTest}")
 	private String additionalSubscriptionIdTest;
 
+	@Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}")
+	private Integer inboundExternalIdCacheSize;
+
 	@Autowired
 	private MicroserviceSubscriptionsService subscriptionsService;
+
+	private HashMap<String, Instant> cacheRetentionStartMap = new HashMap<>();
+
 
 	@PreDestroy
 	public void destroy() {
@@ -100,19 +111,47 @@ public class BootstrapService {
 		mappingComponent.cleanMappingStatus(tenant);
 		configurationRegistry.getPayloadProcessorsInbound().remove(tenant);
 		configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
+
+		// delete cache
+		configurationRegistry.deleteInboundExternalIdCache(tenant);
 	}
 
 	@EventListener
 	public void initialize(MicroserviceSubscriptionAddedEvent event) {
 		// Executed for each tenant subscribed
 		String tenant = event.getCredentials().getTenant();
-		configurationRegistry.getMicroserviceCredentials().put(tenant, event.getCredentials());
 		log.info("Tenant {} - Microservice subscribed", tenant);
+		configurationRegistry.getMicroserviceCredentials().put(tenant, event.getCredentials());
+
+		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+		var cacheSize = inboundExternalIdCacheSize;
+		boolean saveServiceConfiguration = false;
+		if (serviceConfiguration.inboundExternalIdCacheSize != null
+				&& serviceConfiguration.inboundExternalIdCacheSize.intValue() != 0) {
+			cacheSize = serviceConfiguration.inboundExternalIdCacheSize.intValue();
+		} else if (serviceConfiguration.inboundExternalIdCacheSize != null
+				&& serviceConfiguration.inboundExternalIdCacheSize.intValue() == 0) {
+			serviceConfiguration.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
+			saveServiceConfiguration = true;
+		}
+		if (serviceConfiguration.inboundExternalIdCacheRetention == null) {
+			serviceConfiguration.inboundExternalIdCacheSize = 1;
+			saveServiceConfiguration = true;
+		}
+		if (saveServiceConfiguration) {
+			try {
+				serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+			} catch (JsonProcessingException e) {
+				log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
+			}
+		}
+		cacheRetentionStartMap.put(tenant, Instant.now());
+
+		configurationRegistry.initializeInboundExternalIdCache(tenant, cacheSize);
 		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
 		ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()
 				.initializeMappingServiceObject(tenant);
 
-		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 		configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
 		configurationRegistry.getC8yAgent().createExtensibleProcessor(tenant);
 		configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
@@ -230,5 +269,23 @@ public class BootstrapService {
 		if (serviceConfiguration.isOutboundMappingEnabled()) {
 			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
 		}
+	}
+	@Scheduled(cron = "0 * * * * *")
+	public void cleanUpCaches() {
+		subscriptionsService.runForEachTenant(() -> {
+			String tenant = subscriptionsService.getTenant();
+			if (cacheRetentionStartMap.get(tenant) != null) {
+				Instant cacheRetentionStart = cacheRetentionStartMap.get(tenant);
+				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent
+						.getServiceConfiguration(tenant);
+				int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
+				int cacheSize = Integer.valueOf(configurationRegistry.getInboundExternalIdCache(tenant).getCacheSize());
+				if (inboundCacheRetention > 0 && Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
+					configurationRegistry.getInboundExternalIdCache(tenant).clearCache();
+					cacheRetentionStartMap.put(tenant, Instant.now());
+					log.info("Tenant {} - Identity Cache cleared by scheduler. Old Size: {}, New size: {}", tenant, cacheSize, configurationRegistry.getInboundExternalIdCache(tenant).getCacheSize());
+				}
+			}
+		});
 	}
 }

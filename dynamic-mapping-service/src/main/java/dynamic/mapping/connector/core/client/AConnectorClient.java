@@ -146,6 +146,7 @@ public abstract class AConnectorClient {
 
 	private Instant start = Instant.now();
 
+
 	private ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 
 	@Getter

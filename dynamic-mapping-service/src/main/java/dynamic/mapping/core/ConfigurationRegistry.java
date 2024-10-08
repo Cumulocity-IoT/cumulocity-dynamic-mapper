@@ -22,6 +22,7 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
+import dynamic.mapping.core.cache.InboundExternalIdCache;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
@@ -41,149 +42,184 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ConfigurationRegistry {
 
-    @Getter
-    private Map<String, MicroserviceCredentials> microserviceCredentials = new HashMap<>();
+	@Getter
+	private Map<String, MicroserviceCredentials> microserviceCredentials = new HashMap<>();
 
-    // structure: <tenant, <mappingType, mappingServiceRepresentation>>
-    @Getter
-    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new HashMap<>();
+	// structure: <tenant, <mappingType, mappingServiceRepresentation>>
+	@Getter
+	private Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new HashMap<>();
 
-    // structure: <tenant, <mappingType, extensibleProcessorInbound>>
-    @Getter
-    private Map<String, Map<MappingType, BasePayloadProcessorInbound<?>>> payloadProcessorsInbound = new HashMap<>();
+	// structure: <tenant, <mappingType, extensibleProcessorInbound>>
+	@Getter
+	private Map<String, Map<MappingType, BasePayloadProcessorInbound<?>>> payloadProcessorsInbound = new HashMap<>();
 
-    // structure: <tenant, <connectorIdent, <mappingType,
-    // extensibleProcessorOutbound>>>
-    @Getter
-    private Map<String, Map<String, Map<MappingType, BasePayloadProcessorOutbound<?>>>> payloadProcessorsOutbound = new HashMap<>();
+	// structure: <tenant, <connectorIdent, <mappingType,
+	// extensibleProcessorOutbound>>>
+	@Getter
+	private Map<String, Map<String, Map<MappingType, BasePayloadProcessorOutbound<?>>>> payloadProcessorsOutbound = new HashMap<>();
 
-    @Getter
-    private Map<String, ServiceConfiguration> serviceConfigurations = new HashMap<>();
+	@Getter
+	private Map<String, ServiceConfiguration> serviceConfigurations = new HashMap<>();
 
-    // structure: <tenant, <extensibleProcessorInbound>>
-    @Getter
-    private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
+	// structure: <tenant, <extensibleProcessorInbound>>
+	@Getter
+	private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
-    @Getter
-    private C8YAgent c8yAgent;
+	@Getter
+	private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new HashMap<>();
 
-    @Autowired
-    public void setC8yAgent(C8YAgent c8yAgent) {
-        this.c8yAgent = c8yAgent;
-    }
+	@Getter
+	private C8YAgent c8yAgent;
 
-    @Getter
-    private C8YNotificationSubscriber notificationSubscriber;
+	@Autowired
+	public void setC8yAgent(C8YAgent c8yAgent) {
+		this.c8yAgent = c8yAgent;
+	}
 
-    @Autowired
-    public void setC8yAgent(C8YNotificationSubscriber notificationSubscriber) {
-        this.notificationSubscriber = notificationSubscriber;
-    }
+	@Getter
+	private C8YNotificationSubscriber notificationSubscriber;
 
-    @Getter
-    private ObjectMapper objectMapper;
+	@Autowired
+	public void setC8yAgent(C8YNotificationSubscriber notificationSubscriber) {
+		this.notificationSubscriber = notificationSubscriber;
+	}
 
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+	@Getter
+	private ObjectMapper objectMapper;
 
-    @Getter
-    private MappingComponent mappingComponent;
+	@Autowired
+	public void setObjectMapper(ObjectMapper objectMapper) {
+		this.objectMapper = objectMapper;
+	}
 
-    @Autowired
-    public void setMappingComponent(@Lazy MappingComponent mappingComponent) {
-        this.mappingComponent = mappingComponent;
-    }
+	@Getter
+	private MappingComponent mappingComponent;
 
-    @Getter
-    private ConnectorConfigurationComponent connectorConfigurationComponent;
+	@Autowired
+	public void setMappingComponent(@Lazy MappingComponent mappingComponent) {
+		this.mappingComponent = mappingComponent;
+	}
 
-    @Autowired
-    public void setConnectorConfigurationComponent(
-            @Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
-        this.connectorConfigurationComponent = connectorConfigurationComponent;
-    }
+	@Getter
+	private ConnectorConfigurationComponent connectorConfigurationComponent;
 
-    @Getter
-    public ServiceConfigurationComponent serviceConfigurationComponent;
+	@Autowired
+	public void setConnectorConfigurationComponent(
+			@Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
+		this.connectorConfigurationComponent = connectorConfigurationComponent;
+	}
 
-    @Autowired
-    public void setServiceConfigurationComponent(@Lazy ServiceConfigurationComponent serviceConfigurationComponent) {
-        this.serviceConfigurationComponent = serviceConfigurationComponent;
-    }
+	@Getter
+	public ServiceConfigurationComponent serviceConfigurationComponent;
 
-    @Getter
-    @Setter
-    @Autowired
-    private ExecutorService cachedThreadPool;
+	@Autowired
+	public void setServiceConfigurationComponent(@Lazy ServiceConfigurationComponent serviceConfigurationComponent) {
+		this.serviceConfigurationComponent = serviceConfigurationComponent;
+	}
 
-    public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
-        return Map.of(
-                MappingType.JSON, new JSONProcessorInbound(this),
-                MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
-                MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
-                MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
-                MappingType.PROCESSOR_EXTENSION, extensibleProcessor);
-    }
+	@Getter
+	@Setter
+	@Autowired
+	private ExecutorService cachedThreadPool;
 
-    public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
-            String additionalSubscriptionIdTest, String tenant) throws FileNotFoundException, IOException {
-        AConnectorClient connectorClient = null;
-        if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new MQTTClient(this, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
-            log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
-                    connectorConfiguration.getIdent());
-        } else if (ConnectorType.CUMULOCITY_MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new MQTTServiceClient(this, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
-            log.info("Tenant {} - Initializing MQTTService Connector with ident {}", tenant,
-                    connectorConfiguration.getIdent());
-        } else if (ConnectorType.KAFKA.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new KafkaClient(this, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
-            log.info("Tenant {} - Initializing Kafka Connector with ident {}", tenant,
-                    connectorConfiguration.getIdent());
-        }
-        return connectorClient;
-    }
+	public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
+		ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
+		return Map.of(
+				MappingType.JSON, new JSONProcessorInbound(this),
+				MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
+				MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
+				MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
+				MappingType.PROCESSOR_EXTENSION, extensibleProcessor);
+	}
 
-    public Map<MappingType, BasePayloadProcessorOutbound<?>> createPayloadProcessorsOutbound(
-            AConnectorClient connectorClient) {
-        return Map.of(
-                MappingType.JSON, new JSONProcessorOutbound(this, connectorClient));
-    }
+	public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
+			String additionalSubscriptionIdTest, String tenant) throws FileNotFoundException, IOException {
+		AConnectorClient connectorClient = null;
+		if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
+			connectorClient = new MQTTClient(this, connectorConfiguration,
+					null,
+					additionalSubscriptionIdTest, tenant);
+			log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
+					connectorConfiguration.getIdent());
+		} else if (ConnectorType.CUMULOCITY_MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
+			connectorClient = new MQTTServiceClient(this, connectorConfiguration,
+					null,
+					additionalSubscriptionIdTest, tenant);
+			log.info("Tenant {} - Initializing MQTTService Connector with ident {}", tenant,
+					connectorConfiguration.getIdent());
+		} else if (ConnectorType.KAFKA.equals(connectorConfiguration.getConnectorType())) {
+			connectorClient = new KafkaClient(this, connectorConfiguration,
+					null,
+					additionalSubscriptionIdTest, tenant);
+			log.info("Tenant {} - Initializing Kafka Connector with ident {}", tenant,
+					connectorConfiguration.getIdent());
+		}
+		return connectorClient;
+	}
 
-    public void initializePayloadProcessorsInbound(String tenant) {
-        if (!payloadProcessorsInbound.containsKey(tenant)) {
-            payloadProcessorsInbound.put(tenant, createPayloadProcessorsInbound(tenant));
-        }
-    }
+	public Map<MappingType, BasePayloadProcessorOutbound<?>> createPayloadProcessorsOutbound(
+			AConnectorClient connectorClient) {
+		return Map.of(
+				MappingType.JSON, new JSONProcessorOutbound(this, connectorClient));
+	}
 
-    public void initializePayloadProcessorsOutbound(AConnectorClient connectorClient) {
-        Map<String, Map<MappingType, BasePayloadProcessorOutbound<?>>> processorPerTenant = payloadProcessorsOutbound
-                .get(connectorClient.getTenant());
-        if (processorPerTenant == null) {
-            // log.info("Tenant {} - HIER III {} {}", connectorClient.getTenant(),
-            // processorPerTenant);
-            processorPerTenant = new HashMap<>();
-            payloadProcessorsOutbound.put(connectorClient.getTenant(), processorPerTenant);
-        }
-        //if (!processorPerTenant.containsKey(connectorClient.getConnectorIdent())) {
-            // log.info("Tenant {} - HIER VI {} {}", connectorClient.getTenant(),
-            // processorPerTenant);
-            processorPerTenant.put(connectorClient.getConnectorIdent(),
-                    createPayloadProcessorsOutbound(connectorClient));
-        //}
-    }
+	public void initializePayloadProcessorsInbound(String tenant) {
+		if (!payloadProcessorsInbound.containsKey(tenant)) {
+			payloadProcessorsInbound.put(tenant, createPayloadProcessorsInbound(tenant));
+		}
+	}
 
-    public MicroserviceCredentials getMicroserviceCredential(String tenant) {
-        MicroserviceCredentials ms = microserviceCredentials.get(tenant);
-        return ms;
-    }
+	public void initializePayloadProcessorsOutbound(AConnectorClient connectorClient) {
+		Map<String, Map<MappingType, BasePayloadProcessorOutbound<?>>> processorPerTenant = payloadProcessorsOutbound
+				.get(connectorClient.getTenant());
+		if (processorPerTenant == null) {
+			// log.info("Tenant {} - HIER III {} {}", connectorClient.getTenant(),
+			// processorPerTenant);
+			processorPerTenant = new HashMap<>();
+			payloadProcessorsOutbound.put(connectorClient.getTenant(), processorPerTenant);
+		}
+		// if (!processorPerTenant.containsKey(connectorClient.getConnectorIdent())) {
+		// log.info("Tenant {} - HIER VI {} {}", connectorClient.getTenant(),
+		// processorPerTenant);
+		processorPerTenant.put(connectorClient.getConnectorIdent(),
+				createPayloadProcessorsOutbound(connectorClient));
+		// }
+	}
+
+	public MicroserviceCredentials getMicroserviceCredential(String tenant) {
+		MicroserviceCredentials ms = microserviceCredentials.get(tenant);
+		return ms;
+	}
+
+	public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
+		log.info("Tenant {} - Initialize cache {}", tenant, inboundExternalIdCacheSize);
+		inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+	}
+
+	public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
+		return inboundExternalIdCaches.remove(tenant);
+	}
+
+	public InboundExternalIdCache getInboundExternalIdCache(String tenant) {
+		return inboundExternalIdCaches.get(tenant);
+	}
+
+	public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
+		InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
+		if (inboundExternalIdCache != null) {
+			if (recreate) {
+				inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+			} else {
+				inboundExternalIdCache.clearCache();
+			}
+		}
+	}
+
+	public int getSizeInboundExternalIdCache(String tenant) {
+		InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
+		if (inboundExternalIdCache != null) {
+			return inboundExternalIdCache.getCacheSize();
+		} else
+			return 0;
+	}
 }

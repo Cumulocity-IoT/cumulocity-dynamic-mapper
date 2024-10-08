@@ -26,6 +26,7 @@ import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 import { ConnectorConfigurationService } from '../connector';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -45,14 +46,17 @@ export class ServiceConfigurationComponent implements OnInit {
     sendMappingStatus: true,
     sendSubscriptionEvents: false,
     sendNotificationLifecycle: false,
-    outboundMappingEnabled: true
+    outboundMappingEnabled: true,
+    inboundExternalIdCacheSize: 0,
+    inboundExternalIdCacheRetention: 0
   };
+  editable2updated: boolean = false;
 
   constructor(
     public bsModalService: BsModalService,
     public alertService: AlertService,
     private sharedService: SharedService,
-	public connectorConfigurationService: ConnectorConfigurationService
+    public connectorConfigurationService: ConnectorConfigurationService
   ) {}
 
   ngOnInit() {
@@ -65,7 +69,9 @@ export class ServiceConfigurationComponent implements OnInit {
       sendMappingStatus: new FormControl(''),
       sendSubscriptionEvents: new FormControl(''),
       sendNotificationLifecycle: new FormControl(''),
-      outboundMappingEnabled: new FormControl('')
+      outboundMappingEnabled: new FormControl(''),
+      inboundExternalIdCacheSize: new FormControl(''),
+      inboundExternalIdCacheRetention: new FormControl('')
     });
 
     this.loadData();
@@ -81,10 +87,22 @@ export class ServiceConfigurationComponent implements OnInit {
       Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === 201) {
+    if (response1.status === HttpStatusCode.Created) {
       this.alertService.success(gettext('Reconnected successfully.'));
     } else {
       this.alertService.danger(gettext('Failed to reconnect!'));
+    }
+  }
+
+  async clickedClearInboundExternalIdCache() {
+    const response1 = await this.sharedService.runOperation(
+      Operation.CLEAR_CACHE,
+      { cacheId: 'INBOUND_ID_CACHE' }
+    );
+    if (response1.status === HttpStatusCode.Created) {
+      this.alertService.success(gettext('Cache cleared.'));
+    } else {
+      this.alertService.danger(gettext('Failed to clear cache!'));
     }
   }
 
@@ -93,7 +111,7 @@ export class ServiceConfigurationComponent implements OnInit {
       Operation.RESET_DEPLOYMENT_MAP
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === 201) {
+    if (response1.status === HttpStatusCode.Created) {
       this.alertService.success(gettext('Reset deploymentMap.'));
     } else {
       this.alertService.danger(gettext('Failed to reset deploymentMap!'));
