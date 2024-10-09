@@ -98,7 +98,7 @@ public class MappingTreeNode {
 		Set<String> set = childNodes.keySet();
 		String joinedSet = String.join(",", set);
 		String joinedPath = String.join("", remainingLevels);
-		log.debug("Tenant {} - Trying to resolve: '{}' in [{}]", tenant, joinedPath, joinedSet);
+		log.info("Tenant {} - Trying to resolve: '{}' in [{}]", tenant, joinedPath, joinedSet);
 		List<MappingTreeNode> results = new ArrayList<MappingTreeNode>();
 		if (remainingLevels.size() >= 1) {
 			String currentLevel = remainingLevels.get(0);
@@ -128,17 +128,32 @@ public class MappingTreeNode {
 				results.add(this);
 			} else {
 				String remaining = String.join("/", remainingLevels);
-				throw new ResolveException(
-						String.format("No mapping registered for this path: %s %s!", this.getAbsolutePath(),
-								remaining));
+				String msg = String.format("Sibling path mapping registered for this path: %s %s!",
+						this.getAbsolutePath(), remaining);
+				log.info(msg);
+
+				// String remaining = String.join("/", remainingLevels);
+				// throw new ResolveException(
+				// String.format("No mapping registered for this path: %s %s!",
+				// this.getAbsolutePath(),
+				// remaining));
 			}
+			// if (childNodes != null && childNodes.size() == 1) {
+			// results.add(childNodes.get(0).));
+			// } else {
+			// String remaining = String.join("/", remainingLevels);
+			// throw new ResolveException(
+			// String.format("No mapping registered for this path: %s %s!",
+			// this.getAbsolutePath(),
+			// remaining));
+			// }
 		}
 		return results;
 	}
 
 	private void addMapping(Mapping mapping, List<String> levels, int currentLevel)
 			throws ResolveException {
-		List<MappingTreeNode> specificChildren = getChildNodes().getOrDefault(levels.get(currentLevel),
+		List<MappingTreeNode> children = getChildNodes().getOrDefault(levels.get(currentLevel),
 				new ArrayList<MappingTreeNode>());
 		String currentPathMonitoring = createPathMonitoring(levels, currentLevel);
 		if (currentLevel == levels.size() - 1) {
@@ -149,53 +164,57 @@ public class MappingTreeNode {
 			log.debug("Tenant {} - Adding mappingNode : currentPathMonitoring {}, child: {}", tenant,
 					currentPathMonitoring,
 					child.toString());
-			specificChildren.add(child);
-			getChildNodes().put(levels.get(currentLevel), specificChildren);
+			children.add(child);
+			getChildNodes().put(levels.get(currentLevel), children);
 		} else if (currentLevel < levels.size() - 1) {
 			log.debug(
 					"Tenant {} - Adding innerNode   : currentPathMonitoring: {}, currentNode.absolutePath: {}",
 					tenant, currentPathMonitoring, getLevel(), getAbsolutePath());
 			MappingTreeNode child;
+
+			// is currentLevel a known children
 			if (getChildNodes().containsKey(levels.get(currentLevel))) {
-				// if (specificChildren.size() == 1) {
-				// if (!specificChildren.get(0).isMappingNode()) {
-				// child = specificChildren.get(0);
+				// if (children.size() == 1) {
+				// if (!children.get(0).isMappingNode()) {
+				// child = children.get(0);
 				// } else {
 				// throw new ResolveException(String.format(
 				// "Could not add mapping to tree, since at this node is already blocked by
 				// mappingId : %s",
-				// specificChildren.get(0).toString()));
+				// children.get(0).toString()));
 				// }
 				// } else {
 				// throw new ResolveException(String.format(
 				// "Could not add mapping to tree, multiple mappings are only allowed at the end
 				// of the tree. This node already contains: %s nodes",
-				// specificChildren.size()));
+				// children.size()));
 				// }
 
 				// find the one node that is an inner node, so that we can descend further in
 				// the tree
-				List<MappingTreeNode> innerNodes = specificChildren.stream()
+				List<MappingTreeNode> innerNodes = children.stream()
 						.filter(node -> !node.isMappingNode())
 						.collect(Collectors.toList());
 				if (innerNodes != null && innerNodes.size() > 1) {
 					throw new ResolveException(String.format(
 							"multiple inner nodes are registered : %s",
-							specificChildren.toString()));
+							children.toString()));
 				} else if (innerNodes.size() == 1) {
 					child = innerNodes.get(0);
 				} else {
 					child = MappingTreeNode.createInnerNode(this, levels.get(currentLevel));
-					specificChildren.add(child);
-					getChildNodes().put(levels.get(currentLevel), specificChildren);
+					children.add(child);
+					getChildNodes().put(levels.get(currentLevel), children);
 				}
+				// currentLevel is not a known children, is empty and has to be linked to its
+				// parent
 			} else {
 				child = MappingTreeNode.createInnerNode(this, levels.get(currentLevel));
 				log.debug("Tenant {} - Adding innerNode: currentPathMonitoring: {}, child: {}, {}", tenant,
 						currentPathMonitoring,
 						child.toString());
-				specificChildren.add(child);
-				getChildNodes().put(levels.get(currentLevel), specificChildren);
+				children.add(child);
+				getChildNodes().put(levels.get(currentLevel), children);
 			}
 			child.addMapping(mapping, levels, currentLevel + 1);
 		} else {
