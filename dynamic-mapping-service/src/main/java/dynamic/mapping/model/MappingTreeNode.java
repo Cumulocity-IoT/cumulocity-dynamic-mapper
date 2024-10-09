@@ -131,22 +131,7 @@ public class MappingTreeNode {
 				String msg = String.format("Sibling path mapping registered for this path: %s %s!",
 						this.getAbsolutePath(), remaining);
 				log.info(msg);
-
-				// String remaining = String.join("/", remainingLevels);
-				// throw new ResolveException(
-				// String.format("No mapping registered for this path: %s %s!",
-				// this.getAbsolutePath(),
-				// remaining));
 			}
-			// if (childNodes != null && childNodes.size() == 1) {
-			// results.add(childNodes.get(0).));
-			// } else {
-			// String remaining = String.join("/", remainingLevels);
-			// throw new ResolveException(
-			// String.format("No mapping registered for this path: %s %s!",
-			// this.getAbsolutePath(),
-			// remaining));
-			// }
 		}
 		return results;
 	}
@@ -174,21 +159,6 @@ public class MappingTreeNode {
 
 			// is currentLevel a known children
 			if (getChildNodes().containsKey(levels.get(currentLevel))) {
-				// if (children.size() == 1) {
-				// if (!children.get(0).isMappingNode()) {
-				// child = children.get(0);
-				// } else {
-				// throw new ResolveException(String.format(
-				// "Could not add mapping to tree, since at this node is already blocked by
-				// mappingId : %s",
-				// children.get(0).toString()));
-				// }
-				// } else {
-				// throw new ResolveException(String.format(
-				// "Could not add mapping to tree, multiple mappings are only allowed at the end
-				// of the tree. This node already contains: %s nodes",
-				// children.size()));
-				// }
 
 				// find the one node that is an inner node, so that we can descend further in
 				// the tree

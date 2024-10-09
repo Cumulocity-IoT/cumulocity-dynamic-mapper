@@ -571,15 +571,6 @@ public class MappingComponent {
 				.map(mn -> mn.getMapping()).collect(Collectors.toList());
 	}
 
-	// public List<Mapping> resolveMappingInbound(String tenant, String topic,
-	// String connectorIdent)
-	// throws ResolveException {
-	// List<Mapping> resolvedMappings = resolveMappingInbound(tenant, topic);
-	// resolvedMappings.removeIf(m -> !getDeploymentMapEntry(tenant,
-	// m.ident).contains(connectorIdent));
-	// return resolvedMappings;
-	// }
-
 	public void resetSnoop(String tenant, String id) throws Exception {
 		// step 1. update debug for mapping
 		log.info("Tenant {} - Reset snoop for mapping: {}", tenant, id);
