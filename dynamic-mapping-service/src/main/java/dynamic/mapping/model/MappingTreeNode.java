@@ -29,6 +29,7 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -248,10 +249,12 @@ public class MappingTreeNode {
 						tenant,
 						currentPathMonitoring, branchingLevel, mapping.id);
 				// find child and remove
-				getChildNodes().entrySet().removeIf(tn -> {
-					tn.getValue().removeIf(tnn -> {
-						if (tnn.isMappingNode()) {
-							if (tnn.getMapping().id.equals(mapping.id)) {
+				Set<Entry<String, List<MappingTreeNode>>> childNodesEntrySet = getChildNodes().entrySet();
+				childNodesEntrySet.removeIf(childNodesEntry -> {
+					List<MappingTreeNode> listMappingNodes = childNodesEntry.getValue();
+					listMappingNodes.removeIf(tn -> {
+						if (tn.mapping != null) {
+							if (tn.getMapping().id.equals(mapping.id)) {
 								// update the branchingLevel as indicator if other valid mapping in siblings
 								// node exist
 								// in this case the ancestor mapping node must not be deleted, as these sibling
@@ -270,11 +273,12 @@ public class MappingTreeNode {
 						} else
 							return false;
 					});
-					if (tn.getValue().size() == 0) {
+					if (childNodesEntry.getValue().size() == 0) {
 						foundMapping.setTrue();
 						return true;
 					} else
 						return false; // DUMMY
+
 				});
 				return foundMapping.booleanValue();
 			} else if (currentLevel < levels.size() - 1) {
@@ -283,8 +287,8 @@ public class MappingTreeNode {
 						tenant,
 						currentPathMonitoring, branchingLevel);
 				if (getChildNodes().containsKey(levels.get(currentLevel))) {
-					List<MappingTreeNode> tns = getChildNodes().get(levels.get(currentLevel));
-					tns.removeIf(tn -> {
+					List<MappingTreeNode> currentChildNodes = getChildNodes().get(levels.get(currentLevel));
+					currentChildNodes.removeIf(tn -> {
 						boolean bm = false;
 						if (!tn.isMappingNode() && !foundMapping.booleanValue()) {
 							// update the branchingLevel as indicator if other valid mapping in siblings
@@ -319,7 +323,7 @@ public class MappingTreeNode {
 						}
 						return bm;
 					});
-					if (tns.size() == 0) {
+					if (currentChildNodes.size() == 0) {
 						getChildNodes().remove(levels.get(currentLevel));
 					}
 				}
