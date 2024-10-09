@@ -48,17 +48,24 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     public router: Router
   ) {
     this.appStateService.currentApplication.subscribe((cur) => {
-      // console.log('AppName in MappingNavigationFactory', cur, this.router.url);
-
-      if (_.has(cur?.manifest, 'isPackage')) {
-        this.isStandaloneApp = cur?.manifest?.isPackage;
-      }
+      this.isStandaloneApp =
+        _.has(cur?.manifest, 'isPackage') || _.has(cur?.manifest, 'blueprint');
+      //   console.log(
+      //     'Constructor: AppName in MappingNavigationFactory',
+      //     cur,
+      //     this.isStandaloneApp,
+      //     _.has(cur?.manifest, 'isPackage')
+      //   );
       this.appName = cur.name;
     });
   }
 
   get() {
     let navs;
+    // console.log(
+    //   'Get: AppName in MappingNavigationFactory',
+    //   this.isStandaloneApp
+    // );
     if (this.isStandaloneApp) {
       const parentMapping = new NavigatorNode({
         label: gettext('Home'),
