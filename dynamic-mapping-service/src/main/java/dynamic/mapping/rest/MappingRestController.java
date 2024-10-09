@@ -647,7 +647,7 @@ public class MappingRestController {
 				});
 			}
 		} catch (Exception ex) {
-			log.error("Tenant {} - Exception when deleting mapping {}", tenant, ex);
+			log.error("Tenant {} - Exception when deleting mapping: ", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
 		}
 		log.info("Tenant {} - Mapping {} successfully deleted!", tenant, id);
