@@ -262,8 +262,11 @@ public class MappingTreeNode {
 								// update the branchingLevel as indicator if other valid mapping in siblings
 								// node exist
 								// in this case the ancestor mapping node must not be deleted, as these sibling
+								// if (getChildNodes().size() > 1) {
+								// branchingLevel.setValue(currentLevel);
+								// }
 								// mapping would be deleted as well
-								if (getChildNodes().size() > 1) {
+								if (getChildNodes().values().stream().mapToInt(List::size).sum() > 1) {
 									branchingLevel.setValue(currentLevel);
 								}
 								log.debug(
@@ -299,7 +302,11 @@ public class MappingTreeNode {
 							// node exist
 							// in this case the ancestor mapping node must not be deleted, as these sibling
 							// mapping would be deleted as well
-							if (getChildNodes().size() > 1) {
+							// if (getChildNodes().size() > 1) {
+							// branchingLevel.setValue(currentLevel);
+							// }
+							// mapping would be deleted as well
+							if (getChildNodes().values().stream().mapToInt(List::size).sum() > 1) {
 								branchingLevel.setValue(currentLevel);
 							}
 							try {
@@ -311,7 +318,7 @@ public class MappingTreeNode {
 										tenant,
 										currentPathMonitoring, branchingLevel, e.getMessage());
 							}
-							if (currentLevel <= branchingLevel.getValue()) {
+							if (currentLevel < branchingLevel.getValue()) {
 								log.debug(
 										"Tenant {} - Deleting innerNode stopped: currentPathMonitoring: {}, branchingLevel: {}",
 										tenant,
