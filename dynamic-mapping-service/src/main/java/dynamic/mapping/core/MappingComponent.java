@@ -566,7 +566,7 @@ public class MappingComponent {
 
 	public List<Mapping> resolveMappingInbound(String tenant, String topic) throws ResolveException {
 		List<MappingTreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
-				.resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
+				.resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic), 0);
 		return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
 				.map(mn -> mn.getMapping()).collect(Collectors.toList());
 	}

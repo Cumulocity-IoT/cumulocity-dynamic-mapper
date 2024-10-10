@@ -98,40 +98,41 @@ public class MappingTreeNode {
 		this.nodeId = uuidCustom();
 	}
 
-	public List<MappingTreeNode> resolveTopicPath(List<String> remainingLevels) throws ResolveException {
+	public List<MappingTreeNode> resolveTopicPath(List<String> topicLevels, Integer currentTopicLevelIndex)
+			throws ResolveException {
 		Set<String> set = childNodes.keySet();
 		String joinedSet = String.join(",", set);
-		String joinedPath = String.join("", remainingLevels);
+		String joinedPath = String.join("", topicLevels);
 		log.info("Tenant {} - Trying to resolve: '{}' in [{}]", tenant, joinedPath, joinedSet);
 		List<MappingTreeNode> results = new ArrayList<MappingTreeNode>();
-		if (remainingLevels.size() >= 1) {
-			String currentLevel = remainingLevels.get(0);
-			remainingLevels.remove(0);
+		if (currentTopicLevelIndex < topicLevels.size()) {
+			String currentLevel = topicLevels.get(currentTopicLevelIndex);
+			// levels.remove(0);
 			if (childNodes.containsKey(currentLevel)) {
 				List<MappingTreeNode> revolvedNodes = childNodes.get(currentLevel);
 				for (MappingTreeNode node : revolvedNodes) {
-					results.addAll(node.resolveTopicPath(remainingLevels));
+					results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1));
 				}
 			}
 			if (childNodes.containsKey(MappingRepresentation.TOPIC_WILDCARD_SINGLE)) {
 				List<MappingTreeNode> revolvedNodes = childNodes.get(MappingRepresentation.TOPIC_WILDCARD_SINGLE);
 				for (MappingTreeNode node : revolvedNodes) {
-					results.addAll(node.resolveTopicPath(remainingLevels));
+					results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1));
 				}
 				// test if single level wildcard "+" match exists for this level
 			} else if (childNodes.containsKey(MappingRepresentation.TOPIC_WILDCARD_MULTI)) {
 				List<MappingTreeNode> revolvedNodes = childNodes.get(MappingRepresentation.TOPIC_WILDCARD_MULTI);
 				for (MappingTreeNode node : revolvedNodes) {
-					results.addAll(node.resolveTopicPath(remainingLevels));
+					results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1));
 				}
 				// test if single level wildcard "+" match exists for this level
 
 			}
-		} else if (remainingLevels.size() == 0) {
+		} else if (topicLevels.size() == currentTopicLevelIndex) {
 			if (isMappingNode()) {
 				results.add(this);
 			} else {
-				String remaining = String.join("/", remainingLevels);
+				String remaining = String.join("/", topicLevels);
 				String msg = String.format("Sibling path mapping registered for this path: %s %s!",
 						this.getAbsolutePath(), remaining);
 				log.info(msg);
