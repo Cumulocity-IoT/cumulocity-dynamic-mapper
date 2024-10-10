@@ -310,7 +310,7 @@ public class MappingTreeNode {
 										tenant,
 										currentPathMonitoring, branchingLevel, e.getMessage());
 							}
-							if (currentLevel < branchingLevel.getValue()) {
+							if (currentLevel <= branchingLevel.getValue()) {
 								log.debug(
 										"Tenant {} - Deleting innerNode stopped: currentPathMonitoring: {}, branchingLevel: {}",
 										tenant,
@@ -344,8 +344,14 @@ public class MappingTreeNode {
 
 	public static String uuidCustom() {
 		Random random = new Random();
-		int randomInt = random.nextInt(Integer.MAX_VALUE);
-		String id = Integer.toString(randomInt, 36).substring(0, 6);
-		return id;
+		StringBuilder sb = new StringBuilder();
+
+		while (sb.length() < 6) {
+			int randomInt = random.nextInt(36);
+			char c = (randomInt < 10) ? (char) ('0' + randomInt) : (char) ('a' + randomInt - 10);
+			sb.append(c);
+		}
+
+		return sb.toString();
 	}
 }
