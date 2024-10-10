@@ -42,6 +42,8 @@ public class MappingTreeNode {
 
 	private Mapping mapping;
 
+	private String nodeId;
+
 	private boolean mappingNode;
 
 	private long depthIndex;
@@ -93,6 +95,7 @@ public class MappingTreeNode {
 
 	public MappingTreeNode() {
 		this.childNodes = new HashMap<String, List<MappingTreeNode>>();
+		this.nodeId = uuidCustom();
 	}
 
 	public List<MappingTreeNode> resolveTopicPath(List<String> remainingLevels) throws ResolveException {
@@ -337,5 +340,12 @@ public class MappingTreeNode {
 		String cl = levels.get(currentLevel);
 		copyLevels.set(currentLevel, "__" + cl + "__");
 		return copyLevels.toString();
+	}
+
+	public static String uuidCustom() {
+		Random random = new Random();
+		int randomInt = random.nextInt(Integer.MAX_VALUE);
+		String id = Integer.toString(randomInt, 36).substring(0, 6);
+		return id;
 	}
 }
