@@ -60,14 +60,14 @@ public class MappingTreeNode {
 	private Object treeModificationLock = new Object();
 
 	static public MappingTreeNode createRootNode(String tenant) {
-		MappingTreeNode in = new MappingTreeNode();
-		in.setDepthIndex(0);
-		in.setLevel("root");
-		in.setTenant(tenant);
-		in.setParentNode(null);
-		in.setAbsolutePath("");
-		in.setMappingNode(false);
-		return in;
+		MappingTreeNode node = new MappingTreeNode();
+		node.setDepthIndex(0);
+		node.setLevel("root");
+		node.setTenant(tenant);
+		node.setParentNode(null);
+		node.setAbsolutePath("");
+		node.setMappingNode(false);
+		return node;
 	}
 
 	public static MappingTreeNode createInnerNode(MappingTreeNode parent, String level) {
@@ -107,7 +107,6 @@ public class MappingTreeNode {
 		List<MappingTreeNode> results = new ArrayList<MappingTreeNode>();
 		if (currentTopicLevelIndex < topicLevels.size()) {
 			String currentLevel = topicLevels.get(currentTopicLevelIndex);
-			// levels.remove(0);
 			if (childNodes.containsKey(currentLevel)) {
 				List<MappingTreeNode> revolvedNodes = childNodes.get(currentLevel);
 				for (MappingTreeNode node : revolvedNodes) {
@@ -266,7 +265,7 @@ public class MappingTreeNode {
 								// branchingLevel.setValue(currentLevel);
 								// }
 								// mapping would be deleted as well
-								if (getChildNodes().values().stream().mapToInt(List::size).sum() > 1) {
+								if (countGrandChildren() > 1) {
 									branchingLevel.setValue(currentLevel);
 								}
 								log.debug(
@@ -285,7 +284,6 @@ public class MappingTreeNode {
 						return true;
 					} else
 						return false; // DUMMY
-
 				});
 				return foundMapping.booleanValue();
 			} else if (currentLevel < levels.size() - 1) {
@@ -306,7 +304,7 @@ public class MappingTreeNode {
 							// branchingLevel.setValue(currentLevel);
 							// }
 							// mapping would be deleted as well
-							if (getChildNodes().values().stream().mapToInt(List::size).sum() > 1) {
+							if (countGrandChildren() > 1) {
 								branchingLevel.setValue(currentLevel);
 							}
 							try {
@@ -341,6 +339,10 @@ public class MappingTreeNode {
 			}
 		}
 		return foundMapping.booleanValue();
+	}
+
+	private int countGrandChildren() {
+		return getChildNodes().values().stream().mapToInt(List::size).sum();
 	}
 
 	private String createPathMonitoring(List<String> levels, int currentLevel) {
