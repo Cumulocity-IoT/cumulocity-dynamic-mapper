@@ -58,7 +58,7 @@ import {
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { Observable, Subject, take } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, take } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
@@ -94,7 +94,9 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   isConnectionToMQTTEstablished: boolean;
 
-  mappingsEnriched$: Observable<MappingEnriched[]>;
+  mappingsEnriched$: BehaviorSubject<MappingEnriched[]> = new BehaviorSubject(
+    []
+  );
   mappingsCount: number = 0;
   mappingToUpdate: Mapping;
   subscription: C8YNotificationSubscription;
@@ -265,13 +267,14 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.bulkActionControls.push(
       {
         type: BuiltInActionType.Delete,
-        callback: this.deleteMappingBulkWithConfirmation.bind(this),
-        showIf: (selectedItemIds) => {
-          const result = true;
-          // depending on seleted id hide the bulkDelete
-          console.log('Selected mappings (showIf):', selectedItemIds);
-          return result;
-        }
+        callback: this.deleteMappingBulkWithConfirmation.bind(this)
+        // showIf: (selectedItemIds: string[]) => {
+        //   // hide bulkDelete if any selected mapping is enabled
+        //     const mappings = this.mappingsEnriched$.getValue();
+        //     const result = mappings?.some((m) => selectedItemIds?.includes(m.id));
+        //     console.log('Selected mappings (showIf):', selectedItemIds);
+        //   return true;
+        // }
       },
       {
         type: 'ACTIVATE',
@@ -292,9 +295,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.exportMappingBulk.bind(this)
       }
     );
-    this.mappingsEnriched$ = this.mappingService.getMappingsObservable(
-      this.stepperConfiguration.direction
-    );
+    this.mappingService
+      .getMappingsObservable(this.stepperConfiguration.direction)
+      .subscribe((mappings) => this.mappingsEnriched$.next(mappings));
 
     this.mappingsEnriched$.subscribe((maps) => {
       this.mappingsCount = maps.length;
