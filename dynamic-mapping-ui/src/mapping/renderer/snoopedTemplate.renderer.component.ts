@@ -20,11 +20,44 @@
  */
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { SnoopExplorerComponent } from '../snoop-explorer/snoop-explorer-modal.component';
 
 @Component({
   selector: 'd11r-mapping-renderer-snooped',
-  template: '<span>{{ context.value.snoopedTemplates ? context.value.snoopedTemplates.length: "" }}</span>'
+  template: `
+    <div *ngIf="context.value.snoopedTemplates?.length > 0">
+      <button
+        class="btn btn-link"
+        title="{{ context.item.id }}"
+        (click)="exploreSnoopedTemplates()"
+        style="padding-top: 0px; padding-bottom: 10px;"
+      >
+        <span>{{
+          context.value.snoopedTemplates
+            ? context.value.snoopedTemplates?.length
+            : ''
+        }}</span>
+      </button>
+    </div>
+  `
 })
 export class SnoopedTemplateRendererComponent {
-  constructor(public context: CellRendererContext) {}
+  constructor(
+    public context: CellRendererContext,
+    public bsModalService: BsModalService
+  ) {}
+  exploreSnoopedTemplates() {
+    const initialState = {
+      enrichedMapping: this.context.item,
+      labels: {
+        ok: 'Cancel',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      SnoopExplorerComponent,
+      { initialState }
+    );
+  }
 }

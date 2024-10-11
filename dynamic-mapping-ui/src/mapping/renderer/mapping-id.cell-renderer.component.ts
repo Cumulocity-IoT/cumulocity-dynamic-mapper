@@ -20,28 +20,33 @@
  */
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
-import { SnoopStatus } from '../../shared';
+import { MappingService } from '../core/mapping.service';
 
+/**
+ * The example component for custom cell renderer.
+ * It gets `context` with the current row item and the column.
+ * Additionally, a service is injected to provide a helper method.
+ * The template displays the icon and the label with additional styling.
+ */
 @Component({
-  selector: 'd11r-mapping-renderer-status',
   template: `
-    <div *ngIf="context.value.debug">
-      <span class="text-10 label label-primary">{{ 'debug' }}</span>
-    </div>
-    <div *ngIf="context.value.snoopStatus === 'STARTED'">
-      <span class="text-10 label label-primary">{{ 'snoop: started' }}</span>
-    </div>
-    <div *ngIf="context.value.snoopStatus === 'STOPPED'">
-      <span class="text-10 label label-primary">{{ 'snoop: stopped' }}</span>
-    </div>
-    <div *ngIf="context.value.snoopStatus === 'ENABLED'">
-      <span class="text-10 label label-primary">{{ 'snoop: pending' }}</span>
-    </div>
+    <button
+      class="btn btn-link"
+      title="{{ context.item.id }}"
+      (click)="updateMapping()"
+      style="padding-top: 0px; padding-bottom: 10px;"
+    >
+      {{ context.value }}
+    </button>
   `
 })
-export class StatusRendererComponent {
-  constructor(public context: CellRendererContext) {
-    // console.log('StatusRenderer:', context.item, context.value);
+export class MappingIdCellRendererComponent {
+  constructor(
+    public context: CellRendererContext,
+    public mappingService: MappingService
+  ) {}
+  async updateMapping() {
+    const { mapping } = this.context.item;
+    this.mappingService.initiateUpdateMapping({ mapping, id: mapping.id });
   }
-  SnoopStatus: SnoopStatus;
 }

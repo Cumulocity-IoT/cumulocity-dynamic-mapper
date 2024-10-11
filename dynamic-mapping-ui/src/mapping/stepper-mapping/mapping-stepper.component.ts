@@ -57,7 +57,7 @@ import {
 } from '../../shared';
 import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component';
 import { MappingService } from '../core/mapping.service';
-import { EditSubstitutionComponent } from '../edit/edit-substitution-modal.component';
+import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { C8YRequest } from '../processor/processor.model';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
@@ -140,8 +140,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   editorOptionsSourceStep3: any = {};
   editorOptionsSourceStep4: any = {};
-  editorOptionsTargetStep4: any = {};
   editorOptionsTargetStep3: any = {};
+  editorOptionsTargetStep4: any = {};
   editorOptionsTesting: any = {};
 
   selectedSubstitution: number = -1;

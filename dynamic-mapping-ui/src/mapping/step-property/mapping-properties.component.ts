@@ -91,15 +91,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     //  this.mapping,
     //  this.stepperConfiguration
     // );
-    const numberSnooped = this.mapping.snoopedTemplates
-      ? this.mapping.snoopedTemplates.length
-      : 0;
-    if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
-      this.alertService.success(
-        `Already ${numberSnooped} templates exist. To stop the snooping process click on Cancel, select the respective mapping in the list of all mappings and choose the action Toggle Snooping.`,
-        `The recording process is in state ${this.mapping.snoopStatus}.`
-      );
-    }
+    // const numberSnooped = this.mapping.snoopedTemplates
+    //   ? this.mapping.snoopedTemplates.length
+    //   : 0;
+    // if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
+    //   this.alertService.success(
+    //     `Already ${numberSnooped} templates exist. To stop the snooping process click on Cancel, select the respective mapping in the list of all mappings and choose the action Toggle Snooping.`,
+    //     `The recording process is in state ${this.mapping.snoopStatus}.`
+    //   );
+    // }
     this.propertyFormlyFields = [
       {
         validators: {
@@ -109,24 +109,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               : 'checkTopicsOutboundAreValid'
           ]
         },
-        // validators: {
-        // 	validation: [
-        // 	  {
-        // 		name:
-        // 		  this.stepperConfiguration.direction == Direction.INBOUND
-        // 			? 'checkTopicsInboundAreValid'
-        // 			: 'checkTopicsOutboundAreValid'
-        // 	  }
-        // 	]
-        //   },
-
-        // validators: {
-        //   validation: [
-        //     this.stepperConfiguration.direction == Direction.INBOUND
-        //       ? checkTopicsInboundAreValidWithOption({ sampleOption: 3 })
-        //       : checkTopicsOutboundAreValid
-        //   ]
-        // },
         fieldGroupClassName: 'row',
         fieldGroup: [
           {

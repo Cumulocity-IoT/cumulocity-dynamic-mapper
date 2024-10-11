@@ -95,6 +95,7 @@ export class MappingService {
   }
   private eventRealtimeService: EventRealtimeService;
   private subscription: Subscription;
+  private updateMappingEnriched$: Subject<MappingEnriched> = new Subject();
   queriesUtil: QueriesUtil;
   private _agentId: string;
   protected JSONATA = require('jsonata');
@@ -113,6 +114,13 @@ export class MappingService {
       Operation.ACTIVATE_MAPPING,
       parameter
     );
+  }
+
+  listenToUpdateMapping(): Observable<MappingEnriched> {
+    return this.updateMappingEnriched$;
+  }
+  initiateUpdateMapping(m: MappingEnriched): void {
+    this.updateMappingEnriched$.next(m);
   }
 
   async changeDebuggingMapping(parameter: any) {

@@ -27,10 +27,10 @@ import {
   Mapping,
   MappingSubstitution,
   RepairStrategy
-} from '../../shared';
-import { EditorMode } from '../shared/stepper-model';
+} from '../../../shared';
+import { EditorMode } from '../../shared/stepper-model';
 import { StepperConfiguration } from 'src/shared/model/shared.model';
-import { definesDeviceIdentifier } from '../shared/util';
+import { definesDeviceIdentifier } from '../../shared/util';
 
 @Component({
   selector: 'd11r-edit-substitution-modal',

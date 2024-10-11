@@ -25,13 +25,16 @@ import { CellRendererContext } from '@c8y/ngx-components';
   selector: 'd11r-mapping-renderer-deployment',
   template: `
     <div *ngFor="let con of context.value?.connectors">
-        <span class="text-10 label label-primary">{{ con.name }}</span
-        >
+      <span class="text-10 tag tag--primary">{{ con.name }}</span>
+    </div>
+    <div *ngIf="context.item.mapping.active && !context.value?.connectors">
+      <span class="text-12 tag tag--danger">{{ 'No active connector' }}</span>
     </div>
   `
 })
 export class MappingDeploymentRendererComponent {
   constructor(public context: CellRendererContext) {
-   // console.log('Connectors', context, context.value);
+    console.log('Connectors', context, context.value);
+    context.item.mapping.active;
   }
 }

@@ -30,7 +30,7 @@ import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BrokerConfigurationModule } from '../configuration';
 import { SharedModule } from '../shared';
-import { EditSubstitutionComponent } from './edit/edit-substitution-modal.component';
+import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
 import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import/import-modal.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
@@ -61,6 +61,9 @@ import {
 } from './shared/util';
 import { NODE1 } from '../shared/model/util';
 import { MappingSubscriptionComponent } from './subscription-grid/subscription.component';
+import { MappingIdCellRendererComponent } from './renderer/mapping-id.cell-renderer.component';
+import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
+import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 
 @NgModule({
   declarations: [
@@ -88,7 +91,10 @@ import { MappingSubscriptionComponent } from './subscription-grid/subscription.c
     FieldInputCustom,
     MappingConnectorComponent,
     MappingSubscriptionComponent,
-    DeviceSelectorSubscriptionComponent
+    DeviceSelectorSubscriptionComponent,
+    MappingIdCellRendererComponent,
+    SnoopExplorerComponent,
+    AdviceActionComponent
   ],
   imports: [
     CoreModule,
