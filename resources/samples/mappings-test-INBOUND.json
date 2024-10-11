@@ -1,0 +1,194 @@
+[
+  {
+    "tested": false,
+    "autoAckOperation": true,
+    "source": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
+    "externalIdType": "c8y_Serial",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "Temperature.value",
+        "pathTarget": "c8y_TemperatureMeasurement.T.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "7863058531",
+    "subscriptionTopic": "device/test",
+    "direction": "INBOUND",
+    "mappingTopicSample": "device/test",
+    "snoopStatus": "NONE",
+    "debug": false,
+    "mapDeviceIdentifier": true,
+    "active": false,
+    "targetAPI": "MEASUREMENT",
+    "target": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1728564487231,
+    "name": "Mapping - 10",
+    "supportsMessageContext": false,
+    "mappingTopic": "device/test"
+  },
+  {
+    "tested": false,
+    "autoAckOperation": true,
+    "source": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
+    "externalIdType": "c8y_Serial",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "Temperature.value",
+        "pathTarget": "c8y_TemperatureMeasurement.T.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "2063060936",
+    "subscriptionTopic": "device/test/sub",
+    "direction": "INBOUND",
+    "mappingTopicSample": "device/test/sub",
+    "snoopStatus": "NONE",
+    "debug": false,
+    "mapDeviceIdentifier": true,
+    "active": false,
+    "targetAPI": "MEASUREMENT",
+    "target": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1728564332182,
+    "name": "Mapping - 11",
+    "supportsMessageContext": false,
+    "mappingTopic": "device/test/sub"
+  },
+  {
+    "tested": false,
+    "autoAckOperation": true,
+    "source": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
+    "externalIdType": "c8y_Serial",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "Temperature.value",
+        "pathTarget": "c8y_TemperatureMeasurement.T.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "2063060936",
+    "subscriptionTopic": "device/test/sub/subsub",
+    "direction": "INBOUND",
+    "mappingTopicSample": "device/test/sub/subsub",
+    "snoopStatus": "NONE",
+    "debug": false,
+    "mapDeviceIdentifier": true,
+    "active": false,
+    "targetAPI": "MEASUREMENT",
+    "target": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1728564332182,
+    "name": "Mapping - 12",
+    "supportsMessageContext": false,
+    "mappingTopic": "device/test/sub/subsub"
+  },
+  {
+    "tested": false,
+    "autoAckOperation": true,
+    "source": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
+    "externalIdType": "c8y_Serial",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[0]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "Temperature.value",
+        "pathTarget": "c8y_TemperatureMeasurement.T.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "2063060936",
+    "subscriptionTopic": "asset",
+    "direction": "INBOUND",
+    "mappingTopicSample": "asset",
+    "snoopStatus": "NONE",
+    "debug": false,
+    "mapDeviceIdentifier": true,
+    "active": false,
+    "targetAPI": "MEASUREMENT",
+    "target": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1728564332182,
+    "name": "Mapping - 13",
+    "supportsMessageContext": false,
+    "mappingTopic": "asset"
+  }
+]

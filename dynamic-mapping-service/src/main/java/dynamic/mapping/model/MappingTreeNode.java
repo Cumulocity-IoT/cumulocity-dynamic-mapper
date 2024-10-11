@@ -261,9 +261,6 @@ public class MappingTreeNode {
 								// update the branchingLevel as indicator if other valid mapping in siblings
 								// node exist
 								// in this case the ancestor mapping node must not be deleted, as these sibling
-								// if (getChildNodes().size() > 1) {
-								// branchingLevel.setValue(currentLevel);
-								// }
 								// mapping would be deleted as well
 								if (countGrandChildren() > 1) {
 									branchingLevel.setValue(currentLevel);
@@ -299,10 +296,6 @@ public class MappingTreeNode {
 							// update the branchingLevel as indicator if other valid mapping in siblings
 							// node exist
 							// in this case the ancestor mapping node must not be deleted, as these sibling
-							// mapping would be deleted as well
-							// if (getChildNodes().size() > 1) {
-							// branchingLevel.setValue(currentLevel);
-							// }
 							// mapping would be deleted as well
 							if (countGrandChildren() > 1) {
 								branchingLevel.setValue(currentLevel);
