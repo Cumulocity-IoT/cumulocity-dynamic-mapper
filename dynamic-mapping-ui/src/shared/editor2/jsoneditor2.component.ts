@@ -31,6 +31,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import {
+  JsonEditor,
   createJSONEditor,
   stringifyJSONPath,
   Content,
@@ -87,7 +88,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
 
   constructor(private elementRef: ElementRef) {}
 
-  private editor: any;
+  private editor: JsonEditor;
   id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
   content: Content = {
     text: undefined,
