@@ -930,7 +930,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       const initialState = {
         substitution: _.clone(this.mapping.substitutions[selected]),
         mapping: this.mapping,
-        stepperConfiguration: this.stepperConfiguration
+        stepperConfiguration: this.stepperConfiguration,
+        isUpdate: true
       };
       if (
         this.substitutionModel.sourceExpression?.severity != 'text-danger' &&

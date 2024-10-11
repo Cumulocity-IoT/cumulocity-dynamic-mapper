@@ -40,6 +40,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   @Input() substitution: MappingSubstitution;
   @Input() duplicate: MappingSubstitution;
   @Input() isDuplicate: boolean;
+  @Input() isUpdate: boolean = false;
   @Input() duplicateSubstitutionIndex: number;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() mapping: Mapping;
