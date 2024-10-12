@@ -33,6 +33,8 @@ import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
 import {
   API,
+  ConnectorPropertyType,
+  ConnectorType,
   Direction,
   Mapping,
   QOS,
@@ -42,11 +44,11 @@ import {
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { EditorMode } from '../shared/stepper-model';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
 import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveMappingTopicFromTopic } from '../shared/util';
 import { SharedService } from '../../shared/shared.service';
+import { StepperConfiguration } from '../../shared/model/shared.model';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -56,6 +58,16 @@ import { SharedService } from '../../shared/shared.service';
 })
 export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
+  @Input()
+  set deploymentMapEntry(value: any) {
+    this._deploymentMapEntry = value;
+  }
+
+  get deploymentMapEntry(): any {
+    return this._deploymentMapEntry;
+  }
+  _deploymentMapEntry;
+  DeploymentMapEntry;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
 
@@ -436,6 +448,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               description:
                 'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
               hideLabel: true
+            },
+            hideExpression: () => {
+              // console.log('DeploymentMap', this._deploymentMapEntry);
+              return !this._deploymentMapEntry.connectorsDetailed?.some(
+                (con) => con.connectorType == ConnectorType.KAFKA
+              );
             }
           }
         ]

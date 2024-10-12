@@ -561,7 +561,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
       action =
         await confirmAdviceActionModalRef.content.closeSubject.toPromise();
-      console.log('Result from next step:', mapping, action);
+      // console.log('Result from next step:', mapping, action);
     }
 
     if (action != AdvisorAction.CANCEL) {

@@ -39,10 +39,11 @@ import {
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import {
   BehaviorSubject,
+  combineLatest,
   from,
   Observable,
-  ReplaySubject,
-  Subject
+  Subject,
+  take
 } from 'rxjs';
 
 import * as _ from 'lodash';
@@ -79,16 +80,15 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
   }
   set deploymentMapEntry(value: DeploymentMapEntry) {
     this._deploymentMapEntry = value;
-    this.deploymentMapEntryChange.emit(value);
   }
   @Output() deploymentMapEntryChange = new EventEmitter<any>();
   selected: string[] = [];
-  selected$: Subject<string[]> = new BehaviorSubject([]);
+  selected$: Subject<string[]>;
   selectedAll: boolean = false;
   monitoring$: Observable<ConnectorStatus>;
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
-  configurations$: Subject<ConnectorConfiguration[]> = new ReplaySubject(1);
+  configurations$: Observable<ConnectorConfiguration[]>;
   StatusEventTypes = StatusEventTypes;
   pagination: Pagination = {
     pageSize: 30,
@@ -200,35 +200,34 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         gridTrackSize: '10%'
       }
     );
+
+    this.configurations$ =
+      this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
+
     this.selected = this.deploymentMapEntry?.connectors ?? [];
+    this.selected$ = new BehaviorSubject(this.selected);
 
-    this.selected$.next(this.selected);
-    this.selected$.subscribe((se) => {
-      if (this.selectable) {
-        this.deploymentMapEntry.connectors = se;
+    combineLatest([this.selected$, this.configurations$]).subscribe(
+      ([se, conf]) => {
+        if (this.selectable) {
+          this.deploymentMapEntry.connectors = se;
+          this.deploymentMapEntry.connectorsDetailed = conf.filter((con) =>
+            se.includes(con.ident)
+          );
+          this.deploymentMapEntryChange.emit(this.deploymentMapEntry);
+          if (this.readOnly)
+            this.configurations?.forEach(
+              (conf) => (conf['checked'] = this.selected.includes(conf.ident))
+            );
+        }
       }
-    });
+    );
 
-    from(
-      this.connectorConfigurationService.getConnectorSpecifications()
-    ).subscribe((specs) => {
-      this.specifications = specs;
-    });
-
-    this.connectorConfigurationService
-      // .getRealtimeConnectorConfigurations()
-      .getConnectorConfigurationsWithLiveStatus()
-      .subscribe((confs) => {
-        this.configurations$.next(confs);
+    from(this.connectorConfigurationService.getConnectorSpecifications())
+      .pipe(take(1))
+      .subscribe((specs) => {
+        this.specifications = specs;
       });
-
-    this.configurations$.subscribe((confs) => {
-      this.configurations = confs;
-      if (this.selectable && this.readOnly)
-        this.configurations?.forEach(
-          (conf) => (conf['checked'] = this.selected.includes(conf.ident))
-        );
-    });
   }
 
   public onSelectToggle(id: string) {
@@ -256,7 +255,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
   }
   public onSelectionChanged(selected: any) {
     this.selected = selected;
-    this.selected$.next(this.selected);
+    this.selected$?.next(this.selected);
   }
 
   public isSelectedAll(): boolean {

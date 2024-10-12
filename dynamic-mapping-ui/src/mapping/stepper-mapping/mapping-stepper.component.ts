@@ -34,14 +34,13 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { Content } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
   API,
   COLOR_HIGHLIGHTED,
-  ConfirmationModalComponent,
   DeploymentMapEntry,
   Direction,
   Extension,
@@ -85,6 +84,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<Mapping>();
   private _deploymentMapEntry: DeploymentMapEntry;
+  isButtonDisabled$: BehaviorSubject<boolean> = new BehaviorSubject(true);
 
   @Input()
   get deploymentMapEntry(): DeploymentMapEntry {
@@ -92,9 +92,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
   set deploymentMapEntry(value: DeploymentMapEntry) {
     this._deploymentMapEntry = value;
-    this.deploymentMapEntryChange.emit(value);
+    // console.log('New setDeploymentMap', this._deploymentMapEntry);
   }
-  @Output() deploymentMapEntryChange = new EventEmitter<any>();
 
   ValidationError = ValidationError;
   Direction = Direction;
@@ -174,6 +173,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
     private elementRef: ElementRef
   ) {}
+
+  deploymentMapEntryChange(e) {
+    // console.log(
+    //   'New getDeploymentMap',
+    //   this._deploymentMapEntry,
+    //   !this._deploymentMapEntry?.connectors
+    // );
+    this.isButtonDisabled$.next(
+      !this._deploymentMapEntry?.connectors ||
+        this._deploymentMapEntry?.connectors?.length == 0
+    );
+    // console.log('New setDeploymentMap from grid', e);
+  }
 
   ngOnInit() {
     // console.log('mapping-stepper', this._deploymentMapEntry, this.deploymentMapEntry);
@@ -537,6 +549,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionModel.pathTarget = path;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTemplateSourceChanged(content: Content) {
     // if (_.has(content, 'text') && content['text']) {
     //   this.templateSource = JSON.parse(content['text']);
@@ -547,6 +560,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTemplateTargetChanged(content: Content) {
     // if (_.has(content, 'text') && content['text']) {
     //   this.templateTarget = JSON.parse(content['text']);
@@ -667,28 +681,28 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.deploymentMapEntry.connectors &&
         this.deploymentMapEntry.connectors.length == 0
       ) {
-        const initialState = {
-          title: 'No connector selected',
-          message:
-            'To apply the mapping to messages you should select at least one connector, unless you want to change this later! Do you want to continue?',
-          labels: {
-            ok: 'Continue',
-            cancel: 'Close'
-          }
-        };
-        const confirmContinuingModalRef: BsModalRef = this.bsModalService.show(
-          ConfirmationModalComponent,
-          { initialState }
-        );
-        confirmContinuingModalRef.content.closeSubject.subscribe(
-          async (confirmation: boolean) => {
-            // console.log('Confirmation result:', confirmation);
-            if (confirmation) {
-              event.stepper.next();
-            }
-            confirmContinuingModalRef.hide();
-          }
-        );
+        // const initialState = {
+        //   title: 'No connector selected',
+        //   message:
+        //     'To apply the mapping to messages you should select at least one connector, unless you want to change this later! Do you want to continue?',
+        //   labels: {
+        //     ok: 'Continue',
+        //     cancel: 'Close'
+        //   }
+        // };
+        // const confirmContinuingModalRef: BsModalRef = this.bsModalService.show(
+        //   ConfirmationModalComponent,
+        //   { initialState }
+        // );
+        // confirmContinuingModalRef.content.closeSubject.subscribe(
+        //   async (confirmation: boolean) => {
+        //     // console.log('Confirmation result:', confirmation);
+        //     if (confirmation) {
+        //       event.stepper.next();
+        //     }
+        //     confirmContinuingModalRef.hide();
+        //   }
+        // );
         // this.alertService.warning(
         //   'To apply the mapping to messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
         // );
