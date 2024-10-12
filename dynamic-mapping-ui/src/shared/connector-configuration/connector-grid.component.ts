@@ -209,6 +209,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
 
     combineLatest([this.selected$, this.configurations$]).subscribe(
       ([se, conf]) => {
+        this.configurations = conf;
         if (this.selectable) {
           this.deploymentMapEntry.connectors = se;
           this.deploymentMapEntry.connectorsDetailed = conf.filter((con) =>
