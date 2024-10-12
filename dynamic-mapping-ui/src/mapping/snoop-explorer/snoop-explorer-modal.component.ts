@@ -56,7 +56,7 @@ export class SnoopExplorerComponent implements OnInit {
     this.mapping = this.enrichedMapping.mapping;
     this.onSelectSnoopedTemplate(0);
     this.labels = {
-      ok: 'Reset snoop',
+      ok: 'Delete templates',
       cancel: 'Close'
     };
   }

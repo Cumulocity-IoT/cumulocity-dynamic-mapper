@@ -79,6 +79,7 @@ import { AdvisorAction, EditorMode } from '../shared/stepper-model';
 import { HttpStatusCode } from '@angular/common/http';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { AdviceActionComponent } from './advisor/advice-action.component';
+import { map } from 'cypress/types/bluebird';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -568,9 +569,15 @@ export class MappingComponent implements OnInit, OnDestroy {
       // stop snooping
       if (action == AdvisorAction.STOP_SNOOPING_AND_EDIT) {
         mapping.snoopStatus = SnoopStatus.STOPPED;
-        if (mapping.active) await this.activateMapping(m);
+        if (mapping.active) {
+          await this.activateMapping(m);
+          mapping.active = false;
+        }
       } else if (action == AdvisorAction.EDIT) {
-        if (mapping.active) await this.activateMapping(m);
+        if (mapping.active) {
+          await this.activateMapping(m);
+          mapping.active = false;
+        }
       }
       if (mapping.active) {
         this.setStepperConfiguration(
@@ -661,6 +668,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.alertService.success(`${action} mapping: ${mapping.id}`);
     }
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    // return this.mappingService.
   }
 
   async toggleDebugMapping(m: MappingEnriched) {

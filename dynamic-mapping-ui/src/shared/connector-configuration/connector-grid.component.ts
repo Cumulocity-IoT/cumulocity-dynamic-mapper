@@ -55,7 +55,7 @@ import {
 } from '../connector-log/connector-status.model';
 import { DeploymentMapEntry } from '../model/shared.model';
 import { uuidCustom } from '../model/util';
-import { ConfigurationConfigurationModalComponent } from './connector-configuration-modal.component';
+import { ConfigurationConfigurationModalComponent } from './create/connector-configuration-modal.component';
 import {
   ConnectorConfiguration,
   ConnectorSpecification

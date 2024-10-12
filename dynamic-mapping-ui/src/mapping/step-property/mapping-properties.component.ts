@@ -33,7 +33,6 @@ import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
 import {
   API,
-  ConnectorPropertyType,
   ConnectorType,
   Direction,
   Mapping,
