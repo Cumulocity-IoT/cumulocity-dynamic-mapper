@@ -256,8 +256,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: (item) =>
           item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
-          (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
+          (item['mapping']['snoopStatus'] === SnoopStatus.STARTED ||
+            item['mapping']['snoopStatus'] === SnoopStatus.ENABLED ||
             item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
+        // showIf: (item) =>
+        //   item['mapping']['direction'] === Direction.INBOUND &&
+        //   item['snoopSupported'] &&
+        //   (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
+        //     item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
       },
       {
         type: 'EXPORT',
