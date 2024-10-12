@@ -32,7 +32,10 @@
 >
   <div>
     <p class="text-center text-medium text-16 sticky-top bg-white">
-      {{ 'Select next step ... ' | translate }}
+      {{
+        'Your mapping is enabled for snooping.How would you like to continue?'
+          | translate
+      }}
     </p>
     <div class="p-24 modal-inner-scroll animated fadeIn">
       <c8y-list-group class="separator-top">
@@ -40,7 +43,7 @@
           <c8y-li-radio
             name="mapping_type_group"
             title="{{ 'Continue snooping' }}"
-            (click)="onSelection('CONTINUE_SNOOPING')"
+            (click)="onSelection(AdvisorAction.CONTINUE_SNOOPING)"
           ></c8y-li-radio>
           <span>{{ 'Continue snooping and wait for more templates ...' }}</span>
         </c8y-li>
@@ -48,7 +51,7 @@
           <c8y-li-radio
             name="mapping_type_group"
             title="{{ 'Stop snooping' }}"
-            (click)="onSelection('STOP_SNOOPING_AND_EDIT')"
+            (click)="onSelection(AdvisorAction.STOP_SNOOPING_AND_EDIT)"
           ></c8y-li-radio>
           <span>{{ 'Stop snooping and edit mapping ...' }}</span>
         </c8y-li>

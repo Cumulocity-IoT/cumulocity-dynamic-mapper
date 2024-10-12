@@ -28,6 +28,7 @@ import {
 import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { Mapping, MappingEnriched } from '../../../shared';
+import { AdvisorAction } from '../../shared/stepper-model';
 
 @Component({
   selector: 'd11r-advice-action',
@@ -42,6 +43,7 @@ export class AdviceActionComponent implements OnInit, OnDestroy {
 
   selection: string = '';
   valid: boolean = false;
+  AdvisorAction = AdvisorAction;
 
   constructor() {}
 

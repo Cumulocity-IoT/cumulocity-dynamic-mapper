@@ -76,7 +76,7 @@ import {
   C8YNotificationSubscription,
   PayloadWrapper
 } from '../shared/mapping.model';
-import { EditorMode } from '../shared/stepper-model';
+import { AdvisorAction, EditorMode } from '../shared/stepper-model';
 import { HttpStatusCode } from '@angular/common/http';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.cell-renderer.component';
 import { AdviceActionComponent } from './advisor/advice-action.component';
@@ -537,7 +537,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async updateMapping(m: MappingEnriched) {
-    let action = 'CONTINUE';
+    let action = AdvisorAction.CONTINUE;
     const { mapping } = m;
     const { snoopSupported } =
       MAPPING_TYPE_DESCRIPTION[mapping.mappingType].properties[
@@ -565,9 +565,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       console.log('Result from next step:', mapping, action);
     }
 
-    if (action != 'CANCEL') {
+    if (action != AdvisorAction.CANCEL) {
       // stop snooping
-      if (action == 'STOP_SNOOPING_AND_EDIT') {
+      if (action == AdvisorAction.STOP_SNOOPING_AND_EDIT) {
         mapping.snoopStatus = SnoopStatus.STOPPED;
         if (mapping.active) await this.activateMapping(m);
       }
@@ -601,7 +601,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       };
       // console.log('Editing mapping', this.mappingToUpdate);
       if (
-        // mapping.snoopStatus === SnoopStatus.NONE ||
+        mapping.snoopStatus === SnoopStatus.NONE ||
         mapping.snoopStatus === SnoopStatus.STOPPED
       ) {
         this.showConfigMapping = true;

@@ -25,7 +25,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
   selector: 'd11r-mapping-renderer-deployment',
   template: `
     <div *ngFor="let con of context.value?.connectors">
-      <span class="text-10 tag tag--primary">{{ con.name }}</span>
+      <span class="text-12 tag tag--success">{{ con.name }}</span>
     </div>
     <div *ngIf="context.item.mapping.active && !context.value?.connectors">
       <span class="text-12 tag tag--danger">{{ 'No active connector' }}</span>

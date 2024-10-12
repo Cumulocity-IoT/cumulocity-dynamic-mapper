@@ -73,6 +73,8 @@ import dynamic.mapping.processor.model.ProcessingContext;
 @Slf4j
 public abstract class AConnectorClient {
 
+	private static final int HOUSEKEEPING_INTERVAL_SECONDS = 30;
+
 	protected static final int WAIT_PERIOD_MS = 10000;
 
 	protected String connectorIdent;
@@ -146,7 +148,6 @@ public abstract class AConnectorClient {
 
 	private Instant start = Instant.now();
 
-
 	private ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 
 	@Getter
@@ -214,7 +215,7 @@ public abstract class AConnectorClient {
 
 	public void submitHousekeeping() {
 		log.debug("Tenant {} - Called submitHousekeeping()", tenant);
-		housekeepingExecutor.scheduleAtFixedRate(() -> runHousekeeping(), 0, 30,
+		housekeepingExecutor.scheduleAtFixedRate(() -> runHousekeeping(), 0, HOUSEKEEPING_INTERVAL_SECONDS,
 				TimeUnit.SECONDS);
 	}
 
