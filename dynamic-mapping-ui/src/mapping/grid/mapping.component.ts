@@ -58,27 +58,26 @@ import {
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Observable, Subject, take } from 'rxjs';
+import { BehaviorSubject, Subject, take } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
-import { NameRendererComponent } from '../renderer/name.renderer.component';
-import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
-import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
+import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
+import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from '../../shared';
 import { DeploymentMapEntry } from '../../shared/model/shared.model';
 import { SharedService } from '../../shared/shared.service';
-import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
-import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
+import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
+import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import {
   C8YNotificationSubscription,
   PayloadWrapper
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper-model';
 import { HttpStatusCode } from '@angular/common/http';
-import { MappingIdCellRendererComponent } from '../renderer/mapping-id.cell-renderer.component';
+import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { AdviceActionComponent } from './advisor/advice-action.component';
 
 @Component({
@@ -569,6 +568,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       // stop snooping
       if (action == AdvisorAction.STOP_SNOOPING_AND_EDIT) {
         mapping.snoopStatus = SnoopStatus.STOPPED;
+        if (mapping.active) await this.activateMapping(m);
+      } else if (action == AdvisorAction.EDIT) {
         if (mapping.active) await this.activateMapping(m);
       }
       if (mapping.active) {

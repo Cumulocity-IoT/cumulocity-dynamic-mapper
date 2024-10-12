@@ -43,6 +43,10 @@ import { EditorMode } from '../shared/stepper-model';
 import { DeploymentMapEntry, StepperConfiguration } from '../../shared';
 import { SnoopStatus } from '../../shared/model/shared.model';
 import { CdkStep } from '@angular/cdk/stepper';
+import {
+  HOUSEKEEPING_INTERVAL_SECONDS,
+  SNOOP_TEMPLATES_MAX
+} from '../shared/mapping.model';
 
 @Component({
   selector: 'd11r-snooping-stepper',
@@ -123,9 +127,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   }): Promise<void> {
     // ('OnNextStep', event.step.label, this.mapping);
     this.step = event.step.label;
-    if (this.step == 'Properties snooping') {
-      event.stepper.next();
-    } else {
+    if (this.step == 'Add and select connector') {
       if (
         this.deploymentMapEntry.connectors &&
         this.deploymentMapEntry.connectors.length == 0
@@ -149,6 +151,9 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
             if (confirmation) {
               event.stepper.next();
             }
+            this.alertService.info(
+              `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`
+            );
             confirmContinuingModalRef.hide();
           }
         );
@@ -156,6 +161,9 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
         //   'To snoop for messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
         // );
       } else {
+        this.alertService.info(
+          `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`
+        );
         event.stepper.next();
       }
     }

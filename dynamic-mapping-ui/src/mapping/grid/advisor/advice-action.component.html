@@ -33,7 +33,7 @@
   <div>
     <p class="text-center text-medium text-16 sticky-top bg-white">
       {{
-        'Your mapping is enabled for snooping.How would you like to continue?'
+        'Your mapping is enabled for snooping. How would you like to continue?'
           | translate
       }}
     </p>
@@ -54,6 +54,14 @@
             (click)="onSelection(AdvisorAction.STOP_SNOOPING_AND_EDIT)"
           ></c8y-li-radio>
           <span>{{ 'Stop snooping and edit mapping ...' }}</span>
+        </c8y-li>
+        <c8y-li>
+          <c8y-li-radio
+            name="mapping_type_group"
+            title="{{ 'Stop snooping' }}"
+            (click)="onSelection(AdvisorAction.EDIT)"
+          ></c8y-li-radio>
+          <span>{{ 'Edit mapping and continue snooping ...' }}</span>
         </c8y-li>
       </c8y-list-group>
     </div>

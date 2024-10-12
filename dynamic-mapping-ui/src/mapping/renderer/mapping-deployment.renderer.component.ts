@@ -34,7 +34,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
 })
 export class MappingDeploymentRendererComponent {
   constructor(public context: CellRendererContext) {
-    console.log('Connectors', context, context.value);
+    // console.log('Connectors', context, context.value);
     context.item.mapping.active;
   }
 }

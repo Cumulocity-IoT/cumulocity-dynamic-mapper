@@ -20,17 +20,24 @@
  */
 
 import { Component, Input, OnInit } from '@angular/core';
-import { ModalLabels } from '@c8y/ngx-components';
+import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { Mapping, MappingSubstitution } from '../../shared';
 import { isDisabled } from '../shared/util';
 import { MappingEnriched } from '../../shared/model/shared.model';
+import { MappingService } from '../core/mapping.service';
+import { IFetchResponse } from '@c8y/client';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Component({
   selector: 'd11r-snoop-explorer-modal',
   templateUrl: './snoop-explorer-modal.component.html'
 })
 export class SnoopExplorerComponent implements OnInit {
+  constructor(
+    private mappingService: MappingService,
+    private alertService: AlertService
+  ) {}
   @Input() enrichedMapping: MappingEnriched;
   mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();
@@ -47,17 +54,34 @@ export class SnoopExplorerComponent implements OnInit {
 
   ngOnInit(): void {
     this.mapping = this.enrichedMapping.mapping;
+    this.onSelectSnoopedTemplate(0);
     this.labels = {
-      cancel: 'Cancel'
+      ok: 'Reset snoop',
+      cancel: 'Close'
     };
   }
 
-  onDismiss() {
-    // console.log('Dismiss');
+  onCancel() {
     this.closeSubject.next(undefined);
   }
 
   async onSelectSnoopedTemplate(index: any) {
     this.template = JSON.parse(this.mapping.snoopedTemplates[index]);
+  }
+
+  async onResetSnoop() {
+    console.log('Clicked onResetSnoop!');
+    const result: IFetchResponse = await this.mappingService.resetSnoop({
+      id: this.mapping.id
+    });
+    if (result.status == HttpStatusCode.Created) {
+      this.alertService.success(
+        `Reset snooping for mapping ${this.mapping.id}`
+      );
+    } else {
+      this.alertService.warning(
+        `Failed to reset snooping for mapping ${this.mapping.id}`
+      );
+    }
   }
 }

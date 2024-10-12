@@ -109,7 +109,7 @@ export class MappingService {
   reloadInbound$: Subject<void>; // = new Subject<void>();
   reloadOutbound$: Subject<void>; // = new Subject<void>();
 
-  async changeActivationMapping(parameter: any) {
+  async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
@@ -123,16 +123,25 @@ export class MappingService {
     this.updateMappingEnriched$.next(m);
   }
 
-  async changeDebuggingMapping(parameter: any) {
-    await this.sharedService.runOperation(Operation.DEBUG_MAPPING, parameter);
+  async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
+      Operation.DEBUG_MAPPING,
+      parameter
+    );
   }
 
-  async changeSnoopStatusMapping(parameter: any) {
-    await this.sharedService.runOperation(Operation.SNOOP_MAPPING, parameter);
+  async changeSnoopStatusMapping(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
+      Operation.SNOOP_MAPPING,
+      parameter
+    );
   }
 
-  async resetSnoop(parameter: any) {
-    await this.sharedService.runOperation(Operation.SNOOP_RESET, parameter);
+  async resetSnoop(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
+      Operation.SNOOP_RESET,
+      parameter
+    );
   }
 
   resetCache() {

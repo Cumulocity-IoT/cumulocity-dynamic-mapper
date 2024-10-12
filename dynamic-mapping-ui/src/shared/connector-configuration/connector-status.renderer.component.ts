@@ -23,17 +23,6 @@ import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-renderer-qos',
-  //   template: `<div class="c8y-realtime p-l-8">
-  //     <span
-  //       class="c8y-pulse animated pulse animation-slow"
-  //       [ngClass]="{
-  //         active: (context.item?.status$ | async) === 'CONNECTED',
-  //         inactive: (context.item?.status$ | async) !== 'CONNECTED'
-  //       }"
-  //     ></span
-  //     >{{ context.item?.status$ | async }}
-  //   </div>`
-
   template: `<span
     [class]="
       'text-12 tag ' +

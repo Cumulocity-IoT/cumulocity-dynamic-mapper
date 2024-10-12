@@ -53,14 +53,14 @@ import { MappingService } from '../core/mapping.service';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { NameRendererComponent } from '../renderer/name.renderer.component';
 // import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
-import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
-import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
+import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
+import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { StepperConfiguration } from '../../shared';
 import { DeploymentMapEntry } from '../../shared/model/shared.model';
 import { SharedService } from '../../shared/shared.service';
-import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
-import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
+import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
+import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
 
 @Component({

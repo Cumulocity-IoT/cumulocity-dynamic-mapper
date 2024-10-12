@@ -23,7 +23,11 @@
   <h1 c8yIcon="c8y-data-explorer"></h1>
   <h4>Explore snooped templates</h4>
 </div>
-<c8y-modal [labels]="labels">
+<c8y-modal
+  [labels]="labels"
+  (onClose)="onResetSnoop($event)"
+  (onDismiss)="onCancel($event)"
+>
   <div class="p-b-24 p-l-24 p-r-24">
     <div class="form-group">
       <!-- <label>Snooped templates</label> -->
@@ -33,9 +37,9 @@
           (change)="onSelectSnoopedTemplate($event.target.value)"
           [attr.disabled]="isDisabled(mapping.snoopedTemplates?.length === 0)"
         >
-          <option [value]="-1" [disabled]="true">
+          <!-- <option [value]="-1" [disabled]="true">
             Select snooped template
-          </option>
+          </option> -->
           <option
             [value]="i"
             *ngFor="
@@ -43,7 +47,7 @@
               let i = index
             "
           >
-            {{ 'Template - ' + i }}
+            {{ 'Template - ' + (i + 1) }}
           </option>
         </select>
       </div>
