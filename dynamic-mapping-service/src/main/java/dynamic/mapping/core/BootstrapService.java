@@ -281,7 +281,7 @@ public class BootstrapService {
 				int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
 				int cacheSize = Integer.valueOf(configurationRegistry.getInboundExternalIdCache(tenant).getCacheSize());
 				if (inboundCacheRetention > 0 && Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
-					configurationRegistry.getInboundExternalIdCache(tenant).clearCache();
+					configurationRegistry.clearInboundExternalIdCache(tenant, true, cacheSize);
 					cacheRetentionStartMap.put(tenant, Instant.now());
 					log.info("Tenant {} - Identity Cache cleared by scheduler. Old Size: {}, New size: {}", tenant, cacheSize, configurationRegistry.getInboundExternalIdCache(tenant).getCacheSize());
 				}
