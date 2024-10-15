@@ -51,6 +51,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
 
 @Slf4j
 public abstract class BasePayloadProcessorInbound<T> {
@@ -63,6 +64,7 @@ public abstract class BasePayloadProcessorInbound<T> {
     protected C8YAgent c8yAgent;
 
     protected ObjectMapper objectMapper;
+
 
     public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, ConnectorMessage message)
             throws IOException;
@@ -144,7 +146,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                                         new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
                                                 mapping.externalIdType, requestString, null, API.INVENTORY, null));
                                 attocDevice = c8yAgent.upsertDevice(tenant,
-                                        new ID(mapping.externalIdType, substituteValue.value.asText()), context);
+                                        new ID(mapping.externalIdType, substituteValue.value.asText()), context, null);
                                 var response = objectMapper.writeValueAsString(attocDevice);
                                 context.getCurrentRequest().setResponse(response);
                                 substituteValue.value = new TextNode(attocDevice.getId().getValue());
@@ -178,8 +180,10 @@ public abstract class BasePayloadProcessorInbound<T> {
                                 payloadTarget.jsonString(),
                                 null, API.INVENTORY, null));
                 try {
-                    attocDevice = c8yAgent.upsertDevice(tenant,
+                    ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                             new ID(mapping.externalIdType, device.value.asText()), context);
+                    attocDevice = c8yAgent.upsertDevice(tenant,
+                            new ID(mapping.externalIdType, device.value.asText()), context, sourceId);
                     var response = objectMapper.writeValueAsString(attocDevice);
                     context.getCurrentRequest().setResponse(response);
                 } catch (Exception e) {
@@ -194,10 +198,18 @@ public abstract class BasePayloadProcessorInbound<T> {
                                 null, mapping.targetAPI, null));
                 try {
                     if (context.isSendPayload()) {
-                        attocRequest = c8yAgent.createMEAO(context);
+                       c8yAgent.createMEAOAsync(context).thenApply(resp -> {
+                           String response = null;
+                           try {
+                               response = objectMapper.writeValueAsString(attocRequest);
+                           } catch (JsonProcessingException e) {
+                               context.getCurrentRequest().setError(e);
+                           }
+                           context.getCurrentRequest().setResponse(response);
+                           return null;
+                        });
                     }
-                    var response = objectMapper.writeValueAsString(attocRequest);
-                    context.getCurrentRequest().setResponse(response);
+
                 } catch (Exception e) {
                     context.getCurrentRequest().setError(e);
                 }

@@ -83,6 +83,10 @@ import java.net.URLClassLoader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import static java.util.Map.entry;
 
@@ -322,6 +326,61 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 			return null;
 		}
 	}
+	//TODO Change this to use ExecutorService + Virtual Threads when available
+	public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context)
+			throws ProcessingException {
+		return CompletableFuture.supplyAsync(() -> {
+				String tenant = context.getTenant();
+				StringBuffer error = new StringBuffer("");
+				C8YRequest currentRequest = context.getCurrentRequest();
+				String payload = currentRequest.getRequest();
+				API targetAPI = context.getMapping().getTargetAPI();
+				AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
+					MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
+					return contextService.callWithinContext(contextCredentials, () -> {
+						AbstractExtensibleRepresentation rt = null;
+						try {
+							if (targetAPI.equals(API.EVENT)) {
+								EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
+										payload,
+										EventRepresentation.class);
+								rt = eventApi.create(eventRepresentation);
+								log.info("Tenant {} - New event posted: {}", tenant, rt);
+							} else if (targetAPI.equals(API.ALARM)) {
+								AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
+										payload,
+										AlarmRepresentation.class);
+								rt = alarmApi.create(alarmRepresentation);
+								log.info("Tenant {} - New alarm posted: {}", tenant, rt);
+							} else if (targetAPI.equals(API.MEASUREMENT)) {
+								MeasurementRepresentation measurementRepresentation = jsonParser
+										.parse(MeasurementRepresentation.class, payload);
+								rt = measurementApi.create(measurementRepresentation);
+								log.info("Tenant {} - New measurement posted: {}", tenant, rt);
+							} else if (targetAPI.equals(API.OPERATION)) {
+								OperationRepresentation operationRepresentation = jsonParser
+										.parse(OperationRepresentation.class, payload);
+								rt = deviceControlApi.create(operationRepresentation);
+								log.info("Tenant {} - New operation posted: {}", tenant, rt);
+							} else {
+								log.error("Tenant {} - Not existing API!", tenant);
+							}
+						} catch (JsonProcessingException e) {
+							log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload);
+							error.append("Could not map payload: " + targetAPI + "/" + payload);
+						} catch (SDKException s) {
+							log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
+							error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
+						}
+						return rt;
+					});
+				});
+				if (!error.toString().equals("")) {
+					throw new CompletionException(new ProcessingException(error.toString()));
+				}
+				return result;
+			});
+	}
 
 	public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
 			throws ProcessingException {
@@ -376,7 +435,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 		return result;
 	}
 
-	public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context)
+	public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context, ExternalIDRepresentation extId)
 			throws ProcessingException {
 		StringBuffer error = new StringBuffer("");
 		C8YRequest currentRequest = context.getCurrentRequest();
@@ -387,7 +446,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 						currentRequest.getRequest(),
 						ManagedObjectRepresentation.class);
 				try {
-					ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity, context);
+					//ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity, context);
 					if (extId == null) {
 						// Device does not exist
 						// append external id to name
