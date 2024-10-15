@@ -151,7 +151,7 @@
 			<plugin>
 				<groupId>com.nsn.cumulocity.clients-java</groupId>
 				<artifactId>microservice-package-maven-plugin</artifactId>
-				<version>1020.73.0</version>
+				<version>${c8y.version}</version>
 				<executions>
 					<execution>
 						<id>package</id>
@@ -164,14 +164,6 @@
 							<encoding>UTF-8</encoding>
 							<rpmSkip>true</rpmSkip>
 							<containerSkip>false</containerSkip>
-							<heap>
-								<min>256m</min>
-								<max>768m</max>
-							</heap>
-							<metaspace>
-								<min>128m</min>
-								<max>192m</max>
-							</metaspace>
 						</configuration>
 					</execution>
 				</executions>
