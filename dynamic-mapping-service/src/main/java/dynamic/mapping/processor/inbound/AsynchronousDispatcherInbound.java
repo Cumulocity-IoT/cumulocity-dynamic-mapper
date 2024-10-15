@@ -126,7 +126,8 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
 		@Override
 		public List<ProcessingContext<?>> call() throws Exception {
-			long startTime = System.nanoTime();
+			//long startTime = System.nanoTime();
+			Timer.Sample timer = Timer.start(Metrics.globalRegistry);
 			String tenant = connectorMessage.getTenant();
 			String topic = connectorMessage.getTopic();
 			boolean sendPayload = connectorMessage.isSendPayload();
@@ -225,7 +226,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 					processingResult.add(context);
 				}
 			});
-			inboundProcessingTimer.record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+			timer.stop(inboundProcessingTimer);
 			return processingResult;
 		}
 	}

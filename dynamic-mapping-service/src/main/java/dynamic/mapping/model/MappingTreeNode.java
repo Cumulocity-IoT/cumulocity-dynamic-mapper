@@ -103,7 +103,7 @@ public class MappingTreeNode {
 		Set<String> set = childNodes.keySet();
 		String joinedSet = String.join(",", set);
 		String joinedPath = String.join("", topicLevels);
-		log.info("Tenant {} - Trying to resolve: '{}' in [{}]", tenant, joinedPath, joinedSet);
+		log.debug("Tenant {} - Trying to resolve: '{}' in [{}]", tenant, joinedPath, joinedSet);
 		List<MappingTreeNode> results = new ArrayList<MappingTreeNode>();
 		if (currentTopicLevelIndex < topicLevels.size()) {
 			String currentLevel = topicLevels.get(currentTopicLevelIndex);
