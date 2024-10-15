@@ -227,6 +227,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 				}
 			});
 			timer.stop(inboundProcessingTimer);
+
 			return processingResult;
 		}
 	}

@@ -51,7 +51,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 @Slf4j
 public abstract class BasePayloadProcessorInbound<T> {
@@ -59,11 +61,14 @@ public abstract class BasePayloadProcessorInbound<T> {
     public BasePayloadProcessorInbound(ConfigurationRegistry configurationRegistry) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
     }
 
     protected C8YAgent c8yAgent;
 
     protected ObjectMapper objectMapper;
+
+    protected ExecutorService cachedThreadPool;
 
 
     public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, ConnectorMessage message)
@@ -95,134 +100,153 @@ public abstract class BasePayloadProcessorInbound<T> {
         List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
                 .get(deviceIdentifierMapped2PathTarget2);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
-        MappingSubstitution.SubstituteValue toDouble = deviceEntries.get(0);
+        MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxlistEntries) {
-            deviceEntries.add(toDouble);
+            deviceEntries.add(toDuplicate);
         }
         Set<String> pathTargets = postProcessingCache.keySet();
-
-        int i = 0;
-        for (MappingSubstitution.SubstituteValue device : deviceEntries) {
-
-            int predecessor = -1;
-            DocumentContext payloadTarget = JsonPath.parse(mapping.target);
-            for (String pathTarget : pathTargets) {
-                MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
-                        new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                        RepairStrategy.DEFAULT);
-                if (i < postProcessingCache.get(pathTarget).size()) {
-                    substituteValue = postProcessingCache.get(pathTarget).get(i).clone();
-                } else if (postProcessingCache.get(pathTarget).size() == 1) {
-                    // this is an indication that the substitution is the same for all
-                    // events/alarms/measurements/inventory
-                    if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
-                            substituteValue.repairStrategy.equals(RepairStrategy.DEFAULT)) {
-                        substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
-                    } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
-                        int last = postProcessingCache.get(pathTarget).size() - 1;
-                        substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
+        //final int[] i = {0};
+        List<Future<ProcessingContext<T>>> contexFutureList = new ArrayList<>();
+        for(int i=0; i< deviceEntries.size();i++) {
+        //for (MappingSubstitution.SubstituteValue device : deviceEntries) {
+            int finalI = i;
+            contexFutureList.add(cachedThreadPool.submit(() -> {
+                MappingSubstitution.SubstituteValue device = deviceEntries.get(finalI);
+                int predecessor = -1;
+                DocumentContext payloadTarget = JsonPath.parse(mapping.target);
+                for (String pathTarget : pathTargets) {
+                    MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
+                            new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                            RepairStrategy.DEFAULT);
+                    if (finalI < postProcessingCache.get(pathTarget).size()) {
+                        substituteValue = postProcessingCache.get(pathTarget).get(finalI).clone();
+                    } else if (postProcessingCache.get(pathTarget).size() == 1) {
+                        // this is an indication that the substitution is the same for all
+                        // events/alarms/measurements/inventory
+                        if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
+                                substituteValue.repairStrategy.equals(RepairStrategy.DEFAULT)) {
+                            substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+                        } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
+                            int last = postProcessingCache.get(pathTarget).size() - 1;
+                            substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
+                        }
+                        log.warn("Tenant {} - During the processing of this pathTarget: {} a repair strategy: {} was used.",
+                                tenant,
+                                pathTarget, substituteValue.repairStrategy);
                     }
-                    log.warn("Tenant {} - During the processing of this pathTarget: {} a repair strategy: {} was used.",
-                            tenant,
-                            pathTarget, substituteValue.repairStrategy);
-                }
 
-                if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    if (pathTarget.equals(deviceIdentifierMapped2PathTarget2) && mapping.mapDeviceIdentifier) {
+                    if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                        if (pathTarget.equals(deviceIdentifierMapped2PathTarget2) && mapping.mapDeviceIdentifier) {
 
-                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                                new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
-                        if (sourceId == null && mapping.createNonExistingDevice) {
-                            ManagedObjectRepresentation attocDevice = null;
-                            Map<String, Object> request = new HashMap<String, Object>();
-                            request.put("name",
-                                    "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
-                            request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
-                            request.put("c8y_IsDevice", null);
-                            request.put("com_cumulocity_model_Agent", null);
-                            try {
-                                var requestString = objectMapper.writeValueAsString(request);
-                                var newPredecessor = context.addRequest(
-                                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
-                                                mapping.externalIdType, requestString, null, API.INVENTORY, null));
-                                attocDevice = c8yAgent.upsertDevice(tenant,
-                                        new ID(mapping.externalIdType, substituteValue.value.asText()), context, null);
-                                var response = objectMapper.writeValueAsString(attocDevice);
-                                context.getCurrentRequest().setResponse(response);
-                                substituteValue.value = new TextNode(attocDevice.getId().getValue());
-                                predecessor = newPredecessor;
-                            } catch (ProcessingException | JsonProcessingException e) {
-                                context.getCurrentRequest().setError(e);
+                            ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
+                                    new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
+                            if (sourceId == null && mapping.createNonExistingDevice) {
+                                ManagedObjectRepresentation attocDevice = null;
+                                Map<String, Object> request = new HashMap<String, Object>();
+                                request.put("name",
+                                        "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
+                                request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
+                                request.put("c8y_IsDevice", null);
+                                request.put("com_cumulocity_model_Agent", null);
+                                try {
+                                    var requestString = objectMapper.writeValueAsString(request);
+                                    var newPredecessor = context.addRequest(
+                                            new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
+                                                    mapping.externalIdType, requestString, null, API.INVENTORY, null));
+                                    attocDevice = c8yAgent.upsertDevice(tenant,
+                                            new ID(mapping.externalIdType, substituteValue.value.asText()), context, null);
+                                    var response = objectMapper.writeValueAsString(attocDevice);
+                                    context.getCurrentRequest().setResponse(response);
+                                    substituteValue.value = new TextNode(attocDevice.getId().getValue());
+                                    predecessor = newPredecessor;
+                                } catch (ProcessingException | JsonProcessingException e) {
+                                    context.getCurrentRequest().setError(e);
+                                }
+                            } else if (sourceId == null && context.isSendPayload()) {
+                                throw new RuntimeException(String.format(
+                                        "External id %s for type %s not found!", substituteValue.typedValue().toString(),
+                                        mapping.externalIdType));
+                            } else if (sourceId == null) {
+                                substituteValue.value = null;
+                            } else {
+                                substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
                             }
-                        } else if (sourceId == null && context.isSendPayload()) {
-                            throw new RuntimeException(String.format(
-                                    "External id %s for type %s not found!", substituteValue.typedValue().toString(),
-                                    mapping.externalIdType));
-                        } else if (sourceId == null) {
-                            substituteValue.value = null;
-                        } else {
-                            substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
+
+                        }
+                        substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+                    } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
+                        substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+                    }
+                }
+                /*
+                 * step 4 prepare target payload for sending to c8y
+                 */
+                if (mapping.targetAPI.equals(API.INVENTORY)) {
+                    ManagedObjectRepresentation attocDevice = null;
+                    var newPredecessor = context.addRequest(
+                            new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(), mapping.externalIdType,
+                                    payloadTarget.jsonString(),
+                                    null, API.INVENTORY, null));
+                    try {
+                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
+                                new ID(mapping.externalIdType, device.value.asText()), context);
+                        attocDevice = c8yAgent.upsertDevice(tenant,
+                                new ID(mapping.externalIdType, device.value.asText()), context, sourceId);
+                        var response = objectMapper.writeValueAsString(attocDevice);
+                        context.getCurrentRequest().setResponse(response);
+                    } catch (Exception e) {
+                        context.getCurrentRequest().setError(e);
+                    }
+                    predecessor = newPredecessor;
+                } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                    AbstractExtensibleRepresentation attocRequest = null;
+                    var newPredecessor = context.addRequest(
+                            new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(), mapping.externalIdType,
+                                    payloadTarget.jsonString(),
+                                    null, mapping.targetAPI, null));
+                    try {
+                        if (context.isSendPayload()) {
+                            c8yAgent.createMEAO(context);
+                            String response = objectMapper.writeValueAsString(attocRequest);
+                            context.getCurrentRequest().setResponse(response);
+                            /*c8yAgent.createMEAOAsync(context).thenApply(resp -> {
+                                String response = null;
+                                try {
+                                    response = objectMapper.writeValueAsString(attocRequest);
+                                } catch (JsonProcessingException e) {
+                                    context.getCurrentRequest().setError(e);
+                                }
+                                context.getCurrentRequest().setResponse(response);
+                                return null;
+                            });
+                           */
                         }
 
+                    } catch (Exception e) {
+                        context.getCurrentRequest().setError(e);
                     }
-                    substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
-                } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
-                    substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+                    predecessor = newPredecessor;
+                } else {
+                    log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
+                            postProcessingCache.size());
                 }
-            }
-            /*
-             * step 4 prepare target payload for sending to c8y
-             */
-            if (mapping.targetAPI.equals(API.INVENTORY)) {
-                ManagedObjectRepresentation attocDevice = null;
-                var newPredecessor = context.addRequest(
-                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(), mapping.externalIdType,
-                                payloadTarget.jsonString(),
-                                null, API.INVENTORY, null));
-                try {
-                    ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                            new ID(mapping.externalIdType, device.value.asText()), context);
-                    attocDevice = c8yAgent.upsertDevice(tenant,
-                            new ID(mapping.externalIdType, device.value.asText()), context, sourceId);
-                    var response = objectMapper.writeValueAsString(attocDevice);
-                    context.getCurrentRequest().setResponse(response);
-                } catch (Exception e) {
-                    context.getCurrentRequest().setError(e);
-                }
-                predecessor = newPredecessor;
-            } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                AbstractExtensibleRepresentation attocRequest = null;
-                var newPredecessor = context.addRequest(
-                        new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(), mapping.externalIdType,
-                                payloadTarget.jsonString(),
-                                null, mapping.targetAPI, null));
-                try {
-                    if (context.isSendPayload()) {
-                       c8yAgent.createMEAOAsync(context).thenApply(resp -> {
-                           String response = null;
-                           try {
-                               response = objectMapper.writeValueAsString(attocRequest);
-                           } catch (JsonProcessingException e) {
-                               context.getCurrentRequest().setError(e);
-                           }
-                           context.getCurrentRequest().setResponse(response);
-                           return null;
-                        });
-                    }
-
-                } catch (Exception e) {
-                    context.getCurrentRequest().setError(e);
-                }
-                predecessor = newPredecessor;
-            } else {
-                log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
-                        postProcessingCache.size());
-            }
-            log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
-                    mapping.targetAPI,
-                    deviceEntries.size());
-            i++;
+                log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
+                        mapping.targetAPI,
+                        deviceEntries.size());
+                return context;
+            }));
         }
+        int j=0;
+        for (Future<ProcessingContext<T>> currentContext : contexFutureList) {
+            try {
+                log.debug("Tenant {} - Waiting context is completed {}...", tenant, j);
+                currentContext.get();
+                j++;
+            } catch (Exception e) {
+                log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
+            }
+        }
+        log.info("Tenant {} - Context is completed, {} parallel requests processed!", tenant, j);
         return context;
     }
 
