@@ -122,6 +122,11 @@ public class ConfigurationRegistry {
 	@Autowired
 	private ExecutorService cachedThreadPool;
 
+	@Getter
+	@Setter
+	@Autowired
+	private ExecutorService processingCachePool;
+
 	public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
 		ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
 		return Map.of(
