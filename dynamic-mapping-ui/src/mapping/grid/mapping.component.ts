@@ -275,14 +275,18 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.bulkActionControls.push(
       {
         type: BuiltInActionType.Delete,
-        callback: this.deleteMappingBulkWithConfirmation.bind(this)
-        // showIf: (selectedItemIds: string[]) => {
-        //   // hide bulkDelete if any selected mapping is enabled
-        //     const mappings = this.mappingsEnriched$.getValue();
-        //     const result = mappings?.some((m) => selectedItemIds?.includes(m.id));
-        //     console.log('Selected mappings (showIf):', selectedItemIds);
-        //   return true;
-        // }
+        callback: this.deleteMappingBulkWithConfirmation.bind(this),
+        showIf: (selectedItemIds: string[]) => {
+          // hide bulkDelete if any selected mapping is enabled
+          const activeMappings = this.mappingsEnriched$
+            .getValue()
+            ?.filter((m) => m.mapping.active);
+          const result = activeMappings?.some((m) =>
+            selectedItemIds?.includes(m.mapping.id)
+          );
+          // console.log('Selected mappings (showIf):', selectedItemIds);
+          return !result;
+        }
       },
       {
         type: 'ACTIVATE',
