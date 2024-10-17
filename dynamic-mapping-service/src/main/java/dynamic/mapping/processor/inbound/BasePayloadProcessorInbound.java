@@ -31,29 +31,28 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
-
-import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
+import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
+import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public abstract class BasePayloadProcessorInbound<T> {
@@ -107,8 +106,8 @@ public abstract class BasePayloadProcessorInbound<T> {
         Set<String> pathTargets = postProcessingCache.keySet();
         //final int[] i = {0};
         List<Future<ProcessingContext<T>>> contexFutureList = new ArrayList<>();
-        for(int i=0; i< deviceEntries.size();i++) {
-        //for (MappingSubstitution.SubstituteValue device : deviceEntries) {
+        for (int i = 0; i < deviceEntries.size(); i++) {
+            //for (MappingSubstitution.SubstituteValue device : deviceEntries) {
             int finalI = i;
             contexFutureList.add(processingCachePool.submit(() -> {
                 MappingSubstitution.SubstituteValue device = deviceEntries.get(finalI);
@@ -236,11 +235,12 @@ public abstract class BasePayloadProcessorInbound<T> {
                 return context;
             }));
         }
-        int j=0;
+        int j = 0;
+
         for (Future<ProcessingContext<T>> currentContext : contexFutureList) {
             try {
                 log.debug("Tenant {} - Waiting context is completed {}...", tenant, j);
-                currentContext.get();
+                currentContext.get(60, TimeUnit.SECONDS);
                 j++;
             } catch (Exception e) {
                 log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
@@ -251,7 +251,7 @@ public abstract class BasePayloadProcessorInbound<T> {
     }
 
     public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,
-            DocumentContext jsonObject, String keys)
+                                        DocumentContext jsonObject, String keys)
             throws JSONException {
         boolean subValueMissing = sub.value == null;
         boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
