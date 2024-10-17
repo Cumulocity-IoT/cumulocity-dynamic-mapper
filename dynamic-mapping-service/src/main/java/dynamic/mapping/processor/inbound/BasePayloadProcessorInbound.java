@@ -54,6 +54,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public abstract class BasePayloadProcessorInbound<T> {
@@ -245,7 +246,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 		for (Future<ProcessingContext<T>> currentContext : contextFutureList) {
 			try {
 				log.debug("Tenant {} - Waiting context is completed {}...", tenant, j);
-				currentContext.get();
+				currentContext.get(60, TimeUnit.SECONDS);
 				j++;
 			} catch (Exception e) {
 				log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
