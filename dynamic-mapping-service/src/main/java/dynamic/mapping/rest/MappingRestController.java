@@ -213,6 +213,9 @@ public class MappingRestController {
 			if (configuration.enabled)
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 						.body("Can't delete an enabled connector! Disable connector first.");
+			//Make sure the connector is disconnected before it is deleted.
+			if(connectorRegistry.getClientForTenant(tenant, ident).isConnected())
+				bootstrapService.disableConnector(tenant, ident);
 			connectorConfigurationComponent.deleteConnectorConfiguration(ident);
 			mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
 			bootstrapService.shutdownAndRemoveConnector(tenant, ident);
