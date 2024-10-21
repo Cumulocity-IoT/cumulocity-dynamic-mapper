@@ -48,6 +48,8 @@ jobs:
           node-version: 18.x
       - run: npm i
         working-directory: ./dynamic-mapping-ui
+      - run: cp ./LICENSE ./dynamic-mapping-ui/LICENSE
+        working-directory: ./
       - run: npm install -g @angular/cli > /dev/null
         working-directory: ./dynamic-mapping-ui
       - run: npm run build --if-present
