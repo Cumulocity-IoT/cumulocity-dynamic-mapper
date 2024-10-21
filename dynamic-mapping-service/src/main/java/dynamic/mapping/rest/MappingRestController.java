@@ -43,6 +43,7 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
+import dynamic.mapping.core.*;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,12 +65,6 @@ import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.core.BootstrapService;
-import dynamic.mapping.core.ConfigurationRegistry;
-import dynamic.mapping.core.ConnectorStatusEvent;
-import dynamic.mapping.core.MappingComponent;
-import dynamic.mapping.core.Operation;
-import dynamic.mapping.core.ServiceOperation;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.Feature;
@@ -97,6 +92,9 @@ public class MappingRestController {
 
 	@Autowired
 	BootstrapService bootstrapService;
+
+	@Autowired
+	C8YAgent c8YAgent;
 
 	@Autowired
 	private RoleService roleService;
@@ -516,7 +514,7 @@ public class MappingRestController {
 				if ("INBOUND_ID_CACHE".equals(cacheId)) {
 					Integer cacheSize = serviceConfigurationComponent
 							.getServiceConfiguration(tenant).inboundExternalIdCacheSize;
-					configurationRegistry.clearInboundExternalIdCache(tenant, true, cacheSize);
+					c8YAgent.clearInboundExternalIdCache(tenant, false, cacheSize);
 					log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
 				} else {
 					String errorMsgTemplate = "Tenant %s - Unknown cache: %s";
@@ -787,7 +785,7 @@ public class MappingRestController {
 		String tenant = contextService.getContext().getTenant();
 		Integer s = 0;
 		if ("INBOUND_ID_CACHE".equals(cacheId)) {
-			s = configurationRegistry.getSizeInboundExternalIdCache(tenant);
+			s = c8YAgent.getSizeInboundExternalIdCache(tenant);
 			log.info("Tenant {} - Get cache size for cache {}: {}", tenant, cacheId, s);
 		} else {
 			String errorMsgTemplate = "Tenant %s - Unknown cache: %s";

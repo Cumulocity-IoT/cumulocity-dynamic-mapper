@@ -50,6 +50,7 @@ import dynamic.mapping.App;
 import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapping.configuration.TrustedCertificateRepresentation;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.core.cache.InboundExternalIdCache;
 import dynamic.mapping.core.facade.IdentityFacade;
 import dynamic.mapping.core.facade.InventoryFacade;
 import dynamic.mapping.model.API;
@@ -134,6 +135,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 	}
 
 	@Getter
+	private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new HashMap<>();
+
+	@Getter
 	private ConfigurationRegistry configurationRegistry;
 
 	@Autowired
@@ -171,12 +175,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 		}
 		ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
 			try {
-				ExternalIDRepresentation resultInner = configurationRegistry.getInboundExternalIdCache(tenant)
+				ExternalIDRepresentation resultInner = this.getInboundExternalIdCache(tenant)
 						.getIdByExternalId(identity);
 				Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant).register(Metrics.globalRegistry).increment();
 				if (resultInner == null) {
 					resultInner = identityApi.resolveExternalId2GlobalId(identity, context);
-					configurationRegistry.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
+					this.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
 							resultInner);
 
 
@@ -750,6 +754,39 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 				context.getOAuthAccessToken(), context.getXsrfToken(),
 				context.getTfaToken(), null);
 		return clonedContext;
+	}
+
+	public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
+		log.info("Tenant {} - Initialize cache {}", tenant, inboundExternalIdCacheSize);
+		inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+	}
+
+	public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
+		return inboundExternalIdCaches.remove(tenant);
+	}
+
+	public InboundExternalIdCache getInboundExternalIdCache(String tenant) {
+		return inboundExternalIdCaches.get(tenant);
+	}
+
+	public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
+		InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
+		if (inboundExternalIdCache != null) {
+			//FIXME Recreating the cache creates a new instance of InboundExternalIdCache which causes issues with Metering
+			if (recreate) {
+				inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+			} else {
+				inboundExternalIdCache.clearCache();
+			}
+		}
+	}
+
+	public int getSizeInboundExternalIdCache(String tenant) {
+		InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
+		if (inboundExternalIdCache != null) {
+			return inboundExternalIdCache.getCacheSize();
+		} else
+			return 0;
 	}
 
 }

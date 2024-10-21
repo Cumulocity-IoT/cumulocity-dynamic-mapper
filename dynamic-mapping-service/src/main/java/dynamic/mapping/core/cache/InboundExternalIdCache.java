@@ -17,6 +17,8 @@ public class InboundExternalIdCache {
 	//private final LRUMap<ID, ExternalIDRepresentation> cache;
 	private final Map<ID, ExternalIDRepresentation> cache;
 
+	private Gauge cacheSizeGauge = null;
+
 	// Constructor with default cache size
 	public InboundExternalIdCache(String tenant) {
 		this(1000, tenant); // Default size of 1000
@@ -33,9 +35,13 @@ public class InboundExternalIdCache {
 			}
 		});
 		Tags tag = Tags.of("tenant", tenant);
-		Gauge.builder("dynmapper_inbound_identity_cache_size", this.cache, Map::size)
+		this.cacheSizeGauge = Gauge.builder("dynmapper_inbound_identity_cache_size", this.cache, Map::size)
 				.tags(tag)
 				.register(Metrics.globalRegistry);
+	}
+
+	public Gauge getCacheSizeGauge() {
+		return cacheSizeGauge;
 	}
 
 	// Method to get ID by external ID

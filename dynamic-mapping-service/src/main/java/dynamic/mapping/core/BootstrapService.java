@@ -39,7 +39,6 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
-import dynamic.mapping.core.cache.InboundExternalIdCache;
 
 import javax.annotation.PreDestroy;
 
@@ -53,6 +52,9 @@ public class BootstrapService {
 
 	@Autowired
 	ConfigurationRegistry configurationRegistry;
+
+	@Autowired
+	C8YAgent c8YAgent;
 
 	@Autowired
 	private MappingComponent mappingComponent;
@@ -113,7 +115,7 @@ public class BootstrapService {
 		configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
 
 		// delete cache
-		configurationRegistry.deleteInboundExternalIdCache(tenant);
+		c8YAgent.deleteInboundExternalIdCache(tenant);
 	}
 
 	@EventListener
@@ -147,7 +149,7 @@ public class BootstrapService {
 		}
 		cacheRetentionStartMap.put(tenant, Instant.now());
 
-		configurationRegistry.initializeInboundExternalIdCache(tenant, cacheSize);
+		c8YAgent.initializeInboundExternalIdCache(tenant, cacheSize);
 		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
 		ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()
 				.initializeMappingServiceObject(tenant);
@@ -279,11 +281,11 @@ public class BootstrapService {
 				ServiceConfiguration serviceConfiguration = serviceConfigurationComponent
 						.getServiceConfiguration(tenant);
 				int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
-				int cacheSize = Integer.valueOf(configurationRegistry.getInboundExternalIdCache(tenant).getCacheSize());
+				int cacheSize = Integer.valueOf(c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
 				if (inboundCacheRetention > 0 && Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
-					configurationRegistry.clearInboundExternalIdCache(tenant, true, cacheSize);
+					c8YAgent.clearInboundExternalIdCache(tenant, false, cacheSize);
 					cacheRetentionStartMap.put(tenant, Instant.now());
-					log.info("Tenant {} - Identity Cache cleared by scheduler. Old Size: {}, New size: {}", tenant, cacheSize, configurationRegistry.getInboundExternalIdCache(tenant).getCacheSize());
+					log.info("Tenant {} - Identity Cache cleared by scheduler. Old Size: {}, New size: {}", tenant, cacheSize, c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
 				}
 			}
 		});

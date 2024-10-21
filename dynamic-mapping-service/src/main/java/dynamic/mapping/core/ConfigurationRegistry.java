@@ -65,8 +65,7 @@ public class ConfigurationRegistry {
 	@Getter
 	private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
-	@Getter
-	private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new HashMap<>();
+
 
 	@Getter
 	private C8YAgent c8yAgent;
@@ -196,35 +195,5 @@ public class ConfigurationRegistry {
 		return ms;
 	}
 
-	public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
-		log.info("Tenant {} - Initialize cache {}", tenant, inboundExternalIdCacheSize);
-		inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
-	}
 
-	public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
-		return inboundExternalIdCaches.remove(tenant);
-	}
-
-	public InboundExternalIdCache getInboundExternalIdCache(String tenant) {
-		return inboundExternalIdCaches.get(tenant);
-	}
-
-	public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
-		InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
-		if (inboundExternalIdCache != null) {
-			if (recreate) {
-				inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
-			} else {
-				inboundExternalIdCache.clearCache();
-			}
-		}
-	}
-
-	public int getSizeInboundExternalIdCache(String tenant) {
-		InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
-		if (inboundExternalIdCache != null) {
-			return inboundExternalIdCache.getCacheSize();
-		} else
-			return 0;
-	}
 }
