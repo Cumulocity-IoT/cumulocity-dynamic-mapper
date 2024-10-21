@@ -61,7 +61,7 @@ public class MQTTServiceClient extends MQTTClient {
 						null));
 		configProps.put("clientId",
 				new ConnectorProperty(true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
-						MQTTServiceClient.nextId(), null));
+						null, null));
 		configProps.put("useSelfSignedCertificate",
 				new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null));
 		configProps.put("fingerprintSelfSignedCertificate",
@@ -80,6 +80,9 @@ public class MQTTServiceClient extends MQTTClient {
 
 	private static String nextId() {
 		return "CUMULOCITY_MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
+	}
+	private static String getClientId(String ident) {
+		return "CUMULOCITY_MQTT_SERVICE" + ident;
 	}
 	// return random.nextInt(max - min) + min;
 
@@ -111,6 +114,8 @@ public class MQTTServiceClient extends MQTTClient {
 		getConnectorSpecification().getProperties().put("password",
 				new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
 						msc.getPassword(), null));
+		getConnectorSpecification().getProperties().put("clientId", new ConnectorProperty(true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
+				getClientId(this.connectorIdent), null));
 		this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE);
 	}
 
