@@ -131,7 +131,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 							substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
 						}
 						log.warn(
-								"Tenant {} - During the processing of this pathTarget: {} a repair strategy: {} was used.",
+								"Tenant {} - During the processing of this pathTarget: '{}' a repair strategy: '{}' was used.",
 								tenant,
 								pathTarget, substituteValue.repairStrategy);
 					}
