@@ -136,4 +136,15 @@ public class ConnectorRegistry {
 		}
 	}
 
+	public void removeClientFromStatusMap(String tenant,String ident) throws ConnectorRegistryException {
+		if (tenant == null)
+			throw new ConnectorRegistryException("Tenant is missing!");
+		if (ident == null)
+			throw new ConnectorRegistryException("Connector ident is missing!");
+		if(connectorStatusMap.get(tenant) != null) {
+			connectorStatusMap.get(tenant).remove(ident);
+		}
+
+	}
+
 }
