@@ -81,8 +81,8 @@ public class MQTTServiceClient extends MQTTClient {
 	private static String nextId() {
 		return "CUMULOCITY_MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
 	}
-	private static String getClientId(String ident) {
-		return "CUMULOCITY_MQTT_SERVICE" + ident;
+	private static String getClientId(String ident, String suffix) {
+		return "CUMULOCITY_MQTT_SERVICE" + ident + suffix;
 	}
 	// return random.nextInt(max - min) + min;
 
@@ -115,7 +115,7 @@ public class MQTTServiceClient extends MQTTClient {
 				new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
 						msc.getPassword(), null));
 		getConnectorSpecification().getProperties().put("clientId", new ConnectorProperty(true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
-				getClientId(this.connectorIdent), null));
+				getClientId(this.connectorIdent, this.additionalSubscriptionIdTest), null));
 		this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE);
 	}
 
