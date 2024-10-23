@@ -252,7 +252,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 				log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
 			}
 		}
-		log.info("Tenant {} - Context is completed, {} parallel requests processed!", tenant, j);
+		log.debug("Tenant {} - Context is completed, {} parallel requests processed!", tenant, j);
 		return context;
 	}
 

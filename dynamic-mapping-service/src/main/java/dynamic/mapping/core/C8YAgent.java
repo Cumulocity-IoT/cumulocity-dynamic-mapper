@@ -47,6 +47,7 @@ import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import dynamic.mapping.App;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapping.configuration.TrustedCertificateRepresentation;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -392,6 +393,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 		StringBuffer error = new StringBuffer("");
 		C8YRequest currentRequest = context.getCurrentRequest();
 		String payload = currentRequest.getRequest();
+		ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
 		API targetAPI = context.getMapping().getTargetAPI();
 		AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
 			MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
@@ -403,18 +405,27 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 								payload,
 								EventRepresentation.class);
 						rt = eventApi.create(eventRepresentation);
-						log.info("Tenant {} - New event posted: {}", tenant, rt);
+						if(serviceConfiguration.logPayload )
+							log.info("Tenant {} - New event posted: {}", tenant, rt);
+						else
+							log.info("Tenant {} - New event posted with Id {}", tenant, ((EventRepresentation)rt).getId().getValue());
 					} else if (targetAPI.equals(API.ALARM)) {
 						AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
 								payload,
 								AlarmRepresentation.class);
 						rt = alarmApi.create(alarmRepresentation);
-						log.info("Tenant {} - New alarm posted: {}", tenant, rt);
+						if(serviceConfiguration.logPayload )
+							log.info("Tenant {} - New alarm posted: {}", tenant, rt);
+						else
+							log.info("Tenant {} - New alarm posted with Id {}", tenant, ((AlarmRepresentation)rt).getId().getValue());
 					} else if (targetAPI.equals(API.MEASUREMENT)) {
 						MeasurementRepresentation measurementRepresentation = jsonParser
 								.parse(MeasurementRepresentation.class, payload);
 						rt = measurementApi.create(measurementRepresentation);
-						log.info("Tenant {} - New measurement posted: {}", tenant, rt);
+						if(serviceConfiguration.logPayload )
+							log.info("Tenant {} - New measurement posted: {}", tenant, rt);
+						else
+							log.info("Tenant {} - New measurement posted with Id {}", tenant, ((MeasurementRepresentation) rt).getId().getValue());
 					} else if (targetAPI.equals(API.OPERATION)) {
 						OperationRepresentation operationRepresentation = jsonParser
 								.parse(OperationRepresentation.class, payload);
@@ -443,6 +454,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 			throws ProcessingException {
 		StringBuffer error = new StringBuffer("");
 		C8YRequest currentRequest = context.getCurrentRequest();
+		ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
 		ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
 			MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
 			return contextService.callWithinContext(contextCredentials, () -> {
@@ -471,14 +483,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
 						mor = inventoryApi.create(mor, context);
 						//TODO Add/Update new managed object to IdentityCache
-						log.info("Tenant {} - New device created: {}", tenant, mor);
+						if(serviceConfiguration.logPayload)
+							log.info("Tenant {} - New device created: {}", tenant, mor);
+						else
+							log.info("Tenant {} - New device created with Id {}", tenant, mor.getId().getValue());
 						identityApi.create(mor, identity, context);
 					} else {
 						// Device exists - update needed
 						mor.setId(extId.getManagedObject().getId());
 						mor = inventoryApi.update(mor, context);
-
-						log.info("Tenant {} - Device updated: {}", tenant, mor);
+						if(serviceConfiguration.logPayload)
+							log.info("Tenant {} - Device updated: {}", tenant, mor);
+						else
+							log.info("Tenant {} - Device {} updated.", tenant, mor.getId().getValue());
 					}
 				} catch (SDKException s) {
 					log.error("Tenant {} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(),
