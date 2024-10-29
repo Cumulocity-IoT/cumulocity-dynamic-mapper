@@ -70,7 +70,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
 
-  @Output() targetTemplateChanged = new EventEmitter<any>();
+  @Output() targetAPIChanged = new EventEmitter<any>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
   ValidationError = ValidationError;
@@ -462,13 +462,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   onTargetAPIChanged(targetAPI) {
     this.mapping.targetAPI = targetAPI;
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.targetTemplateChanged.emit(
-        SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]
-      );
-    } else {
-      this.targetTemplateChanged.emit(getExternalTemplate(this.mapping));
-    }
+    this.targetAPIChanged.emit(targetAPI);
   }
 
   ngOnDestroy() {

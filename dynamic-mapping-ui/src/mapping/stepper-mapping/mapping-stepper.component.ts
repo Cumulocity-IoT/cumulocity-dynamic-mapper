@@ -900,8 +900,20 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.mapping.snoopStatus = SnoopStatus.STOPPED;
   }
 
-  async onTargetTemplateChanged(templateTarget) {
-    this.templateTarget = templateTarget;
+  async onTargetAPIChanged(changedTargetAPI) {
+    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+      this.mapping.target = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+      this.mapping.source = getExternalTemplate(this.mapping);
+      this.schemaUpdateTarget.emit(
+        getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+      );
+    } else {
+      this.mapping.source = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+      this.mapping.target = getExternalTemplate(this.mapping);
+      this.schemaUpdateSource.emit(
+        getSchema(this.mapping.targetAPI, this.mapping.direction, false)
+      );
+    }
   }
 
   async updateTestResult(result) {
