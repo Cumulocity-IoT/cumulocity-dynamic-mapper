@@ -98,6 +98,10 @@ export default {
       {
         from: '../resources/image/Test.svg',
         to: 'image/Test.svg'
+      },
+      {
+        from: '../LICENSE',
+        to: 'LICENSE.txt'
       }
     ],
     federation: [
