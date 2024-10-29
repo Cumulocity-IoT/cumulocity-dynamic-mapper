@@ -197,6 +197,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 			this.c8yMessage = c8yMessage;
 			this.objectMapper = configurationRegistry.getObjectMapper();
 			this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(c8yMessage.getTenant());
+			this.payloadProcessorsOutbound = payloadProcessorsOutbound;
 
 		}
 
