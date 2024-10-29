@@ -18,36 +18,23 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  EventEmitter,
-  Input,
-  Output,
-  ViewEncapsulation
-} from '@angular/core';
-import { IIdentified } from '@c8y/client';
+import { Component } from '@angular/core';
+import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-  selector: 'd11r-mapping-subscription',
-  templateUrl: 'mapping-subscription.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  selector: 'd11r-mapping-renderer-deployment',
+  template: `
+    <div *ngFor="let con of context.value?.connectors">
+      <span class="text-12 tag tag--success">{{ con.name }}</span>
+    </div>
+    <div *ngIf="context.item.mapping.active && !context.value?.connectors">
+      <span class="text-12 tag tag--danger">{{ 'No active connector' }}</span>
+    </div>
+  `
 })
-export class MappingSubscriptionComponent {
-  @Input() deviceList: IIdentified[];
-
-  @Output() cancel = new EventEmitter<any>();
-  @Output() commit = new EventEmitter<IIdentified[]>();
-
-  selectionChanged(e) {
-    console.log(e);
-  }
-
-  clickedUpdateSubscription() {
-    this.commit.emit(this.deviceList);
-  }
-
-  clickedCancel() {
-    this.cancel.emit();
+export class MappingDeploymentRendererComponent {
+  constructor(public context: CellRendererContext) {
+    // console.log('Connectors', context, context.value);
+    context.item.mapping.active;
   }
 }

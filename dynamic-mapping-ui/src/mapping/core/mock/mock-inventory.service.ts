@@ -18,6 +18,7 @@
  *
  * @authors Christof Strack
  */
+import { HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { IFetchResponse, IManagedObject, IResult } from '@c8y/client';
 import * as _ from 'lodash';
@@ -44,7 +45,7 @@ export class MockInventoryService {
     copyManagedObject.lastUpdated = new Date().toISOString();
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
-      res: { status: 200 } as IFetchResponse
+      res: { status: HttpStatusCode.Ok } as IFetchResponse
     });
     return promise;
   }
@@ -59,7 +60,7 @@ export class MockInventoryService {
     };
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
-      res: { status: 200 } as IFetchResponse
+      res: { status: HttpStatusCode.Ok } as IFetchResponse
     });
     return promise;
   }

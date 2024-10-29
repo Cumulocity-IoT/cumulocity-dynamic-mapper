@@ -21,6 +21,9 @@ import { IIdentified } from '@c8y/client';
  * @authors Christof Strack
  */
 
+export const SNOOP_TEMPLATES_MAX = 10;
+export const HOUSEKEEPING_INTERVAL_SECONDS = 30;
+
 export enum ExtensionStatus {
   COMPLETE = 'COMPLETE',
   PARTIALLY = 'PARTIALLY',

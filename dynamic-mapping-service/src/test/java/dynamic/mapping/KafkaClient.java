@@ -34,7 +34,7 @@ public class KafkaClient {
 	static String broker_password = System.getenv("broker_password");
 	static String group_id = System.getenv("group_id");
 	static String topic = System.getenv("topic");
-	static String sasl_mechanism = System.getenv("topic");
+	static String sasl_mechanism = System.getenv("sasl_mechanism");
 
 	public KafkaClient(KafkaProducer<String, String> sampleClient) {
 		testClient = sampleClient;
@@ -44,16 +44,17 @@ public class KafkaClient {
 
 		String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
 		String jaasCfg = String.format(jaasTemplate, broker_username, broker_password);
+		System.out.println("JAASConfig: " + jaasCfg);
 		String serializer = StringSerializer.class.getName();
 
 		Properties props = new Properties();
 		props.put("key.serializer", serializer);
 		props.put("value.serializer", serializer);
 		props.put("security.protocol", "SASL_SSL");
-		// props.put("sasl.mechanism", "SCRAM-SHA-256");
-		props.put("sasl.mechanism", sasl_mechanism);
-		props.put("linger.ms", 1);
-		props.put("enable.idempotence", false);
+		props.put("sasl.mechanism", "SCRAM-SHA-512");
+		// props.put("sasl.mechanism", sasl_mechanism);
+		// props.put("linger.ms", 1);
+		// props.put("enable.idempotence", false);
 		props.put("bootstrap.servers", kafka_broker_host);
 		props.put("group.id", group_id);
 		props.put("sasl.jaas.config", jaasCfg);

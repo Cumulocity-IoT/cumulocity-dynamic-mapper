@@ -58,26 +58,28 @@ import {
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { Observable, Subject, take } from 'rxjs';
+import { BehaviorSubject, Subject, take } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
-import { NameRendererComponent } from '../renderer/name.renderer.component';
-// import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
-import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
-import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
+import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
+import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from '../../shared';
 import { DeploymentMapEntry } from '../../shared/model/shared.model';
 import { SharedService } from '../../shared/shared.service';
-import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
-import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
+import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
+import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import {
   C8YNotificationSubscription,
   PayloadWrapper
 } from '../shared/mapping.model';
-import { EditorMode } from '../shared/stepper-model';
+import { AdvisorAction, EditorMode } from '../shared/stepper-model';
+import { HttpStatusCode } from '@angular/common/http';
+import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
+import { AdviceActionComponent } from './advisor/advice-action.component';
+import { map } from 'cypress/types/bluebird';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -87,16 +89,16 @@ import { EditorMode } from '../shared/stepper-model';
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid: DataGridComponent;
-  @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
   isSubstitutionValid: boolean;
 
   showConfigMapping: boolean = false;
-  showConfigSubscription: boolean = false;
   showSnoopingMapping: boolean = false;
 
   isConnectionToMQTTEstablished: boolean;
 
-  mappingsEnriched$: Observable<MappingEnriched[]>;
+  mappingsEnriched$: BehaviorSubject<MappingEnriched[]> = new BehaviorSubject(
+    []
+  );
   mappingsCount: number = 0;
   mappingToUpdate: Mapping;
   subscription: C8YNotificationSubscription;
@@ -106,7 +108,6 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   stepperConfiguration: StepperConfiguration = {};
   titleMapping: string;
-  titleSubscription: string = 'Subscription on devices for mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
 
   displayOptions: DisplayOptions = {
@@ -144,8 +145,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     currentPage: 1
   };
   actionControls: ActionControl[] = [];
-  actionControlSubscription: ActionControl[] = [];
-  bulkActionControlSubscription: BulkActionControl[] = [];
   bulkActionControls: BulkActionControl[] = [];
 
   constructor(
@@ -172,7 +171,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.subscription = await this.mappingService.getSubscriptions();
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     // console.log('ngOnInit');
     this.actionControls.push(
       {
@@ -197,20 +196,20 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.deleteMappingWithConfirmation.bind(this),
         showIf: (item) => !item['mapping']['active']
       },
-      {
-        type: 'ACTIVATE_MAPPING',
-        text: 'Activate',
-        icon: 'toggle-on',
-        callback: this.activateMapping.bind(this),
-        showIf: (item) => !item['mapping']['active']
-      },
-      {
-        type: 'DEACTIVATE_MAPPING',
-        text: 'Deactivate',
-        icon: 'toggle-off',
-        callback: this.activateMapping.bind(this),
-        showIf: (item) => item['mapping']['active']
-      },
+      //   {
+      //     type: 'ACTIVATE_MAPPING',
+      //     text: 'Activate',
+      //     icon: 'toggle-on',
+      //     callback: this.activateMapping.bind(this),
+      //     showIf: (item) => !item['mapping']['active']
+      //   },
+      //   {
+      //     type: 'DEACTIVATE_MAPPING',
+      //     text: 'Deactivate',
+      //     icon: 'toggle-off',
+      //     callback: this.activateMapping.bind(this),
+      //     showIf: (item) => item['mapping']['active']
+      //   },
       {
         type: 'ENABLE_DEBUG',
         text: 'Enable debugging',
@@ -233,10 +232,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: (item) =>
           item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
-          (
-            item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED
-          )
+          (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
       },
       {
         type: 'DISABLE_SNOOPING',
@@ -259,8 +256,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: (item) =>
           item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
-          (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
+          (item['mapping']['snoopStatus'] === SnoopStatus.STARTED ||
+            item['mapping']['snoopStatus'] === SnoopStatus.ENABLED ||
             item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
+        // showIf: (item) =>
+        //   item['mapping']['direction'] === Direction.INBOUND &&
+        //   item['snoopSupported'] &&
+        //   (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
+        //     item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
       },
       {
         type: 'EXPORT',
@@ -272,7 +275,18 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.bulkActionControls.push(
       {
         type: BuiltInActionType.Delete,
-        callback: this.deleteMappingBulkWithConfirmation.bind(this)
+        callback: this.deleteMappingBulkWithConfirmation.bind(this),
+        showIf: (selectedItemIds: string[]) => {
+          // hide bulkDelete if any selected mapping is enabled
+          const activeMappings = this.mappingsEnriched$
+            .getValue()
+            ?.filter((m) => m.mapping.active);
+          const result = activeMappings?.some((m) =>
+            selectedItemIds?.includes(m.mapping.id)
+          );
+          // console.log('Selected mappings (showIf):', selectedItemIds);
+          return !result;
+        }
       },
       {
         type: 'ACTIVATE',
@@ -293,22 +307,20 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.exportMappingBulk.bind(this)
       }
     );
-    this.bulkActionControlSubscription.push({
-      type: BuiltInActionType.Delete,
-      callback: this.deleteSubscriptionBulkWithConfirmation.bind(this)
-    });
-    this.actionControlSubscription.push({
-      type: BuiltInActionType.Delete,
-      callback: this.deleteSubscriptionWithConfirmation.bind(this)
-    });
-    this.mappingsEnriched$ = this.mappingService.getMappingsObservable(
-      this.stepperConfiguration.direction
-    );
+    this.mappingService
+      .getMappingsObservable(this.stepperConfiguration.direction)
+      .subscribe((mappings) => this.mappingsEnriched$.next(mappings));
 
     this.mappingsEnriched$.subscribe((maps) => {
       this.mappingsCount = maps.length;
     });
-    this.mappingService.startChangedMappingEvents();
+    await this.mappingService.startChangedMappingEvents();
+    this.mappingService
+      .listenToUpdateMapping()
+      .subscribe((m: MappingEnriched) => {
+        console.log('Triggered updating mapping', m);
+        this.updateMapping(m);
+      });
   }
 
   getColumnsMappings(): Column[] {
@@ -319,7 +331,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         path: 'mapping.name',
         filterable: false,
         dataType: ColumnDataType.TextShort,
-        cellRendererComponent: NameRendererComponent,
+        cellRendererComponent: MappingIdCellRendererComponent,
         sortOrder: 'asc',
         visible: true,
         gridTrackSize: '10%'
@@ -404,7 +416,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   onAddMapping() {
-	this.snoopStatus = SnoopStatus.NONE;
+    this.snoopStatus = SnoopStatus.NONE;
     const initialState = {
       direction: this.stepperConfiguration.direction
     };
@@ -424,12 +436,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     });
   }
 
-  onDefineSubscription() {
-    this.showConfigSubscription = !this.showConfigSubscription;
-  }
-
   async addMapping() {
-	// console.log('Snoop status:', this.snoopStatus);
+    // console.log('Snoop status:', this.snoopStatus);
     this.setStepperConfiguration(
       this.mappingType,
       this.stepperConfiguration.direction,
@@ -538,97 +546,86 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async deleteSubscriptionBulkWithConfirmation(ids: string[]) {
-    let continueDelete: boolean = false;
-    for (let index = 0; index < ids.length; index++) {
-      const device2Delete = this.subscription?.devices.find(
-        (de) => de.id == ids[index]
-      );
-      if (index == 0) {
-        continueDelete = await this.deleteSubscriptionWithConfirmation(
-          device2Delete,
-          true,
-          true
-        );
-      } else if (continueDelete) {
-        this.deleteSubscription(device2Delete);
-      }
-    }
-    this.isConnectionToMQTTEstablished = true;
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    this.subscriptionGrid.setAllItemsSelected(false);
-  }
-
-  private async deleteSubscriptionWithConfirmation(
-    device2Delete: IIdentified,
-    confirmation: boolean = true,
-    multiple: boolean = false
-  ): Promise<boolean | PromiseLike<boolean>> {
-    let result: boolean = false;
-    if (confirmation) {
+  async updateMapping(m: MappingEnriched) {
+    let action = AdvisorAction.CONTINUE;
+    const { mapping } = m;
+    const { snoopSupported } =
+      MAPPING_TYPE_DESCRIPTION[mapping.mappingType].properties[
+        mapping.direction
+      ];
+    if (
+      (mapping.snoopStatus == SnoopStatus.ENABLED ||
+        mapping.snoopStatus == SnoopStatus.STARTED) &&
+      snoopSupported
+    ) {
       const initialState = {
-        title: multiple ? 'Delete subscriptions' : 'Delete subscription',
-        message: multiple
-          ? 'You are about to delete subscriptions. Do you want to proceed to delete ALL?'
-          : 'You are about to delete a subscription. Do you want to proceed?',
+        mapping,
         labels: {
-          ok: 'Delete',
+          ok: 'Ok',
           cancel: 'Cancel'
         }
       };
-      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-        ConfirmationModalComponent,
+      const confirmAdviceActionModalRef: BsModalRef = this.bsModalService.show(
+        AdviceActionComponent,
         { initialState }
       );
 
-      result = await confirmDeletionModalRef.content.closeSubject.toPromise();
-      if (result) {
-        await this.deleteSubscription(device2Delete);
+      action =
+        await confirmAdviceActionModalRef.content.closeSubject.toPromise();
+      // console.log('Result from next step:', mapping, action);
+    }
+
+    if (action != AdvisorAction.CANCEL) {
+      // stop snooping
+      if (action == AdvisorAction.STOP_SNOOPING_AND_EDIT) {
+        mapping.snoopStatus = SnoopStatus.STOPPED;
+        if (mapping.active) {
+          await this.activateMapping(m);
+          mapping.active = false;
+        }
+      } else if (action == AdvisorAction.EDIT) {
+        if (mapping.active) {
+          await this.activateMapping(m);
+          mapping.active = false;
+        }
       }
-    }
-    this.subscriptionGrid.setAllItemsSelected(false);
-    return result;
-  }
+      if (mapping.active) {
+        this.setStepperConfiguration(
+          mapping.mappingType,
+          this.stepperConfiguration.direction,
+          EditorMode.READ_ONLY
+        );
+      } else {
+        this.setStepperConfiguration(
+          mapping.mappingType,
+          this.stepperConfiguration.direction,
+          EditorMode.UPDATE
+        );
+      }
+      // create deep copy of existing mapping, in case user cancels changes
+      this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
 
-  async updateMapping(m: MappingEnriched) {
-    const { mapping } = m;
-
-    if (mapping.active) {
-      this.setStepperConfiguration(
-        mapping.mappingType,
-        this.stepperConfiguration.direction,
-        EditorMode.READ_ONLY
-      );
-    } else {
-      this.setStepperConfiguration(
-        mapping.mappingType,
-        this.stepperConfiguration.direction,
-        EditorMode.UPDATE
-      );
-    }
-    // create deep copy of existing mapping, in case user cancels changes
-    this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
-
-    // for backward compatibility set direction of mapping to inbound
-    if (
-      !this.mappingToUpdate.direction ||
-      this.mappingToUpdate.direction == null
-    )
-      this.mappingToUpdate.direction = Direction.INBOUND;
-    const deploymentMapEntry =
-      await this.mappingService.getDefinedDeploymentMapEntry(mapping.ident);
-    this.deploymentMapEntry = {
-      ident: this.mappingToUpdate.ident,
-      connectors: deploymentMapEntry.connectors
-    };
-    // console.log('Editing mapping', this.mappingToUpdate);
-    if (
-      mapping.snoopStatus === SnoopStatus.NONE ||
-      mapping.snoopStatus === SnoopStatus.STOPPED
-    ) {
-      this.showConfigMapping = true;
-    } else {
-      this.showSnoopingMapping = true;
+      // for backward compatibility set direction of mapping to inbound
+      if (
+        !this.mappingToUpdate.direction ||
+        this.mappingToUpdate.direction == null
+      )
+        this.mappingToUpdate.direction = Direction.INBOUND;
+      const deploymentMapEntry =
+        await this.mappingService.getDefinedDeploymentMapEntry(mapping.ident);
+      this.deploymentMapEntry = {
+        ident: this.mappingToUpdate.ident,
+        connectors: deploymentMapEntry.connectors
+      };
+      // console.log('Editing mapping', this.mappingToUpdate);
+      if (
+        mapping.snoopStatus === SnoopStatus.NONE ||
+        mapping.snoopStatus === SnoopStatus.STOPPED
+      ) {
+        this.showConfigMapping = true;
+      } else {
+        this.showSnoopingMapping = true;
+      }
     }
   }
 
@@ -668,10 +665,20 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     const newActive = !mapping.active;
     const action = newActive ? 'Activated' : 'Deactivated';
-    this.alertService.success(`${action} mapping: ${mapping.id}`);
     const parameter = { id: mapping.id, active: newActive };
-    await this.mappingService.changeActivationMapping(parameter);
+    const response =
+      await this.mappingService.changeActivationMapping(parameter);
+    if (response.status != HttpStatusCode.Created) {
+      const failedMap = await response.json();
+      const failedList = Object.values(failedMap).join(',');
+      this.alertService.warning(
+        `Mapping could only activate partially. It failed for the following connectors: ${failedList}`
+      );
+    } else {
+      this.alertService.success(`${action} mapping: ${mapping.id}`);
+    }
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    // return this.mappingService.
   }
 
   async toggleDebugMapping(m: MappingEnriched) {
@@ -822,25 +829,6 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;
-  }
-
-  async onCommitSubscriptions(deviceList: IIdentified[]) {
-    this.subscription = {
-      api: API.ALL.name,
-      devices: deviceList
-    };
-    // console.log('Changed deviceList:', this.subscription.devices);
-    try {
-      this.subscription = await this.mappingService.updateSubscriptions(
-        this.subscription
-      );
-      this.alertService.success(gettext('Subscriptions updated successfully'));
-    } catch (error) {
-      this.alertService.danger(
-        gettext('Failed to update subscriptions:') + error
-      );
-    }
-    this.showConfigSubscription = false;
   }
 
   async onReload() {

@@ -23,6 +23,16 @@
 <c8y-action-bar-item [placement]="'right'">
   <button
     class="btn btn-link"
+    title="{{ 'Clear inbound cache' | translate }}"
+    (click)="clickedClearInboundExternalIdCache()"
+  >
+    <i c8yIcon="clear"></i>
+    {{ 'Clear inbound cache' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button
+    class="btn btn-link"
     title="{{ 'Reconnect notification endpoint' | translate }}"
     (click)="clickedReconnect2NotificationEndpoint()"
   >
@@ -219,21 +229,78 @@
           <c8y-li-icon icon="swipe-left"></c8y-li-icon>
           <div class="d-flex a-i-center">
             <div>
-              <p>{{  'Outbound mappings' | translate }}</p>
+              <p>{{ 'Outbound mappings' | translate }}</p>
               <p>
-                <small translate
-                  >Outbound mappings</small
-                >
+                <small translate>Outbound mappings</small>
               </p>
             </div>
             <label
               class="c8y-switch c8y-switch--inline m-l-auto"
-              title="{{  'Outbound mappings' | translate }}"
+              title="{{ 'Outbound mappings' | translate }}"
             >
               <input
                 name="sendNotificationLifecycle"
                 type="checkbox"
                 [(ngModel)]="serviceConfiguration.outboundMappingEnabled"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+
+        <c8y-li>
+          <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Size inbound Id cache' | translate }}</p>
+              <p>
+                <small translate
+                  >Set size inbound Id cache. After changing the size you have
+                  to clear the cache to take effect</small
+                >
+              </p>
+            </div>
+            <label
+              class="editable m-l-auto"
+              title="{{ 'Size inbound Id cache' | translate }}"
+              [ngClass]="{ updated: editable2updated }"
+            >
+              <input
+                class="form-control"
+                name="inboundExternalIdCacheSize"
+                type="number"
+                [(ngModel)]="serviceConfiguration.inboundExternalIdCacheSize"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+
+        <c8y-li>
+          <c8y-li-icon icon="time-machine"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Days lifetime inbound Id cache' | translate }}</p>
+              <p>
+                <small translate
+                  >Set time after which complete cache in cleared. This is
+                  useful when you plan to delete a device or assign an external
+                  id to different device</small
+                >
+              </p>
+            </div>
+            <label
+              class="editable m-l-auto"
+              title="{{ 'Outbound mappings' | translate }}"
+              [ngClass]="{ updated: editable2updated }"
+            >
+              <input
+                class="form-control"
+                name="inboundExternalIdCacheRetention"
+                type="number"
+                [(ngModel)]="
+                  serviceConfiguration.inboundExternalIdCacheRetention
+                "
               />
               <span></span>
             </label>

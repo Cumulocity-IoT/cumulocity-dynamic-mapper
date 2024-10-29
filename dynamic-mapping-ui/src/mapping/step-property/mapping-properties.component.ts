@@ -33,6 +33,7 @@ import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
 import {
   API,
+  ConnectorType,
   Direction,
   Mapping,
   QOS,
@@ -42,11 +43,11 @@ import {
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { EditorMode } from '../shared/stepper-model';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
 import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveMappingTopicFromTopic } from '../shared/util';
 import { SharedService } from '../../shared/shared.service';
+import { StepperConfiguration } from '../../shared/model/shared.model';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -56,6 +57,16 @@ import { SharedService } from '../../shared/shared.service';
 })
 export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
+  @Input()
+  set deploymentMapEntry(value: any) {
+    this._deploymentMapEntry = value;
+  }
+
+  get deploymentMapEntry(): any {
+    return this._deploymentMapEntry;
+  }
+  _deploymentMapEntry;
+  DeploymentMapEntry;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
 
@@ -91,15 +102,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     //  this.mapping,
     //  this.stepperConfiguration
     // );
-    const numberSnooped = this.mapping.snoopedTemplates
-      ? this.mapping.snoopedTemplates.length
-      : 0;
-    if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
-      this.alertService.success(
-        `Already ${numberSnooped} templates exist. To stop the snooping process click on Cancel, select the respective mapping in the list of all mappings and choose the action Toggle Snooping.`,
-        `The recording process is in state ${this.mapping.snoopStatus}.`
-      );
-    }
+    // const numberSnooped = this.mapping.snoopedTemplates
+    //   ? this.mapping.snoopedTemplates.length
+    //   : 0;
+    // if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
+    //   this.alertService.success(
+    //     `Already ${numberSnooped} templates exist. To stop the snooping process click on Cancel, select the respective mapping in the list of all mappings and choose the action Toggle Snooping.`,
+    //     `The recording process is in state ${this.mapping.snoopStatus}.`
+    //   );
+    // }
     this.propertyFormlyFields = [
       {
         validators: {
@@ -109,24 +120,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               : 'checkTopicsOutboundAreValid'
           ]
         },
-        // validators: {
-        // 	validation: [
-        // 	  {
-        // 		name:
-        // 		  this.stepperConfiguration.direction == Direction.INBOUND
-        // 			? 'checkTopicsInboundAreValid'
-        // 			: 'checkTopicsOutboundAreValid'
-        // 	  }
-        // 	]
-        //   },
-
-        // validators: {
-        //   validation: [
-        //     this.stepperConfiguration.direction == Direction.INBOUND
-        //       ? checkTopicsInboundAreValidWithOption({ sampleOption: 3 })
-        //       : checkTopicsOutboundAreValid
-        //   ]
-        // },
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
@@ -409,7 +402,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'If this is enabled then the device id is treated as an external id which is looked up and translated using th externalIdType.',
+                'If this is enabled then the device id is treated as an external id which is looked up and translated using the externalIdType.',
               indeterminate: false,
               hideLabel: true
             }
@@ -454,6 +447,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               description:
                 'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
               hideLabel: true
+            },
+            hideExpression: () => {
+              // console.log('DeploymentMap', this._deploymentMapEntry);
+              return !this._deploymentMapEntry.connectorsDetailed?.some(
+                (con) => con.connectorType == ConnectorType.KAFKA
+              );
             }
           }
         ]

@@ -27,7 +27,7 @@ import {
   InventoryBinaryService,
   InventoryService
 } from '@c8y/client';
-import { FetchClient, IFetchResponse, Realtime } from '@c8y/client';
+import { FetchClient, IFetchResponse } from '@c8y/client';
 import {
   BASE_URL,
   Extension,
@@ -36,13 +36,9 @@ import {
   PROCESSOR_EXTENSION_TYPE
 } from '../shared';
 import * as _ from 'lodash';
-import {
-  AlertService,
-  gettext,
-  ModalService,
-  Status
-} from '@c8y/ngx-components';
+import { AlertService, gettext, ModalService } from '@c8y/ngx-components';
 import { BehaviorSubject, forkJoin, from, map, Observable } from 'rxjs';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class ExtensionService {
@@ -85,7 +81,7 @@ export class ExtensionService {
       }
     );
 
-    if (response.status != 200) {
+    if (response.status != HttpStatusCode.Ok) {
       return undefined;
     }
     return response.json();
@@ -103,7 +99,7 @@ export class ExtensionService {
       }
     );
 
-    if (response.status != 200) {
+    if (response.status != HttpStatusCode.Ok) {
       return undefined;
     }
     // let result =  (await response.json()) as string[];
@@ -122,7 +118,7 @@ export class ExtensionService {
       }
     );
 
-    if (response.status != 200) {
+    if (response.status != HttpStatusCode.Ok) {
       return undefined;
     }
     // let result =  (await response.json()) as string[];

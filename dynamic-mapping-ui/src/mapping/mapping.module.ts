@@ -30,16 +30,16 @@ import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BrokerConfigurationModule } from '../configuration';
 import { SharedModule } from '../shared';
-import { EditSubstitutionComponent } from './edit/edit-substitution-modal.component';
+import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
 import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import/import-modal.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
 import { APIRendererComponent } from './renderer/api.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
-import { QOSRendererComponent } from './renderer/qos-cell.renderer.component';
-import { SnoopedTemplateRendererComponent } from './renderer/snoopedTemplate.renderer.component';
-import { StatusActivationRendererComponent } from './renderer/status-activation-renderer.component';
-import { StatusRendererComponent } from './renderer/status-cell.renderer.component';
+import { QOSRendererComponent } from './renderer/qos.renderer.component';
+import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.renderer.component';
+import { StatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
+import { StatusRendererComponent } from './renderer/status.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
 import { WrapperFormlyHorizontal } from './shared/formly/horizontal.wrapper.component';
 import { FieldInputCustom } from './shared/formly/input-custom.type.component';
@@ -48,9 +48,9 @@ import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.compo
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 import { MappingStepPropertiesComponent } from './step-property/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
-import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
+import { DeviceSelectorSubscriptionComponent } from './subscription-grid/device-selector/device-selector-subscription.component';
 import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
-import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment.renderer.component';
+import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
 import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
 import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
@@ -60,6 +60,10 @@ import {
   checkTopicsInboundAreValid
 } from './shared/util';
 import { NODE1 } from '../shared/model/util';
+import { MappingSubscriptionComponent } from './subscription-grid/subscription.component';
+import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
+import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
+import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 
 @NgModule({
   declarations: [
@@ -68,7 +72,7 @@ import { NODE1 } from '../shared/model/util';
     SnoopingStepperComponent,
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
-    MappingSubscriptionComponent,
+    DeviceSelectorSubscriptionComponent,
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,
@@ -85,7 +89,12 @@ import { NODE1 } from '../shared/model/util';
     WrapperFormlyHorizontal,
     WrapperCustomFormField,
     FieldInputCustom,
-    MappingConnectorComponent
+    MappingConnectorComponent,
+    MappingSubscriptionComponent,
+    DeviceSelectorSubscriptionComponent,
+    MappingIdCellRendererComponent,
+    SnoopExplorerComponent,
+    AdviceActionComponent
   ],
   imports: [
     CoreModule,
@@ -106,6 +115,10 @@ import { NODE1 } from '../shared/model/util';
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
       component: MappingComponent
+    }),
+    hookRoute({
+      path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outboundSubscription`,
+      component: MappingSubscriptionComponent
     }),
     {
       provide: FORMLY_CONFIG,

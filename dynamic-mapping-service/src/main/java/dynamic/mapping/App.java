@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.MappingTreeNodeSerializer;
@@ -99,16 +98,17 @@ public class App {
         executor.setQueueCapacity(25);
         return executor;
     }
+    //Assuming we can process 25 messages in parallel per CPU-Core
+    @Bean("processingCachePool")
+    public ExecutorService processingThreadPool() {
+        return Executors.newCachedThreadPool();
+        //return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*25);
+    }
 
-//    @Bean("cachedThreadPool")
-//    public ExecutorService cachedThreadPool() {
-//        return Executors.newCachedThreadPool();
-//    }
-
+    //Assuming we can process 10 messages in parallel per CPU-Core
     @Bean("cachedThreadPool")
     public ExecutorService cachedThreadPool() {
-        final ThreadFactory factory = Thread.ofVirtual().name("virtExThread").factory();
-        return Executors.newThreadPerTaskExecutor(factory);
+        return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*10);
     }
 
     @Bean

@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable } from 'rxjs';
@@ -44,13 +44,15 @@ export class ConnectorStatusComponent implements OnInit {
   monitorings$: Observable<ConnectorStatus>;
   feature: Feature;
   specifications: ConnectorSpecification[] = [];
-  configurations: ConnectorConfiguration[];
+  configurations$: Observable<ConnectorConfiguration[]> = new Observable();
   statusLogs$: Observable<any[]>;
-  statusLogs: any[] = [];
+  private readonly ALL: string = 'ALL';
   filterStatusLog = {
-    // eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
-    eventType: 'ALL',
-    connectorIdent: 'ALL'
+    connectorIdent: this.ALL,
+    connectorName: 'EMPTY',
+    status: ConnectorStatus.UNKNOWN,
+    type: StatusEventTypes.ALL,
+    message: '_RESET_'
   };
   StatusEventTypes = StatusEventTypes;
 
@@ -65,13 +67,9 @@ export class ConnectorStatusComponent implements OnInit {
   async ngOnInit() {
     // console.log('Running version', this.version);
     this.feature = await this.sharedService.getFeatures();
+    this.configurations$ =
+      this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
-
-    this.connectorConfigurationService
-      .getRealtimeConnectorConfigurations()
-      .subscribe((confs) => {
-        this.configurations = confs;
-      });
   }
 
   updateStatusLogs() {

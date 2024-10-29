@@ -21,15 +21,13 @@
 import { Injectable } from '@angular/core';
 import { IEvent, IResult, EventService, IFetchResponse } from '@c8y/client';
 import { ProcessingContext } from '../../processor/processor.model';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class FacadeEventService {
   constructor(private event: EventService) {}
 
-  create(
-    event: IEvent,
-    context: ProcessingContext
-  ): Promise<IResult<IEvent>> {
+  create(event: IEvent, context: ProcessingContext): Promise<IResult<IEvent>> {
     if (context.sendPayload) {
       return this.event.create(event);
     } else {
@@ -40,7 +38,7 @@ export class FacadeEventService {
       };
       const promise = Promise.resolve({
         data: copyEvent,
-        res: { status: 200 } as IFetchResponse
+        res: { status: HttpStatusCode.Ok } as IFetchResponse
       });
       return promise;
     }

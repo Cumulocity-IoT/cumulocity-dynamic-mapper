@@ -5,6 +5,10 @@
     "name":"Software AG"
   },
   "isolation":"MULTI_TENANT",
+  "resources": {
+    "cpu": "0.5",
+    "memory": "2G"
+  },
   "requiredRoles": [
     "ROLE_INVENTORY_READ",
     "ROLE_INVENTORY_ADMIN",

@@ -73,6 +73,8 @@ import dynamic.mapping.processor.model.ProcessingContext;
 @Slf4j
 public abstract class AConnectorClient {
 
+	private static final int HOUSEKEEPING_INTERVAL_SECONDS = 30;
+
 	protected static final int WAIT_PERIOD_MS = 10000;
 
 	protected String connectorIdent;
@@ -158,7 +160,7 @@ public abstract class AConnectorClient {
 
 	@Getter
 	@Setter
-	public ConnectorStatusEvent connectorStatus = ConnectorStatusEvent.unknown();
+	public ConnectorStatusEvent connectorStatus;
 
 	@Getter
 	@Setter
@@ -213,7 +215,7 @@ public abstract class AConnectorClient {
 
 	public void submitHousekeeping() {
 		log.debug("Tenant {} - Called submitHousekeeping()", tenant);
-		housekeepingExecutor.scheduleAtFixedRate(() -> runHousekeeping(), 0, 30,
+		housekeepingExecutor.scheduleAtFixedRate(() -> runHousekeeping(), 0, HOUSEKEEPING_INTERVAL_SECONDS,
 				TimeUnit.SECONDS);
 	}
 
@@ -432,7 +434,7 @@ public abstract class AConnectorClient {
 	 * the same subscriptionTopic the subscriptionTopic is unsubscribed.
 	 * Only inactive mappings can be updated except activation/deactivation.
 	 **/
-	public void updateActiveSubscriptionInbound(Mapping mapping, Boolean create, Boolean activationChanged) {
+	public boolean updateActiveSubscriptionInbound(Mapping mapping, Boolean create, Boolean activationChanged) {
 		if (isConnected()) {
 			Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
 			boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
@@ -503,8 +505,13 @@ public abstract class AConnectorClient {
 						}
 					}
 				}
+			} else {
+				log.warn("Tenant {} - Mapping {} contains wildcards like #,+ which are not support by connector {}",
+						tenant, mapping.getId(), connectorName);
+				return false;
 			}
 		}
+		return true;
 	}
 
 	/**
@@ -525,6 +532,9 @@ public abstract class AConnectorClient {
 			updatedMappings.forEach(mapping -> {
 				Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
 				boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
+				if (!validDeployment)
+					log.warn("Tenant {} - Mapping {} contains wildcards like #,+ which are not support by connector {}",
+							tenant, mapping.getId(), connectorName);
 				List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.ident);
 				boolean isDeployed = false;
 				if (deploymentMapEntry != null) {
@@ -673,7 +683,8 @@ public abstract class AConnectorClient {
 	}
 
 	public void collectSubscribedMappingsAll(Map<String, DeploymentMapEntryDetailed> mappingsDeployed) {
-		ConnectorConfiguration cleanedConfiguration = getConnectorConfiguration().getCleanedConfig(connectorSpecification);
+		ConnectorConfiguration cleanedConfiguration = getConnectorConfiguration()
+				.getCleanedConfig(connectorSpecification);
 		List<String> subscribedMappingsInbound = getMappingsDeployedInbound().keySet().stream()
 				.collect(Collectors.toList());
 		// iterate over all mappings for specific client

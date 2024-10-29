@@ -21,7 +21,9 @@
 
 <div class="modal-header dialog-header animated fadeIn">
   <h1 c8yIcon="pencil"></h1>
-  <h4>Edit properties of substitution</h4>
+  <h4>
+    {{ isDuplicate || isUpdate ? 'Update' : 'Edit' }} properties of substitution
+  </h4>
 </div>
 <c8y-modal (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels">
   <div class="p-b-24 p-l-24 p-r-24">
@@ -32,8 +34,8 @@
 			duplicateSubstitutionIndex | translate
         }}
       </p>
-	  <br>
-	  <div style="text-align: center">
+      <br />
+      <div style="text-align: center">
         <pre>{{ substitutionText }}</pre>
       </div>
     </div>
@@ -99,7 +101,7 @@
       </div>
     </c8y-form-group>
 
-    <c8y-form-group *ngIf = "mapping.direction === Direction.OUTBOUND">
+    <c8y-form-group *ngIf="mapping.direction === Direction.OUTBOUND">
       <label
         class="c8y-switch d-inline"
         title="Resolve to externalId"

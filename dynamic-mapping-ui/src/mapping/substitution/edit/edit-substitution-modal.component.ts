@@ -27,10 +27,10 @@ import {
   Mapping,
   MappingSubstitution,
   RepairStrategy
-} from '../../shared';
-import { EditorMode } from '../shared/stepper-model';
+} from '../../../shared';
+import { EditorMode } from '../../shared/stepper-model';
 import { StepperConfiguration } from 'src/shared/model/shared.model';
-import { definesDeviceIdentifier } from '../shared/util';
+import { definesDeviceIdentifier } from '../../shared/util';
 
 @Component({
   selector: 'd11r-edit-substitution-modal',
@@ -40,6 +40,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   @Input() substitution: MappingSubstitution;
   @Input() duplicate: MappingSubstitution;
   @Input() isDuplicate: boolean;
+  @Input() isUpdate: boolean = false;
   @Input() duplicateSubstitutionIndex: number;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() mapping: Mapping;
@@ -80,7 +81,8 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     )
       ? '* '
       : '';
-    this.substitutionText = `[ ${marksDeviceIdentifier}${this.duplicate.pathSource} -> ${this.duplicate.pathTarget} ]`;
+    if (this.isDuplicate)
+      this.substitutionText = `[ ${marksDeviceIdentifier}${this.duplicate.pathSource} -> ${this.duplicate.pathTarget} ]`;
     this.disabled$.next(this.isDuplicate);
     // console.log("Repair Options:", this.repairStrategyOptions);
     // console.log('Existing substitution:', this.existingSubstitution);

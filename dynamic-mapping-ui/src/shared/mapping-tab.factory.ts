@@ -52,6 +52,13 @@ export class MappingTabFactory implements TabFactory {
           icon: 'swipe-left',
           orientation: 'horizontal'
         } as Tab);
+        tabs.push({
+          path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outboundSubscription`,
+          priority: 915,
+          label: 'Subscription outbound mapping',
+          icon: 'mail',
+          orientation: 'horizontal'
+        } as Tab);
       }
     } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node2/g)) {
       tabs.push({

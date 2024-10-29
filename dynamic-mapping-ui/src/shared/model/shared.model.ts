@@ -33,11 +33,12 @@ export interface MappingSubstitution {
 export interface DeploymentMapEntry {
   ident: string;
   connectors: string[];
+  connectorsDetailed?: ConnectorConfiguration[];
 }
 
 export interface DeploymentMap {
-	[x: string]: DeploymentMapEntry;
-  }
+  [x: string]: DeploymentMapEntry;
+}
 
 export interface Mapping {
   [x: string]: any;

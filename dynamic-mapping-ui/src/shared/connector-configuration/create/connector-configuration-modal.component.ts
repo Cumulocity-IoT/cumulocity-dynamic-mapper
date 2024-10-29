@@ -1,4 +1,11 @@
-import { Component, Input, OnInit, Output } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  Input,
+  NgZone,
+  OnInit,
+  Output
+} from '@angular/core';
 import { HumanizePipe, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { FormlyFieldConfig } from '@ngx-formly/core';
@@ -8,51 +15,12 @@ import {
   ConnectorPropertyType,
   ConnectorSpecification,
   nextIdAndPad
-} from '..';
-import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.component';
+} from '../..';
+import { FieldTextareaCustom } from '../../../mapping/shared/formly/textarea.type.component';
 
 @Component({
   selector: 'd11r-edit-connector-modal',
-  template: `<div class="modal-header dialog-header animated fadeIn">
-      <h1 c8yIcon="connected"></h1>
-      <h4>Edit connector configuration</h4>
-    </div>
-    <c8y-modal
-      (onClose)="onSave()"
-      (onDismiss)="onDismiss()"
-      [labels]="labels"
-      [disabled]="readOnly"
-    >
-      <div class="card-block">
-        <div [formGroup]="brokerFormly" *ngIf="add">
-          <formly-form
-            [form]="brokerFormly"
-            [fields]="brokerFormlyFields"
-            s
-          ></formly-form>
-        </div>
-        <c8y-form-group style="margin-left: 12px; margin-right: 12px;">
-          <label style="margin-left: 4px;">
-            <span>
-              {{ 'Description' | translate }}
-            </span>
-          </label>
-          <textarea
-            rows="3"
-            class="form-control"
-            placeholder="choose connector ..."
-            >{{ description }}</textarea
-          >
-        </c8y-form-group>
-        <div [formGroup]="dynamicFormly">
-          <formly-form
-            [form]="dynamicFormly"
-            [fields]="dynamicFormlyFields"
-            [model]="configuration"
-          ></formly-form>
-        </div>
-      </div>
-    </c8y-modal>`
+  templateUrl: 'connector-configuration-modal.component.html'
 })
 export class ConfigurationConfigurationModalComponent implements OnInit {
   @Input() add: boolean;
@@ -61,17 +29,18 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
   @Input() specifications: ConnectorSpecification[];
   @Input() configurationsCount: number;
   @Output() closeSubject: Subject<any> = new Subject();
-  brokerFormlyFields: FormlyFieldConfig[] = [];
-  brokerFormly: FormGroup = new FormGroup({});
-  dynamicFormlyFields: FormlyFieldConfig[] = [];
-  dynamicFormly: FormGroup = new FormGroup({});
+  brokerFormFields: FormlyFieldConfig[] = [];
+  brokerForm: FormGroup = new FormGroup({});
+  dynamicFormFields: FormlyFieldConfig[] = [];
+  dynamicForm: FormGroup = new FormGroup({});
   labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
   description: string;
 
+  constructor(private cd: ChangeDetectorRef) {}
+
   ngOnInit(): void {
     this.setConnectorDescription();
-
-    this.brokerFormlyFields = [
+    this.brokerFormFields = [
       {
         className: 'col-lg-12',
         key: 'connectorType',
@@ -87,9 +56,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
             };
           }),
           change: () => {
-            this.createDynamicForm(
-              this.brokerFormly.get('connectorType').value
-            );
+            this.createDynamicForm(this.brokerForm.get('connectorType').value);
           },
           required: true
         }
@@ -115,7 +82,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
   }
 
   onSave() {
-    // console.log('Save');
+    // console.log('Save', this.dynamicForm.valid);
     this.closeSubject.next(this.configuration);
   }
 
@@ -126,9 +93,9 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
 
     this.configuration.connectorType = connectorType;
     this.setConnectorDescription();
-    this.dynamicFormlyFields = [];
+    this.dynamicFormFields = [];
 
-    this.dynamicFormlyFields.push({
+    this.dynamicFormFields.push({
       fieldGroup: [
         {
           className: 'col-lg-12',
@@ -141,18 +108,6 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
             required: true
           }
         }
-        // {
-        //     className: 'col-lg-12',
-        //     key: 'supportsWildcardInTopic',
-        //     id: 'supportsWildcardInTopic',
-        //     type: 'switch',
-        //     wrappers: ['c8y-form-field'],
-        //     defaultValue: true,
-        //     props: {
-        //       label: HumanizePipe.humanize('supportsWildcardInTopic'),
-        //       description: 'If this option is checked, then topics can contains wildcards characters: +, #',
-        //     }
-        //   }
       ]
     });
     if (this.add) {
@@ -188,7 +143,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
         if (entry) {
           const { property } = entry;
           if (property.type == ConnectorPropertyType.NUMERIC_PROPERTY) {
-            this.dynamicFormlyFields.push({
+            this.dynamicFormFields.push({
               // fieldGroupClassName: "row",
               fieldGroup: [
                 {
@@ -206,7 +161,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
               ]
             });
           } else if (property.type == ConnectorPropertyType.STRING_PROPERTY) {
-            this.dynamicFormlyFields.push({
+            this.dynamicFormFields.push({
               // fieldGroupClassName: "row",
               fieldGroup: [
                 {
@@ -225,7 +180,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
           } else if (
             property.type == ConnectorPropertyType.SENSITIVE_STRING_PROPERTY
           ) {
-            this.dynamicFormlyFields.push({
+            this.dynamicFormFields.push({
               // fieldGroupClassName: "row",
               fieldGroup: [
                 {
@@ -243,7 +198,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
               ]
             });
           } else if (property.type == ConnectorPropertyType.BOOLEAN_PROPERTY) {
-            this.dynamicFormlyFields.push({
+            this.dynamicFormFields.push({
               // fieldGroupClassName: "row",
               fieldGroup: [
                 {
@@ -260,7 +215,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
               ]
             });
           } else if (property.type == ConnectorPropertyType.OPTION_PROPERTY) {
-            this.dynamicFormlyFields.push({
+            this.dynamicFormFields.push({
               // fieldGroupClassName: "row",
               fieldGroup: [
                 {
@@ -282,7 +237,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
           } else if (
             property.type == ConnectorPropertyType.STRING_LARGE_PROPERTY
           ) {
-            this.dynamicFormlyFields.push({
+            this.dynamicFormFields.push({
               // fieldGroupClassName: "row",
               fieldGroup: [
                 {
@@ -304,7 +259,8 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
           }
         }
       }
-      this.dynamicFormlyFields = [...this.dynamicFormlyFields];
+      this.dynamicFormFields = [...this.dynamicFormFields];
+      this.cd.detectChanges();
     }
   }
 }

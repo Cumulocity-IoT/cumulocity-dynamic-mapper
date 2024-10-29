@@ -71,6 +71,7 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
+import dynamic.mapping.core.ConnectorStatusEvent;
 
 @Slf4j
 public class MQTTClient extends AConnectorClient {
@@ -120,8 +121,9 @@ public class MQTTClient extends AConnectorClient {
 		this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
 		this.connectorConfiguration = connectorConfiguration;
 		// ensure the client knows its identity even if configuration is set to null
-		this.connectorIdent = connectorConfiguration.ident;
 		this.connectorName = connectorConfiguration.name;
+		this.connectorIdent = connectorConfiguration.ident;
+		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
 		// this.connectorType = connectorConfiguration.connectorType;
 		this.c8yAgent = configurationRegistry.getC8yAgent();
 		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
@@ -352,15 +354,16 @@ public class MQTTClient extends AConnectorClient {
 				// test if the mqtt connection is configured and enabled
 				if (shouldConnect()) {
 					/*
-					try {
-						// is not working for broker.emqx.io
-						subscribe("$SYS/#", QOS.AT_LEAST_ONCE);
-					} catch (ConnectorException e) {
-						log.warn(
-								"Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
-								e.getMessage(), e);
-					}
-					*/
+					 * try {
+					 * // is not working for broker.emqx.io
+					 * subscribe("$SYS/#", QOS.AT_LEAST_ONCE);
+					 * } catch (ConnectorException e) {
+					 * log.warn(
+					 * "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}"
+					 * ,
+					 * e.getMessage(), e);
+					 * }
+					 */
 					mappingComponent.rebuildMappingOutboundCache(tenant);
 					// in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
 					// sync, the ActiveSubscriptionMappingInbound is build on the
@@ -428,9 +431,9 @@ public class MQTTClient extends AConnectorClient {
 				}
 			});
 
-			//if (mqttClient.getState().isConnected()) {
-			//	mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
-			//}
+			// if (mqttClient.getState().isConnected()) {
+			// mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
+			// }
 
 			try {
 				if (mqttClient != null && mqttClient.getState().isConnected())

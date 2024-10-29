@@ -1,0 +1,40 @@
+<div class="modal-header dialog-header animated fadeIn">
+  <h1 c8yIcon="connected"></h1>
+  <h4>Edit connector configuration</h4>
+</div>
+<c8y-modal
+  (onClose)="onSave()"
+  (onDismiss)="onDismiss()"
+  [labels]="labels"
+  [disabled]="readOnly || !dynamicForm.valid"
+>
+  <div class="card-block">
+    <div [formGroup]="brokerForm" *ngIf="add">
+      <formly-form
+        [form]="brokerForm"
+        [fields]="brokerFormFields"
+        s
+      ></formly-form>
+    </div>
+    <c8y-form-group style="margin-left: 12px; margin-right: 12px">
+      <label style="margin-left: 4px">
+        <span>
+          {{ 'Description' | translate }}
+        </span>
+      </label>
+      <textarea
+        rows="3"
+        class="form-control"
+        placeholder="choose connector ..."
+        >{{ description }}</textarea
+      >
+    </c8y-form-group>
+    <div [formGroup]="dynamicForm">
+      <formly-form
+        [form]="dynamicForm"
+        [fields]="dynamicFormFields"
+        [model]="configuration"
+      ></formly-form>
+    </div>
+  </div>
+</c8y-modal>

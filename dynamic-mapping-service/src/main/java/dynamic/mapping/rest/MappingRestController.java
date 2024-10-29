@@ -43,6 +43,7 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
+import dynamic.mapping.core.*;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,12 +65,6 @@ import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.core.BootstrapService;
-import dynamic.mapping.core.ConfigurationRegistry;
-import dynamic.mapping.core.ConnectorStatusEvent;
-import dynamic.mapping.core.MappingComponent;
-import dynamic.mapping.core.Operation;
-import dynamic.mapping.core.ServiceOperation;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.Feature;
@@ -97,6 +92,9 @@ public class MappingRestController {
 
 	@Autowired
 	BootstrapService bootstrapService;
+
+	@Autowired
+	C8YAgent c8YAgent;
 
 	@Autowired
 	private RoleService roleService;
@@ -213,22 +211,13 @@ public class MappingRestController {
 			if (configuration.enabled)
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 						.body("Can't delete an enabled connector! Disable connector first.");
+			// make sure the connector is disconnected before it is deleted.
+			//if (connectorRegistry.getClientForTenant(tenant, ident) != null && connectorRegistry.getClientForTenant(tenant, ident).isConnected())
+			bootstrapService.disableConnector(tenant, ident);
 			connectorConfigurationComponent.deleteConnectorConfiguration(ident);
 			mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
+			connectorRegistry.removeClientFromStatusMap(tenant, ident);
 			bootstrapService.shutdownAndRemoveConnector(tenant, ident);
-			// NOTE this block was disabled since a disabled connector is not registered in
-			// connectorRegistry
-
-			// AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-			// configuration.getIdent());
-			// if (client == null)
-			// return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Client with ident
-			// " + ident + " not found");
-			// client.disconnect();
-			// bootstrapService.shutdownAndRemoveConnector(tenant,
-			// client.getConnectorIdent());
-			// connectorConfigurationComponent.deleteConnectorConfiguration(ident);
-			// mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -273,9 +262,9 @@ public class MappingRestController {
 				}
 			}
 			connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-			//AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-			//		configuration.getIdent());
-			//client.reconnect();
+			// AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+			// configuration.getIdent());
+			// client.reconnect();
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -403,7 +392,7 @@ public class MappingRestController {
 	}
 
 	@RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
+	public ResponseEntity<?> runOperation(@Valid @RequestBody ServiceOperation operation) {
 		String tenant = contextService.getContext().getTenant();
 		log.info("Tenant {} - Post operation: {}", tenant, operation.toString());
 		try {
@@ -471,13 +460,30 @@ public class MappingRestController {
 						.getClientsForTenant(tenant);
 				// subscribe/unsubscribe respective subscriptionTopic of mapping only for
 				// outbound mapping
+				Map<String, String> failed = new HashMap<>();
 				for (AConnectorClient client : connectorMap.values()) {
 					if (updatedMapping.direction == Direction.INBOUND) {
-						client.updateActiveSubscriptionInbound(updatedMapping, false, true);
+						if (!client.updateActiveSubscriptionInbound(updatedMapping, false, true)) {
+							ConnectorConfiguration conf = client.getConnectorConfiguration();
+							failed.put(conf.getIdent(), conf.getName());
+						}
+						;
 					} else {
 						client.updateActiveSubscriptionOutbound(updatedMapping);
 					}
 				}
+
+				if (failed.size() > 0) {
+					// configurationRegistry.getC8yAgent().createEvent("Activation of mapping: " +
+					// updatedMapping.name,
+					// C8YAgent.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
+					// DateTime.now(),
+					// configurationRegistry.getMappingServiceRepresentations().get(tenant),
+					// tenant,
+					// failed);
+					return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
+				}
+
 			} else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
 				String id = operation.getParameter().get("id");
 				Boolean debugBoolean = Boolean.parseBoolean(operation.getParameter().get("debug"));
@@ -491,6 +497,19 @@ public class MappingRestController {
 				mappingComponent.resetSnoop(tenant, id);
 			} else if (operation.getOperation().equals(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS)) {
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+			} else if (operation.getOperation().equals(Operation.CLEAR_CACHE)) {
+				String cacheId = operation.getParameter().get("cacheId");
+				if ("INBOUND_ID_CACHE".equals(cacheId)) {
+					Integer cacheSize = serviceConfigurationComponent
+							.getServiceConfiguration(tenant).inboundExternalIdCacheSize;
+					c8YAgent.clearInboundExternalIdCache(tenant, false, cacheSize);
+					log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
+				} else {
+					String errorMsgTemplate = "Tenant %s - Unknown cache: %s";
+					String errorMsg = String.format(errorMsgTemplate, tenant, cacheId);
+					log.error(errorMsg);
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg);
+				}
 			}
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
@@ -518,10 +537,18 @@ public class MappingRestController {
 		Map<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
 		String tenant = contextService.getContext().getTenant();
 		try {
-			Map<String, AConnectorClient> connectorMap = connectorRegistry
-					.getClientsForTenant(tenant);
-			if (connectorMap != null) {
-				for (AConnectorClient client : connectorMap.values()) {
+			// initialize list with all known connectors
+			List<ConnectorConfiguration> configurationList = connectorConfigurationComponent.getConnectorConfigurations(
+					tenant);
+			for (ConnectorConfiguration conf : configurationList) {
+				connectorsStatus.put(conf.getIdent(), ConnectorStatusEvent.unknown(conf.name, conf.ident));
+			}
+
+			// overwrite status with last remembered status of once enabled connectors
+			connectorsStatus.putAll(connectorRegistry.getConnectorStatusMap().get(tenant));
+			// overwrite with / add status of currently enabled connectors
+			if (connectorRegistry.getClientsForTenant(tenant) != null) {
+				for (AConnectorClient client : connectorRegistry.getClientsForTenant(tenant).values()) {
 					ConnectorStatusEvent st = client.getConnectorStatus();
 					connectorsStatus.put(client.getConnectorIdent(), st);
 				}
@@ -609,7 +636,7 @@ public class MappingRestController {
 				});
 			}
 		} catch (Exception ex) {
-			log.error("Tenant {} - Exception when deleting mapping {}", tenant, ex);
+			log.error("Tenant {} - Exception when deleting mapping: ", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
 		}
 		log.info("Tenant {} - Mapping {} successfully deleted!", tenant, id);
@@ -739,6 +766,22 @@ public class MappingRestController {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
 					"Extension with id " + extensionName + " could not be found.");
 		return ResponseEntity.status(HttpStatus.OK).body(result);
+	}
+
+	@RequestMapping(value = "/monitoring/cache/{cacheId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Integer> getCacheSize(@PathVariable @NotNull String cacheId) {
+		String tenant = contextService.getContext().getTenant();
+		Integer s = 0;
+		if ("INBOUND_ID_CACHE".equals(cacheId)) {
+			s = c8YAgent.getSizeInboundExternalIdCache(tenant);
+			log.info("Tenant {} - Get cache size for cache {}: {}", tenant, cacheId, s);
+		} else {
+			String errorMsgTemplate = "Tenant %s - Unknown cache: %s";
+			String errorMsg = String.format(errorMsgTemplate, tenant, cacheId);
+			log.error(errorMsg);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg);
+		}
+		return new ResponseEntity<>(s, HttpStatus.OK);
 	}
 
 	private boolean userHasMappingAdminRole() {
