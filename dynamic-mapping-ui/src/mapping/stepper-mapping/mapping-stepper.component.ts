@@ -174,6 +174,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     private elementRef: ElementRef
   ) {}
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   deploymentMapEntryChange(e) {
     // console.log(
     //   'New getDeploymentMap',
@@ -739,6 +740,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
       event.stepper.next();
     } else if (this.step == 'Define substitutions') {
+      this.expandTemplates();
       this.getTemplateForm();
       const testSourceTemplate = this.editorSourceStep4
         ? this.editorSourceStep4.get()
