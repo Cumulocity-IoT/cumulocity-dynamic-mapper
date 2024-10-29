@@ -92,8 +92,8 @@ public class C8YNotificationSubscriber {
 	}
 
 	@Autowired
-	@Qualifier("cachedThreadPool")
-	private ExecutorService cachedThreadPool;
+	@Qualifier("virtThreadPool")
+	private ExecutorService virtThreadPool;
 
 	// structure: <tenant, <connectorIdent, asynchronousDispatcherOutbound>>
 	@Getter
@@ -339,7 +339,7 @@ public class C8YNotificationSubscriber {
             activatePushConnectivityStatus(tenant, extId.getExternalId());
             return notification;
         });
-        return cachedThreadPool.submit(callableTask);
+        return virtThreadPool.submit(callableTask);
 	}
 
 	public Future<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDevices(
@@ -374,7 +374,7 @@ public class C8YNotificationSubscriber {
 			}
 			return deviceSubList;
         });
-        return cachedThreadPool.submit(callableTask);
+        return virtThreadPool.submit(callableTask);
 	}
 
 	public C8YNotificationSubscription getDeviceSubscriptions(String tenant, String deviceId,
