@@ -46,10 +46,7 @@ import org.json.JSONException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 public abstract class BasePayloadProcessorOutbound<T> {
@@ -118,7 +115,8 @@ public abstract class BasePayloadProcessorOutbound<T> {
         /*
          * step 4 prepare target payload for sending to mqttBroker
          */
-        if (!mapping.targetAPI.equals(API.INVENTORY)) {
+        if(Arrays.stream(API.values()).anyMatch(v -> mapping.targetAPI.equals(v))) {
+        //if (!mapping.targetAPI.equals(API.INVENTORY)) {
             List<String> topicLevels = payloadTarget.read(Mapping.TOKEN_TOPIC_LEVEL);
             if (topicLevels != null && topicLevels.size() > 0) {
                 // now merge the replaced topic levels
@@ -169,6 +167,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
             }
             predecessor = newPredecessor;
         } else {
+            //FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     postProcessingCache.size());
         }

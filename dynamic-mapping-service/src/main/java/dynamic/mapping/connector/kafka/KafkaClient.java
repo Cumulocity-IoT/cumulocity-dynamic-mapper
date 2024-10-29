@@ -143,7 +143,7 @@ public class KafkaClient extends AConnectorClient {
 		this.connectorIdent = connectorConfiguration.ident;
 		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
 		this.c8yAgent = configurationRegistry.getC8yAgent();
-		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+		this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();
 		this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 		this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);

@@ -65,12 +65,12 @@ public class BootstrapService {
 	@Autowired
 	ConnectorConfigurationComponent connectorConfigurationComponent;
 
-	@Qualifier("cachedThreadPool")
-	private ExecutorService cachedThreadPool;
+	@Qualifier("virtThreadPool")
+	private ExecutorService virtThreadPool;
 
 	@Autowired
-	public void setCachedThreadPool(ExecutorService cachedThreadPool) {
-		this.cachedThreadPool = cachedThreadPool;
+	public void setVirtThreadPool(ExecutorService virtThreadPool) {
+		this.virtThreadPool = virtThreadPool;
 	}
 
 	@Value("${APP.additionalSubscriptionIdTest}")

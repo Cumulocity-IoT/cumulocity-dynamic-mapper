@@ -76,7 +76,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
 	private AConnectorClient connectorClient;
 
-	private ExecutorService cachedThreadPool;
+	private ExecutorService virtThreadPool;
 
 	private MappingComponent mappingComponent;
 
@@ -87,7 +87,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 	public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry,
 			AConnectorClient connectorClient) {
 		this.connectorClient = connectorClient;
-		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+		this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 		this.mappingComponent = configurationRegistry.getMappingComponent();
 		this.configurationRegistry = configurationRegistry;
 	}
@@ -103,7 +103,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 		Timer inboundProcessingTimer;
 		Counter inboundProcessingCounter;
 		AConnectorClient connectorClient;
-        ExecutorService cachedThreadPool;
+        ExecutorService virtThreadPool;
 
 
 		public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
@@ -123,7 +123,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 			this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
 					.tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
 					.tag("connector", connectorMessage.getConnectorIdent()).register(Metrics.globalRegistry);
-            this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+            this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 
         }
 
@@ -261,7 +261,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 			return futureProcessingResult;
 		}
 
-		futureProcessingResult = cachedThreadPool.submit(
+		futureProcessingResult = virtThreadPool.submit(
 				new MappingInboundTask(configurationRegistry, resolvedMappings,
 						message, connectorClient));
 
@@ -275,7 +275,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public void onMessage(ConnectorMessage message) {
-        Thread.startVirtualThread(() -> processMessage(message)).setName("vProcIn");
+        processMessage(message);
     }
 
 	@Override

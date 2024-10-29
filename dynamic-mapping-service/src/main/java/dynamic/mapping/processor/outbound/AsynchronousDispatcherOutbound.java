@@ -89,7 +89,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
 	protected ObjectMapper objectMapper;
 
-	protected ExecutorService cachedThreadPool;
+	protected ExecutorService virtThreadPool;
 
 	protected MappingComponent mappingComponent;
 
@@ -105,7 +105,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 		this.objectMapper = configurationRegistry.getObjectMapper();
 		this.c8yAgent = configurationRegistry.getC8yAgent();
 		this.mappingComponent = configurationRegistry.getMappingComponent();
-		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+		this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 		this.connectorClient = connectorClient;
 		// log.info("Tenant {} - HIER I {} {}", connectorClient.getTenant(),
 		// configurationRegistry.getPayloadProcessorsOutbound());
@@ -130,8 +130,10 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 	public void onNotification(Notification notification) {
 		// We don't care about UPDATES nor DELETES and ignore notifications if connector
 		// is not connected
+		String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
+		if (!connectorClient.isConnected())
+			log.warn("Tenant {} - Notification message received but connector {} is not connected. Ignoring message..", tenant, connectorClient.getConnectorName());
 		if ("CREATE".equals(notification.getNotificationHeaders().get(1)) && connectorClient.isConnected()) {
-			String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
 			// log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
 			// notification.getMessage(),
 			// notification.getNotificationHeaders(),
@@ -142,9 +144,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 			c8yMessage.setApi(notification.getApi());
 			c8yMessage.setTenant(tenant);
 			c8yMessage.setSendPayload(true);
-			Thread.startVirtualThread(() -> {
-                processMessage(c8yMessage);
-            }).setName("vProcOut");
+			virtThreadPool.submit(() -> {
+				processMessage(c8yMessage);
+			});
 		}
 	}
 
@@ -175,6 +177,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 		ObjectMapper objectMapper;
 		ServiceConfiguration serviceConfiguration;
 		AConnectorClient connectorClient;
+		Timer outboundProcessingTimer;
+		Counter outboundProcessingCounter;
 
 		public MappingOutboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
 				MappingComponent mappingStatusComponent,
@@ -184,7 +188,12 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 			this.resolvedMappings = resolvedMappings;
 			this.mappingStatusComponent = mappingStatusComponent;
 			this.c8yAgent = configurationRegistry.getC8yAgent();
-			this.payloadProcessorsOutbound = payloadProcessorsOutbound;
+			this.outboundProcessingTimer = Timer.builder("dynmapper_outbound_processing_time")
+					.tag("tenant", connectorClient.getTenant()).tag("connector", connectorClient.getConnectorIdent())
+					.description("Processing time of outbound messages").register(Metrics.globalRegistry);
+			this.outboundProcessingCounter = Counter.builder("dynmapper_outbound_message_total")
+					.tag("tenant", connectorClient.getTenant()).description("Total number of outbound messages")
+					.tag("connector", connectorClient.getConnectorIdent()).register(Metrics.globalRegistry);
 			this.c8yMessage = c8yMessage;
 			this.objectMapper = configurationRegistry.getObjectMapper();
 			this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(c8yMessage.getTenant());
@@ -193,8 +202,6 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
 		@Override
 		public List<ProcessingContext<?>> call() throws Exception {
-			long startTime = System.nanoTime();
-
 			Timer.Sample timer = Timer.start(Metrics.globalRegistry);
 			String tenant = c8yMessage.getTenant();
 			boolean sendPayload = c8yMessage.isSendPayload();
@@ -274,18 +281,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 								}
 							} else {
 								processor.extractFromSource(context);
+								outboundProcessingCounter.increment();
 								processor.substituteInTargetAndSend(context);
-								Counter.builder("dynmapper_outbound_message_total")
-										.tag("tenant", c8yMessage.getTenant())
-										.description("Total number of outbound messages")
-										.tag("connector", processor.connectorClient.getConnectorIdent())
-										.register(Metrics.globalRegistry).increment();
-								timer.stop(Timer.builder("dynmapper_outbound_processing_time")
-										.tag("tenant", c8yMessage.getTenant())
-										.tag("connector", processor.connectorClient.getConnectorIdent())
-										.description("Processing time of outbound messages")
-										.register(Metrics.globalRegistry));
-
 								List<C8YRequest> resultRequests = context.getRequests();
 								if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
 									mappingStatus.errors++;
@@ -299,12 +296,13 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 						}
 					} else {
 						mappingStatusUnspecified.errors++;
-						log.error("Tenant {} - No process for MessageType: {} registered, ignoring this message!",
+						log.error("Tenant {} - No processor for MessageType: {} registered, ignoring this message!",
 								tenant, mappingType);
 					}
 					processingResult.add(context);
 				}
 			});
+			timer.stop(outboundProcessingTimer);
 			return processingResult;
 		}
 
@@ -342,7 +340,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 			return futureProcessingResult;
 		}
 
-		futureProcessingResult = cachedThreadPool.submit(
+		futureProcessingResult = virtThreadPool.submit(
 				new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
 						payloadProcessorsOutbound, c8yMessage, connectorClient));
 
@@ -366,9 +364,11 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 			} catch (InterruptedException e) {
 				// c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
 				// e.getLocalizedMessage());
+				log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
 			} catch (ExecutionException e) {
 				// c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
 				// e.getLocalizedMessage());
+				log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
 			}
 		}
 		return futureProcessingResult;

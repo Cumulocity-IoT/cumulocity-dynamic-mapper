@@ -22,7 +22,6 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
-import dynamic.mapping.core.cache.InboundExternalIdCache;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
@@ -119,12 +118,7 @@ public class ConfigurationRegistry {
 	@Getter
 	@Setter
 	@Autowired
-	private ExecutorService cachedThreadPool;
-
-	@Getter
-	@Setter
-	@Autowired
-	private ExecutorService processingCachePool;
+	private ExecutorService virtThreadPool;
 
 	public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
 		ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);

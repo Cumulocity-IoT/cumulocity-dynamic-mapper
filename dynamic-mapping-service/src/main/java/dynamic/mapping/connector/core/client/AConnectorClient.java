@@ -121,7 +121,7 @@ public abstract class AConnectorClient {
 	protected ConfigurationRegistry configurationRegistry;
 
 	@Getter
-	protected ExecutorService cachedThreadPool;
+	protected ExecutorService virtThreadPool;
 
 	private Future<?> connectTask;
 	private ScheduledExecutorService housekeepingExecutor = Executors
@@ -170,7 +170,7 @@ public abstract class AConnectorClient {
 		// test if init task is still running, then we don't need to start another task
 		log.debug("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone());
 		if ((initializeTask == null || initializeTask.isDone())) {
-			initializeTask = cachedThreadPool.submit(() -> initialize());
+			initializeTask = virtThreadPool.submit(() -> initialize());
 		}
 	}
 
@@ -198,7 +198,7 @@ public abstract class AConnectorClient {
 		log.debug("Tenant {} - Called connect(): connectTask.isDone() {}", tenant,
 				connectTask == null || connectTask.isDone());
 		if (connectTask == null || connectTask.isDone()) {
-			connectTask = cachedThreadPool.submit(() -> connect());
+			connectTask = virtThreadPool.submit(() -> connect());
 		}
 	}
 
@@ -209,7 +209,7 @@ public abstract class AConnectorClient {
 		log.debug("Tenant {} - Called submitDisconnect(): connectTask.isDone() {}", tenant,
 				connectTask == null || connectTask.isDone());
 		if (connectTask == null || connectTask.isDone()) {
-			connectTask = cachedThreadPool.submit(() -> disconnect());
+			connectTask = virtThreadPool.submit(() -> disconnect());
 		}
 	}
 

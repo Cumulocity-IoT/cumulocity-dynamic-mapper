@@ -62,14 +62,14 @@ public abstract class BasePayloadProcessorInbound<T> {
 	public BasePayloadProcessorInbound(ConfigurationRegistry configurationRegistry) {
 		this.objectMapper = configurationRegistry.getObjectMapper();
 		this.c8yAgent = configurationRegistry.getC8yAgent();
-		this.processingCachePool = configurationRegistry.getProcessingCachePool();
+		this.virtCachePool = configurationRegistry.getVirtThreadPool();
 	}
 
 	protected C8YAgent c8yAgent;
 
 	protected ObjectMapper objectMapper;
 
-	protected ExecutorService processingCachePool;
+	protected ExecutorService virtCachePool;
 
 	public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, ConnectorMessage message)
 			throws IOException;
@@ -110,7 +110,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 		for (int i = 0; i < deviceEntries.size(); i++) {
 			// for (MappingSubstitution.SubstituteValue device : deviceEntries) {
 			int finalI = i;
-			contextFutureList.add(processingCachePool.submit(() -> {
+			contextFutureList.add(virtCachePool.submit(() -> {
 				MappingSubstitution.SubstituteValue device = deviceEntries.get(finalI);
 				int predecessor = -1;
 				DocumentContext payloadTarget = JsonPath.parse(mapping.target);
