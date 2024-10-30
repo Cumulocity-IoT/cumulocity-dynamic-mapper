@@ -62,9 +62,10 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @Input() options;
   @Input()
   set data(value: unknown) {
-    if (value) {
+    if (value && Object.keys(value).length != 0) {
       this.content['json'] = value;
     }
+    // console.log('on setData', value, this.content);
 
     if (this.editor) {
       this.editor.destroy();

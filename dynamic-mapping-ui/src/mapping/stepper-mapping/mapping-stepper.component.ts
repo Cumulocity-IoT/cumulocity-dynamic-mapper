@@ -742,15 +742,25 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else if (this.step == 'Define substitutions') {
       this.expandTemplates();
       this.getTemplateForm();
-      const testSourceTemplate = this.editorSourceStep4
-        ? this.editorSourceStep4.get()
-        : {};
-      this.editorTestingPayloadTemplateEmitter.emit(testSourceTemplate);
+      //   const testSourceTemplate = this.editorSourceStep4
+      //     ? this.editorSourceStep4.get()
+      //     : {};
+      // this.editorTestingPayloadTemplateEmitter.emit(testSourceTemplate);
+      this.editorTestingPayloadTemplateEmitter.emit(this.templateSource);
       this.onSelectSubstitution(0);
       event.stepper.next();
     } else if (this.step == 'Select templates') {
       this.templateSource = this.editorSourceStep3.get();
       this.templateTarget = this.editorTargetStep3.get();
+      console.log(
+        'onNextStep before',
+        event.step.label,
+        this.mapping,
+        this.editorSourceStep3.get(),
+        this.getCurrentMapping(true),
+        this.templateSource,
+        this.templateTarget
+      );
       event.stepper.next();
     } else {
       event.stepper.next();
@@ -761,7 +771,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     stepper: C8yStepper;
     step: CdkStep;
   }): Promise<void> {
-    // console.log('onBackStep', event.step.label, this.mapping);
+    // console.log(
+    //   'onBackStep before',
+    //   event.step.label,
+    //   this.mapping,
+    //   this.getCurrentMapping(false),
+    //   this.getCurrentMapping(true),
+    //   this.templateSource,
+    //   this.templateTarget
+    // );
     this.step = event.step.label;
     if (this.step == 'Test mapping') {
       const editorTestingRequestRef =
@@ -770,10 +788,24 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
     } else if (this.step == 'Select templates') {
-      this.mapping = this.getCurrentMapping(false);
+      // this.mapping = this.getCurrentMapping(true);
+      // this.expandTemplates();
     } else if (this.step == 'Define substitutions') {
-      this.mapping = this.getCurrentMapping(false);
+      // this.mapping = this.getCurrentMapping(true);
+      // this.expandTemplates();
     }
+
+    this.mapping = this.getCurrentMapping(true);
+    this.expandTemplates();
+    // console.log(
+    //   'onBackStep after',
+    //   event.step.label,
+    //   this.mapping,
+    //   this.getCurrentMapping(false),
+    //   this.getCurrentMapping(true),
+    //   this.templateSource,
+    //   this.templateTarget
+    // );
     event.stepper.previous();
   }
 
