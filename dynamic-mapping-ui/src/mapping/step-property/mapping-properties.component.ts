@@ -281,9 +281,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Target API',
-              options: Object.keys(API).map((key) => {
-                return { label: key, value: key };
-              }),
+              options: Object.keys(API)
+                .filter((key) => key != API.ALL.name)
+                .map((key) => {
+                  return { label: key, value: key };
+                }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               // eslint-disable-next-line @typescript-eslint/no-unused-vars
