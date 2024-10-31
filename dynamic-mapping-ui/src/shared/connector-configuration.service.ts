@@ -59,9 +59,11 @@ export class ConnectorConfigurationService {
     );
     this.startConnectorConfigurations();
     this.sharedConnectorConfigurations$ = this.connectorConfigurations$.pipe(
-      // tap(() => console.log('Further up I')),
-      shareReplay(1),
+      tap(() => console.log('Further up I')),
+      // shareReplay(1),
+      // tap(() => console.log('Further up II')),
       switchMap((configurations: ConnectorConfiguration[]) => {
+        // console.log('Further up III');
         return combineLatest([
           from([configurations]),
           from(this.getConnectorStatus())
@@ -80,7 +82,8 @@ export class ConnectorConfigurationService {
             }));
           })
         );
-      })
+      }),
+      shareReplay(1)
     );
   }
 
@@ -107,7 +110,9 @@ export class ConnectorConfigurationService {
       this.connectorConfigurations$ = merge(
         from(this.getConnectorConfigurations()),
         this.triggerConfigurations$.pipe(
-          switchMap(() => from(this.getConnectorConfigurations()))
+          switchMap(() => {
+            return from(this.getConnectorConfigurations());
+          })
         )
       ).pipe(
         // tap(() => console.log('Something happened')),

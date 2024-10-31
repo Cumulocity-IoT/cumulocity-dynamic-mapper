@@ -70,12 +70,12 @@ export class ConnectorStatusService {
   private statusLogs$: Observable<ConnectorStatusEvent[]>;
 
   getStatusLogs(): Observable<ConnectorStatusEvent[]> {
-    console.log('Calling: getStatusLogs');
+    // console.log('Calling: getStatusLogs');
     return this.statusLogs$;
   }
 
   async startConnectorStatusLogs() {
-    console.log('Calling: startConnectorStatusLogs');
+    // console.log('Calling: startConnectorStatusLogs');
     if (!this.statusLogs$) {
       await this.initConnectorLogsRealtime();
     }
@@ -99,7 +99,7 @@ export class ConnectorStatusService {
     //   this._agentId
     // );
     const filteredConnectorStatus$ = this.triggerLogs$.pipe(
-      tap((x) => console.log('TriggerLogs In', x)),
+      // tap((x) => console.log('TriggerLogs In', x)),
       switchMap((x) => {
         const filter = {
           pageSize: 5,
