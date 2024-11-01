@@ -79,7 +79,6 @@ import { AdvisorAction, EditorMode } from '../shared/stepper-model';
 import { HttpStatusCode } from '@angular/common/http';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { AdviceActionComponent } from './advisor/advice-action.component';
-import { map } from 'cypress/types/bluebird';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',

@@ -21,9 +21,9 @@ export default {
     contentSecurityPolicy:
       "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
     dynamicOptionsUrl: '/apps/public/public-options/options.json',
-    remotes: {
-      'sag-ps-pkg-dynamic-mapping': ['DynamicMappingModule']
-    },
+    // remotes: {
+    //   'sag-ps-pkg-dynamic-mapping': ['DynamicMappingModule']
+    // },
     tabsHorizontal: true,
     noAppSwitcher: false,
     // comment the following properties to create a standalone app
@@ -118,6 +118,7 @@ export default {
       '@c8y/client',
       '@c8y/ngx-components',
       'ngx-bootstrap',
+      'angular',
       '@ngx-translate/core',
       '@ngx-formly/core'
     ]

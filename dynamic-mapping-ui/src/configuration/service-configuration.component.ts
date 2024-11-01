@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { Component, OnInit } from '@angular/core';
-import { FormControl, FormGroup } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import packageJson from '../../package.json';
@@ -56,12 +56,13 @@ export class ServiceConfigurationComponent implements OnInit {
     public bsModalService: BsModalService,
     public alertService: AlertService,
     private sharedService: SharedService,
-    public connectorConfigurationService: ConnectorConfigurationService
+    public connectorConfigurationService: ConnectorConfigurationService,
+    private fb: FormBuilder
   ) {}
 
   ngOnInit() {
     // console.log('Running version', this.version);
-    this.serviceForm = new FormGroup({
+    this.serviceForm = this.fb.group({
       logPayload: new FormControl(''),
       logSubstitution: new FormControl(''),
       logConnectorErrorInBackend: new FormControl(''),
@@ -80,6 +81,22 @@ export class ServiceConfigurationComponent implements OnInit {
   async loadData(): Promise<void> {
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
+    this.serviceForm.patchValue({
+      logPayload: this.serviceConfiguration.logPayload,
+      logSubstitution: this.serviceConfiguration.logSubstitution,
+      logConnectorErrorInBackend:
+        this.serviceConfiguration.logConnectorErrorInBackend,
+      sendConnectorLifecycle: this.serviceConfiguration.sendConnectorLifecycle,
+      sendMappingStatus: this.serviceConfiguration.sendMappingStatus,
+      sendSubscriptionEvents: this.serviceConfiguration.sendSubscriptionEvents,
+      sendNotificationLifecycle:
+        this.serviceConfiguration.sendNotificationLifecycle,
+      outboundMappingEnabled: this.serviceConfiguration.outboundMappingEnabled,
+      inboundExternalIdCacheSize:
+        this.serviceConfiguration.inboundExternalIdCacheSize,
+      inboundExternalIdCacheRetention:
+        this.serviceConfiguration.inboundExternalIdCacheRetention
+    });
   }
 
   async clickedReconnect2NotificationEndpoint() {
@@ -119,9 +136,7 @@ export class ServiceConfigurationComponent implements OnInit {
   }
 
   async clickedSaveServiceConfiguration() {
-    const conf: ServiceConfiguration = {
-      ...this.serviceConfiguration
-    };
+    const conf = this.serviceForm.value;
     const response = await this.sharedService.updateServiceConfiguration(conf);
     if (response.status < 300) {
       this.alertService.success(gettext('Update successful'));
