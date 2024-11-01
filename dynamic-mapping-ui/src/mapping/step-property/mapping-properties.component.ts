@@ -70,7 +70,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
 
-  @Output() targetTemplateChanged = new EventEmitter<any>();
+  @Output() targetAPIChanged = new EventEmitter<any>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
   ValidationError = ValidationError;
@@ -281,9 +281,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Target API',
-              options: Object.keys(API).map((key) => {
-                return { label: key, value: key };
-              }),
+              options: Object.keys(API)
+                .filter((key) => key != API.ALL.name)
+                .map((key) => {
+                  return { label: key, value: key };
+                }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -462,13 +464,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   onTargetAPIChanged(targetAPI) {
     this.mapping.targetAPI = targetAPI;
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.targetTemplateChanged.emit(
-        SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]
-      );
-    } else {
-      this.targetTemplateChanged.emit(getExternalTemplate(this.mapping));
-    }
+    this.targetAPIChanged.emit(targetAPI);
   }
 
   ngOnDestroy() {

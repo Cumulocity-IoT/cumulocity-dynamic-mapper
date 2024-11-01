@@ -32,9 +32,7 @@
   #addMappingRef
 >
   <div>
-    <p
-      class="text-center text-medium text-16 sticky-top bg-white"
-    >
+    <p class="text-center text-medium text-16 sticky-top bg-white">
       {{
         'Select mapping type for ' +
           (direction === Direction.INBOUND ? 'source ' : 'target') | translate
@@ -42,19 +40,22 @@
     </p>
     <div class="p-24 modal-inner-scroll animated fadeIn">
       <c8y-list-group class="separator-top">
-        <c8y-li *ngFor="let q of MappingType | keyvalue">
-          <c8y-li-radio
+        <ng-container *ngFor="let q of MappingType | keyvalue">
+          <c8y-li
             *ngIf="
               MAPPING_TYPE_DESCRIPTION[q.key].properties[direction]
                 .directionSupported
             "
-            #liRadioOption1
-            name="mapping_type_group"
-            title="{{ q.value }}"
-            (click)="onSelectMappingType(q.value)"
-          ></c8y-li-radio>
-          <span>{{ q.value | humanize }}</span>
-        </c8y-li>
+          >
+            <c8y-li-radio
+              #liRadioOption1
+              name="mapping_type_group"
+              title="{{ q.value }}"
+              (click)="onSelectMappingType(q.value)"
+            ></c8y-li-radio>
+            <span>{{ q.value | humanize }}</span>
+          </c8y-li>
+        </ng-container>
       </c8y-list-group>
       <!-- <div
         #mappingTypes
@@ -105,9 +106,12 @@
         </c8y-form-group>
         <!-- <label>Mapping type description</label> -->
         <c8y-form-group>
-          <textarea readonly c8y-textarea-autoresize class="form-control fit-w">{{
-            mappingTypeDescription
-          }}</textarea>
+          <textarea
+            readonly
+            c8y-textarea-autoresize
+            class="form-control fit-w"
+            >{{ mappingTypeDescription }}</textarea
+          >
         </c8y-form-group>
       </div>
     </div>
