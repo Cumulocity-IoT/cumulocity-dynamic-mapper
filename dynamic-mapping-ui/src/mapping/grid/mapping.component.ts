@@ -369,7 +369,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         sortable: true,
         dataType: ColumnDataType.TextShort,
         cellRendererComponent: APIRendererComponent,
-        gridTrackSize: '7%'
+        gridTrackSize: '8%'
       },
       {
         header: 'For connectors',
