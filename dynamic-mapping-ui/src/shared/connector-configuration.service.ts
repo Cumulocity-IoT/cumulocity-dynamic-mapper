@@ -59,7 +59,7 @@ export class ConnectorConfigurationService {
     );
     this.startConnectorConfigurations();
     this.sharedConnectorConfigurations$ = this.connectorConfigurations$.pipe(
-      tap(() => console.log('Further up I')),
+      // tap(() => console.log('Further up I')),
       // shareReplay(1),
       // tap(() => console.log('Further up II')),
       switchMap((configurations: ConnectorConfiguration[]) => {
