@@ -52,14 +52,8 @@ export class MappingStepPropertiesComponent
   implements OnInit, OnChanges, OnDestroy
 {
   @Input() mapping: Mapping;
-  @Input()
-  set supportsMessageContext(value: any) {
-    this._supportsMessageContext = value;
-  }
+  @Input() supportsMessageContext: boolean;
 
-  get supportsMessageContext(): any {
-    return this._supportsMessageContext;
-  }
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
 
@@ -75,7 +69,6 @@ export class MappingStepPropertiesComponent
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-  _supportsMessageContext: boolean;
 
   constructor(
     mappingService: MappingService,
@@ -86,7 +79,7 @@ export class MappingStepPropertiesComponent
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['supportsMessageContext']) {
-      this._supportsMessageContext =
+      this.supportsMessageContext =
         changes['supportsMessageContext'].currentValue;
       this.propertyFormlyFields = [...this.propertyFormlyFields];
       console.log('Changes', changes);
@@ -453,13 +446,7 @@ export class MappingStepPropertiesComponent
                 'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
               hideLabel: true
             },
-            hideExpression: () => {
-              console.log(
-                'supportsMessageContext',
-                this._supportsMessageContext
-              );
-              return !this._supportsMessageContext;
-            }
+            hideExpression: () => !this.supportsMessageContext
           }
         ]
       }
