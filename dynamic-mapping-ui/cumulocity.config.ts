@@ -1,10 +1,9 @@
-import { EnvironmentOptions } from '@c8y/devkit/dist/options';
+import { ConfigurationOptions } from '@c8y/devkit';
 import { author, description, version, license } from './package.json';
 
-const asset = process.env['npm_config_asset'];
-const isApp = asset == 'app' ? true : false;
-
-console.log('Building asset:', asset, asset == 'app', isApp);
+// const asset = process.env['npm_config_asset'];
+// const isApp = asset == 'app' ? true : false;
+// console.log('Building asset:', asset, asset == 'app', isApp);
 
 export default {
   runTime: {
@@ -21,37 +20,19 @@ export default {
     contentSecurityPolicy:
       "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
     dynamicOptionsUrl: '/apps/public/public-options/options.json',
-    remotes: {
-      'sag-ps-pkg-dynamic-mapping': ['DynamicMappingModule']
-    },
     tabsHorizontal: true,
     noAppSwitcher: false,
-    // comment the following properties to create a standalone app
-    // comment begin
-    // package: 'plugin',
-    // isPackage: !isApp,
     package: 'blueprint',
     isPackage: true,
-    // exports: isApp
-    //   ? []
-    //   : [
-    //       {
-    //         name: 'Dynamic Data Mapper',
-    //         module: 'DynamicMappingModule',
-    //         path: './src/dynamic-mapping.module',
-    //         description: 'Adds a Dynamic Data Mapper Plugin'
-    //       }
-    //     ]
-    // isPackage: true,
     exports: [
       {
         name: 'Dynamic Mapping Mapper Plugin',
         module: 'DynamicMappingModule',
         path: './src/dynamic-mapping.module',
-        description: 'Adds a Dynamic Mapping Mapper Plugin'
+        description: 'Adds a Dynamic Mapping Mapper Plugin',
+        scope: 'self'
       }
     ]
-    // comment end
   },
   buildTime: {
     copy: [
@@ -68,16 +49,20 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Annotated.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Annotated.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Animated.gif',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Animated.gif'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif'
       },
       {
         from: '../resources/image/DM_App-Icon_03.png',
@@ -98,6 +83,10 @@ export default {
       {
         from: '../resources/image/Test.svg',
         to: 'image/Test.svg'
+      },
+      {
+        from: '../LICENSE',
+        to: 'LICENSE.txt'
       }
     ],
     federation: [
@@ -114,8 +103,9 @@ export default {
       '@c8y/client',
       '@c8y/ngx-components',
       'ngx-bootstrap',
+      'angular',
       '@ngx-translate/core',
       '@ngx-formly/core'
     ]
   }
-} as const satisfies EnvironmentOptions;
+} as const satisfies ConfigurationOptions;

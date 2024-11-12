@@ -28,4 +28,6 @@ export interface ServiceConfiguration {
   sendNotificationLifecycle: boolean;
   externalExtensionEnabled?: boolean;
   outboundMappingEnabled: boolean;
+  inboundExternalIdCacheSize: number;
+  inboundExternalIdCacheRetention: number;
 }

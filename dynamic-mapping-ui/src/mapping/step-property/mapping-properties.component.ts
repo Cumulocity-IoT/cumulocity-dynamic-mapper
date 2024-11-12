@@ -22,31 +22,25 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
-import {
-  API,
-  Direction,
-  Mapping,
-  QOS,
-  SAMPLE_TEMPLATES_C8Y,
-  SnoopStatus,
-  getExternalTemplate
-} from '../../shared';
+import { API, Direction, Mapping, QOS, SnoopStatus } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { EditorMode } from '../shared/stepper-model';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
 import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveMappingTopicFromTopic } from '../shared/util';
 import { SharedService } from '../../shared/shared.service';
+import { StepperConfiguration } from '../../shared/model/shared.model';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -54,12 +48,16 @@ import { SharedService } from '../../shared/shared.service';
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
+export class MappingStepPropertiesComponent
+  implements OnInit, OnChanges, OnDestroy
+{
   @Input() mapping: Mapping;
+  @Input() supportsMessageContext: boolean;
+
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
 
-  @Output() targetTemplateChanged = new EventEmitter<any>();
+  @Output() targetAPIChanged = new EventEmitter<any>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
   ValidationError = ValidationError;
@@ -79,8 +77,17 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     private configService: FormlyConfig
   ) {}
 
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['supportsMessageContext']) {
+      this.supportsMessageContext =
+        changes['supportsMessageContext'].currentValue;
+      this.propertyFormlyFields = [...this.propertyFormlyFields];
+      console.log('Changes', changes);
+    }
+  }
+
   ngOnInit() {
-    // set value for backward compatiblility
+    // set value for backward compatibility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
@@ -91,15 +98,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     //  this.mapping,
     //  this.stepperConfiguration
     // );
-    const numberSnooped = this.mapping.snoopedTemplates
-      ? this.mapping.snoopedTemplates.length
-      : 0;
-    if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
-      this.alertService.success(
-        `Already ${numberSnooped} templates exist. To stop the snooping process click on Cancel, select the respective mapping in the list of all mappings and choose the action Toggle Snooping.`,
-        `The recording process is in state ${this.mapping.snoopStatus}.`
-      );
-    }
+    // const numberSnooped = this.mapping.snoopedTemplates
+    //   ? this.mapping.snoopedTemplates.length
+    //   : 0;
+    // if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
+    //   this.alertService.success(
+    //     `Already ${numberSnooped} templates exist. To stop the snooping process click on Cancel, select the respective mapping in the list of all mappings and choose the action Toggle Snooping.`,
+    //     `The recording process is in state ${this.mapping.snoopStatus}.`
+    //   );
+    // }
     this.propertyFormlyFields = [
       {
         validators: {
@@ -109,24 +116,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               : 'checkTopicsOutboundAreValid'
           ]
         },
-        // validators: {
-        // 	validation: [
-        // 	  {
-        // 		name:
-        // 		  this.stepperConfiguration.direction == Direction.INBOUND
-        // 			? 'checkTopicsInboundAreValid'
-        // 			: 'checkTopicsOutboundAreValid'
-        // 	  }
-        // 	]
-        //   },
-
-        // validators: {
-        //   validation: [
-        //     this.stepperConfiguration.direction == Direction.INBOUND
-        //       ? checkTopicsInboundAreValidWithOption({ sampleOption: 3 })
-        //       : checkTopicsOutboundAreValid
-        //   ]
-        // },
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
@@ -288,9 +277,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Target API',
-              options: Object.keys(API).map((key) => {
-                return { label: key, value: key };
-              }),
+              options: Object.keys(API)
+                .filter((key) => key != API.ALL.name)
+                .map((key) => {
+                  return { label: key, value: key };
+                }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -409,7 +400,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'If this is enabled then the device id is treated as an external id which is looked up and translated using th externalIdType.',
+                'If this is enabled then the device id is treated as an external id which is looked up and translated using the externalIdType.',
               indeterminate: false,
               hideLabel: true
             }
@@ -454,7 +445,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               description:
                 'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
               hideLabel: true
-            }
+            },
+            hideExpression: () => !this.supportsMessageContext
           }
         ]
       }
@@ -463,13 +455,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   onTargetAPIChanged(targetAPI) {
     this.mapping.targetAPI = targetAPI;
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.targetTemplateChanged.emit(
-        SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]
-      );
-    } else {
-      this.targetTemplateChanged.emit(getExternalTemplate(this.mapping));
-    }
+    this.targetAPIChanged.emit(targetAPI);
   }
 
   ngOnDestroy() {

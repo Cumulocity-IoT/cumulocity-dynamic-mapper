@@ -21,15 +21,15 @@
 
 <div>
   <div class="legend form-block col-lg-12">Connector Logs</div>
-  <div class="card-block">
+  <div class="p-l-24">
     <c8y-form-group>
       <form class="form-inline">
         <div class="c8y-select-wrapper button-bottom-margin">
           <select
             class="form-control"
             style="width: 180px"
-            [(ngModel)]="filterStatusLog.eventType"
-            name="eventType"
+            [(ngModel)]="filterStatusLog.type"
+            name="type"
           >
             <option [value]="'ALL'">ALL types</option>
             <option [value]="StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE">
@@ -50,11 +50,11 @@
             [(ngModel)]="filterStatusLog.connectorIdent"
             name="connectorIdent"
           >
-            <option [value]="'ALL'">ALL configurations</option>
+            <option [value]="'ALL'">ALL connectors</option>
 
-			<option [value]="t.ident" *ngFor="let t of configurations">
-				{{ t.name }}
-			  </option>
+            <option [value]="t.ident" *ngFor="let t of configurations$ | async">
+              {{ t.name }}
+            </option>
           </select>
         </div>
         <button
@@ -66,36 +66,41 @@
         </button>
       </form>
     </c8y-form-group>
-    <div style="height: 340px; overflow: auto">
-      <div class="timeline-list list-condensed">
-        <div
-          class="timeline-list-item d-flex"
-          *ngFor="let event of statusLogs$ | async"
-        >
-          <small class="timeline-item-date">
-            {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
-          </small>
-          <div class="timeline-item-content d-flex flex-wrap">
-            <div class="list-item-icon">
-              <i c8yIcon="c8y-events"></i>
-            </div>
-            <div class="list-item-body">
-              <div class="row">
-                <div class="col-lg-12">
-                  <label class="small" translate>Status&nbsp;</label>
-                  <span>{{ event.status }}</span>
-                  <label class="small" translate
-                    >&nbsp;&nbsp;Connector&nbsp;</label
-                  >
-                  <span>{{ event.connectorName }}</span>
-                  <br />
-                  <span>{{ event.message }}</span>
-                </div>
-              </div>
-            </div>
+  </div>
+  <div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
+    <div class="d-flex">
+      <div class="c8y-list--timeline__item__date">
+        <p class="m-0 text-medium text-truncate" title="Date">Date</p>
+      </div>
+      <div class="c8y-list__item__block flex-grow">
+        <div class="c8y-list__item__body">
+          <div class="d-flex">
+            <div class="col-md-1">Status</div>
+            <div class="col-md-2">Connector</div>
+            <div class="col-md-9">Message</div>
           </div>
         </div>
       </div>
     </div>
   </div>
+  <c8y-list-group>
+    <c8y-li-timeline *ngFor="let event of statusLogs$ | async">
+      {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
+      <c8y-li>
+        <c8y-li-body>
+          <div class="d-flex">
+            <div class="col-md-1">
+              <div class="label label-primary">
+                {{ event.status ? event.status : '-' }}
+              </div>
+            </div>
+            <div class="col-md-2">{{ event.connectorName }}</div>
+            <div class="col-md-9">
+              <div>{{ event.message ? event.message : '-' }}</div>
+            </div>
+          </div>
+        </c8y-li-body>
+      </c8y-li>
+    </c8y-li-timeline>
+  </c8y-list-group>
 </div>

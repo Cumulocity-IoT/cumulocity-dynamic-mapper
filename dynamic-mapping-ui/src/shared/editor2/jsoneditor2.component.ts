@@ -31,7 +31,8 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import {
-  JSONEditor,
+  JsonEditor,
+  createJSONEditor,
   stringifyJSONPath,
   Content,
   MenuItem,
@@ -61,9 +62,10 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @Input() options;
   @Input()
   set data(value: unknown) {
-    if (value) {
+    if (value && Object.keys(value).length != 0) {
       this.content['json'] = value;
     }
+    // console.log('on setData', value, this.content);
 
     if (this.editor) {
       this.editor.destroy();
@@ -87,7 +89,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
 
   constructor(private elementRef: ElementRef) {}
 
-  private editor: JSONEditor;
+  private editor: JsonEditor;
   id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
   content: Content = {
     text: undefined,
@@ -100,7 +102,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
       console.error("Can't find the ElementRef reference for jsoneditor)");
     }
     delete (this.content as any).text;
-    this.editor = new JSONEditor({
+    this.editor = createJSONEditor({
       target: this.jsonEditorContainer.nativeElement,
       props: {
         ...this.options,

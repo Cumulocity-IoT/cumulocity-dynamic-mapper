@@ -5,6 +5,10 @@
     "name":"Software AG"
   },
   "isolation":"MULTI_TENANT",
+  "resources": {
+    "cpu": "0.5",
+    "memory": "2G"
+  },
   "requiredRoles": [
     "ROLE_INVENTORY_READ",
     "ROLE_INVENTORY_ADMIN",
@@ -28,6 +32,7 @@
 	"ROLE_USER_MANAGEMENT_ADMIN",
     "ROLE_MQTT_SERVICE_ADMIN"
   ],
+
   "roles":[
     "ROLE_MAPPING_ADMIN",
     "ROLE_MAPPING_CREATE"

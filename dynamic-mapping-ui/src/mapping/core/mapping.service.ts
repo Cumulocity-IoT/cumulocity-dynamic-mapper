@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   FetchClient,
   IFetchResponse,
@@ -29,7 +29,9 @@ import {
 import {
   Observable,
   Subject,
+  Subscription,
   combineLatest,
+  filter,
   map,
   shareReplay,
   switchMap,
@@ -63,11 +65,16 @@ import {
   SubstituteValue
 } from '../processor/processor.model';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
-import { AlertService } from '@c8y/ngx-components';
-import { Realtime } from '@c8y/ngx-components/api';
+import {
+  AlertService,
+  EventRealtimeService,
+  RealtimeSubjectService
+} from '@c8y/ngx-components';
 import { ConnectorConfigurationService } from '../../connector';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class MappingService {
   constructor(
     private inventory: InventoryService,
@@ -78,16 +85,19 @@ export class MappingService {
     private client: FetchClient,
     private alertService: AlertService
   ) {
+    this.eventRealtimeService = new EventRealtimeService(
+      inject(RealtimeSubjectService)
+    );
     this.queriesUtil = new QueriesUtil();
     this.reloadInbound$ = this.sharedService.reloadInbound$;
     this.reloadOutbound$ = this.sharedService.reloadOutbound$;
     this.initializeMappingsEnriched();
-    this.realtime = new Realtime(this.client);
   }
-  private realtime: Realtime;
+  private eventRealtimeService: EventRealtimeService;
+  private subscription: Subscription;
+  private updateMappingEnriched$: Subject<MappingEnriched> = new Subject();
   queriesUtil: QueriesUtil;
   private _agentId: string;
-  private subscriptionEvents: any;
   protected JSONATA = require('jsonata');
 
   //   private _mappingsInbound: Promise<Mapping[]>;
@@ -99,29 +109,39 @@ export class MappingService {
   reloadInbound$: Subject<void>; // = new Subject<void>();
   reloadOutbound$: Subject<void>; // = new Subject<void>();
 
-  async changeActivationMapping(parameter: any) {
-    const conf = await this.brokerConnectorService.getConnectorConfigurations();
-    if (parameter.active && conf.length == 0) {
-      this.alertService.warning(
-        'Mapping was activated, but no connector is configured. Please add connector on the Connector tab!'
-      );
-    }
-    await this.sharedService.runOperation(
+  async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
     );
   }
 
-  async changeDebuggingMapping(parameter: any) {
-    await this.sharedService.runOperation(Operation.DEBUG_MAPPING, parameter);
+  listenToUpdateMapping(): Observable<MappingEnriched> {
+    return this.updateMappingEnriched$;
+  }
+  initiateUpdateMapping(m: MappingEnriched): void {
+    this.updateMappingEnriched$.next(m);
   }
 
-  async changeSnoopStatusMapping(parameter: any) {
-    await this.sharedService.runOperation(Operation.SNOOP_MAPPING, parameter);
+  async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
+      Operation.DEBUG_MAPPING,
+      parameter
+    );
   }
 
-  async resetSnoop(parameter: any) {
-    await this.sharedService.runOperation(Operation.SNOOP_RESET, parameter);
+  async changeSnoopStatusMapping(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
+      Operation.SNOOP_MAPPING,
+      parameter
+    );
+  }
+
+  async resetSnoop(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
+      Operation.SNOOP_RESET,
+      parameter
+    );
   }
 
   resetCache() {
@@ -306,7 +326,9 @@ export class MappingService {
     }
   }
 
-  async updateSubscriptions(sub: C8YNotificationSubscription): Promise<C8YNotificationSubscription> {
+  async updateSubscriptions(
+    sub: C8YNotificationSubscription
+  ): Promise<C8YNotificationSubscription> {
     const response = this.client.fetch(
       `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
       {
@@ -485,24 +507,25 @@ export class MappingService {
     // console.log('Started subscriptions:', this._agentId);
 
     // subscribe to event stream
-    this.subscriptionEvents = this.realtime.subscribe(
-      `/events/${this._agentId}`,
-      this.initiateRefreshMapping
-    );
+    this.eventRealtimeService.start();
+    this.subscription = this.eventRealtimeService
+      .onAll$(this._agentId)
+      .pipe(
+        map((p) => p['data']),
+        // tap((p) => {
+        //   console.log('New event', p);
+        // }),
+        filter(
+          (payload) =>
+            payload['type'] ==
+            StatusEventTypes.STATUS_MAPPING_CHANGED_EVENT_TYPE
+        )
+      )
+      .subscribe(() => {
+        this.reloadInbound$.next();
+        this.reloadOutbound$.next();
+      });
   }
 
-  private initiateRefreshMapping = async (p: object) => {
-    const payload = p['data']['data'];
-    if (payload?.type == StatusEventTypes.STATUS_MAPPING_CHANGED_EVENT_TYPE) {
-      this.reloadInbound$.next();
-    }
-  };
-
-  async stopChangedMappingEvents() {
-    if (!this._agentId) {
-      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    }
-    // console.log('Stop subscriptions:', this._agentId);
-    this.realtime.unsubscribe(this.subscriptionEvents);
-  }
+  async stopChangedMappingEvents() {}
 }

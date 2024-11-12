@@ -22,14 +22,14 @@
 <project
 	xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.softwareag.c8y.mapping</groupId>
 	<artifactId>dynamic-mapping-interface</artifactId>
 	<parent>
 		<groupId>com.softwareag.c8y.mapping</groupId>
 		<artifactId>dynamic-mapping-solution</artifactId>
-        <version>${revision}</version>
+		<version>${revision}</version>
 	</parent>
 	<dependencies>
 		<dependency>
@@ -48,10 +48,10 @@
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-joda</artifactId>
 		</dependency>
-        <dependency>
-            <groupId>com.hivemq</groupId>
-            <artifactId>hivemq-mqtt-client</artifactId>
-        </dependency>
+		<dependency>
+			<groupId>com.hivemq</groupId>
+			<artifactId>hivemq-mqtt-client</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>com.ibm.jsonata4java</groupId>
 			<artifactId>JSONata4Java</artifactId>
@@ -67,7 +67,7 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-joda</artifactId>
-            <scope>provided</scope>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.json</groupId>
@@ -82,15 +82,19 @@
 			<artifactId>slf4j-api</artifactId>
 			<scope>provided</scope>
 		</dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.github.loki4j</groupId>
-            <artifactId>loki-logback-appender</artifactId>
-        </dependency>
-    </dependencies>
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka-clients</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.loki4j</groupId>
+			<artifactId>loki-logback-appender</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-collections4</artifactId>
+		</dependency>
+	</dependencies>
 	<build>
 		<sourceDirectory>../dynamic-mapping-service/src/main/java</sourceDirectory>
 		<plugins>
@@ -113,9 +117,10 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!-- <plugin><artifactId>maven-compiler-plugin</artifactId><version>3.11.0</version><configuration><includes><include>dynamic/mapping/model/*.java</include><include>dynamic/mapping/processor/model/*.java</include><include>dynamic/mapping/processor/model/ProcessingContext.java</include><include>
+			<!--
+			<plugin><artifactId>maven-compiler-plugin</artifactId><version>3.11.0</version><configuration><includes><include>dynamic/mapping/model/*.java</include><include>dynamic/mapping/processor/model/*.java</include><include>dynamic/mapping/processor/model/ProcessingContext.java</include><include>
                                     dynamic/mapping/processor/extension/ProcessorExtensionInbound.java</include><include>
-                                    dynamic/mapping/processor/extension/ProcessorExtensionOutbound.java</include></includes></configuration></plugin> -->
+			dynamic/mapping/processor/extension/ProcessorExtensionOutbound.java</include></includes></configuration></plugin> -->
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>3.4.2</version>
@@ -130,10 +135,10 @@
 					</includes>
 				</configuration>
 			</plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>flatten-maven-plugin</artifactId>
-            </plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>flatten-maven-plugin</artifactId>
+			</plugin>
 		</plugins>
 	</build>
 </project>

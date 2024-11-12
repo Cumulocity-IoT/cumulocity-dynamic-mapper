@@ -36,13 +36,36 @@
     <span [c8yIcon]="'hand-peace-o'"></span>
   </ng-template>
   <cdk-step label="Add and select connector">
+    <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
+      <div class="row">
+        <div class="col-lg-12">
+          <h4 class="text-medium">
+            <div class="text-center">
+              <span
+                *ngIf="stepperConfiguration.editorMode !== EditorMode.READ_ONLY"
+                >Select connector for snooping (at least one is required)</span
+              >
+              <div
+                *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY"
+              >
+                Selected connectors for snooping
+                <span class="label label-primary">{{ 'Read Only' }}</span>
+              </div>
+            </div>
+          </h4>
+        </div>
+      </div>
+    </div>
+
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-connector
         [stepperConfiguration]="stepperConfiguration"
-        [(deploymentMapEntry)]="deploymentMapEntry"
+        [deploymentMapEntry]="deploymentMapEntry"
+        (deploymentMapEntryChange)="deploymentMapEntryChange($event)"
       ></d11r-mapping-connector>
     </div>
     <c8y-stepper-buttons
+      [disabled]="isButtonDisabled$ | async"
       class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCancel)="cancel.emit()"
       (onNext)="onNextStep($event)"
@@ -58,6 +81,7 @@
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-properties
         [mapping]="mapping"
+        [supportsMessageContext]="supportsMessageContext"
         [stepperConfiguration]="stepperConfiguration"
         [propertyFormly]="propertyFormly"
       >

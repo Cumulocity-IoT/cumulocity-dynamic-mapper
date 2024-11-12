@@ -1,0 +1,69 @@
+<!--
+  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ @authors Christof Strack
+  -->
+
+<div class="modal-header dialog-header animated fadeIn">
+  <h1 c8yIcon="plus-circle"></h1>
+  <h4>Select next step</h4>
+</div>
+
+<c8y-modal
+  (onClose)="onClose()"
+  (onDismiss)="onDismiss()"
+  [labels]="labels"
+  [disabled]="!valid"
+>
+  <div>
+    <p class="text-center text-medium text-16 sticky-top bg-white">
+      {{
+        'Your mapping is enabled for snooping. How would you like to continue?'
+          | translate
+      }}
+    </p>
+    <div class="p-24 modal-inner-scroll animated fadeIn">
+      <c8y-list-group class="separator-top">
+        <c8y-li>
+          <c8y-li-radio
+            name="mapping_type_group"
+            title="{{ 'Continue snooping' }}"
+            (click)="onSelection(AdvisorAction.CONTINUE_SNOOPING)"
+          ></c8y-li-radio>
+          <span>{{ 'Continue snooping and wait for more templates ...' }}</span>
+        </c8y-li>
+        <c8y-li>
+          <c8y-li-radio
+            name="mapping_type_group"
+            title="{{ 'Stop snooping' }}"
+            (click)="onSelection(AdvisorAction.STOP_SNOOPING_AND_EDIT)"
+          ></c8y-li-radio>
+          <span>{{ 'Stop snooping and edit mapping ...' }}</span>
+        </c8y-li>
+        <c8y-li>
+          <c8y-li-radio
+            name="mapping_type_group"
+            title="{{ 'Stop snooping' }}"
+            (click)="onSelection(AdvisorAction.EDIT)"
+          ></c8y-li-radio>
+          <span>{{ 'Edit mapping and continue snooping ...' }}</span>
+        </c8y-li>
+      </c8y-list-group>
+    </div>
+  </div>
+</c8y-modal>

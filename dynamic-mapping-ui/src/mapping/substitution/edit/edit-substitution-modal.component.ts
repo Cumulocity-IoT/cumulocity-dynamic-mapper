@@ -27,10 +27,11 @@ import {
   Mapping,
   MappingSubstitution,
   RepairStrategy
-} from '../../shared';
-import { EditorMode } from '../shared/stepper-model';
+} from '../../../shared';
+import { EditorMode } from '../../shared/stepper-model';
 import { StepperConfiguration } from 'src/shared/model/shared.model';
-import { definesDeviceIdentifier } from '../shared/util';
+import { definesDeviceIdentifier } from '../../shared/util';
+import { FormBuilder, FormGroup } from '@angular/forms';
 
 @Component({
   selector: 'd11r-edit-substitution-modal',
@@ -40,9 +41,12 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   @Input() substitution: MappingSubstitution;
   @Input() duplicate: MappingSubstitution;
   @Input() isDuplicate: boolean;
+  @Input() isUpdate: boolean = false;
   @Input() duplicateSubstitutionIndex: number;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() mapping: Mapping;
+
+  substitutionForm: FormGroup;
   closeSubject: Subject<MappingSubstitution> = new Subject();
   labels: ModalLabels;
   override: boolean = false;
@@ -51,6 +55,20 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   editedSubstitution: MappingSubstitution;
   disabled$: BehaviorSubject<boolean> = new BehaviorSubject(false);
   Direction = Direction;
+
+  constructor(private fb: FormBuilder) {
+    this.createForm();
+  }
+
+  createForm() {
+    this.substitutionForm = this.fb.group({
+      pathSource: [{ value: '', disabled: true }],
+      pathTarget: [{ value: '', disabled: true }],
+      expandArray: [false],
+      resolve2ExternalId: [false],
+      repairStrategy: ['']
+    });
+  }
 
   ngOnInit(): void {
     this.labels = {
@@ -80,8 +98,17 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     )
       ? '* '
       : '';
-    this.substitutionText = `[ ${marksDeviceIdentifier}${this.duplicate.pathSource} -> ${this.duplicate.pathTarget} ]`;
+    if (this.isDuplicate)
+      this.substitutionText = `[ ${marksDeviceIdentifier}${this.duplicate.pathSource} -> ${this.duplicate.pathTarget} ]`;
     this.disabled$.next(this.isDuplicate);
+
+    this.substitutionForm.patchValue({
+      pathSource: this.editedSubstitution.pathSource,
+      pathTarget: this.editedSubstitution.pathTarget,
+      expandArray: this.editedSubstitution.expandArray,
+      resolve2ExternalId: this.editedSubstitution.resolve2ExternalId,
+      repairStrategy: this.editedSubstitution.repairStrategy
+    });
     // console.log("Repair Options:", this.repairStrategyOptions);
     // console.log('Existing substitution:', this.existingSubstitution);
   }
@@ -93,7 +120,15 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
 
   onSave() {
     // console.log('Save');
-    this.closeSubject.next(this.editedSubstitution);
+    if (this.substitutionForm.valid) {
+      const formValue = this.substitutionForm.value;
+      // Update editedSubstitution with form values
+      this.editedSubstitution = {
+        ...this.editedSubstitution,
+        ...formValue
+      };
+      this.closeSubject.next(this.editedSubstitution);
+    }
   }
 
   onOverrideChanged() {

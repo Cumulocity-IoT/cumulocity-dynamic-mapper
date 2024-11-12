@@ -29,7 +29,7 @@ import { CapitalizeCasePipe } from './capitazilze-case.pipe';
 import { DisableDirective } from './disable.directive';
 import { ConnectorStatusComponent } from './connector-log/connector-status.component';
 import { ConnectorConfigurationComponent } from './connector-configuration/connector-grid.component';
-import { ConfigurationConfigurationModalComponent } from './connector-configuration/connector-configuration-modal.component';
+import { ConfigurationConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
 import { ConnectorStatusRendererComponent } from './connector-configuration/connector-status.renderer.component';
@@ -37,7 +37,7 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
 
 @NgModule({
   declarations: [
-	CheckedRendererComponent,
+    CheckedRendererComponent,
     JsonEditor2Component,
     ConfirmationModalComponent,
     CamelCasePipe,
@@ -46,8 +46,8 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
     ConnectorStatusComponent,
     ConnectorConfigurationComponent,
     ConfigurationConfigurationModalComponent,
-	StatusEnabledRendererComponent,
-	ConnectorStatusRendererComponent
+    StatusEnabledRendererComponent,
+    ConnectorStatusRendererComponent
   ],
   imports: [
     CoreModule,
@@ -81,4 +81,5 @@ export enum Operation {
   SNOOP_MAPPING = 'SNOOP_MAPPING',
   SNOOP_RESET = 'SNOOP_RESET',
   RESET_DEPLOYMENT_MAP = 'RESET_DEPLOYMENT_MAP',
+  CLEAR_CACHE = 'CLEAR_CACHE'
 }

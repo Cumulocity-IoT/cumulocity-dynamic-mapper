@@ -28,7 +28,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { C8yStepper } from '@c8y/ngx-components';
+import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { Direction, Mapping, SharedService } from '../../shared';
@@ -38,6 +38,10 @@ import { EditorMode } from '../shared/stepper-model';
 import { DeploymentMapEntry, StepperConfiguration } from '../../shared';
 import { SnoopStatus } from '../../shared/model/shared.model';
 import { CdkStep } from '@angular/cdk/stepper';
+import {
+  HOUSEKEEPING_INTERVAL_SECONDS,
+  SNOOP_TEMPLATES_MAX
+} from '../shared/mapping.model';
 
 @Component({
   selector: 'd11r-snooping-stepper',
@@ -49,6 +53,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   private _deploymentMapEntry: DeploymentMapEntry;
+  isButtonDisabled$: BehaviorSubject<boolean> = new BehaviorSubject(true);
 
   @Input()
   get deploymentMapEntry(): DeploymentMapEntry {
@@ -56,9 +61,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   }
   set deploymentMapEntry(value: DeploymentMapEntry) {
     this._deploymentMapEntry = value;
-    this.deploymentMapEntryChange.emit(value);
   }
-  @Output() deploymentMapEntryChange = new EventEmitter<any>();
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<Mapping>();
 
@@ -75,7 +78,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   targetSystem: string;
 
   snoopedTemplateCounter: number = 0;
-  step: any;
+  stepLabel: any;
   onDestroy$ = new Subject<void>();
   labels: any = {
     next: 'Next',
@@ -85,8 +88,22 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
+    public alertService: AlertService,
     public sharedService: SharedService
   ) {}
+
+  deploymentMapEntryChange(e) {
+    // console.log(
+    //   'New getDeploymentMap',
+    //   this._deploymentMapEntry,
+    //   !this._deploymentMapEntry?.connectors
+    // );
+    this.isButtonDisabled$.next(
+      !this._deploymentMapEntry?.connectors ||
+        this._deploymentMapEntry?.connectors?.length == 0
+    );
+    // console.log('New setDeploymentMap from grid', e);
+  }
 
   ngOnInit() {
     // set value for backward compatibility
@@ -116,11 +133,46 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
     step: CdkStep;
   }): Promise<void> {
     // ('OnNextStep', event.step.label, this.mapping);
-    this.step = event.step.label;
-    if (this.step == 'Properties snooping') {
-      event.stepper.next();
-    } else {
-      event.stepper.next();
+    this.stepLabel = event.step.label;
+    if (this.stepLabel == 'Add and select connector') {
+      if (
+        this.deploymentMapEntry.connectors &&
+        this.deploymentMapEntry.connectors.length == 0
+      ) {
+        // const initialState = {
+        //   title: 'No connector selected',
+        //   message:
+        //     'To snoop for messages you should select at least one connector, unless you want to change this later! Do you want to continue?',
+        //   labels: {
+        //     ok: 'Continue',
+        //     cancel: 'Close'
+        //   }
+        // };
+        // const confirmContinuingModalRef: BsModalRef = this.bsModalService.show(
+        //   ConfirmationModalComponent,
+        //   { initialState }
+        // );
+        // confirmContinuingModalRef.content.closeSubject.subscribe(
+        //   async (confirmation: boolean) => {
+        //     // console.log('Confirmation result:', confirmation);
+        //     if (confirmation) {
+        //       event.stepper.next();
+        //     }
+        //     this.alertService.info(
+        //       `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`
+        //     );
+        //     confirmContinuingModalRef.hide();
+        //   }
+        // );
+        // this.alertService.warning(
+        //   'To snoop for messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
+        // );
+      } else {
+        this.alertService.info(
+          `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`
+        );
+        event.stepper.next();
+      }
     }
   }
 

@@ -360,7 +360,7 @@ public class MappingComponent {
 		try {
 			resolverMappingInbound.get(tenant).addMapping(mapping);
 		} catch (ResolveException e) {
-			log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, mapping);
+			log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, mapping, e);
 		}
 	}
 
@@ -368,7 +368,7 @@ public class MappingComponent {
 		try {
 			resolverMappingInbound.get(tenant).deleteMapping(mapping);
 		} catch (ResolveException e) {
-			log.error("Tenant {} - Could not delete mapping {}, ignoring mapping", tenant, mapping);
+			log.error("Tenant {} - Could not delete mapping {}, ignoring mapping", tenant, mapping, e);
 		}
 	}
 
@@ -434,7 +434,7 @@ public class MappingComponent {
 			try {
 				in.addMapping(m);
 			} catch (ResolveException e) {
-				log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, m);
+				log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, m, e);
 			}
 		});
 		return in;
@@ -566,17 +566,10 @@ public class MappingComponent {
 
 	public List<Mapping> resolveMappingInbound(String tenant, String topic) throws ResolveException {
 		List<MappingTreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
-				.resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
+				.resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic), 0);
 		return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
 				.map(mn -> mn.getMapping()).collect(Collectors.toList());
 	}
-
-	// public List<Mapping> resolveMappingInbound(String tenant, String topic, String connectorIdent)
-	// 		throws ResolveException {
-	// 	List<Mapping> resolvedMappings = resolveMappingInbound(tenant, topic);
-	// 	resolvedMappings.removeIf(m -> !getDeploymentMapEntry(tenant, m.ident).contains(connectorIdent));
-	// 	return resolvedMappings;
-	// }
 
 	public void resetSnoop(String tenant, String id) throws Exception {
 		// step 1. update debug for mapping

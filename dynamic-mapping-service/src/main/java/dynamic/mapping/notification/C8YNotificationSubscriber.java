@@ -626,7 +626,7 @@ public class C8YNotificationSubscriber {
 								if (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) == 401
 										|| deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
 									log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
-									subscriptionsService.runForEachTenant(() -> {
+									subscriptionsService.runForTenant(tenant, () -> {
 										initDeviceClient();
 									});
 								} else if (deviceClient.getReadyState().equals(ReadyState.CLOSING)

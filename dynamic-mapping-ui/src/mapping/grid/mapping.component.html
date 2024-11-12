@@ -38,15 +38,6 @@
     {{ 'Reload mappings in service' | translate }}
   </button>
   <button
-    *ngIf="stepperConfiguration.direction === Direction.OUTBOUND"
-    class="btn btn-link"
-    title="{{ 'Manage subscriptions' | translate }}"
-    (click)="onDefineSubscription()"
-  >
-    <i c8yIcon="subscription"></i>
-    {{ 'Manage subscriptions' | translate }}
-  </button>
-  <button
     class="btn btn-link"
     title="{{ 'Export all mappings' | translate }}"
     (click)="onExportAll()"
@@ -72,7 +63,7 @@
   </button>
 </c8y-action-bar-item>
 <div class="card">
-  <div class="card-block">
+  <div class="card-block content-fullpage border-top border-bottom">
     <c8y-data-grid
       #mappingGrid
       [title]="'Mappings' | translate"
@@ -107,28 +98,6 @@
   </div>
 </div>
 
-<div
-  class="card"
-  *ngIf="
-    stepperConfiguration.direction === Direction.OUTBOUND &&
-    subscription?.devices
-  "
->
-  <div class="card-block">
-    <c8y-data-grid
-      #subscriptionGrid
-      [selectable]="'true'"
-      [title]="titleSubscription | translate"
-      [columns]="columnsSubscriptions"
-      [rows]="subscription?.devices"
-      [pagination]="pagination"
-      [actionControls]="actionControlSubscription"
-      [bulkActionControls]="bulkActionControlSubscription"
-    >
-    </c8y-data-grid>
-  </div>
-</div>
-
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
   <div class="bottom-drawer">
     <d11r-mapping-stepper
@@ -154,17 +123,5 @@
       [(deploymentMapEntry)]="deploymentMapEntry"
     >
     </d11r-snooping-stepper>
-  </div>
-</div>
-
-<div [ngClass]="{ drawerOpen: showConfigSubscription }">
-  <div class="bottom-drawer">
-    <d11r-mapping-subscription
-      *ngIf="showConfigSubscription"
-      (cancel)="showConfigSubscription = false"
-      (commit)="onCommitSubscriptions($event)"
-      [deviceList]="subscription.devices"
-    >
-    </d11r-mapping-subscription>
   </div>
 </div>

@@ -18,6 +18,7 @@
  *
  * @authors Christof Strack
  */
+import { HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import {
   IExternalIdentity,
@@ -38,9 +39,7 @@ export class MockIdentityService {
     this.identityCache = new Map<string, Map<string, IIdentified>>();
   }
 
-  detail(
-    identity: IExternalIdentity
-  ): Promise<IResult<IExternalIdentity>> {
+  detail(identity: IExternalIdentity): Promise<IResult<IExternalIdentity>> {
     const externalIds = this.identityCache.get(identity.type);
     if (externalIds) {
       const externalId: IIdentified = externalIds.get(identity.externalId);
@@ -49,7 +48,7 @@ export class MockIdentityService {
         copyExternalIdentity.managedObject = externalId;
         const promise = Promise.resolve({
           data: copyExternalIdentity,
-          res: { status: 200 } as IFetchResponse
+          res: { status: HttpStatusCode.Ok } as IFetchResponse
         });
         return promise;
       } else {
@@ -64,9 +63,7 @@ export class MockIdentityService {
     }
   }
 
-  create(
-    identity: IExternalIdentity
-  ): Promise<IResult<IExternalIdentity>> {
+  create(identity: IExternalIdentity): Promise<IResult<IExternalIdentity>> {
     const id: number = Math.floor(100000 + Math.random() * 900000);
     const identified: IIdentified = { id: id };
 
@@ -88,7 +85,7 @@ export class MockIdentityService {
     copyExternalIdentity.managedObject = identified;
     const promise = Promise.resolve({
       data: copyExternalIdentity,
-      res: { status: 200 } as IFetchResponse
+      res: { status: HttpStatusCode.Ok } as IFetchResponse
     });
     return promise;
   }

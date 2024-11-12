@@ -38,79 +38,79 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ServiceConfigurationComponent {
-    private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic.mapper.service";
+	private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic.mapper.service";
 
-    private static final String OPTION_KEY_SERVICE_CONFIGURATION = "service.configuration";
+	private static final String OPTION_KEY_SERVICE_CONFIGURATION = "service.configuration";
 
-    private final TenantOptionApi tenantOptionApi;
+	private final TenantOptionApi tenantOptionApi;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+	@Autowired
+	private MicroserviceSubscriptionsService subscriptionsService;
 
-    private ObjectMapper objectMapper;
+	private ObjectMapper objectMapper;
 
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+	@Autowired
+	public void setObjectMapper(ObjectMapper objectMapper) {
+		this.objectMapper = objectMapper;
+	}
 
-    @Autowired
-    public ServiceConfigurationComponent(TenantOptionApi tenantOptionApi) {
-        this.tenantOptionApi = tenantOptionApi;
-    }
+	@Autowired
+	public ServiceConfigurationComponent(TenantOptionApi tenantOptionApi) {
+		this.tenantOptionApi = tenantOptionApi;
+	}
 
-    public void saveServiceConfiguration(final ServiceConfiguration configuration) throws JsonProcessingException {
-        if (configuration == null) {
-            return;
-        }
-        final String configurationJson = objectMapper.writeValueAsString(configuration);
-        final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(
-                OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION, configurationJson);
-        tenantOptionApi.save(optionRepresentation);
-    }
+	public void saveServiceConfiguration(final ServiceConfiguration configuration) throws JsonProcessingException {
+		if (configuration == null) {
+			return;
+		}
+		final String configurationJson = objectMapper.writeValueAsString(configuration);
+		final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(
+				OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION, configurationJson);
+		tenantOptionApi.save(optionRepresentation);
+	}
 
-    public ServiceConfiguration getServiceConfiguration(String tenant) {
-        final OptionPK option = new OptionPK();
-        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
-        option.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
-        ServiceConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
-            ServiceConfiguration rt = null;
-            try {
-                final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
-                if (optionRepresentation.getValue() == null) {
-                    rt = initialize(tenant);
-                } else {
-                    rt = new ObjectMapper().readValue(optionRepresentation.getValue(),
-                            ServiceConfiguration.class);
-                }
-                log.debug("Tenant {} - Returning service configuration found: {}:", tenant, rt.logPayload);
-                log.debug("Tenant {} - Found connection configuration: {}", tenant, rt);
-            } catch (SDKException exception) {
-                log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
-                rt = initialize(tenant);
-            } catch (JsonMappingException e) {
-                e.printStackTrace();
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-            }
-            return rt;
-        });
-        return result;
-    }
+	public ServiceConfiguration getServiceConfiguration(String tenant) {
+		final OptionPK option = new OptionPK();
+		option.setCategory(OPTION_CATEGORY_CONFIGURATION);
+		option.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
+		ServiceConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
+			ServiceConfiguration rt = null;
+			try {
+				final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
+				if (optionRepresentation.getValue() == null) {
+					rt = initialize(tenant);
+				} else {
+					rt = objectMapper.readValue(optionRepresentation.getValue(),
+							ServiceConfiguration.class);
+				}
+				log.debug("Tenant {} - Returning service configuration found: {}:", tenant, rt.logPayload);
+				log.debug("Tenant {} - Found connection configuration: {}", tenant, rt);
+			} catch (SDKException exception) {
+				log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
+				rt = initialize(tenant);
+			} catch (JsonMappingException e) {
+				e.printStackTrace();
+			} catch (JsonProcessingException e) {
+				e.printStackTrace();
+			}
+			return rt;
+		});
+		return result;
+	}
 
-    public void deleteServiceConfigurations(String tenant) {
-        OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION);
-        tenantOptionApi.delete(optionPK);
-    }
+	public void deleteServiceConfigurations(String tenant) {
+		OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION);
+		tenantOptionApi.delete(optionPK);
+	}
 
-    public ServiceConfiguration initialize(String tenant) {
-        ServiceConfiguration configuration = new ServiceConfiguration();
-        try {
-            saveServiceConfiguration(configuration);
-        } catch (JsonProcessingException e) {
-            log.warn("Tenant {} - failed to initializes ServiceConfiguration!", tenant);
-            e.printStackTrace();
-        }
-        return configuration;
-    }
+	public ServiceConfiguration initialize(String tenant) {
+		ServiceConfiguration configuration = new ServiceConfiguration();
+		try {
+			saveServiceConfiguration(configuration);
+		} catch (JsonProcessingException e) {
+			log.warn("Tenant {} - failed to initializes ServiceConfiguration!", tenant);
+			e.printStackTrace();
+		}
+		return configuration;
+	}
 }

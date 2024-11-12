@@ -25,7 +25,8 @@ import {
   CoreModule,
   DynamicFormsModule,
   hookNavigator,
-  hookTab
+  hookTab,
+  RealtimeModule
 } from '@c8y/ngx-components';
 import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
 import { BrokerConfigurationModule } from './configuration/service-configuration.module';
@@ -60,7 +61,7 @@ import { LandingModule } from './landing/landing.module';
 @NgModule({
   imports: [
     CoreModule,
-	LandingModule,
+    LandingModule,
     TestingModule,
     MappingModule,
     MappingTreeModule,
@@ -76,6 +77,7 @@ import { LandingModule } from './landing/landing.module';
     DynamicFormsModule,
     FormlyPresetModule,
     SharedModule,
+    RealtimeModule
   ],
   exports: [],
   declarations: [],

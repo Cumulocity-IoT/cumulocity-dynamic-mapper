@@ -32,32 +32,34 @@ import java.io.IOException;
 @Slf4j
 public class MappingTreeNodeSerializer extends StdSerializer<MappingTreeNode> {
 
-    public MappingTreeNodeSerializer() {
-        this(null);
-    }
+	public MappingTreeNodeSerializer() {
+		this(null);
+	}
 
-    public MappingTreeNodeSerializer(Class<MappingTreeNode> t) {
-        super(t);
-    }
+	public MappingTreeNodeSerializer(Class<MappingTreeNode> t) {
+		super(t);
+	}
 
-    @Override
-    public void serialize(
-            MappingTreeNode value, JsonGenerator jgen, SerializerProvider provider)
-            throws IOException, JsonProcessingException {
-        log.debug("Serializing node {}, {}", value.getLevel(), value.getAbsolutePath());
-        jgen.writeStartObject();
-        jgen.writeNumberField("depthIndex", value.getDepthIndex());
-        jgen.writeStringField("level", value.getLevel());
-        jgen.writeStringField("parentNode",
-                (value.getParentNode() != null ? value.getParentNode().getAbsolutePath() : "null"));
-        jgen.writeStringField("absolutePath", value.getAbsolutePath());
-        if (value.isMappingNode()) {
-            provider.defaultSerializeField("mapping", value.getMapping(), jgen);
-        } else {
-            provider.defaultSerializeField("childNodes", value.getChildNodes(), jgen);
-        }
-        jgen.writeEndObject();
+	@Override
+	public void serialize(
+			MappingTreeNode value, JsonGenerator jgen, SerializerProvider provider)
+			throws IOException, JsonProcessingException {
+		log.debug("Serializing node {}, {}", value.getLevel(), value.getAbsolutePath());
+		jgen.writeStartObject();
+		jgen.writeNumberField("depthIndex", value.getDepthIndex());
+		jgen.writeStringField("level", value.getLevel());
+		jgen.writeStringField("nodeId", value.getNodeId());
+		jgen.writeBooleanField("isMappingNode", value.isMappingNode());
+		jgen.writeStringField("parentNode",
+				(value.getParentNode() != null ? value.getParentNode().getAbsolutePath() : "null"));
+		jgen.writeStringField("absolutePath", value.getAbsolutePath());
+		if (value.isMappingNode()) {
+			provider.defaultSerializeField("mapping", value.getMapping(), jgen);
+		} else {
+			provider.defaultSerializeField("childNodes", value.getChildNodes(), jgen);
+		}
+		jgen.writeEndObject();
 
-    }
-    
+	}
+
 }

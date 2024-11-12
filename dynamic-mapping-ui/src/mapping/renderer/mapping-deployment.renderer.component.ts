@@ -20,28 +20,21 @@
  */
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
-import { SnoopStatus } from '../../shared';
 
 @Component({
-  selector: 'd11r-mapping-renderer-status',
+  selector: 'd11r-mapping-renderer-deployment',
   template: `
-    <div *ngIf="context.value.debug">
-      <span class="text-10 label label-primary">{{ 'debug' }}</span>
+    <div *ngFor="let con of context.value?.connectors">
+      <span class="text-12 tag tag--success">{{ con.name }}</span>
     </div>
-    <div *ngIf="context.value.snoopStatus === 'STARTED'">
-      <span class="text-10 label label-primary">{{ 'snoop: started' }}</span>
-    </div>
-    <div *ngIf="context.value.snoopStatus === 'STOPPED'">
-      <span class="text-10 label label-primary">{{ 'snoop: stopped' }}</span>
-    </div>
-    <div *ngIf="context.value.snoopStatus === 'ENABLED'">
-      <span class="text-10 label label-primary">{{ 'snoop: enabled' }}</span>
+    <div *ngIf="context.item.mapping.active && !context.value?.connectors">
+      <span class="text-12 tag tag--danger">{{ 'No active connector' }}</span>
     </div>
   `
 })
-export class StatusRendererComponent {
+export class MappingDeploymentRendererComponent {
   constructor(public context: CellRendererContext) {
-    // console.log('StatusRenderer:', context.item, context.value);
+    // console.log('Connectors', context, context.value);
+    context.item.mapping.active;
   }
-  SnoopStatus: SnoopStatus;
 }

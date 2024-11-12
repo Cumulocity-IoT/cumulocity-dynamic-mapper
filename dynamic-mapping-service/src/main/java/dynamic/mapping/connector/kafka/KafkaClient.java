@@ -21,6 +21,7 @@
 
 package dynamic.mapping.connector.kafka;
 
+import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -45,6 +46,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
+import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
@@ -73,8 +75,13 @@ public class KafkaClient extends AConnectorClient {
 		configProps.put("password",
 				new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
 						null));
+		configProps.put("saslMechanism",
+				new ConnectorProperty(false, 3, ConnectorPropertyType.OPTION_PROPERTY, false, false, "SCRAM-SHA-256",
+						Map.ofEntries(
+								new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-256", "SCRAM-SHA-256"),
+								new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-512", "SCRAM-SHA-512"))));
 		configProps.put("groupId",
-				new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
 
 		Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
 		defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
@@ -82,7 +89,7 @@ public class KafkaClient extends AConnectorClient {
 		defaultPropertiesProducer.store(writerProducer,
 				"properties can only be edited in the property file: kafka-producer.properties");
 		configProps.put("propertiesProducer",
-				new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+				new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
 						removeDateCommentLine(writerProducer.getBuffer().toString()), null));
 
 		Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
@@ -91,11 +98,11 @@ public class KafkaClient extends AConnectorClient {
 		defaultPropertiesConsumer.store(writerConsumer,
 				"properties can only be edited in the property file: kafka-consumer.properties");
 		configProps.put("propertiesConsumer",
-				new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+				new ConnectorProperty(false, 6, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
 						removeDateCommentLine(writerConsumer.getBuffer().toString()), null));
 
 		String name = "Kafka";
-		String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.";
+		String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.\n The connector uses SASL_SSL as security protocol.";
 		connectorType = ConnectorType.KAFKA;
 		supportsMessageContext = true;
 		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, true);
@@ -132,8 +139,9 @@ public class KafkaClient extends AConnectorClient {
 		this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
 		this.connectorConfiguration = connectorConfiguration;
 		// ensure the client knows its identity even if configuration is set to null
-		this.connectorIdent = connectorConfiguration.ident;
 		this.connectorName = connectorConfiguration.name;
+		this.connectorIdent = connectorConfiguration.ident;
+		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
 		this.c8yAgent = configurationRegistry.getC8yAgent();
 		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();
@@ -176,12 +184,13 @@ public class KafkaClient extends AConnectorClient {
 		// defaultPropertiesConsumer.put("sasl.mechanism", "SCRAM-SHA-256");
 		// defaultPropertiesConsumer.put("sasl.jaas.config", jaasCfg);
 		// defaultPropertiesConsumer.put("linger.ms", 1);
-		updateConnectorStatusAndSend(ConnectorStatus.UNKNOWN, true, true);
+		// updateConnectorStatusAndSend(ConnectorStatus.UNKNOWN, true, true);
 	}
 
 	private String bootstrapServers;
 	private String password;
 	private String username;
+	private String saslMechanism;
 	private String groupId;
 
 	private HashMap<String, TopicConsumer> consumerList = new HashMap<String, TopicConsumer>();
@@ -199,6 +208,7 @@ public class KafkaClient extends AConnectorClient {
 		loadConfiguration();
 		username = (String) connectorConfiguration.getProperties().get("username");
 		password = (String) connectorConfiguration.getProperties().get("password");
+		saslMechanism = (String) connectorConfiguration.getProperties().get("saslMechanism");
 		bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
 		return true;
 	}
@@ -221,11 +231,13 @@ public class KafkaClient extends AConnectorClient {
 			loadConfiguration();
 			username = (String) connectorConfiguration.getProperties().get("username");
 			password = (String) connectorConfiguration.getProperties().get("password");
+			saslMechanism = (String) connectorConfiguration.getProperties().get("saslMechanism");
 			groupId = (String) connectorConfiguration.getProperties().get("groupId");
 			bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
 			String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
 			String jaasCfg = String.format(jaasTemplate, username, password);
 			defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
+			defaultPropertiesProducer.put("sasl.mechanism", saslMechanism);
 			defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 			defaultPropertiesProducer.put("group.id", groupId);
 			log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
@@ -312,8 +324,9 @@ public class KafkaClient extends AConnectorClient {
 	@Override
 	public void subscribe(String topic, QOS qos) throws ConnectorException {
 		TopicConsumer kafkaConsumer = new TopicConsumer(
-				new TopicConfig(tenant, bootstrapServers, topic, username, password, groupId,
-						defaultPropertiesConsumer));
+				new TopicConfig(tenant, bootstrapServers, topic, username, password, saslMechanism, groupId,
+						defaultPropertiesConsumer),
+				connectorStatus);
 		consumerList.put(topic, kafkaConsumer);
 		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
 				topic, true);

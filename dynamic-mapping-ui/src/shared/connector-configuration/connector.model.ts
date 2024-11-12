@@ -28,6 +28,12 @@ export enum ConnectorPropertyType {
   OPTION_PROPERTY = 'OPTION_PROPERTY',
   STRING_LARGE_PROPERTY = 'STRING_LARGE_PROPERTY'
 }
+
+export enum ConnectorType {
+  MQTT = 'MQTT',
+  CUMULOCITY_MQTT_SERVICE = 'CUMULOCITY_MQTT_SERVICE',
+  KAFKA = 'KAFKA'
+}
 export interface ConnectorProperty {
   required: boolean;
   order: number;

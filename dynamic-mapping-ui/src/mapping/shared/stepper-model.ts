@@ -25,3 +25,11 @@ export enum EditorMode {
   READ_ONLY = 'READ_ONLY',
   COPY = 'COPY'
 }
+
+export enum AdvisorAction {
+  CONTINUE = 'CONTINUE',
+  CANCEL = 'CANCEL',
+  STOP_SNOOPING_AND_EDIT = 'STOP_SNOOPING_AND_EDIT',
+  CONTINUE_SNOOPING = 'CONTINUE_SNOOPING',
+  EDIT = 'EDIT'
+}

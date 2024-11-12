@@ -26,6 +26,7 @@ import {
   MeasurementService
 } from '@c8y/client';
 import { ProcessingContext } from '../../processor/processor.model';
+import { HttpStatusCode } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class FacadeMeasurementService {
@@ -45,7 +46,7 @@ export class FacadeMeasurementService {
       };
       const promise = Promise.resolve({
         data: copyMeasurement,
-        res: { status: 200 } as IFetchResponse
+        res: { status: HttpStatusCode.Ok } as IFetchResponse
       });
       return promise;
     }

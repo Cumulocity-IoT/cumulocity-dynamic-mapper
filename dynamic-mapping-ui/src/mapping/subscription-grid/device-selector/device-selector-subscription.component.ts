@@ -22,29 +22,48 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnInit,
   Output,
   ViewEncapsulation
 } from '@angular/core';
+import { FormGroup, FormBuilder } from '@angular/forms';
 import { IIdentified } from '@c8y/client';
 
 @Component({
-  selector: 'd11r-mapping-subscription',
-  templateUrl: 'mapping-subscription.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  selector: 'd11r-device-selector-subscription',
+  templateUrl: 'device-selector-subscription.component.html',
+  styleUrls: ['../../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class MappingSubscriptionComponent {
+export class DeviceSelectorSubscriptionComponent implements OnInit {
   @Input() deviceList: IIdentified[];
 
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<IIdentified[]>();
 
+  form: FormGroup;
+
+  constructor(private fb: FormBuilder) {
+    this.createForm();
+  }
+  ngOnInit(): void {
+    this.form.patchValue({
+      deviceList: this.deviceList
+    });
+  }
+
+  createForm() {
+    this.form = this.fb.group({
+      deviceList: ['']
+    });
+  }
   selectionChanged(e) {
     console.log(e);
   }
 
   clickedUpdateSubscription() {
-    this.commit.emit(this.deviceList);
+    const formValue = this.form.value;
+    this.commit.emit(formValue.deviceList);
   }
 
   clickedCancel() {

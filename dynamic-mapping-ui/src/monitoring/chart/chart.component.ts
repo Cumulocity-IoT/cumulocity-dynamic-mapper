@@ -21,7 +21,6 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   echartOptions: EChartsOption;
   echartUpdateOptions: EChartsOption;
   echartsInstance: any;
-  subscription: object;
   textColor: string;
   fontFamily: string;
   fontWeight: number;
@@ -195,8 +194,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   }
 
   private async initializeMonitoringService() {
-    this.subscription =
-      await this.monitoringService.subscribeMonitoringChannel();
+    await this.monitoringService.startMonitoring();
     this.monitoringService
       .getCurrentMappingStatus()
       .subscribe((status) => this.mappingStatus$.next(status));
@@ -204,7 +202,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     // console.log('Stop subscription');
-    this.monitoringService.unsubscribeFromMonitoringChannel(this.subscription);
+    this.monitoringService.stopMonitoring();
   }
 
   randomIntFromInterval(min, max) {
