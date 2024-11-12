@@ -126,6 +126,7 @@ export class SharedService {
   async updateServiceConfiguration(
     configuration: ServiceConfiguration
   ): Promise<IFetchResponse> {
+    this._serviceConfiguration = undefined;
     return this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
       {

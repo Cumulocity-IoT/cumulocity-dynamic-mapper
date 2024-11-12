@@ -22,25 +22,18 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
-import {
-  API,
-  ConnectorType,
-  Direction,
-  Mapping,
-  QOS,
-  SAMPLE_TEMPLATES_C8Y,
-  SnoopStatus,
-  getExternalTemplate
-} from '../../shared';
+import { API, Direction, Mapping, QOS, SnoopStatus } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { EditorMode } from '../shared/stepper-model';
 import { isDisabled } from '../shared/util';
@@ -55,18 +48,12 @@ import { StepperConfiguration } from '../../shared/model/shared.model';
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
+export class MappingStepPropertiesComponent
+  implements OnInit, OnChanges, OnDestroy
+{
   @Input() mapping: Mapping;
-  @Input()
-  set deploymentMapEntry(value: any) {
-    this._deploymentMapEntry = value;
-  }
+  @Input() supportsMessageContext: boolean;
 
-  get deploymentMapEntry(): any {
-    return this._deploymentMapEntry;
-  }
-  _deploymentMapEntry;
-  DeploymentMapEntry;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
 
@@ -90,8 +77,17 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     private configService: FormlyConfig
   ) {}
 
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['supportsMessageContext']) {
+      this.supportsMessageContext =
+        changes['supportsMessageContext'].currentValue;
+      this.propertyFormlyFields = [...this.propertyFormlyFields];
+      console.log('Changes', changes);
+    }
+  }
+
   ngOnInit() {
-    // set value for backward compatiblility
+    // set value for backward compatibility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
@@ -450,12 +446,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
               hideLabel: true
             },
-            hideExpression: () => {
-              // console.log('DeploymentMap', this._deploymentMapEntry);
-              return !this._deploymentMapEntry.connectorsDetailed?.some(
-                (con) => con.connectorType == ConnectorType.KAFKA
-              );
-            }
+            hideExpression: () => !this.supportsMessageContext
           }
         ]
       }

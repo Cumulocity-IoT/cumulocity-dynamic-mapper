@@ -27,9 +27,9 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
-import { Subject, BehaviorSubject } from 'rxjs';
+import { Subject } from 'rxjs';
 import { Direction, MAPPING_TYPE_DESCRIPTION, MappingType } from '../../shared';
 import { isDisabled } from '../shared/util';
 
@@ -49,7 +49,6 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   MAPPING_TYPE_DESCRIPTION = MAPPING_TYPE_DESCRIPTION;
   formGroupStep: FormGroup;
   snoop: boolean = false;
-  snoopDisabled$: Subject<boolean>;
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
@@ -70,13 +69,8 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     this.closeSubject = new Subject();
     // console.log('Subject:', this.closeSubject, this.labels);
     this.formGroupStep = this.fb.group({
-      mappingType: ['', Validators.required]
+      snoop: [false]
     });
-    // this.snoopDisabled$ = new BehaviorSubject(
-    //   !MAPPING_TYPE_DESCRIPTION[MappingType.JSON].properties[this.direction]
-    //     .snoopSupported
-    // );
-    this.snoopDisabled$ = new BehaviorSubject(true);
   }
 
   onDismiss() {
@@ -85,21 +79,40 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
-    const { snoopSupported } =
-      MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction];
-    this.closeSubject.next({
-      mappingType: this.mappingType,
-      snoop: this.snoop && snoopSupported
-    });
-    this.closeSubject.complete();
+    if (this.formGroupStep.valid) {
+      const formValue = this.formGroupStep.value;
+      // Your existing save logic
+      const { snoopSupported } =
+        MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction];
+      this.closeSubject.next({
+        mappingType: this.mappingType,
+        snoop: formValue.snoop && snoopSupported
+      });
+      this.closeSubject.complete();
+    }
   }
 
   onSelectMappingType(t) {
     this.valid = true;
     this.mappingType = t;
     this.mappingTypeDescription = MAPPING_TYPE_DESCRIPTION[t].description;
-    this.snoopDisabled$.next(
+    console.log(
+      'Freitag',
+      this.mappingType,
       !MAPPING_TYPE_DESCRIPTION[t].properties[this.direction].snoopSupported
+    );
+    if (this.shouldShowSnoop()) {
+      this.formGroupStep.addControl('snoop', new FormControl(false));
+    } else {
+      this.formGroupStep.removeControl('snoop');
+    }
+  }
+  shouldShowSnoop(): boolean {
+    // Replace these conditions with your specific requirements
+    return (
+      this.direction === Direction.INBOUND &&
+      MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction]
+        .snoopSupported
     );
   }
 

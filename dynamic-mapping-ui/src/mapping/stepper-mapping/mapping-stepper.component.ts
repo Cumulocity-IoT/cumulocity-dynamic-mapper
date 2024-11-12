@@ -41,6 +41,7 @@ import { ExtensionService } from '../../extension';
 import {
   API,
   COLOR_HIGHLIGHTED,
+  ConnectorType,
   DeploymentMapEntry,
   Direction,
   Extension,
@@ -165,6 +166,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   extensions: Map<string, Extension> = new Map();
   extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   onDestroy$ = new Subject<void>();
+  supportsMessageContext: boolean;
 
   constructor(
     public bsModalService: BsModalService,
@@ -185,6 +187,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       !this._deploymentMapEntry?.connectors ||
         this._deploymentMapEntry?.connectors?.length == 0
     );
+    this.supportsMessageContext =
+      this._deploymentMapEntry.connectorsDetailed?.some(
+        (con) => con.connectorType == ConnectorType.KAFKA
+      );
+
     // console.log('New setDeploymentMap from grid', e);
   }
 
@@ -356,49 +363,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           }
         ]
       }
-
-      //   {
-      //     fieldGroup: [
-      //       {
-      //         className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
-      //         key: 'sourceExpression.result',
-      //         type: 'textarea-custom',
-      //         wrappers: ['custom-form-wrapper'],
-      //         templateOptions: {
-      //           class: 'no-resize',
-      //           disabled: false,
-      //           readonly: false,
-      //           customWrapperClass: 'm-b-4'
-      //         },
-      //         expressionProperties: {
-      //           'templateOptions.label': () =>
-      //             `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
-      //           'templateOptions.value': () => {
-      //             return `${this.substitutionModel.sourceExpression?.result}`;
-      //           }
-      //         }
-      //       },
-      //       {
-      //         className: 'col-lg-5 text-monospace font-smaller',
-      //         key: 'targetExpression.result',
-      //         type: 'textarea-custom',
-      //         wrappers: ['custom-form-wrapper'],
-      //         templateOptions: {
-      //           class: 'input',
-      //           disabled: true,
-      //           readonly: true,
-      //           customWrapperClass: 'm-b-4'
-      //         },
-      //         expressionProperties: {
-      //           'templateOptions.label': () =>
-      //             `Target Result [${this.substitutionModel.targetExpression?.resultType}]`,
-      //           'templateOptions.value': () => {
-      //             return `${this.substitutionModel.targetExpression?.result}`;
-      //           }
-      //         }
-      //       }
-      //     ]
-      //   }
     ];
 
     this.setTemplateForm();
@@ -750,13 +714,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.onSelectSubstitution(0);
       event.stepper.next();
     } else if (this.step == 'Select templates') {
-      this.templateSource = this.editorSourceStep3.get();
-      this.templateTarget = this.editorTargetStep3.get();
+      this.templateSource = this.editorSourceStep3?.get();
+      this.templateTarget = this.editorTargetStep3?.get();
       console.log(
         'onNextStep before',
         event.step.label,
         this.mapping,
-        this.editorSourceStep3.get(),
+        this.editorSourceStep3?.get(),
         this.getCurrentMapping(true),
         this.templateSource,
         this.templateTarget
