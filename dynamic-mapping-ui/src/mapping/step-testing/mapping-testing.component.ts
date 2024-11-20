@@ -73,7 +73,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-  currentSourceTemplate: any;
+  currentMapping: any;
   editorOptionsTesting: any = {};
 
   @ViewChild('editorTestingPayload', { static: false })
@@ -111,8 +111,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       readOnly: true
     };
 
-    this.editorTestingPayloadTemplateEmitter.subscribe((template) => {
-      this.currentSourceTemplate = template;
+    this.editorTestingPayloadTemplateEmitter.subscribe((current) => {
+      this.currentMapping = current;
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector('#editorTestingRequest');
       if (editorTestingRequestRef != null) {
@@ -121,7 +121,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
           getSchema(this.mapping.targetAPI, this.mapping.direction, true)
         );
         this.testingModel = {
-          payload: this.currentSourceTemplate,
+          payload: JSON.parse(this.currentMapping.source),
           results: [],
           selectedResult: -1,
           request: {},
@@ -134,7 +134,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   async onTestTransformation() {
     const testProcessingContext = await this.mappingService.testResult(
-      this.mapping,
+      this.currentMapping,
       false
     );
     this.testingModel.results = testProcessingContext.requests;
@@ -185,7 +185,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   onResetTransformation() {
     this.testingModel = {
-      payload: this.currentSourceTemplate,
+      payload: this.currentMapping,
       results: [],
       request: {},
       response: {},

@@ -126,11 +126,11 @@ export abstract class PayloadProcessorInbound {
             mapping.mapDeviceIdentifier
           ) {
             let sourceId: string;
-            const identity = {
-              externalId: substituteValue.value.toString(),
-              type: mapping.externalIdType
-            };
             try {
+              const identity = {
+                externalId: substituteValue.value.toString(),
+                type: mapping.externalIdType
+              };
               sourceId = await this.c8yClient.resolveExternalId2GlobalId(
                 identity,
                 context

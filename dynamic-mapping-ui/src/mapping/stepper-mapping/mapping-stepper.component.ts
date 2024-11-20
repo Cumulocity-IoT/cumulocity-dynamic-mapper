@@ -516,24 +516,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTemplateSourceChanged(content: Content) {
-    // if (_.has(content, 'text') && content['text']) {
-    //   this.templateSource = JSON.parse(content['text']);
-    //   // this.mapping.source = content['text'];‚
-    // } else {
-    //   this.templateSource = content['json'];
-    //   // this.mapping.source = JSON.stringify(content['json']);
-    // }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTemplateTargetChanged(content: Content) {
-    // if (_.has(content, 'text') && content['text']) {
-    //   this.templateTarget = JSON.parse(content['text']);
-    //   // this.mapping.target = content['text'];
-    // } else {
-    //   this.templateTarget = content['json'];
-    //   // this.mapping.target = JSON.stringify(content['json']);
-    // }
   }
 
   async updateTargetExpressionResult() {
@@ -584,7 +570,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   getCurrentMapping(patched: boolean): Mapping {
-    return {
+    const current = {
       ...this.mapping,
       source: reduceSourceTemplate(
         this.editorSourceStep4 ? this.editorSourceStep4?.get() : {},
@@ -593,10 +579,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       target: reduceTargetTemplate(this.editorTargetStep4?.get(), patched), // remove patched attributes, since it should not be stored
       lastUpdate: Date.now()
     };
+    return current;
   }
 
   async onCommitButton() {
-    this.commit.emit(this.getCurrentMapping(false));
+    // this.commit.emit(this.getCurrentMapping(false));
   }
 
   async onSampleTargetTemplatesButton() {
@@ -676,17 +663,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
     } else if (this.step == 'General settings') {
       this.templateModel.mapping = this.mapping;
-      // console.log(
-      //  'Populate jsonPath if wildcard:',
-      //  isWildcardTopic(this.mapping.direction == Direction.INBOUND? this.mapping.subscriptionTopic :this.mapping.publishTopic ),
-      //  this.mapping.substitutions.length
-      // );
-      //   console.log(
-      //     'Templates from mapping:',
-      //     this.mapping.target,
-      //     this.mapping.source,
-      //     this.mapping
-      //   );
+
       this.expandTemplates();
       this.extensions =
         (await this.extensionService.getProcessorExtensions()) as any;
@@ -704,13 +681,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
       event.stepper.next();
     } else if (this.step == 'Define substitutions') {
-      this.expandTemplates();
       this.getTemplateForm();
-      //   const testSourceTemplate = this.editorSourceStep4
-      //     ? this.editorSourceStep4.get()
-      //     : {};
-      // this.editorTestingPayloadTemplateEmitter.emit(testSourceTemplate);
-      this.editorTestingPayloadTemplateEmitter.emit(this.templateSource);
+      this.editorTestingPayloadTemplateEmitter.emit(this.getCurrentMapping(true));
       this.onSelectSubstitution(0);
       event.stepper.next();
     } else if (this.step == 'Select templates') {
@@ -721,7 +693,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         event.step.label,
         this.mapping,
         this.editorSourceStep3?.get(),
-        this.getCurrentMapping(true),
+        //this.getCurrentMapping(true),
         this.templateSource,
         this.templateTarget
       );
@@ -735,15 +707,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     stepper: C8yStepper;
     step: CdkStep;
   }): Promise<void> {
-    // console.log(
-    //   'onBackStep before',
-    //   event.step.label,
-    //   this.mapping,
-    //   this.getCurrentMapping(false),
-    //   this.getCurrentMapping(true),
-    //   this.templateSource,
-    //   this.templateTarget
-    // );
+
     this.step = event.step.label;
     if (this.step == 'Test mapping') {
       const editorTestingRequestRef =
@@ -751,25 +715,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (editorTestingRequestRef != null) {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
-    } else if (this.step == 'Select templates') {
-      // this.mapping = this.getCurrentMapping(true);
-      // this.expandTemplates();
-    } else if (this.step == 'Define substitutions') {
-      // this.mapping = this.getCurrentMapping(true);
-      // this.expandTemplates();
-    }
 
-    this.mapping = this.getCurrentMapping(true);
-    this.expandTemplates();
-    // console.log(
-    //   'onBackStep after',
-    //   event.step.label,
-    //   this.mapping,
-    //   this.getCurrentMapping(false),
-    //   this.getCurrentMapping(true),
-    //   this.templateSource,
-    //   this.templateTarget
-    // );
+    }
     event.stepper.previous();
   }
 
