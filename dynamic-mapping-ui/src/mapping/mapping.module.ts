@@ -64,6 +64,7 @@ import { MappingSubscriptionComponent } from './subscription-grid/subscription.c
 import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
 import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
+import { MappingFilterComponent } from './filter/mapping-filter.component';
 
 @NgModule({
   declarations: [
@@ -94,7 +95,8 @@ import { AdviceActionComponent } from './grid/advisor/advice-action.component';
     DeviceSelectorSubscriptionComponent,
     MappingIdCellRendererComponent,
     SnoopExplorerComponent,
-    AdviceActionComponent
+    AdviceActionComponent,
+    MappingFilterComponent
   ],
   imports: [
     CoreModule,
