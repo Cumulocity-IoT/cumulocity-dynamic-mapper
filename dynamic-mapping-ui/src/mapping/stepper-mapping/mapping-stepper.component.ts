@@ -583,7 +583,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onCommitButton() {
-    // this.commit.emit(this.getCurrentMapping(false));
+    this.commit.emit(this.getCurrentMapping(false));
   }
 
   async onSampleTargetTemplatesButton() {
