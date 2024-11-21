@@ -753,11 +753,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           levels
         );
       }
-      // console.log(
-      //  'Sample template',
-      //  this.templateTarget,
-      //  getSchema(this.mapping.targetAPI, this.mapping.direction, true)
-      // );
     } else {
       if (this.stepperConfiguration.direction == Direction.INBOUND) {
         this.templateSource = expandExternalTemplate(

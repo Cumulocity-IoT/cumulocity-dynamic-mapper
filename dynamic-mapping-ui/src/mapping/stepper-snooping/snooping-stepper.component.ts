@@ -31,7 +31,7 @@ import { FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { Direction, Mapping, SharedService } from '../../shared';
+import { Direction, Mapping, SAMPLE_TEMPLATES_C8Y, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { countDeviceIdentifiers, isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
@@ -113,7 +113,8 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getCurrentMapping(patched: boolean): Mapping {
+  getCurrentMapping(): Mapping {
+    this.mapping.target = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
     return {
       ...this.mapping,
       lastUpdate: Date.now()
@@ -121,7 +122,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onCommitButton() {
-    this.commit.emit(this.getCurrentMapping(false));
+    this.commit.emit(this.getCurrentMapping());
   }
 
   async onCancelButton() {
@@ -139,34 +140,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
         this.deploymentMapEntry.connectors &&
         this.deploymentMapEntry.connectors.length == 0
       ) {
-        // const initialState = {
-        //   title: 'No connector selected',
-        //   message:
-        //     'To snoop for messages you should select at least one connector, unless you want to change this later! Do you want to continue?',
-        //   labels: {
-        //     ok: 'Continue',
-        //     cancel: 'Close'
-        //   }
-        // };
-        // const confirmContinuingModalRef: BsModalRef = this.bsModalService.show(
-        //   ConfirmationModalComponent,
-        //   { initialState }
-        // );
-        // confirmContinuingModalRef.content.closeSubject.subscribe(
-        //   async (confirmation: boolean) => {
-        //     // console.log('Confirmation result:', confirmation);
-        //     if (confirmation) {
-        //       event.stepper.next();
-        //     }
-        //     this.alertService.info(
-        //       `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`
-        //     );
-        //     confirmContinuingModalRef.hide();
-        //   }
-        // );
-        // this.alertService.warning(
-        //   'To snoop for messages you have to select at least one connector. Go back, unless you only want to assign a connector later!'
-        // );
       } else {
         this.alertService.info(
           `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`
