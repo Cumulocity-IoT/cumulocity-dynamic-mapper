@@ -335,7 +335,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     modalRef.content.closeSubject.subscribe((result) => {
       // console.log('Was selected:', result);
       if (result) {
-        this.shareService.runOperation(Operation.APPLY_MAPPING_FILTER, {mappingFilter: result});
+        this.shareService.runOperation(Operation.APPLY_MAPPING_FILTER, {mappingFilter: result, id: mapping.id});
       }
       modalRef.hide();
     });

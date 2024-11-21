@@ -484,7 +484,41 @@ public class MappingRestController {
 					return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
 				}
 
-			} else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
+			} else if (operation.getOperation().equals(Operation.APPLY_MAPPING_FILTER)) {
+				// activate/deactivate mapping
+				String mappingId = operation.getParameter().get("mappingFilter");
+				String mappingFilter = operation.getParameter().get("mappingFilter");
+				Mapping updatedMapping = mappingComponent.setFilterMapping(tenant, mappingId, mappingFilter);
+				Map<String, AConnectorClient> connectorMap = connectorRegistry
+						.getClientsForTenant(tenant);
+				// subscribe/unsubscribe respective subscriptionTopic of mapping only for
+				// outbound mapping
+				Map<String, String> failed = new HashMap<>();
+				for (AConnectorClient client : connectorMap.values()) {
+					if (updatedMapping.direction == Direction.INBOUND) {
+						if (!client.updateActiveSubscriptionInbound(updatedMapping, false, true)) {
+							ConnectorConfiguration conf = client.getConnectorConfiguration();
+							failed.put(conf.getIdent(), conf.getName());
+						}
+						;
+					} else {
+						client.updateActiveSubscriptionOutbound(updatedMapping);
+					}
+				}
+
+				if (failed.size() > 0) {
+					// configurationRegistry.getC8yAgent().createEvent("Activation of mapping: " +
+					// updatedMapping.name,
+					// C8YAgent.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
+					// DateTime.now(),
+					// configurationRegistry.getMappingServiceRepresentations().get(tenant),
+					// tenant,
+					// failed);
+					return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
+				}
+
+			} 
+			else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
 				String id = operation.getParameter().get("id");
 				Boolean debugBoolean = Boolean.parseBoolean(operation.getParameter().get("debug"));
 				mappingComponent.setDebugMapping(tenant, id, debugBoolean);

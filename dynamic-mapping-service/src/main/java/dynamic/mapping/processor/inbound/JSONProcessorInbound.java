@@ -21,6 +21,14 @@
 
 package dynamic.mapping.processor.inbound;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.joda.time.DateTime;
+
 import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
@@ -29,23 +37,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import lombok.extern.slf4j.Slf4j;
+
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
+import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
-import org.joda.time.DateTime;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> {
@@ -218,6 +220,47 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
 							MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT));
 			postProcessingCache.put(Mapping.TIME, postProcessingCacheEntry);
 		}
+	}
+
+	@Override
+	public void applyFiler(ProcessingContext<JsonNode> context) {
+		String tenant = context.getTenant();
+		// TODO filterOutbound has to be renamed to mappingFilter
+		String mappingFilter = context.getMapping().getFilterOutbound();
+		if (mappingFilter != null && !("").equals(mappingFilter)) {
+			JsonNode payloadJsonNode = context.getPayload();
+			String payload = payloadJsonNode.toPrettyString();
+			try {
+				Expressions expr = Expressions.parse(mappingFilter);
+				JsonNode extractedSourceContent = expr.evaluate(payloadJsonNode);
+				context.setIgnoreFurtherProcessing(!isNodeTrue(extractedSourceContent));
+			} catch (ParseException | IOException | EvaluateException e) {
+				log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
+						payload, e);
+			} catch (EvaluateRuntimeException e) {
+				log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", tenant, mappingFilter,
+						payload, e);
+			} catch (Exception e) {
+				log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
+						payload, e);
+			}
+		}
+	}
+
+	private boolean isNodeTrue(JsonNode node) {
+		// Case 1: Direct boolean value check
+		if (node.isBoolean()) {
+			return node.booleanValue();
+		}
+
+		// Case 2: String value that can be converted to boolean
+		if (node.isTextual()) {
+			String text = node.textValue().trim().toLowerCase();
+			return "true".equals(text) || "1".equals(text) || "yes".equals(text);
+			// Add more string variations if needed
+		}
+
+		return false;
 	}
 
 }

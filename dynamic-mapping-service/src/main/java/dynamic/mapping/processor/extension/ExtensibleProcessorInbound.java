@@ -146,4 +146,9 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte
         }
     }
 
+    @Override
+    public void applyFiler(ProcessingContext<byte[]> context) {
+        // do nothing
+    }
+
 }

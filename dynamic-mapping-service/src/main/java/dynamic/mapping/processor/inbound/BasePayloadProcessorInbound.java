@@ -51,7 +51,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -75,6 +74,8 @@ public abstract class BasePayloadProcessorInbound<T> {
 			throws IOException;
 
 	public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
+
+	public abstract void applyFiler(ProcessingContext<T> context);
 
 	public ProcessingContext<T> substituteInTargetAndSend(ProcessingContext<T> context) {
 		/*
