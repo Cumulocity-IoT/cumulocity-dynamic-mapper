@@ -19,6 +19,7 @@
  * @authors Christof Strack
  */
 import {
+  AfterViewInit,
   Component,
   ElementRef,
   Input,
@@ -32,7 +33,7 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { isDisabled } from '../shared/util';
-import { Mapping, whatIsIt } from '../../shared';
+import { JsonEditor2Component, Mapping, whatIsIt } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
 @Component({
@@ -40,13 +41,15 @@ import { MappingService } from '../core/mapping.service';
   templateUrl: './mapping-filter.component.html',
   encapsulation: ViewEncapsulation.None
 })
-export class MappingFilterComponent implements OnInit, OnDestroy {
-
+export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() mapping: Mapping;
+
+  @ViewChild('editorSourceFilter', { static: false })
+  editorSourceFilter: JsonEditor2Component;
   @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<any>;
+
   labels: ModalLabels = { ok: 'Apply', cancel: 'Cancel' };
   editorOptionsSourceFilter: any;
-  isDisabled = isDisabled;
   templateSource: any;
   substitutionModel: any = {};
   substitutionFormly: FormGroup = new FormGroup({});
@@ -58,8 +61,13 @@ export class MappingFilterComponent implements OnInit, OnDestroy {
     public mappingService: MappingService,
   ) {
   }
+  async ngAfterViewInit(): Promise<void> {
+    await this.editorSourceFilter?.setSelectionToPath(
+      this.mapping.filterOutbound
+    );
+  }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.closeSubject = new Subject();
     this.templateSource = JSON.parse(this.mapping.source);
     this.editorOptionsSourceFilter = {
@@ -126,8 +134,11 @@ export class MappingFilterComponent implements OnInit, OnDestroy {
         ]
       }
     ];
+    console.log('Mapping in filter:', this.mapping, this.editorSourceFilter);
+
     // console.log('Subject:', this.closeSubject, this.labels);
   }
+
 
   onDismiss() {
     this.closeSubject.next(undefined);
@@ -171,6 +182,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy {
       this.substitutionFormly
         .get('pathSource')
         .setErrors({ error: error.message });
+        this.valid = false;
     }
     this.substitutionModel = { ...this.substitutionModel };
   }

@@ -20,20 +20,28 @@
   -->
 
 
-<c8y-modal title="Define and apply mapping filter Mapping" (onClose)="onClose()" (onDismiss)="onDismiss()"
-  [labels]="labels" [disabled]="!valid" [headerClasses]="'modal-header dialog-header'" #editMappinFiltergRef>
+<c8y-modal title="Define and apply mapping filter" (onClose)="onClose()" (onDismiss)="onDismiss()" [labels]="labels"
+  [disabled]="!valid" [headerClasses]="'modal-header dialog-header'" #editMappinFiltergRef>
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'filter'"></span>
   </ng-container>
   <div class="p-48">
-    <div class="row" #editorsStep2>
+    <div class="row">
+      <div class="form-group">
+        <div>
+          <span>Define a filter condition, when this mapping should be applied. Use JSONata expression that evaluates to
+            <code>true</code> if the mapping should be applied. <br>If the expression returns anything other than
+            <code>true</code>, the mapping is not applied for this payload.</span>
+        </div>
+      </div>
+    </div>
+    <div class="row">
       <div class="form-group">
         <div>
           <label translate>Source Template - {{ sourceSystem }}</label>
         </div>
-        <d11r-mapping-json-editor2 [options]="editorOptionsSourceFilter" [class]="'jse-main-small'"
-          [data]="templateSource" (pathChanged)="onSelectedPathSourceChanged($event)"
-          #editorSourceFilter></d11r-mapping-json-editor2>
+        <d11r-mapping-json-editor2 #editorSourceFilter [options]="editorOptionsSourceFilter" [class]="'jse-main-small'"
+          [data]="templateSource" (pathChanged)="onSelectedPathSourceChanged($event)"></d11r-mapping-json-editor2>
       </div>
     </div>
     <div class="row">
