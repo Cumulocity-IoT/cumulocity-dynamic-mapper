@@ -28,15 +28,16 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormlyFieldConfig } from '@ngx-formly/core';
-import { FormGroup } from '@angular/forms';
+import { AbstractControl, FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, of, Subject } from 'rxjs';
 import { JsonEditor2Component, Mapping, whatIsIt } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
 @Component({
   selector: 'd11r-mapping-filter',
   templateUrl: './mapping-filter.component.html',
+  styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
 export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -49,10 +50,11 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   labels: ModalLabels = { ok: 'Apply', cancel: 'Cancel' };
   editorOptionsSourceFilter: any;
   templateSource: any;
-  substitutionModel: any = {};
-  substitutionFormly: FormGroup = new FormGroup({});
-  substitutionFormlyFields: FormlyFieldConfig[];
+  filterModel: any = {};
+  filterFormly: FormGroup = new FormGroup({});
+  filterFormlyFields: FormlyFieldConfig[];
   pathSource$: Subject<string> = new BehaviorSubject<string>('');
+  customMessage$: Subject<string> = new BehaviorSubject(undefined);
   valid: boolean = false;
 
   constructor(
@@ -77,18 +79,15 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
       name: 'message'
     };
 
-    this.substitutionFormlyFields = [
+    this.filterFormlyFields = [
       {
         fieldGroup: [
           {
-            className: 'text-monospace',
             key: 'pathSource',
-            type: 'input-custom',
+            type: 'input',
             wrappers: ['custom-form-field'],
             templateOptions: {
-              label: 'Filer Expression',
-              class: 'input-sm disabled-animate-background',
-              customWrapperClass: 'm-b-24',
+              label: 'Filter Expression',
               placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
@@ -103,7 +102,8 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
                   notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
                   becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
               </ol>`,
-              required: true
+              required: true,
+              customMessage: this.customMessage$
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
@@ -111,32 +111,13 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
                   this.updateSourceExpressionResult();
                 });
               }
-            }
+            },
           },
-        ]
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'reduced-top col-lg-offset-1 not-p-b-24',
-            type: 'message-field',
-            expressionProperties: {
-              'templateOptions.content': (model) =>
-                model.sourceExpression?.msgTxt,
-              'templateOptions.textClass': (model) =>
-                model.sourceExpression?.severity,
-              'templateOptions.enabled': () => true
-            }
-          }
         ]
       }
     ];
     console.log('Mapping in filter:', this.mapping, this.editorSourceFilter);
-
-    // console.log('Subject:', this.closeSubject, this.labels);
   }
-
 
   onDismiss() {
     this.closeSubject.next(undefined);
@@ -144,47 +125,44 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   onClose() {
-    this.closeSubject.next(this.substitutionFormly.get('pathSource').value);
+    this.closeSubject.next(this.filterFormly.get('pathSource').value);
   }
 
   onSelectedPathSourceChanged(path: string) {
-    this.substitutionFormly.get('pathSource').setValue(path);
-    this.substitutionModel.pathSource = path;
+    this.filterFormly.get('pathSource').setValue(path);
+    this.filterModel.pathSource = path;
     this.pathSource$.next(path);
   }
 
   async updateSourceExpressionResult() {
     try {
-      this.substitutionModel.sourceExpression = {
+      this.filterModel.sourceExpression = {
         msgTxt: '',
         severity: 'text-info'
       };
-      this.substitutionFormly.get('pathSource').setErrors(null);
+      this.filterFormly.get('pathSource').setErrors(null);
 
       const r: JSON = await this.mappingService.evaluateExpression(
         this.templateSource,
-        this.substitutionFormly.get('pathSource').value
+        this.filterFormly.get('pathSource').value
       );
-      this.substitutionModel.sourceExpression = {
+      this.filterModel.sourceExpression = {
         resultType: whatIsIt(r),
         result: JSON.stringify(r, null, 4)
       };
       this.valid = true;
 
     } catch (error) {
-      // console.log('Error evaluating source expression: ', error);
-      this.substitutionModel.sourceExpression = {
-        msgTxt: error.message,
-        severity: 'text-danger'
-      };
-      this.substitutionFormly
+      this.filterFormly
         .get('pathSource')
-        .setErrors({ error: error.message });
-        this.valid = false;
+        .setErrors({
+          validationExpression: { message: error.message },
+        });
+      this.customMessage$.next(undefined);
+      this.valid = false;
     }
-    this.substitutionModel = { ...this.substitutionModel };
+    this.filterModel = { ...this.filterModel };
   }
-
 
   ngOnDestroy() {
     this.closeSubject.complete();

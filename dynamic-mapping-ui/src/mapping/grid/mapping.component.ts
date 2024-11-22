@@ -201,22 +201,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: 'Apply filter',
         icon: 'filter',
         callback: this.editMessageFilter.bind(this),
-        showIf: (item) => item['mapping']['mappingType'] == MappingType.JSON
+        showIf: (item) => item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND
       },
-      //   {
-      //     type: 'ACTIVATE_MAPPING',
-      //     text: 'Activate',
-      //     icon: 'toggle-on',
-      //     callback: this.activateMapping.bind(this),
-      //     showIf: (item) => !item['mapping']['active']
-      //   },
-      //   {
-      //     type: 'DEACTIVATE_MAPPING',
-      //     text: 'Deactivate',
-      //     icon: 'toggle-off',
-      //     callback: this.activateMapping.bind(this),
-      //     showIf: (item) => item['mapping']['active']
-      //   },
       {
         type: 'ENABLE_DEBUG',
         text: 'Enable debugging',
@@ -332,10 +318,12 @@ export class MappingComponent implements OnInit, OnDestroy {
     const modalRef = this.bsModalService.show(MappingFilterComponent, {
       initialState
     });
-    modalRef.content.closeSubject.subscribe((filterMapping) => {
+    modalRef.content.closeSubject.subscribe(async (filterMapping) => {
       // console.log('Was selected:', result);
       if (filterMapping) {
-        this.shareService.runOperation(Operation.APPLY_MAPPING_FILTER, {filterMapping, id: mapping.id});
+        await this.shareService.runOperation(Operation.APPLY_MAPPING_FILTER, { filterMapping, id: mapping.id });
+        this.mappingService.refreshMappings(Direction.INBOUND);
+        this.alertService.success(`Applied filter ${filterMapping}`);
       }
       modalRef.hide();
     });

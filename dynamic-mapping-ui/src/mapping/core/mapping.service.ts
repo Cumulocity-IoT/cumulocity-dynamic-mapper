@@ -500,6 +500,19 @@ export class MappingService {
     return result;
   }
 
+  async validateExpression(json: JSON, path: string): Promise<boolean> {
+    let result = true;
+    if (path != undefined && path != '' && json != undefined) {
+      const expression = this.JSONATA(path);
+      try {
+        expression.evaluate(json) as JSON;
+      } catch (error) {
+        return false;
+      }
+    }
+    return result;
+  }
+
   async startChangedMappingEvents(): Promise<void> {
     if (!this._agentId) {
       this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
@@ -527,5 +540,5 @@ export class MappingService {
       });
   }
 
-  async stopChangedMappingEvents() {}
+  async stopChangedMappingEvents() { }
 }
