@@ -486,37 +486,9 @@ public class MappingRestController {
 
 			} else if (operation.getOperation().equals(Operation.APPLY_MAPPING_FILTER)) {
 				// activate/deactivate mapping
-				String mappingId = operation.getParameter().get("mappingFilter");
+				String mappingId = operation.getParameter().get("id");
 				String mappingFilter = operation.getParameter().get("mappingFilter");
-				Mapping updatedMapping = mappingComponent.setFilterMapping(tenant, mappingId, mappingFilter);
-				Map<String, AConnectorClient> connectorMap = connectorRegistry
-						.getClientsForTenant(tenant);
-				// subscribe/unsubscribe respective subscriptionTopic of mapping only for
-				// outbound mapping
-				Map<String, String> failed = new HashMap<>();
-				for (AConnectorClient client : connectorMap.values()) {
-					if (updatedMapping.direction == Direction.INBOUND) {
-						if (!client.updateActiveSubscriptionInbound(updatedMapping, false, true)) {
-							ConnectorConfiguration conf = client.getConnectorConfiguration();
-							failed.put(conf.getIdent(), conf.getName());
-						}
-						;
-					} else {
-						client.updateActiveSubscriptionOutbound(updatedMapping);
-					}
-				}
-
-				if (failed.size() > 0) {
-					// configurationRegistry.getC8yAgent().createEvent("Activation of mapping: " +
-					// updatedMapping.name,
-					// C8YAgent.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
-					// DateTime.now(),
-					// configurationRegistry.getMappingServiceRepresentations().get(tenant),
-					// tenant,
-					// failed);
-					return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
-				}
-
+				mappingComponent.setFilterMapping(tenant, mappingId, mappingFilter);
 			} 
 			else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
 				String id = operation.getParameter().get("id");
@@ -547,7 +519,7 @@ public class MappingRestController {
 			}
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
-			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
+			log.error("Tenant {} - Error running operation {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
 	}
