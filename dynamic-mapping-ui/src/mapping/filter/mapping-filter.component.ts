@@ -21,7 +21,6 @@
 import {
   AfterViewInit,
   Component,
-  ElementRef,
   Input,
   OnDestroy,
   OnInit,
@@ -29,10 +28,9 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormlyFieldConfig } from '@ngx-formly/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { isDisabled } from '../shared/util';
 import { JsonEditor2Component, Mapping, whatIsIt } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
@@ -63,7 +61,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   }
   async ngAfterViewInit(): Promise<void> {
     await this.editorSourceFilter?.setSelectionToPath(
-      this.mapping.filterOutbound
+      this.mapping.filterMapping
     );
   }
 

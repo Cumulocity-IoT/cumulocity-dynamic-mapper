@@ -332,10 +332,10 @@ export class MappingComponent implements OnInit, OnDestroy {
     const modalRef = this.bsModalService.show(MappingFilterComponent, {
       initialState
     });
-    modalRef.content.closeSubject.subscribe((result) => {
+    modalRef.content.closeSubject.subscribe((filterMapping) => {
       // console.log('Was selected:', result);
-      if (result) {
-        this.shareService.runOperation(Operation.APPLY_MAPPING_FILTER, {mappingFilter: result, id: mapping.id});
+      if (filterMapping) {
+        this.shareService.runOperation(Operation.APPLY_MAPPING_FILTER, {filterMapping, id: mapping.id});
       }
       modalRef.hide();
     });

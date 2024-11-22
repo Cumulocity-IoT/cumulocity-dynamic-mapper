@@ -487,8 +487,8 @@ public class MappingRestController {
 			} else if (operation.getOperation().equals(Operation.APPLY_MAPPING_FILTER)) {
 				// activate/deactivate mapping
 				String mappingId = operation.getParameter().get("id");
-				String mappingFilter = operation.getParameter().get("mappingFilter");
-				mappingComponent.setFilterMapping(tenant, mappingId, mappingFilter);
+				String filterMapping = operation.getParameter().get("filterMapping");
+				mappingComponent.setFilterMapping(tenant, mappingId, filterMapping);
 			} 
 			else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
 				String id = operation.getParameter().get("id");

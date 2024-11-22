@@ -50,3 +50,5 @@ dynamic-mapping-ui/cypress/fixtures/mqttConnectionPostRequest.json
 dynamic-mapping-service/src/main/configuration/dynamic-mapping-service-logging.xml
 JSONata4Java/dependency-reduced-pom.xml
 dynamic-mapping-ui/node_modules_tmp/
+.vscode/launch.json
+.env

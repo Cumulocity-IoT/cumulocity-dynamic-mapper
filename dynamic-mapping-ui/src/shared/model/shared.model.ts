@@ -67,6 +67,7 @@ export interface Mapping {
   extension?: ExtensionEntry;
   direction?: Direction;
   filterOutbound?: string;
+  filterMapping?: string;
   autoAckOperation?: boolean;
   debug?: boolean;
   supportsMessageContext?: boolean;

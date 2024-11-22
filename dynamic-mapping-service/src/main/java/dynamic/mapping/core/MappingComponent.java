@@ -483,11 +483,11 @@ public class MappingComponent {
 		return mapping;
 	}
 
-	public Mapping setFilterMapping(String tenant, String mappingId, String mappingFilter) throws Exception {
+	public Mapping setFilterMapping(String tenant, String mappingId, String filterMapping) throws Exception {
 		// step 1. update activation for mapping
-		log.debug("Tenant {} - Setting mappingFilter: {} got mapping: {}", tenant, mappingFilter, mappingId);
+		log.debug("Tenant {} - Setting filterMapping: {} got mapping: {}", tenant, filterMapping, mappingId);
 		Mapping mapping = getMapping(tenant, mappingId);
-		mapping.setFilterOutbound(mappingFilter);
+		mapping.setFilterMapping(filterMapping);
 		if (Direction.INBOUND.equals(mapping.direction)) {
 			// step 2. retrieve collected snoopedTemplates
 			mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(mappingId).getSnoopedTemplates());
