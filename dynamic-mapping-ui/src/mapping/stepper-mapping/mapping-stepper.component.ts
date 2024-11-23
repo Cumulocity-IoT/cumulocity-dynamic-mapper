@@ -399,8 +399,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async updateSourceExpressionResult(path) {
     this.sourceCustomMessage$.next(undefined);
     try {
-      this.substitutionFormly.get('pathSource').setErrors(null);
-
       const r: JSON = await this.mappingService.evaluateExpression(
         this.editorSourceStepSubstitution?.get(),
         path
@@ -410,15 +408,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         result: JSON.stringify(r, null, 4),
         valid: true
       };
-
-      if (
-        this.substitutionModel.sourceExpression.resultType == 'Array' &&
-        !this.substitutionModel.expandArray
-      ) {
-        const txt =
-          'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
-        this.alertService.info(txt);
+      if (this.expertMode) {
+        this.substitutionFormly.get('pathSource').setErrors(null);
+        if (
+          this.substitutionModel.sourceExpression.resultType == 'Array' &&
+          !this.substitutionModel.expandArray
+        ) {
+          const txt =
+            'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
+          this.alertService.info(txt);
           // this.sourceCustomMessage$.next(txt);
+        }
       }
     } catch (error) {
       this.substitutionModel.sourceExpression.valid = false;
@@ -432,7 +432,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   async updateTargetExpressionResult(path) {
     try {
-      this.substitutionFormly.get('pathTarget').setErrors(null);
       const r: JSON = await this.mappingService.evaluateExpression(
         this.editorTargetStepSubstitution?.get(),
         path
@@ -448,21 +447,24 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel,
         this.mapping.direction
       );
-      if (definesDI && this.mapping.mapDeviceIdentifier) {
-        const txt = `${API[this.mapping.targetAPI].identifier
-          } is resolved using the external Id ${this.mapping.externalIdType
-          } defined in the previous step.`;
-        this.targetCustomMessage$.next(txt);
-      } else if (path == '$') {
-        const txt = `By specifying "$" you selected the root of the target 
-        template and this result in merging the source expression with the target template.`;
-        this.targetCustomMessage$.next(txt);
+      if (this.expertMode) {
+        this.substitutionFormly.get('pathTarget').setErrors(null);
+        if (definesDI && this.mapping.mapDeviceIdentifier) {
+          const txt = `${API[this.mapping.targetAPI].identifier
+            } is resolved using the external Id ${this.mapping.externalIdType
+            } defined in the previous step.`;
+          this.targetCustomMessage$.next(txt);
+        } else if (path == '$') {
+          const txt = `By specifying "$" you selected the root of the target 
+          template and this result in merging the source expression with the target template.`;
+          this.targetCustomMessage$.next(txt);
+        }
       }
     } catch (error) {
       this.substitutionModel.targetExpression.valid = false;
       this.substitutionFormly
         .get('pathTarget')
-        .setErrors({ error: error.message });
+        .setErrors({ validationError: { message: error.message } });
     }
     this.substitutionModel = { ...this.substitutionModel };
   }
@@ -497,17 +499,24 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectedPathSourceChanged(path: string) {
-    if (this.expertMode)
+    if (this.expertMode) {
       this.substitutionFormly.get('pathSource').setValue(path);
-    this.substitutionModel.pathSource = path;
+      this.substitutionModel.pathSource = path;
+    } else {
+      this.substitutionModel.pathSource = path;
+      this.updateSourceExpressionResult(path);
+    }
   }
 
   onSelectedPathTargetChanged(path: string) {
-    if (this.expertMode)
+    if (this.expertMode) {
       this.substitutionFormly.get('pathTarget').setValue(path);
-    this.substitutionModel.pathTarget = path;
+      this.substitutionModel.pathTarget = path;
+    } else {
+      this.substitutionModel.pathTarget = path;
+      this.updateTargetExpressionResult(path);
+    }
   }
-
 
   getCurrentMapping(patched: boolean): Mapping {
     const current = {

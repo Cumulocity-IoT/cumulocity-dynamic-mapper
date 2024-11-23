@@ -57,17 +57,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   Direction = Direction;
 
   constructor(private fb: FormBuilder) {
-    this.createForm();
-  }
-
-  createForm() {
-    this.substitutionForm = this.fb.group({
-      pathSource: [{ value: '', disabled: true }],
-      pathTarget: [{ value: '', disabled: true }],
-      expandArray: [false],
-      resolve2ExternalId: [false],
-      repairStrategy: ['']
-    });
   }
 
   ngOnInit(): void {
@@ -75,6 +64,8 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       ok: this.isDuplicate ? 'Overwrite' : 'Save',
       cancel: 'Cancel'
     };
+    this.createForm();
+
     this.editedSubstitution = this.substitution;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
       .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
@@ -111,6 +102,16 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     });
     // console.log("Repair Options:", this.repairStrategyOptions);
     // console.log('Existing substitution:', this.existingSubstitution);
+  }
+
+  createForm() {
+    this.substitutionForm = this.fb.group({
+      pathSource: [{ value: '', disabled: true }],
+      pathTarget: [{ value: '', disabled: true }],
+      expandArray: [{ value: false, disabled: this.isExpandToArrayDisabled() }],
+      resolve2ExternalId: [{ value: false, disabled: this.isResolve2ExternalIdDisabled() }],
+      repairStrategy: ['']
+    });
   }
 
   onDismiss() {

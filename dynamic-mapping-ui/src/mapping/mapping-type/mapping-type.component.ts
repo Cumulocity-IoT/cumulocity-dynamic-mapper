@@ -96,11 +96,6 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     this.valid = true;
     this.mappingType = t;
     this.mappingTypeDescription = MAPPING_TYPE_DESCRIPTION[t].description;
-    console.log(
-      'Freitag',
-      this.mappingType,
-      !MAPPING_TYPE_DESCRIPTION[t].properties[this.direction].snoopSupported
-    );
     if (this.shouldShowSnoop()) {
       this.formGroupStep.addControl('snoop', new FormControl(false));
     } else {
