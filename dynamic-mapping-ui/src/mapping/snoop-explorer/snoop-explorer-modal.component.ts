@@ -37,7 +37,7 @@ export class SnoopExplorerComponent implements OnInit {
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService
-  ) {}
+  ) { }
   @Input() enrichedMapping: MappingEnriched;
   mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();
@@ -46,6 +46,7 @@ export class SnoopExplorerComponent implements OnInit {
   template: any;
   editorOptions: any = {
     mode: 'tree',
+    removeModes: ['text', 'tree', 'table'],
     mainMenuBar: true,
     navigationBar: false,
     readOnly: true,
