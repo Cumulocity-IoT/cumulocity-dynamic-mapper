@@ -630,7 +630,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (editorTestingRequestRef != null) {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
-
+    } else if (this.step == 'Select templates'){
+      this.templatesInitialized = false;
     }
     event.stepper.previous();
   }
