@@ -18,13 +18,6 @@
   ~
   ~ @authors Christof Strack
   -->
-
-<div class="modal-header dialog-header animated fadeIn">
-  <h1 c8yIcon="pencil"></h1>
-  <h4>
-    {{ isDuplicate || isUpdate ? 'Update' : 'Edit' }} properties of substitution
-  </h4>
-</div>
 <c8y-modal [title]="isDuplicate || isUpdate ? 'Update properties of substitution' : 'Edit properties of substitution' " (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels"  [headerClasses]="'modal-header dialog-header'">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'pencil'"></span>

@@ -44,7 +44,6 @@ import {
   JSONContent,
   isMultiSelection,
   createMultiSelection,
-  createKeySelection,
   TextContent,
   isValueSelection,
   ContextMenuItem

@@ -61,7 +61,6 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   filterModel: any = {};
   filterFormly: FormGroup = new FormGroup({});
   filterFormlyFields: FormlyFieldConfig[];
-  pathSource$: Subject<string> = new BehaviorSubject<string>('');
   customMessage$: Subject<string> = new BehaviorSubject(undefined);
   valid: boolean = false;
 
@@ -130,7 +129,6 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   onSelectedPathSourceChanged(path: string) {
     this.filterFormly.get('pathSource').setValue(path);
     this.filterModel.pathSource = path;
-    this.pathSource$.next(path);
   }
 
   async updateSourceExpressionResult() {
