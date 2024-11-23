@@ -66,15 +66,22 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     response?: any;
     selectedResult: number;
   } = {
-    results: [],
-    selectedResult: -1
-  };
+      results: [],
+      selectedResult: -1
+    };
 
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
   currentMapping: any;
-  editorOptionsTesting: any = {};
+  editorOptionsTesting: any = {
+    mode: 'tree',
+    removeModes: ['text', 'table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    statusBar: false,
+    readOnly: true
+  };
 
   @ViewChild('editorTestingPayload', { static: false })
   editorTestingPayload: JsonEditor2Component;
@@ -87,7 +94,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     public mappingService: MappingService,
     private alertService: AlertService,
     private elementRef: ElementRef
-  ) {}
+  ) { }
 
   ngOnInit() {
     // set value for backward compatiblility
@@ -101,15 +108,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     //  this.mapping,
     //  this.stepperConfiguration
     // );
-
-    this.editorOptionsTesting = {
-      ...this.editorOptionsTesting,
-      mode: 'tree',
-      mainMenuBar: true,
-      navigationBar: false,
-      statusBar: false,
-      readOnly: true
-    };
 
     this.editorTestingPayloadTemplateEmitter.subscribe((current) => {
       this.currentMapping = current;

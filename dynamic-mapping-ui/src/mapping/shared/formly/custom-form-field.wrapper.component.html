@@ -49,7 +49,7 @@
   >
     {{ props.description | translate }}
   </div>
-  <div *ngIf="( props.customMessage | async )" class="text-12 c8y-messages">
+  <div *ngIf="( props.customMessage | async )" class="text-12 text-info">
     {{ props.customMessage | async }}
   </div>
 </div>

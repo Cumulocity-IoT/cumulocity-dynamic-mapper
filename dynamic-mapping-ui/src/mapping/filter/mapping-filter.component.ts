@@ -72,6 +72,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
     this.templateSource = JSON.parse(this.mapping.source);
     this.editorOptionsSourceFilter = {
       mode: 'tree',
+      removeModes: ['text', 'table'],
       mainMenuBar: true,
       navigationBar: false,
       statusBar: false,
