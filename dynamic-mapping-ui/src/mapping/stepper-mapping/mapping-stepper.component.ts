@@ -57,7 +57,6 @@ import {
 } from '../../shared';
 import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component';
 import { MappingService } from '../core/mapping.service';
-import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { C8YRequest } from '../processor/processor.model';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
@@ -71,6 +70,7 @@ import {
   reduceTargetTemplate,
   splitTopicExcludingSeparator
 } from '../shared/util';
+import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 
 @Component({
@@ -138,10 +138,43 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   sourceSystem: string;
   targetSystem: string;
 
-  editorOptionsSourceTemplate: any = {};
-  editorOptionsSourceSubstitution: any = {};
-  editorOptionsTargetTemplate: any = {};
-  editorOptionsTargetSubstitution: any = {};
+  editorOptionsSourceTemplate = {
+    mode: 'tree',
+    removeModes: ['table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    statusBar: false,
+    readOnly: false,
+    name: 'message'
+  };
+
+  editorOptionsTargetTemplate = {
+    mode: 'tree',
+    removeModes: ['table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    statusBar: true
+  };
+
+  editorOptionsSourceSubstitution = {
+    mode: 'tree',
+    removeModes: ['text', 'table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    statusBar: false,
+    readOnly: true,
+    name: 'message'
+  };
+
+  editorOptionsTargetSubstitution = {
+    mode: 'tree',
+    removeModes: ['text', 'table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    readOnly: true,
+    statusBar: true
+  };
+
 
   selectedSubstitution: number = -1;
 
@@ -230,14 +263,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       targetExpression: {
         result: '',
         resultType: 'empty',
-        msgTxt: '',
-        severity: 'text-info'
       },
       sourceExpression: {
         result: '',
         resultType: 'empty',
-        msgTxt: '',
-        severity: 'text-info'
       }
     };
     // console.log(
@@ -299,7 +328,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             }
           },
           {
-            className: 'col-lg-5 text-monospace',
+            className: 'col-lg-5',
             key: 'pathTarget',
             type: 'input-custom',
             wrappers: ['custom-form-wrapper'],
@@ -314,7 +343,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               result of the source expression with the existing target template. Special care is 
               required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code>.  This can result in API calls that are rejected by the Cumulocity backend!`,
               required: true,
-              customMessage: this.sourceCustomMessage$
+              customMessage: this.targetCustomMessage$
             },
             expressionProperties: {
               'templateOptions.class': (model) => {
@@ -338,79 +367,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             }
           }
         ]
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-5 reduced-top col-lg-offset-1 not-p-b-24',
-            type: 'message-field',
-            expressionProperties: {
-              'templateOptions.content': (model) =>
-                model.sourceExpression?.msgTxt,
-              'templateOptions.textClass': (model) =>
-                model.sourceExpression?.severity,
-              'templateOptions.enabled': () => true
-            }
-          },
-          {
-            // message field target
-            className: 'col-lg-5 reduced-top not-p-b-24',
-            type: 'message-field',
-            expressionProperties: {
-              'templateOptions.content': (model) =>
-                model.targetExpression?.msgTxt,
-              'templateOptions.textClass': (model) =>
-                model.targetExpression?.severity,
-              'templateOptions.enabled': () => true
-            }
-          }
-        ]
       }
     ];
 
     this.setTemplateForm();
-    this.editorOptionsSourceTemplate = {
-      ...this.editorOptionsSourceTemplate,
-      mode: 'tree',
-      removeModes: ['table'],
-      mainMenuBar: true,
-      navigationBar: false,
-      statusBar: false,
-      readOnly: false,
-      name: 'message'
-    };
-
-    this.editorOptionsTargetTemplate = {
-      ...this.editorOptionsTargetTemplate,
-      mode: 'tree',
-      removeModes: ['table'],
-      mainMenuBar: true,
-      navigationBar: false,
-      statusBar: true
-    };
-
-    this.editorOptionsSourceSubstitution = {
-      ...this.editorOptionsSourceSubstitution,
-      mode: 'tree',
-      removeModes: ['text', 'table'],
-      mainMenuBar: true,
-      navigationBar: false,
-      statusBar: false,
-      readOnly: true,
-      name: 'message'
-    };
-
-    this.editorOptionsTargetSubstitution = {
-      ...this.editorOptionsTargetSubstitution,
-      mode: 'tree',
-      removeModes: ['text', 'table'],
-      mainMenuBar: true,
-      navigationBar: false,
-      readOnly: true,
-      statusBar: true
-    };
-
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
 
     // this.extensionEvents$.subscribe((events) => {
@@ -461,10 +421,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async updateSourceExpressionResult() {
     this.sourceCustomMessage$.next(undefined);
     try {
-      this.substitutionModel.sourceExpression = {
-        msgTxt: '',
-        severity: 'text-info'
-      };
       this.substitutionFormly.get('pathSource').setErrors(null);
 
       const r: JSON = await this.mappingService.evaluateExpression(
@@ -480,17 +436,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel.sourceExpression.resultType == 'Array' &&
         !this.substitutionModel.expandArray
       ) {
-        this.substitutionModel.sourceExpression.msgTxt =
+        const txt =
           'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
-        this.substitutionModel.sourceExpression.severity = 'text-warning';
-        this.sourceCustomMessage$.next('Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"');
+        this.alertService.info(txt);
+          // this.sourceCustomMessage$.next(txt);
       }
     } catch (error) {
-      // console.log('Error evaluating source expression: ', error);
-      // this.substitutionModel.sourceExpression = {
-      //   msgTxt: error.message,
-      //   severity: 'text-danger'
-      // };
       this.substitutionFormly
         .get('pathSource')
         .setErrors({ validationError: { message: error.message } });
@@ -524,12 +475,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async updateTargetExpressionResult() {
+    this.targetCustomMessage$.next(undefined);
     const path = this.substitutionFormly.get('pathTarget').value;
     try {
-      this.substitutionModel.targetExpression = {
-        msgTxt: '',
-        severity: 'text-info'
-      };
       this.substitutionFormly.get('pathTarget').setErrors(null);
       const r: JSON = await this.mappingService.evaluateExpression(
         this.editorTargetStepSubstitution?.get(),
@@ -546,24 +494,22 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.mapping.direction
       );
       if (definesDI && this.mapping.mapDeviceIdentifier) {
-        this.substitutionModel.targetExpression.msgTxt = `${API[this.mapping.targetAPI].identifier
+        const txt = `${API[this.mapping.targetAPI].identifier
           } is resolved using the external Id ${this.mapping.externalIdType
           } defined in the previous step.`;
-        this.substitutionModel.targetExpression.severity = 'text-info';
+        this.targetCustomMessage$.next(txt);
       } else if (path == '$') {
-        this.substitutionModel.targetExpression.msgTxt = `By specifying "$" you selected the root of the target 
+        const txt = `By specifying "$" you selected the root of the target 
         template and this result in merging the source expression with the target template.`;
-        this.substitutionModel.targetExpression.severity = 'text-warning';
+        this.targetCustomMessage$.next(txt);
+
       }
     } catch (error) {
       console.error('Error evaluating target expression: ', error);
-      this.substitutionModel.targetExpression = {
-        msgTxt: error.message,
-        severity: 'text-danger'
-      };
+
       this.substitutionFormly
         .get('pathTarget')
-        .setErrors({ error: error.message });
+        .setErrors({ validationError: { message: error.message } });
     }
     this.substitutionModel = { ...this.substitutionModel };
   }

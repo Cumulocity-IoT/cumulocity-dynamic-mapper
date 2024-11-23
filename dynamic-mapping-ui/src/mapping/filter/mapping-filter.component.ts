@@ -28,9 +28,9 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormlyFieldConfig } from '@ngx-formly/core';
-import { AbstractControl, FormGroup } from '@angular/forms';
+import { FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
-import { BehaviorSubject, of, Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { JsonEditor2Component, Mapping, whatIsIt } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
@@ -48,7 +48,15 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<any>;
 
   labels: ModalLabels = { ok: 'Apply', cancel: 'Cancel' };
-  editorOptionsSourceFilter: any;
+  editorOptionsSourceFilter: any ={
+    mode: 'tree',
+    removeModes: ['text', 'table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    statusBar: false,
+    readOnly: true,
+    name: 'message'
+  };
   templateSource: any;
   filterModel: any = {};
   filterFormly: FormGroup = new FormGroup({});
@@ -70,16 +78,6 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   async ngOnInit(): Promise<void> {
     this.closeSubject = new Subject();
     this.templateSource = JSON.parse(this.mapping.source);
-    this.editorOptionsSourceFilter = {
-      mode: 'tree',
-      removeModes: ['text', 'table'],
-      mainMenuBar: true,
-      navigationBar: false,
-      statusBar: false,
-      readOnly: true,
-      name: 'message'
-    };
-
     this.filterFormlyFields = [
       {
         fieldGroup: [
