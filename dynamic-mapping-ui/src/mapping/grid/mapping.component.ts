@@ -79,6 +79,7 @@ import { AdvisorAction, EditorMode } from '../shared/stepper-model';
 import { HttpStatusCode } from '@angular/common/http';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { AdviceActionComponent } from './advisor/advice-action.component';
+import { MappingFilterComponent } from '../filter/mapping-filter.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -195,20 +196,13 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.deleteMappingWithConfirmation.bind(this),
         showIf: (item) => !item['mapping']['active']
       },
-      //   {
-      //     type: 'ACTIVATE_MAPPING',
-      //     text: 'Activate',
-      //     icon: 'toggle-on',
-      //     callback: this.activateMapping.bind(this),
-      //     showIf: (item) => !item['mapping']['active']
-      //   },
-      //   {
-      //     type: 'DEACTIVATE_MAPPING',
-      //     text: 'Deactivate',
-      //     icon: 'toggle-off',
-      //     callback: this.activateMapping.bind(this),
-      //     showIf: (item) => item['mapping']['active']
-      //   },
+      {
+        type: 'APPLY_MAPPING_FILTER',
+        text: 'Apply filter',
+        icon: 'filter',
+        callback: this.editMessageFilter.bind(this),
+        showIf: (item) => item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND
+      },
       {
         type: 'ENABLE_DEBUG',
         text: 'Enable debugging',
@@ -258,11 +252,6 @@ export class MappingComponent implements OnInit, OnDestroy {
           (item['mapping']['snoopStatus'] === SnoopStatus.STARTED ||
             item['mapping']['snoopStatus'] === SnoopStatus.ENABLED ||
             item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
-        // showIf: (item) =>
-        //   item['mapping']['direction'] === Direction.INBOUND &&
-        //   item['snoopSupported'] &&
-        //   (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
-        //     item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
       },
       {
         type: 'EXPORT',
@@ -321,6 +310,24 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.updateMapping(m);
       });
   }
+  editMessageFilter(m: MappingEnriched) {
+    const { mapping } = m;
+    const initialState = {
+      mapping
+    };
+    const modalRef = this.bsModalService.show(MappingFilterComponent, {
+      initialState
+    });
+    modalRef.content.closeSubject.subscribe(async (filterMapping) => {
+      // console.log('Was selected:', result);
+      if (filterMapping) {
+        await this.shareService.runOperation(Operation.APPLY_MAPPING_FILTER, { filterMapping, id: mapping.id });
+        this.mappingService.refreshMappings(Direction.INBOUND);
+        this.alertService.success(`Applied filter ${filterMapping}`);
+      }
+      modalRef.hide();
+    });
+  }
 
   getColumnsMappings(): Column[] {
     const cols: Column[] = [
@@ -337,30 +344,30 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
-            header: 'Subscription topic',
-            name: 'subscriptionTopic',
-            path: 'mapping.subscriptionTopic',
-            filterable: true
-          }
+          header: 'Subscription topic',
+          name: 'subscriptionTopic',
+          path: 'mapping.subscriptionTopic',
+          filterable: true
+        }
         : {
-            header: 'Publish topic',
-            name: 'publishTopic',
-            path: 'mapping.publishTopic',
-            filterable: true
-          },
+          header: 'Publish topic',
+          name: 'publishTopic',
+          path: 'mapping.publishTopic',
+          filterable: true
+        },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
-            header: 'Mapping topic',
-            name: 'mappingTopic',
-            path: 'mapping.mappingTopic',
-            filterable: true
-          }
+          header: 'Mapping topic',
+          name: 'mappingTopic',
+          path: 'mapping.mappingTopic',
+          filterable: true
+        }
         : {
-            header: 'Publish topic sample',
-            name: 'publishTopicSample',
-            path: 'mapping.publishTopicSample',
-            filterable: true
-          },
+          header: 'Publish topic sample',
+          name: 'publishTopicSample',
+          path: 'mapping.publishTopicSample',
+          filterable: true
+        },
       {
         name: 'targetAPI',
         header: 'API',
@@ -390,16 +397,16 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
-            // header: 'Test/Debug/Snoop',
-            header: 'Templates snooped',
-            name: 'snoopedTemplates',
-            path: 'mapping',
-            filterable: false,
-            sortable: false,
-            cellCSSClassName: 'text-align-center',
-            cellRendererComponent: SnoopedTemplateRendererComponent,
-            gridTrackSize: '8%'
-          }
+          // header: 'Test/Debug/Snoop',
+          header: 'Templates snooped',
+          name: 'snoopedTemplates',
+          path: 'mapping',
+          filterable: false,
+          sortable: false,
+          cellCSSClassName: 'text-align-center',
+          cellRendererComponent: SnoopedTemplateRendererComponent,
+          gridTrackSize: '8%'
+        }
         : undefined,
       {
         header: 'Activate',
@@ -550,7 +557,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     const { snoopSupported } =
       MAPPING_TYPE_DESCRIPTION[mapping.mappingType].properties[
-        mapping.direction
+      mapping.direction
       ];
     if (
       (mapping.snoopStatus == SnoopStatus.ENABLED ||

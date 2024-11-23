@@ -25,7 +25,10 @@
     {{ isDuplicate || isUpdate ? 'Update' : 'Edit' }} properties of substitution
   </h4>
 </div>
-<c8y-modal (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels">
+<c8y-modal [title]="isDuplicate || isUpdate ? 'Update properties of substitution' : 'Edit properties of substitution' " (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels"  [headerClasses]="'modal-header dialog-header'">
+  <ng-container c8y-modal-title>
+    <span [c8yIcon]="'pencil'"></span>
+  </ng-container>
   <div class="p-b-24 p-l-24 p-r-24">
     <div *ngIf="isDuplicate">
       <p class="text-medium">

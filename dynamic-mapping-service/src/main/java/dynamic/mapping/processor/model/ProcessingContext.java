@@ -80,6 +80,8 @@ public class ProcessingContext<O> {
 
     private boolean supportsMessageContext = false;
 
+    private boolean ignoreFurtherProcessing = false;
+
     private byte[] key;
 
     private String source;

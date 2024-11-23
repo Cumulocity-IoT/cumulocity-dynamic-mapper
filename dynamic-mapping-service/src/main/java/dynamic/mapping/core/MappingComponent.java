@@ -483,6 +483,32 @@ public class MappingComponent {
 		return mapping;
 	}
 
+	public Mapping setFilterMapping(String tenant, String mappingId, String filterMapping) throws Exception {
+		// step 1. update activation for mapping
+		log.debug("Tenant {} - Setting filterMapping: {} got mapping: {}", tenant, filterMapping, mappingId);
+		Mapping mapping = getMapping(tenant, mappingId);
+		mapping.setFilterMapping(filterMapping);
+		if (Direction.INBOUND.equals(mapping.direction)) {
+			// step 2. retrieve collected snoopedTemplates
+			mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(mappingId).getSnoopedTemplates());
+		}
+		// step 3. update mapping in inventory
+		// don't validate mapping when setting active = false, this allows to remove
+		// mappings that are not working
+		updateMapping(tenant, mapping, true, false);
+		// step 4. delete mapping from update cache
+		removeDirtyMapping(tenant, mapping);
+		// step 5. update caches
+		if (Direction.OUTBOUND.equals(mapping.direction)) {
+			rebuildMappingOutboundCache(tenant);
+		} else {
+			deleteFromCacheMappingInbound(tenant, mapping);
+			addToCacheMappingInbound(tenant, mapping);
+			cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+		}
+		return mapping;
+	}
+
 	public void setDebugMapping(String tenant, String id, Boolean debug) throws Exception {
 		// step 1. update debug for mapping
 		log.info("Tenant {} - Setting debug: {} got mapping: {}", tenant, id, debug);

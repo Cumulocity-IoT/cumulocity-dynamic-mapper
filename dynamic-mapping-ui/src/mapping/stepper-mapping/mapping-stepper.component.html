@@ -224,12 +224,12 @@
                       <d11r-mapping-json-editor2
                         *ngIf="stepperConfiguration.showEditorSource"
                         [schemaUpdate]="schemaUpdateSource"
-                        [options]="editorOptionsSourceStep3"
+                        [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-small'"
                         (contentChanged)="onTemplateSourceChanged($event)"
                         (initialized)="onEditorSourceInitialized()"
                         [data]="templateSource"
-                        #editorSourceStep3
+                        #editorSourceStepTemplate
                       ></d11r-mapping-json-editor2>
                       <div *ngIf="stepperConfiguration.showProcessorExtensions">
                         <div class="form-group">
@@ -313,12 +313,12 @@
                       </div>
                       <d11r-mapping-json-editor2
                         [schemaUpdate]="schemaUpdateTarget"
-                        [options]="editorOptionsTargetStep3"
+                        [options]="editorOptionsTargetTemplate"
                         [class]="'jse-main-small'"
                         (contentChanged)="onTemplateTargetChanged($event)"
                         (initialized)="onEditorTargetInitialized()"
                         [data]="templateTarget"
-                        #editorTargetStep3
+                        #editorTargetStepTemplate
                       >
                       </d11r-mapping-json-editor2>
                     </div>
@@ -344,10 +344,10 @@
           <div class="card-block p-b-0">
             <div class="container">
               <div [formGroup]="templateForm">
-                <div class="row" #editorsStep3>
+                <div class="row" #editorsTemplate>
                   <div
                     class="col-lg-5 col-lg-offset-1 column-right-border"
-                    #leftTemplateStep3
+                    #leftTemplateTemplate
                   >
                     <div class="form-group">
                       <div class="d-flex j-c-between">
@@ -358,12 +358,12 @@
                       <d11r-mapping-json-editor2
                         *ngIf="stepperConfiguration.showEditorSource"
                         [schemaUpdate]="schemaUpdateSource"
-                        [options]="editorOptionsSourceStep4"
+                        [options]="editorOptionsSourceSubstitution"
                         [class]="'jse-main-small'"
                         (pathChanged)="onSelectedPathSourceChanged($event)"
                         (initialized)="onEditorSourceInitialized()"
                         [data]="templateSource"
-                        #editorSourceStep4
+                        #editorSourceStepSubstitution
                       ></d11r-mapping-json-editor2>
                       <div
                         *ngIf="
@@ -462,7 +462,7 @@
                       >
                     </div>
                   </div>
-                  <div class="col-lg-5 column-left-border" #rightTemplateStep3>
+                  <div class="col-lg-5 column-left-border" #rightTemplateTemplate>
                     <div class="form-group">
                       <div class="d-flex j-c-between">
                         <div class="d-flex">
@@ -488,12 +488,12 @@
                       </div>
                       <d11r-mapping-json-editor2
                         [schemaUpdate]="schemaUpdateTarget"
-                        [options]="editorOptionsTargetStep4"
+                        [options]="editorOptionsTargetSubstitution"
                         [class]="'jse-main-small'"
                         (pathChanged)="onSelectedPathTargetChanged($event)"
                         (initialized)="onEditorTargetInitialized()"
                         [data]="templateTarget"
-                        #editorTargetStep4
+                        #editorTargetStepSubstitution
                       >
                       </d11r-mapping-json-editor2>
                       <span

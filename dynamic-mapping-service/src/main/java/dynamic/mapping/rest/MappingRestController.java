@@ -484,7 +484,13 @@ public class MappingRestController {
 					return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
 				}
 
-			} else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
+			} else if (operation.getOperation().equals(Operation.APPLY_MAPPING_FILTER)) {
+				// activate/deactivate mapping
+				String mappingId = operation.getParameter().get("id");
+				String filterMapping = operation.getParameter().get("filterMapping");
+				mappingComponent.setFilterMapping(tenant, mappingId, filterMapping);
+			} 
+			else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
 				String id = operation.getParameter().get("id");
 				Boolean debugBoolean = Boolean.parseBoolean(operation.getParameter().get("debug"));
 				mappingComponent.setDebugMapping(tenant, id, debugBoolean);
@@ -513,7 +519,7 @@ public class MappingRestController {
 			}
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
-			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
+			log.error("Tenant {} - Error running operation {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
 	}

@@ -18,78 +18,51 @@
   ~
   ~ @authors Christof Strack
   -->
-
-<div class="modal-header dialog-header animated fadeIn">
-  <h1 c8yIcon="plus-circle"></h1>
-  <h4>Add Mapping</h4>
-</div>
-
-<c8y-modal
-  (onClose)="onClose()"
-  (onDismiss)="onDismiss()"
-  [labels]="labels"
-  [disabled]="!valid"
-  #addMappingRef
->
+<c8y-modal title="Add Mapping" (onClose)="onClose()" (onDismiss)="onDismiss()" [labels]="labels" [disabled]="!valid" [headerClasses]="'modal-header dialog-header'"
+  #addMappingRef>
+  <ng-container c8y-modal-title>
+    <span [c8yIcon]="'plus-circle'"></span>
+  </ng-container>
   <div>
     <p class="text-center text-medium text-16 sticky-top bg-white">
       {{
-        'Select mapping type for ' +
-          (direction === Direction.INBOUND ? 'source ' : 'target') | translate
+      'Select mapping type for ' +
+      (direction === Direction.INBOUND ? 'source ' : 'target') | translate
       }}
     </p>
     <div class="p-24 modal-inner-scroll animated fadeIn">
       <form [formGroup]="formGroupStep">
         <c8y-list-group class="separator-top">
           <ng-container *ngFor="let q of MappingType | keyvalue">
-            <c8y-li
-              *ngIf="
+            <c8y-li *ngIf="
                 MAPPING_TYPE_DESCRIPTION[q.key].properties[direction]
                   .directionSupported
-              "
-            >
-              <c8y-li-radio
-                #liRadioOption1
-                name="mapping_type_group"
-                title="{{ q.value }}"
-                (click)="onSelectMappingType(q.value)"
-              ></c8y-li-radio>
+              ">
+              <c8y-li-radio #liRadioOption1 name="mapping_type_group" title="{{ q.value }}"
+                (click)="onSelectMappingType(q.value)"></c8y-li-radio>
               <span>{{ q.value | humanize }}</span>
             </c8y-li>
           </ng-container>
         </c8y-list-group>
         <div class="card-block separator-top">
-          <c8y-form-group
-            *ngIf="direction === Direction.INBOUND && shouldShowSnoop()"
-          >
+          <c8y-form-group *ngIf="direction === Direction.INBOUND && shouldShowSnoop()">
             <label class="c8y-checkbox">
-              <input
-                title="{{ 'Start snooping for payloads ...' | translate }}"
-                type="checkbox"
-                checked="checked"
-                name="snoop"
-                formControlName="snoop"
-              />
+              <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox" checked="checked"
+                name="snoop" formControlName="snoop" />
               <span class="m-r-8"></span>
               Enable snooping
             </label>
-            <small class="text-muted"
-              >Before defining a complete mapping with substitutions you can
+            <small class="text-muted">Before defining a complete mapping with substitutions you can
               snoop (record) messages from the source system (Step 1). These can
               be use in a second step (Step 2) for defining the substitutions
               from the source payload in the target payload. To continue after
               Step 2 to defining a complete mapping, incl. substitutions you
-              have to stop the snooping for the respective mapping.</small
-            >
+              have to stop the snooping for the respective mapping.</small>
           </c8y-form-group>
           <!-- <label>Mapping type description</label> -->
           <c8y-form-group>
-            <textarea
-              readonly
-              c8y-textarea-autoresize
-              class="form-control fit-w"
-              >{{ mappingTypeDescription }}</textarea
-            >
+            <textarea readonly c8y-textarea-autoresize
+              class="form-control fit-w">{{ mappingTypeDescription }}</textarea>
           </c8y-form-group>
         </div>
       </form>

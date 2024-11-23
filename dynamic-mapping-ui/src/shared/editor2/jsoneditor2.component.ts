@@ -87,7 +87,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @ViewChild('jsonEditorContainer', { static: true })
   jsonEditorContainer: ElementRef;
 
-  constructor(private elementRef: ElementRef) {}
+  constructor() { }
 
   private editor: JsonEditor;
   id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
@@ -123,19 +123,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           this.contentChanged.emit(updatedContent);
         },
         onSelect: this.onSelect.bind(this),
-        onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
-          // console.log("MenuItems:", items);
-          // remove buttons for table-mode, transform, sort
-          items.splice(
-            items.findIndex((i) => i['text'] === 'table'),
-            1
-          );
-          items.splice(
-            items.findIndex((i) => i['className'] === 'jse-transform'),
-            1
-          );
-          return items;
-        },
+        onRenderMenu: this.onRenderMenu.bind(this),
         onRenderContextMenu: this.onRenderContextMenu.bind(this)
       }
     });
@@ -149,6 +137,20 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.editor?.destroy();
+  }
+
+  onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
+    // console.log("MenuItems:", items);
+    // remove buttons for table-mode, transform, sort
+    items.splice(
+      items.findIndex((i) => i['className'] === 'jse-transform'),
+      1
+    );
+    this.options.removeModes?.forEach(mode => items.splice(
+      items.findIndex((i) => i['text'] === mode),
+      1
+    ))
+    return items;
   }
 
   removeItem(items: ContextMenuItem[], textToRemove: string) {

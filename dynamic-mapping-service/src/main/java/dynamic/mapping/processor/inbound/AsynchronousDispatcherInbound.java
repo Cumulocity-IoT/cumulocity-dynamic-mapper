@@ -122,11 +122,11 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 					.tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
 					.tag("connector", connectorMessage.getConnectorIdent()).register(Metrics.globalRegistry);
 
-        }
+		}
 
 		@Override
 		public List<ProcessingContext<?>> call() throws Exception {
-			//long startTime = System.nanoTime();
+			// long startTime = System.nanoTime();
 			Timer.Sample timer = Timer.start(Metrics.globalRegistry);
 			String tenant = connectorMessage.getTenant();
 			String topic = connectorMessage.getTopic();
@@ -206,10 +206,13 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 								}
 							} else {
 								processor.extractFromSource(context);
-								processor.substituteInTargetAndSend(context);
-								List<C8YRequest> resultRequests = context.getRequests();
-								if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
-									mappingStatus.errors++;
+								processor.applyFiler(context);
+								if (!context.isIgnoreFurtherProcessing()) {
+									processor.substituteInTargetAndSend(context);
+									List<C8YRequest> resultRequests = context.getRequests();
+									if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
+										mappingStatus.errors++;
+									}
 								}
 							}
 						} catch (Exception e) {

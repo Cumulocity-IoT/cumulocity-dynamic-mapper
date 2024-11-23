@@ -124,9 +124,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     response?: any;
     selectedResult: number;
   } = {
-    results: [],
-    selectedResult: -1
-  };
+      results: [],
+      selectedResult: -1
+    };
 
   countDeviceIdentifiers$: BehaviorSubject<number> =
     new BehaviorSubject<number>(0);
@@ -138,11 +138,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   sourceSystem: string;
   targetSystem: string;
 
-  editorOptionsSourceStep3: any = {};
-  editorOptionsSourceStep4: any = {};
-  editorOptionsTargetStep3: any = {};
-  editorOptionsTargetStep4: any = {};
-  editorOptionsTesting: any = {};
+  editorOptionsSourceTemplate: any = {};
+  editorOptionsSourceSubstitution: any = {};
+  editorOptionsTargetTemplate: any = {};
+  editorOptionsTargetSubstitution: any = {};
 
   selectedSubstitution: number = -1;
 
@@ -151,14 +150,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   expertMode: boolean = false;
   templatesInitialized: boolean = false;
 
-  @ViewChild('editorSourceStep4', { static: false })
-  editorSourceStep4: JsonEditor2Component;
-  @ViewChild('editorTargetStep4', { static: false })
-  editorTargetStep4: JsonEditor2Component;
-  @ViewChild('editorSourceStep3', { static: false })
-  editorSourceStep3: JsonEditor2Component;
-  @ViewChild('editorTargetStep3', { static: false })
-  editorTargetStep3: JsonEditor2Component;
+  @ViewChild('editorSourceStepSubstitution', { static: false })
+  editorSourceStepSubstitution: JsonEditor2Component;
+  @ViewChild('editorTargetStepSubstitution', { static: false })
+  editorTargetStepSubstitution: JsonEditor2Component;
+  @ViewChild('editorSourceStepTemplate', { static: false })
+  editorSourceStepTemplate: JsonEditor2Component;
+  @ViewChild('editorTargetStepTemplate', { static: false })
+  editorTargetStepTemplate: JsonEditor2Component;
   editorTestingResponse: JsonEditor2Component;
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
@@ -168,13 +167,16 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onDestroy$ = new Subject<void>();
   supportsMessageContext: boolean;
 
+  sourceCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
+  targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
+
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
     public extensionService: ExtensionService,
     private alertService: AlertService,
     private elementRef: ElementRef
-  ) {}
+  ) { }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   deploymentMapEntryChange(e) {
@@ -185,7 +187,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // );
     this.isButtonDisabled$.next(
       !this._deploymentMapEntry?.connectors ||
-        this._deploymentMapEntry?.connectors?.length == 0
+      this._deploymentMapEntry?.connectors?.length == 0
     );
     this.supportsMessageContext =
       this._deploymentMapEntry.connectorsDetailed?.some(
@@ -248,7 +250,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       {
         fieldGroup: [
           {
-            className: 'col-lg-5 col-lg-offset-1 text-monospace',
+            className: 'col-lg-5 col-lg-offset-1',
             key: 'pathSource',
             type: 'input-custom',
             wrappers: ['custom-form-field'],
@@ -273,7 +275,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                   notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
                   becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
               </ol>`,
-              required: true
+              required: true,
+              customMessage: this.sourceCustomMessage$
             },
             expressionProperties: {
               'templateOptions.class': (model) => {
@@ -310,7 +313,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               expressions as for the source template. In addition you can use <code>$</code> to merge the 
               result of the source expression with the existing target template. Special care is 
               required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code>.  This can result in API calls that are rejected by the Cumulocity backend!`,
-              required: true
+              required: true,
+              customMessage: this.sourceCustomMessage$
             },
             expressionProperties: {
               'templateOptions.class': (model) => {
@@ -366,9 +370,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     ];
 
     this.setTemplateForm();
-    this.editorOptionsSourceStep3 = {
-      ...this.editorOptionsSourceStep3,
+    this.editorOptionsSourceTemplate = {
+      ...this.editorOptionsSourceTemplate,
       mode: 'tree',
+      removeModes: ['table'],
       mainMenuBar: true,
       navigationBar: false,
       statusBar: false,
@@ -376,17 +381,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       name: 'message'
     };
 
-    this.editorOptionsTargetStep3 = {
-      ...this.editorOptionsTargetStep3,
+    this.editorOptionsTargetTemplate = {
+      ...this.editorOptionsTargetTemplate,
       mode: 'tree',
+      removeModes: ['table'],
       mainMenuBar: true,
       navigationBar: false,
       statusBar: true
     };
 
-    this.editorOptionsSourceStep4 = {
-      ...this.editorOptionsSourceStep4,
+    this.editorOptionsSourceSubstitution = {
+      ...this.editorOptionsSourceSubstitution,
       mode: 'tree',
+      removeModes: ['text', 'table'],
       mainMenuBar: true,
       navigationBar: false,
       statusBar: false,
@@ -394,22 +401,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       name: 'message'
     };
 
-    this.editorOptionsTargetStep4 = {
-      ...this.editorOptionsTargetStep4,
+    this.editorOptionsTargetSubstitution = {
+      ...this.editorOptionsTargetSubstitution,
       mode: 'tree',
+      removeModes: ['text', 'table'],
       mainMenuBar: true,
       navigationBar: false,
       readOnly: true,
       statusBar: true
-    };
-
-    this.editorOptionsTesting = {
-      ...this.editorOptionsTesting,
-      mode: 'tree',
-      mainMenuBar: true,
-      navigationBar: false,
-      statusBar: false,
-      readOnly: true
     };
 
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
@@ -460,6 +459,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async updateSourceExpressionResult() {
+    this.sourceCustomMessage$.next(undefined);
     try {
       this.substitutionModel.sourceExpression = {
         msgTxt: '',
@@ -468,7 +468,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.substitutionFormly.get('pathSource').setErrors(null);
 
       const r: JSON = await this.mappingService.evaluateExpression(
-        this.editorSourceStep4?.get(),
+        this.editorSourceStepSubstitution?.get(),
         this.substitutionFormly.get('pathSource').value
       );
       this.substitutionModel.sourceExpression = {
@@ -483,16 +483,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel.sourceExpression.msgTxt =
           'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
         this.substitutionModel.sourceExpression.severity = 'text-warning';
+        this.sourceCustomMessage$.next('Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"');
       }
     } catch (error) {
       // console.log('Error evaluating source expression: ', error);
-      this.substitutionModel.sourceExpression = {
-        msgTxt: error.message,
-        severity: 'text-danger'
-      };
+      // this.substitutionModel.sourceExpression = {
+      //   msgTxt: error.message,
+      //   severity: 'text-danger'
+      // };
       this.substitutionFormly
         .get('pathSource')
-        .setErrors({ error: error.message });
+        .setErrors({ validationError: { message: error.message } });
     }
     this.substitutionModel = { ...this.substitutionModel };
   }
@@ -531,7 +532,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       };
       this.substitutionFormly.get('pathTarget').setErrors(null);
       const r: JSON = await this.mappingService.evaluateExpression(
-        this.editorTargetStep4?.get(),
+        this.editorTargetStepSubstitution?.get(),
         path
       );
       this.substitutionModel.targetExpression = {
@@ -545,11 +546,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.mapping.direction
       );
       if (definesDI && this.mapping.mapDeviceIdentifier) {
-        this.substitutionModel.targetExpression.msgTxt = `${
-          API[this.mapping.targetAPI].identifier
-        } is resolved using the external Id ${
-          this.mapping.externalIdType
-        } defined in the previous step.`;
+        this.substitutionModel.targetExpression.msgTxt = `${API[this.mapping.targetAPI].identifier
+          } is resolved using the external Id ${this.mapping.externalIdType
+          } defined in the previous step.`;
         this.substitutionModel.targetExpression.severity = 'text-info';
       } else if (path == '$') {
         this.substitutionModel.targetExpression.msgTxt = `By specifying "$" you selected the root of the target 
@@ -573,10 +572,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const current = {
       ...this.mapping,
       source: reduceSourceTemplate(
-        this.editorSourceStep4 ? this.editorSourceStep4?.get() : {},
+        this.editorSourceStepSubstitution ? this.editorSourceStepSubstitution?.get() : {},
         patched
       ), // remove array "_TOPIC_LEVEL_" since it should not be stored
-      target: reduceTargetTemplate(this.editorTargetStep4?.get(), patched), // remove patched attributes, since it should not be stored
+      target: reduceTargetTemplate(this.editorTargetStepSubstitution?.get(), patched), // remove patched attributes, since it should not be stored
       lastUpdate: Date.now()
     };
     return current;
@@ -602,7 +601,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         levels
       );
     }
-    this.editorTargetStep4.set(this.templateTarget);
+    this.editorTargetStepSubstitution.set(this.templateTarget);
   }
 
   async onCancelButton() {
@@ -686,13 +685,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.onSelectSubstitution(0);
       event.stepper.next();
     } else if (this.step == 'Select templates') {
-      this.templateSource = this.editorSourceStep3?.get();
-      this.templateTarget = this.editorTargetStep3?.get();
+      this.templateSource = this.editorSourceStepTemplate?.get();
+      this.templateTarget = this.editorTargetStepTemplate?.get();
       console.log(
         'onNextStep before',
         event.step.label,
         this.mapping,
-        this.editorSourceStep3?.get(),
+        this.editorSourceStepTemplate?.get(),
         //this.getCurrentMapping(true),
         this.templateSource,
         this.templateTarget
@@ -969,17 +968,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.selectedSubstitution = selected;
       this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      await this.editorSourceStep4?.setSelectionToPath(
+      await this.editorSourceStepSubstitution?.setSelectionToPath(
         this.substitutionModel.pathSource
       );
-      await this.editorTargetStep4.setSelectionToPath(
+      await this.editorTargetStepSubstitution.setSelectionToPath(
         this.substitutionModel.pathTarget
       );
     }
   }
 
   onTemplateChanged(templateTarget: any): void {
-    this.editorTargetStep4.set(templateTarget);
+    this.editorTargetStepSubstitution.set(templateTarget);
   }
 
   ngOnDestroy() {
