@@ -20,6 +20,7 @@
  */
 import { CdkStep } from '@angular/cdk/stepper';
 import {
+  AfterViewInit,
   Component,
   ElementRef,
   EventEmitter,
@@ -79,7 +80,7 @@ import { SubstitutionRendererComponent } from '../substitution/substitution-grid
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class MappingStepperComponent implements OnInit, OnDestroy {
+export class MappingStepperComponent implements OnInit, OnDestroy{
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Output() cancel = new EventEmitter<any>();
@@ -220,11 +221,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       !this._deploymentMapEntry?.connectors ||
       this._deploymentMapEntry?.connectors?.length == 0
     );
-    this.supportsMessageContext =
-      this._deploymentMapEntry.connectorsDetailed?.some(
-        (con) => con.connectorType == ConnectorType.KAFKA
-      );
 
+    setTimeout(() => {
+      this.supportsMessageContext =
+        this._deploymentMapEntry.connectorsDetailed?.some(
+          (con) => con.connectorType == ConnectorType.KAFKA
+        );
+    });
     // console.log('New setDeploymentMap from grid', e);
   }
 
@@ -630,7 +633,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (editorTestingRequestRef != null) {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
-    } else if (this.step == 'Select templates'){
+    } else if (this.step == 'Select templates') {
       this.templatesInitialized = false;
     }
     event.stepper.previous();

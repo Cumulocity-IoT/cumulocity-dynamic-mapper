@@ -70,12 +70,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   SnoopStatus = SnoopStatus;
   isDisabled = isDisabled;
 
-  countDeviceIdentifiers$: BehaviorSubject<number> =
-    new BehaviorSubject<number>(0);
-
   propertyFormly: FormGroup = new FormGroup({});
-  sourceSystem: string;
-  targetSystem: string;
 
   snoopedTemplateCounter: number = 0;
   stepLabel: any;
@@ -106,10 +101,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // set value for backward compatibility
-    if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
-
-    this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -150,7 +141,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.countDeviceIdentifiers$.complete();
     this.onDestroy$.complete();
   }
 }

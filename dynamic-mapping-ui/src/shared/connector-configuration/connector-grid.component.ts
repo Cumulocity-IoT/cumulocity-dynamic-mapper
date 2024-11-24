@@ -104,7 +104,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
     private bsModalService: BsModalService,
     private connectorConfigurationService: ConnectorConfigurationService,
     private alertService: AlertService
-  ) {}
+  ) { }
 
   ngAfterViewInit(): void {
     setTimeout(async () => {
@@ -151,7 +151,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortOrder: 'asc',
         visible: this.selectable && this.readOnly,
-        gridTrackSize: '7%',
+        gridTrackSize: '10%',
         cellRendererComponent: CheckedRendererComponent
       },
       {
@@ -179,7 +179,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortOrder: 'asc',
         visible: true,
-        gridTrackSize: '30%'
+        gridTrackSize: '25%'
       },
       {
         header: 'Status',
@@ -188,7 +188,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortable: true,
         cellRendererComponent: ConnectorStatusRendererComponent,
-        gridTrackSize: '10%'
+        gridTrackSize: (this.selectable) ? '12%' : '15%'
       },
       {
         header: 'Enabled',
@@ -197,7 +197,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortable: true,
         cellRendererComponent: StatusEnabledRendererComponent,
-        gridTrackSize: '10%'
+        gridTrackSize: (this.selectable) ? '8%' : '15%'
       }
     );
 

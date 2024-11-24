@@ -25,17 +25,16 @@
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'filter'"></span>
   </ng-container>
-  <div class="p-48 p-t-24">
-    <div class="row">
+  <div class="p-24 modal-inner-scroll animated fadeIn">
+    <div class="p-t-24 p-b-24">
       <div class="form-group">
         <div>
-          <span>Define a filter condition, when this mapping should be applied. Use JSONata expression that evaluates to
+          <span>Define a filter condition, when this mapping should be applied. Use JSONata expression that evaluates
+            to
             <code>true</code> if the mapping should be applied. <br>If the expression returns anything other than
             <code>true</code>, the mapping is not applied for this payload.</span>
         </div>
       </div>
-    </div>
-    <div class="row">
       <div class="form-group">
         <div>
           <label translate>Source Template - {{ sourceSystem }}</label>
@@ -43,22 +42,17 @@
         <d11r-mapping-json-editor2 #editorSourceFilter [options]="editorOptionsSourceFilter" [class]="'jse-main-small'"
           [data]="templateSource" (pathChanged)="onSelectedPathSourceChanged($event)"></d11r-mapping-json-editor2>
       </div>
-    </div>
-    <div class="row">
-      <formly-form [form]="filterFormly" [fields]="filterFormlyFields"
-        [model]="filterModel"></formly-form>
-    </div>
-    <div class="row">
+      <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
       <div class="form-group ">
         <label translate>Filter Result [{{
           filterModel.sourceExpression?.resultType
           }}]</label>
         <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
-              font-size: var(--c8y-font-size-small);
-              line-height: var(--c8y-line-height-small);
-            ">{{
-              filterModel.sourceExpression?.result
-            }}</textarea>
+                font-size: var(--c8y-font-size-small);
+                line-height: var(--c8y-line-height-small);
+              ">{{
+                filterModel.sourceExpression?.result
+              }}</textarea>
       </div>
     </div>
   </div>

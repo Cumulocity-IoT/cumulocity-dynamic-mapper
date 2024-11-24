@@ -23,14 +23,14 @@
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'plus-circle'"></span>
   </ng-container>
-  <div>
+  <div class="p-24 modal-inner-scroll animated fadeIn">
     <p class="text-center text-medium text-16 sticky-top bg-white p-t-24">
       {{
       'Select mapping type for ' +
       (direction === Direction.INBOUND ? 'source ' : 'target') | translate
       }}
     </p>
-    <div class="p-24 modal-inner-scroll animated fadeIn">
+    <div class="p-t-24 p-b-24">
       <form [formGroup]="formGroupStep">
         <c8y-list-group class="separator-top">
           <ng-container *ngFor="let q of MappingType | keyvalue">

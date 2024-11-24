@@ -23,14 +23,14 @@
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'plus-circle'"></span>
   </ng-container>
-  <div>
+  <div class="p-24 modal-inner-scroll animated fadeIn">
     <p class="text-center text-medium text-16 sticky-top bg-white">
       {{
       'Your mapping is enabled for snooping. How would you like to continue?'
       | translate
       }}
     </p>
-    <div class="p-24 modal-inner-scroll animated fadeIn">
+    <div class="p-t-24 p-b-24">
       <c8y-list-group class="separator-top">
         <c8y-li>
           <c8y-li-radio name="mapping_type_group" title="{{ 'Continue snooping' }}"
@@ -45,7 +45,7 @@
         <c8y-li>
           <c8y-li-radio name="mapping_type_group" title="{{ 'Stop snooping' }}"
             (click)="onSelection(AdvisorAction.EDIT)"></c8y-li-radio>
-          <span>{{ 'Edit mapping and continue snooping ...' }}</span>
+          <span>{{ 'Continue snooping and edit mapping ...' }}</span>
         </c8y-li>
       </c8y-list-group>
     </div>

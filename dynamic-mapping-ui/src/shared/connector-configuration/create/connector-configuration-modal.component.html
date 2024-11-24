@@ -23,7 +23,7 @@
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'connected'"></span>
   </ng-container>
-  <div class="card-block">
+  <div class="p-24 modal-inner-scroll animated fadeIn">
     <div [formGroup]="brokerForm" *ngIf="add">
       <formly-form [form]="brokerForm" [fields]="brokerFormFields" s></formly-form>
     </div>
