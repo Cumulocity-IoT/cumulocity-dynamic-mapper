@@ -28,8 +28,7 @@
         'm-b-40',
         'p-0',
         'flex-no-shrink'
-      ]" linear (onStepChange)="onStepChange($event)">
-    <!-- override icons -->
+      ]" linear>
     <ng-template c8yStepperIcon="final">
       <span [c8yIcon]="'hand-peace-o'"></span>
     </ng-template>
@@ -280,7 +279,7 @@
                   </div>
                   <div class="col-lg-3 col-lg-offset-1">
                     <label class="c8y-switch">
-                      <input type="checkbox" [value]="expertMode" (change)="togglePowermode()" />
+                      <input type="checkbox" [value]="expertMode" (change)="toggleExpertMode()" />
                       <span></span>
                       <span>
                         {{ 'Expert mode' | translate }}

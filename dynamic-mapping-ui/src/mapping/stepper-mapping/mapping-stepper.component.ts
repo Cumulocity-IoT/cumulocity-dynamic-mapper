@@ -20,7 +20,6 @@
  */
 import { CdkStep } from '@angular/cdk/stepper';
 import {
-  AfterViewInit,
   Component,
   ElementRef,
   EventEmitter,
@@ -86,7 +85,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<Mapping>();
   private _deploymentMapEntry: DeploymentMapEntry;
-  isButtonDisabled$: BehaviorSubject<boolean> = new BehaviorSubject(true);
+
 
   @Input()
   get deploymentMapEntry(): DeploymentMapEntry {
@@ -94,7 +93,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
   set deploymentMapEntry(value: DeploymentMapEntry) {
     this._deploymentMapEntry = value;
-    // console.log('New setDeploymentMap', this._deploymentMapEntry);
   }
 
   ValidationError = ValidationError;
@@ -104,28 +102,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   SnoopStatus = SnoopStatus;
   isDisabled = isDisabled;
 
-  substitutionFormly: FormGroup = new FormGroup({});
-  templateForm: FormGroup;
-  substitutionFormlyFields: FormlyFieldConfig[];
   editorTestingPayloadTemplateEmitter = new EventEmitter<any>();
   schemaUpdateSource: EventEmitter<string> = new EventEmitter<any>();
   schemaUpdateTarget: EventEmitter<string> = new EventEmitter<any>();
-
+  
+  templateForm: FormGroup;
   templateModel: any = {};
+  substitutionFormly: FormGroup = new FormGroup({});
+  substitutionFormlyFields: FormlyFieldConfig[];
   substitutionModel: any = {};
+  propertyFormly: FormGroup = new FormGroup({});
+
   templateSource: any;
   templateTarget: any;
-
-  testingModel: {
-    results: C8YRequest[];
-    errorMsg?: string;
-    request?: any;
-    response?: any;
-    selectedResult: number;
-  } = {
-      results: [],
-      selectedResult: -1
-    };
+  sourceSystem: string;
+  targetSystem: string;
 
   countDeviceIdentifiers$: BehaviorSubject<number> =
     new BehaviorSubject<number>(0);
@@ -133,9 +124,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     next: 'Next',
     cancel: 'Cancel'
   };
-  propertyFormly: FormGroup = new FormGroup({});
-  sourceSystem: string;
-  targetSystem: string;
 
   editorOptionsSourceTemplate = {
     mode: 'tree',
@@ -174,13 +162,20 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     statusBar: true
   };
 
-
   selectedSubstitution: number = -1;
 
   snoopedTemplateCounter: number = -1;
   step: any;
   expertMode: boolean = false;
   templatesInitialized: boolean = false;
+  extensions: Map<string, Extension> = new Map();
+  extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  onDestroy$ = new Subject<void>();
+  supportsMessageContext: boolean;
+  isButtonDisabled$: BehaviorSubject<boolean> = new BehaviorSubject(true);
+
+  sourceCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
+  targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
 
   @ViewChild('editorSourceStepSubstitution', { static: false })
   editorSourceStepSubstitution: JsonEditor2Component;
@@ -194,14 +189,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
 
-  extensions: Map<string, Extension> = new Map();
-  extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
-  onDestroy$ = new Subject<void>();
-  supportsMessageContext: boolean;
-
-  sourceCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
-  targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
-
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
@@ -209,27 +196,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
     private elementRef: ElementRef
   ) { }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  deploymentMapEntryChange(e) {
-    // console.log(
-    //   'New getDeploymentMap',
-    //   this._deploymentMapEntry,
-    //   !this._deploymentMapEntry?.connectors
-    // );
-    this.isButtonDisabled$.next(
-      !this._deploymentMapEntry?.connectors ||
-      this._deploymentMapEntry?.connectors?.length == 0
-    );
-
-    setTimeout(() => {
-      this.supportsMessageContext =
-        this._deploymentMapEntry.connectorsDetailed?.some(
-          (con) => con.connectorType == ConnectorType.KAFKA
-        );
-    });
-    // console.log('New setDeploymentMap from grid', e);
-  }
 
   ngOnInit() {
     // console.log('mapping-stepper', this._deploymentMapEntry, this.deploymentMapEntry);
@@ -242,9 +208,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         custom: 'Start snooping'
       };
     }
-    // console.log('Formly to be updated:', this.configService);
-    // set value for backward compatibility
-    if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
+
     this.targetSystem =
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
@@ -401,6 +365,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
   }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    deploymentMapEntryChange(e) {
+      this.isButtonDisabled$.next(
+        !this._deploymentMapEntry?.connectors ||
+        this._deploymentMapEntry?.connectors?.length == 0
+      );
+  
+      setTimeout(() => {
+        this.supportsMessageContext =
+          this._deploymentMapEntry.connectorsDetailed?.some(
+            (con) => con.connectorType == ConnectorType.KAFKA
+          );
+      });
+    }
+
   onEditorSourceInitialized() {
     this.schemaUpdateSource.emit(
       getSchema(this.mapping.targetAPI, this.mapping.direction, false)
@@ -486,24 +465,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionModel = { ...this.substitutionModel };
   }
 
-  // // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  // onTemplateSourceChanged(content: Content) {
-  //   if (content && 'text' in content) {
-  //     this.templateSource = JSON.parse(content.text);
-  //   } else if (content && 'json' in content) {
-  //     this.templateSource = content.json;
-  //   }
-  // }
-
-  // // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  // onTemplateTargetChanged(content: Content) {
-  //   if (content && 'text' in content) {
-  //     this.templateTarget = JSON.parse(content.text);
-  //   } else if (content && 'json' in content) {
-  //     this.templateTarget = content.json;
-  //   }
-  // }
-
   isSubstitutionValid() {
     const r1 =
       this.substitutionModel.sourceExpression?.valid;
@@ -584,11 +545,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onSelectExtensionEvent(extensionEvent) {
     this.mapping.extension.event = extensionEvent;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async onStepChange(event): Promise<void> {
-    // ('OnStepChange', event);
   }
 
   async onNextStep(event: {
@@ -798,11 +754,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.substitutionModel.resolve2ExternalId = false;
       this.addSubstitution(this.substitutionModel);
       this.selectedSubstitution = -1;
-      // console.log(
-      //  'New substitution',
-      //  this.templateModel,
-      //  this.mapping.substitutions
-      // );
     } else {
       this.alertService.warning(
         'Please select two nodes: one node in the template source, one node in the template target to define a substitution.'
@@ -811,21 +762,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onDeleteSubstitution(selected: number) {
-    // console.log('Delete selected substitution', selected);
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);
     }
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-    // console.log('Deleted substitution', this.mapping.substitutions.length);
   }
-  togglePowermode() {
+
+  toggleExpertMode() {
     this.expertMode = !this.expertMode;
   }
 
   onUpdateSubstitution() {
     if (this.selectedSubstitution != -1) {
       const selected = this.selectedSubstitution;
-      // console.log('Edit selected substitution', selected);
       const initialState = {
         substitution: _.clone(this.mapping.substitutions[selected]),
         mapping: this.mapping,
@@ -845,16 +794,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         initialState
       });
       modalRef.content.closeSubject.subscribe((editedSub) => {
-        // console.log('Mapping after edit:', editedSub);
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
           this.substitutionModel = editedSub;
-          // this.updateSourceExpressionResult();
-          // this.updateTargetExpressionResult();
         }
       });
       this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-      // console.log('Edited substitution', this.mapping.substitutions.length);
     }
   }
 
@@ -881,11 +826,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
         initialState
       });
-      // modalRef.content.closeSubject.subscribe((result) => {
-      //   console.log('results:', result);
-      // });
+
       modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
-        // console.log('About to add new substitution:', newSub);
         if (newSub && !isDuplicate) {
           this.mapping.substitutions.push(newSub);
         } else if (newSub && isDuplicate) {

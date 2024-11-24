@@ -114,7 +114,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
         ]
       }
     ];
-    console.log('Mapping in filter:', this.mapping, this.editorSourceFilter);
+    // console.log('Mapping in filter:', this.mapping, this.editorSourceFilter);
   }
 
   onDismiss() {
