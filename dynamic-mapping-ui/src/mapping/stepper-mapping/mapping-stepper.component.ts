@@ -80,7 +80,7 @@ import { SubstitutionRendererComponent } from '../substitution/substitution-grid
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class MappingStepperComponent implements OnInit, OnDestroy{
+export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Output() cancel = new EventEmitter<any>();
@@ -381,11 +381,25 @@ export class MappingStepperComponent implements OnInit, OnDestroy{
       extensionEvent: new FormControl({
         value: this.mapping?.extension?.event,
         disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
-      })
+      }),
+      snoopedTemplateIndex: new FormControl({
+        value: -1,
+        disabled:
+          !this.stepperConfiguration.showEditorSource ||
+          this.mapping.snoopedTemplates.length === 0 ||
+          this.stepperConfiguration.editorMode ===
+          EditorMode.READ_ONLY
+
+      }),
+      sampleTargetTemplatesButton: new FormControl(
+        {  value: !this.stepperConfiguration.showEditorSource ||
+          this.stepperConfiguration.editorMode ===
+          EditorMode.READ_ONLY,
+          disabled: undefined
+        }
+      )
     });
   }
-
-
 
   onEditorSourceInitialized() {
     this.schemaUpdateSource.emit(

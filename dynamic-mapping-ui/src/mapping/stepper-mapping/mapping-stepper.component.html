@@ -97,25 +97,18 @@
                   <div class="col-lg-5 col-lg-offset-1 column-right-border">
                     <div class="form-group">
                       <div class="c8y-select-wrapper" style="width: 50%">
-                        <select class="form-control" (change)="
-                              onSelectSnoopedSourceTemplate($event.target.value)
-                            " [attr.disabled]="
-                              isDisabled(
-                                !stepperConfiguration.showEditorSource ||
-                                  mapping.snoopedTemplates.length === 0 ||
-                                  stepperConfiguration.editorMode ===
-                                    EditorMode.READ_ONLY
-                              )
-                            ">
+                        <select class="form-control" formControlName="snoopedTemplateIndex" (change)="
+                        onSelectSnoopedSourceTemplate($event.target.value)
+                      ">
                           <option [value]="-1" [disabled]="true">
                             Select snooped template
                           </option>
                           <option [value]="i" *ngFor="
-                                let t of [].constructor(
-                                  mapping.snoopedTemplates.length
-                                );
-                                let i = index
-                              ">
+                          let t of [].constructor(
+                            mapping.snoopedTemplates.length
+                          );
+                          let i = index
+                        ">
                             {{ 'Template - ' + i }}
                           </option>
                         </select>
@@ -135,13 +128,7 @@
                       <div class="d-flex j-c-between">
                         <button type="button" name="sample" class="btn btn-default" style="min-width: 65px"
                           (click)="onSampleTargetTemplatesButton()" translate title="Use Sample Target Templates"
-                          [attr.disabled]="
-                              isDisabled(
-                                !stepperConfiguration.showEditorSource ||
-                                  stepperConfiguration.editorMode ===
-                                    EditorMode.READ_ONLY
-                              )
-                            ">
+                          [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value">
                           <i c8yIcon="enter-right"></i>Reset to default
                         </button>
                       </div>
