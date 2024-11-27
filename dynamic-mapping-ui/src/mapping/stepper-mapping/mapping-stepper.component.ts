@@ -57,7 +57,6 @@ import {
 } from '../../shared';
 import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component';
 import { MappingService } from '../core/mapping.service';
-import { C8YRequest } from '../processor/processor.model';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
 import {
@@ -177,10 +176,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   sourceCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
   targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
 
-  @ViewChild('editorSourceStepSubstitution', { static: false })
-  editorSourceStepSubstitution: JsonEditor2Component;
-  @ViewChild('editorTargetStepSubstitution', { static: false })
-  editorTargetStepSubstitution: JsonEditor2Component;
   @ViewChild('editorSourceStepTemplate', { static: false })
   editorSourceStepTemplate: JsonEditor2Component;
   @ViewChild('editorTargetStepTemplate', { static: false })
@@ -396,7 +391,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.sourceCustomMessage$.next(undefined);
     try {
       const r: JSON = await this.mappingService.evaluateExpression(
-        this.editorSourceStepSubstitution?.get(),
+        this.editorSourceStepTemplate?.get(),
         path
       );
       this.substitutionModel.sourceExpression = {
@@ -429,7 +424,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async updateTargetExpressionResult(path) {
     try {
       const r: JSON = await this.mappingService.evaluateExpression(
-        this.editorTargetStepSubstitution?.get(),
+        this.editorTargetStepTemplate?.get(),
         path
       );
       this.substitutionModel.targetExpression = {
@@ -500,10 +495,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const current = {
       ...this.mapping,
       source: reduceSourceTemplate(
-        this.editorSourceStepSubstitution ? this.editorSourceStepSubstitution?.get() : {},
+        this.editorSourceStepTemplate ? this.editorSourceStepTemplate?.get() : {},
         patched
       ), // remove array "_TOPIC_LEVEL_" since it should not be stored
-      target: reduceTargetTemplate(this.editorTargetStepSubstitution?.get(), patched), // remove patched attributes, since it should not be stored
+      target: reduceTargetTemplate(this.editorTargetStepTemplate?.get(), patched), // remove patched attributes, since it should not be stored
       lastUpdate: Date.now()
     };
     return current;
@@ -529,7 +524,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         levels
       );
     }
-    this.editorTargetStepSubstitution.set(this.templateTarget);
+    this.editorTargetStepTemplate.set(this.templateTarget);
   }
 
   async onCancelButton() {
@@ -846,10 +841,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.selectedSubstitution = selected;
       this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      await this.editorSourceStepSubstitution?.setSelectionToPath(
+      await this.editorSourceStepTemplate?.setSelectionToPath(
         this.substitutionModel.pathSource
       );
-      await this.editorTargetStepSubstitution.setSelectionToPath(
+      await this.editorTargetStepTemplate.setSelectionToPath(
         this.substitutionModel.pathTarget
       );
     }

@@ -194,7 +194,7 @@
                           [options]="editorOptionsSourceSubstitution" [class]="'jse-main-small'"
                           (pathChanged)="onSelectedPathSourceChanged($event)"
                           (initialized)="onEditorSourceInitialized()" [data]="templateSource"
-                          #editorSourceStepSubstitution></d11r-mapping-json-editor2>
+                          #editorSourceStepTemplate></d11r-mapping-json-editor2>
                         <span class="text-warning text-12 p-l-8" *ngIf="
                                 substitutionModel.pathSource === ''
                               ">Select source node to define substitution!</span>
@@ -231,7 +231,7 @@
                       <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateTarget"
                         [options]="editorOptionsTargetSubstitution" [class]="'jse-main-small'"
                         (pathChanged)="onSelectedPathTargetChanged($event)" (initialized)="onEditorTargetInitialized()"
-                        [data]="templateTarget" #editorTargetStepSubstitution>
+                        [data]="templateTarget" #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>
                       <span class="text-warning text-12 p-l-8" *ngIf="
                             substitutionModel.pathTarget === '' &&
