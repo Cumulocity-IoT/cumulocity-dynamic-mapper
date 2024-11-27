@@ -587,7 +587,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.templateTarget = this.editorTargetStepTemplate?.get();
       event.stepper.next();
     } else {
-      console.log("Updated subs III:", this.mapping.substitutions);
+      // console.log("Updated subs III:", this.mapping.substitutions);
       event.stepper.next();
     }
   }
@@ -801,7 +801,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         }
       });
       this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-      console.log("Updated subs I:", this.mapping.substitutions);
+      // console.log("Updated subs I:", this.mapping.substitutions);
     }
   }
 
@@ -844,11 +844,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected;
-      this.substitutionModel.pathSource = this.mapping.substitutions[selected].pathSource;
-      this.substitutionModel.pathTarget = this.mapping.substitutions[selected].pathTarget;
-      this.substitutionModel.expandArray = this.mapping.substitutions[selected].expandArray;
-      this.substitutionModel.resolve2ExternalId = this.mapping.substitutions[selected].resolve2ExternalId;
-      this.substitutionModel.repairStrategy = this.mapping.substitutions[selected].repairStrategy;
+      this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
       await this.editorSourceStepSubstitution?.setSelectionToPath(
         this.substitutionModel.pathSource
@@ -857,7 +853,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel.pathTarget
       );
     }
-    console.log("Updated subs II:", this.mapping.substitutions);
+    // console.log("Updated subs II:", this.mapping.substitutions);
   }
 
   ngOnDestroy() {
