@@ -46,6 +46,11 @@ body .jsoneditor2 {
   overflow: auto;
 }
 
+.jse-main-medium {
+  height: 450px;
+  overflow: auto;
+}
+
 .jse-main-tiny {
   height: 250px;
   overflow: auto;

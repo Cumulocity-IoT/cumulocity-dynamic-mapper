@@ -145,7 +145,7 @@
                       </div>
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource"
                         [schemaUpdate]="schemaUpdateSource" [options]="editorOptionsSourceTemplate"
-                        [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()" [data]="templateSource"
+                        [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()" [data]="templateSource"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container *ngIf="!stepperConfiguration.showEditorSource">
                         <ng-container *ngTemplateOutlet="extensionTemplate; context: { form: templateForm }">
@@ -161,7 +161,7 @@
                         </div>
                       </div>
                       <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateTarget"
-                        [options]="editorOptionsTargetTemplate" [class]="'jse-main-small'"
+                        [options]="editorOptionsTargetTemplate" [class]="'jse-main-medium'"
                         (initialized)="onEditorTargetInitialized()" [data]="templateTarget" #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>
                     </div>
