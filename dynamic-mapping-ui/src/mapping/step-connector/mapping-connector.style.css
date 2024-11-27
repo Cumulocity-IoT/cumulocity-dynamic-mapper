@@ -1,0 +1,6 @@
+
+/* bring dropdown to the top of the modal dialog */
+body > bs-dropdown-container  {
+    z-index: 1056 !important;
+    position: relative;
+}

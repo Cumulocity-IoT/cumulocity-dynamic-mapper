@@ -247,7 +247,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             wrappers: ['custom-form-field'],
             templateOptions: {
               label: 'Source Expression',
-              class: 'input-sm disabled-animate-background',
+              class: 'input-sm',
               customWrapperClass: 'm-b-24',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
@@ -275,7 +275,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                   model.pathSource == '' &&
                   model.stepperConfiguration.allowDefiningSubstitutions
                 ) {
-                  return 'input-sm disabled-animate-background';
+                  return 'input-sm';
                 } else {
                   return 'input-sm';
                 }
@@ -314,7 +314,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                   model.pathTarget == '' &&
                   model.stepperConfiguration.allowDefiningSubstitutions
                 ) {
-                  return 'input-sm disabled-animate-background';
+                  return 'input-sm';
                 } else {
                   return 'input-sm';
                 }
