@@ -33,7 +33,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { Direction, Mapping, SAMPLE_TEMPLATES_C8Y, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { countDeviceIdentifiers, isDisabled } from '../shared/util';
+import { isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
 import { DeploymentMapEntry, StepperConfiguration } from '../../shared';
 import { SnoopStatus } from '../../shared/model/shared.model';

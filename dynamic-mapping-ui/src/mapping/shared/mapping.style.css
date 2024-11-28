@@ -40,11 +40,6 @@ c8y-data-grid button[title='Reload'] {
   font-size: smaller !important;
 }
 
-json-editor > div {
-  max-height: 300px;
-  overflow: auto !important;
-}
-
 .column-left-border {
   border-left: 1px solid;
   border-color: var(--c8y-form-legend-color);
@@ -58,10 +53,6 @@ json-editor > div {
   /* border-color: var(--c8y-root-component-separator-color); */
 }
 
-.reduced-top {
-  top: -20px;
-}
-
 @keyframes background-color {
   from {
     background-color: var(--brand-light, var(--c8y-brand-light));
@@ -70,10 +61,7 @@ json-editor > div {
     background-color: white;
   }
 }
+
 .c8y-switch > button {
   display: none;
-}
-.not-p-b-24 {
-	padding-bottom: 6px;
-	padding-left: 0px;
 }

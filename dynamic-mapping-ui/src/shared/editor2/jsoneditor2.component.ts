@@ -66,7 +66,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
   set data(value: unknown) {
     if (value && Object.keys(value).length != 0 && this.initRan) {
       this.content = { json: value }
-      this.editor.update(this.content);
+      this.editor?.update(this.content);
       this.cdr.detectChanges();
     }
   }
@@ -87,11 +87,11 @@ export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
 
   initRan: boolean = true;
 
-	constructor(
-		private cdr: ChangeDetectorRef
-	) {
+  constructor(
+    private cdr: ChangeDetectorRef
+  ) {
 
-	}
+  }
 
   private editor: JsonEditor;
   id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
@@ -106,17 +106,17 @@ export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-		if (changes) {
-			if (JSON.stringify(changes['options']?.currentValue) !== JSON.stringify(changes['options']?.previousValue)) {
-				this.updateProps();
-			}
-		}
-	}
+    if (changes) {
+      if (JSON.stringify(changes['options']?.currentValue) !== JSON.stringify(changes['options']?.previousValue)) {
+        this.updateProps();
+      }
+    }
+  }
 
   private updateProps() {
-		this.editor?.updateProps(this.options);
-		this.cdr.detectChanges();
-	}
+    this.editor?.updateProps(this.options);
+    this.cdr.detectChanges();
+  }
 
   ngAfterViewInit() {
     this.initalizeEditor();
@@ -232,19 +232,21 @@ export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async setSelectionToPath(pathString: string) {
-    const path = parseJSONPath(pathString);
-    // console.log('Set selection to path:', pathString, path);
-    const selection: any = createMultiSelection(path, path);
-    // const selection: any = createKeySelection(path, false);
-    // marker to ignore emitting change events when the path was set programmatically
-    selection.triggeredSelection = false;
+    if (pathString) {
+      const path = parseJSONPath(pathString);
+      // console.log('Set selection to path:', pathString, path);
+      const selection: any = createMultiSelection(path, path);
+      // const selection: any = createKeySelection(path, false);
+      // marker to ignore emitting change events when the path was set programmatically
+      selection.triggeredSelection = false;
 
-    try {
-      await this.editor.select(selection);
-    } catch (error) {
-      console.warn('Set selection to path not possible:', pathString, error);
+      try {
+        await this.editor.select(selection);
+      } catch (error) {
+        console.warn('Set selection to path not possible:', pathString, error);
+      }
+      this.pathChanged.emit(pathString);
     }
-    this.pathChanged.emit(pathString);
   }
 
   get(): JSON {
