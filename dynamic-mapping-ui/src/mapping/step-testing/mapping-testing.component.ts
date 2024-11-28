@@ -40,7 +40,7 @@ import {
 import { MappingService } from '../core/mapping.service';
 import { C8YRequest } from '../processor/processor.model';
 import { StepperConfiguration } from 'src/shared/model/shared.model';
-import { expandC8YTemplate, expandExternalTemplate, isDisabled } from '../shared/util';
+import { isDisabled } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-testing',
@@ -120,7 +120,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       if (editorTestingRequestRef != null) {
         // set schema for editors
         this.editorTestingRequest.setSchema(
-          getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+          getSchema(this.mapping.targetAPI, this.mapping.direction, true, true)
         );
         this.testingModel = {
           payload: this.source,
@@ -219,7 +219,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         getSchema(
           this.testingModel.results[this.testingModel.selectedResult].targetAPI,
           this.mapping.direction,
-          true
+          true, true
         )
       );
       this.testingModel.errorMsg =

@@ -378,13 +378,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onEditorSourceInitialized() {
     this.schemaUpdateSource.emit(
-      getSchema(this.mapping.targetAPI, this.mapping.direction, false)
+      getSchema(this.mapping.targetAPI, this.mapping.direction, false, false)
     );
   }
 
   onEditorTargetInitialized() {
     this.schemaUpdateTarget.emit(
-      getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+      getSchema(this.mapping.targetAPI, this.mapping.direction, true, false)
     );
   }
 
@@ -734,13 +734,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.target = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.source = getExternalTemplate(this.mapping);
       this.schemaUpdateTarget.emit(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+        getSchema(this.mapping.targetAPI, this.mapping.direction, true, false)
       );
     } else {
       this.mapping.source = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.target = getExternalTemplate(this.mapping);
       this.schemaUpdateSource.emit(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, false)
+        getSchema(this.mapping.targetAPI, this.mapping.direction, false, false)
       );
     }
   }

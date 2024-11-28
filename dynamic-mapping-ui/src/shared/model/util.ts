@@ -258,6 +258,38 @@ export const SCHEMA_INVENTORY = {
   }
 };
 
+export const SCHEMA_C8Y_INVENTORY = {
+  definitions: {},
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  $id: 'http://example.com/root.json',
+  type: 'object',
+  title: 'INVENTORY',
+  required: ['c8y_IsDevice', 'type', 'name'],
+  properties: {
+    c8y_IsDevice: {
+      $id: '#/properties/c8y_IsDevice',
+      type: 'object',
+      title: 'Mark as device.',
+      properties: {}
+    },
+    type: {
+      $id: '#/properties/type',
+      type: 'string',
+      title: 'Type of the device.'
+    },
+    name: {
+      $id: '#/properties/name',
+      type: 'string',
+      title: 'Name of the device.'
+    },
+    id: {
+      $id: '#/properties/id',
+      type: 'string',
+      title: 'Cumulocity id of the device.',
+    }
+  }
+};
+
 export const SCHEMA_OPERATION = {
   definitions: {},
   $schema: 'http://json-schema.org/draft-07/schema#',
@@ -328,11 +360,12 @@ export function getExternalTemplate(mapping: Mapping): any {
 export function getSchema(
   targetAPI: string,
   direction: Direction,
-  target: boolean
+  isTarget: boolean,
+  isTesting: boolean
 ): any {
   if (
-    (target && (!direction || direction == Direction.INBOUND)) ||
-    (!target && direction == Direction.OUTBOUND)
+    (isTarget && direction == Direction.INBOUND) ||
+    (!isTarget && direction == Direction.OUTBOUND)
   ) {
     if (targetAPI == API.ALARM.name) {
       return SCHEMA_ALARM;
@@ -341,7 +374,8 @@ export function getSchema(
     } else if (targetAPI == API.MEASUREMENT.name) {
       return SCHEMA_MEASUREMENT;
     } else if (targetAPI == API.INVENTORY.name) {
-      return SCHEMA_INVENTORY;
+      if (isTarget) return SCHEMA_C8Y_INVENTORY;
+       else return SCHEMA_INVENTORY
     } else {
       return SCHEMA_OPERATION;
     }
