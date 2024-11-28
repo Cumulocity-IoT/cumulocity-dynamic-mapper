@@ -28,7 +28,10 @@ import {
   Output,
   EventEmitter,
   ChangeDetectionStrategy,
-  ViewEncapsulation
+  ViewEncapsulation,
+  AfterViewInit,
+  ChangeDetectorRef,
+  SimpleChanges
 } from '@angular/core';
 import {
   JsonEditor,
@@ -57,18 +60,14 @@ import {
   styleUrls: ['./jsoneditor2.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class JsonEditor2Component implements OnInit, OnDestroy {
+export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
   @Input() options;
   @Input()
   set data(value: unknown) {
-    if (value && Object.keys(value).length != 0) {
-      this.content['json'] = value;
-    }
-    // console.log('on setData', value, this.content);
-
-    if (this.editor) {
-      this.editor.destroy();
-      this.ngOnInit();
+    if (value && Object.keys(value).length != 0 && this.initRan) {
+      this.content = { json: value }
+      this.editor.update(this.content);
+      this.cdr.detectChanges();
     }
   }
   @Input()
@@ -86,7 +85,13 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @ViewChild('jsonEditorContainer', { static: true })
   jsonEditorContainer: ElementRef;
 
-  constructor() { }
+  initRan: boolean = true;
+
+	constructor(
+		private cdr: ChangeDetectorRef
+	) {
+
+	}
 
   private editor: JsonEditor;
   id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
@@ -96,7 +101,29 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
       content: 'no content'
     }
   };
+
   ngOnInit() {
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+		if (changes) {
+			if (JSON.stringify(changes['options']?.currentValue) !== JSON.stringify(changes['options']?.previousValue)) {
+				this.updateProps();
+			}
+		}
+	}
+
+  private updateProps() {
+		this.editor?.updateProps(this.options);
+		this.cdr.detectChanges();
+	}
+
+  ngAfterViewInit() {
+    this.initalizeEditor();
+    this.initRan = true;
+  }
+
+  initalizeEditor() {
     if (!this.jsonEditorContainer.nativeElement) {
       console.error("Can't find the ElementRef reference for jsoneditor)");
     }
@@ -111,13 +138,6 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           previousContent,
           { contentErrors, patchResult }
         ) => {
-          // content is an object { json: JSONData } | { text: string }
-          // console.log('onChange', {
-          //  updatedContent,
-          //  previousContent,
-          //  contentErrors,
-          //  patchResult
-          // });
           this.content = updatedContent;
           this.contentChanged.emit(updatedContent);
         },

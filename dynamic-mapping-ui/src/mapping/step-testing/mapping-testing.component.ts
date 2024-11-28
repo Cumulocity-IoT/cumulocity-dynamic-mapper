@@ -40,7 +40,7 @@ import {
 import { MappingService } from '../core/mapping.service';
 import { C8YRequest } from '../processor/processor.model';
 import { StepperConfiguration } from 'src/shared/model/shared.model';
-import { isDisabled } from '../shared/util';
+import { expandC8YTemplate, expandExternalTemplate, isDisabled } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-testing',
@@ -73,7 +73,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-  currentMapping: any;
+  currentContext: any;
   editorOptionsTesting: any = {
     mode: 'tree',
     removeModes: ['text', 'table'],
@@ -89,6 +89,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   editorTestingRequest: JsonEditor2Component;
   @ViewChild('editorTestingResponse', { static: false })
   editorTestingResponse: JsonEditor2Component;
+  source: any;
 
   constructor(
     public mappingService: MappingService,
@@ -110,7 +111,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     // );
 
     this.editorTestingPayloadTemplateEmitter.subscribe((current) => {
-      this.currentMapping = current;
+      this.currentContext = current;
+      this.source = JSON.parse(this.currentContext.mapping.source);
+      this.currentContext.mapping.source = JSON.stringify(current.sourceTemplate);
+      this.currentContext.mapping.target = JSON.stringify(current.targetTemplate);
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector('#editorTestingRequest');
       if (editorTestingRequestRef != null) {
@@ -119,7 +123,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
           getSchema(this.mapping.targetAPI, this.mapping.direction, true)
         );
         this.testingModel = {
-          payload: JSON.parse(this.currentMapping.source),
+          payload: this.source,
           results: [],
           selectedResult: -1,
           request: {},
@@ -132,7 +136,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   async onTestTransformation() {
     const testProcessingContext = await this.mappingService.testResult(
-      this.currentMapping,
+      this.currentContext.mapping,
       false
     );
     this.testingModel.results = testProcessingContext.requests;
@@ -155,7 +159,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   async onSendTest() {
     const testProcessingContext = await this.mappingService.testResult(
-      this.mapping,
+      this.currentContext.mapping,
       true
     );
     this.testingModel.results = testProcessingContext.requests;
@@ -183,12 +187,14 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   onResetTransformation() {
     this.testingModel = {
-      payload: this.currentMapping,
+      payload: this.source,
       results: [],
       request: {},
       response: {},
       selectedResult: -1
     };
+    this.editorTestingRequest.set(this.testingModel.request);
+    this.editorTestingResponse.set(this.testingModel.response);
     this.mappingService.initializeCache(this.mapping.direction);
   }
 

@@ -40,7 +40,7 @@
           <label translate>Source Template - {{ sourceSystem }}</label>
         </div>
         <d11r-mapping-json-editor2 #editorSourceFilter [options]="editorOptionsSourceFilter" [class]="'jse-main-small'"
-          [data]="templateSource" (pathChanged)="onSelectedPathSourceChanged($event)"></d11r-mapping-json-editor2>
+          [data]="sourceTemplate" (pathChanged)="onSelectedPathSourceChanged($event)"></d11r-mapping-json-editor2>
       </div>
       <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
       <div class="form-group ">

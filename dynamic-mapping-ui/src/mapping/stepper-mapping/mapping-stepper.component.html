@@ -145,7 +145,7 @@
                       </div>
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource"
                         [schemaUpdate]="schemaUpdateSource" [options]="editorOptionsSourceTemplate"
-                        [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()" [data]="templateSource"
+                        [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()" (contentChanged)="onsourceTemplateChanged($event)" [data]="sourceTemplate"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container *ngIf="!stepperConfiguration.showEditorSource">
                         <ng-container *ngTemplateOutlet="extensionTemplate; context: { form: templateForm }">
@@ -162,7 +162,7 @@
                       </div>
                       <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateTarget"
                         [options]="editorOptionsTargetTemplate" [class]="'jse-main-medium'"
-                        (initialized)="onEditorTargetInitialized()" [data]="templateTarget" #editorTargetStepTemplate>
+                        (initialized)="onEditorTargetInitialized()"  (contentChanged)="ontargetTemplateChanged($event)" [data]="targetTemplate" #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>
                     </div>
                   </div>
@@ -193,7 +193,7 @@
                         <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateSource"
                           [options]="editorOptionsSourceSubstitution" [class]="'jse-main-small'"
                           (pathChanged)="onSelectedPathSourceChanged($event)"
-                          (initialized)="onEditorSourceInitialized()" [data]="templateSource"
+                          (initialized)="onEditorSourceInitialized()" [data]="sourceTemplate"
                           #editorSourceStepTemplate></d11r-mapping-json-editor2>
                         <span class="text-warning text-12 p-l-8" *ngIf="
                                 substitutionModel.pathSource === ''
@@ -217,10 +217,10 @@
                         <div class="d-flex">
                           <label>Target Template - {{ targetSystem }}</label>
                           <span class="hidden-xs hidden-sm m-l-4">
-                            <ng-template #popTemplateTarget>The template contains the dummy field
+                            <ng-template #poptargetTemplate>The template contains the dummy field
                               "_TOPIC_LEVEL_"(outbound) to map device
                               identifiers.</ng-template>
-                            <button class="btn-clean text-primary" [popover]="popTemplateTarget"
+                            <button class="btn-clean text-primary" [popover]="poptargetTemplate"
                               popoverTitle='Use dummy field "_TOPIC_LEVEL_"' placement="right" triggers="focus"
                               type="button">
                               <i c8yIcon="question-circle-o"></i>
@@ -231,7 +231,7 @@
                       <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateTarget"
                         [options]="editorOptionsTargetSubstitution" [class]="'jse-main-small'"
                         (pathChanged)="onSelectedPathTargetChanged($event)" (initialized)="onEditorTargetInitialized()"
-                        [data]="templateTarget" #editorTargetStepTemplate>
+                        [data]="targetTemplate" #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>
                       <span class="text-warning text-12 p-l-8" *ngIf="
                             substitutionModel.pathTarget === '' &&

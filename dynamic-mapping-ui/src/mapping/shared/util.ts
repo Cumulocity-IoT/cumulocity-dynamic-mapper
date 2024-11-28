@@ -657,9 +657,9 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
 
 export function reduceSourceTemplate(
   template: object,
-  patched: boolean
+  returnPatched: boolean
 ): string {
-  if (!patched) {
+  if (!returnPatched) {
     delete template[TOKEN_TOPIC_LEVEL];
     delete template[TOKEN_CONTEXT_DATA];
   }

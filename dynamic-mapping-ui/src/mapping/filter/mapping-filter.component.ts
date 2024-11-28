@@ -57,7 +57,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
     readOnly: true,
     name: 'message'
   };
-  templateSource: any;
+  sourceTemplate: any;
   filterModel: any = {};
   filterFormly: FormGroup = new FormGroup({});
   filterFormlyFields: FormlyFieldConfig[];
@@ -76,7 +76,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
 
   async ngOnInit(): Promise<void> {
     this.closeSubject = new Subject();
-    this.templateSource = JSON.parse(this.mapping.source);
+    this.sourceTemplate = JSON.parse(this.mapping.source);
     this.filterFormlyFields = [
       {
         fieldGroup: [
@@ -140,7 +140,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
       this.filterFormly.get('pathSource').setErrors(null);
 
       const r: JSON = await this.mappingService.evaluateExpression(
-        this.templateSource,
+        this.sourceTemplate,
         this.filterFormly.get('pathSource').value
       );
       this.filterModel.sourceExpression = {

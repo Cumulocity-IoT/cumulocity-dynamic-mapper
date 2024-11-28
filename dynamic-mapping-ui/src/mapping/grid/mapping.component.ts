@@ -80,6 +80,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { AdviceActionComponent } from './advisor/advice-action.component';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
+import { map } from 'cypress/types/bluebird';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -559,6 +560,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       MAPPING_TYPE_DESCRIPTION[mapping.mappingType].properties[
       mapping.direction
       ];
+    mapping.lastUpdate =  Date.now();
     if (
       (mapping.snoopStatus == SnoopStatus.ENABLED ||
         mapping.snoopStatus == SnoopStatus.STARTED) &&

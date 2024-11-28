@@ -104,7 +104,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   editorTestingPayloadTemplateEmitter = new EventEmitter<any>();
   schemaUpdateSource: EventEmitter<string> = new EventEmitter<any>();
   schemaUpdateTarget: EventEmitter<string> = new EventEmitter<any>();
-  
+
   templateForm: FormGroup;
   templateModel: any = {};
   substitutionFormly: FormGroup = new FormGroup({});
@@ -112,8 +112,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   substitutionModel: any = {};
   propertyFormly: FormGroup = new FormGroup({});
 
-  templateSource: any;
-  templateTarget: any;
+  sourceTemplate: any;
+  targetTemplate: any;
   sourceSystem: string;
   targetSystem: string;
 
@@ -351,29 +351,30 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
       }),
       sampleTargetTemplatesButton: new FormControl(
-        {  value: !this.stepperConfiguration.showEditorSource ||
-          this.stepperConfiguration.editorMode ===
-          EditorMode.READ_ONLY,
+        {
+          value: !this.stepperConfiguration.showEditorSource ||
+            this.stepperConfiguration.editorMode ===
+            EditorMode.READ_ONLY,
           disabled: undefined
         }
       )
     });
   }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    deploymentMapEntryChange(e) {
-      this.isButtonDisabled$.next(
-        !this._deploymentMapEntry?.connectors ||
-        this._deploymentMapEntry?.connectors?.length == 0
-      );
-  
-      setTimeout(() => {
-        this.supportsMessageContext =
-          this._deploymentMapEntry.connectorsDetailed?.some(
-            (con) => con.connectorType == ConnectorType.KAFKA
-          );
-      });
-    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  deploymentMapEntryChange(e) {
+    this.isButtonDisabled$.next(
+      !this._deploymentMapEntry?.connectors ||
+      this._deploymentMapEntry?.connectors?.length == 0
+    );
+
+    setTimeout(() => {
+      this.supportsMessageContext =
+        this._deploymentMapEntry.connectorsDetailed?.some(
+          (con) => con.connectorType == ConnectorType.KAFKA
+        );
+    });
+  }
 
   onEditorSourceInitialized() {
     this.schemaUpdateSource.emit(
@@ -491,26 +492,31 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
   }
 
-  getCurrentMapping(patched: boolean): Mapping {
-    const current = {
-      ...this.mapping,
-      source: reduceSourceTemplate(
-        this.editorSourceStepTemplate ? this.editorSourceStepTemplate?.get() : {},
-        patched
-      ), // remove array "_TOPIC_LEVEL_" since it should not be stored
-      target: reduceTargetTemplate(this.editorTargetStepTemplate?.get(), patched), // remove patched attributes, since it should not be stored
-      lastUpdate: Date.now()
-    };
-    return current;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onsourceTemplateChanged(content: Content) {
+    if (_.has(content, 'text') && content['text']) {
+      this.mapping.source = reduceSourceTemplate(JSON.parse(content['text']), false);
+    } else {
+      this.mapping.source = reduceSourceTemplate(content['json'], false);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ontargetTemplateChanged(content: Content) {
+    if (_.has(content, 'text') && content['text']) {
+      this.mapping.target = reduceSourceTemplate(JSON.parse(content['text']), false);
+    } else {
+      this.mapping.target = reduceSourceTemplate(content['json'], false);
+    }
   }
 
   async onCommitButton() {
-    this.commit.emit(this.getCurrentMapping(false));
+    this.commit.emit(this.mapping);
   }
 
   async onSampleTargetTemplatesButton() {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.templateTarget = expandC8YTemplate(
+      this.targetTemplate = expandC8YTemplate(
         JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]),
         this.mapping
       );
@@ -518,13 +524,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       const levels: string[] = splitTopicExcludingSeparator(
         this.mapping.mappingTopicSample
       );
-      this.templateTarget = expandExternalTemplate(
+      this.targetTemplate = expandExternalTemplate(
         JSON.parse(getExternalTemplate(this.mapping)),
         this.mapping,
         levels
       );
     }
-    this.editorTargetStepTemplate.set(this.templateTarget);
+    this.editorTargetStepTemplate.set(this.targetTemplate);
   }
 
   async onCancelButton() {
@@ -574,12 +580,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
       event.stepper.next();
     } else if (this.step == 'Define substitutions') {
-      this.editorTestingPayloadTemplateEmitter.emit(this.getCurrentMapping(true));
+      this.editorTestingPayloadTemplateEmitter.emit({mapping:this.mapping, sourceTemplate: this.sourceTemplate,  targetTemplate: this.targetTemplate});
       this.onSelectSubstitution(0);
       event.stepper.next();
     } else if (this.step == 'Select templates') {
-      this.templateSource = this.editorSourceStepTemplate?.get();
-      this.templateTarget = this.editorTargetStepTemplate?.get();
+      this.sourceTemplate = this.editorSourceStepTemplate?.get();
+      this.targetTemplate = this.editorTargetStepTemplate?.get();
       event.stepper.next();
     } else {
       // console.log("Updated subs III:", this.mapping.substitutions);
@@ -618,21 +624,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     ) {
       this.templatesInitialized = true;
       if (this.stepperConfiguration.direction == Direction.INBOUND) {
-        this.templateSource = expandExternalTemplate(
+        this.sourceTemplate = expandExternalTemplate(
           JSON.parse(getExternalTemplate(this.mapping)),
           this.mapping,
           levels
         );
-        this.templateTarget = expandC8YTemplate(
+        this.targetTemplate = expandC8YTemplate(
           JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]),
           this.mapping
         );
       } else {
-        this.templateSource = expandC8YTemplate(
+        this.sourceTemplate = expandC8YTemplate(
           JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]),
           this.mapping
         );
-        this.templateTarget = expandExternalTemplate(
+        this.targetTemplate = expandExternalTemplate(
           JSON.parse(getExternalTemplate(this.mapping)),
           this.mapping,
           levels
@@ -640,21 +646,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
     } else {
       if (this.stepperConfiguration.direction == Direction.INBOUND) {
-        this.templateSource = expandExternalTemplate(
+        this.sourceTemplate = expandExternalTemplate(
           JSON.parse(this.mapping.source),
           this.mapping,
           levels
         );
-        this.templateTarget = expandC8YTemplate(
+        this.targetTemplate = expandC8YTemplate(
           JSON.parse(this.mapping.target),
           this.mapping
         );
       } else {
-        this.templateSource = expandC8YTemplate(
+        this.sourceTemplate = expandC8YTemplate(
           JSON.parse(this.mapping.source),
           this.mapping
         );
-        this.templateTarget = expandExternalTemplate(
+        this.targetTemplate = expandExternalTemplate(
           JSON.parse(this.mapping.target),
           this.mapping,
           levels
@@ -668,27 +674,27 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.snoopedTemplateCounter = 0;
     }
     try {
-      this.templateSource = JSON.parse(
+      this.sourceTemplate = JSON.parse(
         this.mapping.snoopedTemplates[this.snoopedTemplateCounter]
       );
     } catch (error) {
-      this.templateSource = {
+      this.sourceTemplate = {
         message: this.mapping.snoopedTemplates[this.snoopedTemplateCounter]
       };
       console.warn(
         'The payload was not in JSON format, now wrap it:',
-        this.templateSource
+        this.sourceTemplate
       );
     }
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.templateSource = expandExternalTemplate(
-        this.templateSource,
+      this.sourceTemplate = expandExternalTemplate(
+        this.sourceTemplate,
         this.mapping,
         splitTopicExcludingSeparator(this.mapping.mappingTopicSample)
       );
     } else {
-      this.templateSource = expandC8YTemplate(
-        this.templateSource,
+      this.sourceTemplate = expandC8YTemplate(
+        this.sourceTemplate,
         this.mapping
       );
     }
@@ -698,25 +704,25 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   async onSelectSnoopedSourceTemplate(index: any) {
     try {
-      this.templateSource = JSON.parse(this.mapping.snoopedTemplates[index]);
+      this.sourceTemplate = JSON.parse(this.mapping.snoopedTemplates[index]);
     } catch (error) {
-      this.templateSource = {
+      this.sourceTemplate = {
         message: this.mapping.snoopedTemplates[index]
       };
       console.warn(
         'The payload was not in JSON format, now wrap it:',
-        this.templateSource
+        this.sourceTemplate
       );
     }
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.templateSource = expandExternalTemplate(
-        this.templateSource,
+      this.sourceTemplate = expandExternalTemplate(
+        this.sourceTemplate,
         this.mapping,
         splitTopicExcludingSeparator(this.mapping.mappingTopicSample)
       );
     } else {
-      this.templateSource = expandC8YTemplate(
-        this.templateSource,
+      this.sourceTemplate = expandC8YTemplate(
+        this.sourceTemplate,
         this.mapping
       );
     }
