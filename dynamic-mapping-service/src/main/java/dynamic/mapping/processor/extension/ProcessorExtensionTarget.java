@@ -26,6 +26,6 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import org.springframework.stereotype.Component;
 
 @Component
-public interface ProcessorExtensionOutbound<O> {
+public interface ProcessorExtensionTarget<O> {
     public abstract void substituteInTarget(ProcessingContext<O> context) throws ProcessingException;
 }

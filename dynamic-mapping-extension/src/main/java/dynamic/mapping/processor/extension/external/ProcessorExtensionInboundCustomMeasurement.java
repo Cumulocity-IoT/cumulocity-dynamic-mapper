@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-public class ProcessorExtensionInboundCustomMeasurement implements ProcessorExtensionInbound<byte[]> {
+public class ProcessorExtensionInboundCustomMeasurement implements ProcessorExtensionSource<byte[]> {
 
     private ObjectMapper objectMapper;
 

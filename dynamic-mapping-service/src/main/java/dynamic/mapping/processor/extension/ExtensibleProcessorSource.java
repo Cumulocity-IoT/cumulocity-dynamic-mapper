@@ -36,11 +36,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte[]> {
+public class ExtensibleProcessorSource extends BasePayloadProcessorInbound<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 
-    public ExtensibleProcessorInbound(ConfigurationRegistry configurationRegistry) {
+    public ExtensibleProcessorSource(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 
@@ -54,7 +54,7 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
-        ProcessorExtensionInbound extension = null;
+        ProcessorExtensionSource extension = null;
         String tenant = context.getTenant();
         try {
             extension = getProcessorExtension(context.getMapping().extension);
@@ -77,7 +77,7 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte
         extension.extractFromSource(context);
     }
 
-    public ProcessorExtensionInbound<?> getProcessorExtension(ExtensionEntry extension) {
+    public ProcessorExtensionSource<?> getProcessorExtension(ExtensionEntry extension) {
         String name = extension.getName();
         String event = extension.getEvent();
         return extensions.get(name).getExtensionEntries().get(event).getExtensionImplementation();

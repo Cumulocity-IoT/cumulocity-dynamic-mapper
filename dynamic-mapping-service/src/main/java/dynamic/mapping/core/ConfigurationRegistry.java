@@ -25,7 +25,7 @@ import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.core.cache.InboundExternalIdCache;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
-import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
+import dynamic.mapping.processor.extension.ExtensibleProcessorSource;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.GenericBinaryProcessorInbound;
@@ -61,11 +61,13 @@ public class ConfigurationRegistry {
 	@Getter
 	private Map<String, ServiceConfiguration> serviceConfigurations = new HashMap<>();
 
-	// structure: <tenant, <extensibleProcessorInbound>>
+	// structure: <tenant, <extensibleProcessorSource>>
 	@Getter
-	private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
+	private Map<String, ExtensibleProcessorSource> extensibleProcessorsSource = new HashMap<>();
 
-
+	// structure: <tenant, <extensibleProcessorPassthrough>>
+	@Getter
+	private Map<String, ExtensibleProcessorSource> extensibleProcessorsPassthrough = new HashMap<>();
 
 	@Getter
 	private C8YAgent c8yAgent;
@@ -127,13 +129,15 @@ public class ConfigurationRegistry {
 	private ExecutorService processingCachePool;
 
 	public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-		ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
+		ExtensibleProcessorSource extensibleProcessorSource = getExtensibleProcessorsSource().get(tenant);
+		ExtensibleProcessorPassthrough extensibleProcessorPassthrough = getExtensibleProcessorsPassthrough().get(tenant);
 		return Map.of(
 				MappingType.JSON, new JSONProcessorInbound(this),
 				MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
 				MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
 				MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
-				MappingType.PROCESSOR_EXTENSION, extensibleProcessor);
+				MappingType.PROCESSOR_EXTENSION_SOURCE, extensibleProcessorSource,
+				MappingType.PROCESSOR_EXTENSION_PASSTHROUGH, extensibleProcessorPassthrough);
 	}
 
 	public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,

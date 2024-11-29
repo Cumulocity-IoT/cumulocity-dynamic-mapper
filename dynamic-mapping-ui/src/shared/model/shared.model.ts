@@ -137,7 +137,8 @@ export enum MappingType {
   FLAT_FILE = 'FLAT_FILE',
   GENERIC_BINARY = 'GENERIC_BINARY',
   PROTOBUF_STATIC = 'PROTOBUF_STATIC',
-  PROCESSOR_EXTENSION = 'PROCESSOR_EXTENSION'
+  PROCESSOR_EXTENSION_SOURCE = 'PROCESSOR_EXTENSION_SOURCE',
+  PROCESSOR_EXTENSION_PASSTHROUGH = 'PROCESSOR_EXTENSION_PASSTHROUGH'
 }
 
 export interface MappingTypeProperties {
@@ -228,10 +229,27 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       allowTestSending: true
     }
   },
-  [MappingType.PROCESSOR_EXTENSION]: {
-    key: MappingType.PROCESSOR_EXTENSION,
+  [MappingType.PROCESSOR_EXTENSION_SOURCE]: {
+    key: MappingType.PROCESSOR_EXTENSION_SOURCE,
     description:
       'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab',
+    properties: {
+      [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
+      [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
+    },
+    stepperConfiguration: {
+      showProcessorExtensions: true,
+      allowDefiningSubstitutions: false,
+      showEditorSource: false,
+      allowNoDefinedIdentifier: true,
+      allowTestTransformation: false,
+      allowTestSending: false
+    }
+  },
+  [MappingType.PROCESSOR_EXTENSION_PASSTHROUGH]: {
+    key: MappingType.PROCESSOR_EXTENSION_PASSTHROUGH,
+    description:
+      'Mapping handles payloads in custom format. In contrast to the PROCESSOR_EXTENSION_SOURCE the completed processing of the mpayload: extract values from the incoming payload and then transform this to a Cumulocity API call. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab',
     properties: {
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }

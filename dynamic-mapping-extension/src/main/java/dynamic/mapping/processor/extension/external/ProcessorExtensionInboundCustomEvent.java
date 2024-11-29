@@ -29,7 +29,7 @@ import java.util.Map;
 import javax.ws.rs.ProcessingException;
 
 import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
@@ -40,7 +40,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ProcessorExtensionInboundCustomEvent implements ProcessorExtensionInbound<byte[]> {
+public class ProcessorExtensionInboundCustomEvent implements ProcessorExtensionSource<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {

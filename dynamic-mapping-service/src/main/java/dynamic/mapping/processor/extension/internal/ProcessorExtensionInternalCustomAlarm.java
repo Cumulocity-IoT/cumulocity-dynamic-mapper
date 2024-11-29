@@ -27,7 +27,7 @@ import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import org.joda.time.DateTime;
 
 import javax.ws.rs.ProcessingException;
@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtensionInbound<byte[]> {
+public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtensionSource<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {

@@ -26,6 +26,6 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import org.springframework.stereotype.Component;
 
 @Component
-public interface ProcessorExtensionInbound<O> {
+public interface ProcessorExtensionSource<O> {
     public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 }
