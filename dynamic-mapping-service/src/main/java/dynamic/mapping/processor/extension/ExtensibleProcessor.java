@@ -94,6 +94,11 @@ public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
         return;
     }
 
+    @Override
+    public void applyFiler(ProcessingContext<byte[]> context) {
+        // do nothing
+    }
+
     public ProcessorExtensionSource<?> getProcessorExtensionSource(ExtensionEntry extension) {
         String fqnClassName = extension.getFqnClassName();
         String eventName = extension.getEventName();
@@ -167,10 +172,5 @@ public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
         } else if (countLoaded < countDefined) {
             ext.setLoaded(ExtensionStatus.PARTIALLY);
         }
-    }
-
-    @Override
-    public void applyFiler(ProcessingContext<byte[]> context) {
-        // do nothing
     }
 }

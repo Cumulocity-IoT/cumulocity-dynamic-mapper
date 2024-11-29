@@ -1,6 +1,3 @@
-import { EditorMode } from '../../mapping/shared/stepper-model';
-import { ConnectorConfiguration } from '../connector-configuration/connector.model';
-
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -21,6 +18,10 @@ import { ConnectorConfiguration } from '../connector-configuration/connector.mod
  *
  * @authors Christof Strack
  */
+
+import { EditorMode } from '../../mapping/shared/stepper-model';
+import { ConnectorConfiguration } from '../connector-configuration/connector.model';
+
 export interface MappingSubstitution {
   [x: string]: any;
   pathSource: string;
@@ -113,6 +114,12 @@ export interface ExtensionEntry {
   fqnClassName: string;
   loaded?: boolean;
   message: string;
+  extensionType: ExtensionType 
+}
+
+export enum ExtensionType {
+  EXTENSION_SOURCE = 'EXTENSION_SOURCE',
+  EXTENSION_PASSTHROUGH = 'EXTENSION_PASSTHROUGH',
 }
 
 export enum QOS {

@@ -57,6 +57,7 @@ import dynamic.mapping.core.facade.InventoryFacade;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.ExtensionEntry;
+import dynamic.mapping.model.ExtensionType;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.extension.ExtensibleProcessor;
@@ -623,25 +624,27 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 					extensionEntry.setLoaded(false);
 				} else {
 					Object object = clazz.getDeclaredConstructor().newInstance();
-
-					if (object instanceof ProcessorExtensionTarget) {
-						ProcessorExtensionTarget<?> extensionImpl = (ProcessorExtensionTarget<?>) clazz
-								.getDeclaredConstructor()
-								.newInstance();
-						// springUtil.registerBean(key, clazz);
-						extensionEntry.setExtensionImplTarget(extensionImpl);
-						log.debug("Tenant {} - Successfully registered extensionImplTarget : {} for key: {}",
-								tenant,
-								newExtensions.getProperty(key),
-								key);
-					}
 					if (object instanceof ProcessorExtensionSource) {
 						ProcessorExtensionSource<?> extensionImpl = (ProcessorExtensionSource<?>) clazz
 								.getDeclaredConstructor()
 								.newInstance();
 						// springUtil.registerBean(key, clazz);
 						extensionEntry.setExtensionImplSource(extensionImpl);
+						extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE);
 						log.debug("Tenant {} - Successfully registered extensionImplSource : {} for key: {}",
+								tenant,
+								newExtensions.getProperty(key),
+								key);
+					}
+					if (object instanceof ProcessorExtensionTarget) {
+						ProcessorExtensionTarget<?> extensionImpl = (ProcessorExtensionTarget<?>) clazz
+								.getDeclaredConstructor()
+								.newInstance();
+						// springUtil.registerBean(key, clazz);
+						extensionEntry.setExtensionImplTarget(extensionImpl);
+						// overwrite type since it implements both
+						extensionEntry.setExtensionType(ExtensionType.EXTENSION_PASSTHROUGH);
+						log.debug("Tenant {} - Successfully registered extensionImplTarget : {} for key: {}",
 								tenant,
 								newExtensions.getProperty(key),
 								key);

@@ -49,6 +49,9 @@ public class ExtensionEntry implements Serializable {
     private String message;
 
     @NotNull
+    private ExtensionType extensionType;
+
+    @NotNull
     @JsonIgnore
     @Builder.Default
     private ProcessorExtensionSource<?> extensionImplSource = null;
