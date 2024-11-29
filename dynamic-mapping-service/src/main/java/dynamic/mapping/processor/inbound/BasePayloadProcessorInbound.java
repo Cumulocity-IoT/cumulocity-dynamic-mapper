@@ -77,7 +77,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 
 	public abstract void applyFiler(ProcessingContext<T> context);
 
-	public ProcessingContext<T> substituteInTargetAndSend(ProcessingContext<T> context) {
+	public void substituteInTargetAndSend(ProcessingContext<T> context) {
 		/*
 		 * step 3 replace target with extract content from inbound payload
 		 */
@@ -136,7 +136,6 @@ public abstract class BasePayloadProcessorInbound<T> {
 			}
 			log.info("Tenant {} - Context is completed, {} parallel requests processed!", tenant, j);
 		}
-		return context;
 	}
 
 	private ProcessingContext<T> getBuildProcessingContext(ProcessingContext<T> context, int finalI,

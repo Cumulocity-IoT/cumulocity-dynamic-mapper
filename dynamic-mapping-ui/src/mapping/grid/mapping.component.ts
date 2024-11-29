@@ -520,8 +520,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       };
     } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION_SOURCE) {
       mapping.extension = {
-        event: undefined,
-        name: undefined,
+        eventName: undefined,
+        fqnClassName: undefined,
         message: undefined
       };
     }

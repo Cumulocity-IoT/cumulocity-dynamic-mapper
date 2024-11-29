@@ -22,10 +22,9 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
-import dynamic.mapping.core.cache.InboundExternalIdCache;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
-import dynamic.mapping.processor.extension.ExtensibleProcessorSource;
+import dynamic.mapping.processor.extension.ExtensibleProcessor;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.GenericBinaryProcessorInbound;
@@ -63,11 +62,7 @@ public class ConfigurationRegistry {
 
 	// structure: <tenant, <extensibleProcessorSource>>
 	@Getter
-	private Map<String, ExtensibleProcessorSource> extensibleProcessorsSource = new HashMap<>();
-
-	// structure: <tenant, <extensibleProcessorPassthrough>>
-	@Getter
-	private Map<String, ExtensibleProcessorSource> extensibleProcessorsPassthrough = new HashMap<>();
+	private Map<String, ExtensibleProcessor> extensibleProcessors = new HashMap<>();
 
 	@Getter
 	private C8YAgent c8yAgent;
@@ -129,15 +124,14 @@ public class ConfigurationRegistry {
 	private ExecutorService processingCachePool;
 
 	public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-		ExtensibleProcessorSource extensibleProcessorSource = getExtensibleProcessorsSource().get(tenant);
-		ExtensibleProcessorPassthrough extensibleProcessorPassthrough = getExtensibleProcessorsPassthrough().get(tenant);
+		ExtensibleProcessor extensibleProcessor = getExtensibleProcessors().get(tenant);
 		return Map.of(
 				MappingType.JSON, new JSONProcessorInbound(this),
 				MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
 				MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
 				MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
-				MappingType.PROCESSOR_EXTENSION_SOURCE, extensibleProcessorSource,
-				MappingType.PROCESSOR_EXTENSION_PASSTHROUGH, extensibleProcessorPassthrough);
+				MappingType.PROCESSOR_EXTENSION_SOURCE, extensibleProcessor,
+				MappingType.PROCESSOR_EXTENSION_PASSTHROUGH, extensibleProcessor);
 	}
 
 	public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,

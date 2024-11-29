@@ -36,11 +36,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-public class ExtensibleProcessorSource extends BasePayloadProcessorInbound<byte[]> {
+public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 
-    public ExtensibleProcessorSource(ConfigurationRegistry configurationRegistry) {
+    public ExtensibleProcessor(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 
@@ -57,30 +57,53 @@ public class ExtensibleProcessorSource extends BasePayloadProcessorInbound<byte[
         ProcessorExtensionSource extension = null;
         String tenant = context.getTenant();
         try {
-            extension = getProcessorExtension(context.getMapping().extension);
+            extension = getProcessorExtensionSource(context.getMapping().extension);
             if (extension == null) {
                 log.info("Tenant {} - extractFromSource ******* {}", tenant, this);
                 logExtensions(tenant);
                 String message = String.format("Tenant %s - Extension %s:%s could not be found!", tenant,
-                        context.getMapping().extension.getName(),
-                        context.getMapping().extension.getEvent());
+                        context.getMapping().extension.getFqnClassName(),
+                        context.getMapping().extension.getEventName());
                 log.warn(message);
                 throw new ProcessingException(message);
             }
         } catch (Exception ex) {
             String message = String.format("Tenant %s - Extension %s:%s could not be found!", tenant,
-                    context.getMapping().extension.getName(),
-                    context.getMapping().extension.getEvent());
+                    context.getMapping().extension.getFqnClassName(),
+                    context.getMapping().extension.getEventName());
             log.warn(message);
             throw new ProcessingException(message);
         }
         extension.extractFromSource(context);
     }
 
-    public ProcessorExtensionSource<?> getProcessorExtension(ExtensionEntry extension) {
-        String name = extension.getName();
-        String event = extension.getEvent();
-        return extensions.get(name).getExtensionEntries().get(event).getExtensionImplementation();
+    @Override
+    public void substituteInTargetAndSend(ProcessingContext<byte[]> context) {
+        ProcessorExtensionTarget extension = null;
+        String tenant = context.getTenant();
+
+        extension = getProcessorExtensionTarget(context.getMapping().extension);
+        // the extenson is only meant to be used on the source side, extracting. From
+        // now on we can use the standard substituteInTargetAndSend
+        if (extension == null) {
+            super.substituteInTargetAndSend(context);
+            return;
+        } else {
+            extension.substituteInTargetAndSend(context, c8yAgent);
+        }
+        return;
+    }
+
+    public ProcessorExtensionSource<?> getProcessorExtensionSource(ExtensionEntry extension) {
+        String fqnClassName = extension.getFqnClassName();
+        String eventName = extension.getEventName();
+        return extensions.get(fqnClassName).getExtensionEntries().get(eventName).getExtensionImplSource();
+    }
+
+    public ProcessorExtensionTarget<?> getProcessorExtensionTarget(ExtensionEntry extension) {
+        String fqnClassName = extension.getFqnClassName();
+        String eventName = extension.getEventName();
+        return extensions.get(fqnClassName).getExtensionEntries().get(eventName).getExtensionImplTarget();
     }
 
     public Extension getExtension(String extensionName) {
@@ -102,7 +125,7 @@ public class ExtensibleProcessorSource extends BasePayloadProcessorInbound<byte[
                 String extensionEntryKey = entryExtensionEntry.getKey();
                 ExtensionEntry extensionEntry = entryExtensionEntry.getValue();
                 log.info("Tenant {} - ExtensionEntry {}:{} found : ", tenant, extensionEntryKey,
-                        extensionEntry.getEvent());
+                        extensionEntry.getEventName());
             }
         }
     }
@@ -111,7 +134,7 @@ public class ExtensibleProcessorSource extends BasePayloadProcessorInbound<byte[
         if (!extensions.containsKey(extensionName)) {
             log.warn("Tenant {} - Cannot add extension entry. Create first an extension!", tenant);
         } else {
-            extensions.get(extensionName).getExtensionEntries().put(entry.getEvent(), entry);
+            extensions.get(extensionName).getExtensionEntries().put(entry.getEventName(), entry);
         }
     }
 
@@ -150,5 +173,4 @@ public class ExtensibleProcessorSource extends BasePayloadProcessorInbound<byte[
     public void applyFiler(ProcessingContext<byte[]> context) {
         // do nothing
     }
-
 }

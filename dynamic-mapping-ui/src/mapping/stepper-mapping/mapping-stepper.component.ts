@@ -334,11 +334,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private setTemplateForm(): void {
     this.templateForm = new FormGroup({
       extensionName: new FormControl({
-        value: this.mapping?.extension?.name,
+        value: this.mapping?.extension?.fqnClassName,
         disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
       }),
       extensionEvent: new FormControl({
-        value: this.mapping?.extension?.event,
+        value: this.mapping?.extension?.eventName,
         disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
       }),
       snoopedTemplateIndex: new FormControl({
@@ -538,14 +538,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectExtensionName(extensionName) {
-    this.mapping.extension.name = extensionName;
+    this.mapping.extension.fqnClassName = extensionName;
     this.extensionEvents$.next(
       Object.keys(this.extensions[extensionName].extensionEntries)
     );
   }
 
   onSelectExtensionEvent(extensionEvent) {
-    this.mapping.extension.event = extensionEvent;
+    this.mapping.extension.eventName = extensionEvent;
   }
 
   async onNextStep(event: {
@@ -566,14 +566,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.expandTemplates();
       this.extensions =
         (await this.extensionService.getProcessorExtensions()) as any;
-      if (this.mapping?.extension?.name) {
-        if (!this.extensions[this.mapping.extension.name]) {
-          const msg = `The extension ${this.mapping.extension.name} with event ${this.mapping.extension.event} is not loaded. Please load the extension or choose a different one.`;
+      if (this.mapping?.extension?.fqnClassName) {
+        if (!this.extensions[this.mapping.extension.fqnClassName]) {
+          const msg = `The extension ${this.mapping.extension.fqnClassName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
           this.alertService.warning(msg);
         } else {
           this.extensionEvents$.next(
             Object.keys(
-              this.extensions[this.mapping.extension.name].extensionEntries
+              this.extensions[this.mapping.extension.fqnClassName].extensionEntries
             )
           );
         }

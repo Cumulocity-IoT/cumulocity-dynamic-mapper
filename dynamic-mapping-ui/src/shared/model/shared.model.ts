@@ -109,8 +109,8 @@ export enum SnoopStatus {
 }
 
 export interface ExtensionEntry {
-  event: string;
-  name: string;
+  eventName: string;
+  fqnClassName: string;
   loaded?: boolean;
   message: string;
 }
