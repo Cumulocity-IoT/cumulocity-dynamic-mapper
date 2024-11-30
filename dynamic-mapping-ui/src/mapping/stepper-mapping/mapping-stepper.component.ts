@@ -334,10 +334,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private setTemplateForm(): void {
     this.templateForm = new FormGroup({
       extensionName: new FormControl({
-        value: this.mapping?.extension?.fqnClassName,
+        value: this.mapping?.extension?.extensionName,
         disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
       }),
-      extensionEvent: new FormControl({
+      eventName: new FormControl({
         value: this.mapping?.extension?.eventName,
         disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
       }),
@@ -538,7 +538,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectExtensionName(extensionName) {
-    this.mapping.extension.fqnClassName = extensionName;
+    this.mapping.extension.extensionName = extensionName;
     this.extensionEvents$.next(
       Object.keys(this.extensions[extensionName].extensionEntries)
     );
@@ -548,50 +548,88 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.mapping.extension.eventName = extensionEvent;
   }
 
-  async onNextStep(event: {
-    stepper: C8yStepper;
-    step: CdkStep;
-  }): Promise<void> {
-    // ('OnNextStep', event.step.label, this.mapping);
-    this.step = event.step.label;
-    if (this.step == 'Add and select connector') {
-      if (
-        this.deploymentMapEntry.connectors &&
-        this.deploymentMapEntry.connectors.length >= 0
-      ) {
-        event.stepper.next();
-      }
-    } else if (this.step == 'General settings') {
+  async onStepChange(index: number) {
+    // console.log("StepChange:", index);
+    // this.step == 'Add and select connector'
+    if (index == 1) {
       this.templateModel.mapping = this.mapping;
       this.expandTemplates();
       this.extensions =
         (await this.extensionService.getProcessorExtensions()) as any;
-      if (this.mapping?.extension?.fqnClassName) {
-        if (!this.extensions[this.mapping.extension.fqnClassName]) {
-          const msg = `The extension ${this.mapping.extension.fqnClassName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
+      if (this.mapping?.extension?.extensionName) {
+        if (!this.extensions[this.mapping.extension.extensionName]) {
+          const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
           this.alertService.warning(msg);
         } else {
           this.extensionEvents$.next(
             Object.keys(
-              this.extensions[this.mapping.extension.fqnClassName].extensionEntries
+              this.extensions[this.mapping.extension.extensionName].extensionEntries
             )
           );
         }
       }
-      event.stepper.next();
-    } else if (this.step == 'Define substitutions') {
-      this.editorTestingPayloadTemplateEmitter.emit({mapping:this.mapping, sourceTemplate: this.sourceTemplate,  targetTemplate: this.targetTemplate});
+      // this.step == 'Define substitutions'
+    } else if (index == 3) {
+      this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
       this.onSelectSubstitution(0);
-      event.stepper.next();
-    } else if (this.step == 'Select templates') {
+      // this.step == 'Select templates'
+    } else if (index == 4) {
       this.sourceTemplate = this.editorSourceStepTemplate?.get();
       this.targetTemplate = this.editorTargetStepTemplate?.get();
-      event.stepper.next();
-    } else {
-      // console.log("Updated subs III:", this.mapping.substitutions);
-      event.stepper.next();
     }
   }
+
+  onNextStep(event: {
+    stepper: C8yStepper;
+    step: CdkStep;
+  }): void {
+    event.stepper.next();
+  }
+
+  // async onNextStep(event: {
+  //   stepper: C8yStepper;
+  //   step: CdkStep;
+  // }): Promise<void> {
+  //   // ('OnNextStep', event.step.label, this.mapping);
+  //   this.step = event.step.label;
+  //   if (this.step == 'Add and select connector') {
+  //     if (
+  //       this.deploymentMapEntry.connectors &&
+  //       this.deploymentMapEntry.connectors.length >= 0
+  //     ) {
+  //       event.stepper.next();
+  //     }
+  //   } else if (this.step == 'General settings') {
+  //     this.templateModel.mapping = this.mapping;
+  //     this.expandTemplates();
+  //     this.extensions =
+  //       (await this.extensionService.getProcessorExtensions()) as any;
+  //     if (this.mapping?.extension?.extensionName) {
+  //       if (!this.extensions[this.mapping.extension.extensionName]) {
+  //         const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
+  //         this.alertService.warning(msg);
+  //       } else {
+  //         this.extensionEvents$.next(
+  //           Object.keys(
+  //             this.extensions[this.mapping.extension.extensionName].extensionEntries
+  //           )
+  //         );
+  //       }
+  //     }
+  //     event.stepper.next();
+  //   } else if (this.step == 'Define substitutions') {
+  //     this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
+  //     this.onSelectSubstitution(0);
+  //     event.stepper.next();
+  //   } else if (this.step == 'Select templates') {
+  //     this.sourceTemplate = this.editorSourceStepTemplate?.get();
+  //     this.targetTemplate = this.editorTargetStepTemplate?.get();
+  //     event.stepper.next();
+  //   } else {
+  //     // console.log("Updated subs III:", this.mapping.substitutions);
+  //     event.stepper.next();
+  //   }
+  // }
 
   async onBackStep(event: {
     stepper: C8yStepper;

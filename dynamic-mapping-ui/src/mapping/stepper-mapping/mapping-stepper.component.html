@@ -28,7 +28,7 @@
         'm-b-40',
         'p-0',
         'flex-no-shrink'
-      ]" linear>
+      ]"  (onStepChange)="onStepChange($event)" linear>
     <ng-template c8yStepperIcon="final">
       <span [c8yIcon]="'hand-peace-o'"></span>
     </ng-template>
@@ -375,7 +375,7 @@
                 Select an extension
               </option>
               <option *ngFor="let ex of extensions | keyvalue" [ngValue]="ex.key"
-                [selected]="ex.key === mapping.extension?.name">
+                [selected]="ex.key === mapping.extension?.extensionName">
                 {{ ex.key }}
               </option>
             </select>
@@ -384,15 +384,15 @@
         <div class="form-group">
           <label translate>Events for {{ mapping.extension.name }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-            <select class="form-control" [formControl]="templateForm.get('extensionEvent')" #extensionEventControl
+            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl
               (change)="
-                onSelectExtensionEvent(templateForm.value.extensionEvent)
+                onSelectExtensionEvent(templateForm.value.eventName)
               " required>
               <option [ngValue]="null" disabled>
                 Select an event
               </option>
               <option *ngFor="let ev of extensionEvents$ | async" [ngValue]="ev"
-                [selected]="ev === mapping.extension?.event">
+                [selected]="ev === mapping.extension?.eventName">
                 {{ ev }}
               </option>
             </select>
