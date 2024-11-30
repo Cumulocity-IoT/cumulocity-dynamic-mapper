@@ -24,10 +24,10 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.softwareag.c8y.mapping</groupId>
+	<groupId>com.cumulocity.mapping</groupId>
 	<artifactId>dynamic-mapping-interface</artifactId>
 	<parent>
-		<groupId>com.softwareag.c8y.mapping</groupId>
+		<groupId>com.cumulocity.mapping</groupId>
 		<artifactId>dynamic-mapping-solution</artifactId>
 		<version>${revision}</version>
 	</parent>
@@ -63,11 +63,6 @@
 		<dependency>
 			<groupId>org.java-websocket</groupId>
 			<artifactId>Java-WebSocket</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-joda</artifactId>
-			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.json</groupId>
@@ -129,7 +124,7 @@
 						<include>dynamic/mapping/model/*</include>
 						<include>dynamic/mapping/processor/model/*</include>
 						<include>dynamic/mapping/processor/model/ProcessingContext.*</include>
-						<include>dynamic/mapping/processor/extension/ProcessorExtensionInbound.*</include>
+						<include>dynamic/mapping/processor/extension/ProcessorExtensionSource.*</include>
 						<include>dynamic/mapping/processor/extension/ProcessorExtensionOutbound.*</include>
 						<include>dynamic/mapping/processor/ProcessingException.*</include>
 					</includes>

@@ -27,7 +27,7 @@
 	<artifactId>dynamic-mapping-service</artifactId>
 
 	<parent>
-		<groupId>com.softwareag.c8y.mapping</groupId>
+		<groupId>com.cumulocity.mapping</groupId>
 		<artifactId>dynamic-mapping-solution</artifactId>
 		<version>${revision}</version>
 	</parent>
