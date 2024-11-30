@@ -67,7 +67,7 @@ import { StatusActivationRendererComponent } from '../renderer/status-activation
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from '../../shared';
-import { DeploymentMapEntry } from '../../shared/model/shared.model';
+import { DeploymentMapEntry, ExtensionType } from '../../shared/model/shared.model';
 import { SharedService } from '../../shared/shared.service';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
@@ -520,9 +520,15 @@ export class MappingComponent implements OnInit, OnDestroy {
       };
     } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION_SOURCE) {
       mapping.extension = {
+        extensionName: undefined,
         eventName: undefined,
-        fqnClassName: undefined,
-        message: undefined
+        extensionType: ExtensionType.EXTENSION_SOURCE,
+      };
+    } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION_PASSTHROUGH) {
+      mapping.extension = {
+        extensionName: undefined,
+        eventName: undefined,
+        extensionType: ExtensionType.EXTENSION_PASSTHROUGH,
       };
     }
 

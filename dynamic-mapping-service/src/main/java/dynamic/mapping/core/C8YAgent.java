@@ -606,11 +606,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 			newExtensions.load(buffered);
 		log.debug("Tenant {} - Preparing to load extensions:" + newExtensions.toString(), tenant);
 
-		Enumeration<?> extensions = newExtensions.propertyNames();
-		while (extensions.hasMoreElements()) {
-			String key = (String) extensions.nextElement();
+		Enumeration<?> extensionEntries = newExtensions.propertyNames();
+		while (extensionEntries.hasMoreElements()) {
+			String key = (String) extensionEntries.nextElement();
 			Class<?> clazz;
-			ExtensionEntry extensionEntry = ExtensionEntry.builder().eventName(key)
+			ExtensionEntry extensionEntry = ExtensionEntry.builder().eventName(key).extensionName(extensionName)
 					.fqnClassName(newExtensions.getProperty(key)).loaded(true).message("OK").build();
 			extensibleProcessor.addExtensionEntry(tenant, extensionName, extensionEntry);
 

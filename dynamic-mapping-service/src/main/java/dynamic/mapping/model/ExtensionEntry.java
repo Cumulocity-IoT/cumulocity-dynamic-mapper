@@ -36,6 +36,10 @@ import java.io.Serializable;
 @Builder
 @AllArgsConstructor
 public class ExtensionEntry implements Serializable {
+
+    @NotNull
+    private String extensionName;
+
     @NotNull
     private String eventName;
     

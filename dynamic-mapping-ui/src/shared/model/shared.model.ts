@@ -110,10 +110,11 @@ export enum SnoopStatus {
 }
 
 export interface ExtensionEntry {
+  extensionName: string;
   eventName: string;
-  fqnClassName: string;
+  fqnClassName?: string;
   loaded?: boolean;
-  message: string;
+  message?: string;
   extensionType: ExtensionType 
 }
 
@@ -233,7 +234,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showEditorSource: false,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
-      allowTestSending: true
+      allowTestSending: false
     }
   },
   [MappingType.PROCESSOR_EXTENSION_SOURCE]: {
@@ -267,7 +268,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showEditorSource: false,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
-      allowTestSending: true
+      allowTestSending: false
     }
   }
 };

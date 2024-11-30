@@ -62,14 +62,14 @@ public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
                 log.info("Tenant {} - extractFromSource ******* {}", tenant, this);
                 logExtensions(tenant);
                 String message = String.format("Tenant %s - Extension %s:%s could not be found!", tenant,
-                        context.getMapping().extension.getFqnClassName(),
+                        context.getMapping().extension.getExtensionName(),
                         context.getMapping().extension.getEventName());
                 log.warn(message);
                 throw new ProcessingException(message);
             }
         } catch (Exception ex) {
             String message = String.format("Tenant %s - Extension %s:%s could not be found!", tenant,
-                    context.getMapping().extension.getFqnClassName(),
+                    context.getMapping().extension.getExtensionName(),
                     context.getMapping().extension.getEventName());
             log.warn(message);
             throw new ProcessingException(message);
@@ -100,15 +100,15 @@ public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
     }
 
     public ProcessorExtensionSource<?> getProcessorExtensionSource(ExtensionEntry extension) {
-        String fqnClassName = extension.getFqnClassName();
+        String extensionName = extension.getExtensionName();
         String eventName = extension.getEventName();
-        return extensions.get(fqnClassName).getExtensionEntries().get(eventName).getExtensionImplSource();
+        return extensions.get(extensionName).getExtensionEntries().get(eventName).getExtensionImplSource();
     }
 
     public ProcessorExtensionTarget<?> getProcessorExtensionTarget(ExtensionEntry extension) {
-        String fqnClassName = extension.getFqnClassName();
+        String extensionName = extension.getExtensionName();
         String eventName = extension.getEventName();
-        return extensions.get(fqnClassName).getExtensionEntries().get(eventName).getExtensionImplTarget();
+        return extensions.get(extensionName).getExtensionEntries().get(eventName).getExtensionImplTarget();
     }
 
     public Extension getExtension(String extensionName) {
