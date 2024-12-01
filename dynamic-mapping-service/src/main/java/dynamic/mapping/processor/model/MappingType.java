@@ -27,7 +27,7 @@ public enum MappingType {
     GENERIC_BINARY ( "GENERIC_BINARY", byte[].class),
     PROTOBUF_STATIC ( "PROTOBUF_STATIC", byte[].class),
     PROCESSOR_EXTENSION_SOURCE ( "PROCESSOR_EXTENSION_SOURCE", byte[].class),
-    PROCESSOR_EXTENSION_PASSTHROUGH ( "PROCESSOR_EXTENSION_PASSTHROUGH", byte[].class);
+    PROCESSOR_EXTENSION_SOURCE_TARGET ( "PROCESSOR_EXTENSION_SOURCE_TARGET", byte[].class);
 
     public final String name;
     public final Class<?> payloadType;

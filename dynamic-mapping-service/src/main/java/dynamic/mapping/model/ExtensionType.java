@@ -23,5 +23,5 @@ package dynamic.mapping.model;
 
 public enum ExtensionType {
   EXTENSION_SOURCE,
-  EXTENSION_PASSTHROUGH
+  EXTENSION_SOURCE_TARGET
 }

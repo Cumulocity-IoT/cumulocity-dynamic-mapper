@@ -540,8 +540,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onSelectExtensionName(extensionName) {
     this.mapping.extension.extensionName = extensionName;
     this.extensionEvents$.next(
-      Object.keys(this.extensions[extensionName].extensionEntries)
+      Object.values(this.extensions[extensionName].extensionEntries)
     );
+    console.log("Selected events", Object.values(this.extensions[extensionName].extensionEntries))
   }
 
   onSelectExtensionEvent(extensionEvent) {
@@ -562,10 +563,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.alertService.warning(msg);
         } else {
           this.extensionEvents$.next(
-            Object.keys(
+            Object.values(
               this.extensions[this.mapping.extension.extensionName].extensionEntries
             )
           );
+          console.log("Selected events", Object.values(this.extensions[this.mapping.extension.extensionName].extensionEntries), this.mapping, this.extensions)
+
         }
       }
       // this.step == 'Define substitutions'

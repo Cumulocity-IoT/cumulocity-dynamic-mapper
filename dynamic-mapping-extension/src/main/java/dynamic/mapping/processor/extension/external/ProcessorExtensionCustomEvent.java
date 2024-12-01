@@ -40,7 +40,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class ProcessorExtensionInboundCustomEvent implements ProcessorExtensionSource<byte[]> {
+public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {

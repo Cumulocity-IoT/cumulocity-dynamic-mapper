@@ -114,7 +114,7 @@
 			</plugin>
 			<!--
 			<plugin><artifactId>maven-compiler-plugin</artifactId><version>3.11.0</version><configuration><includes><include>dynamic/mapping/model/*.java</include><include>dynamic/mapping/processor/model/*.java</include><include>dynamic/mapping/processor/model/ProcessingContext.java</include><include>
-                                    dynamic/mapping/processor/extension/ProcessorExtensionInbound.java</include><include>
+                                    dynamic/mapping/processor/extension/ProcessorExtension.java</include><include>
 			dynamic/mapping/processor/extension/ProcessorExtensionOutbound.java</include></includes></configuration></plugin> -->
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -125,6 +125,8 @@
 						<include>dynamic/mapping/processor/model/*</include>
 						<include>dynamic/mapping/processor/model/ProcessingContext.*</include>
 						<include>dynamic/mapping/processor/extension/ProcessorExtensionSource.*</include>
+						<include>dynamic/mapping/processor/extension/ProcessorExtensionTarget.*</include>
+						<include>dynamic/mapping/core/C8YAgent.*</include>
 						<include>dynamic/mapping/processor/extension/ProcessorExtensionOutbound.*</include>
 						<include>dynamic/mapping/processor/ProcessingException.*</include>
 					</includes>

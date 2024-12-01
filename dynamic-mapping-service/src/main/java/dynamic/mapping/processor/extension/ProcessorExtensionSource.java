@@ -27,5 +27,5 @@ import org.springframework.stereotype.Component;
 
 @Component
 public interface ProcessorExtensionSource<O> {
-    public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
+    public void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 }

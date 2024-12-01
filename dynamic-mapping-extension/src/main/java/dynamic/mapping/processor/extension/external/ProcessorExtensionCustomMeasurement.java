@@ -41,11 +41,11 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-public class ProcessorExtensionInboundCustomMeasurement implements ProcessorExtensionSource<byte[]> {
+public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSource<byte[]> {
 
     private ObjectMapper objectMapper;
 
-    public ProcessorExtensionInboundCustomMeasurement() {
+    public ProcessorExtensionCustomMeasurement() {
         this.objectMapper = new ObjectMapper();
     }
 

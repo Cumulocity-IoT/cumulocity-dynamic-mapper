@@ -131,7 +131,7 @@ public class ConfigurationRegistry {
 				MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
 				MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
 				MappingType.PROCESSOR_EXTENSION_SOURCE, extensibleProcessor,
-				MappingType.PROCESSOR_EXTENSION_PASSTHROUGH, extensibleProcessor);
+				MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET, extensibleProcessor);
 	}
 
 	public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,

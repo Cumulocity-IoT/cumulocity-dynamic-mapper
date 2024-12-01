@@ -27,5 +27,5 @@ import org.springframework.stereotype.Component;
 
 @Component
 public interface ProcessorExtensionTarget<O> {
-    public abstract void substituteInTargetAndSend(ProcessingContext<O> context, C8YAgent c8yAgent);
+    public void substituteInTargetAndSend(ProcessingContext<O> context, C8YAgent c8yAgent);
 }

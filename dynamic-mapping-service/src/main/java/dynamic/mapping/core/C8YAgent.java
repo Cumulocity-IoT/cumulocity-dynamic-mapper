@@ -68,7 +68,6 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
@@ -643,7 +642,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 						// springUtil.registerBean(key, clazz);
 						extensionEntry.setExtensionImplTarget(extensionImpl);
 						// overwrite type since it implements both
-						extensionEntry.setExtensionType(ExtensionType.EXTENSION_PASSTHROUGH);
+						extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE_TARGET);
 						log.debug("Tenant {} - Successfully registered extensionImplTarget : {} for key: {}",
 								tenant,
 								newExtensions.getProperty(key),

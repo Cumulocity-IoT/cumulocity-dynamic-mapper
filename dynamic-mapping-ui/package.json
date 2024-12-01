@@ -42,6 +42,7 @@
     "jsonata": "^2.0.3",
     "ngx-bootstrap": "^18.0.0",
     "ngx-echarts": "^18.0.0",
+    "ngx-filter-pipe": "^3.0.1",
     "postcss-loader": "^8.1.0",
     "rxjs": "~7.8.1",
     "style-loader": "^4.0.0",
