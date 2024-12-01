@@ -24,7 +24,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-public class DeviceSubscriptionRestController {
+public class DeviceSubscriptionController {
 
     @Autowired
     C8YAgent c8yAgent;
