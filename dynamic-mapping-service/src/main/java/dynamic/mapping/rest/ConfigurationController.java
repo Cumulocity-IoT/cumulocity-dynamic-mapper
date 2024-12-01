@@ -24,7 +24,11 @@ package dynamic.mapping.rest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+
 import javax.validation.Valid;
+import javax.ws.rs.QueryParam;
+
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -43,6 +47,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -147,11 +152,14 @@ public class ConfigurationController {
     }
 
     @RequestMapping(value = "/configuration/connector/instances", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations() {
+    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(@RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details", tenant);
 
         try {
+            // Create Pattern object for the regex only if name is provided
+            Pattern pattern = name != null ? Pattern.compile(name) : null;
+
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
                     .getConnectorConfigurations(tenant);
             List<ConnectorConfiguration> modifiedConfigs = new ArrayList<>();
@@ -161,7 +169,11 @@ public class ConfigurationController {
                 ConnectorSpecification connectorSpecification = connectorRegistry
                         .getConnectorSpecification(config.connectorType);
                 ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
-                modifiedConfigs.add(cleanedConfig);
+                // Add configuration if no pattern (name) is provided or if name matches the
+                // pattern
+                if (pattern == null || pattern.matcher(cleanedConfig.getName()).matches()) {
+                    modifiedConfigs.add(cleanedConfig);
+                }
             }
             return ResponseEntity.ok(modifiedConfigs);
         } catch (Exception ex) {
@@ -187,9 +199,9 @@ public class ConfigurationController {
                             .getConnectorSpecification(config.connectorType);
                     ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
                     modifiedConfig = cleanedConfig;
-                } 
+                }
             }
-            if ( modifiedConfig == null) {
+            if (modifiedConfig == null) {
                 ResponseEntity.notFound();
             }
             return ResponseEntity.ok(modifiedConfig);
