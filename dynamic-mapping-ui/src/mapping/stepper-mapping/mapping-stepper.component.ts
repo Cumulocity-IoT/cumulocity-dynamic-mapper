@@ -45,6 +45,7 @@ import {
   DeploymentMapEntry,
   Direction,
   Extension,
+  ExtensionEntry,
   Mapping,
   MappingSubstitution,
   RepairStrategy,
@@ -168,7 +169,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   expertMode: boolean = false;
   templatesInitialized: boolean = false;
   extensions: Map<string, Extension> = new Map();
-  extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  extensionEvents$: BehaviorSubject<ExtensionEntry[]> = new BehaviorSubject([]);
   onDestroy$ = new Subject<void>();
   supportsMessageContext: boolean;
   isButtonDisabled$: BehaviorSubject<boolean> = new BehaviorSubject(true);
@@ -180,9 +181,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   editorSourceStepTemplate: JsonEditor2Component;
   @ViewChild('editorTargetStepTemplate', { static: false })
   editorTargetStepTemplate: JsonEditor2Component;
-  editorTestingResponse: JsonEditor2Component;
+
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
+
+  @ViewChild('stepper', { static: false })
+  stepper: C8yStepper;
+
+  currentStepIndex: number;
 
   constructor(
     public bsModalService: BsModalService,
@@ -540,7 +546,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onSelectExtensionName(extensionName) {
     this.mapping.extension.extensionName = extensionName;
     this.extensionEvents$.next(
-      Object.values(this.extensions[extensionName].extensionEntries)
+      Object.values(this.extensions[extensionName].extensionEntries as Map<string, ExtensionEntry>).filter(entry => entry.extensionType == this.mapping.extension.extensionType)
     );
     console.log("Selected events", Object.values(this.extensions[extensionName].extensionEntries))
   }
@@ -552,6 +558,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async onStepChange(index: number) {
     // console.log("StepChange:", index);
     // this.step == 'Add and select connector'
+    this.currentStepIndex = index;
     if (index == 1) {
       this.templateModel.mapping = this.mapping;
       this.expandTemplates();
@@ -571,6 +578,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
         }
       }
+
       // this.step == 'Define substitutions'
     } else if (index == 3) {
       this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
@@ -580,13 +588,30 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.sourceTemplate = this.editorSourceStepTemplate?.get();
       this.targetTemplate = this.editorTargetStepTemplate?.get();
     }
+
   }
 
   onNextStep(event: {
     stepper: C8yStepper;
     step: CdkStep;
   }): void {
-    event.stepper.next();
+    if (this.stepperConfiguration.advanceFromStepToEndStep && this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
+      this.goToLastStep();
+      this.alertService.info('The other steps have been skipped for this mapping type!');
+    } else {
+      event.stepper.next();
+    }
+  }
+
+  private goToLastStep() {
+        // Mark all previous steps as completed
+    this.stepper.steps.forEach((step, index) => {
+      if (index < this.stepper.steps.length - 1) {
+        step.completed = true;
+      }
+    });
+    // Select the last step
+    this.stepper.selectedIndex = this.stepper.steps.length - 1;
   }
 
   // async onNextStep(event: {

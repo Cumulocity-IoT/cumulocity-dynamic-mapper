@@ -522,13 +522,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       mapping.extension = {
         extensionName: undefined,
         eventName: undefined,
-        extensionType: ExtensionType.EXTENSION_SOURCE,
+        extensionType: ExtensionType.PROCESSOR_EXTENSION_SOURCE,
       };
     } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET) {
       mapping.extension = {
         extensionName: undefined,
         eventName: undefined,
-        extensionType: ExtensionType.EXTENSION_SOURCE_TARGET,
+        extensionType: ExtensionType.PROCESSOR_EXTENSION_SOURCE_TARGET,
       };
     }
 

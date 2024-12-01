@@ -119,8 +119,8 @@ export interface ExtensionEntry {
 }
 
 export enum ExtensionType {
-  EXTENSION_SOURCE = 'EXTENSION_SOURCE',
-  EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
+  PROCESSOR_EXTENSION_SOURCE = 'PROCESSOR_EXTENSION_SOURCE',
+  PROCESSOR_EXTENSION_SOURCE_TARGET = 'PROCESSOR_EXTENSION_SOURCE_TARGET',
 }
 
 export enum QOS {
@@ -140,6 +140,7 @@ export interface StepperConfiguration {
   allowTestTransformation?: boolean;
   allowTestSending?: boolean;
   direction?: Direction;
+  advanceFromStepToEndStep?: number;
 }
 
 export enum MappingType {
@@ -259,7 +260,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showEditorTarget: true,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
-      allowTestSending: false
+      allowTestSending: false,
+      advanceFromStepToEndStep: 2
     }
   },
   [MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET]: {
@@ -278,7 +280,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showEditorTarget: false,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
-      allowTestSending: false
+      allowTestSending: false,
+      advanceFromStepToEndStep: 2
     }
   }
 };

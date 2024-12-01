@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 
-
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -83,7 +82,6 @@ public class BootstrapService {
 	private MicroserviceSubscriptionsService subscriptionsService;
 
 	private HashMap<String, Instant> cacheRetentionStartMap = new HashMap<>();
-
 
 	@PreDestroy
 	public void destroy() {
@@ -272,6 +270,7 @@ public class BootstrapService {
 			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
 		}
 	}
+
 	@Scheduled(cron = "0 * * * * *")
 	public void cleanUpCaches() {
 		subscriptionsService.runForEachTenant(() -> {
@@ -282,10 +281,12 @@ public class BootstrapService {
 						.getServiceConfiguration(tenant);
 				int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
 				int cacheSize = Integer.valueOf(c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
-				if (inboundCacheRetention > 0 && Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
+				if (inboundCacheRetention > 0 && Duration.between(cacheRetentionStart, Instant.now())
+						.getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
 					c8YAgent.clearInboundExternalIdCache(tenant, false, cacheSize);
 					cacheRetentionStartMap.put(tenant, Instant.now());
-					log.info("Tenant {} - Identity Cache cleared by scheduler. Old Size: {}, New size: {}", tenant, cacheSize, c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
+					log.info("Tenant {} - Identity Cache cleared by scheduler. Old Size: {}, New size: {}", tenant,
+							cacheSize, c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
 				}
 			}
 		});

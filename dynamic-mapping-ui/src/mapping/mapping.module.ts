@@ -65,7 +65,6 @@ import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.c
 import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingFilterComponent } from './filter/mapping-filter.component';
-import { FilterPipeModule } from 'ngx-filter-pipe';
 
 @NgModule({
   declarations: [
@@ -102,7 +101,6 @@ import { FilterPipeModule } from 'ngx-filter-pipe';
   imports: [
     CoreModule,
     CommonModule,
-    FilterPipeModule,
     AssetSelectorModule,
     PopoverModule,
     DynamicFormsModule,

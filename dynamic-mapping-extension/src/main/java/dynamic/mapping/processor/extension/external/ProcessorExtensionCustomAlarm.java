@@ -42,72 +42,74 @@ import java.util.Map;
 
 @Slf4j
 public class ProcessorExtensionCustomAlarm
-                implements ProcessorExtensionSource<byte[]>, ProcessorExtensionTarget<byte[]> {
+        implements ProcessorExtensionSource<byte[]>, ProcessorExtensionTarget<byte[]> {
 
-        private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper;
 
-        public ProcessorExtensionCustomAlarm() {
-                this.objectMapper = new ObjectMapper();
+    public ProcessorExtensionCustomAlarm() {
+        this.objectMapper = new ObjectMapper();
+    }
+
+    @Override
+    public void extractFromSource(ProcessingContext<byte[]> context)
+            throws ProcessingException {
+        JsonNode jsonNode;
+        try {
+            jsonNode = objectMapper.readTree(context.getPayload());
+        } catch (IOException e) {
+            throw new ProcessingException(e.getMessage());
         }
+        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context
+                .getPostProcessingCache();
 
-        @Override
-        public void extractFromSource(ProcessingContext<byte[]> context)
-                        throws ProcessingException {
-                JsonNode jsonNode;
-                try {
-                        jsonNode = objectMapper.readTree(context.getPayload());
-                } catch (IOException e) {
-                        throw new ProcessingException(e.getMessage());
-                }
-                Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context
-                                .getPostProcessingCache();
+        postProcessingCache.put("time",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(new MappingSubstitution.SubstituteValue(
+                                new TextNode(new DateTime(
+                                        jsonNode.get("time").textValue())
+                                        .toString()),
+                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
 
-                postProcessingCache.put("time",
-                                new ArrayList<MappingSubstitution.SubstituteValue>(
-                                                Arrays.asList(new MappingSubstitution.SubstituteValue(
-                                                                new TextNode(new DateTime(
-                                                                                jsonNode.get("time").textValue())
-                                                                                .toString()),
-                                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                                RepairStrategy.DEFAULT))));
+        postProcessingCache.put("type",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(
+                                new MappingSubstitution.SubstituteValue(
+                                        new TextNode(jsonNode.get("alarmType")
+                                                .textValue()),
+                                        MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                        RepairStrategy.DEFAULT))));
 
-                postProcessingCache.put("type",
-                                new ArrayList<MappingSubstitution.SubstituteValue>(
-                                                Arrays.asList(
-                                                                new MappingSubstitution.SubstituteValue(
-                                                                                new TextNode(jsonNode.get("alarmType")
-                                                                                                .textValue()),
-                                                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                                                RepairStrategy.DEFAULT))));
+        postProcessingCache.put("severity",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(
+                                new MappingSubstitution.SubstituteValue(
+                                        new TextNode(jsonNode.get("criticality")
+                                                .textValue()),
+                                        MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                        RepairStrategy.DEFAULT))));
 
-                postProcessingCache.put("severity",
-                                new ArrayList<MappingSubstitution.SubstituteValue>(
-                                                Arrays.asList(
-                                                                new MappingSubstitution.SubstituteValue(
-                                                                                new TextNode(jsonNode.get("criticality")
-                                                                                                .textValue()),
-                                                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                                                RepairStrategy.DEFAULT))));
+        postProcessingCache.put("text",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(
+                                new MappingSubstitution.SubstituteValue(
+                                        new TextNode(jsonNode.get("message")
+                                                .textValue()),
+                                        MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                        RepairStrategy.DEFAULT))));
+        postProcessingCache.put(context.getMapping().targetAPI.identifier,
+                new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
+                        new MappingSubstitution.SubstituteValue(
+                                new TextNode(jsonNode.get("externalId").textValue()),
+                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
 
-                postProcessingCache.put("text",
-                                new ArrayList<MappingSubstitution.SubstituteValue>(
-                                                Arrays.asList(
-                                                                new MappingSubstitution.SubstituteValue(
-                                                                                new TextNode(jsonNode.get("message")
-                                                                                                .textValue()),
-                                                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                                                RepairStrategy.DEFAULT))));
-                postProcessingCache.put(context.getMapping().targetAPI.identifier,
-                                new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                                                new MappingSubstitution.SubstituteValue(
-                                                                new TextNode(jsonNode.get("externalId").textValue()),
-                                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                                RepairStrategy.DEFAULT))));
+        log.info("Tenant {} - New alarm over json processor: {}, {}", context.getTenant(),
+                jsonNode.get("time").textValue(), jsonNode.get("message").textValue());
+    }
 
-                log.info("Tenant {} - New alarm over json processor: {}, {}", context.getTenant(),
-                                jsonNode.get("time").textValue(), jsonNode.get("message").textValue());
-        }
+    @Override
+    public void substituteInTargetAndSend(ProcessingContext<byte[]> context, C8YAgent c8yAgent) {
 
-        @Override
-        public void substituteInTargetAndSend(ProcessingContext<byte[]> context, C8YAgent c8yAgent){}
+    }
 }
