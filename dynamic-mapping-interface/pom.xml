@@ -126,6 +126,7 @@
 						<include>dynamic/mapping/processor/model/ProcessingContext.*</include>
 						<include>dynamic/mapping/processor/extension/ProcessorExtensionSource.*</include>
 						<include>dynamic/mapping/processor/extension/ProcessorExtensionTarget.*</include>
+						<include>dynamic/mapping/processor/inbound/BasePayloadProcessorInbound.*</include>
 						<include>dynamic/mapping/core/C8YAgent.*</include>
 						<include>dynamic/mapping/processor/extension/ProcessorExtensionOutbound.*</include>
 						<include>dynamic/mapping/processor/ProcessingException.*</include>

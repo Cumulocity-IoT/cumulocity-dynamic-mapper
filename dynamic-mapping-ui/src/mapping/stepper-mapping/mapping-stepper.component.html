@@ -147,7 +147,7 @@
                         [schemaUpdate]="schemaUpdateSource" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()" (contentChanged)="onsourceTemplateChanged($event)" [data]="sourceTemplate"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
-                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource">
+                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
@@ -403,7 +403,7 @@
           </div>
         </div>
       </div>
-      <div class="p-t-48" *ngIf="!stepperConfiguration.showProcessorExtensionsSource
+      <div class="p-t-48" *ngIf="!stepperConfiguration.showProcessorExtensionsSource && !stepperConfiguration.showProcessorExtensionsSourceTarget
     ">
         <small class="text-muted">Template is described internally by the chosen
           mapping type</small>

@@ -277,7 +277,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 		return context;
 	}
 
-	public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,
+	public static void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,
 			DocumentContext jsonObject, String keys)
 			throws JSONException {
 		boolean subValueMissing = sub.value == null;

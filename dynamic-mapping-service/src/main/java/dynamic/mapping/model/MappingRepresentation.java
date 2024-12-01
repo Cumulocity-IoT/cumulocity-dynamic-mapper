@@ -87,6 +87,7 @@ public class MappingRepresentation implements Serializable {
 
         if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
                 && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE)
+                && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)
                 && !mapping.direction.equals(Direction.OUTBOUND)) {
             if (count > 1) {
