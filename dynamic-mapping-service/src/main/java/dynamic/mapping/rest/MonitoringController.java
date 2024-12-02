@@ -50,7 +50,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.cumulocity.microservice.security.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.MappingStatus;

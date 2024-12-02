@@ -75,9 +75,6 @@ public class ExtensionController {
 	@Autowired
 	private ConfigurationRegistry configurationRegistry;
 
-	@Autowired
-	private MappingComponent mappingStatusComponent;
-
 	@Value("${APP.externalExtensionsEnabled}")
 	private boolean externalExtensionsEnabled;
 

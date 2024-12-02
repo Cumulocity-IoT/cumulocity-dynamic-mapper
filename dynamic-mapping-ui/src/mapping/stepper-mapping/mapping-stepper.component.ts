@@ -563,7 +563,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.templateModel.mapping = this.mapping;
       this.expandTemplates();
       this.extensions =
-        (await this.extensionService.getProcessorExtensions()) as any;
+        (await this.extensionService.getProcessorExtensions()) as Map<string,Extension>;
       if (this.mapping?.extension?.extensionName) {
         if (!this.extensions[this.mapping.extension.extensionName]) {
           const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
@@ -613,51 +613,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // Select the last step
     this.stepper.selectedIndex = this.stepper.steps.length - 1;
   }
-
-  // async onNextStep(event: {
-  //   stepper: C8yStepper;
-  //   step: CdkStep;
-  // }): Promise<void> {
-  //   // ('OnNextStep', event.step.label, this.mapping);
-  //   this.step = event.step.label;
-  //   if (this.step == 'Add and select connector') {
-  //     if (
-  //       this.deploymentMapEntry.connectors &&
-  //       this.deploymentMapEntry.connectors.length >= 0
-  //     ) {
-  //       event.stepper.next();
-  //     }
-  //   } else if (this.step == 'General settings') {
-  //     this.templateModel.mapping = this.mapping;
-  //     this.expandTemplates();
-  //     this.extensions =
-  //       (await this.extensionService.getProcessorExtensions()) as any;
-  //     if (this.mapping?.extension?.extensionName) {
-  //       if (!this.extensions[this.mapping.extension.extensionName]) {
-  //         const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
-  //         this.alertService.warning(msg);
-  //       } else {
-  //         this.extensionEvents$.next(
-  //           Object.keys(
-  //             this.extensions[this.mapping.extension.extensionName].extensionEntries
-  //           )
-  //         );
-  //       }
-  //     }
-  //     event.stepper.next();
-  //   } else if (this.step == 'Define substitutions') {
-  //     this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
-  //     this.onSelectSubstitution(0);
-  //     event.stepper.next();
-  //   } else if (this.step == 'Select templates') {
-  //     this.sourceTemplate = this.editorSourceStepTemplate?.get();
-  //     this.targetTemplate = this.editorTargetStepTemplate?.get();
-  //     event.stepper.next();
-  //   } else {
-  //     // console.log("Updated subs III:", this.mapping.substitutions);
-  //     event.stepper.next();
-  //   }
-  // }
 
   async onBackStep(event: {
     stepper: C8yStepper;

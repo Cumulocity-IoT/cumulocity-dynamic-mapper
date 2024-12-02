@@ -46,7 +46,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.cumulocity.microservice.security.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.SnoopStatus;
@@ -75,16 +74,10 @@ public class OperationController {
 	C8YAgent c8YAgent;
 
 	@Autowired
-	private RoleService roleService;
-
-	@Autowired
 	private ContextService<UserCredentials> contextService;
 
 	@Autowired
 	private ConfigurationRegistry configurationRegistry;
-
-	@Autowired
-	private MappingComponent mappingStatusComponent;
 
 	@Value("${APP.externalExtensionsEnabled}")
 	private boolean externalExtensionsEnabled;
