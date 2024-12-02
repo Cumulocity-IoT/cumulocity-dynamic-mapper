@@ -34,7 +34,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>4.6.1</revision>
+		<revision>4.7.0-SNAPSHOT</revision>
 		<c8y.version>1020.127.0</c8y.version>
 		<lombok.version>1.18.34</lombok.version>
 		<slf4j.version>1.7.36</slf4j.version>
@@ -44,11 +44,6 @@
 		<spring-boot-dependencies.version>2.7.17</spring-boot-dependencies.version>
 	</properties>
 	<repositories>
-		<!-- <repository>
-			<id>local-snapshots</id>
-			<name>Local Snapshot Repository</name>
-			<url>file:${user.home}/.m2/repository</url>
-		</repository> -->
 		<repository>
 			<id>cumulocity</id>
 			<layout>default</layout>

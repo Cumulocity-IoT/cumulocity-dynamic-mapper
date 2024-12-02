@@ -423,6 +423,7 @@
     "extension": {
       "loaded": false,
       "name": "dynamic-mapping-extension",
+      "extensionType": "PROCESSOR_EXTENSION_SOURCE",
       "event": "CustomEvent"
     },
     "mappingTopicSample": "protobuf/event",
@@ -439,7 +440,7 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [],
     "updateExistingDevice": false,
-    "mappingType": "PROCESSOR_EXTENSION",
+    "mappingType": "PROCESSOR_EXTENSION_SOURCE",
     "lastUpdate": 1709815847318,
     "debug": false,
     "name": "Mapping - 19",
@@ -827,8 +828,9 @@
     "snoopStatus": "NONE",
     "extension": {
       "loaded": false,
-      "name": "dynamic-mapping-extension",
-      "event": "CustomMeasurement"
+      "extensionName": "dynamic-mapping-extension",
+      "extensionType": "PROCESSOR_EXTENSION_SOURCE",
+      "eventName": "CustomMeasurement"
     },
     "mappingTopicSample": "measurementExt",
     "ident": "c2e9uh",
@@ -844,7 +846,7 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [],
     "updateExistingDevice": false,
-    "mappingType": "PROCESSOR_EXTENSION",
+    "mappingType": "PROCESSOR_EXTENSION_SOURCE",
     "lastUpdate": 1709817338214,
     "debug": false,
     "name": "Mapping - 25",
