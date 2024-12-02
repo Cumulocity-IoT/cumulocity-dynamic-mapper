@@ -34,7 +34,7 @@
         <select
           class="form-control"
           (change)="onSelectSnoopedTemplate($event.target.value)"
-          [attr.disabled]="isDisabled(mapping.snoopedTemplates?.length === 0)"
+          [disabled]="mapping.snoopedTemplates?.length === 0"
         >
           <option
             [value]="i"

@@ -1,6 +1,3 @@
-import { EditorMode } from '../../mapping/shared/stepper-model';
-import { ConnectorConfiguration } from '../connector-configuration/connector.model';
-
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -21,6 +18,10 @@ import { ConnectorConfiguration } from '../connector-configuration/connector.mod
  *
  * @authors Christof Strack
  */
+
+import { EditorMode } from '../../mapping/shared/stepper-model';
+import { ConnectorConfiguration } from '../connector-configuration/connector.model';
+
 export interface MappingSubstitution {
   [x: string]: any;
   pathSource: string;
@@ -109,10 +110,17 @@ export enum SnoopStatus {
 }
 
 export interface ExtensionEntry {
-  event: string;
-  name: string;
+  extensionName: string;
+  eventName: string;
+  fqnClassName?: string;
   loaded?: boolean;
-  message: string;
+  message?: string;
+  extensionType: ExtensionType
+}
+
+export enum ExtensionType {
+  PROCESSOR_EXTENSION_SOURCE = 'PROCESSOR_EXTENSION_SOURCE',
+  PROCESSOR_EXTENSION_SOURCE_TARGET = 'PROCESSOR_EXTENSION_SOURCE_TARGET',
 }
 
 export enum QOS {
@@ -123,13 +131,16 @@ export enum QOS {
 
 export interface StepperConfiguration {
   showEditorSource?: boolean;
-  showProcessorExtensions?: boolean;
+  showEditorTarget?: boolean;
+  showProcessorExtensionsSource?: boolean;
+  showProcessorExtensionsSourceTarget?: boolean;
   editorMode?: EditorMode;
   allowNoDefinedIdentifier?: boolean;
   allowDefiningSubstitutions?: boolean;
   allowTestTransformation?: boolean;
   allowTestSending?: boolean;
   direction?: Direction;
+  advanceFromStepToEndStep?: number;
 }
 
 export enum MappingType {
@@ -137,7 +148,8 @@ export enum MappingType {
   FLAT_FILE = 'FLAT_FILE',
   GENERIC_BINARY = 'GENERIC_BINARY',
   PROTOBUF_STATIC = 'PROTOBUF_STATIC',
-  PROCESSOR_EXTENSION = 'PROCESSOR_EXTENSION'
+  PROCESSOR_EXTENSION_SOURCE = 'PROCESSOR_EXTENSION_SOURCE',
+  PROCESSOR_EXTENSION_SOURCE_TARGET = 'PROCESSOR_EXTENSION_SOURCE_TARGET'
 }
 
 export interface MappingTypeProperties {
@@ -158,16 +170,17 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
 > = {
   [MappingType.JSON]: {
     key: MappingType.JSON,
-    description: 'Mapping handles payloads in JSON format',
+    description: 'Mapping handles payloads in JSON format.',
     properties: {
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: true }
     },
     stepperConfiguration: {
       showEditorSource: true,
+      showEditorTarget: true,
       allowNoDefinedIdentifier: false,
       allowDefiningSubstitutions: true,
-      showProcessorExtensions: false,
+      showProcessorExtensionsSource: false,
       allowTestTransformation: true,
       allowTestSending: true
     }
@@ -181,16 +194,17 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
 				"2022-08-06T00:14:50.000+02:00",
 				"c8y_FuelMeasurement"
 			]
-			`,
+			.`,
     properties: {
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
     stepperConfiguration: {
       showEditorSource: true,
+      showEditorTarget: true,
       allowNoDefinedIdentifier: false,
       allowDefiningSubstitutions: true,
-      showProcessorExtensions: false,
+      showProcessorExtensionsSource: false,
       allowTestTransformation: true,
       allowTestSending: true
     }
@@ -198,51 +212,76 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
   [MappingType.GENERIC_BINARY]: {
     key: MappingType.GENERIC_BINARY,
     description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x". 
-Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157`,
+Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
     properties: {
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
     stepperConfiguration: {
       showEditorSource: true,
+      showEditorTarget: true,
       allowNoDefinedIdentifier: false,
       allowDefiningSubstitutions: true,
-      showProcessorExtensions: false,
+      showProcessorExtensionsSource: false,
       allowTestTransformation: true,
       allowTestSending: true
     }
   },
   [MappingType.PROTOBUF_STATIC]: {
     key: MappingType.PROTOBUF_STATIC,
-    description: 'Mapping handles payloads in protobuf format',
+    description: 'Mapping handles payloads in protobuf format.',
     properties: {
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
     stepperConfiguration: {
-      showProcessorExtensions: false,
+      showProcessorExtensionsSource: false,
       allowDefiningSubstitutions: false,
       showEditorSource: false,
+      showEditorTarget: true,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
-      allowTestSending: true
+      allowTestSending: false
     }
   },
-  [MappingType.PROCESSOR_EXTENSION]: {
-    key: MappingType.PROCESSOR_EXTENSION,
+  [MappingType.PROCESSOR_EXTENSION_SOURCE]: {
+    key: MappingType.PROCESSOR_EXTENSION_SOURCE,
     description:
-      'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab',
+      'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
     properties: {
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
     stepperConfiguration: {
-      showProcessorExtensions: true,
+      showProcessorExtensionsSource: true,
+      showProcessorExtensionsSourceTarget: false,
       allowDefiningSubstitutions: false,
       showEditorSource: false,
+      showEditorTarget: true,
       allowNoDefinedIdentifier: true,
       allowTestTransformation: false,
-      allowTestSending: true
+      allowTestSending: false,
+      advanceFromStepToEndStep: 2
+    }
+  },
+  [MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET]: {
+    key: MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET,
+    description:
+      'Mapping handles payloads in custom format. In contrast to the PROCESSOR_EXTENSION_SOURCE the completed processing of the payload: extract values from the incoming payload and then transform this to a Cumulocity API call. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
+    properties: {
+      [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
+      [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
+    },
+    stepperConfiguration: {
+      showProcessorExtensionsSource: false,
+      showProcessorExtensionsSourceTarget: true,
+      allowDefiningSubstitutions: false,
+      showEditorSource: false,
+      showEditorTarget: false,
+      allowNoDefinedIdentifier: true,
+      allowTestTransformation: false,
+      allowTestSending: false,
+      advanceFromStepToEndStep: 2
     }
   }
 };

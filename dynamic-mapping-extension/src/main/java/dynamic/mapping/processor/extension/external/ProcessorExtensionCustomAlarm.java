@@ -19,127 +19,153 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package dynamic.mapping.processor.inbound;
+package dynamic.mapping.processor.extension.external;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
 
-import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.connector.core.callback.ConnectorMessage;
-import dynamic.mapping.core.C8YAgent;
-import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
+import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
-import dynamic.mapping.processor.ProcessingException;
+import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.processor.extension.ProcessorExtensionSource;
+import dynamic.mapping.processor.extension.ProcessorExtensionTarget;
+import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.processor.model.C8YRequest;
-import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
-import org.json.JSONException;
+import dynamic.mapping.core.C8YAgent;
+import lombok.extern.slf4j.Slf4j;
+import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import javax.ws.rs.ProcessingException;
 import java.io.IOException;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
 
 @Slf4j
-public abstract class BasePayloadProcessorInbound<T> {
+public class ProcessorExtensionCustomAlarm
+        implements ProcessorExtensionSource<byte[]>, ProcessorExtensionTarget<byte[]> {
 
-	public BasePayloadProcessorInbound(ConfigurationRegistry configurationRegistry) {
-		this.objectMapper = configurationRegistry.getObjectMapper();
-		this.c8yAgent = configurationRegistry.getC8yAgent();
-		this.processingCachePool = configurationRegistry.getProcessingCachePool();
-	}
+    private ObjectMapper objectMapper;
 
-	protected C8YAgent c8yAgent;
+    public ProcessorExtensionCustomAlarm() {
+        this.objectMapper = new ObjectMapper();
+    }
 
-	protected ObjectMapper objectMapper;
+    @Override
+    public void extractFromSource(ProcessingContext<byte[]> context)
+            throws ProcessingException {
+        JsonNode jsonNode;
+        try {
+            jsonNode = objectMapper.readTree(context.getPayload());
+        } catch (IOException e) {
+            throw new ProcessingException(e.getMessage());
+        }
+        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context
+                .getPostProcessingCache();
 
-	protected ExecutorService processingCachePool;
+        postProcessingCache.put("time",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(new MappingSubstitution.SubstituteValue(
+                                new TextNode(new DateTime(
+                                        jsonNode.get("time").textValue())
+                                        .toString()),
+                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
 
-	public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, ConnectorMessage message)
-			throws IOException;
+        postProcessingCache.put("type",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(
+                                new MappingSubstitution.SubstituteValue(
+                                        new TextNode(jsonNode.get("alarmType")
+                                                .textValue()),
+                                        MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                        RepairStrategy.DEFAULT))));
 
-	public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
+        postProcessingCache.put("severity",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(
+                                new MappingSubstitution.SubstituteValue(
+                                        new TextNode(jsonNode.get("criticality")
+                                                .textValue()),
+                                        MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                        RepairStrategy.DEFAULT))));
 
-	public abstract void applyFiler(ProcessingContext<T> context);
+        postProcessingCache.put("text",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(
+                                new MappingSubstitution.SubstituteValue(
+                                        new TextNode(jsonNode.get("message")
+                                                .textValue()),
+                                        MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                        RepairStrategy.DEFAULT))));
+        postProcessingCache.put(context.getMapping().targetAPI.identifier,
+                new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
+                        new MappingSubstitution.SubstituteValue(
+                                new TextNode(jsonNode.get("externalId").textValue()),
+                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
 
-	public void substituteInTargetAndSend(ProcessingContext<T> context) {
-		/*
-		 * step 3 replace target with extract content from inbound payload
-		 */
-		Mapping mapping = context.getMapping();
-		String tenant = context.getTenant();
+        log.info("Tenant {} - New alarm over json processor: {}, {}", context.getTenant(),
+                jsonNode.get("time").textValue(), jsonNode.get("message").textValue());
+    }
 
-		// if there are too few devices identified then we replicate the first device
-		Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
-		String maxEntry = postProcessingCache.entrySet()
-				.stream()
-				.map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
-				.max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
-						.compareTo(e2.getValue()))
-				.get().getKey();
+    @Override
+    public void substituteInTargetAndSend(ProcessingContext<byte[]> context, C8YAgent c8yAgent) {
+        /*
+         * step 3 replace target with extract content from inbound payload
+         */
+        Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
 
-		// the following stmt does not work for mapping_type protobuf
-		// String deviceIdentifierMapped2PathTarget2 =
-		// MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
-		// using alternative method
-		String deviceIdentifierMapped2PathTarget2 = mapping.targetAPI.identifier;
-		List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
-				.get(deviceIdentifierMapped2PathTarget2);
-		int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
-		MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
-		while (deviceEntries.size() < countMaxlistEntries) {
-			deviceEntries.add(toDuplicate);
-		}
-		// Set<String> pathTargets = postProcessingCache.keySet();
-		
-		// if devices have to be created implicitly, then request have to b process in sequence, other multiple threads will try to create a device with the same externalId
-		if (mapping.createNonExistingDevice) {
-			for (int i = 0; i < deviceEntries.size(); i++) {
-				// for (MappingSubstitution.SubstituteValue device : deviceEntries) {
-				getBuildProcessingContext(context, i, postProcessingCache);
-			}
-			log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {} !", tenant,mapping.createNonExistingDevice);
+        // if there are too few devices identified then we replicate the first device
+        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        String maxEntry = postProcessingCache.entrySet()
+                .stream()
+                .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
+                .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
+                        .compareTo(e2.getValue()))
+                .get().getKey();
 
-		} else {
-			List<Future<ProcessingContext<T>>> contextFutureList = new ArrayList<>();
-			for (int i = 0; i < deviceEntries.size(); i++) {
-				// for (MappingSubstitution.SubstituteValue device : deviceEntries) {
-				int finalI = i;
-				contextFutureList.add(processingCachePool.submit(() -> {
-					return getBuildProcessingContext(context, finalI, postProcessingCache);
-				}));
-			}
-			int j = 0;
-			for (Future<ProcessingContext<T>> currentContext : contextFutureList) {
-				try {
-					log.debug("Tenant {} - Waiting context is completed {}...", tenant, j);
-					currentContext.get(60, TimeUnit.SECONDS);
-					j++;
-				} catch (Exception e) {
-					log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
-				}
-			}
-			log.info("Tenant {} - Context is completed, {} parallel requests processed!", tenant, j);
-		}
-	}
+        // the following stmt does not work for mapping_type protobuf
+        // String deviceIdentifierMapped2PathTarget2 =
+        // MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
+        // using alternative method
+        String deviceIdentifierMapped2PathTarget2 = mapping.targetAPI.identifier;
+        List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
+                .get(deviceIdentifierMapped2PathTarget2);
+        int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
+        MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
+        while (deviceEntries.size() < countMaxlistEntries) {
+            deviceEntries.add(toDuplicate);
+        }
 
-	private ProcessingContext<T> getBuildProcessingContext(ProcessingContext<T> context, int finalI,
-			Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache) {
+        for (int i = 0; i < deviceEntries.size(); i++) {
+            // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
+            getBuildProcessingContext(context, i, postProcessingCache, c8yAgent);
+        }
+        log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {} !", tenant,mapping.createNonExistingDevice);
+
+    }
+
+    	private ProcessingContext<byte[]> getBuildProcessingContext(ProcessingContext<byte[]> context, int finalI,
+			Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache, C8YAgent c8yAgent) {
 		Set<String> pathTargets = postProcessingCache.keySet();
 		Mapping mapping = context.getMapping();
 		String tenant = context.getTenant();
@@ -198,7 +224,9 @@ public abstract class BasePayloadProcessorInbound<T> {
 							predecessor = newPredecessor;
 						} catch (ProcessingException | JsonProcessingException e) {
 							context.getCurrentRequest().setError(e);
-						}
+						} catch (dynamic.mapping.processor.ProcessingException e) {
+                            context.getCurrentRequest().setError(e);
+                                                }
 					} else if (sourceId == null && context.isSendPayload()) {
 						throw new RuntimeException(String.format(
 								"External id %s for type %s not found!",
@@ -211,9 +239,9 @@ public abstract class BasePayloadProcessorInbound<T> {
 					}
 
 				}
-				substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+				BasePayloadProcessorInbound.substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
 			} else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
-				substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+				BasePayloadProcessorInbound.substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
 			}
 		}
 		/*
@@ -277,37 +305,5 @@ public abstract class BasePayloadProcessorInbound<T> {
 		return context;
 	}
 
-	public static void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,
-			DocumentContext jsonObject, String keys)
-			throws JSONException {
-		boolean subValueMissing = sub.value == null;
-		boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
-		try {
-			if ("$".equals(keys)) {
-				Object replacement = sub.typedValue();
-				if (replacement instanceof Map<?, ?>) {
-					Map<String, Object> rm = (Map<String, Object>) replacement;
-					for (Map.Entry<String, Object> entry : rm.entrySet()) {
-						jsonObject.put("$", entry.getKey(), entry.getValue());
-					}
-				}
-			} else {
-				if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-						(sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
-					jsonObject.delete(keys);
-				} else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-					boolean pathIsNested = keys.contains(".") || keys.contains("[");
-					if (pathIsNested) {
-						throw new JSONException("Can only create new nodes ion the root level!");
-					}
-					jsonObject.put("$", keys, sub.typedValue());
-				} else {
-					jsonObject.set(keys, sub.typedValue());
-				}
-			}
-		} catch (PathNotFoundException e) {
-			throw new PathNotFoundException(String.format("Path: %s not found!", keys));
-		}
-	}
-
+	
 }

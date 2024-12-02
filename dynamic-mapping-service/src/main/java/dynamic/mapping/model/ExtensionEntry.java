@@ -23,7 +23,8 @@ package dynamic.mapping.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
-import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapping.processor.extension.ProcessorExtensionSource;
+import dynamic.mapping.processor.extension.ProcessorExtensionTarget;
 
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -31,23 +32,37 @@ import java.io.Serializable;
 @Getter
 @Setter
 @NoArgsConstructor
+@ToString
+@Builder
 @AllArgsConstructor
-@ToString()
 public class ExtensionEntry implements Serializable {
 
     @NotNull
-    private String event;
+    private String extensionName;
 
     @NotNull
-    private String name;
+    private String eventName;
+    
+    @NotNull
+    private String fqnClassName;
+    
+    @NotNull
+    private boolean loaded;
+    
+    @NotNull
+    private String message;
+
+    @NotNull
+    private ExtensionType extensionType;
 
     @NotNull
     @JsonIgnore
-    private ProcessorExtensionInbound<?> extensionImplementation;
-
+    @Builder.Default
+    private ProcessorExtensionSource<?> extensionImplSource = null;
+    
     @NotNull
-    public boolean loaded;
-
-    @NotNull
-    public String message;
+    @JsonIgnore
+    @Builder.Default
+    private ProcessorExtensionTarget<?> extensionImplTarget = null;
+    
 }

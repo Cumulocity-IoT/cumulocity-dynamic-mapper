@@ -19,13 +19,9 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package dynamic.mapping.processor.extension;
+package dynamic.mapping.model;
 
-import dynamic.mapping.processor.ProcessingException;
-import dynamic.mapping.processor.model.ProcessingContext;
-import org.springframework.stereotype.Component;
-
-@Component
-public interface ProcessorExtensionInbound<O> {
-    public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
+public enum ExtensionType {
+  PROCESSOR_EXTENSION_SOURCE,
+  PROCESSOR_EXTENSION_SOURCE_TARGET
 }

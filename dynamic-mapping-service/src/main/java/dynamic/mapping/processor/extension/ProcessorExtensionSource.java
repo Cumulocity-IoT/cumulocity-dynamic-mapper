@@ -19,29 +19,13 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package dynamic.mapping.processor.model;
+package dynamic.mapping.processor.extension;
 
-public enum MappingType {
-    JSON ("JSON", String.class),
-    FLAT_FILE ( "FLAT_FILE", String.class),
-    GENERIC_BINARY ( "GENERIC_BINARY", byte[].class),
-    PROTOBUF_STATIC ( "PROTOBUF_STATIC", byte[].class),
-    PROCESSOR_EXTENSION_SOURCE ( "PROCESSOR_EXTENSION_SOURCE", byte[].class),
-    PROCESSOR_EXTENSION_SOURCE_TARGET ( "PROCESSOR_EXTENSION_SOURCE_TARGET", byte[].class);
+import dynamic.mapping.processor.ProcessingException;
+import dynamic.mapping.processor.model.ProcessingContext;
+import org.springframework.stereotype.Component;
 
-    public final String name;
-    public final Class<?> payloadType;
-
-    private MappingType (String name, Class<?> payloadType){
-        this.name = name;
-        this.payloadType = payloadType;
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
-    public Class<?> getPayloadType() {
-        return this.payloadType;
-    }
+@Component
+public interface ProcessorExtensionSource<O> {
+    public void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 }

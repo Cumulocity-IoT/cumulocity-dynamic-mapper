@@ -85,7 +85,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
     public mappingService: MappingService,
     public alertService: AlertService,
     public sharedService: SharedService
-  ) {}
+  ) { }
 
   deploymentMapEntryChange(e) {
     // console.log(
@@ -95,7 +95,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
     // );
     this.isButtonDisabled$.next(
       !this._deploymentMapEntry?.connectors ||
-        this._deploymentMapEntry?.connectors?.length == 0
+      this._deploymentMapEntry?.connectors?.length == 0
     );
     // console.log('New setDeploymentMap from grid', e);
   }
@@ -119,25 +119,18 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   async onCancelButton() {
     this.cancel.emit();
   }
+  
+  async onStepChange(index: number) {
+    this.alertService.info(
+      `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`
+    );
+  }
 
-  async onNextStep(event: {
+  onNextStep(event: {
     stepper: C8yStepper;
     step: CdkStep;
-  }): Promise<void> {
-    // ('OnNextStep', event.step.label, this.mapping);
-    this.stepLabel = event.step.label;
-    if (this.stepLabel == 'Add and select connector') {
-      if (
-        this.deploymentMapEntry.connectors &&
-        this.deploymentMapEntry.connectors.length == 0
-      ) {
-      } else {
-        this.alertService.info(
-          `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`
-        );
-        event.stepper.next();
-      }
-    }
+  }): void {
+    event.stepper.next();
   }
 
   ngOnDestroy() {

@@ -32,12 +32,12 @@ import org.junit.jupiter.api.Test;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.processor.extension.external.CustomEventOuter;
-import dynamic.mapping.processor.extension.external.ProcessorExtensionInboundCustomEvent;
+import dynamic.mapping.processor.extension.external.ProcessorExtensionCustomEvent;
 import dynamic.mapping.processor.extension.external.CustomEventOuter.CustomEvent;
 import dynamic.mapping.model.API;
 
 @Slf4j
-public class ProcessorExtensionInboundTest {
+public class ProcessorExtensionTest {
 
   @Test
   void testDeserializeCustomEvent() {
@@ -49,7 +49,7 @@ public class ProcessorExtensionInboundTest {
     .setEventType("type_Dummy")
     .build();
 
-    ProcessorExtensionInboundCustomEvent extension = new ProcessorExtensionInboundCustomEvent();
+    ProcessorExtensionCustomEvent extension = new ProcessorExtensionCustomEvent();
     ProcessingContext<byte[]> context = new ProcessingContext<>();
     context.setPayload(proto.toByteArray());
     Mapping m1 = new Mapping();

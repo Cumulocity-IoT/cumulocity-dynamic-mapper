@@ -21,11 +21,11 @@
 
 package dynamic.mapping.processor.extension;
 
-import dynamic.mapping.processor.ProcessingException;
+import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.springframework.stereotype.Component;
 
 @Component
-public interface ProcessorExtensionOutbound<O> {
-    public abstract void substituteInTarget(ProcessingContext<O> context) throws ProcessingException;
+public interface ProcessorExtensionTarget<O> {
+    public void substituteInTargetAndSend(ProcessingContext<O> context, C8YAgent c8yAgent);
 }

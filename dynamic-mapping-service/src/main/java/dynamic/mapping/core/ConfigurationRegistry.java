@@ -22,10 +22,9 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
-import dynamic.mapping.core.cache.InboundExternalIdCache;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
-import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
+import dynamic.mapping.processor.extension.ExtensibleProcessor;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.GenericBinaryProcessorInbound;
@@ -61,11 +60,9 @@ public class ConfigurationRegistry {
 	@Getter
 	private Map<String, ServiceConfiguration> serviceConfigurations = new HashMap<>();
 
-	// structure: <tenant, <extensibleProcessorInbound>>
+	// structure: <tenant, <extensibleProcessorSource>>
 	@Getter
-	private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
-
-
+	private Map<String, ExtensibleProcessor> extensibleProcessors = new HashMap<>();
 
 	@Getter
 	private C8YAgent c8yAgent;
@@ -127,13 +124,14 @@ public class ConfigurationRegistry {
 	private ExecutorService processingCachePool;
 
 	public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-		ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
+		ExtensibleProcessor extensibleProcessor = getExtensibleProcessors().get(tenant);
 		return Map.of(
 				MappingType.JSON, new JSONProcessorInbound(this),
 				MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
 				MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
 				MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
-				MappingType.PROCESSOR_EXTENSION, extensibleProcessor);
+				MappingType.PROCESSOR_EXTENSION_SOURCE, extensibleProcessor,
+				MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET, extensibleProcessor);
 	}
 
 	public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,

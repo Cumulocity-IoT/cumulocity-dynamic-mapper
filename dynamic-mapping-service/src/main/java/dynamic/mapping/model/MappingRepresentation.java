@@ -86,7 +86,8 @@ public class MappingRepresentation implements Serializable {
                 .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.direction)).count();
 
         if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
-                && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION)
+                && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE)
+                && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)
                 && !mapping.direction.equals(Direction.OUTBOUND)) {
             if (count > 1) {
@@ -255,7 +256,7 @@ public class MappingRepresentation implements Serializable {
             result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
         }
 
-        if (!mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION)
+        if (!mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)) {
             try {
                 new JSONObject(mapping.target);

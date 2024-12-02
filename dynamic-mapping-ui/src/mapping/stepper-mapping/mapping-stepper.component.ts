@@ -45,6 +45,7 @@ import {
   DeploymentMapEntry,
   Direction,
   Extension,
+  ExtensionEntry,
   Mapping,
   MappingSubstitution,
   RepairStrategy,
@@ -168,7 +169,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   expertMode: boolean = false;
   templatesInitialized: boolean = false;
   extensions: Map<string, Extension> = new Map();
-  extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  extensionEvents$: BehaviorSubject<ExtensionEntry[]> = new BehaviorSubject([]);
   onDestroy$ = new Subject<void>();
   supportsMessageContext: boolean;
   isButtonDisabled$: BehaviorSubject<boolean> = new BehaviorSubject(true);
@@ -180,9 +181,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   editorSourceStepTemplate: JsonEditor2Component;
   @ViewChild('editorTargetStepTemplate', { static: false })
   editorTargetStepTemplate: JsonEditor2Component;
-  editorTestingResponse: JsonEditor2Component;
+
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
+
+  @ViewChild('stepper', { static: false })
+  stepper: C8yStepper;
+
+  currentStepIndex: number;
 
   constructor(
     public bsModalService: BsModalService,
@@ -334,11 +340,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private setTemplateForm(): void {
     this.templateForm = new FormGroup({
       extensionName: new FormControl({
-        value: this.mapping?.extension?.name,
+        value: this.mapping?.extension?.extensionName,
         disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
       }),
-      extensionEvent: new FormControl({
-        value: this.mapping?.extension?.event,
+      eventName: new FormControl({
+        value: this.mapping?.extension?.eventName,
         disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
       }),
       snoopedTemplateIndex: new FormControl({
@@ -538,60 +544,120 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectExtensionName(extensionName) {
-    this.mapping.extension.name = extensionName;
+    this.mapping.extension.extensionName = extensionName;
     this.extensionEvents$.next(
-      Object.keys(this.extensions[extensionName].extensionEntries)
+      Object.values(this.extensions[extensionName].extensionEntries as Map<string, ExtensionEntry>).filter(entry => entry.extensionType == this.mapping.extension.extensionType)
     );
+    console.log("Selected events", Object.values(this.extensions[extensionName].extensionEntries))
   }
 
   onSelectExtensionEvent(extensionEvent) {
-    this.mapping.extension.event = extensionEvent;
+    this.mapping.extension.eventName = extensionEvent;
   }
 
-  async onNextStep(event: {
-    stepper: C8yStepper;
-    step: CdkStep;
-  }): Promise<void> {
-    // ('OnNextStep', event.step.label, this.mapping);
-    this.step = event.step.label;
-    if (this.step == 'Add and select connector') {
-      if (
-        this.deploymentMapEntry.connectors &&
-        this.deploymentMapEntry.connectors.length >= 0
-      ) {
-        event.stepper.next();
-      }
-    } else if (this.step == 'General settings') {
+  async onStepChange(index: number) {
+    // console.log("StepChange:", index);
+    // this.step == 'Add and select connector'
+    this.currentStepIndex = index;
+    if (index == 1) {
       this.templateModel.mapping = this.mapping;
       this.expandTemplates();
       this.extensions =
         (await this.extensionService.getProcessorExtensions()) as any;
-      if (this.mapping?.extension?.name) {
-        if (!this.extensions[this.mapping.extension.name]) {
-          const msg = `The extension ${this.mapping.extension.name} with event ${this.mapping.extension.event} is not loaded. Please load the extension or choose a different one.`;
+      if (this.mapping?.extension?.extensionName) {
+        if (!this.extensions[this.mapping.extension.extensionName]) {
+          const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
           this.alertService.warning(msg);
         } else {
           this.extensionEvents$.next(
-            Object.keys(
-              this.extensions[this.mapping.extension.name].extensionEntries
+            Object.values(
+              this.extensions[this.mapping.extension.extensionName].extensionEntries
             )
           );
+          console.log("Selected events", Object.values(this.extensions[this.mapping.extension.extensionName].extensionEntries), this.mapping, this.extensions)
+
         }
       }
-      event.stepper.next();
-    } else if (this.step == 'Define substitutions') {
-      this.editorTestingPayloadTemplateEmitter.emit({mapping:this.mapping, sourceTemplate: this.sourceTemplate,  targetTemplate: this.targetTemplate});
+
+      // this.step == 'Define substitutions'
+    } else if (index == 3) {
+      this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
       this.onSelectSubstitution(0);
-      event.stepper.next();
-    } else if (this.step == 'Select templates') {
+      // this.step == 'Select templates'
+    } else if (index == 4) {
       this.sourceTemplate = this.editorSourceStepTemplate?.get();
       this.targetTemplate = this.editorTargetStepTemplate?.get();
-      event.stepper.next();
+    }
+
+  }
+
+  onNextStep(event: {
+    stepper: C8yStepper;
+    step: CdkStep;
+  }): void {
+    if (this.stepperConfiguration.advanceFromStepToEndStep && this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
+      this.goToLastStep();
+      this.alertService.info('The other steps have been skipped for this mapping type!');
     } else {
-      // console.log("Updated subs III:", this.mapping.substitutions);
       event.stepper.next();
     }
   }
+
+  private goToLastStep() {
+        // Mark all previous steps as completed
+    this.stepper.steps.forEach((step, index) => {
+      if (index < this.stepper.steps.length - 1) {
+        step.completed = true;
+      }
+    });
+    // Select the last step
+    this.stepper.selectedIndex = this.stepper.steps.length - 1;
+  }
+
+  // async onNextStep(event: {
+  //   stepper: C8yStepper;
+  //   step: CdkStep;
+  // }): Promise<void> {
+  //   // ('OnNextStep', event.step.label, this.mapping);
+  //   this.step = event.step.label;
+  //   if (this.step == 'Add and select connector') {
+  //     if (
+  //       this.deploymentMapEntry.connectors &&
+  //       this.deploymentMapEntry.connectors.length >= 0
+  //     ) {
+  //       event.stepper.next();
+  //     }
+  //   } else if (this.step == 'General settings') {
+  //     this.templateModel.mapping = this.mapping;
+  //     this.expandTemplates();
+  //     this.extensions =
+  //       (await this.extensionService.getProcessorExtensions()) as any;
+  //     if (this.mapping?.extension?.extensionName) {
+  //       if (!this.extensions[this.mapping.extension.extensionName]) {
+  //         const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
+  //         this.alertService.warning(msg);
+  //       } else {
+  //         this.extensionEvents$.next(
+  //           Object.keys(
+  //             this.extensions[this.mapping.extension.extensionName].extensionEntries
+  //           )
+  //         );
+  //       }
+  //     }
+  //     event.stepper.next();
+  //   } else if (this.step == 'Define substitutions') {
+  //     this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
+  //     this.onSelectSubstitution(0);
+  //     event.stepper.next();
+  //   } else if (this.step == 'Select templates') {
+  //     this.sourceTemplate = this.editorSourceStepTemplate?.get();
+  //     this.targetTemplate = this.editorTargetStepTemplate?.get();
+  //     event.stepper.next();
+  //   } else {
+  //     // console.log("Updated subs III:", this.mapping.substitutions);
+  //     event.stepper.next();
+  //   }
+  // }
 
   async onBackStep(event: {
     stepper: C8yStepper;
