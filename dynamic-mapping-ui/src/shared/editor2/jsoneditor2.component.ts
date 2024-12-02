@@ -119,11 +119,11 @@ export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    this.initalizeEditor();
+    this.initializeEditor();
     this.initRan = true;
   }
 
-  initalizeEditor() {
+  initializeEditor() {
     if (!this.jsonEditorContainer.nativeElement) {
       console.error("Can't find the ElementRef reference for jsoneditor)");
     }
