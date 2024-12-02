@@ -28,7 +28,10 @@ import {
   Output,
   EventEmitter,
   ChangeDetectionStrategy,
-  ViewEncapsulation
+  ViewEncapsulation,
+  AfterViewInit,
+  ChangeDetectorRef,
+  SimpleChanges
 } from '@angular/core';
 import {
   JsonEditor,
@@ -44,7 +47,6 @@ import {
   JSONContent,
   isMultiSelection,
   createMultiSelection,
-  createKeySelection,
   TextContent,
   isValueSelection,
   ContextMenuItem
@@ -58,18 +60,14 @@ import {
   styleUrls: ['./jsoneditor2.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class JsonEditor2Component implements OnInit, OnDestroy {
+export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
   @Input() options;
   @Input()
   set data(value: unknown) {
-    if (value && Object.keys(value).length != 0) {
-      this.content['json'] = value;
-    }
-    // console.log('on setData', value, this.content);
-
-    if (this.editor) {
-      this.editor.destroy();
-      this.ngOnInit();
+    if (value && Object.keys(value).length != 0 && this.initRan) {
+      this.content = { json: value }
+      this.editor?.update(this.content);
+      this.cdr.detectChanges();
     }
   }
   @Input()
@@ -87,7 +85,13 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @ViewChild('jsonEditorContainer', { static: true })
   jsonEditorContainer: ElementRef;
 
-  constructor(private elementRef: ElementRef) {}
+  initRan: boolean = true;
+
+  constructor(
+    private cdr: ChangeDetectorRef
+  ) {
+
+  }
 
   private editor: JsonEditor;
   id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
@@ -97,7 +101,29 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
       content: 'no content'
     }
   };
+
   ngOnInit() {
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes) {
+      if (JSON.stringify(changes['options']?.currentValue) !== JSON.stringify(changes['options']?.previousValue)) {
+        this.updateProps();
+      }
+    }
+  }
+
+  private updateProps() {
+    this.editor?.updateProps(this.options);
+    this.cdr.detectChanges();
+  }
+
+  ngAfterViewInit() {
+    this.initializeEditor();
+    this.initRan = true;
+  }
+
+  initializeEditor() {
     if (!this.jsonEditorContainer.nativeElement) {
       console.error("Can't find the ElementRef reference for jsoneditor)");
     }
@@ -112,30 +138,11 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           previousContent,
           { contentErrors, patchResult }
         ) => {
-          // content is an object { json: JSONData } | { text: string }
-          // console.log('onChange', {
-          //  updatedContent,
-          //  previousContent,
-          //  contentErrors,
-          //  patchResult
-          // });
           this.content = updatedContent;
           this.contentChanged.emit(updatedContent);
         },
         onSelect: this.onSelect.bind(this),
-        onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
-          // console.log("MenuItems:", items);
-          // remove buttons for table-mode, transform, sort
-          items.splice(
-            items.findIndex((i) => i['text'] === 'table'),
-            1
-          );
-          items.splice(
-            items.findIndex((i) => i['className'] === 'jse-transform'),
-            1
-          );
-          return items;
-        },
+        onRenderMenu: this.onRenderMenu.bind(this),
         onRenderContextMenu: this.onRenderContextMenu.bind(this)
       }
     });
@@ -149,6 +156,20 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.editor?.destroy();
+  }
+
+  onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
+    // console.log("MenuItems:", items);
+    // remove buttons for table-mode, transform, sort
+    items.splice(
+      items.findIndex((i) => i['className'] === 'jse-transform'),
+      1
+    );
+    this.options.removeModes?.forEach(mode => items.splice(
+      items.findIndex((i) => i['text'] === mode),
+      1
+    ))
+    return items;
   }
 
   removeItem(items: ContextMenuItem[], textToRemove: string) {
@@ -211,19 +232,21 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   }
 
   async setSelectionToPath(pathString: string) {
-    const path = parseJSONPath(pathString);
-    // console.log('Set selection to path:', pathString, path);
-    const selection: any = createMultiSelection(path, path);
-    // const selection: any = createKeySelection(path, false);
-    // marker to ignore emitting change events when the path was set programmatically
-    selection.triggeredSelection = false;
+    if (pathString) {
+      const path = parseJSONPath(pathString);
+      // console.log('Set selection to path:', pathString, path);
+      const selection: any = createMultiSelection(path, path);
+      // const selection: any = createKeySelection(path, false);
+      // marker to ignore emitting change events when the path was set programmatically
+      selection.triggeredSelection = false;
 
-    try {
-      await this.editor.select(selection);
-    } catch (error) {
-      console.warn('Set selection to path not possible:', pathString, error);
+      try {
+        await this.editor.select(selection);
+      } catch (error) {
+        console.warn('Set selection to path not possible:', pathString, error);
+      }
+      this.pathChanged.emit(pathString);
     }
-    this.pathChanged.emit(pathString);
   }
 
   get(): JSON {

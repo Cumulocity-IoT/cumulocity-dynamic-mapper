@@ -66,15 +66,22 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     response?: any;
     selectedResult: number;
   } = {
-    results: [],
-    selectedResult: -1
-  };
+      results: [],
+      selectedResult: -1
+    };
 
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-  currentSourceTemplate: any;
-  editorOptionsTesting: any = {};
+  currentContext: any;
+  editorOptionsTesting: any = {
+    mode: 'tree',
+    removeModes: ['text', 'table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    statusBar: false,
+    readOnly: true
+  };
 
   @ViewChild('editorTestingPayload', { static: false })
   editorTestingPayload: JsonEditor2Component;
@@ -82,12 +89,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   editorTestingRequest: JsonEditor2Component;
   @ViewChild('editorTestingResponse', { static: false })
   editorTestingResponse: JsonEditor2Component;
+  source: any;
 
   constructor(
     public mappingService: MappingService,
     private alertService: AlertService,
     private elementRef: ElementRef
-  ) {}
+  ) { }
 
   ngOnInit() {
     // set value for backward compatiblility
@@ -102,26 +110,20 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     //  this.stepperConfiguration
     // );
 
-    this.editorOptionsTesting = {
-      ...this.editorOptionsTesting,
-      mode: 'tree',
-      mainMenuBar: true,
-      navigationBar: false,
-      statusBar: false,
-      readOnly: true
-    };
-
-    this.editorTestingPayloadTemplateEmitter.subscribe((template) => {
-      this.currentSourceTemplate = template;
+    this.editorTestingPayloadTemplateEmitter.subscribe((current) => {
+      this.currentContext = current;
+      this.source = JSON.parse(this.currentContext.mapping.source);
+      this.currentContext.mapping.source = JSON.stringify(current.sourceTemplate);
+      this.currentContext.mapping.target = JSON.stringify(current.targetTemplate);
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector('#editorTestingRequest');
       if (editorTestingRequestRef != null) {
         // set schema for editors
         this.editorTestingRequest.setSchema(
-          getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+          getSchema(this.mapping.targetAPI, this.mapping.direction, true, true)
         );
         this.testingModel = {
-          payload: this.currentSourceTemplate,
+          payload: this.source,
           results: [],
           selectedResult: -1,
           request: {},
@@ -134,7 +136,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   async onTestTransformation() {
     const testProcessingContext = await this.mappingService.testResult(
-      this.mapping,
+      this.currentContext.mapping,
       false
     );
     this.testingModel.results = testProcessingContext.requests;
@@ -157,7 +159,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   async onSendTest() {
     const testProcessingContext = await this.mappingService.testResult(
-      this.mapping,
+      this.currentContext.mapping,
       true
     );
     this.testingModel.results = testProcessingContext.requests;
@@ -185,12 +187,14 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   onResetTransformation() {
     this.testingModel = {
-      payload: this.currentSourceTemplate,
+      payload: this.source,
       results: [],
       request: {},
       response: {},
       selectedResult: -1
     };
+    this.editorTestingRequest.set(this.testingModel.request);
+    this.editorTestingResponse.set(this.testingModel.response);
     this.mappingService.initializeCache(this.mapping.direction);
   }
 
@@ -215,7 +219,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         getSchema(
           this.testingModel.results[this.testingModel.selectedResult].targetAPI,
           this.mapping.direction,
-          true
+          true, true
         )
       );
       this.testingModel.errorMsg =

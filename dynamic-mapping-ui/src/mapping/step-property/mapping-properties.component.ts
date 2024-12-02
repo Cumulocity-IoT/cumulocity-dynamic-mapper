@@ -49,8 +49,7 @@ import { StepperConfiguration } from '../../shared/model/shared.model';
   encapsulation: ViewEncapsulation.None
 })
 export class MappingStepPropertiesComponent
-  implements OnInit, OnChanges, OnDestroy
-{
+  implements OnInit, OnChanges, OnDestroy {
   @Input() mapping: Mapping;
   @Input() supportsMessageContext: boolean;
 
@@ -75,14 +74,14 @@ export class MappingStepPropertiesComponent
     sharedService: SharedService,
     private alertService: AlertService,
     private configService: FormlyConfig
-  ) {}
+  ) { }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['supportsMessageContext']) {
       this.supportsMessageContext =
         changes['supportsMessageContext'].currentValue;
       this.propertyFormlyFields = [...this.propertyFormlyFields];
-      console.log('Changes', changes);
+      // console.log('Changes', changes);
     }
   }
 

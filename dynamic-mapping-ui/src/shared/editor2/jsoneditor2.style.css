@@ -23,7 +23,7 @@ svg {
   height: unset !important;
 }
 
-body .jsoneditor2 {
+body .jse-main {
   --jse-theme-color: var(--c8y-root-component-background-default);
   --jse-menu-color: var(--c8y-root-component-color-default);
   /*--jse-theme-color-highlight: var(
@@ -43,6 +43,11 @@ body .jsoneditor2 {
 
 .jse-main-small {
   height: 300px;
+  overflow: auto;
+}
+
+.jse-main-medium {
+  height: 450px;
   overflow: auto;
 }
 

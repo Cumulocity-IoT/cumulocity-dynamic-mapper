@@ -33,22 +33,21 @@ import { BehaviorSubject } from 'rxjs';
 export class MappingTreeComponent implements OnInit {
   constructor(
     private service: MappingTreeService,
-    private route: ActivatedRoute
-  ) {}
+    private route: ActivatedRoute,
+  ) { }
 
   @ViewChild('editorTree', { static: false }) editorTree: JsonEditor2Component;
   mappingTree$: BehaviorSubject<any> = new BehaviorSubject([]);
-  editorOptionsTree: any = {};
+  editorOptionsTree: any = {
+    mode: 'tree',
+    removeModes: ['text', 'table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    statusBar: false,
+    readOnly: true,
+  };
 
   ngOnInit() {
-    this.editorOptionsTree = {
-      mode: 'tree',
-      mainMenuBar: true,
-      navigationBar: false,
-      statusBar: false,
-      readOnly: false,
-      name: 'root'
-    };
     this.mappingTree$.next(this.route.snapshot.data['mappingTree']);
   }
 

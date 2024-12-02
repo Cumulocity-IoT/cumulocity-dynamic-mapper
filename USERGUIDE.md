@@ -16,6 +16,7 @@
       - [Map Device Identifier](#map-device-identifier)
       - [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
       - [Different type of substitutions](#different-type-of-substitutions)
+    - [Apply a filter for a mapping](#apply-a-filter-for-a-mapping)
     - [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
     - [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
     - [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
@@ -392,6 +393,22 @@ then three requests are generated:
 1. request: for device `"device_101023"`, timestamp `2022-10-30T04:10:00.000Z` and value `10.4`
 1. request: for device `"device_101024"`, timestamp `2022-10-30T04:11:00.000Z` and value `20.9`
 1. request: for device `"device_101025"`, timestamp `2022-10-30T04:12:00.000Z` and value `10.4`
+
+---
+
+### Apply a filter for a mapping
+
+You can apply a filter for a mapping, in case the mapping should only be processed if the payload meets a certain condition. This might be the case, if you want to turn a rather generic payload into a measurement, an event and an alarm depending on content of the payload.
+In this case you can apply a filter:
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Filter.png"  style="width: 70%;" />
+</p>
+
+by defining a `JSONata` expression that evaluates to `true` or `false`:
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Filter_Detail.png"  style="width: 70%;" />
+</p>
 
 ---
 
