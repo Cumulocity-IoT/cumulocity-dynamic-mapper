@@ -259,7 +259,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 									mappingStatus.snoopedTemplatesActive++;
 
 									log.debug("Tenant {} - Adding snoopedTemplate to map: {},{},{}", tenant,
-											mapping.subscriptionTopic,
+											mapping.mappingTopic,
 											mapping.snoopedTemplates.size(),
 											mapping.snoopStatus);
 									mappingStatusComponent.addDirtyMapping(tenant, mapping);

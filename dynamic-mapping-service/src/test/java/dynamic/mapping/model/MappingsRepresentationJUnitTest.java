@@ -67,27 +67,21 @@ public class MappingsRepresentationJUnitTest {
         Mapping m1 = new Mapping();
         m1.setMappingTopic("/device/+/east/");
         m1.setMappingTopicSample("/device/us/east/");
-        m1.setSubscriptionTopic("/device/#");
         assertEquals(new ArrayList<ValidationError>(),
                 MappingRepresentation.isMappingTopicAndMappingTopicSampleValid(m1.mappingTopic, m1.mappingTopicSample));
 
         Mapping m2 = new Mapping();
-        m2.setMappingTopic("/device");
-        m2.setSubscriptionTopic("/device/#");
-        ValidationError[] l2 = { ValidationError.MappingTopic_Must_Match_The_SubscriptionTopic };
-        assertEquals(Arrays.asList(l2), MappingRepresentation.isMappingTopicAndSubscriptionTopicValid(m2));
+        m2.setMappingTopic("/device/#");
+        m2.setMappingTopicSample("/device/us/east/");
+        assertEquals(new ArrayList<ValidationError>(Arrays.asList(
+            ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name)),
+                MappingRepresentation.isMappingTopicAndMappingTopicSampleValid(m2.mappingTopic, m2.mappingTopicSample));
 
         Mapping m3 = new Mapping();
         m3.setMappingTopic("/device/");
         m3.setMappingTopicSample("/device/");
         assertEquals(new ArrayList<ValidationError>(),
                 MappingRepresentation.isMappingTopicAndMappingTopicSampleValid(m3.mappingTopic, m3.mappingTopicSample));
-
-        Mapping m4 = new Mapping();
-        m4.setMappingTopic("binary/+");
-        m4.setSubscriptionTopic("binary/+");
-        assertEquals(new ArrayList<ValidationError>(),
-                MappingRepresentation.isMappingTopicAndSubscriptionTopicValid(m4));
     }
 
     @Test
@@ -175,7 +169,6 @@ public class MappingsRepresentationJUnitTest {
         log.info(
                 String.join("[^\\/]+", st.replace("/", "\\/").split("\\+")).replace("#", ".*"));
     }
-
 
     @Test
     void testNeedsRepair() {

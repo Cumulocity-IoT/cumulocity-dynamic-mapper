@@ -165,7 +165,7 @@ public class OperationController {
 				Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, mappingId, activeBoolean);
 				Map<String, AConnectorClient> connectorMap = connectorRegistry
 						.getClientsForTenant(tenant);
-				// subscribe/unsubscribe respective subscriptionTopic of mapping only for
+				// subscribe/unsubscribe respective mappingTopic of mapping only for
 				// outbound mapping
 				Map<String, String> failed = new HashMap<>();
 				for (AConnectorClient client : connectorMap.values()) {

@@ -174,7 +174,7 @@ public class ProcessorExtensionCustomAlarm
 				.get(deviceIdentifierMapped2PathTarget2);
 		MappingSubstitution.SubstituteValue device = deviceEntries.get(finalI);
 		int predecessor = -1;
-		DocumentContext payloadTarget = JsonPath.parse(mapping.target);
+		DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
 		for (String pathTarget : pathTargets) {
 			MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
 					new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,

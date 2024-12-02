@@ -57,7 +57,7 @@ public class MappingStatus implements Serializable {
   public String direction;
 
   @NotNull
-  public String subscriptionTopic;
+  public String mappingTopic;
 
   @NotNull
   public String publishTopic;

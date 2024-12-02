@@ -200,10 +200,6 @@ public class MappingTreeNode {
 		synchronized (treeModificationLock) {
 			if (mapping != null) {
 				var path = mapping.mappingTopic;
-				// if mappingTopic is not set use topic instead
-				if (path == null || path.equals("")) {
-					path = mapping.subscriptionTopic;
-				}
 				List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
 				addMapping(mapping, levels, 0);
 			}
@@ -214,10 +210,6 @@ public class MappingTreeNode {
 		synchronized (treeModificationLock) {
 			if (mapping != null) {
 				var path = mapping.mappingTopic;
-				// if mappingTopic is not set use topic instead
-				if (path == null || path.equals("")) {
-					path = mapping.subscriptionTopic;
-				}
 				List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
 				MutableInt branchingLevel = new MutableInt(0);
 				deleteMapping(mapping, levels, 0, branchingLevel);

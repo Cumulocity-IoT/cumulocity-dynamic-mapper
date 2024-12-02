@@ -83,7 +83,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
         Set<String> pathTargets = postProcessingCache.keySet();
 
         int predecessor = -1;
-        DocumentContext payloadTarget = JsonPath.parse(mapping.target);
+        DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
         /*
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution

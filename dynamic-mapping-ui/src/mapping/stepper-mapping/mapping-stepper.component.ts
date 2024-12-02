@@ -501,18 +501,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onsourceTemplateChanged(content: Content) {
     if (_.has(content, 'text') && content['text']) {
-      this.mapping.source = reduceSourceTemplate(JSON.parse(content['text']), false);
+      this.mapping.sourceTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
     } else {
-      this.mapping.source = reduceSourceTemplate(content['json'], false);
+      this.mapping.sourceTemplate = reduceSourceTemplate(content['json'], false);
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ontargetTemplateChanged(content: Content) {
     if (_.has(content, 'text') && content['text']) {
-      this.mapping.target = reduceSourceTemplate(JSON.parse(content['text']), false);
+      this.mapping.targetTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
     } else {
-      this.mapping.target = reduceSourceTemplate(content['json'], false);
+      this.mapping.targetTemplate = reduceSourceTemplate(content['json'], false);
     }
   }
 
@@ -713,21 +713,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else {
       if (this.stepperConfiguration.direction == Direction.INBOUND) {
         this.sourceTemplate = expandExternalTemplate(
-          JSON.parse(this.mapping.source),
+          JSON.parse(this.mapping.sourceTemplate),
           this.mapping,
           levels
         );
         this.targetTemplate = expandC8YTemplate(
-          JSON.parse(this.mapping.target),
+          JSON.parse(this.mapping.targetTemplate),
           this.mapping
         );
       } else {
         this.sourceTemplate = expandC8YTemplate(
-          JSON.parse(this.mapping.source),
+          JSON.parse(this.mapping.sourceTemplate),
           this.mapping
         );
         this.targetTemplate = expandExternalTemplate(
-          JSON.parse(this.mapping.target),
+          JSON.parse(this.mapping.targetTemplate),
           this.mapping,
           levels
         );
@@ -797,14 +797,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   async onTargetAPIChanged(changedTargetAPI) {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.mapping.target = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
-      this.mapping.source = getExternalTemplate(this.mapping);
+      this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+      this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
       this.schemaUpdateTarget.emit(
         getSchema(this.mapping.targetAPI, this.mapping.direction, true, false)
       );
     } else {
-      this.mapping.source = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
-      this.mapping.target = getExternalTemplate(this.mapping);
+      this.mapping.sourceTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+      this.mapping.targetTemplate = getExternalTemplate(this.mapping);
       this.schemaUpdateSource.emit(
         getSchema(this.mapping.targetAPI, this.mapping.direction, false, false)
       );

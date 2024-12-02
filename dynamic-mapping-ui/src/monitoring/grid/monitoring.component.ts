@@ -81,9 +81,9 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       visible: true
     },
     {
-      name: 'subscriptionTopic',
-      header: 'Subscription topic',
-      path: 'subscriptionTopic',
+      name: 'mappingTopic',
+      header: 'Mapping topic',
+      path: 'mappingTopic',
       filterable: false,
       dataType: ColumnDataType.TextLong,
       gridTrackSize: '15%'

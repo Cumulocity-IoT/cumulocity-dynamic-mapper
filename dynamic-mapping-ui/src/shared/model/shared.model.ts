@@ -46,14 +46,13 @@ export interface Mapping {
   name: string;
   id: string;
   ident: string;
-  subscriptionTopic?: string;
   publishTopic?: string;
   publishTopicSample?: string;
   mappingTopic?: string;
   mappingTopicSample?: string;
   targetAPI: string;
-  source: string;
-  target: string;
+  sourceTemplate: string;
+  targetTemplate: string;
   active: boolean;
   tested: boolean;
   qos: QOS;
@@ -67,7 +66,6 @@ export interface Mapping {
   mappingType: MappingType;
   extension?: ExtensionEntry;
   direction?: Direction;
-  filterOutbound?: string;
   filterMapping?: string;
   autoAckOperation?: boolean;
   debug?: boolean;
@@ -306,7 +304,7 @@ export interface MappingStatus {
   name: string;
   ident: string;
   direction: Direction;
-  subscriptionTopic: string;
+  mappingTopic: string;
   errors: number;
   messagesReceived: number;
   snoopedTemplatesTotal: number;

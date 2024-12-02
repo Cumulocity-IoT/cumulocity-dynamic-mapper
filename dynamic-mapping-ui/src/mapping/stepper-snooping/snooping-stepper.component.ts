@@ -105,7 +105,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getCurrentMapping(): Mapping {
-    this.mapping.target = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
+    this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
     return {
       ...this.mapping,
       lastUpdate: Date.now()

@@ -76,7 +76,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
 
   async ngOnInit(): Promise<void> {
     this.closeSubject = new Subject();
-    this.sourceTemplate = JSON.parse(this.mapping.source);
+    this.sourceTemplate = JSON.parse(this.mapping.sourceTemplate);
     this.filterFormlyFields = [
       {
         fieldGroup: [

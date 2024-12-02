@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -200,7 +201,7 @@ public class MappingComponent {
 		MappingStatus ms = statusMapping.get(m.ident);
 		if (ms == null) {
 			log.info("Tenant {} - Adding: {}", tenant, m.ident);
-			ms = new MappingStatus(m.id, m.name, m.ident, m.direction.name(), m.subscriptionTopic, m.publishTopic, 0, 0,
+			ms = new MappingStatus(m.id, m.name, m.ident, m.direction.name(), m.mappingTopic, m.publishTopic, 0, 0,
 					0, 0);
 			statusMapping.put(m.ident, ms);
 		}
@@ -225,18 +226,23 @@ public class MappingComponent {
 		});
 	}
 
-	public Mapping getMapping(String tenant, String id) {
-		Mapping result = subscriptionsService.callForTenant(tenant, () -> {
-			ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
-			if (mo != null) {
-				Mapping mt = toMappingObject(mo).getC8yMQTTMapping();
-				log.debug("Tenant {} - Found Mapping: {}", tenant, mt.id);
-				return mt;
-			}
-			return null;
-		});
-		return result;
-	}
+    public Mapping getMapping(String tenant, String id) {
+        Mapping result = subscriptionsService.callForTenant(tenant, () -> {
+            ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
+            if (mo != null) {
+                try {
+                    Mapping mt = toMappingObject(mo).getC8yMQTTMapping();
+                    log.debug("Tenant {} - Found Mapping: {}", tenant, mt.id);
+                    return mt;
+                } catch (IllegalArgumentException e) {
+                    log.warn("Failed to convert managed object to mapping: {}", mo.getId(), e);
+                    return null;
+                }
+            }
+            return null;
+        });
+        return result;
+    }
 
 	public Mapping deleteMapping(String tenant, String id) {
 		// test id the mapping is active, we don't delete or modify active mappings
@@ -258,19 +264,28 @@ public class MappingComponent {
 		return result;
 	}
 
-	public List<Mapping> getMappings(String tenant) {
-		List<Mapping> result = subscriptionsService.callForTenant(tenant, () -> {
-			InventoryFilter inventoryFilter = new InventoryFilter();
-			inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
-			ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter);
-			List<Mapping> res = StreamSupport.stream(moc.get().allPages().spliterator(), true)
-					.map(mo -> toMappingObject(mo).getC8yMQTTMapping())
-					.collect(Collectors.toList());
-			log.debug("Tenant {} - Loaded mappings (inbound & outbound): {}", tenant, res.size());
-			return res;
-		});
-		return result;
-	}
+    public List<Mapping> getMappings(String tenant) {
+        List<Mapping> result = subscriptionsService.callForTenant(tenant, () -> {
+            InventoryFilter inventoryFilter = new InventoryFilter();
+            inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
+            ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter);
+            List<Mapping> res = StreamSupport.stream(moc.get().allPages().spliterator(), true)
+                    .map(mo -> {
+                        try {
+                            return Optional.of(toMappingObject(mo).getC8yMQTTMapping());
+                        } catch (IllegalArgumentException e) {
+                            log.warn("Failed to convert managed object to mapping: {}", mo.getId(), e);
+                            return Optional.<Mapping>empty();
+                        }
+                    })
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toList());
+            log.debug("Tenant {} - Loaded mappings (inbound & outbound): {}", tenant, res.size());
+            return res;
+        });
+        return result;
+    }
 
 	public Mapping updateMapping(String tenant, Mapping mapping, boolean allowUpdateWhenActive,
 			boolean ignoreValidation)
@@ -372,21 +387,32 @@ public class MappingComponent {
 		}
 	}
 
-	public List<Mapping> rebuildMappingOutboundCache(String tenant) {
-		// only add outbound mappings to the cache
-		List<Mapping> updatedMappings = getMappings(tenant).stream()
-				.filter(m -> Direction.OUTBOUND.equals(m.direction))
-				.collect(Collectors.toList());
-		log.info("Tenant {} - Loaded mappings outbound: {} to cache", tenant, updatedMappings.size());
-		cacheMappingOutbound.replace(tenant, updatedMappings.stream()
-				.collect(Collectors.toMap(Mapping::getId, Function.identity())));
-		resolverMappingOutbound.replace(tenant, updatedMappings.stream()
-				.collect(Collectors.groupingBy(Mapping::getFilterOutbound)));
-		return updatedMappings;
-	}
+    public List<Mapping> rebuildMappingOutboundCache(String tenant) {
+        // only add outbound mappings to the cache
+        List<Mapping> updatedMappings = getMappings(tenant).stream()
+                .filter(m -> Direction.OUTBOUND.equals(m.direction))
+                .collect(Collectors.toList());
+        log.info("Tenant {} - Loaded mappings outbound: {} to cache", tenant, updatedMappings.size());
+        
+        cacheMappingOutbound.replace(tenant, updatedMappings.stream()
+                .collect(Collectors.toMap(Mapping::getId, Function.identity())));
+        
+        resolverMappingOutbound.replace(tenant, updatedMappings.stream()
+                .filter(m -> {
+                    if (m.getFilterMapping() == null) {
+                        log.warn("Tenant {} - Mapping with ID {} has null filterMapping, ignoring for resolver", 
+                                tenant, m.getId());
+                        return false;
+                    }
+                    return true;
+                })
+                .collect(Collectors.groupingBy(Mapping::getFilterMapping)));
+        
+        return updatedMappings;
+    }
 
 	public List<Mapping> resolveMappingOutbound(String tenant, JsonNode message, API api) throws ResolveException {
-		// use mappingCacheOutbound and the key filterOutbound to identify the matching
+		// use mappingCacheOutbound and the key filterMapping to identify the matching
 		// mappings.
 		// the need to be returned in a list
 		List<Mapping> result = new ArrayList<>();
@@ -394,7 +420,7 @@ public class MappingComponent {
 			for (Mapping m : cacheMappingOutbound.get(tenant).values()) {
 				// test if message has property associated for this mapping, JsonPointer must
 				// begin with "/"
-				String key = "/" + m.getFilterOutbound().replace('.', '/');
+				String key = "/" + m.getFilterMapping().replace('.', '/');
 				JsonNode testNode = message.at(key);
 				if (!testNode.isMissingNode() && m.targetAPI.equals(api)) {
 					log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant, key,
@@ -403,7 +429,7 @@ public class MappingComponent {
 				} else {
 					log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant,
 							key,
-							m.getFilterOutbound(), message.get("id"), api, message.toPrettyString());
+							m.getFilterMapping(), message.get("id"), api, message.toPrettyString());
 				}
 			}
 		} catch (IllegalArgumentException e) {
@@ -416,9 +442,9 @@ public class MappingComponent {
 		if (Direction.OUTBOUND.equals(mapping.direction)) {
 			Mapping deletedMapping = cacheMappingOutbound.get(tenant).remove(mapping.id);
 			log.info("Tenant {} - Preparing to delete {} {}", tenant, resolverMappingOutbound.get(tenant),
-					mapping.filterOutbound);
+					mapping.filterMapping);
 
-			List<Mapping> cmo = resolverMappingOutbound.get(tenant).get(mapping.filterOutbound);
+			List<Mapping> cmo = resolverMappingOutbound.get(tenant).get(mapping.filterMapping);
 			cmo.removeIf(m -> mapping.id.equals(m.id));
 			return deletedMapping;
 		} else {
@@ -440,7 +466,7 @@ public class MappingComponent {
 		return in;
 	}
 
-	public List<Mapping> rebuildMappingInboundCache(String tenant, List<Mapping> updatedMappings) {
+	private List<Mapping> rebuildMappingInboundCache(String tenant, List<Mapping> updatedMappings) {
 		log.info("Tenant {} - Loaded mappings inbound: {} to cache", tenant, updatedMappings.size());
 		cacheMappingInbound.replace(tenant, updatedMappings.stream()
 				.collect(Collectors.toMap(Mapping::getId, Function.identity())));

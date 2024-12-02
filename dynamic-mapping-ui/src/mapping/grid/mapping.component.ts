@@ -344,12 +344,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '10%'
       },
       this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-          header: 'Subscription topic',
-          name: 'subscriptionTopic',
-          path: 'mapping.subscriptionTopic',
-          filterable: true
-        }
+        ? undefined
         : {
           header: 'Publish topic',
           name: 'publishTopic',
@@ -460,12 +455,11 @@ export class MappingComponent implements OnInit, OnDestroy {
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
         id: ident,
         ident: ident,
-        subscriptionTopic: '',
         mappingTopic: '',
         mappingTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        source: '{}',
-        target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: '{}',
+        targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
         qos: QOS.AT_LEAST_ONCE,
@@ -490,8 +484,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         publishTopic: '',
         publishTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        source: '{}',
-        target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: '{}',
+        targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
         qos: QOS.AT_LEAST_ONCE,
@@ -509,14 +503,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         lastUpdate: Date.now()
       };
     }
-    mapping.target = getExternalTemplate(mapping);
+    mapping.targetTemplate = getExternalTemplate(mapping);
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
         message: '10,temp,1666963367'
       } as PayloadWrapper);
       mapping = {
         ...mapping,
-        source: sampleSource
+        sourceTemplate: sampleSource
       };
     } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION_SOURCE) {
       mapping.extension = {
@@ -789,7 +783,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     // ('Changed mapping:', mapping);
     if (
       mapping.direction == Direction.INBOUND ||
-      // test if we can attach multiple outbound mappings to the same filterOutbound
+      // test if we can attach multiple outbound mappings to the same filterMapping
       mapping.direction == Direction.OUTBOUND
       //  && isFilterOutboundUnique(mapping, this.mappings)
     ) {
@@ -825,13 +819,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       if (mapping.direction == Direction.INBOUND) {
         this.alertService.danger(
           gettext(
-            `Topic is already used: ${mapping.subscriptionTopic}. Please use a different topic.`
+            `Topic is already used: ${mapping.mappingTopic}. Please use a different topic.`
           )
         );
       } else {
         this.alertService.danger(
           gettext(
-            `FilterOutbound is already used: ${mapping.filterOutbound}. Please use a different filter.`
+            `FilterMapping is already used: ${mapping.filterMapping}. Please use a different filter.`
           )
         );
       }

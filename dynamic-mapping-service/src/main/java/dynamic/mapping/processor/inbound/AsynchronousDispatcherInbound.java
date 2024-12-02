@@ -190,7 +190,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 									mappingStatus.snoopedTemplatesActive++;
 
 									log.debug("Tenant {} - Adding snoopedTemplate to map: {},{},{}", tenant,
-											mapping.subscriptionTopic,
+											mapping.mappingTopic,
 											mapping.snoopedTemplates.size(),
 											mapping.snoopStatus);
 									mappingComponent.addDirtyMapping(tenant, mapping);

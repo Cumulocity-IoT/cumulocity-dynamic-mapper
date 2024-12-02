@@ -174,30 +174,25 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
-            header: 'Subscription topic',
-            name: 'subscriptionTopic',
-            path: 'mapping.subscriptionTopic',
-            filterable: true
-          }
+          header: 'Mapping topic',
+          name: 'mappingTopic',
+          path: 'mapping.mappingTopic',
+          filterable: true
+        }
         : {
-            header: 'Publish topic',
-            name: 'publishTopic',
-            path: 'mapping.publishTopic',
-            filterable: true
-          },
+          header: 'Publish topic',
+          name: 'publishTopic',
+          path: 'mapping.publishTopic',
+          filterable: true
+        },
       this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-            header: 'Mapping topic',
-            name: 'mappingTopic',
-            path: 'mapping.mappingTopic',
-            filterable: true
-          }
+        ? undefined
         : {
-            header: 'Publish topic sample',
-            name: 'publishTopicSample',
-            path: 'mapping.publishTopicSample',
-            filterable: true
-          },
+          header: 'Publish topic sample',
+          name: 'publishTopicSample',
+          path: 'mapping.publishTopicSample',
+          filterable: true
+        },
       {
         name: 'targetAPI',
         header: 'API',
@@ -227,16 +222,16 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
-            // header: 'Test/Debug/Snoop',
-            header: 'Templates snooped',
-            name: 'snoopedTemplates',
-            path: 'mapping',
-            filterable: false,
-            sortable: false,
-            cellCSSClassName: 'text-align-center',
-            cellRendererComponent: SnoopedTemplateRendererComponent,
-            gridTrackSize: '8%'
-          }
+          // header: 'Test/Debug/Snoop',
+          header: 'Templates snooped',
+          name: 'snoopedTemplates',
+          path: 'mapping',
+          filterable: false,
+          sortable: false,
+          cellCSSClassName: 'text-align-center',
+          cellRendererComponent: SnoopedTemplateRendererComponent,
+          gridTrackSize: '8%'
+        }
         : undefined,
       {
         header: 'Activate',

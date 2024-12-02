@@ -204,7 +204,7 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 
 For outbound mappings the properties are slightly different. Most important are the properties:
 
-1. `filterOutbound`: The Filter Outbound can contain one fragment name to associate a
+1. `filterMapping`: The Filter Outbound can contain one fragment name to associate a
    mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is
    applied.
 2. `publishTopic`: MQTT topic to publish outbound messages to.
@@ -216,7 +216,7 @@ For outbound mappings the properties are slightly different. Most important are 
 
 For an outbound mapping to be applied two conditions have to be fulfilled:
 
-1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterOutbound`
+1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterMapping`
 2. for the device a Notification 2.0 subscription has to be created. This is done using the following dialog:
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png"  style="width: 70%;" />

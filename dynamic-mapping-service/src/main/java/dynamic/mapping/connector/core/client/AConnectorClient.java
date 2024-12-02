@@ -129,8 +129,8 @@ public abstract class AConnectorClient {
 
 	private Future<?> initializeTask;
 
-	// keeps track how many active mappings use this topic as subscriptionTopic:
-	// structure < subscriptionTopic, numberMappings >
+	// keeps track how many active mappings use this topic as mappingTopic:
+	// structure < mappingTopic, numberMappings >
 	public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 	// keeps track if a specific mapping is deployed in this connector:
 	// a) is it active,
@@ -347,39 +347,24 @@ public abstract class AConnectorClient {
 	}
 
 	public void deleteActiveSubscription(Mapping mapping) {
-		if (getActiveSubscriptions().containsKey(mapping.subscriptionTopic) && isConnected()
+		if (getActiveSubscriptions().containsKey(mapping.mappingTopic) && isConnected()
 				&& mapping.direction == Direction.INBOUND) {
 			MutableInt activeSubs = getActiveSubscriptions()
-					.get(mapping.subscriptionTopic);
+					.get(mapping.mappingTopic);
 			activeSubs.subtract(1);
 			getMappingsDeployedInbound().remove(mapping.ident);
 			if (activeSubs.intValue() <= 0) {
 				try {
-					unsubscribe(mapping.subscriptionTopic);
+					unsubscribe(mapping.mappingTopic);
 				} catch (Exception e) {
 					log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
-							mapping.subscriptionTopic,
+							mapping.mappingTopic,
 							e);
 				}
 			}
 		} else if (mapping.direction == Direction.INBOUND) {
 			getMappingsDeployedOutbound().remove(mapping.ident);
 		}
-	}
-
-	public boolean subscriptionTopicChanged(Mapping mapping) {
-		Boolean subscriptionTopicChanged = false;
-		Mapping activeMapping = null;
-		Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().get(tenant).values()
-				.stream()
-				.filter(m -> m.id.equals(mapping.id))
-				.findFirst();
-
-		if (activeMappingOptional.isPresent()) {
-			activeMapping = activeMappingOptional.get();
-			subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
-		}
-		return subscriptionTopicChanged;
 	}
 
 	public boolean activationChanged(Mapping mapping) {
@@ -430,17 +415,17 @@ public abstract class AConnectorClient {
 	 * updated.
 	 * It maintains a list of the active subscriptions for this connector.
 	 * When a mapping id deleted or deactivated, then it is verified how many other
-	 * mapping use the same subscriptionTopic. If there are no other mapping using
-	 * the same subscriptionTopic the subscriptionTopic is unsubscribed.
+	 * mapping use the same mappingTopic. If there are no other mapping using
+	 * the same mappingTopic the mappingTopic is unsubscribed.
 	 * Only inactive mappings can be updated except activation/deactivation.
 	 **/
 	public boolean updateActiveSubscriptionInbound(Mapping mapping, Boolean create, Boolean activationChanged) {
 		if (isConnected()) {
-			Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
+			Boolean containsWildcards = mapping.mappingTopic.matches(".*[#\\+].*");
 			boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
 			if (validDeployment) {
-				if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-					getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
+				if (!getActiveSubscriptions().containsKey(mapping.mappingTopic)) {
+					getActiveSubscriptions().put(mapping.mappingTopic, new MutableInt(0));
 				}
 				List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.ident);
 				boolean isDeployed = false;
@@ -453,19 +438,19 @@ public abstract class AConnectorClient {
 					getMappingsDeployedInbound().remove(mapping.ident);
 				}
 				MutableInt updatedMappingSubs = getActiveSubscriptions()
-						.get(mapping.subscriptionTopic);
+						.get(mapping.mappingTopic);
 
 				// consider unsubscribing from previous subscription topic if it has changed
 				if (create) {
 					if (mapping.active) {
 						updatedMappingSubs.add(1);
-						log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+						log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.mappingTopic,
 								mapping.qos);
 						try {
-							subscribe(mapping.subscriptionTopic, mapping.qos);
+							subscribe(mapping.mappingTopic, mapping.qos);
 						} catch (ConnectorException exp) {
 							log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
-									mapping.subscriptionTopic, exp);
+									mapping.mappingTopic, exp);
 						}
 					} else {
 						log.error("Tenant {} - Cannot update of active mapping: {}, it is not subscribed to topics ",
@@ -477,13 +462,13 @@ public abstract class AConnectorClient {
 						// mapping is activated, we have to subscribe
 						if (updatedMappingSubs.intValue() == 0) {
 							log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant,
-									mapping.subscriptionTopic,
+									mapping.mappingTopic,
 									mapping.qos.ordinal());
 							try {
-								subscribe(mapping.subscriptionTopic, mapping.qos);
+								subscribe(mapping.mappingTopic, mapping.qos);
 							} catch (ConnectorException exp) {
 								log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
-										mapping.subscriptionTopic, exp);
+										mapping.mappingTopic, exp);
 							}
 						}
 						updatedMappingSubs.add(1);
@@ -494,13 +479,13 @@ public abstract class AConnectorClient {
 						if (updatedMappingSubs.intValue() <= 0) {
 							try {
 								log.info("Tenant {} - Unsubscribing from topic: {}, qos: {}", tenant,
-										mapping.subscriptionTopic,
+										mapping.mappingTopic,
 										mapping.qos.ordinal());
-								unsubscribe(mapping.subscriptionTopic);
-								getActiveSubscriptions().remove(mapping.subscriptionTopic);
+								unsubscribe(mapping.mappingTopic);
+								getActiveSubscriptions().remove(mapping.mappingTopic);
 							} catch (Exception exp) {
 								log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
-										mapping.subscriptionTopic, exp);
+										mapping.mappingTopic, exp);
 							}
 						}
 					}
@@ -530,7 +515,7 @@ public abstract class AConnectorClient {
 		if (isConnected()) {
 			Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
 			updatedMappings.forEach(mapping -> {
-				Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
+				Boolean containsWildcards = mapping.mappingTopic.matches(".*[#\\+].*");
 				boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
 				if (!validDeployment)
 					log.warn("Tenant {} - Mapping {} contains wildcards like #,+ which are not support by connector {}",
@@ -542,23 +527,23 @@ public abstract class AConnectorClient {
 				}
 
 				if (validDeployment && mapping.isActive() && isDeployed) {
-					if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
-						updatedSubscriptionCache.put(mapping.subscriptionTopic, new MutableInt(0));
+					if (!updatedSubscriptionCache.containsKey(mapping.mappingTopic)) {
+						updatedSubscriptionCache.put(mapping.mappingTopic, new MutableInt(0));
 					}
-					MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
+					MutableInt activeSubs = updatedSubscriptionCache.get(mapping.mappingTopic);
 					activeSubs.add(1);
 					getMappingsDeployedInbound().put(mapping.ident, mapping);
 				}
 			});
 
 			// unsubscribe topics not used
-			getActiveSubscriptions().keySet().forEach((subscriptionTopic) -> {
-				if (!updatedSubscriptionCache.containsKey(subscriptionTopic)) {
-					log.debug("Tenant {} - Unsubscribe from topic: {}", tenant, subscriptionTopic);
+			getActiveSubscriptions().keySet().forEach((mappingTopic) -> {
+				if (!updatedSubscriptionCache.containsKey(mappingTopic)) {
+					log.debug("Tenant {} - Unsubscribe from topic: {}", tenant, mappingTopic);
 					try {
-						unsubscribe(subscriptionTopic);
+						unsubscribe(mappingTopic);
 					} catch (Exception exp) {
-						log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", subscriptionTopic, exp);
+						log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", mappingTopic, exp);
 						throw new RuntimeException(exp);
 					}
 				}
@@ -567,7 +552,7 @@ public abstract class AConnectorClient {
 			// subscribe to new topics
 			updatedSubscriptionCache.keySet().forEach((topic) -> {
 				if (!getActiveSubscriptions().containsKey(topic)) {
-					int qosOrdial = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
+					int qosOrdial = updatedMappings.stream().filter(m -> m.mappingTopic.equals(topic))
 							.map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
 					QOS qos = QOS.values()[qosOrdial];
 					try {

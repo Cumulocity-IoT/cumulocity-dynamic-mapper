@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.BiFunction;
-import java.util.regex.Pattern;
 
 import javax.validation.constraints.NotNull;
 
@@ -102,17 +100,6 @@ public class MappingRepresentation implements Serializable {
     }
 
     static public ArrayList<ValidationError> isMappingTopicValid(String topic) {
-        // mappingTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
-        // TOPIC_WILDCARD_MULTI
-        ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-        int count = topic.length() - topic.replace(TOPIC_WILDCARD_MULTI, "").length();
-        if (count >= 1) {
-            result.add(ValidationError.No_Multi_Level_Wildcard_Allowed_In_MappingTopic);
-        }
-        return result;
-    }
-
-    static public ArrayList<ValidationError> isSubscriptionTopicValid(String topic) {
         ArrayList<ValidationError> result = new ArrayList<ValidationError>();
         int count = topic.length() - topic.replace(TOPIC_WILDCARD_SINGLE, "").length();
         // disable this test: Why is it still needed?
@@ -130,30 +117,11 @@ public class MappingRepresentation implements Serializable {
         return result;
     }
 
-    static public List<ValidationError> isMappingTopicAndSubscriptionTopicValid(Mapping mapping) {
-        List<ValidationError> result = new ArrayList<ValidationError>();
-
-        // is the template topic covered by the subscriptionTopic
-        BiFunction<String, String, Boolean> topicMatcher = (st,
-                tt) -> (Pattern.matches(String.join("[^\\/]+", st.replace("/", "\\/").split("\\+")).replace("#", ".*"),
-                        tt));
-        // append trailing null character to avoid that the last "+" is swallowed
-        String st = mapping.subscriptionTopic + "\u0000";
-        String mt = mapping.mappingTopic + "\u0000";
-    
-        log.debug("Testing st:" + st + "Testing tt:" + mt );
-        boolean error = (!topicMatcher.apply(st, mt));
-        if (error) {
-            result.add(ValidationError.MappingTopic_Must_Match_The_SubscriptionTopic);
-        }
-        return result;
-    }
-
     static public List<ValidationError> isFilterOutboundUnique(List<Mapping> mappings, Mapping mapping) {
         ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-        var filterOutbound = mapping.filterOutbound;
+        var filterMapping = mapping.filterMapping;
         mappings.forEach(m -> {
-            if ((filterOutbound.equals(m.filterOutbound))
+            if ((filterMapping.equals(m.filterMapping))
                     && (mapping.id != m.id)) {
                 result.add(ValidationError.FilterOutbound_Must_Be_Unique);
             }
@@ -165,12 +133,9 @@ public class MappingRepresentation implements Serializable {
         ArrayList<ValidationError> result = new ArrayList<ValidationError>();
         result.addAll(isSubstitutionValid(mapping));
         if (mapping.direction.equals(Direction.INBOUND)) {
-            result.addAll(isSubscriptionTopicValid(mapping.subscriptionTopic));
-            result.addAll(isMappingTopicAndSubscriptionTopicValid(mapping));
-            // result.addAll(isMappingTopicTemplateAndTopicSampleValid(mapping.subscriptionTopic,
-            // mapping.mappingTopicSample));
+            result.addAll(isMappingTopicValid(mapping.mappingTopic));
         } else {
-            // test if we can attach multiple outbound mappings to the same filterOutbound
+            // test if we can attach multiple outbound mappings to the same filterMapping
             result.addAll(
                     isPublishTopicTemplateAndPublishTopicSampleValid(mapping.publishTopic, mapping.publishTopicSample));
         }
@@ -251,7 +216,7 @@ public class MappingRepresentation implements Serializable {
     private static Collection<ValidationError> areJSONTemplatesValid(Mapping mapping) {
         ArrayList<ValidationError> result = new ArrayList<ValidationError>();
         try {
-            new JSONTokener(mapping.source).nextValue();
+            new JSONTokener(mapping.sourceTemplate).nextValue();
         } catch (JSONException e) {
             result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
         }
@@ -259,7 +224,7 @@ public class MappingRepresentation implements Serializable {
         if (!mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)) {
             try {
-                new JSONObject(mapping.target);
+                new JSONObject(mapping.targetTemplate);
             } catch (JSONException e) {
                 result.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
             }
