@@ -1,3 +1,6 @@
+#!/bin/sh
+set -e
+
 ###
 # script to delete mappings
 # this can be used after a migration to a new version of the dynamic mapper. in case the structure of the mappings has changed and become invalid
