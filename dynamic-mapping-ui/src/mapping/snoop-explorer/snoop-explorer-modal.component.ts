@@ -22,7 +22,7 @@
 import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { JsonEditor2Component, Mapping, MappingSubstitution } from '../../shared';
+import { JsonEditorComponent, Mapping, MappingSubstitution } from '../../shared';
 import { isDisabled } from '../shared/util';
 import { MappingEnriched } from '../../shared/model/shared.model';
 import { MappingService } from '../core/mapping.service';
@@ -43,7 +43,7 @@ export class SnoopExplorerComponent implements OnInit {
   @Input() enrichedMapping: MappingEnriched;
 
   @ViewChild('editorGeneral', { static: false })
-  editorGeneral: JsonEditor2Component;
+  editorGeneral: JsonEditorComponent;
   
   mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();

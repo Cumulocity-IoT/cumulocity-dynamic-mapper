@@ -31,7 +31,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { JsonEditor2Component, Mapping, whatIsIt } from '../../shared';
+import { JsonEditorComponent, Mapping, whatIsIt } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
 @Component({
@@ -44,7 +44,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   @Input() mapping: Mapping;
 
   @ViewChild('editorSourceFilter', { static: false })
-  editorSourceFilter: JsonEditor2Component;
+  editorSourceFilter: JsonEditorComponent;
   @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<any>;
 
   labels: ModalLabels = { ok: 'Apply', cancel: 'Cancel' };

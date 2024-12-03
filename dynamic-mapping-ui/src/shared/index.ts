@@ -1,6 +1,6 @@
 export * from './shared.module';
 export * from './confirmation/confirmation-modal.component';
-export * from './editor2/jsoneditor2.component';
+export * from './editor/jsoneditor.component';
 export * from './model/util';
 export * from './model/shared.model';
 export * from './navigation.factory';

@@ -52,15 +52,17 @@ import {
   ContextMenuItem
 } from 'vanilla-jsoneditor';
 
+import type { JSONPath } from 'immutable-json-patch'
+
 @Component({
   selector: 'd11r-mapping-json-editor2',
   template: '<div [class]="class" [id]="id" #jsonEditorContainer></div>',
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['./jsoneditor2.style.css'],
+  styleUrls: ['./jsoneditor.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
+export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() options;
   @Input()
   set data(value: unknown) {
@@ -71,7 +73,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
     }
   }
   @Input()
-  schemaUpdate: EventEmitter<string>;
+  schemaUpdate: EventEmitter<any>;
   @Input()
   class: string;
 
@@ -86,6 +88,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
   jsonEditorContainer: ElementRef;
 
   initRan: boolean = true;
+  identifier: string;
 
   constructor(
     private cdr: ChangeDetectorRef
@@ -143,19 +146,27 @@ export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
         },
         onSelect: this.onSelect.bind(this),
         onRenderMenu: this.onRenderMenu.bind(this),
-        onRenderContextMenu: this.onRenderContextMenu.bind(this)
+        onRenderContextMenu: this.onRenderContextMenu.bind(this),
+        onClassName: this.onClassName.bind(this)
       }
     });
 
     this.class = `jsoneditor2 ${this.class}`;
-    this.schemaUpdate?.subscribe((schema) => {
-      this.setSchema(schema);
+    this.schemaUpdate?.subscribe((update) => {
+      this.setSchema(update.schema);
+      this.identifier = update.identifier;
     });
     this.initialized.emit('Ready');
   }
 
   ngOnDestroy() {
     this.editor?.destroy();
+  }
+
+  onClassName(path: JSONPath, value: any): string | undefined {
+    let result = undefined;
+    if (path.join('.') == this.identifier) result = 'id-node';
+    return result;
   }
 
   onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
@@ -266,5 +277,9 @@ export class JsonEditor2Component implements OnInit, OnDestroy, AfterViewInit {
       json: json
     };
     this.editor.set(value);
+  }
+
+  updateOptions(opts) {
+    this.editor?.updateProps(opts)
   }
 }

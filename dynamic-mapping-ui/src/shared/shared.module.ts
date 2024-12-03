@@ -20,7 +20,7 @@
  */
 import { NgModule } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
-import { JsonEditor2Component } from './editor2/jsoneditor2.component';
+import { JsonEditorComponent } from './editor/jsoneditor.component';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { PaginationModule } from 'ngx-bootstrap/pagination';
 import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
@@ -38,7 +38,7 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
 @NgModule({
   declarations: [
     CheckedRendererComponent,
-    JsonEditor2Component,
+    JsonEditorComponent,
     ConfirmationModalComponent,
     CamelCasePipe,
     CapitalizeCasePipe,
@@ -56,7 +56,7 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
     BsDropdownModule.forRoot()
   ],
   exports: [
-    JsonEditor2Component,
+    JsonEditorComponent,
     ConfirmationModalComponent,
     CamelCasePipe,
     CapitalizeCasePipe,

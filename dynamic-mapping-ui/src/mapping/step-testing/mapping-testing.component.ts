@@ -33,7 +33,7 @@ import { AlertService } from '@c8y/ngx-components';
 import { BehaviorSubject } from 'rxjs';
 import {
   Direction,
-  JsonEditor2Component,
+  JsonEditorComponent,
   Mapping,
   getSchema
 } from '../../shared/';
@@ -84,11 +84,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   };
 
   @ViewChild('editorTestingPayload', { static: false })
-  editorTestingPayload: JsonEditor2Component;
+  editorTestingPayload: JsonEditorComponent;
   @ViewChild('editorTestingRequest', { static: false })
-  editorTestingRequest: JsonEditor2Component;
+  editorTestingRequest: JsonEditorComponent;
   @ViewChild('editorTestingResponse', { static: false })
-  editorTestingResponse: JsonEditor2Component;
+  editorTestingResponse: JsonEditorComponent;
   source: any;
 
   constructor(

@@ -36,7 +36,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { Content } from 'vanilla-jsoneditor';
+import { Content, JSONEditorPropsOptional, Mode } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
   API,
@@ -56,7 +56,7 @@ import {
   getSchema,
   whatIsIt
 } from '../../shared';
-import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component';
+import { JsonEditorComponent } from '../../shared/editor/jsoneditor.component';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
@@ -103,8 +103,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   isDisabled = isDisabled;
 
   editorTestingPayloadTemplateEmitter = new EventEmitter<any>();
-  schemaUpdateSource: EventEmitter<string> = new EventEmitter<any>();
-  schemaUpdateTarget: EventEmitter<string> = new EventEmitter<any>();
+  schemaUpdateSource: EventEmitter<any> = new EventEmitter<any>();
+  schemaUpdateTarget: EventEmitter<any> = new EventEmitter<any>();
 
   templateForm: FormGroup;
   templateModel: any = {};
@@ -126,7 +126,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   };
 
   editorOptionsSourceTemplate = {
-    mode: 'tree',
+    mode: Mode.tree,
     removeModes: ['table'],
     mainMenuBar: true,
     navigationBar: false,
@@ -136,7 +136,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   };
 
   editorOptionsTargetTemplate = {
-    mode: 'tree',
+    mode: Mode.tree,
     removeModes: ['table'],
     mainMenuBar: true,
     navigationBar: false,
@@ -144,7 +144,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   };
 
   editorOptionsSourceSubstitution = {
-    mode: 'tree',
+    mode: Mode.tree,
     removeModes: ['text', 'table'],
     mainMenuBar: true,
     navigationBar: false,
@@ -154,7 +154,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   };
 
   editorOptionsTargetSubstitution = {
-    mode: 'tree',
+    mode: Mode.tree,
     removeModes: ['text', 'table'],
     mainMenuBar: true,
     navigationBar: false,
@@ -178,9 +178,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
 
   @ViewChild('editorSourceStepTemplate', { static: false })
-  editorSourceStepTemplate: JsonEditor2Component;
+  editorSourceStepTemplate: JsonEditorComponent;
   @ViewChild('editorTargetStepTemplate', { static: false })
-  editorTargetStepTemplate: JsonEditor2Component;
+  editorTargetStepTemplate: JsonEditorComponent;
 
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
@@ -383,14 +383,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onEditorSourceInitialized() {
+    this.editorSourceStepTemplate.updateOptions(this.editorOptionsSourceSubstitution);
     this.schemaUpdateSource.emit(
-      getSchema(this.mapping.targetAPI, this.mapping.direction, false, false)
+      { schema: getSchema(this.mapping.targetAPI, this.mapping.direction, false, false), identifier: API[this.mapping.targetAPI].identifier }
     );
   }
 
   onEditorTargetInitialized() {
     this.schemaUpdateTarget.emit(
-      getSchema(this.mapping.targetAPI, this.mapping.direction, true, false)
+      { schema: getSchema(this.mapping.targetAPI, this.mapping.direction, true, false), identifier: API[this.mapping.targetAPI].identifier }
     );
   }
 
@@ -563,7 +564,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.templateModel.mapping = this.mapping;
       this.expandTemplates();
       this.extensions =
-        (await this.extensionService.getProcessorExtensions()) as Map<string,Extension>;
+        (await this.extensionService.getProcessorExtensions()) as Map<string, Extension>;
       if (this.mapping?.extension?.extensionName) {
         if (!this.extensions[this.mapping.extension.extensionName]) {
           const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
@@ -604,7 +605,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   private goToLastStep() {
-        // Mark all previous steps as completed
+    // Mark all previous steps as completed
     this.stepper.steps.forEach((step, index) => {
       if (index < this.stepper.steps.length - 1) {
         step.completed = true;

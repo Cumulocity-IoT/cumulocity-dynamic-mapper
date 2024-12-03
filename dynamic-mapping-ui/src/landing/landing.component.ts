@@ -22,7 +22,7 @@
 
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, JsonEditor2Component } from '../shared';
+import { Direction, JsonEditorComponent } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -43,7 +43,7 @@ export class LandingComponent implements OnInit {
       'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
     );
   }
-  @ViewChild('editorTest', { static: false }) editorTest: JsonEditor2Component;
+  @ViewChild('editorTest', { static: false }) editorTest: JsonEditorComponent;
 
   ROUTE_INBOUND: string = `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`;
   ROUTE_OUTBOUND: string =
