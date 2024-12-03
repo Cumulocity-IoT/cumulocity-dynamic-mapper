@@ -73,7 +73,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
   @Input()
-  schemaUpdate: EventEmitter<any>;
+  updateEditor: EventEmitter<any>;
   @Input()
   class: string;
 
@@ -152,7 +152,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     });
 
     this.class = `jsoneditor2 ${this.class}`;
-    this.schemaUpdate?.subscribe((update) => {
+    this.updateEditor?.subscribe((update) => {
       this.setSchema(update.schema);
       this.identifier = update.identifier;
     });

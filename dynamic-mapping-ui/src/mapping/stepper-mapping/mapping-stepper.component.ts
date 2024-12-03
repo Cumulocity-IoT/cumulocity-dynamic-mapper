@@ -103,8 +103,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   isDisabled = isDisabled;
 
   editorTestingPayloadTemplateEmitter = new EventEmitter<any>();
-  schemaUpdateSource: EventEmitter<any> = new EventEmitter<any>();
-  schemaUpdateTarget: EventEmitter<any> = new EventEmitter<any>();
+  updateSourceEditor: EventEmitter<any> = new EventEmitter<any>();
+  updateTargetEditor: EventEmitter<any> = new EventEmitter<any>();
 
   templateForm: FormGroup;
   templateModel: any = {};
@@ -384,13 +384,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onEditorSourceInitialized() {
     this.editorSourceStepTemplate.updateOptions(this.editorOptionsSourceSubstitution);
-    this.schemaUpdateSource.emit(
+    this.updateSourceEditor.emit(
       { schema: getSchema(this.mapping.targetAPI, this.mapping.direction, false, false), identifier: API[this.mapping.targetAPI].identifier }
     );
   }
 
   onEditorTargetInitialized() {
-    this.schemaUpdateTarget.emit(
+    this.updateTargetEditor.emit(
       { schema: getSchema(this.mapping.targetAPI, this.mapping.direction, true, false), identifier: API[this.mapping.targetAPI].identifier }
     );
   }
@@ -755,13 +755,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
-      this.schemaUpdateTarget.emit(
+      this.updateTargetEditor.emit(
         getSchema(this.mapping.targetAPI, this.mapping.direction, true, false)
       );
     } else {
       this.mapping.sourceTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.targetTemplate = getExternalTemplate(this.mapping);
-      this.schemaUpdateSource.emit(
+      this.updateSourceEditor.emit(
         getSchema(this.mapping.targetAPI, this.mapping.direction, false, false)
       );
     }
