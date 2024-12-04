@@ -383,7 +383,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onEditorSourceInitialized() {
-    this.editorSourceStepTemplate.updateOptions(this.editorOptionsSourceSubstitution);
     this.updateSourceEditor.emit(
       { schema: getSchema(this.mapping.targetAPI, this.mapping.direction, false, false), identifier: API[this.mapping.targetAPI].identifier }
     );
