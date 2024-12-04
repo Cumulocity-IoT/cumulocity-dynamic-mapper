@@ -29,7 +29,7 @@ import lombok.Setter;
 import lombok.ToString;
 import dynamic.mapping.processor.model.MappingType;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;

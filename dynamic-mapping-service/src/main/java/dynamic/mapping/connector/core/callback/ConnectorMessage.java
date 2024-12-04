@@ -1,6 +1,6 @@
 package dynamic.mapping.connector.core.callback;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

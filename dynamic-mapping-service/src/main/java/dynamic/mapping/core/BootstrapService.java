@@ -39,7 +39,7 @@ import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 
 @Service
 @EnableScheduling

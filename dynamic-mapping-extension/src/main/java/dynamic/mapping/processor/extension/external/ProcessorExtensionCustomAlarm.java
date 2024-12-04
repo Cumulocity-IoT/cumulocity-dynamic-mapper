@@ -47,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import javax.ws.rs.ProcessingException;
+import jakarta.ws.rs.ProcessingException;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;

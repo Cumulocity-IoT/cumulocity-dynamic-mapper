@@ -79,7 +79,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.svenson.JSONParser;
 
-import javax.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;

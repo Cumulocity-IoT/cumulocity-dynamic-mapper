@@ -26,7 +26,7 @@ import lombok.*;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.extension.ProcessorExtensionTarget;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 
 @Getter

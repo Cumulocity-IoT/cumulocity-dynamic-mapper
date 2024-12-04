@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import org.joda.time.DateTime;
 
-import javax.ws.rs.ProcessingException;
+import jakarta.ws.rs.ProcessingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
