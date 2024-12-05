@@ -35,13 +35,13 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<revision>4.7.0-SNAPSHOT</revision>
-		<c8y.version>1020.150.1</c8y.version>
+		<c8y.version>1020.155.0</c8y.version>
 		<lombok.version>1.18.34</lombok.version>
 		<slf4j.version>1.7.36</slf4j.version>
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.target>21</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring-boot-dependencies.version>3.0.13</spring-boot-dependencies.version>
+		<spring-boot-dependencies.version>3.3.5</spring-boot-dependencies.version>
 	</properties>
 	<repositories>
 		<repository>
@@ -106,11 +106,12 @@
 				<artifactId>JSONata4Java</artifactId>
 				<version>2.5.1</version>
 			</dependency>
-			<dependency>
+			<!-- <dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-text</artifactId>
 				<version>1.12.0</version>
-			</dependency>			<!-- commons-text 1.11.0 requires
+			</dependency> -->
+			<!-- commons-text 1.11.0 requires
             commons-lang3 3.13.0, see
 			https://stackoverflow.com/questions/53459184/java-lang-noclassdeffounderror-could-not-initialize-class-org-apache-commons-te-->
 			<dependency>
