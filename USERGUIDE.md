@@ -298,7 +298,7 @@ In order to define a substitution (a substitution substitutes values in the targ
 3. Delete an existing substitution, by pressing the button with the red minus
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Detail_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Detailed_Annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -446,7 +446,7 @@ In order to use a previously snooped payload click the button
 `Snooped templates`. Multiples activation of this button iterates over all the recorded templates.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -501,14 +501,14 @@ When you choose the mapping type `PROCESSOR_EXTENSION` the wizard for defining y
 Using the tab `Processor Extension` you can upload your own processor extension. After the upload the mircroservice load the extensions dynamically.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Configuration_ProcessorExtension.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionInbound.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The following guide lays out the steps to create and use a processor extension:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtension_Guide.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
 
