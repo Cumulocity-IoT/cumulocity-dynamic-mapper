@@ -65,7 +65,7 @@ export class StatusEnabledRendererComponent {
   async onConfigurationToggle() {
     const configuration = this.context.item;
     const response1 = await this.sharedService.runOperation(
-      configuration.enabled ? { operation: Operation.DISCONNECT } : {
+      configuration.enabled ? { operation: Operation.DISCONNECT, parameter: { connectorIdent: configuration.ident } } : {
         operation: Operation.CONNECT,
         parameter: { connectorIdent: configuration.ident }
       }
