@@ -25,7 +25,8 @@ c8y inventory list --type d11r_mapping --includeAll | jq -s 'map(.d11r_mapping)'
 cat $ORIGINAL_MAPPINGS | jq '[.[] | 
   . + {
     sourceTemplate: .source,
-    targetTemplate: .target
+    targetTemplate: .target,
+    active: false
     } + (if .direction == "OUTBOUND" then {
     filterMapping: .filterOutbound  
     } else  {} end) + (if .extension then {
