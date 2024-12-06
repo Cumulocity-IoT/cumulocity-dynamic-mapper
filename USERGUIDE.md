@@ -298,7 +298,7 @@ In order to define a substitution (a substitution substitutes values in the targ
 3. Delete an existing substitution, by pressing the button with the red minus
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Detailed_Annotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode_Annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
