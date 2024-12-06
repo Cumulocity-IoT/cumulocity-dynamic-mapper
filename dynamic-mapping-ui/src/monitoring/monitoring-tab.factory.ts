@@ -21,7 +21,7 @@
 import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
-import { NODE2 } from '../shared/model/util';
+import { NODE2 } from '../shared/mapping/util';
 @Injectable()
 export class MonitoringTabFactory implements TabFactory {
   constructor(

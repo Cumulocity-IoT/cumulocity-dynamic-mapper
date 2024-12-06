@@ -148,7 +148,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     public alertService: AlertService,
     public bsModalService: BsModalService,
     private sharedService: SharedService
-  ) {}
+  ) { }
 
   async ngOnInit() {
     this.initializeMonitoringService();
@@ -156,7 +156,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   }
 
   async refreshMappingStatus(): Promise<void> {
-    await this.sharedService.runOperation(Operation.REFRESH_STATUS_MAPPING);
+    await this.sharedService.runOperation({ operation: Operation.REFRESH_STATUS_MAPPING });
   }
 
   private async initializeMonitoringService() {
@@ -186,7 +186,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
         // console.log('Confirmation result:', result);
         if (result) {
           const res = await this.sharedService.runOperation(
-            Operation.RESET_STATUS_MAPPING
+            { operation: Operation.RESET_STATUS_MAPPING }
           );
           if (res.status < 300) {
             this.alertService.success(

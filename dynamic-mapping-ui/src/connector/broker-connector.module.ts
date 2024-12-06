@@ -25,7 +25,7 @@ import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { SharedModule } from '../shared';
 import { BrokerConnectorComponent } from './broker-connector.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { NODE3 } from '../shared/model/util';
+import { NODE3 } from '../shared/mapping/util';
 
 @NgModule({
   declarations: [BrokerConnectorComponent],

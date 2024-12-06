@@ -51,11 +51,11 @@ import {
   PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT,
   MappingEnriched,
   MAPPING_TYPE_DESCRIPTION,
-  Operation,
   StatusEventTypes,
   DeploymentMapEntry,
   DeploymentMap,
-  PATH_DEPLOYMENT_DEFINED_ENDPOINT
+  PATH_DEPLOYMENT_DEFINED_ENDPOINT,
+  Operation
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -111,8 +111,10 @@ export class MappingService {
 
   async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.ACTIVATE_MAPPING,
-      parameter
+      {
+        operation: Operation.ACTIVATE_MAPPING,
+        parameter
+      }
     );
   }
 
@@ -125,22 +127,28 @@ export class MappingService {
 
   async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.DEBUG_MAPPING,
-      parameter
+      {
+        operation: Operation.DEBUG_MAPPING,
+        parameter
+      }
     );
   }
 
   async changeSnoopStatusMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.SNOOP_MAPPING,
-      parameter
+      {
+        operation: Operation.SNOOP_MAPPING,
+        parameter
+      }
     );
   }
 
   async resetSnoop(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.SNOOP_RESET,
-      parameter
+      {
+        operation: Operation.SNOOP_RESET,
+        parameter
+      }
     );
   }
 

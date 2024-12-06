@@ -34,10 +34,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ServiceOperation {
+
     private String tenant;
+    
     @NotNull
     private Operation operation;
-    @NotNull
+
     private Map<String, String> parameter;
 
     public static ServiceOperation reloadMappings(String tenant) {

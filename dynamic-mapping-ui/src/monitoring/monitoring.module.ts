@@ -28,7 +28,7 @@ import { NumberRendererComponent } from './renderer/number.renderer.component';
 import { DirectionRendererComponent } from './renderer/direction.renderer.component';
 import { MonitoringChartComponent } from './chart/chart.component';
 import { MonitoringTabFactory } from './monitoring-tab.factory';
-import { NODE2 } from '../shared/model/util';
+import { NODE2 } from '../shared/mapping/util';
 import { NgxEchartsModule } from 'ngx-echarts';
 
 @NgModule({

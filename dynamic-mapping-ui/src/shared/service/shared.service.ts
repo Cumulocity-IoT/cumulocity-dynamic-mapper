@@ -30,14 +30,14 @@ import {
   BASE_URL,
   Direction,
   Feature,
-  Operation,
   PATH_CONFIGURATION_SERVICE_ENDPOINT,
   PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT
-} from '.';
+} from '..';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { FetchClient } from '@c8y/ngx-components/api';
-import { ServiceConfiguration } from '../configuration';
+import { ServiceConfiguration } from '../../configuration';
+import { Operation, ServiceOperation } from './shared.model';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
@@ -104,21 +104,12 @@ export class SharedService {
     }
   }
 
-  async runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
-    let body: any = {
-      operation: op
-    };
-    if (parameter) {
-      body = {
-        ...body,
-        parameter: parameter
-      };
-    }
+  async runOperation(serviceOperation: ServiceOperation): Promise<IFetchResponse> {
     return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json'
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(serviceOperation),
       method: 'POST'
     });
   }

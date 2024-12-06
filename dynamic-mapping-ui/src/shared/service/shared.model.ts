@@ -18,24 +18,26 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
-import { Direction } from '../../shared/mapping/shared.model';
 
-@Component({
-  template: `
-    <span [title]="context.value">
-      <i
-        [style]="context.value === 'OUTBOUND' ? 'width: 100%; color: orange' : 'width: 100%; color: green'"
-        [c8yIcon]="context.value === 'OUTBOUND' ? 'swipe-left' : 'swipe-right'"
-        class="m-r-5"
-      ></i>
-    </span>
-  `
-})
-export class DirectionRendererComponent {
-  Direction = Direction;
-  constructor(public context: CellRendererContext) {
-   //  console.log('Item', context.value);
-  }
+export enum Operation {
+  ACTIVATE_MAPPING = 'ACTIVATE_MAPPING',
+  CONNECT = 'CONNECT',
+  DISCONNECT = 'DISCONNECT',
+  REFRESH_STATUS_MAPPING = 'REFRESH_STATUS_MAPPING',
+  RELOAD_EXTENSIONS = 'RELOAD_EXTENSIONS',
+  RELOAD_MAPPINGS = 'RELOAD_MAPPINGS',
+  RESET_STATUS_MAPPING = 'RESET_STATUS_MAPPING',
+  REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS',
+  DEBUG_MAPPING = 'DEBUG_MAPPING',
+  SNOOP_MAPPING = 'SNOOP_MAPPING',
+  SNOOP_RESET = 'SNOOP_RESET',
+  RESET_DEPLOYMENT_MAP = 'RESET_DEPLOYMENT_MAP',
+  CLEAR_CACHE = 'CLEAR_CACHE',
+  APPLY_MAPPING_FILTER = 'APPLY_MAPPING_FILTER'
+}
+
+export class ServiceOperation{
+  tenant?: string;
+  operation:Operation;
+  parameter?: any
 }

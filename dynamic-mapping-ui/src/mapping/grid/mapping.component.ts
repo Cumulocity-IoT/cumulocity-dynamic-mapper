@@ -67,8 +67,8 @@ import { StatusActivationRendererComponent } from '../renderer/status-activation
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from '../../shared';
-import { DeploymentMapEntry, ExtensionType } from '../../shared/model/shared.model';
-import { SharedService } from '../../shared/shared.service';
+import { DeploymentMapEntry, ExtensionType } from '../../shared/mapping/shared.model';
+import { SharedService } from '../../shared/service/shared.service';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import {
@@ -322,7 +322,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     modalRef.content.closeSubject.subscribe(async (filterMapping) => {
       // console.log('Was selected:', result);
       if (filterMapping) {
-        await this.shareService.runOperation(Operation.APPLY_MAPPING_FILTER, { filterMapping, id: mapping.id });
+        await this.shareService.runOperation({ operation: Operation.APPLY_MAPPING_FILTER, parameter: { filterMapping, id: mapping.id } });
         this.mappingService.refreshMappings(Direction.INBOUND);
         this.alertService.success(`Applied filter ${filterMapping}`);
       }
@@ -560,7 +560,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       MAPPING_TYPE_DESCRIPTION[mapping.mappingType].properties[
       mapping.direction
       ];
-    mapping.lastUpdate =  Date.now();
+    mapping.lastUpdate = Date.now();
     if (
       (mapping.snoopStatus == SnoopStatus.ENABLED ||
         mapping.snoopStatus == SnoopStatus.STARTED) &&
@@ -948,7 +948,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   private async reloadMappingsInBackend() {
     const response2 = await this.shareService.runOperation(
-      Operation.RELOAD_MAPPINGS
+      { operation: Operation.RELOAD_MAPPINGS }
     );
     // console.log('Activate mapping response:', response2);
     if (response2.status < 300) {

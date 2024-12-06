@@ -29,7 +29,7 @@ import {
   RepairStrategy
 } from '../../../shared';
 import { EditorMode } from '../../shared/stepper-model';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
+import { StepperConfiguration } from 'src/shared/mapping/shared.model';
 import { definesDeviceIdentifier } from '../../shared/util';
 import { FormBuilder, FormGroup } from '@angular/forms';
 

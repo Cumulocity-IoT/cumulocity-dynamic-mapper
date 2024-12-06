@@ -57,8 +57,8 @@ import { StatusActivationRendererComponent } from '../renderer/status-activation
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { StepperConfiguration } from '../../shared';
-import { DeploymentMapEntry } from '../../shared/model/shared.model';
-import { SharedService } from '../../shared/shared.service';
+import { DeploymentMapEntry } from '../../shared/mapping/shared.model';
+import { SharedService } from '../../shared/service/shared.service';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
@@ -342,7 +342,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   private async reloadMappingsInBackend() {
     const response2 = await this.shareService.runOperation(
-      Operation.RELOAD_MAPPINGS
+    { operation: Operation.RELOAD_MAPPINGS}
     );
     // console.log('Activate mapping response:', response2);
     if (response2.status < 300) {

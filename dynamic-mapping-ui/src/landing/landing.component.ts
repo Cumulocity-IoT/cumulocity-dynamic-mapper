@@ -26,7 +26,7 @@ import { Direction, JsonEditorComponent } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { NODE1, NODE3 } from '../shared/model/util';
+import { NODE1, NODE3 } from '../shared/mapping/util';
 
 @Component({
   selector: 'd11r-landing',

@@ -24,7 +24,7 @@ import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { JsonEditorComponent, Mapping, MappingSubstitution } from '../../shared';
 import { isDisabled } from '../shared/util';
-import { MappingEnriched } from '../../shared/model/shared.model';
+import { MappingEnriched } from '../../shared/mapping/shared.model';
 import { MappingService } from '../core/mapping.service';
 import { IFetchResponse } from '@c8y/client';
 import { HttpStatusCode } from '@angular/common/http';

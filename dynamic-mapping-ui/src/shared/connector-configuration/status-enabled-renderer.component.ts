@@ -65,8 +65,10 @@ export class StatusEnabledRendererComponent {
   async onConfigurationToggle() {
     const configuration = this.context.item;
     const response1 = await this.sharedService.runOperation(
-      configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
-      { connectorIdent: configuration.ident }
+      configuration.enabled ? { operation: Operation.DISCONNECT } : {
+        operation: Operation.CONNECT,
+        parameter: { connectorIdent: configuration.ident }
+      }
     );
     // console.log('Details toggle activation to broker', response1);
     if (response1.status === HttpStatusCode.Created) {

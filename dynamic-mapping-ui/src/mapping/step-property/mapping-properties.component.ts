@@ -39,8 +39,8 @@ import { EditorMode } from '../shared/stepper-model';
 import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic } from '../shared/util';
-import { SharedService } from '../../shared/shared.service';
-import { StepperConfiguration } from '../../shared/model/shared.model';
+import { SharedService } from '../../shared/service/shared.service';
+import { StepperConfiguration } from '../../shared/mapping/shared.model';
 
 @Component({
   selector: 'd11r-mapping-properties',

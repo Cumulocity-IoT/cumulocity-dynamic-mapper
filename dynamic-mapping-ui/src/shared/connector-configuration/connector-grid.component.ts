@@ -53,8 +53,8 @@ import {
   ConnectorStatus,
   StatusEventTypes
 } from '../connector-log/connector-status.model';
-import { DeploymentMapEntry } from '../model/shared.model';
-import { uuidCustom } from '../model/util';
+import { DeploymentMapEntry } from '../mapping/shared.model';
+import { uuidCustom } from '../mapping/util';
 import { ConfigurationConfigurationModalComponent } from './create/connector-configuration-modal.component';
 import {
   ConnectorConfiguration,

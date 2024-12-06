@@ -36,7 +36,7 @@ import { MappingService } from '../core/mapping.service';
 import { isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
 import { DeploymentMapEntry, StepperConfiguration } from '../../shared';
-import { SnoopStatus } from '../../shared/model/shared.model';
+import { SnoopStatus } from '../../shared/mapping/shared.model';
 import { CdkStep } from '@angular/cdk/stepper';
 import {
   HOUSEKEEPING_INTERVAL_SECONDS,
