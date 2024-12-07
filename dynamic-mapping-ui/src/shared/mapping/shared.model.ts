@@ -132,6 +132,7 @@ export interface StepperConfiguration {
   showEditorTarget?: boolean;
   showProcessorExtensionsSource?: boolean;
   showProcessorExtensionsSourceTarget?: boolean;
+  showProcessorExtensionsInternal?: boolean;
   editorMode?: EditorMode;
   allowNoDefinedIdentifier?: boolean;
   allowDefiningSubstitutions?: boolean;
@@ -234,6 +235,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     },
     stepperConfiguration: {
       showProcessorExtensionsSource: false,
+      showProcessorExtensionsInternal: true,
       allowDefiningSubstitutions: false,
       showEditorSource: false,
       showEditorTarget: true,

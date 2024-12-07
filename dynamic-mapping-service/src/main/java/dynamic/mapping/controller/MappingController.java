@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package dynamic.mapping.rest;
+package dynamic.mapping.controller;
 
 import java.util.List;
 import java.util.Map;

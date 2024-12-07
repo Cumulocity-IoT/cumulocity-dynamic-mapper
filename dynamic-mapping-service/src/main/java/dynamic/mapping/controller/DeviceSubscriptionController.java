@@ -1,4 +1,4 @@
-package dynamic.mapping.rest;
+package dynamic.mapping.controller;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;

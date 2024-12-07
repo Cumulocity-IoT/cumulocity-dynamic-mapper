@@ -21,23 +21,25 @@
 
 package dynamic.mapping.processor.extension.internal;
 
-import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.protobuf.InvalidProtocolBufferException;
-import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.processor.model.ProcessingContext;
-import dynamic.mapping.processor.model.RepairStrategy;
-import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.processor.extension.ProcessorExtensionSource;
-import org.joda.time.DateTime;
-
-import jakarta.ws.rs.ProcessingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.joda.time.DateTime;
+
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.processor.extension.ProcessorExtensionSource;
+import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.processor.model.RepairStrategy;
+import jakarta.ws.rs.ProcessingException;
+import lombok.extern.slf4j.Slf4j;
+
 @Slf4j
-public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtensionSource<byte[]> {
+public class ProcessorExtensionSourceCustomAlarm implements ProcessorExtensionSource<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
