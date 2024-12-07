@@ -66,7 +66,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
 
     protected AConnectorClient connectorClient;
 
-    public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, C8YMessage c8yMessage)
+    public abstract ProcessingContext<T> deserializePayload(Mapping mapping, C8YMessage c8yMessage)
             throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;

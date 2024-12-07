@@ -25,6 +25,7 @@ import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.ExtensionEntry;
 import dynamic.mapping.model.ExtensionStatus;
+import dynamic.mapping.model.Mapping;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -45,8 +46,9 @@ public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
     }
 
     @Override
-    public ProcessingContext<byte[]> deserializePayload(ProcessingContext<byte[]> context, ConnectorMessage message)
+    public ProcessingContext<byte[]> deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
+        ProcessingContext<byte[]> context = new ProcessingContext<byte[]>();
         context.setPayload(message.getPayload());
         return context;
     }

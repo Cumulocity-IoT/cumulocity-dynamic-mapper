@@ -231,9 +231,11 @@ public class MappingComponent {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             if (mo != null) {
                 try {
-                    Mapping mt = toMappingObject(mo).getC8yMQTTMapping();
-                    log.debug("Tenant {} - Found Mapping: {}", tenant, mt.id);
-                    return mt;
+                    MappingRepresentation mappingMO = toMappingObject(mo);
+                    Mapping mapping = mappingMO.getC8yMQTTMapping();
+                    mapping.setId(mappingMO.getId());
+                    log.debug("Tenant {} - Found Mapping: {}", tenant, mapping.id);
+                    return mapping;
                 } catch (IllegalArgumentException e) {
                     log.warn("Failed to convert managed object to mapping: {}", mo.getId(), e);
                     return null;
@@ -272,7 +274,10 @@ public class MappingComponent {
             List<Mapping> res = StreamSupport.stream(moc.get().allPages().spliterator(), true)
                     .map(mo -> {
                         try {
-                            return Optional.of(toMappingObject(mo).getC8yMQTTMapping());
+                            MappingRepresentation mappingMO = toMappingObject(mo);
+                            Mapping mapping = mappingMO.getC8yMQTTMapping();
+                            mapping.setId(mappingMO.getId());
+                            return Optional.of(mapping);
                         } catch (IllegalArgumentException e) {
                             log.warn("Failed to convert managed object to mapping: {}", mo.getId(), e);
                             return Optional.<Mapping>empty();
