@@ -79,9 +79,6 @@ public class MonitoringController {
 	@Autowired
 	private ContextService<UserCredentials> contextService;
 
-	@Autowired
-	private MappingComponent mappingStatusComponent;
-
 	@Value("${APP.externalExtensionsEnabled}")
 	private boolean externalExtensionsEnabled;
 
@@ -136,11 +133,19 @@ public class MonitoringController {
 		}
 	}
 
-	@RequestMapping(value = "/monitoring/status/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@RequestMapping(value = "/monitoring/status/mapping/statistic", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<MappingStatus>> getMappingStatus() {
 		String tenant = contextService.getContext().getTenant();
-		List<MappingStatus> ms = mappingStatusComponent.getMappingStatus(tenant);
+		List<MappingStatus> ms = mappingComponent.getMappingStatus(tenant);
 		log.info("Tenant {} - Get mapping status: {}", tenant, ms);
+		return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
+	}
+
+    @RequestMapping(value = "/monitoring/status/mapping/error", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<List<MappingStatus>> getMappingLoadingError() {
+		String tenant = contextService.getContext().getTenant();
+		List<MappingStatus> ms = mappingComponent.getMappingLoadingError(tenant);
+		log.info("Tenant {} - Get mapping loadingError: {}", tenant, ms);
 		return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	}
 

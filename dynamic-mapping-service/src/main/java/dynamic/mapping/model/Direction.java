@@ -22,6 +22,8 @@
 package dynamic.mapping.model;
 
 public enum Direction {
+    //Direction.UNSPECIFIED
   INBOUND,
-  OUTBOUND
+  OUTBOUND,
+  UNSPECIFIED,
 }
