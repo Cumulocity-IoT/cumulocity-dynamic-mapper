@@ -66,7 +66,7 @@ import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
-import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from '../../shared';
+import { MappingTypeDescriptionMap, StepperConfiguration } from '../../shared';
 import { DeploymentMapEntry, ExtensionType } from '../../shared/mapping/shared.model';
 import { SharedService } from '../../shared/service/shared.service';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
@@ -557,7 +557,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     let action = AdvisorAction.CONTINUE;
     const { mapping } = m;
     const { snoopSupported } =
-      MAPPING_TYPE_DESCRIPTION[mapping.mappingType].properties[
+      MappingTypeDescriptionMap[mapping.mappingType].properties[
       mapping.direction
       ];
     mapping.lastUpdate = Date.now();
@@ -967,7 +967,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     // console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
     // console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
     this.stepperConfiguration =
-      MAPPING_TYPE_DESCRIPTION[mappingType].stepperConfiguration;
+      MappingTypeDescriptionMap[mappingType].stepperConfiguration;
     this.stepperConfiguration.direction = direction;
     this.stepperConfiguration.editorMode = editorMode;
     if (direction == Direction.OUTBOUND)

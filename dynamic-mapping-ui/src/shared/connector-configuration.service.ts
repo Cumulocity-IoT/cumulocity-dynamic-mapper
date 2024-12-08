@@ -22,7 +22,6 @@ import { inject, Injectable } from '@angular/core';
 import { FetchClient, IFetchResponse } from '@c8y/client';
 import {
   BASE_URL,
-  CONNECTOR_FRAGMENT,
   ConnectorConfiguration,
   ConnectorSpecification,
   ConnectorStatus,
@@ -30,7 +29,6 @@ import {
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_STATUS_CONNECTORS_ENDPOINT,
   SharedService,
-  StatusEventTypes
 } from '.';
 
 import {
@@ -218,37 +216,37 @@ export class ConnectorConfigurationService {
     return this._connectorConfigurations;
   }
 
-  private getConnectorStatusEvents(): Observable<ConnectorStatusEvent> {
-    // subscribe to event stream
-    this.eventRealtimeService.start();
-    return from(this.sharedService.getDynamicMappingServiceAgent()).pipe(
-      switchMap((agentId) => {
-        return concat(
-          this.eventRealtimeService.onAll$(agentId).pipe(
-            filter(
-              (p) =>
-                p['data']['type'] ==
-                StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE
-            ),
-            map((p) => {
-              const connectorFragment = p['data'][CONNECTOR_FRAGMENT];
-              return {
-                connectorIdent: connectorFragment.connectorIdent,
-                connectorName: connectorFragment.connectorName,
-                status: connectorFragment.status,
-                message: connectorFragment.message,
-                type: connectorFragment.type
-              };
-            }),
-            tap((p) => {
-              console.log('Status change connector original:', p);
-              this.updateConnectorConfigurations();
-            })
-          )
-        );
-      })
-    );
-  }
+  // private getConnectorStatusEvents(): Observable<ConnectorStatusEvent> {
+  //   // subscribe to event stream
+  //   this.eventRealtimeService.start();
+  //   return from(this.sharedService.getDynamicMappingServiceAgent()).pipe(
+  //     switchMap((agentId) => {
+  //       return concat(
+  //         this.eventRealtimeService.onAll$(agentId).pipe(
+  //           filter(
+  //             (p) =>
+  //               p['data']['type'] ==
+  //             LoggingEventTypeMap[LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE].type
+  //           ),
+  //           map((p) => {
+  //             const connectorFragment = p['data'][CONNECTOR_FRAGMENT];
+  //             return {
+  //               connectorIdent: connectorFragment.connectorIdent,
+  //               connectorName: connectorFragment.connectorName,
+  //               status: connectorFragment.status,
+  //               message: connectorFragment.message,
+  //               type: connectorFragment.type
+  //             };
+  //           }),
+  //           tap((p) => {
+  //             console.log('Status change connector original:', p);
+  //             this.updateConnectorConfigurations();
+  //           })
+  //         )
+  //       );
+  //     })
+  //   );
+  // }
 
   private async testRealtime() {
     console.log('Calling testRealtime');

@@ -163,7 +163,7 @@ export interface MappingTypeDescriptionInterface {
   stepperConfiguration: StepperConfiguration;
 }
 
-export const MAPPING_TYPE_DESCRIPTION: Record<
+export const MappingTypeDescriptionMap: Record<
   MappingType,
   MappingTypeDescriptionInterface
 > = {

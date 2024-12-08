@@ -19,16 +19,17 @@
  * @authors Christof Strack
  */
 import { inject, Injectable } from '@angular/core';
-import { EventService, FetchClient } from '@c8y/client';
+import { EventService } from '@c8y/client';
 import {
   CONNECTOR_FRAGMENT,
   ConnectorStatus,
   ConnectorStatusEvent,
+  LoggingEventType,
+  LoggingEventTypeMap,
   SharedService,
-  StatusEventTypes
 } from '../shared';
 
-import { BehaviorSubject, from, merge, Observable } from 'rxjs';
+import { BehaviorSubject, from, merge, Observable, ReplaySubject } from 'rxjs';
 import { filter, map, scan, shareReplay, switchMap, tap } from 'rxjs/operators';
 import {
   EventRealtimeService,
@@ -40,7 +41,6 @@ import {
 })
 export class ConnectorStatusService {
   constructor(
-    private client: FetchClient,
     private eventService: EventService,
     private sharedService: SharedService
   ) {
@@ -58,20 +58,19 @@ export class ConnectorStatusService {
     connectorIdent: this.ALL,
     connectorName: 'EMPTY',
     status: ConnectorStatus.UNKNOWN,
-    type: StatusEventTypes.ALL,
+    type: LoggingEventTypeMap[LoggingEventType.ALL].type,
     message: '_RESET_'
   };
 
   private filterStatusLog = this.RESET;
 
-  private triggerLogs$: BehaviorSubject<ConnectorStatusEvent[]> =
-    new BehaviorSubject([this.RESET]);
+  private triggerLogs$: BehaviorSubject<ConnectorStatusEvent> =
+    new BehaviorSubject(this.RESET);
 
-  private statusLogs$: Observable<ConnectorStatusEvent[]>;
+  private statusLogs$ = new ReplaySubject<ConnectorStatusEvent[]>(1);
 
   getStatusLogs(): Observable<ConnectorStatusEvent[]> {
-    // console.log('Calling: getStatusLogs');
-    return this.statusLogs$;
+    return this.statusLogs$.asObservable();
   }
 
   async startConnectorStatusLogs() {
@@ -81,13 +80,14 @@ export class ConnectorStatusService {
     }
   }
 
-  updateStatusLogs(filter: any) {
-    const updatedFilter = {
-      ...this.RESET,
-      ...filter
-    };
+  updateStatusLogs(filter: {
+    connectorIdent: string,
+    type: LoggingEventType,
+  }) {
+    const updatedFilter = this.RESET;
+    updatedFilter.type = LoggingEventTypeMap[filter.type].type;
     this.filterStatusLog = updatedFilter;
-    this.triggerLogs$.next([updatedFilter]);
+    this.triggerLogs$.next(updatedFilter);
   }
 
   async initConnectorLogsRealtime() {
@@ -99,22 +99,25 @@ export class ConnectorStatusService {
     //   this._agentId
     // );
     const filteredConnectorStatus$ = this.triggerLogs$.pipe(
-      // tap((x) => console.log('TriggerLogs In', x)),
+      tap((x) => console.log('TriggerLogs In', x)),
       switchMap((x) => {
         const filter = {
-          pageSize: 5,
+          pageSize: 100,
           withTotalPages: false,
           source: this._agentId
         };
-        if (x[0]?.type !== this.ALL) {
-          filter['type'] = x[0]?.type;
+        if (x?.type !== LoggingEventTypeMap[LoggingEventType.ALL].type) {
+          filter['type'] = x?.type;
         }
         return this.eventService.list(filter);
       }),
       map((data) => data.data),
       map((events) =>
         events
-          .filter((ev) => ev[CONNECTOR_FRAGMENT])
+          .filter((ev) => {
+            console.log('Event has:', ev, ev.hasOwnProperty(CONNECTOR_FRAGMENT));
+            return ev.hasOwnProperty(CONNECTOR_FRAGMENT)
+          })
           .map((event) => {
             event[CONNECTOR_FRAGMENT].type = event.type;
             return event[CONNECTOR_FRAGMENT];
@@ -126,30 +129,31 @@ export class ConnectorStatusService {
             ? true
             : event.connectorIdent == this.filterStatusLog.connectorIdent;
         })
-      )
-      //   tap((x) => console.log('TriggerLogs Out', x))
+      ),
+      tap((x) => console.log('TriggerLogs Out', x))
     );
 
     //  const refreshedConnectorStatus$: Observable<any> =
-    this.statusLogs$ = merge(
+    merge(
       filteredConnectorStatus$,
       this.getAllConnectorStatusEvents(),
-      this.triggerLogs$
+      this.triggerLogs$.pipe(
+        filter(cmd => cmd.message === '_RESET_'),
+        map(cmd => [cmd])
+      )
     ).pipe(
-      // tap((i) => console.log('Items', i)),
       scan((acc, val) => {
         let sortedAcc;
-        if (val[0]?.message == '_RESET_') {
-          // console.log('Reset loaded logs!');
+        if (val[0]?.message === '_RESET_') {
           sortedAcc = [];
         } else {
           sortedAcc = val.concat(acc);
         }
-        sortedAcc = sortedAcc.slice(0, 9);
+        sortedAcc = sortedAcc?.slice(0, 9);
         return sortedAcc;
       }, []),
       shareReplay(1)
-    );
+    ).subscribe(this.statusLogs$);
   }
 
   private getAllConnectorStatusEvents(): Observable<ConnectorStatusEvent[]> {
@@ -162,6 +166,7 @@ export class ConnectorStatusService {
         return this.eventRealtimeService.onAll$(agentId);
       }),
       map((p) => p['data']),
+      filter((e) => e[CONNECTOR_FRAGMENT]),
       map((e) => {
         e[CONNECTOR_FRAGMENT].type = e['type'];
         return e[CONNECTOR_FRAGMENT];

@@ -25,8 +25,9 @@ import {
   LoadMoreComponent,
   Pagination
 } from '@c8y/ngx-components';
-import { from, Observable, switchMap } from 'rxjs';
+import { BehaviorSubject, from, Observable, Subject, switchMap, takeUntil } from 'rxjs';
 import {
+  LoggingEventTypeMap,
   SharedService
 } from '../../shared';
 import { EventService, IEvent, IResultList } from '@c8y/client';
@@ -52,6 +53,11 @@ export class MapppingServiceEventComponent implements OnInit, OnDestroy {
   mappingService: string;
   events$: Observable<IResultList<IEvent>>;
   loadMoreComponent: LoadMoreComponent;
+  LoggingEventTypeMap = LoggingEventTypeMap;
+  filterMappingServiceEvent: string = 'ALL';
+  filterSubject = new BehaviorSubject<string>(null);
+  destroy$ = new Subject<void>();
+  reload$ = new Subject<void>();
 
   constructor(
     public eventService: EventService,
@@ -60,17 +66,30 @@ export class MapppingServiceEventComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    this.events$ = from(this.sharedService.getDynamicMappingServiceAgent()).pipe(
-      switchMap((mappingServiceId) => 
+    this.events$ = this.filterSubject.pipe(
+      switchMap(() => from(this.sharedService.getDynamicMappingServiceAgent())),
+      switchMap((mappingServiceId) =>
         this.eventService.list({
           ...this.BASE_FILTER,
           source: mappingServiceId,
         })
-      )
+      ),
+      takeUntil(this.destroy$)
     );
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.reload$.complete();
+  }
 
+  onFilterMappingServiceEventSelect(event) {
+    if (event == 'ALL'){
+      delete this.BASE_FILTER['type'];
+    } else {
+      this.BASE_FILTER['type'] = LoggingEventTypeMap[event].type;
+    }
+    this.filterSubject.next(event);
   }
 }

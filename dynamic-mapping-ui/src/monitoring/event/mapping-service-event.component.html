@@ -20,13 +20,44 @@
   -->
 
 <c8y-title translate>Monitoring</c8y-title>
-<c8y-action-bar-item [placement]="'right'">
+<c8y-action-bar-item
+  [placement]="'left'"
+  itemClass="navbar-form hidden-xs"
+>
+<div class="form-group">
+  <label class="m-r-8" id="listLabel">
+    {{ 'Filter' | translate }}
+  </label>
+  <div class="c8y-select-wrapper">
+    <select class="form-control" style="width: 280px" [ngModel]="filterMappingServiceEvent"  (ngModelChange)="onFilterMappingServiceEventSelect($event)" name="type">
+      <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
+        <option [ngValue]="lt.key">
+          {{ lt.key | humanize }}
+        </option>
+      </ng-container>
+    </select>
+    <span></span>
+  </div>
+</div>
 </c8y-action-bar-item>
 <div class="d-flex d-col bg-inherit content-fullpage bg-gray-white">
   <div class="card-header large-padding separator sticky-top">
     <span class="card-title" translate>
       Mapping service events
     </span>
+  </div>
+  <div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
+    <div class="d-flex">
+      <div class="c8y-list__item__block flex-grow">
+        <div class="c8y-list__item__body">
+          <div class="content-flex-50">
+            <div class="col-2">Date</div>
+            <div class="col-2">Event type</div>
+            <div class="col-8">Message</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="inner-scroll">
     <c8y-list-group class="c8y-list__group--strip">
@@ -40,9 +71,9 @@
             <i c8yIcon="events"></i>
           </c8y-li-icon>
           <c8y-li-body class="content-flex-100">
-            <div class="col-1">
+            <div class="col-2">
               <span>
-                {{ event.time | date }}
+                {{ event.time }}
               </span>
             </div>
             <div class="col-2">
@@ -50,7 +81,7 @@
                 {{ event.type }}
               </span>
             </div>
-            <div class="col-9">
+            <div class="col-8">
               <span>
                 {{ event.text }}
               </span>

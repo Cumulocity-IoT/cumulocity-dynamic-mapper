@@ -58,6 +58,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Direction;
+import dynamic.mapping.model.LoggingEventType;
 import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
@@ -75,7 +76,8 @@ public class MappingComponent {
     private Map<String, Map<String, MappingStatus>> tenantMappingStatus = new HashMap<>();
 
     // // structure: <tenant, < id , status>>
-    // private Map<String, Map<String, MappingStatus>> tenantMappingLoadingError = new HashMap<>();
+    // private Map<String, Map<String, MappingStatus>> tenantMappingLoadingError =
+    // new HashMap<>();
 
     // structure: <tenant, < mappingId ,list of connectorId>>
     private Map<String, Map<String, List<String>>> tenantDeploymentMap = new HashMap<>();
@@ -221,25 +223,26 @@ public class MappingComponent {
 
     public void sendMappingLoadingError(String tenant, ManagedObjectRepresentation mo, String message) {
 
-			DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			Date now = new Date();
-			String date = dateFormat.format(now);
-			Map<String, String> stMap = Map.ofEntries(
-					entry("message", message),
-					entry("id", mo.getId().getValue()),
-					entry("date", date));
-                    configurationRegistry.getC8yAgent().createEvent(message,
-					C8YAgent.MAPPING_LOADING_ERROR_EVENT_TYPE,
-					DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant, stMap);
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date now = new Date();
+        String date = dateFormat.format(now);
+        Map<String, String> stMap = Map.ofEntries(
+                entry("message", message),
+                entry("id", mo.getId().getValue()),
+                entry("date", date));
+        configurationRegistry.getC8yAgent().createEvent(message,
+                LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE,
+                DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant, stMap);
     }
 
     // ic List<MappingStatus> getMappingLoadingError(String tenant) {
     // // log.info("Tenant {} - get MappingStatus: {
     // ", tenant, m.ident);
     // Map<String, MappingStatus> mappingLoadErro
-    //  = tenantMappingLoadingError.get(tenant);
-    // List<MappingStatus> mappingLoadErrorList = mappingLoadError.values().stream().collect(Collectors.toList());
-    //     return mappingLoadErrorList;
+    // = tenantMappingLoadingError.get(tenant);
+    // List<MappingStatus> mappingLoadErrorList =
+    // mappingLoadError.values().stream().collect(Collectors.toList());
+    // return mappingLoadErrorList;
     // }
 
     public List<MappingStatus> getMappingStatus(String tenant) {
@@ -314,8 +317,9 @@ public class MappingComponent {
                             return Optional.of(mapping);
                         } catch (IllegalArgumentException e) {
                             String execeptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
-                                    String msg = String.format("Failed to convert managed object %s to mapping: %s", mo.getId(),
-                            execeptionMsg);
+                            String msg = String.format("Failed to convert managed object %s to mapping. Error: %s",
+                                    mo.getId().getValue(),
+                                    execeptionMsg);
                             log.warn(msg);
                             sendMappingLoadingError(tenant, mo, msg);
                             return Optional.<Mapping>empty();
@@ -639,7 +643,7 @@ public class MappingComponent {
             }
 
             configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
-                    C8YAgent.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
                     null);
         }
@@ -690,7 +694,7 @@ public class MappingComponent {
                 cacheMappingInbound.get(tenant).put(mapping.id, mapping);
             }
             configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
-                    C8YAgent.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
                     null);
         }

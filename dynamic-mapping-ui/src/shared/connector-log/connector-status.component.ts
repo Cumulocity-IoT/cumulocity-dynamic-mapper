@@ -18,18 +18,19 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { Observable } from 'rxjs';
+import { Observable, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../../package.json';
 import {
   ConnectorConfiguration,
   ConnectorSpecification,
   ConnectorStatus,
   Feature,
+  LoggingEventType,
+  LoggingEventTypeMap,
   SharedService,
-  StatusEventTypes
 } from '../../shared';
 import { ConnectorStatusService } from '../connector-status.service';
 import { ConnectorConfigurationService } from '../connector-configuration.service';
@@ -39,22 +40,21 @@ import { ConnectorConfigurationService } from '../connector-configuration.servic
   styleUrls: ['./connector-status.component.style.css'],
   templateUrl: 'connector-status.component.html'
 })
-export class ConnectorStatusComponent implements OnInit {
+export class ConnectorStatusComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
   monitorings$: Observable<ConnectorStatus>;
   feature: Feature;
   specifications: ConnectorSpecification[] = [];
   configurations$: Observable<ConnectorConfiguration[]> = new Observable();
-  statusLogs$: Observable<any[]>;
+  statusLogs$: Observable<any[]> ;
   private readonly ALL: string = 'ALL';
   filterStatusLog = {
     connectorIdent: this.ALL,
-    connectorName: 'EMPTY',
-    status: ConnectorStatus.UNKNOWN,
-    type: StatusEventTypes.ALL,
-    message: '_RESET_'
+    type: LoggingEventType.ALL,
   };
-  StatusEventTypes = StatusEventTypes;
+  LoggingEventTypeMap = LoggingEventTypeMap;
+  LoggingEventType = LoggingEventType;
+  private destroy$ = new Subject<void>();
 
   constructor(
     public bsModalService: BsModalService,
@@ -66,13 +66,25 @@ export class ConnectorStatusComponent implements OnInit {
 
   async ngOnInit() {
     // console.log('Running version', this.version);
+    this.connectorStatusService.initConnectorLogsRealtime();
     this.feature = await this.sharedService.getFeatures();
     this.configurations$ =
       this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
+    // Subscribe to logs to verify they're coming through
+    this.statusLogs$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
+      logs => console.log('Received logs in component:', logs),
+      error => console.error('Error receiving logs:', error)
+    );
   }
 
   updateStatusLogs() {
     this.connectorStatusService.updateStatusLogs(this.filterStatusLog);
+  }
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

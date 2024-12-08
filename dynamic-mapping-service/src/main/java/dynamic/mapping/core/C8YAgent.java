@@ -58,6 +58,7 @@ import dynamic.mapping.model.API;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.ExtensionEntry;
 import dynamic.mapping.model.ExtensionType;
+import dynamic.mapping.model.LoggingEventType;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.extension.ExtensibleProcessor;
@@ -151,13 +152,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public static final String CONNECTOR_FRAGMENT = "d11r_connector";
     public static final String DEPLOYMENT_MAP_FRAGMENT = "d11r_deploymentMap";
-
-    public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
-    public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
-    public static final String MAPPING_LOADING_ERROR_EVENT_TYPE = "d11r_mappingLoadingErrorEvent";
-    public static final String STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE = "d11r_mappingActivationErrorEvent";
-    public static final String STATUS_MAPPING_CHANGED_EVENT_TYPE = "d11r_mappingChangedEvent";
-    public static final String STATUS_NOTIFICATION_EVENT_TYPE = "d11r_notificationStatusEvent";
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
@@ -258,7 +252,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return alarmRepresentation;
     }
 
-    public void createEvent(String message, String type, DateTime eventTime, MappingServiceRepresentation source,
+    public void createEvent(String message, LoggingEventType loggingType, DateTime eventTime,
+            MappingServiceRepresentation source,
             String tenant, Map<String, String> properties) {
         subscriptionsService.runForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
@@ -269,9 +264,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 er.setSource(mor);
                 er.setText(message);
                 er.setDateTime(eventTime);
-                er.setType(type);
+                er.setType(loggingType.type);
                 if (properties != null) {
-                    er.setProperty(C8YAgent.CONNECTOR_FRAGMENT, properties);
+                    er.setProperty(loggingType.getComponent(), properties);
                 }
                 this.eventApi.createAsync(er);
             });
@@ -814,8 +809,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     entry("connectorIdent", "000000"),
                     entry("date", date));
             createEvent("Connector status:" + connectorStatus.name(),
-                    C8YAgent.STATUS_NOTIFICATION_EVENT_TYPE,
-                    DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+                    LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE, DateTime.now(),
+                    configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
                     stMap);
         }
     }

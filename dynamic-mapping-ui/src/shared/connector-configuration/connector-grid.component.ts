@@ -51,7 +51,7 @@ import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.c
 import { ConnectorConfigurationService } from '../connector-configuration.service';
 import {
   ConnectorStatus,
-  StatusEventTypes
+  LoggingEventType
 } from '../connector-log/connector-status.model';
 import { DeploymentMapEntry } from '../mapping/shared.model';
 import { uuidCustom } from '../mapping/util';
@@ -89,7 +89,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
   configurations$: Observable<ConnectorConfiguration[]>;
-  StatusEventTypes = StatusEventTypes;
+  LoggingEventType = LoggingEventType;
   pagination: Pagination = {
     pageSize: 30,
     currentPage: 1
