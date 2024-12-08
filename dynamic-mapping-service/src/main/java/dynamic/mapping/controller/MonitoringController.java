@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package dynamic.mapping.rest;
+package dynamic.mapping.controller;
 
 import java.util.AbstractMap;
 import java.util.HashMap;
@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
@@ -50,7 +50,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.cumulocity.microservice.security.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.MappingStatus;
@@ -79,9 +78,6 @@ public class MonitoringController {
 
 	@Autowired
 	private ContextService<UserCredentials> contextService;
-
-	@Autowired
-	private MappingComponent mappingStatusComponent;
 
 	@Value("${APP.externalExtensionsEnabled}")
 	private boolean externalExtensionsEnabled;
@@ -137,13 +133,21 @@ public class MonitoringController {
 		}
 	}
 
-	@RequestMapping(value = "/monitoring/status/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@RequestMapping(value = "/monitoring/status/mapping/statistic", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<MappingStatus>> getMappingStatus() {
 		String tenant = contextService.getContext().getTenant();
-		List<MappingStatus> ms = mappingStatusComponent.getMappingStatus(tenant);
+		List<MappingStatus> ms = mappingComponent.getMappingStatus(tenant);
 		log.info("Tenant {} - Get mapping status: {}", tenant, ms);
 		return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	}
+
+    // @RequestMapping(value = "/monitoring/status/mapping/error", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	// public ResponseEntity<List<MappingStatus>> getMappingLoadingError() {
+	// 	String tenant = contextService.getContext().getTenant();
+	// 	List<MappingStatus> ms = mappingComponent.getMappingLoadingError(tenant);
+	// 	log.info("Tenant {} - Get mapping loadingError: {}", tenant, ms);
+	// 	return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
+	// }
 
 	@RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<MappingTreeNode> getInboundMappingTree() {

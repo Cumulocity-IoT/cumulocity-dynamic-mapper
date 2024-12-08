@@ -343,16 +343,16 @@ public class KafkaClient extends AConnectorClient {
 			String mapIdent = it.next();
 			Mapping map = getMappingsDeployedInbound().get(mapIdent);
 			// test if topicConsumer was started successfully
-			if (consumerList.containsKey(map.subscriptionTopic)) {
-				TopicConsumer kafkaConsumer = consumerList.get(map.subscriptionTopic);
+			if (consumerList.containsKey(map.mappingTopic)) {
+				TopicConsumer kafkaConsumer = consumerList.get(map.mappingTopic);
 				if (kafkaConsumer.shouldStop()) {
 					try {
 						// kafkaConsumer.close();
 						unsubscribe(mapIdent);
 						getMappingsDeployedInbound().remove(map.ident);
 						log.warn(
-								"Tenant {} - Failed to subscribe to subscriptionTopic {} for mapping {} in connector {}!",
-								tenant, map.subscriptionTopic, map, getConnectorName());
+								"Tenant {} - Failed to subscribe to mappingTopic {} for mapping {} in connector {}!",
+								tenant, map.mappingTopic, map, getConnectorName());
 					} catch (Exception e) {
 						// ignore interrupt
 					}

@@ -50,12 +50,13 @@ import {
   DeploymentMapEntryDetailed,
   PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT,
   MappingEnriched,
-  MAPPING_TYPE_DESCRIPTION,
-  Operation,
-  StatusEventTypes,
+  MappingTypeDescriptionMap,
   DeploymentMapEntry,
   DeploymentMap,
-  PATH_DEPLOYMENT_DEFINED_ENDPOINT
+  PATH_DEPLOYMENT_DEFINED_ENDPOINT,
+  Operation,
+  LoggingEventTypeMap,
+  LoggingEventType
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -66,11 +67,9 @@ import {
 } from '../processor/processor.model';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
 import {
-  AlertService,
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
-import { ConnectorConfigurationService } from '../../connector';
 
 @Injectable({
   providedIn: 'root'
@@ -78,12 +77,10 @@ import { ConnectorConfigurationService } from '../../connector';
 export class MappingService {
   constructor(
     private inventory: InventoryService,
-    private brokerConnectorService: ConnectorConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
     private sharedService: SharedService,
     private client: FetchClient,
-    private alertService: AlertService
   ) {
     this.eventRealtimeService = new EventRealtimeService(
       inject(RealtimeSubjectService)
@@ -111,8 +108,10 @@ export class MappingService {
 
   async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.ACTIVATE_MAPPING,
-      parameter
+      {
+        operation: Operation.ACTIVATE_MAPPING,
+        parameter
+      }
     );
   }
 
@@ -125,22 +124,28 @@ export class MappingService {
 
   async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.DEBUG_MAPPING,
-      parameter
+      {
+        operation: Operation.DEBUG_MAPPING,
+        parameter
+      }
     );
   }
 
   async changeSnoopStatusMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.SNOOP_MAPPING,
-      parameter
+      {
+        operation: Operation.SNOOP_MAPPING,
+        parameter
+      }
     );
   }
 
   async resetSnoop(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.SNOOP_RESET,
-      parameter
+      {
+        operation: Operation.SNOOP_RESET,
+        parameter
+      }
     );
   }
 
@@ -237,7 +242,7 @@ export class MappingService {
             id: m.id,
             mapping: m,
             snoopSupported:
-              MAPPING_TYPE_DESCRIPTION[m.mappingType].properties[
+              MappingTypeDescriptionMap[m.mappingType].properties[
                 Direction.INBOUND
               ].snoopSupported,
             connectors: mappingsDeployed[m.ident]
@@ -531,7 +536,7 @@ export class MappingService {
         filter(
           (payload) =>
             payload['type'] ==
-            StatusEventTypes.STATUS_MAPPING_CHANGED_EVENT_TYPE
+          LoggingEventTypeMap[LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE].type
         )
       )
       .subscribe(() => {

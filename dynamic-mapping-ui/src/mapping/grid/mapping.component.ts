@@ -66,9 +66,9 @@ import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
-import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from '../../shared';
-import { DeploymentMapEntry, ExtensionType } from '../../shared/model/shared.model';
-import { SharedService } from '../../shared/shared.service';
+import { MappingTypeDescriptionMap, StepperConfiguration } from '../../shared';
+import { DeploymentMapEntry, ExtensionType } from '../../shared/mapping/shared.model';
+import { SharedService } from '../../shared/service/shared.service';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import {
@@ -322,7 +322,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     modalRef.content.closeSubject.subscribe(async (filterMapping) => {
       // console.log('Was selected:', result);
       if (filterMapping) {
-        await this.shareService.runOperation(Operation.APPLY_MAPPING_FILTER, { filterMapping, id: mapping.id });
+        await this.shareService.runOperation({ operation: Operation.APPLY_MAPPING_FILTER, parameter: { filterMapping, id: mapping.id } });
         this.mappingService.refreshMappings(Direction.INBOUND);
         this.alertService.success(`Applied filter ${filterMapping}`);
       }
@@ -344,12 +344,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '10%'
       },
       this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-          header: 'Subscription topic',
-          name: 'subscriptionTopic',
-          path: 'mapping.subscriptionTopic',
-          filterable: true
-        }
+        ? undefined
         : {
           header: 'Publish topic',
           name: 'publishTopic',
@@ -460,12 +455,11 @@ export class MappingComponent implements OnInit, OnDestroy {
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
         id: ident,
         ident: ident,
-        subscriptionTopic: '',
         mappingTopic: '',
         mappingTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        source: '{}',
-        target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: '{}',
+        targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
         qos: QOS.AT_LEAST_ONCE,
@@ -490,8 +484,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         publishTopic: '',
         publishTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        source: '{}',
-        target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: '{}',
+        targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
         qos: QOS.AT_LEAST_ONCE,
@@ -509,14 +503,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         lastUpdate: Date.now()
       };
     }
-    mapping.target = getExternalTemplate(mapping);
+    mapping.targetTemplate = getExternalTemplate(mapping);
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
         message: '10,temp,1666963367'
       } as PayloadWrapper);
       mapping = {
         ...mapping,
-        source: sampleSource
+        sourceTemplate: sampleSource
       };
     } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION_SOURCE) {
       mapping.extension = {
@@ -563,10 +557,10 @@ export class MappingComponent implements OnInit, OnDestroy {
     let action = AdvisorAction.CONTINUE;
     const { mapping } = m;
     const { snoopSupported } =
-      MAPPING_TYPE_DESCRIPTION[mapping.mappingType].properties[
+      MappingTypeDescriptionMap[mapping.mappingType].properties[
       mapping.direction
       ];
-    mapping.lastUpdate =  Date.now();
+    mapping.lastUpdate = Date.now();
     if (
       (mapping.snoopStatus == SnoopStatus.ENABLED ||
         mapping.snoopStatus == SnoopStatus.STARTED) &&
@@ -789,7 +783,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     // ('Changed mapping:', mapping);
     if (
       mapping.direction == Direction.INBOUND ||
-      // test if we can attach multiple outbound mappings to the same filterOutbound
+      // test if we can attach multiple outbound mappings to the same filterMapping
       mapping.direction == Direction.OUTBOUND
       //  && isFilterOutboundUnique(mapping, this.mappings)
     ) {
@@ -825,13 +819,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       if (mapping.direction == Direction.INBOUND) {
         this.alertService.danger(
           gettext(
-            `Topic is already used: ${mapping.subscriptionTopic}. Please use a different topic.`
+            `Topic is already used: ${mapping.mappingTopic}. Please use a different topic.`
           )
         );
       } else {
         this.alertService.danger(
           gettext(
-            `FilterOutbound is already used: ${mapping.filterOutbound}. Please use a different filter.`
+            `FilterMapping is already used: ${mapping.filterMapping}. Please use a different filter.`
           )
         );
       }
@@ -954,7 +948,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   private async reloadMappingsInBackend() {
     const response2 = await this.shareService.runOperation(
-      Operation.RELOAD_MAPPINGS
+      { operation: Operation.RELOAD_MAPPINGS }
     );
     // console.log('Activate mapping response:', response2);
     if (response2.status < 300) {
@@ -973,7 +967,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     // console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
     // console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
     this.stepperConfiguration =
-      MAPPING_TYPE_DESCRIPTION[mappingType].stepperConfiguration;
+      MappingTypeDescriptionMap[mappingType].stepperConfiguration;
     this.stepperConfiguration.direction = direction;
     this.stepperConfiguration.editorMode = editorMode;
     if (direction == Direction.OUTBOUND)

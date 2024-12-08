@@ -57,8 +57,8 @@ import { StatusActivationRendererComponent } from '../renderer/status-activation
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { StepperConfiguration } from '../../shared';
-import { DeploymentMapEntry } from '../../shared/model/shared.model';
-import { SharedService } from '../../shared/shared.service';
+import { DeploymentMapEntry } from '../../shared/mapping/shared.model';
+import { SharedService } from '../../shared/service/shared.service';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
@@ -174,30 +174,25 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
-            header: 'Subscription topic',
-            name: 'subscriptionTopic',
-            path: 'mapping.subscriptionTopic',
-            filterable: true
-          }
+          header: 'Mapping topic',
+          name: 'mappingTopic',
+          path: 'mapping.mappingTopic',
+          filterable: true
+        }
         : {
-            header: 'Publish topic',
-            name: 'publishTopic',
-            path: 'mapping.publishTopic',
-            filterable: true
-          },
+          header: 'Publish topic',
+          name: 'publishTopic',
+          path: 'mapping.publishTopic',
+          filterable: true
+        },
       this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-            header: 'Mapping topic',
-            name: 'mappingTopic',
-            path: 'mapping.mappingTopic',
-            filterable: true
-          }
+        ? undefined
         : {
-            header: 'Publish topic sample',
-            name: 'publishTopicSample',
-            path: 'mapping.publishTopicSample',
-            filterable: true
-          },
+          header: 'Publish topic sample',
+          name: 'publishTopicSample',
+          path: 'mapping.publishTopicSample',
+          filterable: true
+        },
       {
         name: 'targetAPI',
         header: 'API',
@@ -227,16 +222,16 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
-            // header: 'Test/Debug/Snoop',
-            header: 'Templates snooped',
-            name: 'snoopedTemplates',
-            path: 'mapping',
-            filterable: false,
-            sortable: false,
-            cellCSSClassName: 'text-align-center',
-            cellRendererComponent: SnoopedTemplateRendererComponent,
-            gridTrackSize: '8%'
-          }
+          // header: 'Test/Debug/Snoop',
+          header: 'Templates snooped',
+          name: 'snoopedTemplates',
+          path: 'mapping',
+          filterable: false,
+          sortable: false,
+          cellCSSClassName: 'text-align-center',
+          cellRendererComponent: SnoopedTemplateRendererComponent,
+          gridTrackSize: '8%'
+        }
         : undefined,
       {
         header: 'Activate',
@@ -332,6 +327,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       this.subscription = await this.mappingService.updateSubscriptions(
         this.subscription
       );
+      this.subscriptionGrid.reload();
       this.alertService.success(gettext('Subscriptions updated successfully'));
     } catch (error) {
       this.alertService.danger(
@@ -347,7 +343,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   private async reloadMappingsInBackend() {
     const response2 = await this.shareService.runOperation(
-      Operation.RELOAD_MAPPINGS
+    { operation: Operation.RELOAD_MAPPINGS}
     );
     // console.log('Activate mapping response:', response2);
     if (response2.status < 300) {

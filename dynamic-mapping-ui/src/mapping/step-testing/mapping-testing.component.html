@@ -97,7 +97,7 @@
     Transform Test Message
   </button>
   <button type="button" class="btn btn-default btn-sm" (click)="onNextTestResult()"
-    [attr.disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length <= 1)">
+    [attr.disabled]="!stepperConfiguration.allowTestTransformation || isDisabled(testingModel.results.length <= 1)">
     Show Next Test Result&nbsp;<span *ngIf="testingModel.results.length > 0" class="badge badge-success">
       {{ testingModel.results.length }}</span>
   </button>

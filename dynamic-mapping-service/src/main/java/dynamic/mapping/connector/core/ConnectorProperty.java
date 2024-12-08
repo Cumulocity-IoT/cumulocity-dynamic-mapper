@@ -8,7 +8,7 @@ import lombok.ToString;
 
 import java.util.Map;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 @Data
 @ToString()

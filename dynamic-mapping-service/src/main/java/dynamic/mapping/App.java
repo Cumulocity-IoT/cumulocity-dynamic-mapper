@@ -99,11 +99,11 @@ public class App {
         return executor;
     }
     //Assuming we can process 25 messages in parallel per CPU-Core
-    @Bean("processingCachePool")
-    public ExecutorService processingThreadPool() {
-        return Executors.newCachedThreadPool();
-        //return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*25);
-    }
+    // @Bean("processingCachePool")
+    // public ExecutorService processingThreadPool() {
+    //     return Executors.newCachedThreadPool();
+    //     //return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*25);
+    // }
 
     //Assuming we can process 10 messages in parallel per CPU-Core
     @Bean("cachedThreadPool")

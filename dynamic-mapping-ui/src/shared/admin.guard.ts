@@ -20,7 +20,7 @@
  */
 import { Injectable } from '@angular/core';
 import { CanActivate } from '@angular/router';
-import { SharedService } from './shared.service';
+import { SharedService } from './service/shared.service';
 
 @Injectable({ providedIn: 'root' })
 export class AdminGuard implements CanActivate {

@@ -51,10 +51,10 @@ import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.c
 import { ConnectorConfigurationService } from '../connector-configuration.service';
 import {
   ConnectorStatus,
-  StatusEventTypes
+  LoggingEventType
 } from '../connector-log/connector-status.model';
-import { DeploymentMapEntry } from '../model/shared.model';
-import { uuidCustom } from '../model/util';
+import { DeploymentMapEntry } from '../mapping/shared.model';
+import { uuidCustom } from '../mapping/util';
 import { ConfigurationConfigurationModalComponent } from './create/connector-configuration-modal.component';
 import {
   ConnectorConfiguration,
@@ -89,7 +89,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
   configurations$: Observable<ConnectorConfiguration[]>;
-  StatusEventTypes = StatusEventTypes;
+  LoggingEventType = LoggingEventType;
   pagination: Pagination = {
     pageSize: 30,
     currentPage: 1

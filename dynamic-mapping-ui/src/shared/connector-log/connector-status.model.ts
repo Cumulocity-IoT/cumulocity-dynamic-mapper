@@ -25,7 +25,7 @@ export interface ConnectorStatusEvent {
   date?: string;
   status: ConnectorStatus;
   message: string;
-  type: StatusEventTypes;
+  type: string;
 }
 
 export enum ConnectorStatus {
@@ -38,11 +38,62 @@ export enum ConnectorStatus {
   DISCONNECTING = 'DISCONNECTING',
   FAILED = 'FAILED'
 }
-export enum StatusEventTypes {
-  STATUS_CONNECTOR_EVENT_TYPE = 'd11r_connectorStatusEvent',
-  STATUS_MAPPING_CHANGED_EVENT_TYPE = 'd11r_mappingChangedEvent',
-  STATUS_SUBSCRIPTION_EVENT_TYPE = 'd11r_subscriptionEvent',
-  STATUS_NOTIFICATION_EVENT_TYPE = 'd11r_notificationStatusEvent',
+
+export enum LoggingEventType {
+  STATUS_SUBSCRIPTION_EVENT_TYPE = 'STATUS_SUBSCRIPTION_EVENT_TYPE',
+  STATUS_CONNECTOR_EVENT_TYPE = 'STATUS_CONNECTOR_EVENT_TYPE',
+  MAPPING_LOADING_ERROR_EVENT_TYPE = 'MAPPING_LOADING_ERROR_EVENT_TYPE',
   STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE = 'STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
+  STATUS_MAPPING_CHANGED_EVENT_TYPE = 'STATUS_MAPPING_CHANGED_EVENT_TYPE',
+  STATUS_NOTIFICATION_EVENT_TYPE = 'STATUS_NOTIFICATION_EVENT_TYPE',
   ALL = 'ALL'
+}
+
+export interface LoggingEventTypeDetails {
+  name: string;
+  type?: string;
+  component: string;
+}
+
+export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetails> = {
+  [LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE]: {
+    name: 'STATUS_SUBSCRIPTION_EVENT_TYPE',
+    type: 'd11r_subscriptionEvent',
+    component: 'd11r_connector'
+  },
+  [LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE]: {
+    name: 'STATUS_CONNECTOR_EVENT_TYPE',
+    type: 'd11r_connectorStatusEvent',
+    component: 'd11r_connector'
+  },
+  [LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE]: {
+    name: 'MAPPING_LOADING_ERROR_EVENT_TYPE',
+    type: 'd11r_mappingLoadingErrorEvent',
+    component: 'd11r_mapping'
+  },
+  [LoggingEventType.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE]: {
+    name: 'STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE',
+    type: 'd11r_mappingActivationErrorEvent',
+    component: 'd11r_mapping'
+  },
+  [LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE]: {
+    name: 'STATUS_MAPPING_CHANGED_EVENT_TYPE',
+    type: 'd11r_mappingChangedEvent',
+    component: 'd11r_mapping'
+  },
+  [LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE]: {
+    name: 'STATUS_NOTIFICATION_EVENT_TYPE',
+    type: 'd11r_notificationStatusEvent',
+    component: 'd11r_connector'
+  },
+  [LoggingEventType.ALL]: {
+    name: 'ALL',
+    type: 'ALL',
+    component: 'd11r_AnyComponent'
+  }
+};
+
+// Helper function to get details for a specific event type
+export function getLoggingEventTypeDetails(eventType: LoggingEventType): LoggingEventTypeDetails {
+  return LoggingEventTypeMap[eventType];
 }

@@ -36,7 +36,7 @@ import { MappingService } from '../core/mapping.service';
 import { isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
 import { DeploymentMapEntry, StepperConfiguration } from '../../shared';
-import { SnoopStatus } from '../../shared/model/shared.model';
+import { SnoopStatus } from '../../shared/mapping/shared.model';
 import { CdkStep } from '@angular/cdk/stepper';
 import {
   HOUSEKEEPING_INTERVAL_SECONDS,
@@ -105,7 +105,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getCurrentMapping(): Mapping {
-    this.mapping.target = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
+    this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
     return {
       ...this.mapping,
       lastUpdate: Date.now()

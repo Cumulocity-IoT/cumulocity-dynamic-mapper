@@ -59,7 +59,7 @@ import {
   checkTopicsOutboundAreValid,
   checkTopicsInboundAreValid
 } from './shared/util';
-import { NODE1 } from '../shared/model/util';
+import { NODE1 } from '../shared/mapping/util';
 import { MappingSubscriptionComponent } from './subscription-grid/subscription.component';
 import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
 import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';

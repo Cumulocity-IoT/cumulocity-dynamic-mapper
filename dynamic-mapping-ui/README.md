@@ -18,13 +18,13 @@ The mapper processes messages in both directions:
 Different mappings types can be used:
 <br>
 <br>
-![Add mapping](image/Dynamic_Mapper_Mapping_Table_Add.png)
+![Add mapping](image/Dynamic_Mapper_Mapping_Table_Add_Modal.png)
 <br>
 <br>
 Mappings are defined in a graphical editor using JSONata expressions:
 <br>
 <br>
-![Define mappings](image/Dynamic_Mapper_Mapping_Stepper_Substitution.png)
+![Define mappings](image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png)
 <br>
 <br>
 For the complete documentation please check the github project [cumulocity-dynamic-mqtt-mapper](https://github.com/SoftwareAG/cumulocity-dynamic-mqtt-mapper).

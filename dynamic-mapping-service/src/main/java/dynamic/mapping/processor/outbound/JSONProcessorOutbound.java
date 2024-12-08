@@ -53,9 +53,10 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context,
+    public ProcessingContext<JsonNode> deserializePayload(Mapping mapping,
             C8YMessage c8yMessage) throws IOException {
         JsonNode jsonNode = objectMapper.readTree(c8yMessage.getPayload());
+        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
         context.setPayload(jsonNode);
         return context;
     }
