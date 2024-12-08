@@ -21,6 +21,11 @@
 
 package dynamic.mapping.core;
 
+import static java.util.Map.entry;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -69,8 +74,8 @@ public class MappingComponent {
     // structure: <tenant, < mappingIdent , status>>
     private Map<String, Map<String, MappingStatus>> tenantMappingStatus = new HashMap<>();
 
-    // structure: <tenant, < id , status>>
-    private Map<String, Map<String, MappingStatus>> tenantMappingLoadingError = new HashMap<>();
+    // // structure: <tenant, < id , status>>
+    // private Map<String, Map<String, MappingStatus>> tenantMappingLoadingError = new HashMap<>();
 
     // structure: <tenant, < mappingId ,list of connectorId>>
     private Map<String, Map<String, List<String>>> tenantDeploymentMap = new HashMap<>();
@@ -118,7 +123,7 @@ public class MappingComponent {
     public void initializeMappingStatus(String tenant, boolean reset) {
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                 .getMappingServiceRepresentations().get(tenant);
-        tenantMappingLoadingError.put(tenant, new HashMap<String, MappingStatus>());
+        // tenantMappingLoadingError.put(tenant, new HashMap<String, MappingStatus>());
         if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
             log.debug("Tenant {} - Initializing status: {}, {} ", tenant,
                     mappingServiceRepresentation.getMappingStatus(),
@@ -214,26 +219,28 @@ public class MappingComponent {
         return ms;
     }
 
-    public void setMappingLoadingError(String tenant, ManagedObjectRepresentation mo, String message) {
-        // log.info("Tenant {} - get MappingStatus: {}", tenant, m.ident);
-        Map<String, MappingStatus> mappingLoadError = tenantMappingLoadingError.get(tenant);
-        MappingStatus ms = mappingLoadError.get(mo.getId().getValue());
-        if (ms == null) {
-            log.info("Tenant {} - Adding: {} to tenantMappingLoadError", tenant, mo.getId().getValue());
-            ms = new MappingStatus(mo.getId().getValue(), mo.getName(), null, Direction.UNSPECIFIED, null, null, 0, 0,
-                    0, 0, message);
-            mappingLoadError.put(mo.getId().getValue(), ms);
-        } else {
-            ms.setLoadingError(message);
-        }
+    public void sendMappingLoadingError(String tenant, ManagedObjectRepresentation mo, String message) {
+
+			DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			Date now = new Date();
+			String date = dateFormat.format(now);
+			Map<String, String> stMap = Map.ofEntries(
+					entry("message", message),
+					entry("id", mo.getId().getValue()),
+					entry("date", date));
+                    configurationRegistry.getC8yAgent().createEvent(message,
+					C8YAgent.MAPPING_LOADING_ERROR_EVENT_TYPE,
+					DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant, stMap);
     }
 
-    public List<MappingStatus> getMappingLoadingError(String tenant) {
-        // log.info("Tenant {} - get MappingStatus: {}", tenant, m.ident);
-        Map<String, MappingStatus> mappingLoadError = tenantMappingLoadingError.get(tenant);
-        List<MappingStatus> mappingLoadErrorList = mappingLoadError.values().stream().collect(Collectors.toList());
-        return mappingLoadErrorList;
-    }
+    // ic List<MappingStatus> getMappingLoadingError(String tenant) {
+    // // log.info("Tenant {} - get MappingStatus: {
+    // ", tenant, m.ident);
+    // Map<String, MappingStatus> mappingLoadErro
+    //  = tenantMappingLoadingError.get(tenant);
+    // List<MappingStatus> mappingLoadErrorList = mappingLoadError.values().stream().collect(Collectors.toList());
+    //     return mappingLoadErrorList;
+    // }
 
     public List<MappingStatus> getMappingStatus(String tenant) {
         Map<String, MappingStatus> statusMapping = tenantMappingStatus.get(tenant);
@@ -307,10 +314,10 @@ public class MappingComponent {
                             return Optional.of(mapping);
                         } catch (IllegalArgumentException e) {
                             String execeptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
-                            String msg = String.format("Failed to convert managed object %s to mapping: %s", mo.getId(),
+                                    String msg = String.format("Failed to convert managed object %s to mapping: %s", mo.getId(),
                             execeptionMsg);
                             log.warn(msg);
-                            setMappingLoadingError(tenant, mo, msg);
+                            sendMappingLoadingError(tenant, mo, msg);
                             return Optional.<Mapping>empty();
                         }
                     })

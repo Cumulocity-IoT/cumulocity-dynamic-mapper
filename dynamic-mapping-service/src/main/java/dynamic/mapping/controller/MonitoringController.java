@@ -141,13 +141,13 @@ public class MonitoringController {
 		return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	}
 
-    @RequestMapping(value = "/monitoring/status/mapping/error", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<List<MappingStatus>> getMappingLoadingError() {
-		String tenant = contextService.getContext().getTenant();
-		List<MappingStatus> ms = mappingComponent.getMappingLoadingError(tenant);
-		log.info("Tenant {} - Get mapping loadingError: {}", tenant, ms);
-		return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
-	}
+    // @RequestMapping(value = "/monitoring/status/mapping/error", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	// public ResponseEntity<List<MappingStatus>> getMappingLoadingError() {
+	// 	String tenant = contextService.getContext().getTenant();
+	// 	List<MappingStatus> ms = mappingComponent.getMappingLoadingError(tenant);
+	// 	log.info("Tenant {} - Get mapping loadingError: {}", tenant, ms);
+	// 	return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
+	// }
 
 	@RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<MappingTreeNode> getInboundMappingTree() {

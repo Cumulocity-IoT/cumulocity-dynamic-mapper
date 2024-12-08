@@ -48,6 +48,13 @@ export class MonitoringTabFactory implements TabFactory {
         icon: 'pie-chart',
         orientation: 'horizontal'
       } as Tab);
+      tabs.push({
+        path: `sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/serviceEvent`,
+        priority: 790,
+        label: 'Mapping service events',
+        icon: 'event',
+        orientation: 'horizontal'
+      } as Tab);
     }
     return tabs;
   }
