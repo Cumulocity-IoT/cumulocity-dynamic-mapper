@@ -163,7 +163,7 @@ export class ConnectorStatusService {
         (this.filterStatusLog.connectorIdent === 'ALL' || event.connectorIdent === this.filterStatusLog.connectorIdent)
       ),
       map(event => [event]),
-      tap(logs => console.log('StatusLogs:', logs))
+      // tap(logs => console.log('StatusLogs:', logs))
     );
   }
 }
