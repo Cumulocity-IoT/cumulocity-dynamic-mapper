@@ -5,12 +5,10 @@
 
     <logger name="com.cumulocity.microservice.security.filter.provider.SpringSecurityContextProvider" level="ERROR" />
 
-    <!-- <appender name="OpenTelemetry"
-              class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
-    </appender> -->
-
+    <appender name="OpenTelemetry" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+    </appender>
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
-        <!-- <appender-ref ref="OpenTelemetry"/> -->
+        <appender-ref ref="OpenTelemetry"/>
     </root>
 </configuration>
