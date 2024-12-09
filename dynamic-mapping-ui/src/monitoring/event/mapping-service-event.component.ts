@@ -49,12 +49,11 @@ export class MapppingServiceEventComponent implements OnInit, OnDestroy {
     pageSize: 5,
     currentPage: 1
   };
-  mappingService: string;
   events$: Observable<IResultList<IEvent>>;
   loadMoreComponent: LoadMoreComponent;
   LoggingEventTypeMap = LoggingEventTypeMap;
   filterMappingServiceEvent = {type:'ALL'};
-  filterSubject = new BehaviorSubject<void>(null);
+  filterSubject$ = new BehaviorSubject<void>(null);
   destroy$ = new Subject<void>();
   reload$ = new Subject<void>();
 
@@ -65,7 +64,7 @@ export class MapppingServiceEventComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    this.events$ = this.filterSubject.pipe(
+    this.events$ = this.filterSubject$.pipe(
       switchMap(() => from(this.sharedService.getDynamicMappingServiceAgent())),
       switchMap((mappingServiceId) =>
         this.eventService.list({
@@ -89,16 +88,16 @@ export class MapppingServiceEventComponent implements OnInit, OnDestroy {
     } else {
       this.baseFilter['type'] = LoggingEventTypeMap[event].type;
     }
-    this.filterSubject.next();
+    this.filterSubject$.next();
   }
 
   onDateFromChange(date) {
     this.baseFilter['dateFrom'] = date.toISOString();
-    this.filterSubject.next();
+    this.filterSubject$.next();
   }
 
   onDateToChange(date) {
     this.baseFilter['dateTo'] = date.toISOString();
-    this.filterSubject.next();
+    this.filterSubject$.next();
   }
 }

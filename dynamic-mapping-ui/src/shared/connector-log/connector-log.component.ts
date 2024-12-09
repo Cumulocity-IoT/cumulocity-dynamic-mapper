@@ -31,25 +31,23 @@ import {
   LoggingEventType,
   LoggingEventTypeMap,
   SharedService,
-} from '../../shared';
+} from '..';
 import { ConnectorStatusService } from '../connector-status.service';
 import { ConnectorConfigurationService } from '../connector-configuration.service';
 
 @Component({
-  selector: 'd11r-mapping-connector-status',
-  styleUrls: ['./connector-status.component.style.css'],
-  templateUrl: 'connector-status.component.html'
+  selector: 'd11r-mapping-connector-log',
+  styleUrls: ['./connector-log.component.style.css'],
+  templateUrl: 'connector-log.component.html'
 })
 export class ConnectorStatusComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
   monitorings$: Observable<ConnectorStatus>;
-  feature: Feature;
   specifications: ConnectorSpecification[] = [];
   configurations$: Observable<ConnectorConfiguration[]> = new Observable();
   statusLogs$: Observable<any[]> ;
-  private readonly ALL: string = 'ALL';
   filterStatusLog = {
-    connectorIdent: this.ALL,
+    connectorIdent: 'ALL',
     type: LoggingEventType.ALL,
   };
   LoggingEventTypeMap = LoggingEventTypeMap;
@@ -61,23 +59,22 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
     public connectorStatusService: ConnectorStatusService,
     public connectorConfigurationService: ConnectorConfigurationService,
     public alertService: AlertService,
-    private sharedService: SharedService
   ) {}
 
   async ngOnInit() {
     // console.log('Running version', this.version);
     this.connectorStatusService.initConnectorLogsRealtime();
-    this.feature = await this.sharedService.getFeatures();
     this.configurations$ =
       this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
     // Subscribe to logs to verify they're coming through
     this.statusLogs$.pipe(
       takeUntil(this.destroy$)
-    ).subscribe(
-      logs => console.log('Received logs in component:', logs),
-      error => console.error('Error receiving logs:', error)
-    );
+    ).subscribe({
+      next: (logs) => console.log('Received logs in component:', logs),
+      error: (error) => console.error('Error receiving logs:', error),
+      complete: () => console.log('Completed') // optional
+    });
   }
 
   updateStatusLogs() {

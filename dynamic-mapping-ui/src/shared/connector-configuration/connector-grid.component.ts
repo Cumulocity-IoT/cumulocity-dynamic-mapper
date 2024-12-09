@@ -52,7 +52,7 @@ import { ConnectorConfigurationService } from '../connector-configuration.servic
 import {
   ConnectorStatus,
   LoggingEventType
-} from '../connector-log/connector-status.model';
+} from '../connector-log/connector-log.model';
 import { DeploymentMapEntry } from '../mapping/shared.model';
 import { uuidCustom } from '../mapping/util';
 import { ConfigurationConfigurationModalComponent } from './create/connector-configuration-modal.component';

@@ -27,7 +27,7 @@ import { ConfirmationModalComponent } from './confirmation/confirmation-modal.co
 import { CamelCasePipe } from './camel-case.pipe';
 import { CapitalizeCasePipe } from './capitazilze-case.pipe';
 import { DisableDirective } from './disable.directive';
-import { ConnectorStatusComponent } from './connector-log/connector-status.component';
+import { ConnectorStatusComponent } from './connector-log/connector-log.component';
 import { ConnectorConfigurationComponent } from './connector-configuration/connector-grid.component';
 import { ConfigurationConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
