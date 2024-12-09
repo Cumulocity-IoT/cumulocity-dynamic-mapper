@@ -46,14 +46,13 @@ export interface Mapping {
   name: string;
   id: string;
   ident: string;
-  subscriptionTopic?: string;
   publishTopic?: string;
   publishTopicSample?: string;
   mappingTopic?: string;
   mappingTopicSample?: string;
   targetAPI: string;
-  source: string;
-  target: string;
+  sourceTemplate: string;
+  targetTemplate: string;
   active: boolean;
   tested: boolean;
   qos: QOS;
@@ -67,7 +66,6 @@ export interface Mapping {
   mappingType: MappingType;
   extension?: ExtensionEntry;
   direction?: Direction;
-  filterOutbound?: string;
   filterMapping?: string;
   autoAckOperation?: boolean;
   debug?: boolean;
@@ -134,6 +132,7 @@ export interface StepperConfiguration {
   showEditorTarget?: boolean;
   showProcessorExtensionsSource?: boolean;
   showProcessorExtensionsSourceTarget?: boolean;
+  showProcessorExtensionsInternal?: boolean;
   editorMode?: EditorMode;
   allowNoDefinedIdentifier?: boolean;
   allowDefiningSubstitutions?: boolean;
@@ -164,7 +163,7 @@ export interface MappingTypeDescriptionInterface {
   stepperConfiguration: StepperConfiguration;
 }
 
-export const MAPPING_TYPE_DESCRIPTION: Record<
+export const MappingTypeDescriptionMap: Record<
   MappingType,
   MappingTypeDescriptionInterface
 > = {
@@ -236,6 +235,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     },
     stepperConfiguration: {
       showProcessorExtensionsSource: false,
+      showProcessorExtensionsInternal: true,
       allowDefiningSubstitutions: false,
       showEditorSource: false,
       showEditorTarget: true,
@@ -306,7 +306,7 @@ export interface MappingStatus {
   name: string;
   ident: string;
   direction: Direction;
-  subscriptionTopic: string;
+  mappingTopic: string;
   errors: number;
   messagesReceived: number;
   snoopedTemplatesTotal: number;

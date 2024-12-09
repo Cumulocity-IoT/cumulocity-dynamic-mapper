@@ -20,14 +20,14 @@
  */
 import { NgModule } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
-import { JsonEditor2Component } from './editor2/jsoneditor2.component';
+import { JsonEditorComponent } from './editor/jsoneditor.component';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { PaginationModule } from 'ngx-bootstrap/pagination';
 import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
 import { CamelCasePipe } from './camel-case.pipe';
 import { CapitalizeCasePipe } from './capitazilze-case.pipe';
 import { DisableDirective } from './disable.directive';
-import { ConnectorStatusComponent } from './connector-log/connector-status.component';
+import { ConnectorStatusComponent } from './connector-log/connector-log.component';
 import { ConnectorConfigurationComponent } from './connector-configuration/connector-grid.component';
 import { ConfigurationConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
@@ -38,7 +38,7 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
 @NgModule({
   declarations: [
     CheckedRendererComponent,
-    JsonEditor2Component,
+    JsonEditorComponent,
     ConfirmationModalComponent,
     CamelCasePipe,
     CapitalizeCasePipe,
@@ -56,7 +56,7 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
     BsDropdownModule.forRoot()
   ],
   exports: [
-    JsonEditor2Component,
+    JsonEditorComponent,
     ConfirmationModalComponent,
     CamelCasePipe,
     CapitalizeCasePipe,
@@ -67,20 +67,3 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
   ]
 })
 export class SharedModule {}
-
-export enum Operation {
-  ACTIVATE_MAPPING = 'ACTIVATE_MAPPING',
-  CONNECT = 'CONNECT',
-  DISCONNECT = 'DISCONNECT',
-  REFRESH_STATUS_MAPPING = 'REFRESH_STATUS_MAPPING',
-  RELOAD_EXTENSIONS = 'RELOAD_EXTENSIONS',
-  RELOAD_MAPPINGS = 'RELOAD_MAPPINGS',
-  RESET_STATUS_MAPPING = 'RESET_STATUS_MAPPING',
-  REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS',
-  DEBUG_MAPPING = 'DEBUG_MAPPING',
-  SNOOP_MAPPING = 'SNOOP_MAPPING',
-  SNOOP_RESET = 'SNOOP_RESET',
-  RESET_DEPLOYMENT_MAP = 'RESET_DEPLOYMENT_MAP',
-  CLEAR_CACHE = 'CLEAR_CACHE',
-  APPLY_MAPPING_FILTER = 'APPLY_MAPPING_FILTER'
-}

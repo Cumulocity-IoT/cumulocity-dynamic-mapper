@@ -28,7 +28,7 @@
         'm-b-40',
         'p-0',
         'flex-no-shrink'
-      ]"  (onStepChange)="onStepChange($event)" linear #stepper>
+      ]" (onStepChange)="onStepChange($event)" linear #stepper>
     <ng-template c8yStepperIcon="final">
       <span [c8yIcon]="'hand-peace-o'"></span>
     </ng-template>
@@ -144,10 +144,12 @@
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource"
-                        [schemaUpdate]="schemaUpdateSource" [options]="editorOptionsSourceTemplate"
-                        [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()" (contentChanged)="onsourceTemplateChanged($event)" [data]="sourceTemplate"
+                        [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
+                        [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
+                        (contentChanged)="onsourceTemplateChanged($event)" [data]="sourceTemplate"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
-                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
+                      <ng-container
+                        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
@@ -160,9 +162,10 @@
                           <label>Target Template - {{ targetSystem }}</label>
                         </div>
                       </div>
-                      <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorTarget" [schemaUpdate]="schemaUpdateTarget"
-                        [options]="editorOptionsTargetTemplate" [class]="'jse-main-medium'"
-                        (initialized)="onEditorTargetInitialized()"  (contentChanged)="ontargetTemplateChanged($event)" [data]="targetTemplate" #editorGeneral>
+                      <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorTarget"
+                        [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
+                        [class]="'jse-main-medium'" (initialized)="onEditorTargetInitialized()"
+                        (contentChanged)="ontargetTemplateChanged($event)" [data]="targetTemplate" #editorGeneral>
                       </d11r-mapping-json-editor2>
                     </div>
                   </div>
@@ -190,7 +193,7 @@
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
                       <div *ngIf="stepperConfiguration.showEditorSource">
-                        <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateSource"
+                        <d11r-mapping-json-editor2 [updateEditor]="updateSourceEditor"
                           [options]="editorOptionsSourceSubstitution" [class]="'jse-main-small'"
                           (pathChanged)="onSelectedPathSourceChanged($event)"
                           (initialized)="onEditorSourceInitialized()" [data]="sourceTemplate"
@@ -210,7 +213,8 @@
                         </ng-container>
                       </ng-container>
                       <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSourceTarget">
-                        <ng-container *ngTemplateOutlet="extensionTemplateSourceTarget; context: { form: templateForm }">
+                        <ng-container
+                          *ngTemplateOutlet="extensionTemplateSourceTarget; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
                     </div>
@@ -232,7 +236,7 @@
                           </span>
                         </div>
                       </div>
-                      <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateTarget"
+                      <d11r-mapping-json-editor2 [updateEditor]="updateTargetEditor"
                         [options]="editorOptionsTargetSubstitution" [class]="'jse-main-small'"
                         (pathChanged)="onSelectedPathTargetChanged($event)" (initialized)="onEditorTargetInitialized()"
                         [data]="targetTemplate" #editorTargetStepTemplate>
@@ -367,7 +371,8 @@
       </c8y-stepper-buttons>
     </cdk-step>
     <ng-template #extensionTemplateSource let-form="form">
-      <div *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
+      <div
+        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
         <div class="form-group">
           <label translate>Extensions for {{ mapping.mappingType }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
@@ -388,8 +393,7 @@
         <div class="form-group">
           <label translate>Events for {{ mapping.extension.name }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl
-              (change)="
+            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl (change)="
                 onSelectExtensionEvent(templateForm.value.eventName)
               " required>
               <option [ngValue]="null" disabled>
@@ -403,7 +407,7 @@
           </div>
         </div>
       </div>
-      <div class="p-t-48" *ngIf="!stepperConfiguration.showProcessorExtensionsSource && !stepperConfiguration.showProcessorExtensionsSourceTarget
+      <div class="p-t-48" *ngIf="stepperConfiguration.showProcessorExtensionsInternal
     ">
         <small class="text-muted">Template is described internally by the chosen
           mapping type</small>

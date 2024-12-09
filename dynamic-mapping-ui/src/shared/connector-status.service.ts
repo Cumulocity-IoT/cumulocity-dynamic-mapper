@@ -19,16 +19,17 @@
  * @authors Christof Strack
  */
 import { inject, Injectable } from '@angular/core';
-import { EventService, FetchClient } from '@c8y/client';
+import { EventService } from '@c8y/client';
 import {
   CONNECTOR_FRAGMENT,
   ConnectorStatus,
   ConnectorStatusEvent,
+  LoggingEventType,
+  LoggingEventTypeMap,
   SharedService,
-  StatusEventTypes
 } from '../shared';
 
-import { BehaviorSubject, from, merge, Observable } from 'rxjs';
+import { BehaviorSubject, from, merge, Observable, ReplaySubject } from 'rxjs';
 import { filter, map, scan, shareReplay, switchMap, tap } from 'rxjs/operators';
 import {
   EventRealtimeService,
@@ -40,7 +41,6 @@ import {
 })
 export class ConnectorStatusService {
   constructor(
-    private client: FetchClient,
     private eventService: EventService,
     private sharedService: SharedService
   ) {
@@ -52,26 +52,24 @@ export class ConnectorStatusService {
   private eventRealtimeService: EventRealtimeService;
 
   private _agentId: string;
-  private readonly ALL: string = 'ALL';
 
   private readonly RESET = {
-    connectorIdent: this.ALL,
+    connectorIdent: 'ALL',
     connectorName: 'EMPTY',
     status: ConnectorStatus.UNKNOWN,
-    type: StatusEventTypes.ALL,
+    type: LoggingEventTypeMap[LoggingEventType.ALL].type,
     message: '_RESET_'
   };
 
   private filterStatusLog = this.RESET;
 
-  private triggerLogs$: BehaviorSubject<ConnectorStatusEvent[]> =
-    new BehaviorSubject([this.RESET]);
+  private triggerLogs$: BehaviorSubject<ConnectorStatusEvent> =
+    new BehaviorSubject(this.RESET);
 
-  private statusLogs$: Observable<ConnectorStatusEvent[]>;
+  private statusLogs$ = new ReplaySubject<ConnectorStatusEvent[]>(1);
 
   getStatusLogs(): Observable<ConnectorStatusEvent[]> {
-    // console.log('Calling: getStatusLogs');
-    return this.statusLogs$;
+    return this.statusLogs$.asObservable();
   }
 
   async startConnectorStatusLogs() {
@@ -81,13 +79,15 @@ export class ConnectorStatusService {
     }
   }
 
-  updateStatusLogs(filter: any) {
-    const updatedFilter = {
-      ...this.RESET,
-      ...filter
-    };
+  updateStatusLogs(filter: {
+    connectorIdent: string,
+    type: LoggingEventType,
+  }) {
+    const updatedFilter = this.RESET;
+    updatedFilter.type = LoggingEventTypeMap[filter.type].type;
+    updatedFilter.connectorIdent = filter.connectorIdent;
     this.filterStatusLog = updatedFilter;
-    this.triggerLogs$.next([updatedFilter]);
+    this.triggerLogs$.next(updatedFilter);
   }
 
   async initConnectorLogsRealtime() {
@@ -99,85 +99,71 @@ export class ConnectorStatusService {
     //   this._agentId
     // );
     const filteredConnectorStatus$ = this.triggerLogs$.pipe(
-      // tap((x) => console.log('TriggerLogs In', x)),
-      switchMap((x) => {
-        const filter = {
-          pageSize: 5,
-          withTotalPages: false,
-          source: this._agentId
-        };
-        if (x[0]?.type !== this.ALL) {
-          filter['type'] = x[0]?.type;
-        }
-        return this.eventService.list(filter);
-      }),
-      map((data) => data.data),
-      map((events) =>
-        events
-          .filter((ev) => ev[CONNECTOR_FRAGMENT])
-          .map((event) => {
-            event[CONNECTOR_FRAGMENT].type = event.type;
-            return event[CONNECTOR_FRAGMENT];
-          })
-      ),
-      map((events) =>
-        events.filter((event) => {
-          return this.filterStatusLog.connectorIdent == this.ALL
-            ? true
-            : event.connectorIdent == this.filterStatusLog.connectorIdent;
+      tap(x => console.log('TriggerLogs In', x, this.filterStatusLog)),
+      switchMap(x => this.eventService.list({
+        pageSize: 100,
+        withTotalPages: false,
+        source: this._agentId,
+        ...(x.type !== 'ALL' && { type: x.type })
+      })),
+      map(({ data }) => data),
+      map(events => events
+        .filter(ev => {
+          // console.log('Event has:', ev, ev.hasOwnProperty(CONNECTOR_FRAGMENT));
+          return ev.hasOwnProperty(CONNECTOR_FRAGMENT);
         })
-      )
-      //   tap((x) => console.log('TriggerLogs Out', x))
+        .map(event => ({
+          ...event[CONNECTOR_FRAGMENT],
+          type: event.type
+        }))
+      ),
+      map(events => events.filter(event => 
+        this.filterStatusLog.connectorIdent === 'ALL' || 
+        event.connectorIdent === this.filterStatusLog.connectorIdent
+      )),
+      // tap(x => console.log('TriggerLogs Out', x))
     );
 
     //  const refreshedConnectorStatus$: Observable<any> =
-    this.statusLogs$ = merge(
+    merge(
       filteredConnectorStatus$,
       this.getAllConnectorStatusEvents(),
-      this.triggerLogs$
+      this.triggerLogs$.pipe(
+        filter(cmd => cmd.message === '_RESET_'),
+        map(cmd => [cmd])
+      )
     ).pipe(
-      // tap((i) => console.log('Items', i)),
       scan((acc, val) => {
         let sortedAcc;
-        if (val[0]?.message == '_RESET_') {
-          // console.log('Reset loaded logs!');
+        if (val[0]?.message === '_RESET_') {
           sortedAcc = [];
         } else {
           sortedAcc = val.concat(acc);
         }
-        sortedAcc = sortedAcc.slice(0, 9);
+        sortedAcc = sortedAcc?.slice(0, 9);
         return sortedAcc;
       }, []),
       shareReplay(1)
-    );
+    ).subscribe(this.statusLogs$);
   }
 
   private getAllConnectorStatusEvents(): Observable<ConnectorStatusEvent[]> {
-    // console.log('Started subscriptions:', this._agentId);
-
-    // subscribe to event stream
     this.eventRealtimeService.start();
+    
     return from(this.sharedService.getDynamicMappingServiceAgent()).pipe(
-      switchMap((agentId) => {
-        return this.eventRealtimeService.onAll$(agentId);
-      }),
-      map((p) => p['data']),
-      map((e) => {
-        e[CONNECTOR_FRAGMENT].type = e['type'];
-        return e[CONNECTOR_FRAGMENT];
-      }),
-      filter((e) =>
-        this.filterStatusLog.type == this.ALL
-          ? true
-          : e['type'] == this.filterStatusLog.type
+      switchMap(agentId => this.eventRealtimeService.onAll$(agentId)),
+      map(({ data }) => data),
+      filter(event => event[CONNECTOR_FRAGMENT]),
+      map(event => ({
+        ...event[CONNECTOR_FRAGMENT],
+        type: event['type']
+      })),
+      filter(event => 
+        (this.filterStatusLog.type === 'ALL' || event.type === this.filterStatusLog.type) &&
+        (this.filterStatusLog.connectorIdent === 'ALL' || event.connectorIdent === this.filterStatusLog.connectorIdent)
       ),
-      filter((e) =>
-        this.filterStatusLog.connectorIdent == this.ALL
-          ? true
-          : e.connectorIdent == this.filterStatusLog.connectorIdent
-      ),
-      map((e) => [e]),
-      tap((l) => console.log('StatusLogs:', l))
+      map(event => [event]),
+      // tap(logs => console.log('StatusLogs:', logs))
     );
   }
 }

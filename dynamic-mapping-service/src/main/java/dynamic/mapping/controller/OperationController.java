@@ -19,12 +19,12 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package dynamic.mapping.rest;
+package dynamic.mapping.controller;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -46,7 +46,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.cumulocity.microservice.security.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.SnoopStatus;
@@ -75,16 +74,10 @@ public class OperationController {
 	C8YAgent c8YAgent;
 
 	@Autowired
-	private RoleService roleService;
-
-	@Autowired
 	private ContextService<UserCredentials> contextService;
 
 	@Autowired
 	private ConfigurationRegistry configurationRegistry;
-
-	@Autowired
-	private MappingComponent mappingStatusComponent;
 
 	@Value("${APP.externalExtensionsEnabled}")
 	private boolean externalExtensionsEnabled;
@@ -165,7 +158,7 @@ public class OperationController {
 				Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, mappingId, activeBoolean);
 				Map<String, AConnectorClient> connectorMap = connectorRegistry
 						.getClientsForTenant(tenant);
-				// subscribe/unsubscribe respective subscriptionTopic of mapping only for
+				// subscribe/unsubscribe respective mappingTopic of mapping only for
 				// outbound mapping
 				Map<String, String> failed = new HashMap<>();
 				for (AConnectorClient client : connectorMap.values()) {

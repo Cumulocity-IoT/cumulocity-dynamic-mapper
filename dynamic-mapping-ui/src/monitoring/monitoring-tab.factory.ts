@@ -21,7 +21,7 @@
 import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
-import { NODE2 } from '../shared/model/util';
+import { NODE2 } from '../shared/mapping/util';
 @Injectable()
 export class MonitoringTabFactory implements TabFactory {
   constructor(
@@ -46,6 +46,13 @@ export class MonitoringTabFactory implements TabFactory {
         priority: 800,
         label: 'Monitoring chart',
         icon: 'pie-chart',
+        orientation: 'horizontal'
+      } as Tab);
+      tabs.push({
+        path: `sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/serviceEvent`,
+        priority: 790,
+        label: 'Mapping service events',
+        icon: 'logs',
         orientation: 'horizontal'
       } as Tab);
     }

@@ -1,3 +1,6 @@
+#!/bin/sh
+set -e
+
 ###
 # script to delete connection configurations from the tenantoptions
 # this can be used after a migration to a new version of the dynamic mapper. in case the structure of the connection configurations has changed and become invalid

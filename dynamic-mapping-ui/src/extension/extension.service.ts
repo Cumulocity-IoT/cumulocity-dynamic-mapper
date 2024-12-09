@@ -69,7 +69,7 @@ export class ExtensionService {
     return result;
   }
 
-  async getProcessorExtensions(): Promise<unknown> {
+  async getProcessorExtensions(): Promise<Map<string,Extension>> {
     const response: IFetchResponse = await this.client.fetch(
       `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}`,
       {

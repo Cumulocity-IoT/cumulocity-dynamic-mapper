@@ -33,13 +33,13 @@ import { AlertService } from '@c8y/ngx-components';
 import { BehaviorSubject } from 'rxjs';
 import {
   Direction,
-  JsonEditor2Component,
+  JsonEditorComponent,
   Mapping,
   getSchema
 } from '../../shared/';
 import { MappingService } from '../core/mapping.service';
 import { C8YRequest } from '../processor/processor.model';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
+import { StepperConfiguration } from 'src/shared/mapping/shared.model';
 import { isDisabled } from '../shared/util';
 
 @Component({
@@ -84,11 +84,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   };
 
   @ViewChild('editorTestingPayload', { static: false })
-  editorTestingPayload: JsonEditor2Component;
+  editorTestingPayload: JsonEditorComponent;
   @ViewChild('editorTestingRequest', { static: false })
-  editorTestingRequest: JsonEditor2Component;
+  editorTestingRequest: JsonEditorComponent;
   @ViewChild('editorTestingResponse', { static: false })
-  editorTestingResponse: JsonEditor2Component;
+  editorTestingResponse: JsonEditorComponent;
   source: any;
 
   constructor(
@@ -112,9 +112,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     this.editorTestingPayloadTemplateEmitter.subscribe((current) => {
       this.currentContext = current;
-      this.source = JSON.parse(this.currentContext.mapping.source);
-      this.currentContext.mapping.source = JSON.stringify(current.sourceTemplate);
-      this.currentContext.mapping.target = JSON.stringify(current.targetTemplate);
+      this.source = JSON.parse(this.currentContext.mapping.sourceTemplate);
+      this.currentContext.mapping.sourceTemplate = JSON.stringify(current.sourceTemplate);
+      this.currentContext.mapping.targetTemplate = JSON.stringify(current.targetTemplate);
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector('#editorTestingRequest');
       if (editorTestingRequestRef != null) {
