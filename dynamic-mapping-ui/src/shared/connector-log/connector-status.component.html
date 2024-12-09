@@ -25,7 +25,7 @@
     <c8y-form-group>
       <form class="form-inline">
         <div class="c8y-select-wrapper button-bottom-margin">
-          <select class="form-control" style="width: 180px" [(ngModel)]="filterStatusLog.type" name="type">
+          <select class="form-control" style="width: 280px" [(ngModel)]="filterStatusLog.type" name="type">
             <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
               <option [ngValue]="lt.key"  
                 *ngIf="lt.value['component'] == 'd11r_connector' || lt.value['component'] == LoggingEventTypeMap[LoggingEventType.ALL].component">

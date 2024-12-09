@@ -20,25 +20,53 @@
   -->
 
 <c8y-title translate>Monitoring</c8y-title>
-<c8y-action-bar-item
-  [placement]="'left'"
-  itemClass="navbar-form hidden-xs"
->
-<div class="form-group">
-  <label class="m-r-8" id="listLabel">
-    {{ 'Filter' | translate }}
-  </label>
-  <div class="c8y-select-wrapper">
-    <select class="form-control" style="width: 280px" [ngModel]="filterMappingServiceEvent"  (ngModelChange)="onFilterMappingServiceEventSelect($event)" name="type">
-      <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
-        <option [ngValue]="lt.key">
-          {{ lt.key | humanize }}
-        </option>
-      </ng-container>
-    </select>
-    <span></span>
+<c8y-action-bar-item [placement]="'left'" itemClass="navbar-form hidden-xs">
+  <div class="form-group">
+    <label class="m-r-8" id="listLabel">
+      {{ 'Filter' | translate }}
+    </label>
+    <div class="c8y-select-wrapper">
+      <select class="form-control" style="width: 280px" [(ngModel)]="filterMappingServiceEvent.type"
+        (ngModelChange)="onFilterMappingServiceEventSelect($event)" name="type">
+        <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
+          <option [ngValue]="lt.key">
+            {{ lt.key | humanize }}
+          </option>
+        </ng-container>
+      </select>
+      <span></span>
+    </div>
   </div>
-</div>
+  <div class="form-group datepicker">
+    <c8y-form-group>
+      <label [for]="'fromPicker'" class="control-label">
+        {{ 'From' | translate }}
+      </label>
+      <input [name]="'fromPicker'" [id]="'fromPicker'" [(ngModel)]="filterMappingServiceEvent.dateFrom"
+      (ngModelChange)="onDateFromChange($event)"  class="form-control"
+        [attr.aria-label]="'Date from' | translate" placeholder="{{ 'Date from' | translate }}"
+        [bsConfig]="{ 
+          dateInputFormat: 'YYYY-MM-DD',
+          customTodayClass: 'today', 
+          adaptivePosition: true 
+        }"  bsDatepicker />
+    </c8y-form-group>
+  </div>
+  <div class="form-group datepicker">
+    <c8y-form-group>
+      <label [for]="'toPicker'" class="control-label">
+        {{ 'To' | translate }}
+      </label>
+      <input [name]="'toPicker'" [id]="'toPicker'" [(ngModel)]="filterMappingServiceEvent.dateTo"
+      (ngModelChange)="onDateToChange($event)" class="form-control"
+        [attr.aria-label]="'Date to' | translate" placeholder="{{ 'Date to' | translate }}"
+        [bsConfig]="{ 
+          dateInputFormat: 'YYYY-MM-DD',
+          customTodayClass: 'today', 
+          adaptivePosition: true 
+        }"  bsDatepicker />
+    </c8y-form-group>
+  </div>
 </c8y-action-bar-item>
 <div class="d-flex d-col bg-inherit content-fullpage bg-gray-white">
   <div class="card-header large-padding separator sticky-top">
@@ -77,7 +105,7 @@
               </span>
             </div>
             <div class="col-2">
-              <span>
+              <span class="text-10 label label-primary">
                 {{ event.type }}
               </span>
             </div>

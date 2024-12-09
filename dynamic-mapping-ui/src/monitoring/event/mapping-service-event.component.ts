@@ -20,7 +20,6 @@
  */
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import {
-  ActionControl,
   AlertService,
   LoadMoreComponent,
   Pagination
@@ -40,7 +39,7 @@ import { EventService, IEvent, IResultList } from '@c8y/client';
 })
 export class MapppingServiceEventComponent implements OnInit, OnDestroy {
 
-  BASE_FILTER = {
+  baseFilter = {
     pageSize: 1000,
     withTotalPages: true,
     // type: LOCATION_UPDATE_EVENT_TYPE
@@ -54,8 +53,8 @@ export class MapppingServiceEventComponent implements OnInit, OnDestroy {
   events$: Observable<IResultList<IEvent>>;
   loadMoreComponent: LoadMoreComponent;
   LoggingEventTypeMap = LoggingEventTypeMap;
-  filterMappingServiceEvent: string = 'ALL';
-  filterSubject = new BehaviorSubject<string>(null);
+  filterMappingServiceEvent = {type:'ALL'};
+  filterSubject = new BehaviorSubject<void>(null);
   destroy$ = new Subject<void>();
   reload$ = new Subject<void>();
 
@@ -70,7 +69,7 @@ export class MapppingServiceEventComponent implements OnInit, OnDestroy {
       switchMap(() => from(this.sharedService.getDynamicMappingServiceAgent())),
       switchMap((mappingServiceId) =>
         this.eventService.list({
-          ...this.BASE_FILTER,
+          ...this.baseFilter,
           source: mappingServiceId,
         })
       ),
@@ -86,10 +85,20 @@ export class MapppingServiceEventComponent implements OnInit, OnDestroy {
 
   onFilterMappingServiceEventSelect(event) {
     if (event == 'ALL'){
-      delete this.BASE_FILTER['type'];
+      delete this.baseFilter['type'];
     } else {
-      this.BASE_FILTER['type'] = LoggingEventTypeMap[event].type;
+      this.baseFilter['type'] = LoggingEventTypeMap[event].type;
     }
-    this.filterSubject.next(event);
+    this.filterSubject.next();
+  }
+
+  onDateFromChange(date) {
+    this.baseFilter['dateFrom'] = date.toISOString();
+    this.filterSubject.next();
+  }
+
+  onDateToChange(date) {
+    this.baseFilter['dateTo'] = date.toISOString();
+    this.filterSubject.next();
   }
 }

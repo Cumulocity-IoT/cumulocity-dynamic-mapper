@@ -31,6 +31,7 @@ import { MonitoringTabFactory } from './monitoring-tab.factory';
 import { NODE2 } from '../shared/mapping/util';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { MapppingServiceEventComponent } from './event/mapping-service-event.component';
+import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 
 @NgModule({
   declarations: [
@@ -44,6 +45,7 @@ import { MapppingServiceEventComponent } from './event/mapping-service-event.com
   imports: [
     CoreModule,
     BrokerConfigurationModule,
+    BsDatepickerModule,
     NgxEchartsModule.forRoot({
       echarts: () => import('echarts')
     })
