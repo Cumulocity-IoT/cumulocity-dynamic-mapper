@@ -40,9 +40,7 @@
     "ngx-bootstrap": "^18.0.0",
     "ngx-echarts": "^18.0.0",
     "rxjs": "~7.8.1",
-    "style-loader": "^4.0.0",
     "vanilla-jsoneditor": "^2.3.2",
-    "webpack": "^5.90.3",
     "zone.js": "^0.14.10"
   },
   "devDependencies": {
