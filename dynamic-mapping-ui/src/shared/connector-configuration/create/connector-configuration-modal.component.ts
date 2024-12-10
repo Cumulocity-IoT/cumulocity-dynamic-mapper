@@ -16,7 +16,6 @@ import {
   FormatStringPipe,
   nextIdAndPad
 } from '../..';
-import { FieldTextareaCustom } from '../../component/formly/textarea.type.component';
 
 @Component({
   selector: 'd11r-edit-connector-modal',
@@ -246,7 +245,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
                   className: 'col-lg-12',
                   key: `properties.${entry.key}`,
                   id: `${entry.key}`,
-                  type: FieldTextareaCustom,
+                  type: 'textarea-custom',
                   wrappers: ['c8y-form-field'],
                   props: {
                     label: entry.key,
