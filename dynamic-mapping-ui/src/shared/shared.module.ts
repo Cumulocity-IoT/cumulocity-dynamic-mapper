@@ -38,8 +38,6 @@ import { FormatStringPipe } from './misc/format-string.pipe';
 import { WrapperCustomFormField } from './component/formly/custom-form-field.wrapper.component';
 import { FieldTextareaCustom } from './component/formly/textarea.type.component';
 import { FieldInputCustom } from './component/formly/input-custom.type.component';
-import { MessageField } from './component/formly/message.type.component';
-import { FormlyTextField } from './component/formly/text.type.component';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 
 @NgModule({
@@ -59,8 +57,6 @@ import { FORMLY_CONFIG } from '@ngx-formly/core';
     WrapperCustomFormField,
     FieldTextareaCustom,
     FieldInputCustom,
-    MessageField,
-    FormlyTextField
   ],
   imports: [
     CoreModule,
@@ -81,8 +77,6 @@ import { FORMLY_CONFIG } from '@ngx-formly/core';
     WrapperCustomFormField,
     FieldTextareaCustom,
     FieldInputCustom,
-    MessageField,
-    FormlyTextField
   ],
   providers:[FormatStringPipe,
     {
@@ -98,11 +92,6 @@ import { FORMLY_CONFIG } from '@ngx-formly/core';
             name: 'input-custom',
             component: FieldInputCustom
           },
-          {
-            name: 'message-field',
-            component: MessageField
-          },
-          { name: 'text', component: FormlyTextField },
           { name: 'enum', extends: 'select' },
           { name: 'boolean', extends: 'checkbox' }
         ],

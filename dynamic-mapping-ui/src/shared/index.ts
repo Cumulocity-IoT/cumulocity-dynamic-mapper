@@ -17,7 +17,5 @@ export * from './service/shared.model';
 export * from './service/shared.service';
 export * from './shared.module';
 export * from './component/formly/input-custom.type.component';
-export * from './component/formly/message.type.component';
-export * from './component/formly/text.type.component';
 export * from './component/formly/textarea.type.component';
 export * from './component/formly/custom-form-field.wrapper.component';
