@@ -20,20 +20,26 @@
  */
 import { NgModule } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
-import { JsonEditorComponent } from './editor/jsoneditor.component';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { PaginationModule } from 'ngx-bootstrap/pagination';
 import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
-import { CamelCasePipe } from './camel-case.pipe';
-import { CapitalizeCasePipe } from './capitazilze-case.pipe';
-import { DisableDirective } from './disable.directive';
-import { ConnectorStatusComponent } from './connector-log/connector-log.component';
-import { ConnectorConfigurationComponent } from './connector-configuration/connector-grid.component';
-import { ConfigurationConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
-import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
-import { ConnectorStatusRendererComponent } from './connector-configuration/connector-status.renderer.component';
 import { CheckedRendererComponent } from './connector-configuration/checked-renderer.component';
+import { ConnectorConfigurationComponent } from './connector-configuration/connector-grid.component';
+import { ConnectorStatusRendererComponent } from './connector-configuration/connector-status.renderer.component';
+import { ConnectorConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
+import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
+import { ConnectorStatusComponent } from './connector-log/connector-log.component';
+import { JsonEditorComponent } from './editor/jsoneditor.component';
+import { CamelCasePipe } from './misc/camel-case.pipe';
+import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
+import { DisableDirective } from './misc/disable.directive';
+import { FormatStringPipe } from './misc/format-string.pipe';
+import { WrapperCustomFormField } from './component/formly/custom-form-field.wrapper.component';
+import { FieldTextareaCustom } from './component/formly/textarea.type.component';
+import { FieldInputCustom } from './component/formly/input-custom.type.component';
+import { MessageField } from './component/formly/message.type.component';
+import { FormlyTextField } from './component/formly/text.type.component';
 
 @NgModule({
   declarations: [
@@ -42,12 +48,18 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
     ConfirmationModalComponent,
     CamelCasePipe,
     CapitalizeCasePipe,
+    FormatStringPipe,
     DisableDirective,
     ConnectorStatusComponent,
     ConnectorConfigurationComponent,
-    ConfigurationConfigurationModalComponent,
+    ConnectorConfigurationModalComponent,
     StatusEnabledRendererComponent,
-    ConnectorStatusRendererComponent
+    ConnectorStatusRendererComponent,
+    WrapperCustomFormField,
+    FieldTextareaCustom,
+    FieldInputCustom,
+    MessageField,
+    FormlyTextField
   ],
   imports: [
     CoreModule,
@@ -61,9 +73,16 @@ import { CheckedRendererComponent } from './connector-configuration/checked-rend
     CamelCasePipe,
     CapitalizeCasePipe,
     DisableDirective,
+    FormatStringPipe,
     ConnectorStatusComponent,
     ConnectorConfigurationComponent,
-    ConfigurationConfigurationModalComponent
-  ]
+    ConnectorConfigurationModalComponent,
+    WrapperCustomFormField,
+    FieldTextareaCustom,
+    FieldInputCustom,
+    MessageField,
+    FormlyTextField
+  ],
+  providers:[FormatStringPipe]
 })
 export class SharedModule {}

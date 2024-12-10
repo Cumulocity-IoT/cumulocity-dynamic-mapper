@@ -27,7 +27,7 @@ import {
   LoggingEventType,
   LoggingEventTypeMap,
   SharedService,
-} from '../shared';
+} from '..';
 
 import { BehaviorSubject, from, merge, Observable, ReplaySubject } from 'rxjs';
 import { filter, map, scan, shareReplay, switchMap, tap } from 'rxjs/operators';
@@ -99,7 +99,7 @@ export class ConnectorStatusService {
     //   this._agentId
     // );
     const filteredConnectorStatus$ = this.triggerLogs$.pipe(
-      tap(x => console.log('TriggerLogs In', x, this.filterStatusLog)),
+      // tap(x => console.log('TriggerLogs In', x, this.filterStatusLog)),
       switchMap(x => this.eventService.list({
         pageSize: 100,
         withTotalPages: false,

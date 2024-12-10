@@ -29,7 +29,7 @@ import {
   ConnectorStatus,
   Feature
 } from '../shared';
-import { ConnectorConfigurationService } from '../shared/connector-configuration.service';
+import { ConnectorConfigurationService } from '../shared/service/connector-configuration.service';
 import { ConnectorConfigurationComponent } from '../shared/connector-configuration/connector-grid.component';
 
 @Component({

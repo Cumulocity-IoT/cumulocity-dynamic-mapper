@@ -23,7 +23,7 @@ import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute, hookTab } from '@c8y/ngx-components';
 import { MonitoringComponent } from './grid/monitoring.component';
 import { IdRendererComponent } from './renderer/id-cell.renderer.component';
-import { BrokerConfigurationModule } from '../configuration';
+import { ServiceConfigurationModule } from '../configuration';
 import { NumberRendererComponent } from './renderer/number.renderer.component';
 import { DirectionRendererComponent } from './renderer/direction.renderer.component';
 import { MonitoringChartComponent } from './chart/chart.component';
@@ -32,6 +32,7 @@ import { NODE2 } from '../shared/mapping/util';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { MapppingServiceEventComponent } from './event/mapping-service-event.component';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
+import { SharedModule } from '../shared';
 
 @NgModule({
   declarations: [
@@ -44,11 +45,12 @@ import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
   ],
   imports: [
     CoreModule,
-    BrokerConfigurationModule,
+    ServiceConfigurationModule,
     BsDatepickerModule,
     NgxEchartsModule.forRoot({
       echarts: () => import('echarts')
-    })
+    }),
+    SharedModule
   ],
   exports: [],
   providers: [

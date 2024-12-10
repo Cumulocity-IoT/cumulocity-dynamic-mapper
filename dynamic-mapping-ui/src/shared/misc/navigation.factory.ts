@@ -28,8 +28,8 @@ import {
   NavigatorNode,
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
-import { SharedService } from './service/shared.service';
-import { NODE1, NODE2, NODE3 } from './mapping/util';
+import { SharedService } from '../service/shared.service';
+import { NODE1, NODE2, NODE3 } from '../mapping/util';
 import { Router } from '@angular/router';
 
 @Injectable()

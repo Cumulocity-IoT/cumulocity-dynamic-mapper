@@ -28,7 +28,7 @@ import {
   ConnectorStatusEvent,
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_STATUS_CONNECTORS_ENDPOINT,
-} from '.';
+} from '..';
 
 import {
   combineLatest,

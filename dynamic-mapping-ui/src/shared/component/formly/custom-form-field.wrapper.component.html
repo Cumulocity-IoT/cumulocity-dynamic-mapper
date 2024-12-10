@@ -7,7 +7,7 @@
     [attr.for]="id"
     class="text-pre-wrap"
   >
-    {{ props.label | humanize }}
+    {{ props.label | formatStringAsWords }}
     <i
       *ngIf="props.tooltip"
       class="text-info"

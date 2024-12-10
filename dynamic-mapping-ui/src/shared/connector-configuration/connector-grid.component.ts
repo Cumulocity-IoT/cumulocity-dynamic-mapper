@@ -48,14 +48,14 @@ import {
 
 import * as _ from 'lodash';
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
-import { ConnectorConfigurationService } from '../connector-configuration.service';
+import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import {
   ConnectorStatus,
   LoggingEventType
 } from '../connector-log/connector-log.model';
 import { DeploymentMapEntry } from '../mapping/shared.model';
 import { uuidCustom } from '../mapping/util';
-import { ConfigurationConfigurationModalComponent } from './create/connector-configuration-modal.component';
+import { ConnectorConfigurationModalComponent } from './create/connector-configuration-modal.component';
 import {
   ConnectorConfiguration,
   ConnectorSpecification
@@ -283,7 +283,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
       readOnly: this.readOnly
     };
     const modalRef = this.bsModalService.show(
-      ConfigurationConfigurationModalComponent,
+      ConnectorConfigurationModalComponent,
       {
         initialState
       }
@@ -336,7 +336,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
       specifications: this.specifications
     };
     const modalRef = this.bsModalService.show(
-      ConfigurationConfigurationModalComponent,
+      ConnectorConfigurationModalComponent,
       {
         initialState
       }
@@ -421,7 +421,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
       configurationsCount: this.configurations?.length
     };
     const modalRef = this.bsModalService.show(
-      ConfigurationConfigurationModalComponent,
+      ConnectorConfigurationModalComponent,
       {
         initialState
       }

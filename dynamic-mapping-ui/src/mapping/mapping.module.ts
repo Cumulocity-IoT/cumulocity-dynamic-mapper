@@ -28,7 +28,7 @@ import {
 } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { BrokerConfigurationModule } from '../configuration';
+import { ServiceConfigurationModule } from '../configuration';
 import { SharedModule } from '../shared';
 import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
 import { MappingComponent } from './grid/mapping.component';
@@ -41,20 +41,19 @@ import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.re
 import { StatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from './renderer/status.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
-import { WrapperFormlyHorizontal } from './shared/formly/horizontal.wrapper.component';
-import { FieldInputCustom } from './shared/formly/input-custom.type.component';
-import { MessageField } from './shared/formly/message.type.component';
+import { FieldInputCustom } from '../shared/component/formly/input-custom.type.component';
+import { MessageField } from '../shared/component/formly/message.type.component';
 import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 import { MappingStepPropertiesComponent } from './step-property/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
 import { DeviceSelectorSubscriptionComponent } from './subscription-grid/device-selector/device-selector-subscription.component';
-import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
+import { WrapperCustomFormField } from '../shared/component/formly/custom-form-field.wrapper.component';
 import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
 import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
 import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
-import { FieldTextareaCustom } from './shared/formly/textarea.type.component';
+import { FieldTextareaCustom } from '../shared/component/formly/textarea.type.component';
 import {
   checkTopicsOutboundAreValid,
   checkTopicsInboundAreValid
@@ -86,10 +85,6 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
     APIRendererComponent,
     NameRendererComponent,
     MappingTypeComponent,
-    MessageField,
-    WrapperFormlyHorizontal,
-    WrapperCustomFormField,
-    FieldInputCustom,
     MappingConnectorComponent,
     MappingSubscriptionComponent,
     DeviceSelectorSubscriptionComponent,
@@ -106,7 +101,7 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
     DynamicFormsModule,
     ModalModule,
     SharedModule,
-    BrokerConfigurationModule
+    ServiceConfigurationModule
   ],
   exports: [],
   providers: [

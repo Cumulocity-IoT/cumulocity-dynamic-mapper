@@ -2,11 +2,10 @@ import {
   ChangeDetectorRef,
   Component,
   Input,
-  NgZone,
   OnInit,
   Output
 } from '@angular/core';
-import { HumanizePipe, ModalLabels } from '@c8y/ngx-components';
+import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
@@ -14,15 +13,16 @@ import {
   ConnectorConfiguration,
   ConnectorPropertyType,
   ConnectorSpecification,
+  FormatStringPipe,
   nextIdAndPad
 } from '../..';
-import { FieldTextareaCustom } from '../../../mapping/shared/formly/textarea.type.component';
+import { FieldTextareaCustom } from '../../component/formly/textarea.type.component';
 
 @Component({
   selector: 'd11r-edit-connector-modal',
   templateUrl: 'connector-configuration-modal.component.html'
 })
-export class ConfigurationConfigurationModalComponent implements OnInit {
+export class ConnectorConfigurationModalComponent implements OnInit {
   @Input() add: boolean;
   @Input() readOnly: boolean;
   @Input() configuration: Partial<ConnectorConfiguration>;
@@ -36,7 +36,9 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
   labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
   description: string;
 
-  constructor(private cd: ChangeDetectorRef) {}
+  constructor(private cd: ChangeDetectorRef,
+    private formatStringPipe: FormatStringPipe
+  ) {}
 
   ngOnInit(): void {
     this.setConnectorDescription();
@@ -111,7 +113,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
       ]
     });
     if (this.add) {
-      const n = HumanizePipe.humanize(connectorType);
+      const n = this.formatStringPipe.transform(connectorType);
       this.configuration.name = `${n} - ${nextIdAndPad(this.configurationsCount, 2)}`;
       this.configuration.enabled = false;
     }

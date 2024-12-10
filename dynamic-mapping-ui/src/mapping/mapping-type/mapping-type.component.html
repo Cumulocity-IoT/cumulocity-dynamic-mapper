@@ -40,7 +40,7 @@
               ">
               <c8y-li-radio #liRadioOption1 name="mapping_type_group" title="{{ q.value }}"
                 (click)="onSelectMappingType(q.value)"></c8y-li-radio>
-              <span>{{ q.value | humanize }}</span>
+              <span>{{ q.value | formatStringAsWords }}</span>
             </c8y-li>
           </ng-container>
         </c8y-list-group>

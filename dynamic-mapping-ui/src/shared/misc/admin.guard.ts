@@ -18,27 +18,25 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
-import { FieldWrapper } from '@ngx-formly/core';
+import { Injectable } from '@angular/core';
+import { CanActivate } from '@angular/router';
+import { SharedService } from '../service/shared.service';
 
-@Component({
-  selector: 'd11r-formly-horizontal-wrapper',
-  template: `
-    <div class="form-group row">
-      <label [attr.for]="id" class="col-sm-2 col-form-label" *ngIf="props.label">
-        {{ props.label }}
-        <ng-container *ngIf="props.required && props['hideRequiredMarker'] !== true"
-          >*</ng-container
-        >
-      </label>
-      <div class="col-sm-7">
-        <ng-template #fieldComponent></ng-template>
-      </div>
+@Injectable({ providedIn: 'root' })
+export class AdminGuard implements CanActivate {
+  private adminPromise: Promise<boolean>;
 
-      <div *ngIf="showError" class="col-sm-3 invalid-feedback d-block">
-        <formly-validation-message [field]="field"></formly-validation-message>
-      </div>
-    </div>
-  `
-})
-export class WrapperFormlyHorizontal extends FieldWrapper {}
+  constructor(private sharedService: SharedService) {}
+
+  canActivate(): Promise<boolean> {
+    this.adminPromise = this.sharedService.getFeatures().then((conf) => {
+      // console.log(
+      //   "User has externalExtensionEnabled:",
+      //   conf.userHasMappingAdminRole
+      // );
+      return conf.userHasMappingAdminRole;
+    });
+
+    return this.adminPromise;
+  }
+}

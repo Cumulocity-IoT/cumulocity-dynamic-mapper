@@ -32,8 +32,8 @@ import {
   LoggingEventTypeMap,
   SharedService,
 } from '..';
-import { ConnectorStatusService } from '../connector-status.service';
-import { ConnectorConfigurationService } from '../connector-configuration.service';
+import { ConnectorStatusService } from '../service/connector-status.service';
+import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 
 @Component({
   selector: 'd11r-mapping-connector-log',
@@ -71,7 +71,7 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
     this.statusLogs$.pipe(
       takeUntil(this.destroy$)
     ).subscribe({
-      next: (logs) => console.log('Received logs in component:', logs),
+      // next: (logs) => console.log('Received logs in component:', logs),
       error: (error) => console.error('Error receiving logs:', error),
       complete: () => console.log('Completed') // optional
     });

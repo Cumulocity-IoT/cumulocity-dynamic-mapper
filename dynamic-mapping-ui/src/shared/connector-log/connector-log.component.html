@@ -29,7 +29,7 @@
             <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
               <option [ngValue]="lt.key"  
                 *ngIf="lt.value['component'] == 'd11r_connector' || lt.value['component'] == LoggingEventTypeMap[LoggingEventType.ALL].component">
-                {{ lt.key | humanize }}
+                {{ lt.key | formatStringAsWords }}
               </option>
             </ng-container>
           </select>
