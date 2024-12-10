@@ -41,29 +41,23 @@ import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.re
 import { StatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from './renderer/status.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
-import { FieldInputCustom } from '../shared/component/formly/input-custom.type.component';
-import { MessageField } from '../shared/component/formly/message.type.component';
 import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 import { MappingStepPropertiesComponent } from './step-property/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
 import { DeviceSelectorSubscriptionComponent } from './subscription-grid/device-selector/device-selector-subscription.component';
-import { WrapperCustomFormField } from '../shared/component/formly/custom-form-field.wrapper.component';
 import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
 import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
 import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
-import { FORMLY_CONFIG } from '@ngx-formly/core';
-import { FieldTextareaCustom } from '../shared/component/formly/textarea.type.component';
-import {
-  checkTopicsOutboundAreValid,
-  checkTopicsInboundAreValid
-} from './shared/util';
+
 import { NODE1 } from '../shared/mapping/util';
 import { MappingSubscriptionComponent } from './subscription-grid/subscription.component';
 import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
 import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingFilterComponent } from './filter/mapping-filter.component';
+import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
+import { FORMLY_CONFIG } from '@ngx-formly/core';
 
 @NgModule({
   declarations: [
@@ -121,26 +115,6 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
       provide: FORMLY_CONFIG,
       multi: true,
       useValue: {
-        types: [
-          {
-            name: 'textarea-custom',
-            component: FieldTextareaCustom
-          },
-          {
-            name: 'input-custom',
-            component: FieldInputCustom
-          },
-          {
-            name: 'message-field',
-            component: MessageField
-          }
-        ],
-        wrappers: [
-          {
-            name: 'custom-form-wrapper',
-            component: WrapperCustomFormField
-          }
-        ],
         validators: [
           {
             name: 'checkTopicsInboundAreValid',
@@ -150,7 +124,8 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
             name: 'checkTopicsOutboundAreValid',
             validation: checkTopicsOutboundAreValid
           }
-        ]
+        ],
+
       }
     }
   ]

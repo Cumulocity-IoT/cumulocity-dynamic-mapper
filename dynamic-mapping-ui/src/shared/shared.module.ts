@@ -40,6 +40,7 @@ import { FieldTextareaCustom } from './component/formly/textarea.type.component'
 import { FieldInputCustom } from './component/formly/input-custom.type.component';
 import { MessageField } from './component/formly/message.type.component';
 import { FormlyTextField } from './component/formly/text.type.component';
+import { FORMLY_CONFIG } from '@ngx-formly/core';
 
 @NgModule({
   declarations: [
@@ -83,6 +84,36 @@ import { FormlyTextField } from './component/formly/text.type.component';
     MessageField,
     FormlyTextField
   ],
-  providers:[FormatStringPipe]
+  providers:[FormatStringPipe,
+    {
+      provide: FORMLY_CONFIG,
+      multi: true,
+      useValue: {
+        types: [
+          {
+            name: 'textarea-custom',
+            component: FieldTextareaCustom
+          },
+          {
+            name: 'input-custom',
+            component: FieldInputCustom
+          },
+          {
+            name: 'message-field',
+            component: MessageField
+          },
+          { name: 'text', component: FormlyTextField },
+          { name: 'enum', extends: 'select' },
+          { name: 'boolean', extends: 'checkbox' }
+        ],
+        wrappers: [
+          {
+            name: 'custom-form-wrapper',
+            component: WrapperCustomFormField
+          }
+        ],
+      }
+    }
+  ]
 })
 export class SharedModule {}
