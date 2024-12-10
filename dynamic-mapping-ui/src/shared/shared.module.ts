@@ -35,7 +35,7 @@ import { CamelCasePipe } from './misc/camel-case.pipe';
 import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
 import { DisableDirective } from './misc/disable.directive';
 import { FormatStringPipe } from './misc/format-string.pipe';
-import { WrapperCustomFormField } from './component/formly/custom-form-field.wrapper.component';
+import { WrapperCustomFormField } from './component/formly/custom-form-field-wrapper.component';
 import { FieldTextareaCustom } from './component/formly/textarea.type.component';
 import { FieldInputCustom } from './component/formly/input-custom.type.component';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
@@ -97,7 +97,7 @@ import { FORMLY_CONFIG } from '@ngx-formly/core';
         ],
         wrappers: [
           {
-            name: 'custom-form-wrapper',
+            name: 'custom-form-field-wrapper',
             component: WrapperCustomFormField
           }
         ],

@@ -18,4 +18,4 @@ export * from './service/shared.service';
 export * from './shared.module';
 export * from './component/formly/input-custom.type.component';
 export * from './component/formly/textarea.type.component';
-export * from './component/formly/custom-form-field.wrapper.component';
+export * from './component/formly/custom-form-field-wrapper.component';

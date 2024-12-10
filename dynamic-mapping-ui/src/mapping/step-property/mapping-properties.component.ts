@@ -275,7 +275,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'createNonExistingDevice',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Create device',
               disabled:
@@ -295,7 +295,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'updateExistingDevice',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Update Existing Device',
               disabled:
@@ -315,7 +315,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'autoAckOperation',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Auto acknowledge',
               disabled:
@@ -364,7 +364,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'mapDeviceIdentifier',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Map device identifier',
               switchMode: true,
@@ -407,7 +407,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-6',
             key: 'supportsMessageContext',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               switchMode: true,
               label: 'Supports key message context',

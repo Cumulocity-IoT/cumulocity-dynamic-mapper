@@ -245,7 +245,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className: 'col-lg-5 col-lg-offset-1',
             key: 'pathSource',
             type: 'input-custom',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Source Expression',
               class: 'input-sm',
@@ -294,7 +294,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className: 'col-lg-5',
             key: 'pathTarget',
             type: 'input-custom',
-            wrappers: ['custom-form-wrapper'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Target Expression',
               customWrapperClass: 'm-b-24',

@@ -83,7 +83,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
           {
             key: 'pathSource',
             type: 'input',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Filter Expression',
               placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
