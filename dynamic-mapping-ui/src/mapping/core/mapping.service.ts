@@ -295,33 +295,17 @@ export class MappingService {
   }
 
   async getMappings(direction: Direction): Promise<Mapping[]> {
-    const result: Mapping[] = [];
-    const filter: object = {
-      pageSize: 200,
-      withTotalPages: true
-    };
-    const query: any = {
-      __and: [{ 'd11r_mapping.direction': direction }, { type: MAPPING_TYPE }]
-    };
 
-    //   if (direction == Direction.INBOUND) {
-    //     query = this.queriesUtil.addOrFilter(query, {
-    //       __not: { __has: 'd11r_mapping.direction' }
-    //     });
-    //   }
-    //   query = this.queriesUtil.addAndFilter(query, {
-    //     type: { __has: 'd11r_mapping' }
-    //   });
-
-    const { data } = await this.inventory.listQuery(query, filter);
-
-    data.forEach((m) =>
-      result.push({
-        ...m[MAPPING_FRAGMENT],
-        id: m.id
-      })
+    const path = direction ? `${BASE_URL}/${PATH_MAPPING_ENDPOINT}?direction=${direction}` : `${BASE_URL}/${PATH_MAPPING_ENDPOINT}`;
+    const response = await this.client.fetch(path,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
     );
-
+    const result: Mapping[] = await response.json();
     return result;
   }
 
@@ -536,7 +520,7 @@ export class MappingService {
         filter(
           (payload) =>
             payload['type'] ==
-          LoggingEventTypeMap[LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE].type
+            LoggingEventTypeMap[LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE].type
         )
       )
       .subscribe(() => {

@@ -28,19 +28,17 @@ import {
   ConnectorStatusEvent,
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_STATUS_CONNECTORS_ENDPOINT,
-  SharedService,
 } from '.';
 
 import {
   combineLatest,
-  concat,
   from,
   merge,
   Observable,
   Subject,
   Subscription
 } from 'rxjs';
-import { filter, map, shareReplay, switchMap, tap } from 'rxjs/operators';
+import { map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import {
   EventRealtimeService,
   RealtimeSubjectService
@@ -50,7 +48,6 @@ import {
 export class ConnectorConfigurationService {
   constructor(
     private client: FetchClient,
-    private sharedService: SharedService
   ) {
     this.eventRealtimeService = new EventRealtimeService(
       inject(RealtimeSubjectService)

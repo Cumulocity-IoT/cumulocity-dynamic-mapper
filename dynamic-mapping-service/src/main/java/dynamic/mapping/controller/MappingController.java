@@ -39,6 +39,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -88,10 +89,10 @@ public class MappingController {
 	private String mappingCreateRole;
 
 	@RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<List<Mapping>> getMappings() {
+	public ResponseEntity<List<Mapping>> getMappings(@RequestParam(required = false) Direction direction) {
 		String tenant = contextService.getContext().getTenant();
 		log.info("Tenant {} - Get mappings", tenant);
-		List<Mapping> result = mappingComponent.getMappings(tenant);
+		List<Mapping> result = mappingComponent.getMappings(tenant, direction);
 		return ResponseEntity.status(HttpStatus.OK).body(result);
 	}
 

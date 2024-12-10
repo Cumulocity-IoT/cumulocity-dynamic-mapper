@@ -303,7 +303,7 @@ public class MappingComponent {
         return result;
     }
 
-    public List<Mapping> getMappings(String tenant) {
+    public List<Mapping> getMappings(String tenant, Direction direction) {
         List<Mapping> result = subscriptionsService.callForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
@@ -327,6 +327,8 @@ public class MappingComponent {
                     })
                     .filter(Optional::isPresent)
                     .map(Optional::get)
+                    .filter(mapping -> direction == null | Direction.UNSPECIFIED.equals(direction) ? true
+                            : mapping.direction.equals(direction))
                     .collect(Collectors.toList());
             log.debug("Tenant {} - Loaded mappings (inbound & outbound): {}", tenant, res.size());
             return res;
@@ -348,7 +350,7 @@ public class MappingComponent {
                                 tenant, mapping.id));
             }
             // mapping is deactivated and we can delete it
-            List<Mapping> mappings = getMappings(tenant);
+            List<Mapping> mappings = getMappings(tenant, Direction.UNSPECIFIED);
             List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
             if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();
@@ -376,7 +378,7 @@ public class MappingComponent {
     }
 
     public Mapping createMapping(String tenant, Mapping mapping) {
-        List<Mapping> mappings = getMappings(tenant);
+        List<Mapping> mappings = getMappings(tenant, Direction.UNSPECIFIED);
         List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
         if (errors.size() != 0) {
             String errorList = errors.stream().map(e -> e.toString()).reduce("",
@@ -436,7 +438,7 @@ public class MappingComponent {
 
     public List<Mapping> rebuildMappingOutboundCache(String tenant) {
         // only add outbound mappings to the cache
-        List<Mapping> updatedMappings = getMappings(tenant).stream()
+        List<Mapping> updatedMappings = getMappings(tenant, Direction.OUTBOUND).stream()
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
         log.info("Tenant {} - Loaded mappings outbound: {} to cache", tenant, updatedMappings.size());
@@ -523,7 +525,7 @@ public class MappingComponent {
     }
 
     public List<Mapping> rebuildMappingInboundCache(String tenant) {
-        List<Mapping> updatedMappings = getMappings(tenant).stream()
+        List<Mapping> updatedMappings = getMappings(tenant, Direction.INBOUND).stream()
                 .filter(m -> !Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
         return rebuildMappingInboundCache(tenant, updatedMappings);
