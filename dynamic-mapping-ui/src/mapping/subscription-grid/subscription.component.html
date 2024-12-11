@@ -21,47 +21,37 @@
 
 <c8y-title translate>Mapping</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button
-    *ngIf="stepperConfiguration.direction === Direction.OUTBOUND"
-    class="btn btn-link"
-    title="{{ 'Manage subscriptions' | translate }}"
-    (click)="onDefineSubscription()"
-  >
+  <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription()">
     <i c8yIcon="subscription"></i>
     {{ 'Manage subscriptions' | translate }}
   </button>
 </c8y-action-bar-item>
 
-<div
-  class="card"
-  *ngIf="
+<div class="card" *ngIf="
     stepperConfiguration.direction === Direction.OUTBOUND &&
     subscription?.devices
-  "
->
+  ">
   <div class="card-block content-fullpage border-top border-bottom">
-    <c8y-data-grid
-      #subscriptionGrid
-      [selectable]="true"
-      [title]="titleSubscription | translate"
-      [columns]="columnsSubscriptions"
-      [rows]="subscription?.devices"
-      [pagination]="pagination"
-      [actionControls]="actionControlSubscription"
-      [bulkActionControls]="bulkActionControlSubscription"
-    >
+    <c8y-data-grid #subscriptionGrid [selectable]="true" [title]="titleSubscription | translate"
+      [columns]="columnsSubscriptions" [rows]="subscription?.devices" [pagination]="pagination"
+      [actionControls]="actionControlSubscription" [bulkActionControls]="bulkActionControlSubscription">
+      <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-mail'"
+        [title]="'No subscriptions for devices exist.' | translate" [subtitle]="
+    'Create your first subscription for a device.' | translate
+  " [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Manage subscriptions' | translate }}"
+          (click)="onDefineSubscription()">
+          <i c8yIcon="subscription"></i>
+          {{ 'Manage subscriptions' | translate }}
+        </button>
+      </c8y-ui-empty-state>
     </c8y-data-grid>
   </div>
 </div>
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription }">
   <div class="bottom-drawer">
-    <d11r-device-selector-subscription
-      *ngIf="showConfigSubscription"
-      (cancel)="showConfigSubscription = false"
-      (commit)="onCommitSubscriptions($event)"
-      [deviceList]="subscription.devices"
-    >
+    <d11r-device-selector-subscription *ngIf="showConfigSubscription" (cancel)="showConfigSubscription = false"
+      (commit)="onCommitSubscriptions($event)" [deviceList]="subscription.devices">
     </d11r-device-selector-subscription>
   </div>
 </div>
