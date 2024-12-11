@@ -63,6 +63,7 @@ import {
 import { StatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
 import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
 import { CheckedRendererComponent } from './renderer/checked-renderer.component';
+import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
@@ -179,6 +180,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortOrder: 'asc',
         visible: true,
+        cellRendererComponent: LabelRendererComponent,
         gridTrackSize: '25%'
       },
       {

@@ -31,12 +31,10 @@ import { FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { Direction, Mapping, SAMPLE_TEMPLATES_C8Y, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
-import { DeploymentMapEntry, StepperConfiguration } from '../../shared';
-import { SnoopStatus } from '../../shared/mapping/shared.model';
+import { SnoopStatus, DeploymentMapEntry, StepperConfiguration, Direction, Mapping, SAMPLE_TEMPLATES_C8Y, SharedService } from '../../shared';
 import { CdkStep } from '@angular/cdk/stepper';
 import {
   HOUSEKEEPING_INTERVAL_SECONDS,
@@ -119,7 +117,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   async onCancelButton() {
     this.cancel.emit();
   }
-  
+
   async onStepChange(index: number) {
     this.alertService.info(
       `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`

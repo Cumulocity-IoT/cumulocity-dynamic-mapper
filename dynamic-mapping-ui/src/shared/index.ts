@@ -1,4 +1,9 @@
+export * from './component/formly/custom-form-field-wrapper.component';
+export * from './component/formly/input-custom.type.component';
+export * from './component/formly/textarea.type.component';
+export * from './component/renderer/label.renderer.component';
 export * from './confirmation/confirmation-modal.component';
+export * from './connector-configuration/connector-grid.component';
 export * from './connector-configuration/connector.model';
 export * from './connector-configuration/create/connector-configuration-modal.component';
 export * from './connector-log/connector-log.component';
@@ -8,14 +13,12 @@ export * from './mapping/shared.model';
 export * from './mapping/util';
 export * from './misc/admin.guard';
 export * from './misc/camel-case.pipe';
-export * from './misc/format-string.pipe'
 export * from './misc/capitalize-case.pipe';
+export * from './misc/format-string.pipe';
 export * from './misc/mapping-tab.factory';
 export * from './misc/navigation.factory';
 export * from './misc/overview.guard';
 export * from './service/shared.model';
 export * from './service/shared.service';
 export * from './shared.module';
-export * from './component/formly/input-custom.type.component';
-export * from './component/formly/textarea.type.component';
-export * from './component/formly/custom-form-field-wrapper.component';
+

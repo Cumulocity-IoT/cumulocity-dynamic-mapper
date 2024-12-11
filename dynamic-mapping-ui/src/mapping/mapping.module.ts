@@ -29,35 +29,33 @@ import {
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ServiceConfigurationModule } from '../configuration';
-import { SharedModule } from '../shared';
-import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
+import { NODE1, LabelRendererComponent, SharedModule } from '../shared';
 import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import/import-modal.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
-import { LabelRendererComponent } from './renderer/label.renderer.component';
+import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
 import { QOSRendererComponent } from './renderer/qos.renderer.component';
 import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.renderer.component';
 import { StatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from './renderer/status.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
-import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
-import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
+import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
 import { MappingStepPropertiesComponent } from './step-property/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
-import { DeviceSelectorSubscriptionComponent } from './subscription-grid/device-selector/device-selector-subscription.component';
-import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
+import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
 import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
-import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
+import { DeviceSelectorSubscriptionComponent } from './subscription-grid/device-selector/device-selector-subscription.component';
+import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
+import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 
-import { NODE1 } from '../shared/mapping/util';
-import { MappingSubscriptionComponent } from './subscription-grid/subscription.component';
-import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
-import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
-import { AdviceActionComponent } from './grid/advisor/advice-action.component';
-import { MappingFilterComponent } from './filter/mapping-filter.component';
-import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
+import { MappingFilterComponent } from './filter/mapping-filter.component';
+import { AdviceActionComponent } from './grid/advisor/advice-action.component';
+import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
+import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
+import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
+import { MappingSubscriptionComponent } from './subscription-grid/subscription.component';
 
 @NgModule({
   declarations: [

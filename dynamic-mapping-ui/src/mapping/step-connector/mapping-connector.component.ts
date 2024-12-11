@@ -36,10 +36,9 @@ import {
   StepperConfiguration
 } from '../../shared';
 import { EditorMode } from '../shared/stepper-model';
-import { SharedService } from '../../shared/service/shared.service';
+import { ConnectorGridComponent, SharedService } from '../../shared';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ConnectorConfigurationService } from '../../connector';
-import { ConnectorGridComponent } from '../../shared/connector-configuration/connector-grid.component';
 
 @Component({
   selector: 'd11r-mapping-connector',

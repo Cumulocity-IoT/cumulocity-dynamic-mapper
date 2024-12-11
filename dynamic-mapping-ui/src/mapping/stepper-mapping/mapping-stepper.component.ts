@@ -56,7 +56,7 @@ import {
   getSchema,
   whatIsIt
 } from '../../shared';
-import { JsonEditorComponent } from '../../shared/editor/jsoneditor.component';
+import { JsonEditorComponent } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
