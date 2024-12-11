@@ -39,7 +39,7 @@ import { EditorMode } from '../shared/stepper-model';
 import { SharedService } from '../../shared/service/shared.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ConnectorConfigurationService } from '../../connector';
-import { ConnectorConfigurationComponent } from '../../shared/connector-configuration/connector-grid.component';
+import { ConnectorGridComponent } from '../../shared/connector-configuration/connector-grid.component';
 
 @Component({
   selector: 'd11r-mapping-connector',
@@ -48,8 +48,8 @@ import { ConnectorConfigurationComponent } from '../../shared/connector-configur
   encapsulation: ViewEncapsulation.None
 })
 export class MappingConnectorComponent implements OnInit, OnDestroy {
-  @ViewChild(ConnectorConfigurationComponent)
-  connectorGrid!: ConnectorConfigurationComponent;
+  @ViewChild(ConnectorGridComponent)
+  connectorGrid!: ConnectorGridComponent;
   @Input() stepperConfiguration: StepperConfiguration;
   private _deploymentMapEntry: DeploymentMapEntry;
   @Input()

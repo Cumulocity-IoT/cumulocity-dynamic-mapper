@@ -24,11 +24,10 @@ import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { PaginationModule } from 'ngx-bootstrap/pagination';
 import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
-import { CheckedRendererComponent } from './connector-configuration/checked-renderer.component';
-import { ConnectorConfigurationComponent } from './connector-configuration/connector-grid.component';
-import { ConnectorStatusRendererComponent } from './connector-configuration/connector-status.renderer.component';
+import { CheckedRendererComponent } from './connector-configuration/renderer/checked-renderer.component';
+import { ConnectorGridComponent } from './connector-configuration/connector-grid.component';
+import { ConnectorStatusRendererComponent } from './connector-configuration/renderer/connector-status.renderer.component';
 import { ConnectorConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
-import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
 import { ConnectorStatusComponent } from './connector-log/connector-log.component';
 import { JsonEditorComponent } from './editor/jsoneditor.component';
 import { CamelCasePipe } from './misc/camel-case.pipe';
@@ -39,6 +38,7 @@ import { WrapperCustomFormField } from './component/formly/custom-form-field-wra
 import { FieldTextareaCustom } from './component/formly/textarea.type.component';
 import { FieldInputCustom } from './component/formly/input-custom.type.component';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
+import { StatusEnabledRendererComponent } from './connector-configuration/renderer/status-enabled-renderer.component';
 
 @NgModule({
   declarations: [
@@ -50,7 +50,7 @@ import { FORMLY_CONFIG } from '@ngx-formly/core';
     FormatStringPipe,
     DisableDirective,
     ConnectorStatusComponent,
-    ConnectorConfigurationComponent,
+    ConnectorGridComponent,
     ConnectorConfigurationModalComponent,
     StatusEnabledRendererComponent,
     ConnectorStatusRendererComponent,
@@ -72,7 +72,7 @@ import { FORMLY_CONFIG } from '@ngx-formly/core';
     DisableDirective,
     FormatStringPipe,
     ConnectorStatusComponent,
-    ConnectorConfigurationComponent,
+    ConnectorGridComponent,
     ConnectorConfigurationModalComponent,
     WrapperCustomFormField,
     FieldTextareaCustom,

@@ -60,16 +60,16 @@ import {
   ConnectorConfiguration,
   ConnectorSpecification
 } from './connector.model';
-import { StatusEnabledRendererComponent } from './status-enabled-renderer.component';
-import { ConnectorStatusRendererComponent } from './connector-status.renderer.component';
-import { CheckedRendererComponent } from './checked-renderer.component';
+import { StatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
+import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
+import { CheckedRendererComponent } from './renderer/checked-renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
   styleUrls: ['./connector-grid.component.style.css'],
   templateUrl: 'connector-grid.component.html'
 })
-export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
+export class ConnectorGridComponent implements OnInit, AfterViewInit {
   @Input() selectable = true;
   @Input() readOnly = false;
   @Input() deploy: string[];

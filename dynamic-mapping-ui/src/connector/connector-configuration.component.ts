@@ -30,15 +30,15 @@ import {
   Feature
 } from '../shared';
 import { ConnectorConfigurationService } from '../shared/service/connector-configuration.service';
-import { ConnectorConfigurationComponent } from '../shared/connector-configuration/connector-grid.component';
+import { ConnectorGridComponent } from '../shared/connector-configuration/connector-grid.component';
 
 @Component({
   selector: 'd11r-mapping-broker-connector',
-  styleUrls: ['./broker-connector.component.style.css'],
-  templateUrl: 'broker-connector.component.html'
+  styleUrls: ['./connector-configuration.component.style.css'],
+  templateUrl: 'connector-configuration.component.html'
 })
-export class BrokerConnectorComponent {
-  @ViewChild(ConnectorConfigurationComponent) connectorGrid!: ConnectorConfigurationComponent;
+export class ConnectorConfigurationComponent {
+  @ViewChild(ConnectorGridComponent) connectorGrid!: ConnectorGridComponent;
   version: string = packageJson.version;
   monitoring$: Observable<ConnectorStatus>;
   feature: Feature;

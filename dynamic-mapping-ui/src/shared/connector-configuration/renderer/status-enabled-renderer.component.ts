@@ -24,8 +24,8 @@ import {
   CellRendererContext,
   gettext
 } from '@c8y/ngx-components';
-import { Direction, Operation, SharedService } from '..';
-import { ConnectorConfigurationService } from '../service/connector-configuration.service';
+import { Direction, Operation, SharedService } from '../..';
+import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
 import { HttpStatusCode } from '@angular/common/http';
 
 /**

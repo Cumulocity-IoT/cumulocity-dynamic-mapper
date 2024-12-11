@@ -23,12 +23,12 @@
 import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { SharedModule } from '../shared';
-import { BrokerConnectorComponent } from './broker-connector.component';
+import { ConnectorConfigurationComponent } from './connector-configuration.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { NODE3 } from '../shared/mapping/util';
 
 @NgModule({
-  declarations: [BrokerConnectorComponent],
+  declarations: [ConnectorConfigurationComponent],
   imports: [
     CoreModule,
     SharedModule,
@@ -38,7 +38,7 @@ import { NODE3 } from '../shared/mapping/util';
   providers: [
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-      component: BrokerConnectorComponent,
+      component: ConnectorConfigurationComponent,
     })
   ]
 })
