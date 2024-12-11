@@ -62,7 +62,7 @@ import { BehaviorSubject, Subject, take } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
-import { APIRendererComponent } from '../renderer/api.renderer.component';
+import { LabelRendererComponent } from '../renderer/label.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
@@ -371,7 +371,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         filterable: true,
         sortable: true,
         dataType: ColumnDataType.TextShort,
-        cellRendererComponent: APIRendererComponent,
+        cellRendererComponent: LabelRendererComponent,
         gridTrackSize: '8%'
       },
       {

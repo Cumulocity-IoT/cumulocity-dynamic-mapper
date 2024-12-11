@@ -30,7 +30,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
     </div>
   `
 })
-export class APIRendererComponent {
+export class LabelRendererComponent {
   constructor(public context: CellRendererContext) {
     // console.log("Context:", context.item, context)
   }

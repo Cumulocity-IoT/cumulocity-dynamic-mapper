@@ -34,7 +34,7 @@ import { EditSubstitutionComponent } from './substitution/edit/edit-substitution
 import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import/import-modal.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
-import { APIRendererComponent } from './renderer/api.renderer.component';
+import { LabelRendererComponent } from './renderer/label.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
 import { QOSRendererComponent } from './renderer/qos.renderer.component';
 import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.renderer.component';
@@ -76,7 +76,7 @@ import { FORMLY_CONFIG } from '@ngx-formly/core';
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
     StatusActivationRendererComponent,
-    APIRendererComponent,
+    LabelRendererComponent,
     NameRendererComponent,
     MappingTypeComponent,
     MappingConnectorComponent,

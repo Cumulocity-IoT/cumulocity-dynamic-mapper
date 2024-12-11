@@ -50,7 +50,7 @@ import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
-import { APIRendererComponent } from '../renderer/api.renderer.component';
+import { LabelRendererComponent } from '../renderer/label.renderer.component';
 import { NameRendererComponent } from '../renderer/name.renderer.component';
 // import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
@@ -200,7 +200,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
         filterable: true,
         sortable: true,
         dataType: ColumnDataType.TextShort,
-        cellRendererComponent: APIRendererComponent,
+        cellRendererComponent: LabelRendererComponent,
         gridTrackSize: '7%'
       },
       {
