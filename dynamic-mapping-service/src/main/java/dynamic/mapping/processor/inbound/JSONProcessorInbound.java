@@ -224,7 +224,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
     }
 
     @Override
-    public void applyFiler(ProcessingContext<JsonNode> context) {
+    public void applyFilter(ProcessingContext<JsonNode> context) {
         String tenant = context.getTenant();
         String mappingFilter = context.getMapping().getFilterMapping();
         if (mappingFilter != null && !("").equals(mappingFilter)) {

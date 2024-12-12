@@ -194,7 +194,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                                 }
                             } else {
                                 processor.extractFromSource(context);
-                                processor.applyFiler(context);
+                                processor.applyFilter(context);
                                 if (!context.isIgnoreFurtherProcessing()) {
                                     processor.substituteInTargetAndSend(context);
                                     List<C8YRequest> resultRequests = context.getRequests();
