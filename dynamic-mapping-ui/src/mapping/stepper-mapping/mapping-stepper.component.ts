@@ -36,7 +36,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { Content } from 'vanilla-jsoneditor';
+import { Content, JSONEditorPropsOptional, Mode } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
   API,
@@ -56,7 +56,7 @@ import {
   getSchema,
   whatIsIt
 } from '../../shared';
-import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component';
+import { JsonEditorComponent } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
@@ -103,8 +103,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   isDisabled = isDisabled;
 
   editorTestingPayloadTemplateEmitter = new EventEmitter<any>();
-  schemaUpdateSource: EventEmitter<string> = new EventEmitter<any>();
-  schemaUpdateTarget: EventEmitter<string> = new EventEmitter<any>();
+  updateSourceEditor: EventEmitter<any> = new EventEmitter<any>();
+  updateTargetEditor: EventEmitter<any> = new EventEmitter<any>();
 
   templateForm: FormGroup;
   templateModel: any = {};
@@ -126,7 +126,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   };
 
   editorOptionsSourceTemplate = {
-    mode: 'tree',
+    mode: Mode.tree,
     removeModes: ['table'],
     mainMenuBar: true,
     navigationBar: false,
@@ -136,7 +136,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   };
 
   editorOptionsTargetTemplate = {
-    mode: 'tree',
+    mode: Mode.tree,
     removeModes: ['table'],
     mainMenuBar: true,
     navigationBar: false,
@@ -144,7 +144,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   };
 
   editorOptionsSourceSubstitution = {
-    mode: 'tree',
+    mode: Mode.tree,
     removeModes: ['text', 'table'],
     mainMenuBar: true,
     navigationBar: false,
@@ -154,7 +154,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   };
 
   editorOptionsTargetSubstitution = {
-    mode: 'tree',
+    mode: Mode.tree,
     removeModes: ['text', 'table'],
     mainMenuBar: true,
     navigationBar: false,
@@ -178,9 +178,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
 
   @ViewChild('editorSourceStepTemplate', { static: false })
-  editorSourceStepTemplate: JsonEditor2Component;
+  editorSourceStepTemplate: JsonEditorComponent;
   @ViewChild('editorTargetStepTemplate', { static: false })
-  editorTargetStepTemplate: JsonEditor2Component;
+  editorTargetStepTemplate: JsonEditorComponent;
 
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
@@ -245,7 +245,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className: 'col-lg-5 col-lg-offset-1',
             key: 'pathSource',
             type: 'input-custom',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Source Expression',
               class: 'input-sm',
@@ -294,7 +294,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className: 'col-lg-5',
             key: 'pathTarget',
             type: 'input-custom',
-            wrappers: ['custom-form-wrapper'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Target Expression',
               customWrapperClass: 'm-b-24',
@@ -383,14 +383,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onEditorSourceInitialized() {
-    this.schemaUpdateSource.emit(
-      getSchema(this.mapping.targetAPI, this.mapping.direction, false, false)
+    this.updateSourceEditor.emit(
+      { schema: getSchema(this.mapping.targetAPI, this.mapping.direction, false, false), identifier: API[this.mapping.targetAPI].identifier }
     );
   }
 
   onEditorTargetInitialized() {
-    this.schemaUpdateTarget.emit(
-      getSchema(this.mapping.targetAPI, this.mapping.direction, true, false)
+    this.updateTargetEditor.emit(
+      { schema: getSchema(this.mapping.targetAPI, this.mapping.direction, true, false), identifier: API[this.mapping.targetAPI].identifier }
     );
   }
 
@@ -501,18 +501,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onsourceTemplateChanged(content: Content) {
     if (_.has(content, 'text') && content['text']) {
-      this.mapping.source = reduceSourceTemplate(JSON.parse(content['text']), false);
+      this.mapping.sourceTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
     } else {
-      this.mapping.source = reduceSourceTemplate(content['json'], false);
+      this.mapping.sourceTemplate = reduceSourceTemplate(content['json'], false);
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ontargetTemplateChanged(content: Content) {
     if (_.has(content, 'text') && content['text']) {
-      this.mapping.target = reduceSourceTemplate(JSON.parse(content['text']), false);
+      this.mapping.targetTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
     } else {
-      this.mapping.target = reduceSourceTemplate(content['json'], false);
+      this.mapping.targetTemplate = reduceSourceTemplate(content['json'], false);
     }
   }
 
@@ -563,7 +563,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.templateModel.mapping = this.mapping;
       this.expandTemplates();
       this.extensions =
-        (await this.extensionService.getProcessorExtensions()) as any;
+        (await this.extensionService.getProcessorExtensions()) as Map<string, Extension>;
       if (this.mapping?.extension?.extensionName) {
         if (!this.extensions[this.mapping.extension.extensionName]) {
           const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
@@ -604,7 +604,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   private goToLastStep() {
-        // Mark all previous steps as completed
+    // Mark all previous steps as completed
     this.stepper.steps.forEach((step, index) => {
       if (index < this.stepper.steps.length - 1) {
         step.completed = true;
@@ -613,51 +613,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // Select the last step
     this.stepper.selectedIndex = this.stepper.steps.length - 1;
   }
-
-  // async onNextStep(event: {
-  //   stepper: C8yStepper;
-  //   step: CdkStep;
-  // }): Promise<void> {
-  //   // ('OnNextStep', event.step.label, this.mapping);
-  //   this.step = event.step.label;
-  //   if (this.step == 'Add and select connector') {
-  //     if (
-  //       this.deploymentMapEntry.connectors &&
-  //       this.deploymentMapEntry.connectors.length >= 0
-  //     ) {
-  //       event.stepper.next();
-  //     }
-  //   } else if (this.step == 'General settings') {
-  //     this.templateModel.mapping = this.mapping;
-  //     this.expandTemplates();
-  //     this.extensions =
-  //       (await this.extensionService.getProcessorExtensions()) as any;
-  //     if (this.mapping?.extension?.extensionName) {
-  //       if (!this.extensions[this.mapping.extension.extensionName]) {
-  //         const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
-  //         this.alertService.warning(msg);
-  //       } else {
-  //         this.extensionEvents$.next(
-  //           Object.keys(
-  //             this.extensions[this.mapping.extension.extensionName].extensionEntries
-  //           )
-  //         );
-  //       }
-  //     }
-  //     event.stepper.next();
-  //   } else if (this.step == 'Define substitutions') {
-  //     this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
-  //     this.onSelectSubstitution(0);
-  //     event.stepper.next();
-  //   } else if (this.step == 'Select templates') {
-  //     this.sourceTemplate = this.editorSourceStepTemplate?.get();
-  //     this.targetTemplate = this.editorTargetStepTemplate?.get();
-  //     event.stepper.next();
-  //   } else {
-  //     // console.log("Updated subs III:", this.mapping.substitutions);
-  //     event.stepper.next();
-  //   }
-  // }
 
   async onBackStep(event: {
     stepper: C8yStepper;
@@ -713,21 +668,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else {
       if (this.stepperConfiguration.direction == Direction.INBOUND) {
         this.sourceTemplate = expandExternalTemplate(
-          JSON.parse(this.mapping.source),
+          JSON.parse(this.mapping.sourceTemplate),
           this.mapping,
           levels
         );
         this.targetTemplate = expandC8YTemplate(
-          JSON.parse(this.mapping.target),
+          JSON.parse(this.mapping.targetTemplate),
           this.mapping
         );
       } else {
         this.sourceTemplate = expandC8YTemplate(
-          JSON.parse(this.mapping.source),
+          JSON.parse(this.mapping.sourceTemplate),
           this.mapping
         );
         this.targetTemplate = expandExternalTemplate(
-          JSON.parse(this.mapping.target),
+          JSON.parse(this.mapping.targetTemplate),
           this.mapping,
           levels
         );
@@ -797,15 +752,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   async onTargetAPIChanged(changedTargetAPI) {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.mapping.target = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
-      this.mapping.source = getExternalTemplate(this.mapping);
-      this.schemaUpdateTarget.emit(
+      this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+      this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
+      this.updateTargetEditor.emit(
         getSchema(this.mapping.targetAPI, this.mapping.direction, true, false)
       );
     } else {
-      this.mapping.source = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
-      this.mapping.target = getExternalTemplate(this.mapping);
-      this.schemaUpdateSource.emit(
+      this.mapping.sourceTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+      this.mapping.targetTemplate = getExternalTemplate(this.mapping);
+      this.updateSourceEditor.emit(
         getSchema(this.mapping.targetAPI, this.mapping.direction, false, false)
       );
     }

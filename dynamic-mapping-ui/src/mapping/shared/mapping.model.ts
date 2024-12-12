@@ -41,7 +41,6 @@ export enum ValidationError {
   Multi_Level_Wildcard_Only_At_End,
   Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used,
   One_Substitution_Defining_Device_Identifier_Must_Be_Used,
-  MappingTopicSample_Must_Match_The_SubscriptionTopic,
   MappingTopic_Not_Unique,
   MappingTopic_Must_Not_Be_Substring_Of_Other_MappingTopic,
   Target_Template_Must_Be_Valid_JSON,
@@ -70,9 +69,6 @@ export const ValidationFormlyError = {
   },
   One_Substitution_Defining_Device_Identifier_Must_Be_Used: {
     message: 'Only one MultiLevel wildcard "#" is allowed.'
-  },
-  MappingTopicSample_Must_Match_The_SubscriptionTopic: {
-    message: 'The MappingTopicSample must match the SubscriptionTopic.'
   },
   MappingTopic_Not_Unique: {
     message: 'This MappingTopic must be unique across other MappingTopics.'
@@ -114,7 +110,7 @@ export const ValidationFormlyError = {
         'PublishTopic and PublishTopicSample do not have same structure in the Topic Name.'
     },
   FilterOutbound_Must_Be_Unique: {
-    message: 'FilterOutbound must be unique within all outbound mappings.'
+    message: 'filterMapping must be unique within all outbound mappings.'
   }
 };
 

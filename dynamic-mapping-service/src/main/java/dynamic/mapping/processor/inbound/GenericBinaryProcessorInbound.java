@@ -24,6 +24,7 @@ package dynamic.mapping.processor.inbound;
 import com.fasterxml.jackson.databind.JsonNode;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
+import dynamic.mapping.model.Mapping;
 import dynamic.mapping.processor.model.PayloadWrapper;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.codec.binary.Hex;
@@ -33,13 +34,16 @@ import java.io.IOException;
 //@Service
 public class GenericBinaryProcessorInbound extends JSONProcessorInbound {
 
-    public GenericBinaryProcessorInbound (ConfigurationRegistry configurationRegistry){
+    public GenericBinaryProcessorInbound(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, ConnectorMessage message) throws IOException{
-        JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper("0x" + Hex.encodeHexString(message.getPayload())));
+    public ProcessingContext<JsonNode> deserializePayload(Mapping mapping, ConnectorMessage message)
+            throws IOException {
+        JsonNode payloadJsonNode = objectMapper
+                .valueToTree(new PayloadWrapper("0x" + Hex.encodeHexString(message.getPayload())));
+        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
         context.setPayload(payloadJsonNode);
         return context;
     }

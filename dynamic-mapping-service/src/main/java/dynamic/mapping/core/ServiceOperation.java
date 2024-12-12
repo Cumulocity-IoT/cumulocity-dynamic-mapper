@@ -24,7 +24,7 @@ package dynamic.mapping.core;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -34,10 +34,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ServiceOperation {
+
     private String tenant;
+    
     @NotNull
     private Operation operation;
-    @NotNull
+
     private Map<String, String> parameter;
 
     public static ServiceOperation reloadMappings(String tenant) {

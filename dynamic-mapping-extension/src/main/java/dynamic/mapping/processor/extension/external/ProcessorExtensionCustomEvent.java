@@ -26,7 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import javax.ws.rs.ProcessingException;
+import jakarta.ws.rs.ProcessingException;
 
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;

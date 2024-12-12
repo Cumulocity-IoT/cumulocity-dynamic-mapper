@@ -70,12 +70,12 @@ public abstract class BasePayloadProcessorInbound<T> {
 
 	protected ExecutorService processingCachePool;
 
-	public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, ConnectorMessage message)
+	public abstract ProcessingContext<T> deserializePayload(Mapping mapping, ConnectorMessage message)
 			throws IOException;
 
 	public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
 
-	public abstract void applyFiler(ProcessingContext<T> context);
+	public abstract void applyFilter(ProcessingContext<T> context);
 
 	public void substituteInTargetAndSend(ProcessingContext<T> context) {
 		/*
@@ -148,7 +148,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 				.get(deviceIdentifierMapped2PathTarget2);
 		MappingSubstitution.SubstituteValue device = deviceEntries.get(finalI);
 		int predecessor = -1;
-		DocumentContext payloadTarget = JsonPath.parse(mapping.target);
+		DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
 		for (String pathTarget : pathTargets) {
 			MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
 					new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,

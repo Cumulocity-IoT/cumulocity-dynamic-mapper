@@ -1,12 +1,31 @@
+/*
+ * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+ * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @authors Christof Strack
+ */
 import {
   ChangeDetectorRef,
   Component,
   Input,
-  NgZone,
   OnInit,
   Output
 } from '@angular/core';
-import { HumanizePipe, ModalLabels } from '@c8y/ngx-components';
+import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
@@ -14,15 +33,15 @@ import {
   ConnectorConfiguration,
   ConnectorPropertyType,
   ConnectorSpecification,
+  FormatStringPipe,
   nextIdAndPad
 } from '../..';
-import { FieldTextareaCustom } from '../../../mapping/shared/formly/textarea.type.component';
 
 @Component({
   selector: 'd11r-edit-connector-modal',
   templateUrl: 'connector-configuration-modal.component.html'
 })
-export class ConfigurationConfigurationModalComponent implements OnInit {
+export class ConnectorConfigurationModalComponent implements OnInit {
   @Input() add: boolean;
   @Input() readOnly: boolean;
   @Input() configuration: Partial<ConnectorConfiguration>;
@@ -36,7 +55,9 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
   labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
   description: string;
 
-  constructor(private cd: ChangeDetectorRef) {}
+  constructor(private cd: ChangeDetectorRef,
+    private formatStringPipe: FormatStringPipe
+  ) {}
 
   ngOnInit(): void {
     this.setConnectorDescription();
@@ -111,7 +132,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
       ]
     });
     if (this.add) {
-      const n = HumanizePipe.humanize(connectorType);
+      const n = this.formatStringPipe.transform(connectorType);
       this.configuration.name = `${n} - ${nextIdAndPad(this.configurationsCount, 2)}`;
       this.configuration.enabled = false;
     }
@@ -244,13 +265,13 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
                   className: 'col-lg-12',
                   key: `properties.${entry.key}`,
                   id: `${entry.key}`,
-                  type: FieldTextareaCustom,
+                  type: 'textarea-custom',
                   wrappers: ['c8y-form-field'],
                   props: {
                     label: entry.key,
                     readonly: property.readonly,
                     cols: 120,
-                    rows: 4,
+                    rows: 6,
                     required: property.required
                   }
                 }

@@ -30,7 +30,7 @@ import {
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { Direction, MAPPING_TYPE_DESCRIPTION, MappingType } from '../../shared';
+import { Direction, MappingTypeDescriptionMap, MappingType } from '../../shared';
 import { isDisabled } from '../shared/util';
 
 @Component({
@@ -46,7 +46,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
   isDisabled = isDisabled;
-  MAPPING_TYPE_DESCRIPTION = MAPPING_TYPE_DESCRIPTION;
+  MappingTypeDescriptionMap = MappingTypeDescriptionMap;
   formGroupStep: FormGroup;
   snoop: boolean = false;
   canOpenInBrowser: boolean = false;
@@ -55,7 +55,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   Direction = Direction;
   mappingType: MappingType = MappingType.JSON;
   mappingTypeDescription: string =
-    MAPPING_TYPE_DESCRIPTION[MappingType.JSON].description;
+    MappingTypeDescriptionMap[MappingType.JSON].description;
   valid: boolean = false;
 
   constructor(
@@ -83,7 +83,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
       const formValue = this.formGroupStep.value;
       // Your existing save logic
       const { snoopSupported } =
-        MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction];
+        MappingTypeDescriptionMap[this.mappingType].properties[this.direction];
       this.closeSubject.next({
         mappingType: this.mappingType,
         snoop: formValue.snoop && snoopSupported
@@ -95,7 +95,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   onSelectMappingType(t) {
     this.valid = true;
     this.mappingType = t;
-    this.mappingTypeDescription = MAPPING_TYPE_DESCRIPTION[t].description;
+    this.mappingTypeDescription = MappingTypeDescriptionMap[t].description;
     if (this.shouldShowSnoop()) {
       this.formGroupStep.addControl('snoop', new FormControl(false));
     } else {
@@ -106,7 +106,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     // Replace these conditions with your specific requirements
     return (
       this.direction === Direction.INBOUND &&
-      MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction]
+      MappingTypeDescriptionMap[this.mappingType].properties[this.direction]
         .snoopSupported
     );
   }

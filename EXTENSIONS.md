@@ -28,8 +28,15 @@ The steps required for an external extension are as follows. The extension:
 A sample how to build an extension is contained in the maven module [dynamic-mapping-extension](./dynamic-mapping-extension).
 The following diagram shows how the dispatcher handles messages with different format:
 
-TODO Replace picture
+
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Diagram_Dispatcher.png"  style="width: 70%;" />
+</p>
+<br/>
+
+The following diagram gives an overview on the step to build and use your own extension:
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionSource_Guide.png"  style="width: 70%;" />
 </p>
 <br/>

@@ -47,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import javax.ws.rs.ProcessingException;
+import jakarta.ws.rs.ProcessingException;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -174,7 +174,7 @@ public class ProcessorExtensionCustomAlarm
 				.get(deviceIdentifierMapped2PathTarget2);
 		MappingSubstitution.SubstituteValue device = deviceEntries.get(finalI);
 		int predecessor = -1;
-		DocumentContext payloadTarget = JsonPath.parse(mapping.target);
+		DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
 		for (String pathTarget : pathTargets) {
 			MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
 					new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,

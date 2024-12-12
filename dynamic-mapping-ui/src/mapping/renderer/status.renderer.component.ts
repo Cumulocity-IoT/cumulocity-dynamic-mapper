@@ -25,18 +25,14 @@ import { SnoopStatus } from '../../shared';
 @Component({
   selector: 'd11r-mapping-renderer-status',
   template: `
-    <div *ngIf="context.value.debug">
-      <span class="text-10 label label-primary">{{ 'debug' }}</span>
-    </div>
-    <div *ngIf="context.value.snoopStatus === 'STARTED'">
-      <span class="text-10 label label-primary">{{ 'snoop: started' }}</span>
-    </div>
-    <div *ngIf="context.value.snoopStatus === 'STOPPED'">
-      <span class="text-10 label label-primary">{{ 'snoop: stopped' }}</span>
-    </div>
-    <div *ngIf="context.value.snoopStatus === 'ENABLED'">
-      <span class="text-10 label label-primary">{{ 'snoop: pending' }}</span>
-    </div>
+<ng-container *ngIf="context.value.debug">
+  <span class="text-10 label label-primary">debug</span>
+</ng-container>
+<ng-container [ngSwitch]="context.value.snoopStatus">
+  <span *ngSwitchCase="'STARTED'" class="text-10 label label-primary">snoop: started</span>
+  <span *ngSwitchCase="'STOPPED'" class="text-10 label label-primary">snoop: stopped</span>
+  <span *ngSwitchCase="'ENABLED'" class="text-10 label label-primary">snoop: pending</span>
+</ng-container>
   `
 })
 export class StatusRendererComponent {

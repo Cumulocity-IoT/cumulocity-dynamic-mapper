@@ -49,7 +49,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
     private extensionService: ExtensionService,
     private alertService: AlertService,
     private sharedService: SharedService
-  ) {}
+  ) { }
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
@@ -78,7 +78,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
 
   async reloadExtensions() {
     await this.sharedService.runOperation(
-      Operation.RELOAD_EXTENSIONS
+      { operation: Operation.RELOAD_EXTENSIONS }
     );
     this.alertService.success('Extensions reloaded');
     this.reload$.next();

@@ -41,29 +41,18 @@ export class DeviceSelectorSubscriptionComponent implements OnInit {
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<IIdentified[]>();
 
-  form: FormGroup;
-
-  constructor(private fb: FormBuilder) {
-    this.createForm();
+  constructor() {
   }
   ngOnInit(): void {
-    this.form.patchValue({
-      deviceList: this.deviceList
-    });
+
   }
 
-  createForm() {
-    this.form = this.fb.group({
-      deviceList: ['']
-    });
-  }
   selectionChanged(e) {
     console.log(e);
   }
 
   clickedUpdateSubscription() {
-    const formValue = this.form.value;
-    this.commit.emit(formValue.deviceList);
+    this.commit.emit(this.deviceList);
   }
 
   clickedCancel() {

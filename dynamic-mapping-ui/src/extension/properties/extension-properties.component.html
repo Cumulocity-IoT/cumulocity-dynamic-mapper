@@ -47,8 +47,8 @@
               #li
             >
               <c8y-li-icon [icon]="'plugin'"></c8y-li-icon>
-              <button class="btn-clean" (click)="li.collapsed = !li.collapsed">
-                <span>{{ entry.name }} </span>
+              <button class="btn-clean" style="width:100%" (click)="li.collapsed = !li.collapsed">
+                <span class="m-r-16">{{ entry.eventName }}</span>
                 <span class="label label-primary m-l-10">{{
                   extension['external'] ? 'External' : 'Internal'
                 }}</span>
@@ -76,7 +76,7 @@
                     </tr>
                     <tr>
                       <td>Type</td>
-                      <td>{{ entry.extensionType | humanize }}</td>
+                      <td>{{ entry.extensionType | formatStringAsWords }}</td>
                     </tr>
                   </tbody>
                 </table>

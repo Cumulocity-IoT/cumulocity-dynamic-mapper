@@ -29,7 +29,7 @@ import lombok.Setter;
 import lombok.ToString;
 import dynamic.mapping.processor.model.MappingType;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,29 +65,22 @@ public class Mapping implements Serializable {
     @NotNull
     public String ident;
 
-    @NotNull
-    public String subscriptionTopic;
-
-    @NotNull
     public String publishTopic;
 
-    @NotNull
     public String publishTopicSample;
 
-    @NotNull
     public String mappingTopic;
 
-    @NotNull
     public String mappingTopicSample;
 
     @NotNull
     public API targetAPI;
 
     @NotNull
-    public String source;
+    public String sourceTemplate;
 
     @NotNull
-    public String target;
+    public String targetTemplate;
 
     @NotNull
     public boolean active;
@@ -122,7 +115,6 @@ public class Mapping implements Serializable {
     @NotNull
     public MappingType mappingType;
 
-    @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public ExtensionEntry extension;
 
@@ -130,17 +122,12 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public Direction direction;
 
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public String filterOutbound;
-
-    // TODO filterOutbound has to be removed and for ountbound mappings as well JSONata expressions
+    // TODO filterMapping has to be removed and for ountbound mappings as well JSONata expressions
     // this has to be changed in MappingComponent.deleteFromMappingCache & MappingComponent.rebuildMappingOutboundCache
-    @NotNull
+
     @JsonSetter(nulls = Nulls.SKIP)
     public String filterMapping;
 
-    @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public Boolean autoAckOperation;
 
