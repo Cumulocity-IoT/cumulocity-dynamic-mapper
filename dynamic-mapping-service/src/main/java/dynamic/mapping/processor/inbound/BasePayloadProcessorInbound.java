@@ -75,7 +75,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 
 	public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
 
-	public abstract void applyFiler(ProcessingContext<T> context);
+	public abstract void applyFilter(ProcessingContext<T> context);
 
 	public void substituteInTargetAndSend(ProcessingContext<T> context) {
 		/*

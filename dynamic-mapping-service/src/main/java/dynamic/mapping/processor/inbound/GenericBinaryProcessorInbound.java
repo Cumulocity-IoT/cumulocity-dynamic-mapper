@@ -39,11 +39,11 @@ public class GenericBinaryProcessorInbound extends JSONProcessorInbound {
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(Mapping mapping, ConnectorMessage message)
+    public ProcessingContext<Object> deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
         JsonNode payloadJsonNode = objectMapper
                 .valueToTree(new PayloadWrapper("0x" + Hex.encodeHexString(message.getPayload())));
-        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
+        ProcessingContext<Object> context = new ProcessingContext<Object>();
         context.setPayload(payloadJsonNode);
         return context;
     }

@@ -67,13 +67,6 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
-			<!-- <dependency>
-				<groupId>io.opentelemetry</groupId>
-				<artifactId>opentelemetry-bom</artifactId>
-				<version>1.44.1</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency> -->
 			<dependency>
 				<groupId>com.jayway.jsonpath</groupId>
 				<artifactId>json-path</artifactId>
@@ -115,6 +108,11 @@
 				<groupId>io.netty</groupId>
 				<artifactId>netty-all</artifactId>
 				<version>4.1.112.Final</version>
+			</dependency>
+			<dependency>
+				<groupId>com.dashjoin</groupId>
+				<artifactId>jsonata</artifactId>
+				<version>0.9.8</version>
 			</dependency>
 			<dependency>
 				<groupId>com.ibm.jsonata4java</groupId>

@@ -21,6 +21,8 @@
 
 package dynamic.mapping.processor.inbound;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -32,7 +34,10 @@ import org.joda.time.DateTime;
 import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
-import com.api.jsonata4java.expressions.ParseException;
+// import com.api.jsonata4java.expressions.EvaluateException;
+// import com.api.jsonata4java.expressions.EvaluateRuntimeException;
+// import com.api.jsonata4java.expressions.Expressions;
+// import com.api.jsonata4java.expressions.ParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -48,31 +53,33 @@ import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import lombok.extern.slf4j.Slf4j;
+import java.util.Base64;
 
 @Slf4j
-public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> {
+public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
 
     public JSONProcessorInbound(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(
+    public ProcessingContext<Object> deserializePayload(
             Mapping mapping, ConnectorMessage message) throws IOException {
-        JsonNode jsonNode = objectMapper.readTree(message.getPayload());
-        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
-        context.setPayload(jsonNode);
+        Object jsonNodeAsObject = objectMapper.readValue(Base64.getEncoder().encodeToString(message.getPayload()),
+                Object.class);
+        ProcessingContext<Object> context = new ProcessingContext<Object>();
+        context.setPayload(jsonNodeAsObject);
         return context;
     }
 
     @Override
-    public void extractFromSource(ProcessingContext<JsonNode> context)
+    public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        JsonNode payloadJsonNode = context.getPayload();
+        Object payloadJsonNode = context.getPayload();
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
         /*
@@ -95,30 +102,27 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                     tenant);
         }
 
-        String payload = payloadJsonNode.toPrettyString();
+        // create pretty string for logging
+        String payloadAsPrettyString = objectMapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(payloadJsonNode);
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.debug("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
+            log.debug("Tenant {} - Patched payload: {} {} {} {}", tenant, payloadAsPrettyString,
+                    serviceConfiguration.logPayload,
                     mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
         boolean substitutionTimeExists = false;
         for (MappingSubstitution substitution : mapping.substitutions) {
-            JsonNode extractedSourceContent = null;
+            Object extractedSourceContent = null;
             /*
              * step 1 extract content from inbound payload
              */
             try {
-                Expressions expr = Expressions.parse(substitution.pathSource);
-                extractedSourceContent = expr.evaluate(payloadJsonNode);
-            } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
-                        payload, e);
-            } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", tenant, substitution.pathSource,
-                        payload, e);
+                var expression = jsonata(substitution.pathSource);
+                extractedSourceContent = expression.evaluate(payloadJsonNode);
             } catch (Exception e) {
                 log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
-                        payload, e);
+                        payloadAsPrettyString, e);
             }
             /*
              * step 2 analyse extracted content: textual, array
@@ -224,25 +228,27 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
     }
 
     @Override
-    public void applyFiler(ProcessingContext<JsonNode> context) {
+    public void applyFilter(ProcessingContext<Object> context) {
         String tenant = context.getTenant();
         String mappingFilter = context.getMapping().getFilterMapping();
         if (mappingFilter != null && !("").equals(mappingFilter)) {
-            JsonNode payloadJsonNode = context.getPayload();
-            String payload = payloadJsonNode.toPrettyString();
+            Object payloadJsonNode = context.getPayload();
+            // create pretty string for logging
+            String payloadAsPrettyString = objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(payloadJsonNode);
             try {
-                Expressions expr = Expressions.parse(mappingFilter);
+                Expressions expr = jsonata(mappingFilter);
                 JsonNode extractedSourceContent = expr.evaluate(payloadJsonNode);
                 context.setIgnoreFurtherProcessing(!isNodeTrue(extractedSourceContent));
             } catch (ParseException | IOException | EvaluateException e) {
                 log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
-                        payload, e);
+                        payloadAsPrettyString, e);
             } catch (EvaluateRuntimeException e) {
                 log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", tenant, mappingFilter,
-                        payload, e);
+                        payloadAsPrettyString, e);
             } catch (Exception e) {
                 log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
-                        payload, e);
+                        payloadAsPrettyString, e);
             }
         }
     }

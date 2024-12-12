@@ -39,13 +39,13 @@ public class FlatFileProcessorInbound extends JSONProcessorInbound {
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(Mapping mapping, ConnectorMessage message)
+    public ProcessingContext<Object> deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
         String payloadMessage = (message.getPayload() != null
                 ? new String(message.getPayload(), Charset.defaultCharset())
                 : "");
         JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));
-        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
+        ProcessingContext<Object> context = new ProcessingContext<Object>();
         context.setPayload(payloadJsonNode);
         return context;
     }
