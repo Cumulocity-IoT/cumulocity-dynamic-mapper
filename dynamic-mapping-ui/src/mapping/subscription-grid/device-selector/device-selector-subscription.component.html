@@ -19,53 +19,34 @@
   ~ @authors Christof Strack
   -->
 
-<div
-  class="flex-col flex-nowrap no-align-items fit-h col-md-6 col-md-offset-3 c8y-stepper--no-btns"
->
+<div class="flex-col flex-nowrap no-align-items fit-h col-md-8 col-md-offset-2 c8y-stepper--no-btns">
   <div class="card">
-    <form [formGroup]="form">
-      <div
-        class="card-header m-t-48 p-24 separator"
-        style="justify-content: center"
-      >
-        <h4 class="card-title">
-          Select devices to subscribe to for outbound mappings
-        </h4>
-      </div>
-      <div class="card-block">
-        <c8y-asset-selector
-          formControlName="deviceList"
-          (onSelected)="selectionChanged($event)"
-          [config]="{
+    <div class="card-header m-t-48 p-24 separator" style="justify-content: center">
+      <h4 class="card-title">
+        Select devices to subscribe to for outbound mappings
+      </h4>
+    </div>
+    <div class="card-block">
+      <c8y-asset-selector-miller [(ngModel)]="deviceList" (onSelected)="selectionChanged($event)" [config]="{
             groupsSelectable: true,
+            columnHeaders: true,
+            showFilter: true,
             showUnassignedDevices: true,
+            showChildDevices: true,
+            search: true,
             multi: true,
-            search: true
-          }"
-        ></c8y-asset-selector>
+            showSelected: false
+          }" class="bg-component"></c8y-asset-selector-miller>
+    </div>
+    <div class="card-footer text-center">
+      <div class="form-group">
+        <button type="button" name="update" class="btn btn-primary" (click)="clickedUpdateSubscription()" translate>
+          Save
+        </button>
+        <button type="button" name="update" class="btn btn-primary" (click)="clickedCancel()" translate>
+          Cancel
+        </button>
       </div>
-      <div class="card-footer text-center">
-        <div class="form-group">
-          <button
-            type="button"
-            name="update"
-            class="btn btn-primary"
-            (click)="clickedUpdateSubscription()"
-            translate
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            name="update"
-            class="btn btn-primary"
-            (click)="clickedCancel()"
-            translate
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </form>
+    </div>
   </div>
 </div>

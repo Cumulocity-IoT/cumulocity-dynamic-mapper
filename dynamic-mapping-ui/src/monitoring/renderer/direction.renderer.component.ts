@@ -20,7 +20,7 @@
  */
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
-import { Direction } from '../../shared/model/shared.model';
+import { Direction } from '../../shared';
 
 @Component({
   template: `

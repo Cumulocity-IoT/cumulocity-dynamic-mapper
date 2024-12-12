@@ -41,12 +41,12 @@ export default {
         to: 'README.md'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add.png',
-        to: 'image/Dynamic_Mapper_Mapping_Table_Add.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png'
       },
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png',

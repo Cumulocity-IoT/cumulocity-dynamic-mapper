@@ -37,3 +37,10 @@ The mapper processes messages in both directions:
 The Dynamic Data Mapper can be deployed as a **multi tenant microservice** which means you can deploy it once in your enterprise tenant and subscribe additional tenants using the same hardware resources.
 It is also implemented to support **multiple broker connections** at the same time. So you can combine multiple message brokers sharing the same mappings.
 This implies of course that all of them use the same topic structure and payload otherwise the mappings will fail.
+
+Incoming messages are processed by the steps in the following diagram. It shows the involved classes:
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Diagram_Dispatcher.png"  style="width: 100%;" />
+</p>
+<br/>

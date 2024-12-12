@@ -31,7 +31,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-#  @authors Christoph Strack, Stefan Witschel
+#  @authors Christof Strack, Stefan Witschel
 
 import base64
 import requests

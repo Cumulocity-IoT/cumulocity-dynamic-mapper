@@ -23,17 +23,21 @@ import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute, hookTab } from '@c8y/ngx-components';
 import { MonitoringComponent } from './grid/monitoring.component';
 import { IdRendererComponent } from './renderer/id-cell.renderer.component';
-import { BrokerConfigurationModule } from '../configuration';
+import { ServiceConfigurationModule } from '../configuration';
 import { NumberRendererComponent } from './renderer/number.renderer.component';
 import { DirectionRendererComponent } from './renderer/direction.renderer.component';
 import { MonitoringChartComponent } from './chart/chart.component';
 import { MonitoringTabFactory } from './monitoring-tab.factory';
-import { NODE2 } from '../shared/model/util';
+import { NODE2 } from '../shared/mapping/util';
 import { NgxEchartsModule } from 'ngx-echarts';
+import { MapppingServiceEventComponent } from './event/mapping-service-event.component';
+import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
+import { SharedModule } from '../shared';
 
 @NgModule({
   declarations: [
     MonitoringComponent,
+    MapppingServiceEventComponent,
     IdRendererComponent,
     NumberRendererComponent,
     DirectionRendererComponent,
@@ -41,10 +45,12 @@ import { NgxEchartsModule } from 'ngx-echarts';
   ],
   imports: [
     CoreModule,
-    BrokerConfigurationModule,
+    ServiceConfigurationModule,
+    BsDatepickerModule,
     NgxEchartsModule.forRoot({
       echarts: () => import('echarts')
-    })
+    }),
+    SharedModule
   ],
   exports: [],
   providers: [
@@ -55,6 +61,10 @@ import { NgxEchartsModule } from 'ngx-echarts';
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/chart`,
       component: MonitoringChartComponent
+    }),
+    hookRoute({
+      path: `sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/serviceEvent`,
+      component: MapppingServiceEventComponent
     }),
     hookTab(MonitoringTabFactory)
   ]

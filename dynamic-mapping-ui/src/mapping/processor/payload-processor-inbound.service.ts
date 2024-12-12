@@ -84,7 +84,7 @@ export abstract class PayloadProcessorInbound {
       let predecessor: number = -1;
       let payloadTarget: JSON = null;
       try {
-        payloadTarget = JSON.parse(mapping.target);
+        payloadTarget = JSON.parse(mapping.targetTemplate);
       } catch (e) {
         this.alert.warning('Target Payload is not a valid json object!');
         throw e;

@@ -33,14 +33,12 @@ import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
-import { API, Direction, Mapping, QOS, SnoopStatus } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { EditorMode } from '../shared/stepper-model';
 import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
-import { deriveMappingTopicFromTopic } from '../shared/util';
-import { SharedService } from '../../shared/shared.service';
-import { StepperConfiguration } from '../../shared/model/shared.model';
+import { deriveSampleTopicFromTopic } from '../shared/util';
+import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus} from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -131,23 +129,20 @@ export class MappingStepPropertiesComponent
           },
           {
             className: 'col-lg-6',
-            key: 'subscriptionTopic',
+            key: 'mappingTopic',
             wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
-              label: 'Subscription Topic',
-              placeholder: 'Subscription Topic ...',
+              label: 'Mapping Topic',
+              placeholder: 'The MappingTopic defines a key to which this mapping is bound. It is a kind of key to organize the mappings internally',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'Subscription Topic',
+              description: 'Mapping Topic',
               change: () => {
-                const newDerivedTopic = deriveMappingTopicFromTopic(
-                  this.propertyFormly.get('subscriptionTopic').value
+                const newDerivedTopic = deriveSampleTopicFromTopic(
+                  this.propertyFormly.get('mappingTopic').value
                 );
                 if (this.stepperConfiguration.direction == Direction.INBOUND) {
-                  this.propertyFormly
-                    .get('mappingTopic')
-                    .setValue(newDerivedTopic);
                   this.propertyFormly
                     .get('mappingTopicSample')
                     .setValue(newDerivedTopic);
@@ -173,10 +168,9 @@ export class MappingStepPropertiesComponent
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               change: () => {
-                const newDerivedTopic = deriveMappingTopicFromTopic(
+                const newDerivedTopic = deriveSampleTopicFromTopic(
                   this.propertyFormly.get('publishTopic').value
                 );
-
                 this.propertyFormly
                   .get('publishTopicSample')
                   .setValue(newDerivedTopic);
@@ -189,45 +183,21 @@ export class MappingStepPropertiesComponent
           },
           {
             className: 'col-lg-6',
-            key: 'mappingTopic',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Mapping Topic',
-              placeholder: 'Mapping Topic ...',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description:
-                'The MappingTopic defines a key to which this mapping is bound. It is a kind of key to organize the mappings internally. Name must begin with the SubscriptionTopic.',
-              required: this.stepperConfiguration.direction == Direction.INBOUND
-            },
-            hideExpression:
-              this.stepperConfiguration.direction == Direction.OUTBOUND
-          },
-          {
-            className: 'col-lg-6',
-            key: 'filterOutbound',
+            key: 'filterMapping',
             type: 'input',
             templateOptions: {
-              label: 'Filter Outbound',
+              label: 'Filter Mapping',
               placeholder: 'e.g. custom_OperationFragment',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value',
+                'The Filter Mapping can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value',
               required:
                 this.stepperConfiguration.direction == Direction.OUTBOUND
             },
             hideExpression:
               this.stepperConfiguration.direction != Direction.OUTBOUND
           },
-          // filler when template topic is not shown
-          //   {
-          //     className: 'col-lg-6',
-          //     template: '<div class="form-group row" style="height:80px"></div>',
-          //     hideExpression:
-          //       this.stepperConfiguration.direction != Direction.OUTBOUND
-          //   },
           {
             className: 'col-lg-6',
             key: 'mappingTopicSample',
@@ -303,7 +273,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'createNonExistingDevice',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Create device',
               disabled:
@@ -323,7 +293,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'updateExistingDevice',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Update Existing Device',
               disabled:
@@ -343,7 +313,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'autoAckOperation',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Auto acknowledge',
               disabled:
@@ -392,7 +362,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-3',
             key: 'mapDeviceIdentifier',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Map device identifier',
               switchMode: true,
@@ -435,7 +405,7 @@ export class MappingStepPropertiesComponent
             className: 'col-lg-6',
             key: 'supportsMessageContext',
             type: 'switch',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               switchMode: true,
               label: 'Supports key message context',

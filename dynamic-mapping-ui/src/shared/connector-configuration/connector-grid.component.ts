@@ -48,28 +48,29 @@ import {
 
 import * as _ from 'lodash';
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
-import { ConnectorConfigurationService } from '../connector-configuration.service';
+import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import {
   ConnectorStatus,
-  StatusEventTypes
-} from '../connector-log/connector-status.model';
-import { DeploymentMapEntry } from '../model/shared.model';
-import { uuidCustom } from '../model/util';
-import { ConfigurationConfigurationModalComponent } from './create/connector-configuration-modal.component';
+  LoggingEventType
+} from '../connector-log/connector-log.model';
+import { DeploymentMapEntry } from '../mapping/shared.model';
+import { uuidCustom } from '../mapping/util';
+import { ConnectorConfigurationModalComponent } from './create/connector-configuration-modal.component';
 import {
   ConnectorConfiguration,
   ConnectorSpecification
 } from './connector.model';
-import { StatusEnabledRendererComponent } from './status-enabled-renderer.component';
-import { ConnectorStatusRendererComponent } from './connector-status.renderer.component';
-import { CheckedRendererComponent } from './checked-renderer.component';
+import { StatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
+import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
+import { CheckedRendererComponent } from './renderer/checked-renderer.component';
+import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
   styleUrls: ['./connector-grid.component.style.css'],
   templateUrl: 'connector-grid.component.html'
 })
-export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
+export class ConnectorGridComponent implements OnInit, AfterViewInit {
   @Input() selectable = true;
   @Input() readOnly = false;
   @Input() deploy: string[];
@@ -89,7 +90,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
   configurations$: Observable<ConnectorConfiguration[]>;
-  StatusEventTypes = StatusEventTypes;
+  LoggingEventType = LoggingEventType;
   pagination: Pagination = {
     pageSize: 30,
     currentPage: 1
@@ -179,6 +180,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortOrder: 'asc',
         visible: true,
+        cellRendererComponent: LabelRendererComponent,
         gridTrackSize: '25%'
       },
       {
@@ -283,7 +285,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
       readOnly: this.readOnly
     };
     const modalRef = this.bsModalService.show(
-      ConfigurationConfigurationModalComponent,
+      ConnectorConfigurationModalComponent,
       {
         initialState
       }
@@ -336,7 +338,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
       specifications: this.specifications
     };
     const modalRef = this.bsModalService.show(
-      ConfigurationConfigurationModalComponent,
+      ConnectorConfigurationModalComponent,
       {
         initialState
       }
@@ -421,7 +423,7 @@ export class ConnectorConfigurationComponent implements OnInit, AfterViewInit {
       configurationsCount: this.configurations?.length
     };
     const modalRef = this.bsModalService.show(
-      ConfigurationConfigurationModalComponent,
+      ConnectorConfigurationModalComponent,
       {
         initialState
       }

@@ -4,6 +4,11 @@
   "provider": {
     "name":"Software AG"
   },
+  "buildSpec": {
+    "targetBuildArchitectures": [
+      "linux/amd64"
+    ]
+  },
   "isolation":"MULTI_TENANT",
   "resources": {
     "cpu": "0.5",

@@ -31,7 +31,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { JsonEditor2Component, Mapping, whatIsIt } from '../../shared';
+import { JsonEditorComponent, Mapping, whatIsIt } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
 @Component({
@@ -44,7 +44,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
   @Input() mapping: Mapping;
 
   @ViewChild('editorSourceFilter', { static: false })
-  editorSourceFilter: JsonEditor2Component;
+  editorSourceFilter: JsonEditorComponent;
   @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<any>;
 
   labels: ModalLabels = { ok: 'Apply', cancel: 'Cancel' };
@@ -76,14 +76,14 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
 
   async ngOnInit(): Promise<void> {
     this.closeSubject = new Subject();
-    this.sourceTemplate = JSON.parse(this.mapping.source);
+    this.sourceTemplate = JSON.parse(this.mapping.sourceTemplate);
     this.filterFormlyFields = [
       {
         fieldGroup: [
           {
             key: 'pathSource',
             type: 'input',
-            wrappers: ['custom-form-field'],
+            wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               label: 'Filter Expression',
               placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',

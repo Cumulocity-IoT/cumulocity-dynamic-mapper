@@ -35,12 +35,12 @@
         <c8y-list-group class="separator-top">
           <ng-container *ngFor="let q of MappingType | keyvalue">
             <c8y-li *ngIf="
-                MAPPING_TYPE_DESCRIPTION[q.key].properties[direction]
+                MappingTypeDescriptionMap[q.key].properties[direction]
                   .directionSupported
               ">
               <c8y-li-radio #liRadioOption1 name="mapping_type_group" title="{{ q.value }}"
                 (click)="onSelectMappingType(q.value)"></c8y-li-radio>
-              <span>{{ q.value | humanize }}</span>
+              <span>{{ q.value | formatStringAsWords }}</span>
             </c8y-li>
           </ng-container>
         </c8y-list-group>

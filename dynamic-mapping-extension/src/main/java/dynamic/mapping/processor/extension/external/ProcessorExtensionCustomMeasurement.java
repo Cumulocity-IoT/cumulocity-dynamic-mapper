@@ -33,7 +33,7 @@ import dynamic.mapping.processor.model.RepairStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 
-import javax.ws.rs.ProcessingException;
+import jakarta.ws.rs.ProcessingException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;

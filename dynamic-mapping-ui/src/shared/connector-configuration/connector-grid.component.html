@@ -19,26 +19,19 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-data-grid
-  #connectorGrid
-  [title]="'Connector'"
-  [selectable]="selectable && !readOnly"
-  [columns]="columns"
-  [selectionPrimaryKey]="'ident'"
-  [rows]="configurations$ | async"
-  [pagination]="pagination"
-  [actionControls]="actionControls"
-  (itemsSelect)="onSelectionChanged($event)"
->
+<c8y-data-grid #connectorGrid [title]="'Connector'" [selectable]="selectable && !readOnly" [columns]="columns"
+  [selectionPrimaryKey]="'ident'" [rows]="configurations$ | async" [pagination]="pagination"
+  [actionControls]="actionControls" (itemsSelect)="onSelectionChanged($event)">
+  <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-connected'" [title]="'No connectors exist.' | translate"
+    [subtitle]="
+'Create your first connector.' | translate
+" [horizontal]="true">
+  </c8y-ui-empty-state>
 </c8y-data-grid>
-<div  *ngIf ="selectable && !readOnly">
-	<label>Selected connectors for mapping</label>
-	<div class="bg-level-1 p-t-2 p-b-2">
-	  <span
-		class="text-10 label label-primary m-r-8"
-		*ngFor="let ident of deploymentMapEntry?.connectors; let i = index"
-	  >
-		{{ findNameByIdent(ident) }}</span
-	  >
-	</div>
+<div *ngIf="selectable && !readOnly">
+  <label>Selected connectors for mapping</label>
+  <div class="bg-level-1 p-t-2 p-b-2">
+    <span class="text-10 label label-primary m-r-8" *ngFor="let ident of deploymentMapEntry?.connectors; let i = index">
+      {{ findNameByIdent(ident) }}</span>
   </div>
+</div>

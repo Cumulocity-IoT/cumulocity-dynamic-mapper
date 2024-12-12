@@ -204,7 +204,7 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 
 For outbound mappings the properties are slightly different. Most important are the properties:
 
-1. `filterOutbound`: The Filter Outbound can contain one fragment name to associate a
+1. `filterMapping`: The Filter Outbound can contain one fragment name to associate a
    mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is
    applied.
 2. `publishTopic`: MQTT topic to publish outbound messages to.
@@ -216,7 +216,7 @@ For outbound mappings the properties are slightly different. Most important are 
 
 For an outbound mapping to be applied two conditions have to be fulfilled:
 
-1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterOutbound`
+1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterMapping`
 2. for the device a Notification 2.0 subscription has to be created. This is done using the following dialog:
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png"  style="width: 70%;" />
@@ -298,7 +298,7 @@ In order to define a substitution (a substitution substitutes values in the targ
 3. Delete an existing substitution, by pressing the button with the red minus
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Detail_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode_Annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -446,7 +446,7 @@ In order to use a previously snooped payload click the button
 `Snooped templates`. Multiples activation of this button iterates over all the recorded templates.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -501,14 +501,14 @@ When you choose the mapping type `PROCESSOR_EXTENSION` the wizard for defining y
 Using the tab `Processor Extension` you can upload your own processor extension. After the upload the mircroservice load the extensions dynamically.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Configuration_ProcessorExtension.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The following guide lays out the steps to create and use a processor extension:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtension_Guide.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionSource_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
 

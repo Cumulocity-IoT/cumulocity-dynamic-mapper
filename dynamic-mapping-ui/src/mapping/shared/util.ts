@@ -71,7 +71,7 @@ export function normalizeTopic(topic: string) {
   return nt;
 }
 
-export function deriveMappingTopicFromTopic(topic: string) {
+export function deriveSampleTopicFromTopic(topic: string) {
   let topix = topic;
   if (topix == undefined) topix = '';
   topix = normalizeTopic(topix);
@@ -104,32 +104,6 @@ export function isTopicNameValid(topic: string): any {
 
 export function isMappingTopicValid(topic: string): any {
   let topix = topic;
-  // mappingTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
-  // TOPIC_WILDCARD_MULTI
-  topix = normalizeTopic(topix);
-
-  // let errors = {};
-  // // count number of "#"
-  // let count_multi = (topix.match(/\#/g) || []).length;
-  // if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
-  // // count number of "+"
-  // let count_single = (topix.match(/\+/g) || []).length;
-  // if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
-
-  // if (count_multi >= 1 && topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
-
-  const errors = {};
-  // count number of "#"
-  const count_multi = (topix.match(/#/g) || []).length;
-  if (count_multi >= 1)
-    errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_MappingTopic] =
-      true;
-
-  return errors;
-}
-
-export function isSubscriptionTopicValid(topic: string): any {
-  let topix = topic;
   topix = normalizeTopic(topix);
   const errors = {};
   // count number of "#"
@@ -148,21 +122,6 @@ export function isSubscriptionTopicValid(topic: string): any {
     errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
   return errors;
-}
-
-export function isSubscriptionTopicUnique(
-  mapping: Mapping,
-  mappings: Mapping[]
-): boolean {
-  let result = true;
-  result = mappings.every((m) => {
-    return (
-      (!mapping.subscriptionTopic.startsWith(m.subscriptionTopic) &&
-        !m.subscriptionTopic.startsWith(mapping.subscriptionTopic)) ||
-      mapping.id == m.id
-    );
-  });
-  return result;
 }
 
 export function isMappingTopicUnique(
@@ -185,7 +144,7 @@ export function isFilterOutboundUnique(
 ): boolean {
   let result = true;
   result = mappings.every((m) => {
-    return mapping.filterOutbound != m.filterOutbound || mapping.id == m.id;
+    return mapping.filterMapping!= m.filterMapping || mapping.id == m.id;
   });
   return result;
 }
@@ -282,87 +241,56 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
 
   // console.log('Validation options:', options);
 
-  const { mappingTopic, mappingTopicSample, subscriptionTopic } =
+  const { mappingTopic, mappingTopicSample } =
     control['controls'];
   mappingTopic.setErrors(null);
   mappingTopicSample.setErrors(null);
-  subscriptionTopic.setErrors(null);
 
   // avoid displaying the message error when values are empty
   if (
     mappingTopic.value == '' ||
-    mappingTopicSample.value == '' ||
-    subscriptionTopic.value == ''
+    mappingTopicSample.value == ''
   ) {
     return { required: false };
   }
 
-  // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
-  // for comparison the "#" must then be replaced by a "+"
-  // allowed (mt=template topic, st= subscription topic)
-  // allowed    st                      mt
-  //    +       /topic/                 /topic/
-  //    -       /topic/                 /topic/value
-  //    +       /topic/#                /topic/value
-  //    +       /topic/+                /topic/value
-  //    -       /topic/+                /topic/important/value
-  //    +       /topic/+/value          /topic/important/value
-  //    +       device/#                device/+/rom/
 
-  // let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
-  // error = !f(subscriptionTopic, mappingTopic);
-  const f = (t) => (s) =>
-    new RegExp(
-      s.concat('@').split('+').join('[^/]+').split('#').join('.+')
-    ).test(t.concat('@'));
-  error = !f(mappingTopic.value)(subscriptionTopic.value);
-  if (error) {
-    errors = {
-      ...errors,
-      MappingTopic_Must_Match_The_SubscriptionTopic: {
-        ...ValidationFormlyError[
-          'MappingTopic_Must_Match_The_SubscriptionTopic'
-        ],
-        errorPath: 'subscriptionTopic'
-      }
-    };
-  }
 
-  // count number of "#" in subscriptionTopic
-  let count_multi = (subscriptionTopic.value.match(/#/g) || []).length;
+  // count number of "#" in mappingTopic
+  let count_multi = (mappingTopic.value.match(/#/g) || []).length;
   if (count_multi > 1) {
     errors = {
       ...errors,
       Only_One_Multi_Level_Wildcard: {
         ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
-        errorPath: 'subscriptionTopic'
+        errorPath: 'mappingTopic'
       }
     };
   }
 
-  // count number of "+" in subscriptionTopic
-  const count_single = (subscriptionTopic.value.match(/\+/g) || []).length;
-  if (count_single > 1) {
-    errors = {
-      ...errors,
-      Only_One_Single_Level_Wildcard: {
-        ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
-        errorPath: 'subscriptionTopic'
-      }
-    };
-  }
+  // // count number of "+" in mappingTopic
+  // const count_single = (mappingTopic.value.match(/\+/g) || []).length;
+  // if (count_single > 1) {
+  //   errors = {
+  //     ...errors,
+  //     Only_One_Single_Level_Wildcard: {
+  //       ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
+  //       errorPath: 'mappingTopic'
+  //     }
+  //   };
+  // }
 
-  // wildcard "#" can only appear at the end in subscriptionTopic
+  // wildcard "#" can only appear at the end in mappingTopic
   if (
     count_multi >= 1 &&
-    subscriptionTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
-      subscriptionTopic.value.length
+    mappingTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
+    mappingTopic.value.length
   ) {
     errors = {
       ...errors,
       Multi_Level_Wildcard_Only_At_End: {
         ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
-        errorPath: 'subscriptionTopic'
+        errorPath: 'mappingTopic'
       }
     };
   }
@@ -484,7 +412,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
     };
   }
 
-  // wildcard "#" can only appear at the end in subscriptionTopic
+  // wildcard "#" can only appear at the end in mappingTopic
   if (
     count_multi >= 1 &&
     publishTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
