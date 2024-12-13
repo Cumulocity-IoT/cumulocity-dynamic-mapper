@@ -28,7 +28,7 @@ import {
   RepairStrategy,
   MAPPING_TEST_DEVICE_TYPE
 } from '../../shared';
-import { findDeviceIdentifier, getDeviceIdentifier, getTypedValue, remappedPath } from '../shared/util';
+import { findDeviceIdentifier, getGenericDeviceIdentifier, getTypedValue, transformGenericPath2C8YPath } from '../shared/util';
 import { C8YAgent } from '../core/c8y-agent.service';
 import {
   ProcessingContext,
@@ -194,12 +194,12 @@ export abstract class PayloadProcessorInbound {
             payloadTarget,
             pathTarget
           );
-          if (getDeviceIdentifier(mapping) === pathTarget) {
+          if (getGenericDeviceIdentifier(mapping) === pathTarget) {
             this.substituteValueInPayload(
               mapping.mappingType,
               sourceId,
               payloadTarget,
-              remappedPath(mapping, pathTarget)
+              transformGenericPath2C8YPath(mapping, pathTarget)
             )
           };
 
@@ -211,12 +211,12 @@ export abstract class PayloadProcessorInbound {
             payloadTarget,
             pathTarget
           );
-          if (getDeviceIdentifier(mapping) === pathTarget) {
+          if (getGenericDeviceIdentifier(mapping) === pathTarget) {
             this.substituteValueInPayload(
               mapping.mappingType,
               sourceId,
               payloadTarget,
-              remappedPath(mapping, pathTarget)
+              transformGenericPath2C8YPath(mapping, pathTarget)
             )
           };
         }

@@ -595,7 +595,8 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
       ...template,
       _IDENTITY_: {
         externalIdType: mapping.externalIdType,
-        externalId: '909090'
+        externalId: 'any_SerialNumber',
+        c8yId: '909090'
       }
     };
   } else {
@@ -647,7 +648,7 @@ export function isDisabled(condition: boolean) {
 }
 
 
-export function getDeviceIdentifier(mapping: Mapping): string {
+export function getGenericDeviceIdentifier(mapping: Mapping): string {
   if (mapping.externalIdType && mapping.externalIdType !== '') {
       return `${IDENTITY}.externalId`;
   } else {
@@ -655,8 +656,8 @@ export function getDeviceIdentifier(mapping: Mapping): string {
   }
 }
 
-export function remappedPath(mapping: Mapping, originalPath: string): string {
-  if (getDeviceIdentifier(mapping) === originalPath) {
+export function transformGenericPath2C8YPath(mapping: Mapping, originalPath: string): string {
+  if (getGenericDeviceIdentifier(mapping) === originalPath) {
       return API[mapping.targetAPI].identifier;
   } else {
       return originalPath;

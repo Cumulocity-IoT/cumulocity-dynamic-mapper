@@ -187,7 +187,7 @@ public class Mapping implements Serializable {
                 Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
     }
 
-    public String getDeviceIdentifier() {
+    public String getGenericDeviceIdentifier() {
         if (externalIdType != null && !("").equals(externalIdType)) {
             return (Mapping.IDENTITY + ".externalId");
         } else {
@@ -195,9 +195,19 @@ public class Mapping implements Serializable {
         }
     }
 
-    public String remappedPath(String originalPath) {
-        if (getDeviceIdentifier().equals(originalPath)) {
+    public String transformGenericPath2C8YPath(String originalPath) {
+        // "_IDENTITY_.externalId" => source.id
+        if (getGenericDeviceIdentifier().equals(originalPath)) {
             return targetAPI.identifier;
+        } else {
+            return originalPath;
+        }
+    }
+
+    public String transformC8YPath2GenericPath(String originalPath) {
+        // source.id => "_IDENTITY_.externalId" ource.id
+        if (targetAPI.identifier.equals(originalPath)) {
+            return getGenericDeviceIdentifier();
         } else {
             return originalPath;
         }

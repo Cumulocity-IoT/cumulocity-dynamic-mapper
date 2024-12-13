@@ -98,7 +98,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         // MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
         // using alternative method
         // String deviceIdentifierMapped2PathTarget = mapping.targetAPI.identifier;
-        String deviceIdentifierMapped2PathTarget = mapping.getDeviceIdentifier();
+        String deviceIdentifierMapped2PathTarget = mapping.getGenericDeviceIdentifier();
         List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
                 .get(deviceIdentifierMapped2PathTarget);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
@@ -149,7 +149,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         String tenant = context.getTenant();
         // String deviceIdentifierMapped2PathTarget = mapping.targetAPI.identifier;
                 // String deviceIdentifierMapped2PathTarget = mapping.targetAPI.identifier;
-                String deviceIdentifierMapped2PathTarget = mapping.getDeviceIdentifier();
+                String deviceIdentifierMapped2PathTarget = mapping.getGenericDeviceIdentifier();
         List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
                 .get(deviceIdentifierMapped2PathTarget);
         MappingSubstitution.SubstituteValue device = deviceEntries.get(finalI);
@@ -229,9 +229,9 @@ public abstract class BasePayloadProcessorInbound<T> {
                     }
 
                 }
-                substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, mapping.remappedPath(pathTarget));
+                substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
             } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget)) {
-                substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, mapping.remappedPath(pathTarget));
+                substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
             }
         }
         /*

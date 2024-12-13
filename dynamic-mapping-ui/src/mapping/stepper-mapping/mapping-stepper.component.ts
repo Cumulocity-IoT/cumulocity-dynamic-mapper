@@ -182,6 +182,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   editorSourceStepTemplate: JsonEditorComponent;
   @ViewChild('editorTargetStepTemplate', { static: false })
   editorTargetStepTemplate: JsonEditorComponent;
+  @ViewChild('editorSourceStepSubstitution', { static: false })
+  editorSourceStepSubstitution: JsonEditorComponent;
+  @ViewChild('editorTargetStepSubstitution', { static: false })
+  editorTargetStepSubstitution: JsonEditorComponent;
 
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
@@ -339,11 +343,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   private updateSubstiutionValid() {
     const ni = countDeviceIdentifiers(this.mapping);
-    console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
-    (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
+    // console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
+    // (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
     this.countDeviceIdentifiers$.next(ni);
     this.isSubstitutionValid$.next((ni == 1 && this.mapping.direction == Direction.INBOUND) ||
-      (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
+      (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier || this.currentStepIndex < 3);
   }
 
   private setTemplateForm(): void {
@@ -523,6 +527,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else {
       this.mapping.sourceTemplate = reduceSourceTemplate(content['json'], false);
     }
+    this.sourceTemplate = JSON.parse(this.mapping.sourceTemplate);
+    console.log("Step onSourceTemplateChanged",this.mapping.sourceTemplate);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -532,6 +538,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else {
       this.mapping.targetTemplate = reduceSourceTemplate(content['json'], false);
     }
+    console.log("Step onTargetTemplateChanged",this.mapping.targetTemplate);
   }
 
   async onCommitButton() {
@@ -577,6 +584,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log("StepChange:", index);
     // this.step == 'Add and select connector'
     this.currentStepIndex = index;
+    this.updateSubstiutionValid();
     if (index == 1) {
       this.templateModel.mapping = this.mapping;
 
@@ -603,6 +611,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // console.log("Step index 1 - afer", this.targetTemplate);
     } else if (index == 3) {
       this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
+      console.log("Step onStepChange",this.mapping.sourceTemplate);
+      this.editorSourceStepSubstitution.set(JSON.parse(this.mapping.sourceTemplate));
+      this.editorTargetStepSubstitution.set(JSON.parse(this.mapping.targetTemplate));
       this.updateSubstiutionValid();
       this.onSelectSubstitution(0);
       // this.step == 'Select templates'
@@ -893,10 +904,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.selectedSubstitution = selected;
       this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      await this.editorSourceStepTemplate?.setSelectionToPath(
+      await this.editorSourceStepSubstitution.setSelectionToPath(
         this.substitutionModel.pathSource
       );
-      await this.editorTargetStepTemplate.setSelectionToPath(
+      await this.editorTargetStepSubstitution.setSelectionToPath(
         this.substitutionModel.pathTarget
       );
     }
