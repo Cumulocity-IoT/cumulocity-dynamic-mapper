@@ -86,7 +86,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @Output() commit = new EventEmitter<Mapping>();
   private _deploymentMapEntry: DeploymentMapEntry;
 
-
   @Input()
   get deploymentMapEntry(): DeploymentMapEntry {
     return this._deploymentMapEntry;
@@ -120,6 +119,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   countDeviceIdentifiers$: BehaviorSubject<number> =
     new BehaviorSubject<number>(0);
+  isSubstitutionValid$: BehaviorSubject<boolean> =
+    new BehaviorSubject<boolean>(false);
   labels: any = {
     next: 'Next',
     cancel: 'Cancel'
@@ -335,6 +336,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
     this.setTemplateForm();
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
+    this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
   }
 
   private setTemplateForm(): void {
@@ -365,6 +367,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         }
       )
     });
+    this.isSubstitutionValid$.subscribe(valid => {
+      if (valid) {
+        this.templateForm.setErrors(null);
+      } else {
+        this.templateForm.setErrors({ 'incorrect': true });
+      }
+    })
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -442,8 +451,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
       const definesDI = definesDeviceIdentifier(
         this.mapping.targetAPI,
-        this.substitutionModel,
-        this.mapping.direction
+        this.mapping.externalIdType,
+        this.mapping.direction,
+        this.substitutionModel
       );
       if (this.expertMode) {
         this.substitutionFormly.get('pathTarget').setErrors(null);
@@ -499,7 +509,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onsourceTemplateChanged(content: Content) {
+  onSourceTemplateChanged(content: Content) {
     if (_.has(content, 'text') && content['text']) {
       this.mapping.sourceTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
     } else {
@@ -508,7 +518,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ontargetTemplateChanged(content: Content) {
+  onTargetTemplateChanged(content: Content) {
     if (_.has(content, 'text') && content['text']) {
       this.mapping.targetTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
     } else {
@@ -561,7 +571,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.currentStepIndex = index;
     if (index == 1) {
       this.templateModel.mapping = this.mapping;
-      this.expandTemplates();
+
       this.extensions =
         (await this.extensionService.getProcessorExtensions()) as Map<string, Extension>;
       if (this.mapping?.extension?.extensionName) {
@@ -578,10 +588,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
         }
       }
-
-      // this.step == 'Define substitutions'
+    } else if (index == 2) {
+      // this.step == 'Select templates'
+      // console.log("Step index 1 - before", this.targetTemplate);
+      this.expandTemplates();
+      // console.log("Step index 1 - afer", this.targetTemplate);
     } else if (index == 3) {
       this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
+      this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
       this.onSelectSubstitution(0);
       // this.step == 'Select templates'
     } else if (index == 4) {
@@ -618,7 +632,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     stepper: C8yStepper;
     step: CdkStep;
   }): Promise<void> {
-
     this.step = event.step.label;
     if (this.step == 'Test mapping') {
       const editorTestingRequestRef =
@@ -789,6 +802,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.substitutions.splice(selected, 1);
     }
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
+    this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
+
   }
 
   toggleExpertMode() {
@@ -819,10 +834,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       modalRef.content.closeSubject.subscribe((editedSub) => {
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
+          this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
+          this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
           //this.substitutionModel = editedSub; not needed
         }
       });
-      this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
+
+
       // console.log("Updated subs I:", this.mapping.substitutions);
     }
   }
@@ -857,9 +875,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         } else if (newSub && isDuplicate) {
           this.mapping.substitutions[duplicateSubstitutionIndex] = newSub;
         }
+        this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
+        this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
       });
     } else {
       this.mapping.substitutions.push(sub);
+      this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
+      this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
     }
   }
 
@@ -880,6 +902,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.countDeviceIdentifiers$.complete();
+    this.isSubstitutionValid$.complete();
     this.extensionEvents$.complete();
     this.onDestroy$.complete();
   }

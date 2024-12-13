@@ -89,7 +89,7 @@ export abstract class PayloadProcessorOutbound {
         substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
       }
 
-      this.substituteValueInObject(
+      this.substituteValueInPayload(
         mapping.mappingType,
         substituteValue,
         payloadTarget,
@@ -156,7 +156,7 @@ export abstract class PayloadProcessorOutbound {
     //);
   }
 
-  substituteValueInObject(
+  substituteValueInPayload(
     type: MappingType,
     sub: SubstituteValue,
     jsonObject: JSON,

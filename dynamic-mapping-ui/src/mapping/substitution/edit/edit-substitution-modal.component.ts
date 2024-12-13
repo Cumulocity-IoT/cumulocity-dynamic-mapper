@@ -84,8 +84,9 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
 
     const marksDeviceIdentifier = definesDeviceIdentifier(
       this.mapping.targetAPI,
+      this.mapping.externalIdType,
+      this.stepperConfiguration.direction,
       this.substitution,
-      this.stepperConfiguration.direction
     )
       ? '* '
       : '';

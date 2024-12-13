@@ -28,7 +28,7 @@ import {
   RepairStrategy,
   MAPPING_TEST_DEVICE_TYPE
 } from '../../shared';
-import { findDeviceIdentifier, getTypedValue } from '../shared/util';
+import { findDeviceIdentifier, getDeviceIdentifier, getTypedValue, remappedPath } from '../shared/util';
 import { C8YAgent } from '../core/c8y-agent.service';
 import {
   ProcessingContext,
@@ -41,7 +41,7 @@ export abstract class PayloadProcessorInbound {
   constructor(
     private alert: AlertService,
     private c8yClient: C8YAgent
-  ) {}
+  ) { }
 
   abstract deserializePayload(
     context: ProcessingContext,
@@ -61,10 +61,10 @@ export abstract class PayloadProcessorInbound {
     const { mapping } = context;
 
     const { postProcessingCache } = context;
-    let maxEntry: string = findDeviceIdentifier(context.mapping).pathTarget;
+    let deviceIdentifierMapped2PathTarget: string = findDeviceIdentifier(context.mapping).pathTarget;
     for (const entry of postProcessingCache.entries()) {
-      if (postProcessingCache.get(maxEntry).length < entry[1].length) {
-        maxEntry = entry[0];
+      if (postProcessingCache.get(deviceIdentifierMapped2PathTarget).length < entry[1].length) {
+        deviceIdentifierMapped2PathTarget = entry[0];
       }
     }
 
@@ -73,7 +73,7 @@ export abstract class PayloadProcessorInbound {
     );
 
     const countMaxlistEntries: number =
-      postProcessingCache.get(maxEntry).length;
+      postProcessingCache.get(deviceIdentifierMapped2PathTarget).length;
     const [toDouble] = deviceEntries;
     while (deviceEntries.length < countMaxlistEntries) {
       deviceEntries.push(toDouble);
@@ -102,7 +102,7 @@ export abstract class PayloadProcessorInbound {
           // events/alarms/measurements/inventory
           if (
             substituteValue.repairStrategy ==
-              RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
+            RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
             substituteValue.repairStrategy == RepairStrategy.DEFAULT
           ) {
             substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
@@ -120,21 +120,27 @@ export abstract class PayloadProcessorInbound {
           );
         }
 
+        let sourceId: SubstituteValue = {
+          value: undefined,
+          type: SubstituteValueType.TEXTUAL,
+          repairStrategy: RepairStrategy.DEFAULT
+        };;
         if (mapping.targetAPI != API.INVENTORY.name) {
           if (
             pathTarget == findDeviceIdentifier(mapping).pathTarget &&
             mapping.mapDeviceIdentifier
           ) {
-            let sourceId: string;
             try {
               const identity = {
                 externalId: substituteValue.value.toString(),
                 type: mapping.externalIdType
               };
-              sourceId = await this.c8yClient.resolveExternalId2GlobalId(
-                identity,
-                context
-              );
+              sourceId = {
+                value: await this.c8yClient.resolveExternalId2GlobalId(
+                  identity,
+                  context
+                ), repairStrategy: RepairStrategy.DEFAULT, type: SubstituteValueType.TEXTUAL
+              };
             } catch (e) {
               // console.log(
               //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
@@ -176,24 +182,57 @@ export abstract class PayloadProcessorInbound {
               );
             } else if (!sourceId) {
               substituteValue.value = substituteValue.value.toString();
-            } else {
-              substituteValue.value = sourceId.toString();
             }
+            // else {
+            //   substituteValue.value = sourceId.toString();
+            // }
           }
-          this.substituteValueInObject(
-            mapping.mappingType,
-            substituteValue,
-            payloadTarget,
-            pathTarget
-          );
+
+          if (getDeviceIdentifier(mapping) === pathTarget) {
+            this.substituteValueInPayload(
+              mapping.mappingType,
+              substituteValue,
+              payloadTarget,
+              pathTarget
+            );
+            this.substituteValueInPayload(
+              mapping.mappingType,
+              sourceId,
+              payloadTarget,
+              remappedPath(mapping, pathTarget)
+            )
+          } else {
+            this.substituteValueInPayload(
+              mapping.mappingType,
+              substituteValue,
+              payloadTarget,
+              pathTarget
+            );
+          };
+
           // } else if (pathTarget != API[mapping.targetAPI].identifier) {
         } else {
-          this.substituteValueInObject(
-            mapping.mappingType,
-            substituteValue,
-            payloadTarget,
-            pathTarget
-          );
+          if (getDeviceIdentifier(mapping) === pathTarget) {
+            this.substituteValueInPayload(
+              mapping.mappingType,
+              substituteValue,
+              payloadTarget,
+              pathTarget
+            );
+            this.substituteValueInPayload(
+              mapping.mappingType,
+              sourceId,
+              payloadTarget,
+              remappedPath(mapping, pathTarget)
+            )
+          } else {
+            this.substituteValueInPayload(
+              mapping.mappingType,
+              substituteValue,
+              payloadTarget,
+              pathTarget
+            );
+          }
         }
       }
       /*
@@ -249,15 +288,15 @@ export abstract class PayloadProcessorInbound {
     }
   }
 
-  substituteValueInObject(
+  substituteValueInPayload(
     type: MappingType,
     sub: SubstituteValue,
     jsonObject: JSON,
     keys: string
   ) {
-    const subValueMissing: boolean = sub.value == null;
+    const subValueMissing: boolean = !sub || sub.value == null;
     const subValueNull: boolean =
-      sub.value == null || (sub.value != null && sub.value != undefined);
+      !sub || sub.value == null || (sub.value != null && sub.value != undefined);
 
     if (keys == '$') {
       Object.keys(getTypedValue(sub)).forEach((key) => {

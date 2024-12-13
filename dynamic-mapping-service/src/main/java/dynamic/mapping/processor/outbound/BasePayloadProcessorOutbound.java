@@ -113,7 +113,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
             if (postProcessingCache.get(pathTarget).size() > 0) {
                 substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
             }
-            substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+            substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to mqttBroker
@@ -178,7 +178,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
         return context;
     }
 
-    public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,
+    public void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue sub,
             DocumentContext jsonObject, String keys)
             throws JSONException {
         boolean subValueMissing = sub.value == null;

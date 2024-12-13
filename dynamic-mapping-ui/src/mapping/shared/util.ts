@@ -42,6 +42,7 @@ export function getTypedValue(subValue: SubstituteValue): any {
   }
 }
 
+export const IDENTITY = '_IDENTITY_';
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
 export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
@@ -144,7 +145,7 @@ export function isFilterOutboundUnique(
 ): boolean {
   let result = true;
   result = mappings.every((m) => {
-    return mapping.filterMapping!= m.filterMapping || mapping.id == m.id;
+    return mapping.filterMapping != m.filterMapping || mapping.id == m.id;
   });
   return result;
 }
@@ -162,7 +163,7 @@ export function isWildcardTopic(topic: string): boolean {
 export function isSubstitutionValid(mapping: Mapping): boolean {
   const count = mapping.substitutions
     .filter((sub) =>
-      definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
+      definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction, sub)
     )
     .map(() => 1)
     .reduce((previousValue: number, currentValue: number) => {
@@ -203,9 +204,10 @@ export function isSubstitutionValid(mapping: Mapping): boolean {
 // }
 
 export function countDeviceIdentifiers(mapping: Mapping): number {
-  return mapping.substitutions.filter((sub) =>
-    definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
+  const n = mapping.substitutions.filter((sub) =>
+    definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction, sub)
   ).length;
+  return n;
 }
 
 export function checkNotSnooping(control: AbstractControl) {
@@ -302,7 +304,7 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
       ...errors,
       No_Multi_Level_Wildcard_Allowed_In_MappingTopic: {
         ...ValidationFormlyError[
-          'No_Multi_Level_Wildcard_Allowed_In_MappingTopic'
+        'No_Multi_Level_Wildcard_Allowed_In_MappingTopic'
         ],
         errorPath: 'mappingTopic'
       }
@@ -317,12 +319,12 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
     errors = {
       ...errors,
       MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
-        {
-          ...ValidationFormlyError[
-            'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
-          ],
-          errorPath: 'mappingTopic'
-        }
+      {
+        ...ValidationFormlyError[
+        'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
+        ],
+        errorPath: 'mappingTopic'
+      }
     };
   } else {
     for (let i = 0; i < splitTT.length; i++) {
@@ -330,12 +332,12 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
         errors = {
           ...errors,
           MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-            {
-              ...ValidationFormlyError[
-                'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-              ],
-              errorPath: 'mappingTopic'
-            }
+          {
+            ...ValidationFormlyError[
+            'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+            ],
+            errorPath: 'mappingTopic'
+          }
         };
         break;
       }
@@ -343,12 +345,12 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
         errors = {
           ...errors,
           MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-            {
-              ...ValidationFormlyError[
-                'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-              ],
-              errorPath: 'mappingTopic'
-            }
+          {
+            ...ValidationFormlyError[
+            'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+            ],
+            errorPath: 'mappingTopic'
+          }
         };
         break;
       }
@@ -361,12 +363,12 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
           errors = {
             ...errors,
             MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-              {
-                ...ValidationFormlyError[
-                  'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-                ],
-                errorPath: 'mappingTopic'
-              }
+            {
+              ...ValidationFormlyError[
+              'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+              ],
+              errorPath: 'mappingTopic'
+            }
           };
           break;
         }
@@ -416,7 +418,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
   if (
     count_multi >= 1 &&
     publishTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
-      publishTopic.value.length
+    publishTopic.value.length
   ) {
     errors = {
       ...errors,
@@ -435,12 +437,12 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
     errors = {
       ...errors,
       PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
-        {
-          ...ValidationFormlyError[
-            'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
-          ],
-          errorPath: 'publishTopicSample'
-        }
+      {
+        ...ValidationFormlyError[
+        'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
+        ],
+        errorPath: 'publishTopicSample'
+      }
     };
   } else {
     for (let i = 0; i < splitPT.length; i++) {
@@ -448,12 +450,12 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
         errors = {
           ...errors,
           PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-            {
-              ...ValidationFormlyError[
-                'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-              ],
-              errorPath: 'publishTopicSample'
-            }
+          {
+            ...ValidationFormlyError[
+            'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+            ],
+            errorPath: 'publishTopicSample'
+          }
         };
         break;
       }
@@ -461,12 +463,12 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
         errors = {
           ...errors,
           PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-            {
-              ...ValidationFormlyError[
-                'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-              ],
-              errorPath: 'publishTopicSample'
-            }
+          {
+            ...ValidationFormlyError[
+            'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+            ],
+            errorPath: 'publishTopicSample'
+          }
         };
         break;
       }
@@ -479,12 +481,12 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
           errors = {
             ...errors,
             PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-              {
-                ...ValidationFormlyError[
-                  'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-                ],
-                errorPath: 'publishTopicSample'
-              }
+            {
+              ...ValidationFormlyError[
+              'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+              ],
+              errorPath: 'publishTopicSample'
+            }
           };
           break;
         }
@@ -500,19 +502,34 @@ export const isNumeric = (num: any) =>
 
 export function definesDeviceIdentifier(
   api: string,
+  externalIdType: string,
+  direction: Direction,
   sub: MappingSubstitution,
-  direction: Direction
 ): boolean {
+  // if (direction == Direction.INBOUND) {
+  //   return sub?.pathTarget == API[api].identifier;
+  // } else {
+  //   return sub?.pathSource == API[api].identifier;
+  // }
+
   if (direction == Direction.INBOUND) {
-    return sub?.pathTarget == API[api].identifier;
+    if (externalIdType) {
+      return sub?.pathTarget == `${IDENTITY}.externalId`;
+    } else {
+      return sub?.pathTarget == `${IDENTITY}.c8yId`;
+    }
   } else {
-    return sub?.pathSource == API[api].identifier;
+    if (externalIdType) {
+      return sub?.pathSource == `${IDENTITY}.externalId`;
+    } else {
+      return sub?.pathSource == `${IDENTITY}.c8yId`;
+    }
   }
 }
 
 export function findDeviceIdentifier(mapping: Mapping): MappingSubstitution {
   const mp = mapping.substitutions.filter((sub) =>
-    definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
+    definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction, sub)
   );
   if (mp && mp.length > 0) {
     return mp[0];
@@ -573,14 +590,30 @@ export function expandExternalTemplate(
 }
 
 export function expandC8YTemplate(template: object, mapping: Mapping): object {
-  if (mapping.targetAPI == API.INVENTORY.name) {
+  if (mapping.externalIdType) {
     return {
       ...template,
-      id: '909090'
+      _IDENTITY_: {
+        externalIdType: mapping.externalIdType,
+        externalId: '909090'
+      }
     };
   } else {
-    return template;
+    return {
+      ...template,
+      _IDENTITY_: {
+        c8yId: '909090'
+      }
+    };
   }
+  // if (mapping.targetAPI == API.INVENTORY.name) {
+  //   return {
+  //     ...template,
+  //     id: '909090'
+  //   };
+  // } else {
+  //   return template;
+  // }
 }
 
 export function reduceSourceTemplate(
@@ -588,6 +621,7 @@ export function reduceSourceTemplate(
   returnPatched: boolean
 ): string {
   if (!returnPatched) {
+    delete template[IDENTITY];
     delete template[TOKEN_TOPIC_LEVEL];
     delete template[TOKEN_CONTEXT_DATA];
   }
@@ -600,6 +634,7 @@ export function reduceTargetTemplate(
   patched: boolean
 ): string {
   if (template && !patched) {
+    delete template[IDENTITY];
     delete template[TOKEN_TOPIC_LEVEL];
     delete template[TOKEN_CONTEXT_DATA];
   }
@@ -610,3 +645,21 @@ export function reduceTargetTemplate(
 export function isDisabled(condition: boolean) {
   return condition ? '' : null;
 }
+
+
+export function getDeviceIdentifier(mapping: Mapping): string {
+  if (mapping.externalIdType && mapping.externalIdType !== '') {
+      return `${IDENTITY}.externalId`;
+  } else {
+      return `${IDENTITY}.c8yId`;
+  }
+}
+
+export function remappedPath(mapping: Mapping, originalPath: string): string {
+  if (getDeviceIdentifier(mapping) === originalPath) {
+      return API[mapping.targetAPI].identifier;
+  } else {
+      return originalPath;
+  }
+}
+

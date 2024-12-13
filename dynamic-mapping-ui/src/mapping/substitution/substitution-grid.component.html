@@ -72,7 +72,7 @@
           <span *ngIf="!sub.registeredType" class="text-12"
             >{{
               '[ ' +
-                (definesDeviceIdentifier(targetAPI, sub, direction)
+                (definesDeviceIdentifier(targetAPI, externalIdType, direction, sub)
                   ? '* '
                   : '') +
                 sub.pathSource +

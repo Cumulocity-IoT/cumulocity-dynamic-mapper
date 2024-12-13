@@ -146,7 +146,7 @@
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
-                        (contentChanged)="onsourceTemplateChanged($event)" [data]="sourceTemplate"
+                        (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container
                         *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal">
@@ -165,7 +165,7 @@
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorTarget"
                         [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
                         [class]="'jse-main-medium'" (initialized)="onEditorTargetInitialized()"
-                        (contentChanged)="ontargetTemplateChanged($event)" [data]="targetTemplate" #editorGeneral>
+                        (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate" #editorGeneral>
                       </d11r-mapping-json-editor2>
                     </div>
                   </div>
@@ -332,8 +332,8 @@
                 <div class="row">
                   <div class="col-lg-10 col-lg-offset-1">
                     <div style="min-height: 32px">
-                      <d11r-mapping-substitution-grid [substitutions]="mapping.substitutions"
-                        [targetAPI]="mapping.targetAPI" [settings]="{
+                      <d11r-mapping-substitution-grid [targetAPI]="mapping.targetAPI"
+                        [externalIdType]="mapping.externalIdType" [substitutions]="mapping.substitutions" [settings]="{
                             color: COLOR_HIGHLIGHTED,
                             selectedSubstitutionIndex: selectedSubstitution,
                             editorMode: stepperConfiguration.editorMode
@@ -342,8 +342,7 @@
                       </d11r-mapping-substitution-grid>
                     </div>
                     <span class="text-warning text-12 p-l-8" *ngIf="
-                          (countDeviceIdentifiers$ | async) !== 1 &&
-                          !stepperConfiguration.allowNoDefinedIdentifier
+                          (isSubstitutionValid$ | async) != true
                         ">Exactly one substitution defining the DeviceIdentifier
                       must be used</span>
                   </div>

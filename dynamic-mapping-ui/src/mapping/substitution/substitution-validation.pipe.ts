@@ -26,7 +26,7 @@ import { definesDeviceIdentifier } from '../shared/util';
 export class CountDeviceIdentifiersPipe implements PipeTransform {
   transform(mapping: Mapping) {
     return mapping.substitutions.filter((sub) =>
-      definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
+      definesDeviceIdentifier(mapping.targetAPI,  mapping.externalIdType, mapping.direction, sub)
     ).length;
   }
 }

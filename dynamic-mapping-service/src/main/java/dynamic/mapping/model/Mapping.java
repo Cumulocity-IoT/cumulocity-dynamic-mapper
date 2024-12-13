@@ -41,6 +41,7 @@ import java.util.List;
 @ToString(exclude = { "source", "target", "snoopedTemplates" })
 public class Mapping implements Serializable {
 
+    public static final String IDENTITY = "_IDENTITY_";
     public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
     public static final String TOKEN_CONTEXT_DATA = "_CONTEXT_DATA_";
     public static final String CONTEXT_DATA_KEY_NAME = "key";
@@ -122,8 +123,10 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public Direction direction;
 
-    // TODO filterMapping has to be removed and for ountbound mappings as well JSONata expressions
-    // this has to be changed in MappingComponent.deleteFromMappingCache & MappingComponent.rebuildMappingOutboundCache
+    // TODO filterMapping has to be removed and for ountbound mappings as well
+    // JSONata expressions
+    // this has to be changed in MappingComponent.deleteFromMappingCache &
+    // MappingComponent.rebuildMappingOutboundCache
 
     @JsonSetter(nulls = Nulls.SKIP)
     public String filterMapping;
@@ -157,8 +160,9 @@ public class Mapping implements Serializable {
 
     public void sortSubstitutions() {
         MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
-                (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI, direction))
-                        .compareTo(Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI, direction)))))
+                (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI, externalIdType, direction, s1))
+                        .compareTo(
+                                Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI, externalIdType, direction, s2)))))
                 .toArray(size -> new MappingSubstitution[size]);
         substitutions = sortedSubstitutions;
     }
@@ -181,5 +185,21 @@ public class Mapping implements Serializable {
     public static List<String> splitTopicExcludingSeparatorAsList(String topic) {
         return new ArrayList<String>(
                 Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
+    }
+
+    public String getDeviceIdentifier() {
+        if (externalIdType != null && !("").equals(externalIdType)) {
+            return (Mapping.IDENTITY + ".externalId");
+        } else {
+            return (Mapping.IDENTITY + ".c8yId");
+        }
+    }
+
+    public String remappedPath(String originalPath) {
+        if (getDeviceIdentifier().equals(originalPath)) {
+            return targetAPI.identifier;
+        } else {
+            return originalPath;
+        }
     }
 }
