@@ -188,51 +188,37 @@ export abstract class PayloadProcessorInbound {
             // }
           }
 
+          this.substituteValueInPayload(
+            mapping.mappingType,
+            substituteValue,
+            payloadTarget,
+            pathTarget
+          );
           if (getDeviceIdentifier(mapping) === pathTarget) {
-            this.substituteValueInPayload(
-              mapping.mappingType,
-              substituteValue,
-              payloadTarget,
-              pathTarget
-            );
             this.substituteValueInPayload(
               mapping.mappingType,
               sourceId,
               payloadTarget,
               remappedPath(mapping, pathTarget)
             )
-          } else {
-            this.substituteValueInPayload(
-              mapping.mappingType,
-              substituteValue,
-              payloadTarget,
-              pathTarget
-            );
           };
 
           // } else if (pathTarget != API[mapping.targetAPI].identifier) {
         } else {
+          this.substituteValueInPayload(
+            mapping.mappingType,
+            substituteValue,
+            payloadTarget,
+            pathTarget
+          );
           if (getDeviceIdentifier(mapping) === pathTarget) {
-            this.substituteValueInPayload(
-              mapping.mappingType,
-              substituteValue,
-              payloadTarget,
-              pathTarget
-            );
             this.substituteValueInPayload(
               mapping.mappingType,
               sourceId,
               payloadTarget,
               remappedPath(mapping, pathTarget)
             )
-          } else {
-            this.substituteValueInPayload(
-              mapping.mappingType,
-              substituteValue,
-              payloadTarget,
-              pathTarget
-            );
-          }
+          };
         }
       }
       /*

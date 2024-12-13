@@ -335,8 +335,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     ];
 
     this.setTemplateForm();
-    this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-    this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
+  }
+
+  private updateSubstiutionValid() {
+    const ni = countDeviceIdentifiers(this.mapping);
+    console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
+    (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
+    this.countDeviceIdentifiers$.next(ni);
+    this.isSubstitutionValid$.next((ni == 1 && this.mapping.direction == Direction.INBOUND) ||
+      (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
   }
 
   private setTemplateForm(): void {
@@ -457,12 +464,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       );
       if (this.expertMode) {
         this.substitutionFormly.get('pathTarget').setErrors(null);
-        if (definesDI && this.mapping.mapDeviceIdentifier) {
-          const txt = `${API[this.mapping.targetAPI].identifier
-            } is resolved using the external Id ${this.mapping.externalIdType
-            } defined in the previous step.`;
-          this.targetCustomMessage$.next(txt);
-        } else if (path == '$') {
+        // if (definesDI && this.mapping.mapDeviceIdentifier) {
+        //   const txt = `${API[this.mapping.targetAPI].identifier
+        //     } is resolved using the external Id ${this.mapping.externalIdType
+        //     } defined in the previous step.`;
+        //   this.targetCustomMessage$.next(txt);
+        // } else 
+        if (path == '$') {
           const txt = `By specifying "$" you selected the root of the target 
           template and this result in merging the source expression with the target template.`;
           this.targetCustomMessage$.next(txt);
@@ -595,7 +603,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // console.log("Step index 1 - afer", this.targetTemplate);
     } else if (index == 3) {
       this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
-      this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
+      this.updateSubstiutionValid();
       this.onSelectSubstitution(0);
       // this.step == 'Select templates'
     } else if (index == 4) {
@@ -801,9 +809,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);
     }
-    this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-    this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
-
+    this.updateSubstiutionValid();
   }
 
   toggleExpertMode() {
@@ -834,8 +840,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       modalRef.content.closeSubject.subscribe((editedSub) => {
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
-          this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-          this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
+          this.updateSubstiutionValid();
           //this.substitutionModel = editedSub; not needed
         }
       });
@@ -875,13 +880,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         } else if (newSub && isDuplicate) {
           this.mapping.substitutions[duplicateSubstitutionIndex] = newSub;
         }
-        this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-        this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
+        this.updateSubstiutionValid();
       });
     } else {
       this.mapping.substitutions.push(sub);
-      this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-      this.isSubstitutionValid$.next(countDeviceIdentifiers(this.mapping) == 1 || this.stepperConfiguration.allowNoDefinedIdentifier);
+      this.updateSubstiutionValid();
     }
   }
 

@@ -28,6 +28,7 @@ import com.api.jsonata4java.expressions.ParseException;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
@@ -71,6 +72,20 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
         JsonNode payloadJsonNode = context.getPayload();
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
+        /*
+         * step 0 patch payload with dummy property _IDENTITY_ in case the content
+         * is required in the payload for a substitution
+         */
+        ObjectNode identityFragment = objectMapper.createObjectNode();
+        identityFragment.set("externalIdType", TextNode.valueOf(mapping.externalIdType));
+        if (payloadJsonNode instanceof ObjectNode) {
+            ((ObjectNode) payloadJsonNode).set(Mapping.IDENTITY, identityFragment);
+        } else {
+            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+                    tenant);
+        }
+        
+
         String payload = payloadJsonNode.toPrettyString();
         if (serviceConfiguration.logPayload || mapping.debug) {
             log.debug("Tenant {} - Incoming payload in extractFromSource(): {} {} {} {}", tenant, payload, serviceConfiguration.logPayload, mapping.debug,serviceConfiguration.logPayload || mapping.debug );
@@ -90,7 +105,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                 log.error("Tenant {} - Exception for: {}, {}: ", context.getTenant(), substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
+                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
                         substitution.pathSource,
                         payload, e);
             }
