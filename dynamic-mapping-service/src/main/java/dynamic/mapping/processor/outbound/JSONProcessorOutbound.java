@@ -21,6 +21,8 @@
 
 package dynamic.mapping.processor.outbound;
 
+import static dynamic.mapping.model.Mapping.findDeviceIdentifier;
+
 import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
@@ -31,7 +33,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -158,7 +159,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
                 } else if (extractedSourceContent.isTextual()) {
-                    if (ps.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathSource)
+                    if (ps.equals(findDeviceIdentifier(mapping).pathSource)
                             && substitution.resolve2ExternalId) {
                         log.debug("Tenant {} - Finding external Id: resolveGlobalId2ExternalId: {}, {}, {}",
                                 context.getTenant(), ps, extractedSourceContent.toPrettyString(),

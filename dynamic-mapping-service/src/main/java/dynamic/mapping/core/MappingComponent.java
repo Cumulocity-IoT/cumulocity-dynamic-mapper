@@ -351,7 +351,7 @@ public class MappingComponent {
             }
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant, Direction.UNSPECIFIED);
-            List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
+            List<ValidationError> errors = Mapping.isMappingValid(mappings, mapping);
             if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();
                 mapping.lastUpdate = System.currentTimeMillis();
@@ -379,7 +379,7 @@ public class MappingComponent {
 
     public Mapping createMapping(String tenant, Mapping mapping) {
         List<Mapping> mappings = getMappings(tenant, Direction.UNSPECIFIED);
-        List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
+        List<ValidationError> errors = Mapping.isMappingValid(mappings, mapping);
         if (errors.size() != 0) {
             String errorList = errors.stream().map(e -> e.toString()).reduce("",
                     (res, error) -> res + "[ " + error + " ]");
