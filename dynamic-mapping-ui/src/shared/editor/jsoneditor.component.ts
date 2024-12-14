@@ -166,7 +166,8 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onClassName(path: JSONPath, value: any): string | undefined {
     let result = undefined;
-    if (path.join('.') == this.identifier || path.join('.') == `${IDENTITY}.externalId` || path.join('.') == '_IDENTITY_.c8yId') result = 'id-node';
+    // if (path.join('.') == this.identifier || path.join('.') == `${IDENTITY}.externalId` || path.join('.') == '_IDENTITY_.c8yId') result = 'id-node';
+    if (path.join('.') == `${IDENTITY}.externalId` || path.join('.') == '_IDENTITY_.c8yId') result = 'id-node';
     return result;
   }
 

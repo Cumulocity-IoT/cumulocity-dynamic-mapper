@@ -62,11 +62,11 @@ body .jse-main {
 }
 
 .id-node .jse-key {
-  background-color: var(--navigator-active-bg, var(--c8y-navigator-active-bg)) !important;
+  background-color: var(--palette-status-info-light, var(--c8y-palette-status-info-light)) !important;
 }
 
 .id-node .jse-value {
-  background-color: var(--navigator-active-bg, var(--c8y-navigator-active-bg)) !important;
+  background-color: var(--palette-status-info-light, var(--c8y-palette-status-info-light)) !important;
 }
 
 /* remove the 'transform' option from the context menu */

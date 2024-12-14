@@ -84,7 +84,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
-        // if there are too few devices identified then we replicate the first device
+        // if there are too few devices identified, then we replicate the first device
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
         String maxEntry = postProcessingCache.entrySet()
                 .stream()
@@ -106,7 +106,6 @@ public abstract class BasePayloadProcessorInbound<T> {
         while (deviceEntries.size() < countMaxlistEntries) {
             deviceEntries.add(toDuplicate);
         }
-        // Set<String> pathTargets = postProcessingCache.keySet();
 
         // if devices have to be created implicitly, then request have to b process in
         // sequence, other multiple threads will try to create a device with the same

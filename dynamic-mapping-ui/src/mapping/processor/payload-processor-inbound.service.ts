@@ -57,7 +57,9 @@ export abstract class PayloadProcessorInbound {
   protected JSONATA = require('jsonata');
 
   async substituteInTargetAndSend(context: ProcessingContext) {
+
     // step 3 replace target with extract content from inbound payload
+    
     const { mapping } = context;
 
     const { postProcessingCache } = context;

@@ -65,6 +65,7 @@ import {
   definesDeviceIdentifier,
   expandC8YTemplate,
   expandExternalTemplate,
+  getGenericDeviceIdentifier,
   isDisabled,
   reduceSourceTemplate,
   reduceTargetTemplate,
@@ -72,6 +73,7 @@ import {
 } from '../shared/util';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
+import { map } from 'cypress/types/bluebird';
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -500,7 +502,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  onSelectedPathSourceChanged(path: string) {
+  async onSelectedPathSourceChanged(path: string) {
     if (this.expertMode) {
       this.substitutionFormly.get('pathSource').setValue(path);
       this.substitutionModel.pathSource = path;
@@ -508,15 +510,30 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.substitutionModel.pathSource = path;
       this.updateSourceExpressionResult(path);
     }
+    if (path == API[this.mapping.targetAPI].identifier) {
+      const gi = getGenericDeviceIdentifier(this.mapping);
+      await this.editorSourceStepSubstitution.setSelectionToPath(
+        getGenericDeviceIdentifier(this.mapping)
+      );
+      this.alertService.info(`Please use the selected node ${gi} to map the identiy from the source`);
+    }
+  
   }
 
-  onSelectedPathTargetChanged(path: string) {
+  async onSelectedPathTargetChanged(path: string) {
     if (this.expertMode) {
       this.substitutionFormly.get('pathTarget').setValue(path);
       this.substitutionModel.pathTarget = path;
     } else {
       this.substitutionModel.pathTarget = path;
       this.updateTargetExpressionResult(path);
+    }
+    if (path == API[this.mapping.targetAPI].identifier) {
+      const gi = getGenericDeviceIdentifier(this.mapping);
+      await this.editorTargetStepSubstitution.setSelectionToPath(
+        gi
+      );
+      this.alertService.info(`Please use the selected node ${gi} to map the identiy from the source`);
     }
   }
 
@@ -528,7 +545,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.sourceTemplate = reduceSourceTemplate(content['json'], false);
     }
     this.sourceTemplate = JSON.parse(this.mapping.sourceTemplate);
-    console.log("Step onSourceTemplateChanged",this.mapping.sourceTemplate);
+    console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -538,7 +555,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else {
       this.mapping.targetTemplate = reduceSourceTemplate(content['json'], false);
     }
-    console.log("Step onTargetTemplateChanged",this.mapping.targetTemplate);
+    console.log("Step onTargetTemplateChanged", this.mapping.targetTemplate);
   }
 
   async onCommitButton() {
@@ -611,7 +628,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // console.log("Step index 1 - afer", this.targetTemplate);
     } else if (index == 3) {
       this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
-      console.log("Step onStepChange",this.mapping.sourceTemplate);
+      console.log("Step onStepChange", this.mapping.sourceTemplate);
       this.editorSourceStepSubstitution.set(JSON.parse(this.mapping.sourceTemplate));
       this.editorTargetStepSubstitution.set(JSON.parse(this.mapping.targetTemplate));
       this.updateSubstiutionValid();
