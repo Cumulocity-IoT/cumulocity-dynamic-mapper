@@ -483,9 +483,9 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
     return {
       ...template,
       _IDENTITY_: {
-        externalIdType: mapping.externalIdType,
+        // externalIdType: mapping.externalIdType,
         externalId: 'any_SerialNumber',
-        c8yId: '909090'
+        // c8yId: '909090'
       }
     };
   } else {

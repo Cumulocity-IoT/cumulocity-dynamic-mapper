@@ -73,7 +73,6 @@ import {
 } from '../shared/util';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
-import { map } from 'cypress/types/bluebird';
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -516,7 +515,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       );
       this.alertService.info(`Please use the selected node ${gi} to map the identiy from the source`);
     }
-  
+
   }
 
   async onSelectedPathTargetChanged(path: string) {
@@ -538,26 +537,33 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onSourceTemplateChanged(content: Content) {
+    let contentAsJson;
     if (_.has(content, 'text') && content['text']) {
-      this.mapping.sourceTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
+      contentAsJson = JSON.parse(content['text']);
     } else {
-      this.mapping.sourceTemplate = reduceSourceTemplate(content['json'], false);
+      contentAsJson = content['json'];
     }
-    this.sourceTemplate = JSON.parse(this.mapping.sourceTemplate);
-    console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate);
+    this.sourceTemplate = contentAsJson;
+
+    // console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate, this.mapping.targetTemplate);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTargetTemplateChanged(content: Content) {
+    let contentAsJson;
     if (_.has(content, 'text') && content['text']) {
-      this.mapping.targetTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
+      contentAsJson = JSON.parse(content['text']);
     } else {
-      this.mapping.targetTemplate = reduceSourceTemplate(content['json'], false);
+      contentAsJson = content['json'];
     }
-    console.log("Step onTargetTemplateChanged", this.mapping.targetTemplate);
+    this.targetTemplate = contentAsJson;
+
+    // console.log("Step onTargetTemplateChanged",this.mapping.sourceTemplate,  this.mapping.targetTemplate);
   }
 
   async onCommitButton() {
+    this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
+    this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
     this.commit.emit(this.mapping);
   }
 
@@ -627,15 +633,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // console.log("Step index 1 - afer", this.targetTemplate);
     } else if (index == 3) {
       this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
-      console.log("Step onStepChange", this.mapping.sourceTemplate);
-      this.editorSourceStepSubstitution.set(JSON.parse(this.mapping.sourceTemplate));
-      this.editorTargetStepSubstitution.set(JSON.parse(this.mapping.targetTemplate));
+      // console.log("Step 3: onStepChange targetTemplate ", this.mapping.targetTemplate);
       this.updateSubstiutionValid();
       this.onSelectSubstitution(0);
       // this.step == 'Select templates'
     } else if (index == 4) {
-      this.sourceTemplate = this.editorSourceStepTemplate?.get();
-      this.targetTemplate = this.editorTargetStepTemplate?.get();
+      // console.log("Step 4: onStepChange targetTemplate ", this.mapping.targetTemplate);
     }
 
   }
