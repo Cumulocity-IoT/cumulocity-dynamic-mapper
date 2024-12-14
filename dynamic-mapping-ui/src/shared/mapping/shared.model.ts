@@ -28,7 +28,6 @@ export interface MappingSubstitution {
   pathTarget: string;
   repairStrategy: RepairStrategy;
   expandArray: boolean;
-  resolve2ExternalId: boolean;
 }
 
 export interface DeploymentMapEntry {

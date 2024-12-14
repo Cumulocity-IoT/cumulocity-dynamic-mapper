@@ -159,8 +159,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
                 } else if (extractedSourceContent.isTextual()) {
-                    if (ps.equals(findDeviceIdentifier(mapping).pathSource)
-                            && substitution.resolve2ExternalId) {
+                    if (ps.equals(findDeviceIdentifier(mapping).pathSource)) {
                         log.debug("Tenant {} - Finding external Id: resolveGlobalId2ExternalId: {}, {}, {}",
                                 context.getTenant(), ps, extractedSourceContent.toPrettyString(),
                                 extractedSourceContent.asText());

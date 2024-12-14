@@ -449,7 +449,6 @@ export function cloneSubstitution(
     pathTarget: sub.pathTarget,
     repairStrategy: sub.repairStrategy,
     expandArray: sub.expandArray,
-    resolve2ExternalId: sub.resolve2ExternalId
   };
 }
 

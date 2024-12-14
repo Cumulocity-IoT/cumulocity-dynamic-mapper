@@ -231,7 +231,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       pathSource: '',
       pathTarget: '',
       repairStrategy: RepairStrategy.DEFAULT,
-      resolve2ExternalId: false,
       expandArray: false,
       targetExpression: {
         result: '',
@@ -823,7 +822,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.isSubstitutionValid()) {
       this.substitutionModel.expandArray = false;
       this.substitutionModel.repairStrategy = RepairStrategy.DEFAULT;
-      this.substitutionModel.resolve2ExternalId = false;
       this.addSubstitution(this.substitutionModel);
       this.selectedSubstitution = -1;
     } else {

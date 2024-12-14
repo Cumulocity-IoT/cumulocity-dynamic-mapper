@@ -143,8 +143,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
 
             if (
               substitution.pathSource ==
-                findDeviceIdentifier(mapping).pathSource &&
-              substitution.resolve2ExternalId
+                findDeviceIdentifier(mapping).pathSource
             ) {
               let externalId: string;
               try {
@@ -187,8 +186,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
 
             if (
               substitution.pathSource ==
-                findDeviceIdentifier(mapping).pathSource &&
-              substitution.resolve2ExternalId
+                findDeviceIdentifier(mapping).pathSource 
             ) {
               const externalId: string =
                 await this.c8yAgent.resolveGlobalId2ExternalId(
