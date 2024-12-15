@@ -228,8 +228,14 @@ public abstract class BasePayloadProcessorInbound<T> {
                     }
 
                 }
+                if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
+                    substituteValue.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+                }
                 substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
             } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget)) {
+                if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
+                    substituteValue.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+                }
                 substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
             }
         }

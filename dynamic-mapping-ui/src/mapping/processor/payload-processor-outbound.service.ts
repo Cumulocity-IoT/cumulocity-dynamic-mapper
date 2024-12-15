@@ -178,10 +178,10 @@ export abstract class PayloadProcessorOutbound {
       ) {
         _.unset(jsonObject, keys);
       } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-        const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-        if (pathIsNested) {
-          throw new Error('Can only crrate new nodes ion the root level!');
-        }
+        // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
+        // if (pathIsNested) {
+        //   throw new Error('Can only create new nodes on the root level!');
+        // }
         // jsonObject.put("$", keys, sub.typedValue());
         _.set(jsonObject, keys, getTypedValue(sub));
       } else {

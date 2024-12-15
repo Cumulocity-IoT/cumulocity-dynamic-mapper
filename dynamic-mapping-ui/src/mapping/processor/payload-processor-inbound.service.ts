@@ -59,7 +59,7 @@ export abstract class PayloadProcessorInbound {
   async substituteInTargetAndSend(context: ProcessingContext) {
 
     // step 3 replace target with extract content from inbound payload
-    
+
     const { mapping } = context;
 
     const { postProcessingCache } = context;
@@ -125,7 +125,7 @@ export abstract class PayloadProcessorInbound {
         let sourceId: SubstituteValue = {
           value: undefined,
           type: SubstituteValueType.TEXTUAL,
-          repairStrategy: RepairStrategy.DEFAULT
+          repairStrategy: RepairStrategy.CREATE_IF_MISSING
         };;
         if (mapping.targetAPI != API.INVENTORY.name) {
           if (
@@ -148,7 +148,7 @@ export abstract class PayloadProcessorInbound {
               //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
               // );
             }
-            if (!sourceId && mapping.createNonExistingDevice) {
+            if (!sourceId.value && mapping.createNonExistingDevice) {
               const request = {
                 c8y_IsDevice: {},
                 name: `device_${mapping.externalIdType}_${substituteValue.value}`,
@@ -156,6 +156,7 @@ export abstract class PayloadProcessorInbound {
                 d11r_testDevice: {},
                 type: MAPPING_TEST_DEVICE_TYPE
               };
+              
               const newPredecessor = context.requests.push({
                 predecessor: predecessor,
                 method: 'PATCH',
@@ -164,6 +165,7 @@ export abstract class PayloadProcessorInbound {
                 request: request,
                 targetAPI: API.INVENTORY.name
               });
+
               try {
                 const response = await this.c8yClient.upsertDevice(
                   {
@@ -174,6 +176,7 @@ export abstract class PayloadProcessorInbound {
                 );
                 context.requests[newPredecessor - 1].response = response;
                 substituteValue.value = response.id as any;
+                sourceId.value = response.id;
               } catch (e) {
                 context.requests[newPredecessor - 1].error = e;
               }
@@ -182,8 +185,6 @@ export abstract class PayloadProcessorInbound {
               throw new Error(
                 `External id ${substituteValue} for type ${mapping.externalIdType} not found!`
               );
-            } else if (!sourceId) {
-              substituteValue.value = substituteValue.value.toString();
             }
             // else {
             //   substituteValue.value = sourceId.toString();
@@ -298,10 +299,10 @@ export abstract class PayloadProcessorInbound {
       ) {
         _.unset(jsonObject, keys);
       } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-        const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-        if (pathIsNested) {
-          throw new Error('Can only crrate new nodes ion the root level!');
-        }
+        // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
+        // if (pathIsNested) {
+        //   throw new Error('Can only create new nodes on the root level!');
+        // }
         // jsonObject.put("$", keys, sub.typedValue());
         _.set(jsonObject, keys, getTypedValue(sub));
       } else {

@@ -143,10 +143,7 @@ export class C8YAgent {
       // );
     }
 
-    const currentRequest =
-      context.requests[context.requests.length - 1].request;
     const device: Partial<IManagedObject> = {
-      ...currentRequest,
       c8y_IsDevice: {},
       d11r_testDevice: {},
       com_cumulocity_model_Agent: {}
