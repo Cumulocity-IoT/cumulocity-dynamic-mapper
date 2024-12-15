@@ -64,17 +64,17 @@ public class Mapping implements Serializable {
     static {
         UNSPECIFIED_MAPPING = new Mapping();
         UNSPECIFIED_MAPPING.setId(MappingStatus.IDENT_UNSPECIFIED_MAPPING);
-        UNSPECIFIED_MAPPING.setIdent(MappingStatus.IDENT_UNSPECIFIED_MAPPING);
+        UNSPECIFIED_MAPPING.setIdentifier(MappingStatus.IDENT_UNSPECIFIED_MAPPING);
     }
-
-    @NotNull
-    public String name;
 
     @NotNull
     public String id;
 
     @NotNull
-    public String ident;
+    public String identifier;
+
+    @NotNull
+    public String name;
 
     public String publishTopic;
 
@@ -88,31 +88,44 @@ public class Mapping implements Serializable {
     public API targetAPI;
 
     @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Direction direction;
+
+    @NotNull
     public String sourceTemplate;
 
     @NotNull
     public String targetTemplate;
 
     @NotNull
-    public boolean active;
-
-    @NotNull
-    public boolean tested;
-
-    @NotNull
-    public QOS qos;
+    public MappingType mappingType;
 
     @NotNull
     public MappingSubstitution[] substitutions;
 
     @NotNull
-    public boolean mapDeviceIdentifier;
+    public boolean active;
+
+    @NotNull
+    public boolean debug;
+
+    @NotNull
+    public boolean tested;
+
+    @NotNull
+    public boolean supportsMessageContext;
 
     @NotNull
     public boolean createNonExistingDevice;
 
     @NotNull
     public boolean updateExistingDevice;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean autoAckOperation;
+
+    @NotNull
+    public boolean useExternalId;
 
     @NotNull
     public String externalIdType;
@@ -123,15 +136,8 @@ public class Mapping implements Serializable {
     @NotNull
     public ArrayList<String> snoopedTemplates;
 
-    @NotNull
-    public MappingType mappingType;
-
     @JsonSetter(nulls = Nulls.SKIP)
     public ExtensionEntry extension;
-
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public Direction direction;
 
     // TODO filterMapping has to be removed and for ountbound mappings as well
     // JSONata expressions
@@ -141,14 +147,8 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public String filterMapping;
 
-    @JsonSetter(nulls = Nulls.SKIP)
-    public Boolean autoAckOperation;
-
     @NotNull
-    public boolean debug;
-
-    @NotNull
-    public boolean supportsMessageContext;
+    public QOS qos;
 
     @NotNull
     public long lastUpdate;
@@ -229,8 +229,10 @@ public class Mapping implements Serializable {
     static public ArrayList<ValidationError> isSubstitutionValid(Mapping mapping) {
         ArrayList<ValidationError> result = new ArrayList<ValidationError>();
         long count = Arrays.asList(mapping.substitutions).stream()
-                .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction, sub)).count();
-    
+                .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction,
+                        sub))
+                .count();
+
         if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
                 && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE)
                 && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET)
@@ -242,7 +244,7 @@ public class Mapping implements Serializable {
             if (count < 1) {
                 result.add(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used);
             }
-    
+
         }
         return result;
     }
@@ -254,7 +256,7 @@ public class Mapping implements Serializable {
         // if (count > 1) {
         // result.add(ValidationError.Only_One_Single_Level_Wildcard);
         // }
-    
+
         count = topic.length() - topic.replace(TOPIC_WILDCARD_MULTI, "").length();
         if (count > 1) {
             result.add(ValidationError.Only_One_Multi_Level_Wildcard);
@@ -265,72 +267,73 @@ public class Mapping implements Serializable {
         return result;
     }
 
-	static public boolean isWildcardTopic(String topic) {
-	    var result = topic.contains(TOPIC_WILDCARD_MULTI) || topic.contains(TOPIC_WILDCARD_SINGLE);
-	    return result;
-	}
+    static public boolean isWildcardTopic(String topic) {
+        var result = topic.contains(TOPIC_WILDCARD_MULTI) || topic.contains(TOPIC_WILDCARD_SINGLE);
+        return result;
+    }
 
-	static public List<ValidationError> isFilterOutboundUnique(List<Mapping> mappings, Mapping mapping) {
-	    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-	    var filterMapping = mapping.filterMapping;
-	    mappings.forEach(m -> {
-	        if ((filterMapping.equals(m.filterMapping))
-	                && (mapping.id != m.id)) {
-	            result.add(ValidationError.FilterOutbound_Must_Be_Unique);
-	        }
-	    });
-	    return result;
-	}
+    static public List<ValidationError> isFilterOutboundUnique(List<Mapping> mappings, Mapping mapping) {
+        ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+        var filterMapping = mapping.filterMapping;
+        mappings.forEach(m -> {
+            if ((filterMapping.equals(m.filterMapping))
+                    && (mapping.id != m.id)) {
+                result.add(ValidationError.FilterOutbound_Must_Be_Unique);
+            }
+        });
+        return result;
+    }
 
-	static public List<ValidationError> isMappingValid(List<Mapping> mappings, Mapping mapping) {
-	    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-	    result.addAll(isSubstitutionValid(mapping));
-	    if (mapping.direction.equals(Direction.INBOUND)) {
-	        result.addAll(isMappingTopicValid(mapping.mappingTopic));
-	    } else {
-	        // test if we can attach multiple outbound mappings to the same filterMapping
-	        result.addAll(
-	                Mapping.isPublishTopicTemplateAndPublishTopicSampleValid(mapping.publishTopic, mapping.publishTopicSample));
-	    }
-	
-	    result.addAll(areJSONTemplatesValid(mapping));
-	    // result.addAll(isMappingTopicUnique(mappings, mapping));
-	    return result;
-	}
+    static public List<ValidationError> isMappingValid(List<Mapping> mappings, Mapping mapping) {
+        ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+        result.addAll(isSubstitutionValid(mapping));
+        if (mapping.direction.equals(Direction.INBOUND)) {
+            result.addAll(isMappingTopicValid(mapping.mappingTopic));
+        } else {
+            // test if we can attach multiple outbound mappings to the same filterMapping
+            result.addAll(
+                    Mapping.isPublishTopicTemplateAndPublishTopicSampleValid(mapping.publishTopic,
+                            mapping.publishTopicSample));
+        }
 
-	static Collection<? extends ValidationError> isPublishTopicTemplateAndPublishTopicSampleValid(
-	        @NotNull String publishTopic, @NotNull String publishTopicSample) {
-	    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-	    String[] splitPT = splitTopicIncludingSeparatorAsArray(publishTopic);
-	    String[] splitTTS = splitTopicIncludingSeparatorAsArray(publishTopicSample);
-	    if (splitPT.length != splitTTS.length) {
-	        result.add(
-	                ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
-	    } else {
-	        for (int i = 0; i < splitPT.length; i++) {
-	            if (("/").equals(splitPT[i]) && !("/").equals(splitTTS[i])) {
-	                result.add(
-	                        ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
-	                break;
-	            }
-	            if (("/").equals(splitTTS[i]) && !("/").equals(splitPT[i])) {
-	                result.add(
-	                        ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
-	                break;
-	            }
-	            if (!("/").equals(splitPT[i]) && !("+").equals(splitPT[i]) && !("#").equals(splitPT[i])) {
-	                if (!splitPT[i].equals(splitTTS[i])) {
-	                    result.add(
-	                            ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
-	                    break;
-	                }
-	            }
-	        }
-	    }
-	    return result;
-	}
+        result.addAll(areJSONTemplatesValid(mapping));
+        // result.addAll(isMappingTopicUnique(mappings, mapping));
+        return result;
+    }
 
-        /*
+    static Collection<? extends ValidationError> isPublishTopicTemplateAndPublishTopicSampleValid(
+            @NotNull String publishTopic, @NotNull String publishTopicSample) {
+        ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+        String[] splitPT = splitTopicIncludingSeparatorAsArray(publishTopic);
+        String[] splitTTS = splitTopicIncludingSeparatorAsArray(publishTopicSample);
+        if (splitPT.length != splitTTS.length) {
+            result.add(
+                    ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
+        } else {
+            for (int i = 0; i < splitPT.length; i++) {
+                if (("/").equals(splitPT[i]) && !("/").equals(splitTTS[i])) {
+                    result.add(
+                            ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+                    break;
+                }
+                if (("/").equals(splitTTS[i]) && !("/").equals(splitPT[i])) {
+                    result.add(
+                            ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+                    break;
+                }
+                if (!("/").equals(splitPT[i]) && !("+").equals(splitPT[i]) && !("#").equals(splitPT[i])) {
+                    if (!splitPT[i].equals(splitTTS[i])) {
+                        result.add(
+                                ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+                        break;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /*
      * test if mapping.mappingTopic and mapping.mappingTopicSample have the same
      * structure and same number of levels
      */
@@ -399,7 +402,9 @@ public class Mapping implements Serializable {
 
     static public MappingSubstitution findDeviceIdentifier(Mapping mapping) {
         Object[] mp = Arrays.stream(mapping.substitutions)
-                .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction, sub)).toArray();
+                .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction,
+                        sub))
+                .toArray();
         if (mp.length > 0) {
             return (MappingSubstitution) mp[0];
         } else {

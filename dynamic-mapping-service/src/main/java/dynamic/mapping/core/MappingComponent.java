@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -96,7 +95,7 @@ public class MappingComponent {
     // structure: <tenant, initialized>
     private Map<String, Boolean> initializedMappingStatus = new HashMap<>();
 
-    // structure: <tenant, < connectorIdent , <connectorProperty , connectorValue>>>
+    // structure: <tenant, < connectorIdentifier , <connectorProperty , connectorValue>>>
     @Getter
     private Map<String, Map<String, Map<String, String>>> consolidatedConnectorStatus = new HashMap<>();
 
@@ -134,7 +133,7 @@ public class MappingComponent {
                                     : mappingServiceRepresentation.getMappingStatus().size()));
             Map<String, MappingStatus> mappingStatus = new HashMap<>();
             mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
-                mappingStatus.put(ms.ident, ms);
+                mappingStatus.put(ms.identifier, ms);
             });
             tenantMappingStatus.put(tenant, mappingStatus);
         } else {
@@ -142,7 +141,7 @@ public class MappingComponent {
 
         }
         if (!tenantMappingStatus.get(tenant).containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
-            tenantMappingStatus.get(tenant).put(MappingStatus.UNSPECIFIED_MAPPING_STATUS.ident,
+            tenantMappingStatus.get(tenant).put(MappingStatus.UNSPECIFIED_MAPPING_STATUS.identifier,
                     MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
         initializedMappingStatus.put(tenant, true);
@@ -209,14 +208,14 @@ public class MappingComponent {
     }
 
     public MappingStatus getMappingStatus(String tenant, Mapping m) {
-        // log.info("Tenant {} - get MappingStatus: {}", tenant, m.ident);
+        // log.info("Tenant {} - get MappingStatus: {}", tenant, m.identifier);
         Map<String, MappingStatus> mappingStatus = tenantMappingStatus.get(tenant);
-        MappingStatus ms = mappingStatus.get(m.ident);
+        MappingStatus ms = mappingStatus.get(m.identifier);
         if (ms == null) {
-            log.info("Tenant {} - Adding: {}", tenant, m.ident);
-            ms = new MappingStatus(m.id, m.name, m.ident, m.direction, m.mappingTopic, m.publishTopic, 0, 0,
+            log.info("Tenant {} - Adding: {}", tenant, m.identifier);
+            ms = new MappingStatus(m.id, m.name, m.identifier, m.direction, m.mappingTopic, m.publishTopic, 0, 0,
                     0, 0, null);
-            mappingStatus.put(m.ident, ms);
+            mappingStatus.put(m.identifier, ms);
         }
         return ms;
     }
@@ -237,7 +236,7 @@ public class MappingComponent {
 
     // ic List<MappingStatus> getMappingLoadingError(String tenant) {
     // // log.info("Tenant {} - get MappingStatus: {
-    // ", tenant, m.ident);
+    // ", tenant, m.identifier);
     // Map<String, MappingStatus> mappingLoadErro
     // = tenantMappingLoadingError.get(tenant);
     // List<MappingStatus> mappingLoadErrorList =
@@ -298,7 +297,7 @@ public class MappingComponent {
             return m.getC8yMQTTMapping();
         });
         if (result != null)
-            removeMappingFromDeploymentMap(tenant, result.ident);
+            removeMappingFromDeploymentMap(tenant, result.identifier);
         // log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
         return result;
     }
@@ -316,10 +315,10 @@ public class MappingComponent {
                             mapping.setId(mappingMO.getId());
                             return Optional.of(mapping);
                         } catch (IllegalArgumentException e) {
-                            String execeptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+                            String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
                             String msg = String.format("Failed to convert managed object %s to mapping. Error: %s",
                                     mo.getId().getValue(),
-                                    execeptionMsg);
+                                    exceptionMsg);
                             log.warn(msg);
                             sendMappingLoadingError(tenant, mo, msg);
                             return Optional.<Mapping>empty();
@@ -727,13 +726,13 @@ public class MappingComponent {
         return map;
     }
 
-    public boolean removeConnectorFromDeploymentMap(String tenant, String connectorIdent) {
+    public boolean removeConnectorFromDeploymentMap(String tenant, String connectorIdentifier) {
         MutableBoolean result = new MutableBoolean(false);
         if (!tenantDeploymentMap.containsKey(tenant)) {
             return result.booleanValue();
         }
         for (List<String> deploymentList : tenantDeploymentMap.get(tenant).values()) {
-            result.setValue(deploymentList.remove(connectorIdent) || result.booleanValue());
+            result.setValue(deploymentList.remove(connectorIdentifier) || result.booleanValue());
         }
         if (result.getValue())
             saveDeploymentMap(tenant);

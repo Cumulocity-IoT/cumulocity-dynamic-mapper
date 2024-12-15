@@ -45,9 +45,9 @@ public class ServiceOperation {
     public static ServiceOperation reloadMappings(String tenant) {
         return new ServiceOperation(tenant, Operation.RELOAD_MAPPINGS, null);
     }   
-    public static ServiceOperation connect(String tenant, String connectorIdent) {
+    public static ServiceOperation connect(String tenant, String connectorIdentifier) {
         HashMap<String, String> params = new HashMap<>();
-        params.put("connectorIdent", connectorIdent);
+        params.put("connectorIdentifier", connectorIdentifier);
         return new ServiceOperation(tenant, Operation.CONNECT, params);
     }
     public static ServiceOperation reloadExtensions(String tenant) {

@@ -30,15 +30,15 @@ public class TopicConsumerCallback implements TopicConsumerListener {
     GenericMessageCallback genericMessageCallback;
     String tenant;
     String topic;
-    String connectorIdent;
+    String connectorIdentifier;
     boolean supportsMessageContext;
 
-    TopicConsumerCallback(GenericMessageCallback callback, String tenant, String connectorIdent, String topic,
+    TopicConsumerCallback(GenericMessageCallback callback, String tenant, String connectorIdentifier, String topic,
             boolean supportsMessageContext) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.topic = topic;
-        this.connectorIdent = connectorIdent;
+        this.connectorIdentifier = connectorIdentifier;
         this.supportsMessageContext = supportsMessageContext;
     }
 
@@ -50,7 +50,7 @@ public class TopicConsumerCallback implements TopicConsumerListener {
         connectorMessage.setTenant(tenant);
         connectorMessage.setSendPayload(true);
         connectorMessage.setTopic(topic);
-        connectorMessage.setConnectorIdent(connectorIdent);
+        connectorMessage.setConnectorIdentifier(connectorIdentifier);
         connectorMessage.setSupportsMessageContext(supportsMessageContext);
         genericMessageCallback.onMessage(connectorMessage);
     }

@@ -52,7 +52,7 @@ public class ConfigurationRegistry {
 	@Getter
 	private Map<String, Map<MappingType, BasePayloadProcessorInbound<?>>> payloadProcessorsInbound = new HashMap<>();
 
-	// structure: <tenant, <connectorIdent, <mappingType,
+	// structure: <tenant, <connectorIdentifier, <mappingType,
 	// extensibleProcessorOutbound>>>
 	@Getter
 	private Map<String, Map<String, Map<MappingType, BasePayloadProcessorOutbound<?>>>> payloadProcessorsOutbound = new HashMap<>();
@@ -141,20 +141,20 @@ public class ConfigurationRegistry {
 			connectorClient = new MQTTClient(this, connectorConfiguration,
 					null,
 					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
-					connectorConfiguration.getIdent());
+			log.info("Tenant {} - Initializing MQTT Connector with identifier {}", tenant,
+					connectorConfiguration.getIdentifier());
 		} else if (ConnectorType.CUMULOCITY_MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
 			connectorClient = new MQTTServiceClient(this, connectorConfiguration,
 					null,
 					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing MQTTService Connector with ident {}", tenant,
-					connectorConfiguration.getIdent());
+			log.info("Tenant {} - Initializing MQTTService Connector with identifier {}", tenant,
+					connectorConfiguration.getIdentifier());
 		} else if (ConnectorType.KAFKA.equals(connectorConfiguration.getConnectorType())) {
 			connectorClient = new KafkaClient(this, connectorConfiguration,
 					null,
 					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing Kafka Connector with ident {}", tenant,
-					connectorConfiguration.getIdent());
+			log.info("Tenant {} - Initializing Kafka Connector with identifier {}", tenant,
+					connectorConfiguration.getIdentifier());
 		}
 		return connectorClient;
 	}

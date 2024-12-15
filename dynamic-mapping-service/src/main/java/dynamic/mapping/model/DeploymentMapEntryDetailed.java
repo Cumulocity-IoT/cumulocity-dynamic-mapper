@@ -35,13 +35,13 @@ import java.util.ArrayList;
 @Setter
 @NoArgsConstructor
 public class DeploymentMapEntryDetailed implements Serializable {
-	public DeploymentMapEntryDetailed(String ident) {
-		this.ident = ident;
+	public DeploymentMapEntryDetailed(String identifier) {
+		this.identfier = identifier;
 		this.connectors = new ArrayList<>();
 	}
 
 	@NotNull
-	public String ident;
+	public String identfier;
 	@NotNull
 	public ArrayList<ConnectorConfiguration> connectors;
 }

@@ -360,16 +360,16 @@ export class MappingStepPropertiesComponent
         fieldGroup: [
           {
             className: 'col-lg-3',
-            key: 'mapDeviceIdentifier',
+            key: 'useExternalId',
             type: 'switch',
             wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
-              label: 'Map device identifier',
+              label: 'Use external id',
               switchMode: true,
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'If this is enabled then the device id is treated as an external id which is looked up and translated using the externalIdType.',
+                'If this is enabled then the device id is identified by its  external id which is looked up and translated using the externalIdType.',
               indeterminate: false,
               hideLabel: true
             }
@@ -384,13 +384,13 @@ export class MappingStepPropertiesComponent
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
             },
-            hideExpression: (model) => !model.mapDeviceIdentifier
+            hideExpression: (model) => !model.useExternalId
           },
           // filler
           {
             className: 'col-lg-3',
             template: '<div class="form-group row" style="height:80px"></div>',
-            hideExpression: (model) => model.mapDeviceIdentifier
+            hideExpression: (model) => model.useExternalId
           },
           {
             className: 'col-lg-6',

@@ -468,7 +468,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       );
       if (this.expertMode) {
         this.substitutionFormly.get('pathTarget').setErrors(null);
-        // if (definesDI && this.mapping.mapDeviceIdentifier) {
+        // if (definesDI && this.mapping.useExternalId) {
         //   const txt = `${API[this.mapping.targetAPI].identifier
         //     } is resolved using the external Id ${this.mapping.externalIdType
         //     } defined in the previous step.`;
@@ -677,7 +677,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (editorTestingRequestRef != null) {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
-    } else if (this.step == 'Select templates') {
+    } else if (this.step == 'Select templates' || this.step == 'General sesstings') {
       this.templatesInitialized = false;
     }
     event.stepper.previous();

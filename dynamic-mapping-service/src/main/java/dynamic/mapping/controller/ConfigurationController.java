@@ -181,10 +181,10 @@ public class ConfigurationController {
         }
     }
 
-    @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@PathVariable String ident) {
+    @RequestMapping(value = "/configuration/connector/instance/{identifier}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
-        log.debug("Tenant {} - Get connection details: {}", tenant, ident);
+        log.debug("Tenant {} - Get connection details: {}", tenant, identifier);
 
         try {
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
@@ -193,7 +193,7 @@ public class ConfigurationController {
 
             // Remove sensitive data before sending to UI
             for (ConnectorConfiguration config : configurations) {
-                if (config.getIdent().equals(ident)) {
+                if (config.getIdentifier().equals(identifier)) {
                     ConnectorSpecification connectorSpecification = connectorRegistry
                             .getConnectorSpecification(config.connectorType);
                     ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
@@ -205,15 +205,15 @@ public class ConfigurationController {
             }
             return ResponseEntity.ok(modifiedConfig);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error getting configuration: {},  {}", tenant, ident, ex);
+            log.error("Tenant {} - Error getting configuration: {},  {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
 
-    @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String ident) {
+    @RequestMapping(value = "/configuration/connector/instance/{identifier}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Delete connection instance {}", tenant, ident);
+        log.info("Tenant {} - Delete connection instance {}", tenant, identifier);
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -221,33 +221,33 @@ public class ConfigurationController {
                     "Insufficient Permission, user does not have required permission to access this API");
         }
         try {
-            ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(ident,
+            ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(identifier,
                     tenant);
             if (configuration.enabled)
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Can't delete an enabled connector! Disable connector first.");
             // make sure the connector is disconnected before it is deleted.
-            // if (connectorRegistry.getClientForTenant(tenant, ident) != null &&
-            // connectorRegistry.getClientForTenant(tenant, ident).isConnected())
-            bootstrapService.disableConnector(tenant, ident);
-            connectorConfigurationComponent.deleteConnectorConfiguration(ident);
-            mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
-            connectorRegistry.removeClientFromStatusMap(tenant, ident);
-            bootstrapService.shutdownAndRemoveConnector(tenant, ident);
+            // if (connectorRegistry.getClientForTenant(tenant, identifier) != null &&
+            // connectorRegistry.getClientForTenant(tenant, identifier).isConnected())
+            bootstrapService.disableConnector(tenant, identifier);
+            connectorConfigurationComponent.deleteConnectorConfiguration(identifier);
+            mappingComponent.removeConnectorFromDeploymentMap(tenant, identifier);
+            connectorRegistry.removeClientFromStatusMap(tenant, identifier);
+            bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
         } catch (Exception ex) {
             log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
-        return ResponseEntity.status(HttpStatus.OK).body(ident);
+        return ResponseEntity.status(HttpStatus.OK).body(identifier);
     }
 
-    @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(@PathVariable String ident,
+    @RequestMapping(value = "/configuration/connector/instance/{identifier}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(@PathVariable String identifier,
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Update connection instance {}", tenant, ident);
-        // make sure we are using the correct ident
-        configuration.ident = ident;
+        log.info("Tenant {} - Update connection instance {}", tenant, identifier);
+        // make sure we are using the correct identifier
+        configuration.identifier = identifier;
 
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
@@ -264,7 +264,7 @@ public class ConfigurationController {
             // check if password filed was touched, e.g. != "****", then use password from
             // new payload, otherwise copy password from previously saved configuration
             ConnectorConfiguration originalConfiguration = connectorConfigurationComponent
-                    .getConnectorConfiguration(configuration.ident, tenant);
+                    .getConnectorConfiguration(configuration.identifier, tenant);
 
             for (String property : configuration.getProperties().keySet()) {
                 if (connectorSpecification.isPropertySensitive(property)

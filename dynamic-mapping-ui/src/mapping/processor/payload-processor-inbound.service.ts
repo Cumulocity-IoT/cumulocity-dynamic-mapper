@@ -130,7 +130,7 @@ export abstract class PayloadProcessorInbound {
         if (mapping.targetAPI != API.INVENTORY.name) {
           if (
             pathTarget == findDeviceIdentifier(mapping).pathTarget &&
-            mapping.mapDeviceIdentifier
+            mapping.useExternalId
           ) {
             try {
               const identity = {

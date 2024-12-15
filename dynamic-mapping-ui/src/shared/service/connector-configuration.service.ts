@@ -69,8 +69,8 @@ export class ConnectorConfigurationService {
             return configs.map((config) => ({
               ...config,
               status$: new Observable<ConnectorStatus>((observer) => {
-                if (statusMap[config.ident]) {
-                  observer.next(statusMap[config.ident].status);
+                if (statusMap[config.identifier]) {
+                  observer.next(statusMap[config.identifier].status);
                 }
                 return () => {}; // Cleanup function
               })
@@ -143,7 +143,7 @@ export class ConnectorConfigurationService {
   }
 
   async getConnectorStatus(): Promise<{
-    [ident: string]: ConnectorStatusEvent;
+    [identifier: string]: ConnectorStatusEvent;
   }> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_STATUS_CONNECTORS_ENDPOINT}`,
@@ -159,7 +159,7 @@ export class ConnectorConfigurationService {
     configuration: ConnectorConfiguration
   ): Promise<IFetchResponse> {
     return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${configuration.ident}`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${configuration.identifier}`,
       {
         headers: {
           'content-type': 'application/json'
@@ -185,9 +185,9 @@ export class ConnectorConfigurationService {
     );
   }
 
-  async deleteConnectorConfiguration(ident: string): Promise<IFetchResponse> {
+  async deleteConnectorConfiguration(identifier: string): Promise<IFetchResponse> {
     return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${ident}`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${identifier}`,
       {
         headers: {
           accept: 'application/json',
@@ -228,7 +228,7 @@ export class ConnectorConfigurationService {
   //           map((p) => {
   //             const connectorFragment = p['data'][CONNECTOR_FRAGMENT];
   //             return {
-  //               connectorIdent: connectorFragment.connectorIdent,
+  //               connectorIdentifier: connectorFragment.connectorIdentifier,
   //               connectorName: connectorFragment.connectorName,
   //               status: connectorFragment.status,
   //               message: connectorFragment.message,

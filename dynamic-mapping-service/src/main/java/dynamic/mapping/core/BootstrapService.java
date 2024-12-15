@@ -251,23 +251,23 @@ public class BootstrapService {
 
 	// shutdownAndRemoveConnector will unsubscribe the subscriber which drops all
 	// queues
-	public void shutdownAndRemoveConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
-		// connectorRegistry.unregisterClient(tenant, connectorIdent);
+	public void shutdownAndRemoveConnector(String tenant, String connectorIdentifier) throws ConnectorRegistryException {
+		// connectorRegistry.unregisterClient(tenant, connectorIdentifier);
 		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 		if (serviceConfiguration.isOutboundMappingEnabled()) {
 			configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriberByConnector(tenant,
-					connectorIdent);
-			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
+					connectorIdentifier);
+			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdentifier);
 		}
 	}
 
 	// DisableConnector will just clean-up maps and disconnects Notification 2.0 -
 	// queues will be kept
-	public void disableConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
-		connectorRegistry.unregisterClient(tenant, connectorIdent);
+	public void disableConnector(String tenant, String connectorIdentifier) throws ConnectorRegistryException {
+		connectorRegistry.unregisterClient(tenant, connectorIdentifier);
 		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 		if (serviceConfiguration.isOutboundMappingEnabled()) {
-			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
+			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdentifier);
 		}
 	}
 

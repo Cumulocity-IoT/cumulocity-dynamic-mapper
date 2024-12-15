@@ -184,7 +184,7 @@ export class MappingService {
     if (!data.ok) throw new Error(data.statusText)!;
     const mapEntry: string[] = await data.json();
     const result: DeploymentMapEntry = {
-      ident: mappingIdent,
+      identifier: mappingIdent,
       connectors: mapEntry
     };
     return result;
@@ -210,7 +210,7 @@ export class MappingService {
     entry: DeploymentMapEntry
   ): Promise<any> {
     const response = this.client.fetch(
-      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${entry.ident}`,
+      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${entry.identifier}`,
       {
         headers: {
           'content-type': 'application/json'
@@ -243,7 +243,7 @@ export class MappingService {
               MappingTypeDescriptionMap[m.mappingType].properties[
                 Direction.INBOUND
               ].snoopSupported,
-            connectors: mappingsDeployed[m.ident]
+            connectors: mappingsDeployed[m.identifier]
           });
         });
         return mappingsEnriched;
@@ -263,7 +263,7 @@ export class MappingService {
           mappingsEnriched.push({
             id: m.id,
             mapping: m,
-            connectors: mappingsDeployed[m.ident]
+            connectors: mappingsDeployed[m.identifier]
           });
         });
         return mappingsEnriched;

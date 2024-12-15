@@ -202,7 +202,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
-                if (mapping.isActive() && connectorClient.getMappingsDeployedOutbound().containsKey(mapping.ident)) {
+                if (mapping.isActive() && connectorClient.getMappingsDeployedOutbound().containsKey(mapping.identifier)) {
                     MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
                     BasePayloadProcessorOutbound processor = payloadProcessorsOutbound.get(mapping.mappingType);

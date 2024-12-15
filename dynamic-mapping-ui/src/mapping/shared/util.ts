@@ -479,8 +479,9 @@ export function expandExternalTemplate(
 }
 
 export function expandC8YTemplate(template: object, mapping: Mapping): object {
-  if (mapping.externalIdType) {
-    return {
+  let result;
+  if (mapping.useExternalId) {
+    result = {
       ...template,
       _IDENTITY_: {
         // externalIdType: mapping.externalIdType,
@@ -488,13 +489,16 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
         // c8yId: '909090'
       }
     };
+    return result;
   } else {
-    return {
+    result = {
       ...template,
       _IDENTITY_: {
         c8yId: '909090'
       }
     };
+    return result;
+
   }
 }
 
@@ -531,16 +535,16 @@ export function isDisabled(condition: boolean) {
 
 export function getGenericDeviceIdentifier(mapping: Mapping): string {
   if (mapping.externalIdType && mapping.externalIdType !== '') {
-      return `${IDENTITY}.externalId`;
+    return `${IDENTITY}.externalId`;
   } else {
-      return `${IDENTITY}.c8yId`;
+    return `${IDENTITY}.c8yId`;
   }
 }
 
 export function transformGenericPath2C8YPath(mapping: Mapping, originalPath: string): string {
   if (getGenericDeviceIdentifier(mapping) === originalPath) {
-      return API[mapping.targetAPI].identifier;
+    return API[mapping.targetAPI].identifier;
   } else {
-      return originalPath;
+    return originalPath;
   }
 }

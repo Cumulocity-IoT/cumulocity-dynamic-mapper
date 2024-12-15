@@ -2,9 +2,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "/plant1/line1/device1_measure1_Type",
-    "ident": "c6bnuy",
+    "identifier": "c6bnuy",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -15,28 +15,24 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": " $substringAfter(_TOPIC_LEVEL_[2],\"_\")",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "value",
         "pathTarget": "measure1_Type.V.value",
         "repairStrategy": "DEFAULT",
@@ -57,9 +53,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "devices/device_best_01",
-    "ident": "h5mzdq",
+    "identifier": "h5mzdq",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -70,21 +66,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "mea.values[0].value",
         "pathTarget": "c8y_ProcessLoadMeasurement.L.value",
         "repairStrategy": "DEFAULT",
         "expandArray": true
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$map($map(mea.values[0].timestamp, $number), function($v, $i, $a) { $fromMillis($v) })",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
@@ -105,9 +98,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "device/express/berlin_01",
-    "ident": "3jvjuy",
+    "identifier": "3jvjuy",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "INVENTORY",
@@ -118,28 +111,24 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[2]",
-        "pathTarget": "id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "customType",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "operator&\"-\"&line",
         "pathTarget": "name",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "capacity",
         "pathTarget": "capacity",
         "repairStrategy": "DEFAULT",
@@ -160,9 +149,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "event/berlin_01",
-    "ident": "qkwkh5",
+    "identifier": "qkwkh5",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "EVENT",
@@ -173,28 +162,24 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "txt",
         "pathTarget": "text",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "msg_type",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
@@ -215,9 +200,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "measurement/berlin_01/gazoline",
-    "ident": "lj2zfk",
+    "identifier": "lj2zfk",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -228,21 +213,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "fuel",
         "pathTarget": "c8y_FuelMeasurement.L.value",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
@@ -263,9 +245,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "multiarray/devices",
-    "ident": "b6fu1i",
+    "identifier": "b6fu1i",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "INVENTORY",
@@ -276,21 +258,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "device",
-        "pathTarget": "id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": true
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "types.type_A",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$map(used_name, function($v, $i, $a) { $contains($v,'d1') ? $join(['Special_i0', $string($i)]) : $join([$string($v), $string($i)]) } )",
         "pathTarget": "name",
         "repairStrategy": "DEFAULT",
@@ -311,9 +290,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "arrayType/devices",
-    "ident": "9qeo7e",
+    "identifier": "9qeo7e",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -324,21 +303,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "$substringBefore($[0].devicePath,\"_AL\") ",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$[].values[0].value",
         "pathTarget": "c8y_TemperatureMeasurement.T.value",
         "repairStrategy": "DEFAULT",
         "expandArray": true
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$map($map($[].values[0].timestamp, $number), function($v) { $fromMillis($v)})",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
@@ -359,9 +335,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "eventObject/berlin_01",
-    "ident": "5lu1td",
+    "identifier": "5lu1td",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "EVENT",
@@ -372,35 +348,30 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "txt",
         "pathTarget": "text",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "msg_type",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "model",
         "pathTarget": "customProperties",
         "repairStrategy": "REMOVE_IF_MISSING",
@@ -427,9 +398,9 @@
       "eventName": "CustomEvent"
     },
     "mappingTopicSample": "protobuf/event",
-    "ident": "myydg3",
+    "identifier": "myydg3",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "EVENT",
@@ -453,9 +424,9 @@
   {
     "snoopStatus": "STOPPED",
     "mappingTopicSample": "binary/berlin_01",
-    "ident": "r59btj",
+    "identifier": "r59btj",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "EVENT",
@@ -466,21 +437,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "$number($substring(message,0,6))",
         "pathTarget": "value",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
@@ -506,9 +474,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "binaryEvent/berlin_01",
-    "ident": "s0baih",
+    "identifier": "s0baih",
     "tested": true,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "EVENT",
@@ -519,21 +487,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "\"Temp: \"&$number($substring(message,0,4))&\" C\"",
         "pathTarget": "text",
         "repairStrategy": "DEFAULT",
@@ -554,9 +519,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "device/update/berlin_01",
-    "ident": "60bnka",
+    "identifier": "60bnka",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "INVENTORY",
@@ -567,14 +532,12 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[2]",
-        "pathTarget": "id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "customType",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
@@ -595,9 +558,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "protobuf/measurement",
-    "ident": "wwd2h4",
+    "identifier": "wwd2h4",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -621,9 +584,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "panel",
-    "ident": "0cfd0g",
+    "identifier": "0cfd0g",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -634,21 +597,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "deviceId",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$fromMillis($number(deviceTimestamp))",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "temperature",
         "pathTarget": "c8y_TemperatureMeasurement.T.value",
         "repairStrategy": "DEFAULT",
@@ -669,9 +629,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "panel",
-    "ident": "nv61c6",
+    "identifier": "nv61c6",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "EVENT",
@@ -682,21 +642,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "deviceId",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "'New device status: ' & deviceStatus & '!'",
         "pathTarget": "text",
         "repairStrategy": "DEFAULT",
@@ -717,9 +674,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "flexM/berlin_01/gazoline",
-    "ident": "r9lka2",
+    "identifier": "r9lka2",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -730,35 +687,30 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "Measurementname & \"_type\"",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": " Measurementname = \"Airsensor\" ? {Seriesname:{\"value\": value, \"unit\": unit}} : null",
         "pathTarget": "Airsensor",
         "repairStrategy": "REMOVE_IF_NULL",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "Measurementname = \"Liquidsensor\" ? {Seriesname:{\"value\": value, \"unit\": unit}} : null",
         "pathTarget": "Liquidsensor",
         "repairStrategy": "REMOVE_IF_NULL",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
@@ -779,9 +731,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "alarm/tires",
-    "ident": "50b6a9",
+    "identifier": "50b6a9",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "ALARM",
@@ -792,21 +744,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "bus_id",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "msg_type",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "tx",
         "pathTarget": "text",
         "repairStrategy": "DEFAULT",
@@ -833,9 +782,9 @@
       "eventName": "CustomMeasurement"
     },
     "mappingTopicSample": "measurementExt",
-    "ident": "c2e9uh",
+    "identifier": "c2e9uh",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -859,9 +808,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "v2/things/berlin_01",
-    "ident": "nh4wx6",
+    "identifier": "nh4wx6",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -872,23 +821,20 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "values{key: {'Measurement':{'value':value, 'key': 'U'}}}",
         "pathTarget": "$",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[2]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       }
@@ -905,7 +851,7 @@
     "direction": "INBOUND"
   },
   {
-    "ident": "9av2or",
+    "identifier": "9av2or",
     "tested": false,
     "autoAckOperation": true,
     "sourceTemplate": "{\"ID\":\"0018\",\"d\":{\"Product1_Flow\":[14.93],\"Water_Flow\":[18.54],\"Product2_Flow\":[212.9]},\"ts\":\"2024-06-18 13:20:45.000Z\",\"timestampUTC\":\"2024-06-18T13:20:45.000Z\"}",
@@ -913,21 +859,18 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "ID",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$replace(ts,' ','T')",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$map($spread(d), function($v, $k) {     {       $keys($v): {         \"value\": $lookup($v,$keys($v))[0],         \"unit\": \"l/h\"       }     }   })~>$merge()",
         "pathTarget": "onguardMeasurement",
         "repairStrategy": "DEFAULT",
@@ -942,7 +885,7 @@
     "mappingTopicSample": "datalogger/0018",
     "snoopStatus": "NONE",
     "debug": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "targetAPI": "MEASUREMENT",
     "targetTemplate": "{\"onguardMeasurement\":{\"Product1_Flow\":{\"value\":110,\"unit\":\"l/h\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"onguardMeasurement\"}",
@@ -956,9 +899,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "operation/berlin_01",
-    "ident": "06gbfl",
+    "identifier": "06gbfl",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "OPERATION",
@@ -969,14 +912,12 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "deviceId",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$join([text,\"_\",$now()])",
         "pathTarget": "description",
         "repairStrategy": "DEFAULT",
@@ -997,9 +938,9 @@
   {
     "snoopStatus": "NONE",
     "mappingTopicSample": "measurementObject/berlin_01/gazoline",
-    "ident": "ywbx3a",
+    "identifier": "ywbx3a",
     "tested": false,
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "autoAckOperation": true,
     "targetAPI": "MEASUREMENT",
@@ -1010,35 +951,30 @@
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
         "pathSource": "_TOPIC_LEVEL_[1]",
-        "pathTarget": "source.id",
+        "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "mea",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "fuel*3.78541",
         "pathTarget": "c8y_FuelMeasurement.Tank.value",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "(oil?{\"Motor\": {\"value\":oil, \"unit\":\"l\"}}:null)",
         "pathTarget": "c8y_OilMeasurement",
         "repairStrategy": "REMOVE_IF_NULL",

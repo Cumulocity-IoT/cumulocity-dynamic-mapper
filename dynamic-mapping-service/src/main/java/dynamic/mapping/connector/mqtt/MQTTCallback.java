@@ -13,14 +13,14 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
     GenericMessageCallback genericMessageCallback;
     static String TOPIC_LEVEL_SEPARATOR = String.valueOf(MqttTopic.TOPIC_LEVEL_SEPARATOR);
     String tenant;
-    String connectorIdent;
+    String connectorIdentifier;
     boolean supportsMessageContext;
 
-    MQTTCallback(GenericMessageCallback callback, String tenant, String connectorIdent,
+    MQTTCallback(GenericMessageCallback callback, String tenant, String connectorIdentifier,
             boolean supportsMessageContext) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
-        this.connectorIdent = connectorIdent;
+        this.connectorIdentifier = connectorIdentifier;
         this.supportsMessageContext = supportsMessageContext;
     }
 
@@ -37,7 +37,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         connectorMessage.setSendPayload(true);
         String topic = String.join(TOPIC_LEVEL_SEPARATOR, mqttMessage.getTopic().getLevels());
         connectorMessage.setTopic(topic);
-        connectorMessage.setConnectorIdent(connectorIdent);
+        connectorMessage.setConnectorIdentifier(connectorIdentifier);
         connectorMessage.setSupportsMessageContext(supportsMessageContext);
         genericMessageCallback.onMessage(connectorMessage);
     }

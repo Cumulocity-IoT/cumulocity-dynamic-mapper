@@ -33,7 +33,6 @@ import com.cumulocity.rest.representation.tenant.OptionRepresentation;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
@@ -41,142 +40,147 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ConnectorConfigurationComponent {
-	private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic.mapper.service";
-	private static final String OPTION_KEY_CONNECTIOR_PREFIX = "credentials.connection.configuration";
+    private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic.mapper.service";
+    private static final String OPTION_KEY_CONNECTIOR_PREFIX = "credentials.connection.configuration";
 
-	private final TenantOptionApi tenantOptionApi;
+    private final TenantOptionApi tenantOptionApi;
 
-	@Autowired
-	private MicroserviceSubscriptionsService subscriptionsService;
+    @Autowired
+    private MicroserviceSubscriptionsService subscriptionsService;
 
-	private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper;
 
-	@Autowired
-	public void setObjectMapper(ObjectMapper objectMapper) {
-		this.objectMapper = objectMapper;
-	}
+    @Autowired
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
-	@Autowired
-	public ConnectorConfigurationComponent(TenantOptionApi tenantOptionApi) {
-		this.tenantOptionApi = tenantOptionApi;
-	}
+    public ConnectorConfigurationComponent(TenantOptionApi tenantOptionApi) {
+        this.tenantOptionApi = tenantOptionApi;
+    }
 
-	public String getConnectorOptionKey(String ident) {
-		return OPTION_KEY_CONNECTIOR_PREFIX + "." + ident;
-	}
+    public String getConnectorOptionKey(String identifier) {
+        return OPTION_KEY_CONNECTIOR_PREFIX + "." + identifier;
+    }
 
-	public void saveConnectorConfiguration(final ConnectorConfiguration configuration)
-			throws JsonProcessingException {
-		if (configuration == null) {
-			return;
-		}
-		String ident = configuration.getIdent();
-		final String configurationJson = objectMapper.writeValueAsString(configuration);
-		final OptionRepresentation optionRepresentation = OptionRepresentation
-				.asOptionRepresentation(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(ident), configurationJson);
-		tenantOptionApi.save(optionRepresentation);
-	}
+    public void saveConnectorConfiguration(final ConnectorConfiguration configuration)
+            throws JsonProcessingException {
+        if (configuration == null) {
+            return;
+        }
+        String identifier = configuration.getIdentifier();
+        final String configurationJson = objectMapper.writeValueAsString(configuration);
+        final OptionRepresentation optionRepresentation = OptionRepresentation
+                .asOptionRepresentation(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(identifier),
+                        configurationJson);
+        tenantOptionApi.save(optionRepresentation);
+    }
 
-	public void deleteConnectorConfiguration(final String ident)
-			throws JsonProcessingException {
-		if (ident == null) {
-			return;
-		}
-		final OptionPK option = new OptionPK();
-		option.setCategory(OPTION_CATEGORY_CONFIGURATION);
-		option.setKey(getConnectorOptionKey(ident));
-		tenantOptionApi.delete(option);
-	}
+    public void deleteConnectorConfiguration(final String identifier)
+            throws JsonProcessingException {
+        if (identifier == null) {
+            return;
+        }
+        final OptionPK option = new OptionPK();
+        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
+        option.setKey(getConnectorOptionKey(identifier));
+        tenantOptionApi.delete(option);
+    }
 
-	public ConnectorConfiguration getConnectorConfiguration(String ident, String tenant) {
-		final OptionPK option = new OptionPK();
-		option.setCategory(OPTION_CATEGORY_CONFIGURATION);
-		option.setKey(getConnectorOptionKey(ident));
-		ConnectorConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
-			ConnectorConfiguration rt = null;
-			try {
-				final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
-				final ConnectorConfiguration configuration = objectMapper.readValue(
-						optionRepresentation.getValue(),
-						ConnectorConfiguration.class);
-				log.debug("Tenant {} - Returning connection configuration found: {}:", tenant,
-						configuration.getConnectorType());
-				rt = configuration;
-			} catch (SDKException exception) {
-				log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
-				rt = null;
-			} catch (JsonMappingException e) {
-				e.printStackTrace();
-			} catch (JsonProcessingException e) {
-				e.printStackTrace();
-			}
-			return rt;
-		});
-		return result;
-	}
+    public ConnectorConfiguration getConnectorConfiguration(String identifier, String tenant) {
+        final OptionPK option = new OptionPK();
+        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
+        option.setKey(getConnectorOptionKey(identifier));
+        ConnectorConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
+            ConnectorConfiguration rt = null;
+            try {
+                final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
+                final ConnectorConfiguration configuration = objectMapper.readValue(
+                        optionRepresentation.getValue(),
+                        ConnectorConfiguration.class);
+                log.debug("Tenant {} - Returning connection configuration found: {}:", tenant,
+                        configuration.getConnectorType());
+                rt = configuration;
+            } catch (SDKException exception) {
+                log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
+            } catch (Exception e) {
+                String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+                String msg = String.format("Failed to convert configurator object %s. Error: %s",
+                        identifier,
+                        exceptionMsg);
+                log.warn(msg);
+            }
+            return rt;
+        });
+        return result;
+    }
 
-	public List<ConnectorConfiguration> getConnectorConfigurations(String tenant) {
-		final List<ConnectorConfiguration> connectorConfigurations = new ArrayList<>();
-		subscriptionsService.runForTenant(tenant, () -> {
-			try {
-				final List<OptionRepresentation> optionRepresentationList = tenantOptionApi
-						.getAllOptionsForCategory(OPTION_CATEGORY_CONFIGURATION);
-				for (OptionRepresentation optionRepresentation : optionRepresentationList) {
-					// Just Connector Config --> Ignoring Service Configuration
-					String optionKey = OPTION_KEY_CONNECTIOR_PREFIX.replace("credentials.", "");
-					if (optionRepresentation.getKey().startsWith(optionKey)) {
-						final ConnectorConfiguration configuration = objectMapper.readValue(
-								optionRepresentation.getValue(),
-								ConnectorConfiguration.class);
-						connectorConfigurations.add(configuration);
-						log.debug("Tenant {} - Connection configuration found: {}:", tenant,
-								configuration.getConnectorType());
-					}
-				}
-			} catch (SDKException exception) {
-				log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
-			} catch (JsonMappingException e) {
-				e.printStackTrace();
-			} catch (JsonProcessingException e) {
-				e.printStackTrace();
-			}
-		});
-		return connectorConfigurations;
-	}
+    public List<ConnectorConfiguration> getConnectorConfigurations(String tenant) {
+        final List<ConnectorConfiguration> connectorConfigurations = new ArrayList<>();
+        subscriptionsService.runForTenant(tenant, () -> {
+            final List<OptionRepresentation> optionRepresentationList = tenantOptionApi
+                    .getAllOptionsForCategory(OPTION_CATEGORY_CONFIGURATION);
+            for (OptionRepresentation optionRepresentation : optionRepresentationList) {
+                try {
+                    // Just Connector Config --> Ignoring Service Configuration
+                    String optionKey = OPTION_KEY_CONNECTIOR_PREFIX.replace("credentials.", "");
+                    if (optionRepresentation.getKey().startsWith(optionKey)) {
+                        final ConnectorConfiguration configuration = objectMapper.readValue(
+                                optionRepresentation.getValue(),
+                                ConnectorConfiguration.class);
+                        connectorConfigurations.add(configuration);
+                        log.debug("Tenant {} - Connection configuration found: {}:", tenant,
+                                configuration.getConnectorType());
+                    }
+                } catch (SDKException exception) {
+                    log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
+                } catch (Exception e) {
+                    String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+                    String msg = String.format("Failed to convert configurator object %s. Error: %s",
+                            optionRepresentation.getKey(),
+                            exceptionMsg);
+                    log.warn(msg);
+                }
+            }
+        });
+        return connectorConfigurations;
+    }
 
-	public void deleteConnectorConfigurations(String tenant) {
-		List<ConnectorConfiguration> configs = getConnectorConfigurations(tenant);
-		for (ConnectorConfiguration config : configs) {
-			OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION,
-					getConnectorOptionKey(config.getIdent()));
-			tenantOptionApi.delete(optionPK);
-		}
-	}
+    public void deleteConnectorConfigurations(String tenant) {
+        List<ConnectorConfiguration> configs = getConnectorConfigurations(tenant);
+        for (ConnectorConfiguration config : configs) {
+            OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION,
+                    getConnectorOptionKey(config.getIdentifier()));
+            tenantOptionApi.delete(optionPK);
+        }
+    }
 
-	public ConnectorConfiguration enableConnection(String connectorIdent, boolean enabled) {
-		final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(connectorIdent));
-		String tenant = subscriptionsService.getTenant();
-		try {
-			final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
-			final ConnectorConfiguration configuration = objectMapper.readValue(optionRepresentation.getValue(),
-					ConnectorConfiguration.class);
+    public ConnectorConfiguration enableConnection(String identfier, boolean enabled) {
+        final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(identfier));
+        String tenant = subscriptionsService.getTenant();
+        try {
+            final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
+            final ConnectorConfiguration configuration = objectMapper.readValue(optionRepresentation.getValue(),
+                    ConnectorConfiguration.class);
 
-			configuration.enabled = enabled;
-			log.debug("Tenant {} - Setting connection: {}:", tenant, configuration.enabled);
-			final String configurationJson = objectMapper.writeValueAsString(configuration);
-			optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
-			optionRepresentation.setKey(getConnectorOptionKey(connectorIdent));
-			optionRepresentation.setValue(configurationJson);
-			tenantOptionApi.save(optionRepresentation);
-			return configuration;
-		} catch (SDKException exception) {
-			log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
-			// exception.printStackTrace();
-		} catch (JsonMappingException e) {
-			e.printStackTrace();
-		} catch (JsonProcessingException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
+            configuration.enabled = enabled;
+            log.debug("Tenant {} - Setting connection: {}:", tenant, configuration.enabled);
+            final String configurationJson = objectMapper.writeValueAsString(configuration);
+            optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
+            optionRepresentation.setKey(getConnectorOptionKey(identfier));
+            optionRepresentation.setValue(configurationJson);
+            tenantOptionApi.save(optionRepresentation);
+            return configuration;
+        } catch (SDKException exception) {
+            log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
+            // exception.printStackTrace();
+        } catch (Exception e) {
+            String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+            String msg = String.format("Failed to convert configurator object %s. Error: %s",
+                    identfier,
+                    exceptionMsg);
+            log.warn(msg);
+        }
+        return null;
+    }
 }

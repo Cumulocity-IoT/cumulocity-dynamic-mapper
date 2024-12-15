@@ -81,8 +81,8 @@ public class MQTTServiceClient extends MQTTClient {
 	private static String nextId() {
 		return "CUMULOCITY_MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
 	}
-	private static String getClientId(String ident, String suffix) {
-		return "CUMULOCITY_MQTT_SERVICE" + ident + suffix;
+	private static String getClientId(String identifier, String suffix) {
+		return "CUMULOCITY_MQTT_SERVICE" + identifier + suffix;
 	}
 	// return random.nextInt(max - min) + min;
 
@@ -96,9 +96,9 @@ public class MQTTServiceClient extends MQTTClient {
 		this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
 		this.connectorConfiguration = connectorConfiguration;
 		// ensure the client knows its identity even if configuration is set to null
-		this.connectorIdent = connectorConfiguration.ident;
+		this.connectorIdentifier = connectorConfiguration.identifier;
 		this.connectorName = connectorConfiguration.name;
-		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
+		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.identifier);
 		this.c8yAgent = configurationRegistry.getC8yAgent();
 		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();
@@ -115,7 +115,7 @@ public class MQTTServiceClient extends MQTTClient {
 				new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
 						msc.getPassword(), null));
 		getConnectorSpecification().getProperties().put("clientId", new ConnectorProperty(true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
-				getClientId(this.connectorIdent, this.additionalSubscriptionIdTest), null));
+				getClientId(this.connectorIdentifier, this.additionalSubscriptionIdTest), null));
 		this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE);
 	}
 

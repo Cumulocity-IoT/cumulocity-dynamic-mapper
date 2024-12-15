@@ -35,11 +35,11 @@
           </select>
         </div>
         <div class="c8y-select-wrapper button-bottom-margin m-l-16">
-          <select class="form-control" style="width: 180px" [(ngModel)]="filterStatusLog.connectorIdent"
-            name="connectorIdent">
+          <select class="form-control" style="width: 180px" [(ngModel)]="filterStatusLog.connectorIdentifier"
+            name="connectorIdentifier">
             <option [value]="'ALL'">ALL connectors</option>
 
-            <option [value]="t.ident" *ngFor="let t of configurations$ | async">
+            <option [value]="t.identifier" *ngFor="let t of configurations$ | async">
               {{ t.name }}
             </option>
           </select>

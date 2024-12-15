@@ -54,7 +54,7 @@ export class ConnectorStatusService {
   private _agentId: string;
 
   private readonly RESET = {
-    connectorIdent: 'ALL',
+    connectorIdentifier: 'ALL',
     connectorName: 'EMPTY',
     status: ConnectorStatus.UNKNOWN,
     type: LoggingEventTypeMap[LoggingEventType.ALL].type,
@@ -80,12 +80,12 @@ export class ConnectorStatusService {
   }
 
   updateStatusLogs(filter: {
-    connectorIdent: string,
+    connectorIdentifier: string,
     type: LoggingEventType,
   }) {
     const updatedFilter = this.RESET;
     updatedFilter.type = LoggingEventTypeMap[filter.type].type;
-    updatedFilter.connectorIdent = filter.connectorIdent;
+    updatedFilter.connectorIdentifier = filter.connectorIdentifier;
     this.filterStatusLog = updatedFilter;
     this.triggerLogs$.next(updatedFilter);
   }
@@ -118,8 +118,8 @@ export class ConnectorStatusService {
         }))
       ),
       map(events => events.filter(event => 
-        this.filterStatusLog.connectorIdent === 'ALL' || 
-        event.connectorIdent === this.filterStatusLog.connectorIdent
+        this.filterStatusLog.connectorIdentifier === 'ALL' || 
+        event.connectorIdentifier === this.filterStatusLog.connectorIdentifier
       )),
       // tap(x => console.log('TriggerLogs Out', x))
     );
@@ -160,7 +160,7 @@ export class ConnectorStatusService {
       })),
       filter(event => 
         (this.filterStatusLog.type === 'ALL' || event.type === this.filterStatusLog.type) &&
-        (this.filterStatusLog.connectorIdent === 'ALL' || event.connectorIdent === this.filterStatusLog.connectorIdent)
+        (this.filterStatusLog.connectorIdentifier === 'ALL' || event.connectorIdentifier === this.filterStatusLog.connectorIdentifier)
       ),
       map(event => [event]),
       // tap(logs => console.log('StatusLogs:', logs))

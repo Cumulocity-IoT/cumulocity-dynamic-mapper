@@ -443,15 +443,15 @@ export class MappingComponent implements OnInit, OnDestroy {
       EditorMode.CREATE
     );
 
-    const ident = uuidCustom();
+    const identifier = uuidCustom();
     const sub: MappingSubstitution[] = [];
     let mapping: Mapping;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       mapping = {
-        // name: `Mapping - ${ident.substring(0, 7)}`,
+        // name: `Mapping - ${identifier.substring(0, 7)}`,
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
-        id: ident,
-        ident: ident,
+        id: 'any',
+        identifier: identifier,
         mappingTopic: '',
         mappingTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
@@ -461,7 +461,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         tested: false,
         qos: QOS.AT_LEAST_ONCE,
         substitutions: sub,
-        mapDeviceIdentifier: false,
+        useExternalId: false,
         createNonExistingDevice: false,
         mappingType: this.mappingType,
         updateExistingDevice: false,
@@ -475,9 +475,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       };
     } else {
       mapping = {
-        name: `Mapping - ${ident.substring(0, 7)}`,
-        id: ident,
-        ident: ident,
+        name: `Mapping - ${identifier.substring(0, 7)}`,
+        id: identifier,
+        identifier: identifier,
         publishTopic: '',
         publishTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
@@ -487,7 +487,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         tested: false,
         qos: QOS.AT_LEAST_ONCE,
         substitutions: sub,
-        mapDeviceIdentifier: false,
+        useExternalId: false,
         createNonExistingDevice: false,
         mappingType: this.mappingType,
         updateExistingDevice: false,
@@ -524,7 +524,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
 
     this.mappingToUpdate = mapping;
-    this.deploymentMapEntry = { ident: mapping.ident, connectors: [] };
+    this.deploymentMapEntry = { identifier: mapping.identifier, connectors: [] };
     if (
       mapping.snoopStatus === SnoopStatus.NONE ||
       mapping.snoopStatus === SnoopStatus.STOPPED
@@ -617,9 +617,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       )
         this.mappingToUpdate.direction = Direction.INBOUND;
       const deploymentMapEntry =
-        await this.mappingService.getDefinedDeploymentMapEntry(mapping.ident);
+        await this.mappingService.getDefinedDeploymentMapEntry(mapping.identifier);
       this.deploymentMapEntry = {
-        ident: this.mappingToUpdate.ident,
+        identifier: this.mappingToUpdate.identifier,
         connectors: deploymentMapEntry.connectors
       };
       // console.log('Editing mapping', this.mappingToUpdate);
@@ -646,13 +646,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingToUpdate.snoopStatus = SnoopStatus.NONE;
     this.mappingToUpdate.snoopedTemplates = [];
     this.mappingToUpdate.name = `${this.mappingToUpdate.name} - Copy`;
-    this.mappingToUpdate.ident = uuidCustom();
-    this.mappingToUpdate.id = this.mappingToUpdate.ident;
+    this.mappingToUpdate.identifier = uuidCustom();
+    this.mappingToUpdate.id = this.mappingToUpdate.identifier;
     this.mappingToUpdate.active = false;
     const deploymentMapEntry =
-      await this.mappingService.getDefinedDeploymentMapEntry(mapping.ident);
+      await this.mappingService.getDefinedDeploymentMapEntry(mapping.identifier);
     this.deploymentMapEntry = {
-      ident: this.mappingToUpdate.ident,
+      identifier: this.mappingToUpdate.identifier,
       connectors: deploymentMapEntry.connectors
     };
     // console.log('Copying mapping', this.mappingToUpdate);

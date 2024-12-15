@@ -20,7 +20,7 @@
  */
 
 export interface ConnectorStatusEvent {
-  connectorIdent: string;
+  connectorIdentifier: string;
   connectorName: string;
   date?: string;
   status: ConnectorStatus;

@@ -656,9 +656,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     }
                 }
             } catch (Exception e) {
-                String execeptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+                String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
                 String msg = String.format("Could not load extension: %s:%s: %s!", key,
-                        newExtensions.getProperty(key), execeptionMsg);
+                        newExtensions.getProperty(key), exceptionMsg);
                 log.warn(msg);
                 e.printStackTrace();
                 extensionEntry.setMessage(msg);
@@ -806,7 +806,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     entry("message",
                             message == null ? C8Y_NOTIFICATION_CONNECTOR + ": " + connectorStatus.name() : message),
                     entry("connectorName", C8Y_NOTIFICATION_CONNECTOR),
-                    entry("connectorIdent", "000000"),
+                    entry("connectorIdentifier", "000000"),
                     entry("date", date));
             createEvent("Connector status:" + connectorStatus.name(),
                     LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE, DateTime.now(),

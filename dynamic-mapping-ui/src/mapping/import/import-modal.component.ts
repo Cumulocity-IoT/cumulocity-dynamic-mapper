@@ -74,7 +74,7 @@ export class ImportMappingsComponent implements OnDestroy {
     const errors = [];
     mappings.forEach(async (m, i) => {
       try {
-        m.ident = uuidCustom();
+        m.identifier = uuidCustom();
         m.lastUpdate = Date.now();
         m.active = false;
         await this.mappingService.createMapping(m);
