@@ -228,11 +228,13 @@ public abstract class BasePayloadProcessorInbound<T> {
                     }
 
                 }
+                // since the attributes identifying the MEA and Invnetory requests are removed during the design time, htey have to be added before sending
                 if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
                     substituteValue.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
                 }
                 substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
             } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget)) {
+                // since the attributes identifying the MEA and Invnetory requests are removed during the design time, htey have to be added before sending
                 if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
                     substituteValue.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
                 }
@@ -319,11 +321,13 @@ public abstract class BasePayloadProcessorInbound<T> {
                         (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
                     jsonObject.delete(keys);
                 } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                    boolean pathIsNested = keys.contains(".") || keys.contains("[");
-                    if (pathIsNested) {
-                        throw new JSONException("Can only create new nodes ion the root level!");
-                    }
-                    jsonObject.put("$", keys, sub.typedValue());
+                    // boolean pathIsNested = keys.contains(".") || keys.contains("[");
+                    // if (pathIsNested) {
+                    //     throw new JSONException("Can only create new nodes on the root level!");
+                    // }
+                    //jsonObject.put("$", keys, sub.typedValue());
+                    jsonObject.set("$."+ keys, sub.typedValue());
+
                 } else {
                     jsonObject.set(keys, sub.typedValue());
                 }

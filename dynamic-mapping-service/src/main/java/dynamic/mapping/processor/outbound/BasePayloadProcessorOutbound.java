@@ -155,7 +155,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
-                if (connectorClient.isConnected() && context.isSendPayload() ) {
+                if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);
                 } else {
                     log.warn("Tenant {} - Not sending message: connected {}, sendPayload {}", tenant,
@@ -188,11 +188,12 @@ public abstract class BasePayloadProcessorOutbound<T> {
                     (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
                 jsonObject.delete(keys);
             } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                boolean pathIsNested = keys.contains(".") || keys.contains("[");
-                if (pathIsNested) {
-                    throw new JSONException("Can only create new nodes ion the root level!");
-                }
-                jsonObject.put("$", keys, sub.typedValue());
+                // boolean pathIsNested = keys.contains(".") || keys.contains("[");
+                // if (pathIsNested) {
+                // throw new JSONException("Can only create new nodes on the root level!");
+                // }
+                // jsonObject.put("$", keys, sub.typedValue());
+                jsonObject.set("$." + keys, sub.typedValue());
             } else {
                 jsonObject.set(keys, sub.typedValue());
             }
