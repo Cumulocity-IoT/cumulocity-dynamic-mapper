@@ -174,13 +174,6 @@ public class OperationController {
 				}
 
 				if (failed.size() > 0) {
-					// configurationRegistry.getC8yAgent().createEvent("Activation of mapping: " +
-					// updatedMapping.name,
-					// C8YAgent.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
-					// DateTime.now(),
-					// configurationRegistry.getMappingServiceRepresentations().get(tenant),
-					// tenant,
-					// failed);
 					return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
 				}
 

@@ -421,17 +421,18 @@ public abstract class AConnectorClient {
      * Only inactive mappings can be updated except activation/deactivation.
      **/
     public boolean updateActiveSubscriptionInbound(Mapping mapping, Boolean create, Boolean activationChanged) {
+        boolean result = true;
+        boolean isDeployed = false;
         if (isConnected()) {
             Boolean containsWildcards = mapping.mappingTopic.matches(".*[#\\+].*");
             boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
+            List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
+            if (deploymentMapEntry != null) {
+                isDeployed = deploymentMapEntry.contains(getConnectorIdent());
+            }
             if (validDeployment) {
                 if (!getActiveSubscriptions().containsKey(mapping.mappingTopic)) {
                     getActiveSubscriptions().put(mapping.mappingTopic, new MutableInt(0));
-                }
-                List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
-                boolean isDeployed = false;
-                if (deploymentMapEntry != null) {
-                    isDeployed = deploymentMapEntry.contains(getConnectorIdent());
                 }
                 if (mapping.active && isDeployed) {
                     getMappingsDeployedInbound().put(mapping.identifier, mapping);
@@ -491,13 +492,13 @@ public abstract class AConnectorClient {
                         }
                     }
                 }
-            } else {
+            } else if (isDeployed) {
                 log.warn("Tenant {} - Mapping {} contains wildcards like #,+ which are not support by connector {}",
                         tenant, mapping.getId(), connectorName);
-                return false;
+                result = false;
             }
         }
-        return true;
+        return result;
     }
 
     /**
