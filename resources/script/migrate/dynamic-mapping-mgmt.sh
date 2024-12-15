@@ -1,30 +1,6 @@
 #!/bin/bash
 set -e
 
-###
-# script migrates the mappings form a format used in releases up to 4.6.1 to the new format used from 4.7.x onwards
-# changes are:
-## Step 1 change format
-# 1. rename 'source' -> 'sourceTemplate'
-# 2. rename 'target' -> 'targetTemplate'
-# 3. rename 'filterOutbound' -> 'filterMapping' only for outbound mappings
-# 4. remove 'subscriptionTopic', instead the conent of 'mappingTopic' is used for managing the subscriptions
-# 5. rename 'extension.event' -> 'extension.eventName'
-# 6. rename 'extension.name' -> 'extension.extensionName'
-# 6. add 'extension.extensionType: 'PROCESSOR_EXTENSION_SOURCE'
-# 7. remove 'extension.loaded'
-# 8. rename 'mapDeviceIdentifier' -> 'useExternalId'
-
-## Step 2 change the used identifiers in the substitutions
-# 1. for mappings with targetAPI EVENT, ALARM, or MEASUREMENT, changes "source.id" to "_IDENTITY_.externalId"
-# 2. for mappings with targetAPI OPERATION, changes "deviceId" to "_IDENTITY_.externalId"
-# 3. for mappings with targetAPI INVENTORY, changes "id" to "_IDENTITY_.externalId"
-# 4. remove 'resolve2ExternalId'
-#
-
-# this can be used after a migration to a new version of the dynamic mapper. in case the structure of the mappings has changed and become invalid
-###
-
 ORIGINAL_MAPPINGS_NAME="mappings-v46"
 MIGRATED_MAPPINGS_name="mappings-v47"
 
@@ -36,6 +12,30 @@ function show_usage() {
 }
 
 function migrate_mappings() {
+  ###
+  # script migrates the mappings form a format used in releases up to 4.6.1 to the new format used from 4.7.x onwards
+  # changes are:
+  ## Step 1 change format
+  # 1. rename 'source' -> 'sourceTemplate'
+  # 2. rename 'target' -> 'targetTemplate'
+  # 3. rename 'filterOutbound' -> 'filterMapping' only for outbound mappings
+  # 4. remove 'subscriptionTopic', instead the conent of 'mappingTopic' is used for managing the subscriptions
+  # 5. rename 'extension.event' -> 'extension.eventName'
+  # 6. rename 'extension.name' -> 'extension.extensionName'
+  # 6. add 'extension.extensionType: 'PROCESSOR_EXTENSION_SOURCE'
+  # 7. remove 'extension.loaded'
+  # 8. rename 'mapDeviceIdentifier' -> 'useExternalId'
+
+  ## Step 2 change the used identifiers in the substitutions
+  # 1. for mappings with targetAPI EVENT, ALARM, or MEASUREMENT, changes "source.id" to "_IDENTITY_.externalId"
+  # 2. for mappings with targetAPI OPERATION, changes "deviceId" to "_IDENTITY_.externalId"
+  # 3. for mappings with targetAPI INVENTORY, changes "id" to "_IDENTITY_.externalId"
+  # 4. remove 'resolve2ExternalId'
+  #
+
+  # this can be used after a migration to a new version of the dynamic mapper. in case the structure of the mappings has changed and become invalid
+  ###
+  
   # Step 0 save existing mappings to file ORIGINAL_MAPPINGS and only use the attribute d11r_mapping
   echo 'Step 0 save existing mappings to file ORIGINAL_MAPPINGS and only use the attribute d11r_mapping'
   c8y inventory list --type d11r_mapping --includeAll | jq -s 'map(.d11r_mapping)' >${ORIGINAL_MAPPINGS_NAME}.json
