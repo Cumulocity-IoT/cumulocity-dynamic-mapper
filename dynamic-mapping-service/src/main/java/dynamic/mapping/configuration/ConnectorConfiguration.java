@@ -10,7 +10,7 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import lombok.Data;
 import lombok.ToString;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.io.*;
 import java.util.Map;
 
@@ -24,8 +24,8 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
 
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
-	@JsonProperty("ident")
-	public String ident;
+	@JsonProperty("identifier")
+	public String identifier;
 
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)

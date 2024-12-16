@@ -30,16 +30,12 @@
 >
   <div class="p-b-24 p-l-24 p-r-24">
     <div class="form-group">
-      <!-- <label>Snooped templates</label> -->
       <div class="c8y-select-wrapper" style="width: 50%">
         <select
           class="form-control"
           (change)="onSelectSnoopedTemplate($event.target.value)"
-          [attr.disabled]="isDisabled(mapping.snoopedTemplates?.length === 0)"
+          [disabled]="mapping.snoopedTemplates?.length === 0"
         >
-          <!-- <option [value]="-1" [disabled]="true">
-            Select snooped template
-          </option> -->
           <option
             [value]="i"
             *ngFor="
@@ -54,9 +50,9 @@
       <div class="p-t-16">
         <label>Template</label>
         <d11r-mapping-json-editor2
-          [options]="editorOptions"
+          [options]="editorOptionsGeneral"
           [class]="'jse-main-small'"
-          [data]="template"
+          [data]="template" #editorGeneral
         ></d11r-mapping-json-editor2>
       </div>
     </div>

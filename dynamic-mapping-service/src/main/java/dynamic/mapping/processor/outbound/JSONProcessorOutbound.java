@@ -21,6 +21,8 @@
 
 package dynamic.mapping.processor.outbound;
 
+import static dynamic.mapping.model.Mapping.findDeviceIdentifier;
+
 import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
@@ -28,9 +30,9 @@ import com.api.jsonata4java.expressions.ParseException;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -39,6 +41,7 @@ import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
+import jakarta.validation.constraints.NotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,9 +56,10 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context,
+    public ProcessingContext<JsonNode> deserializePayload(Mapping mapping,
             C8YMessage c8yMessage) throws IOException {
         JsonNode jsonNode = objectMapper.readTree(c8yMessage.getPayload());
+        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
         context.setPayload(jsonNode);
         return context;
     }
@@ -68,11 +72,35 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
         JsonNode payloadJsonNode = context.getPayload();
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
-        String payload = payloadJsonNode.toPrettyString();
+        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        String payloadAsString = payloadJsonNode.toPrettyString();
+        /*
+         * step 0 patch payload with dummy property _IDENTITY_ in case the content
+         * is required in the payload for a substitution
+         */
+        ObjectNode identityFragment = objectMapper.createObjectNode();
+        var sourceId = extractContent(context, mapping, payloadJsonNode, payloadAsString, mapping.targetAPI.identifier);
+        identityFragment.set("c8ySourceId",
+                sourceId);
+        identityFragment.set("externalIdType", TextNode.valueOf(mapping.externalIdType));
+        if (mapping.externalIdType != null && !("").equals(mapping.externalIdType)) {
+            ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
+                    new GId(sourceId.textValue()), mapping.externalIdType,
+                    context);
+            identityFragment.set("externalId", new TextNode(externalId.getExternalId()));
+        }
+        if (payloadJsonNode instanceof ObjectNode) {
+            ((ObjectNode) payloadJsonNode).set(Mapping.IDENTITY, identityFragment);
+        } else {
+            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+                    tenant);
+        }
+
+        payloadAsString = payloadJsonNode.toPrettyString();
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.debug("Tenant {} - Incoming payload in extractFromSource(): {} {} {} {}", tenant, payload, serviceConfiguration.logPayload, mapping.debug,serviceConfiguration.logPayload || mapping.debug );
+            log.info("Tenant {} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant, payloadAsString,
+                    serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
         for (MappingSubstitution substitution : mapping.substitutions) {
@@ -82,17 +110,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
              * step 1 extract content from inbound payload
              */
             var ps = substitution.pathSource;
-            try {
-                Expressions expr = Expressions.parse(ps);
-                extractedSourceContent = expr.evaluate(payloadJsonNode);
-            } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", context.getTenant(), substitution.pathSource,
-                        payload, e);
-            } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
-                        substitution.pathSource,
-                        payload, e);
-            }
+            extractedSourceContent = extractContent(context, mapping, payloadJsonNode, payloadAsString, ps);
             /*
              * step 2 analyse extracted content: textual, array
              */
@@ -101,7 +119,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                     new ArrayList<MappingSubstitution.SubstituteValue>());
             if (extractedSourceContent == null) {
                 log.error("Tenant {} - No substitution for: {}, {}", context.getTenant(), substitution.pathSource,
-                        payload);
+                        payloadAsString);
                 postProcessingCacheEntry
                         .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                                 MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
@@ -141,8 +159,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
                 } else if (extractedSourceContent.isTextual()) {
-                    if (ps.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathSource)
-                            && substitution.resolve2ExternalId) {
+                    if (ps.equals(findDeviceIdentifier(mapping).pathSource)) {
                         log.debug("Tenant {} - Finding external Id: resolveGlobalId2ExternalId: {}, {}, {}",
                                 context.getTenant(), ps, extractedSourceContent.toPrettyString(),
                                 extractedSourceContent.asText());
@@ -188,6 +205,23 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
 
         }
 
+    }
+
+    private JsonNode extractContent(ProcessingContext<JsonNode> context, Mapping mapping, JsonNode payloadJsonNode,
+            String payloadAsString, @NotNull String ps) {
+        JsonNode extractedSourceContent = null;
+        try {
+            Expressions expr = Expressions.parse(mapping.transformGenericPath2C8YPath(ps));
+            extractedSourceContent = expr.evaluate(payloadJsonNode);
+        } catch (ParseException | IOException | EvaluateException e) {
+            log.error("Tenant {} - Exception for: {}, {}: ", context.getTenant(), ps,
+                    payloadAsString, e);
+        } catch (EvaluateRuntimeException e) {
+            log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
+                    ps,
+                    payloadAsString, e);
+        }
+        return extractedSourceContent;
     }
 
 }

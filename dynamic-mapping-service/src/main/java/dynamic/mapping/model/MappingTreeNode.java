@@ -113,14 +113,14 @@ public class MappingTreeNode {
 					results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1));
 				}
 			}
-			if (childNodes.containsKey(MappingRepresentation.TOPIC_WILDCARD_SINGLE)) {
-				List<MappingTreeNode> revolvedNodes = childNodes.get(MappingRepresentation.TOPIC_WILDCARD_SINGLE);
+			if (childNodes.containsKey(Mapping.TOPIC_WILDCARD_SINGLE)) {
+				List<MappingTreeNode> revolvedNodes = childNodes.get(Mapping.TOPIC_WILDCARD_SINGLE);
 				for (MappingTreeNode node : revolvedNodes) {
 					results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1));
 				}
 				// test if single level wildcard "+" match exists for this level
-			} else if (childNodes.containsKey(MappingRepresentation.TOPIC_WILDCARD_MULTI)) {
-				List<MappingTreeNode> revolvedNodes = childNodes.get(MappingRepresentation.TOPIC_WILDCARD_MULTI);
+			} else if (childNodes.containsKey(Mapping.TOPIC_WILDCARD_MULTI)) {
+				List<MappingTreeNode> revolvedNodes = childNodes.get(Mapping.TOPIC_WILDCARD_MULTI);
 				for (MappingTreeNode node : revolvedNodes) {
 					results.addAll(node.resolveTopicPath(topicLevels, currentTopicLevelIndex + 1));
 				}
@@ -200,10 +200,6 @@ public class MappingTreeNode {
 		synchronized (treeModificationLock) {
 			if (mapping != null) {
 				var path = mapping.mappingTopic;
-				// if mappingTopic is not set use topic instead
-				if (path == null || path.equals("")) {
-					path = mapping.subscriptionTopic;
-				}
 				List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
 				addMapping(mapping, levels, 0);
 			}
@@ -214,10 +210,6 @@ public class MappingTreeNode {
 		synchronized (treeModificationLock) {
 			if (mapping != null) {
 				var path = mapping.mappingTopic;
-				// if mappingTopic is not set use topic instead
-				if (path == null || path.equals("")) {
-					path = mapping.subscriptionTopic;
-				}
 				List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
 				MutableInt branchingLevel = new MutableInt(0);
 				deleteMapping(mapping, levels, 0, branchingLevel);

@@ -63,7 +63,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
 
     protected AConnectorClient connectorClient;
 
-    public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, C8YMessage c8yMessage)
+    public abstract ProcessingContext<T> deserializePayload(Mapping mapping, C8YMessage c8yMessage)
             throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
@@ -80,7 +80,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
         Set<String> pathTargets = postProcessingCache.keySet();
 
         int predecessor = -1;
-        DocumentContext payloadTarget = JsonPath.parse(mapping.target);
+        DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
         /*
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
@@ -110,7 +110,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
             if (postProcessingCache.get(pathTarget).size() > 0) {
                 substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
             }
-            substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+            substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to mqttBroker
@@ -153,7 +153,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
-                if (connectorClient.isConnected() && context.isSendPayload() ) {
+                if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);
                 } else {
                     log.warn("Tenant {} - Not sending message: connected {}, sendPayload {}", tenant,
@@ -177,7 +177,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
         return context;
     }
 
-    public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,
+    public void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue sub,
             DocumentContext jsonObject, String keys)
             throws JSONException {
         boolean subValueMissing = sub.value == null;
@@ -187,11 +187,12 @@ public abstract class BasePayloadProcessorOutbound<T> {
                     (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
                 jsonObject.delete(keys);
             } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                boolean pathIsNested = keys.contains(".") || keys.contains("[");
-                if (pathIsNested) {
-                    throw new JSONException("Can only create new nodes ion the root level!");
-                }
-                jsonObject.put("$", keys, sub.typedValue());
+                // boolean pathIsNested = keys.contains(".") || keys.contains("[");
+                // if (pathIsNested) {
+                // throw new JSONException("Can only create new nodes on the root level!");
+                // }
+                // jsonObject.put("$", keys, sub.typedValue());
+                jsonObject.set("$." + keys, sub.typedValue());
             } else {
                 jsonObject.set(keys, sub.typedValue());
             }

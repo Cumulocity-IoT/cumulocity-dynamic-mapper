@@ -24,28 +24,34 @@ import {
   IExternalIdentity,
   IFetchResponse,
   IIdentified,
-  IResult
+  IResult,
+  IResultList
 } from '@c8y/client';
 import * as _ from 'lodash';
 
 @Injectable({ providedIn: 'root' })
 export class MockIdentityService {
-  identityCache: Map<string, Map<string, IIdentified>>;
+  // <type , <externalId, IIdentified>>
+  identityCacheByType: Map<string, Map<string, string>>;
+  // <IIdentified , <type, externalId>>
+
+  identityCacheByC8YId: Map<string, Map<string, string>>;
 
   constructor() {
     this.initializeCache();
   }
   initializeCache(): void {
-    this.identityCache = new Map<string, Map<string, IIdentified>>();
+    this.identityCacheByType = new Map<string, Map<string, string>>();
+    this.identityCacheByC8YId = new Map<string, Map<string, string>>();
   }
 
   detail(identity: IExternalIdentity): Promise<IResult<IExternalIdentity>> {
-    const externalIds = this.identityCache.get(identity.type);
+    const externalIds = this.identityCacheByType.get(identity.type);
     if (externalIds) {
-      const externalId: IIdentified = externalIds.get(identity.externalId);
+      const externalId = externalIds.get(identity.externalId);
       if (externalId) {
         const copyExternalIdentity: IExternalIdentity = _.clone(identity);
-        copyExternalIdentity.managedObject = externalId;
+        copyExternalIdentity.managedObject = { id: externalId };
         const promise = Promise.resolve({
           data: copyExternalIdentity,
           res: { status: HttpStatusCode.Ok } as IFetchResponse
@@ -64,29 +70,68 @@ export class MockIdentityService {
   }
 
   create(identity: IExternalIdentity): Promise<IResult<IExternalIdentity>> {
-    const id: number = Math.floor(100000 + Math.random() * 900000);
-    const identified: IIdentified = { id: id };
 
-    let externalIds = this.identityCache.get(identity.type);
-    if (!externalIds) {
-      externalIds = new Map<string, IIdentified>();
-      externalIds.set(identity.externalId, identified);
-      this.identityCache.set(identity.type, externalIds);
+    let externalIdsForType = this.identityCacheByType.get(identity.type);
+    // update identityCacheByType
+    if (!externalIdsForType) {
+      externalIdsForType = new Map<string, string>();
+      externalIdsForType.set(identity.externalId, identity.managedObject.id as string);
+      this.identityCacheByType.set(identity.type, externalIdsForType);
     } else {
-      const sourceID = externalIds.get(identity.externalId);
-      if (sourceID) {
+      const sourceId = externalIdsForType.get(identity.externalId);
+      if (sourceId) {
         throw new Error(
           `External id ${identity.externalId} for type ${identity.type} already exists.`
         );
       }
-      externalIds.set(identity.externalId, identified);
+      externalIdsForType.set(identity.externalId, identity.managedObject.id as string);
     }
+
+    let externalIdsForIdentified = this.identityCacheByC8YId.get(identity.managedObject.id as string);
+    // update identityCacheByC8YId
+    if (!externalIdsForIdentified) {
+      externalIdsForIdentified = new Map<string, string>();
+      externalIdsForIdentified.set(identity.type, identity.externalId);
+      this.identityCacheByC8YId.set(identity.managedObject.id as string, externalIdsForIdentified);
+    } else {
+      const externalId = externalIdsForIdentified.get(identity.type);
+      if (externalId) {
+        throw new Error(
+          `External id ${identity.externalId} for type ${identity.type} already exists.`
+        );
+      }
+      externalIdsForIdentified.set(identity.type, identity.externalId);
+    }
+
     const copyExternalIdentity: IExternalIdentity = _.clone(identity);
-    copyExternalIdentity.managedObject = identified;
+    copyExternalIdentity.managedObject = identity.managedObject;
     const promise = Promise.resolve({
       data: copyExternalIdentity,
       res: { status: HttpStatusCode.Ok } as IFetchResponse
     });
     return promise;
+  }
+
+  list(managedObjectId: string): Promise<IResultList<IExternalIdentity>> {
+    let externalIdsForIdentified = this.identityCacheByC8YId.get(managedObjectId);
+    if (externalIdsForIdentified) {
+      const externalIds: IExternalIdentity[] = [];
+      externalIdsForIdentified.forEach((value, key) => {
+        externalIds.push({ externalId: value, type: key, managedObject: { id: managedObjectId } })
+      });
+
+      const copyExternalIdentities: IExternalIdentity[] = _.clone(externalIdsForIdentified);
+      const promise = Promise.resolve({
+        data: copyExternalIdentities,
+        res: { status: HttpStatusCode.Ok } as IFetchResponse
+      });
+      return promise;
+    } else {
+      const promise = Promise.resolve({
+        data: [],
+        res: { status: HttpStatusCode.Ok } as IFetchResponse
+      });
+      return promise;
+    }
   }
 }

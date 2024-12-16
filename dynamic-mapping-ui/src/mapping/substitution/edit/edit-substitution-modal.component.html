@@ -18,20 +18,17 @@
   ~
   ~ @authors Christof Strack
   -->
-
-<div class="modal-header dialog-header animated fadeIn">
-  <h1 c8yIcon="pencil"></h1>
-  <h4>
-    {{ isDuplicate || isUpdate ? 'Update' : 'Edit' }} properties of substitution
-  </h4>
-</div>
-<c8y-modal (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels">
-  <div class="p-b-24 p-l-24 p-r-24">
+<c8y-modal [title]="isDuplicate || isUpdate ? 'Update properties of substitution' : 'Edit properties of substitution' "
+  (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels" [headerClasses]="'modal-header dialog-header'">
+  <ng-container c8y-modal-title>
+    <span [c8yIcon]="'pencil'"></span>
+  </ng-container>
+  <div class="p-24">
     <div *ngIf="isDuplicate">
       <p class="text-medium">
         {{
-			'You are about to overwrite the existing substitution: # ' + &nbsp; + 
-			duplicateSubstitutionIndex | translate
+        'You are about to overwrite the existing substitution: # ' + &nbsp; +
+        duplicateSubstitutionIndex | translate
         }}
       </p>
       <br />
@@ -46,12 +43,7 @@
             {{ 'Path source' | translate }}
           </span>
         </label>
-        <input
-          type="text"
-          class="form-control"
-          readOnly
-          formControlName="pathSource"
-        />
+        <input type="text" class="form-control" readOnly formControlName="pathSource" />
       </c8y-form-group>
       <c8y-form-group>
         <label>
@@ -59,24 +51,11 @@
             {{ 'Path target' | translate }}
           </span>
         </label>
-        <input
-          type="text"
-          readOnly
-          formControlName="pathTarget"
-          class="form-control"
-        />
+        <input type="text" readOnly formControlName="pathTarget" class="form-control" />
       </c8y-form-group>
       <c8y-form-group>
-        <label
-          class="c8y-switch d-inline"
-          title="Expand as array"
-          style="padding-top: 6px"
-        >
-          <input
-            type="checkbox"
-            formControlName="expandArray"
-            [disabled]="isExpandToArrayDisabled()"
-          />
+        <label class="c8y-switch d-inline" title="Expand as array" style="padding-top: 6px">
+          <input type="checkbox" formControlName="expandArray" />
           <span></span>
           <span>
             {{ 'Expand as array' | translate }}
@@ -89,30 +68,16 @@
             measurements, alarms, events or devices, i.e.
             &quot;multi-device&quot; or &quot;multi-value&quot;
           </ng-template>
-          <button
-            class="btn-clean text-primary"
-            [popover]="popTemplateExpandAsArray"
-            popoverTitle="Expand as array"
-            placement="right"
-            triggers="focus"
-            type="button"
-          >
+          <button class="btn-clean text-primary" [popover]="popTemplateExpandAsArray" popoverTitle="Expand as array"
+            placement="right" triggers="focus" type="button">
             <i c8yIcon="question-circle-o"></i>
           </button>
         </div>
       </c8y-form-group>
 
-      <c8y-form-group *ngIf="mapping.direction === Direction.OUTBOUND">
-        <label
-          class="c8y-switch d-inline"
-          title="Resolve to externalId"
-          style="padding-top: 6px"
-        >
-          <input
-            type="checkbox"
-            formControlName="resolve2ExternalId"
-            [disabled]="isResolve2ExternalIdDisabled()"
-          />
+      <!-- <c8y-form-group *ngIf="mapping.direction === Direction.OUTBOUND">
+        <label class="c8y-switch d-inline" title="Resolve to externalId" style="padding-top: 6px">
+          <input type="checkbox" formControlName="resolve2ExternalId" />
           <span></span>
           <span>
             {{ 'Resolve to externalId' | translate }}
@@ -123,43 +88,25 @@
             Resolve system Cumulocity Id to externalId using externalIdType.
             This can only be used for OUTBOUND mappings.
           </ng-template>
-          <button
-            class="btn-clean text-primary"
-            [popover]="popTemplateResolve"
-            popoverTitle="Resolve to externalId"
-            placement="right"
-            triggers="focus"
-            type="button"
-          >
+          <button class="btn-clean text-primary" [popover]="popTemplateResolve" popoverTitle="Resolve to externalId"
+            placement="right" triggers="focus" type="button">
             <i c8yIcon="question-circle-o"></i>
           </button>
         </div>
-      </c8y-form-group>
+      </c8y-form-group> -->
       <c8y-form-group>
-        <label
-          ><span>Repair strategy</span>
+        <label><span>Repair strategy</span>
           <span> &nbsp;</span>
           <ng-template #popTemplateRepair>
             Strategy defining what should happen when extracted arrays in
             different expressions do not have the same size. How are missing
             values handled?
           </ng-template>
-          <button
-            class="btn-clean text-primary"
-            [popover]="popTemplateRepair"
-            popoverTitle="Repair strategy"
-            placement="right"
-            triggers="focus"
-            type="button"
-          >
-            <i c8yIcon="question-circle-o"></i></button
-        ></label>
+          <button class="btn-clean text-primary" [popover]="popTemplateRepair" popoverTitle="Repair strategy"
+            placement="right" triggers="focus" type="button">
+            <i c8yIcon="question-circle-o"></i></button></label>
         <div class="c8y-select-wrapper">
-          <select
-            class="form-control"
-            formControlName="repairStrategy"
-            name="repairStrategy"
-          >
+          <select class="form-control" formControlName="repairStrategy" name="repairStrategy">
             <option [value]="t.value" *ngFor="let t of repairStrategyOptions">
               {{ t.label }}
             </option>

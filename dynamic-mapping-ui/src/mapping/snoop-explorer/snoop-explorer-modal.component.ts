@@ -19,33 +19,40 @@
  * @authors Christof Strack
  */
 
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { Mapping, MappingSubstitution } from '../../shared';
+import { JsonEditorComponent, Mapping, MappingSubstitution, MappingEnriched } from '../../shared';
 import { isDisabled } from '../shared/util';
-import { MappingEnriched } from '../../shared/model/shared.model';
 import { MappingService } from '../core/mapping.service';
 import { IFetchResponse } from '@c8y/client';
 import { HttpStatusCode } from '@angular/common/http';
 
 @Component({
   selector: 'd11r-snoop-explorer-modal',
-  templateUrl: './snoop-explorer-modal.component.html'
+  templateUrl: './snoop-explorer-modal.component.html',
+  styleUrls: ['../shared/mapping.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class SnoopExplorerComponent implements OnInit {
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService
-  ) {}
+  ) { }
   @Input() enrichedMapping: MappingEnriched;
+
+  @ViewChild('editorGeneral', { static: false })
+  editorGeneral: JsonEditorComponent;
+  
   mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();
   labels: ModalLabels;
   isDisabled = isDisabled;
   template: any;
-  editorOptions: any = {
+
+  editorOptionsGeneral = {
     mode: 'tree',
+    removeModes: ['text', 'table'],
     mainMenuBar: true,
     navigationBar: false,
     readOnly: true,

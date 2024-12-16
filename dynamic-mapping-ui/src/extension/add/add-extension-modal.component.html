@@ -18,35 +18,18 @@
   ~
   ~ @authors Christof Strack
   -->
-<div class="modal-header dialog-header animated fadeIn">
-  <h1 c8yIcon="plugin"></h1>
-  <h4>Add Processor Extension</h4>
-</div>
-
-<c8y-modal
-  (onClose)="onDone()"
-  (onDismiss)="onDismiss()"
-  [labels]="labels"
-  [disabled]="false"
-  #addMappingRef
->
+<c8y-modal title="Add Processor Extension" (onClose)="onDone()" (onDismiss)="onDismiss()" [labels]="labels" [headerClasses]="'modal-header dialog-header'"
+  [disabled]="false">
+  <ng-container c8y-modal-title>
+    <span [c8yIcon]="'plugin'"></span>
+  </ng-container>
   <div class="p-24 modal-inner-scroll animated fadeIn">
     <div class="modal-body">
-      <c8y-form-group
-        *ngIf="!isAppCreated; else appCreated"
-        [hasError]="!!errorMessage"
-        class="m-auto"
-        style="max-width: 285px"
-      >
-        <c8y-drop-area
-          (dropped)="onFileDroppedEvent($event)"
-          [accept]="'.jar'"
-          [loading]="isLoading"
-          [maxAllowedFiles]="1"
-          [message]="'Upload a *.jar file' | translate"
-          [progress]="progress | async"
-          class="drop-area"
-        >
+      <c8y-form-group *ngIf="!isAppCreated; else appCreated" [hasError]="!!errorMessage" class="m-auto"
+        style="max-width: 285px">
+        <c8y-drop-area (dropped)="onFileDroppedEvent($event)" [accept]="'.jar'" [loading]="isLoading"
+          [maxAllowedFiles]="1" [message]="'Upload a *.jar file' | translate" [progress]="progress | async"
+          class="drop-area">
         </c8y-drop-area>
         <c8y-messages>
           <c8y-message *ngIf="errorMessage">
@@ -56,13 +39,8 @@
       </c8y-form-group>
       <ng-template #appCreated>
         <div class="d-flex a-i-center j-c-center" style="min-height: 285px">
-          <c8y-operation-result
-            text="{{ successText | translate }}"
-            [vertical]="true"
-            [size]="84"
-            class="lead"
-            type="success"
-          >
+          <c8y-operation-result text="{{ successText | translate }}" [vertical]="true" [size]="84" class="lead"
+            type="success">
           </c8y-operation-result>
         </div>
       </ng-template>

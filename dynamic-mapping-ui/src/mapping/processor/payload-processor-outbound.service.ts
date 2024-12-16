@@ -63,7 +63,7 @@ export abstract class PayloadProcessorOutbound {
     let predecessor: number = -1;
     let payloadTarget: JSON = null;
     try {
-      payloadTarget = JSON.parse(mapping.target);
+      payloadTarget = JSON.parse(mapping.targetTemplate);
     } catch (e) {
       this.alert.warning('Target payload is not a valid json object!');
       throw e;
@@ -89,7 +89,7 @@ export abstract class PayloadProcessorOutbound {
         substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
       }
 
-      this.substituteValueInObject(
+      this.substituteValueInPayload(
         mapping.mappingType,
         substituteValue,
         payloadTarget,
@@ -156,7 +156,7 @@ export abstract class PayloadProcessorOutbound {
     //);
   }
 
-  substituteValueInObject(
+  substituteValueInPayload(
     type: MappingType,
     sub: SubstituteValue,
     jsonObject: JSON,
@@ -178,10 +178,10 @@ export abstract class PayloadProcessorOutbound {
       ) {
         _.unset(jsonObject, keys);
       } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-        const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-        if (pathIsNested) {
-          throw new Error('Can only crrate new nodes ion the root level!');
-        }
+        // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
+        // if (pathIsNested) {
+        //   throw new Error('Can only create new nodes on the root level!');
+        // }
         // jsonObject.put("$", keys, sub.typedValue());
         _.set(jsonObject, keys, getTypedValue(sub));
       } else {

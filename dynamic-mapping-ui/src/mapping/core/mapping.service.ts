@@ -39,8 +39,6 @@ import {
 } from 'rxjs';
 import {
   BASE_URL,
-  MAPPING_FRAGMENT,
-  MAPPING_TYPE,
   PATH_MAPPING_ENDPOINT,
   PATH_SUBSCRIPTIONS_ENDPOINT,
   PATH_SUBSCRIPTION_ENDPOINT,
@@ -50,12 +48,13 @@ import {
   DeploymentMapEntryDetailed,
   PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT,
   MappingEnriched,
-  MAPPING_TYPE_DESCRIPTION,
-  Operation,
-  StatusEventTypes,
+  MappingTypeDescriptionMap,
   DeploymentMapEntry,
   DeploymentMap,
-  PATH_DEPLOYMENT_DEFINED_ENDPOINT
+  PATH_DEPLOYMENT_DEFINED_ENDPOINT,
+  Operation,
+  LoggingEventTypeMap,
+  LoggingEventType
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -66,11 +65,9 @@ import {
 } from '../processor/processor.model';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
 import {
-  AlertService,
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
-import { ConnectorConfigurationService } from '../../connector';
 
 @Injectable({
   providedIn: 'root'
@@ -78,12 +75,10 @@ import { ConnectorConfigurationService } from '../../connector';
 export class MappingService {
   constructor(
     private inventory: InventoryService,
-    private brokerConnectorService: ConnectorConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
     private sharedService: SharedService,
     private client: FetchClient,
-    private alertService: AlertService
   ) {
     this.eventRealtimeService = new EventRealtimeService(
       inject(RealtimeSubjectService)
@@ -111,8 +106,10 @@ export class MappingService {
 
   async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.ACTIVATE_MAPPING,
-      parameter
+      {
+        operation: Operation.ACTIVATE_MAPPING,
+        parameter
+      }
     );
   }
 
@@ -125,22 +122,28 @@ export class MappingService {
 
   async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.DEBUG_MAPPING,
-      parameter
+      {
+        operation: Operation.DEBUG_MAPPING,
+        parameter
+      }
     );
   }
 
   async changeSnoopStatusMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.SNOOP_MAPPING,
-      parameter
+      {
+        operation: Operation.SNOOP_MAPPING,
+        parameter
+      }
     );
   }
 
   async resetSnoop(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.SNOOP_RESET,
-      parameter
+      {
+        operation: Operation.SNOOP_RESET,
+        parameter
+      }
     );
   }
 
@@ -181,7 +184,7 @@ export class MappingService {
     if (!data.ok) throw new Error(data.statusText)!;
     const mapEntry: string[] = await data.json();
     const result: DeploymentMapEntry = {
-      ident: mappingIdent,
+      identifier: mappingIdent,
       connectors: mapEntry
     };
     return result;
@@ -207,7 +210,7 @@ export class MappingService {
     entry: DeploymentMapEntry
   ): Promise<any> {
     const response = this.client.fetch(
-      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${entry.ident}`,
+      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${entry.identifier}`,
       {
         headers: {
           'content-type': 'application/json'
@@ -237,10 +240,10 @@ export class MappingService {
             id: m.id,
             mapping: m,
             snoopSupported:
-              MAPPING_TYPE_DESCRIPTION[m.mappingType].properties[
+              MappingTypeDescriptionMap[m.mappingType].properties[
                 Direction.INBOUND
               ].snoopSupported,
-            connectors: mappingsDeployed[m.ident]
+            connectors: mappingsDeployed[m.identifier]
           });
         });
         return mappingsEnriched;
@@ -260,7 +263,7 @@ export class MappingService {
           mappingsEnriched.push({
             id: m.id,
             mapping: m,
-            connectors: mappingsDeployed[m.ident]
+            connectors: mappingsDeployed[m.identifier]
           });
         });
         return mappingsEnriched;
@@ -290,33 +293,17 @@ export class MappingService {
   }
 
   async getMappings(direction: Direction): Promise<Mapping[]> {
-    const result: Mapping[] = [];
-    const filter: object = {
-      pageSize: 200,
-      withTotalPages: true
-    };
-    const query: any = {
-      __and: [{ 'd11r_mapping.direction': direction }, { type: MAPPING_TYPE }]
-    };
 
-    //   if (direction == Direction.INBOUND) {
-    //     query = this.queriesUtil.addOrFilter(query, {
-    //       __not: { __has: 'd11r_mapping.direction' }
-    //     });
-    //   }
-    //   query = this.queriesUtil.addAndFilter(query, {
-    //     type: { __has: 'd11r_mapping' }
-    //   });
-
-    const { data } = await this.inventory.listQuery(query, filter);
-
-    data.forEach((m) =>
-      result.push({
-        ...m[MAPPING_FRAGMENT],
-        id: m.id
-      })
+    const path = direction ? `${BASE_URL}/${PATH_MAPPING_ENDPOINT}?direction=${direction}` : `${BASE_URL}/${PATH_MAPPING_ENDPOINT}`;
+    const response = await this.client.fetch(path,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
     );
-
+    const result: Mapping[] = await response.json();
     return result;
   }
 
@@ -500,6 +487,19 @@ export class MappingService {
     return result;
   }
 
+  async validateExpression(json: JSON, path: string): Promise<boolean> {
+    let result = true;
+    if (path != undefined && path != '' && json != undefined) {
+      const expression = this.JSONATA(path);
+      try {
+        expression.evaluate(json) as JSON;
+      } catch (error) {
+        return false;
+      }
+    }
+    return result;
+  }
+
   async startChangedMappingEvents(): Promise<void> {
     if (!this._agentId) {
       this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
@@ -518,7 +518,7 @@ export class MappingService {
         filter(
           (payload) =>
             payload['type'] ==
-            StatusEventTypes.STATUS_MAPPING_CHANGED_EVENT_TYPE
+            LoggingEventTypeMap[LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE].type
         )
       )
       .subscribe(() => {
@@ -527,5 +527,5 @@ export class MappingService {
       });
   }
 
-  async stopChangedMappingEvents() {}
+  async stopChangedMappingEvents() { }
 }

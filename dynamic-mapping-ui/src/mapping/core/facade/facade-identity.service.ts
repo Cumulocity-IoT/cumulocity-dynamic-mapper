@@ -23,7 +23,8 @@ import {
   IdentityService,
   IExternalIdentity,
   IIdentified,
-  IResult
+  IResult,
+  IResultList
 } from '@c8y/client';
 import { ProcessingContext } from '../../processor/processor.model';
 import { MockIdentityService } from '../mock/mock-identity.service';
@@ -35,7 +36,7 @@ export class FacadeIdentityService {
   constructor(
     private mockIdentity: MockIdentityService,
     private identity: IdentityService
-  ) {}
+  ) { }
 
   initializeCache(): void {
     this.mockIdentity.initializeCache();
@@ -46,35 +47,37 @@ export class FacadeIdentityService {
     externalIdType: string,
     context: ProcessingContext
   ): Promise<IExternalIdentity> {
-    const result: IExternalIdentity = undefined;
+    let result: IExternalIdentity;
     if (context.sendPayload) {
-      await this.identity.list(managedObjectId);
-      // while (res.data.length) {
+      const entries = new Array<IExternalIdentity>();
+      let res = await this.identity.list(managedObjectId);
+      while (res.data.length) {
+        entries.push(...(res.data as IExternalIdentity[]));
+        if (res.data.length < res.paging.pageSize) {
+          break;
+        }
+        if (!res.paging.nextPage) {
+          break;
+        }
 
-      //   if (externalId.getType().equals(idType)) {
-      //     result = externalId;
-      //     break;
-      //   }
-
-      //   entries.push(...(res.data as ManagedObjectKPI[]));
-      //   if (res.data.length < res.paging.pageSize) {
-      //     break;
-      //   }
-      //   if (!res.paging.nextPage) {
-      //     break;
-      //   }
-
-      //   res = await res.paging.next();
-      // }
-      // results.
-      // for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
-      //     if (externalId.getType().equals(idType)) {
-      //         result = externalId;
-      //         break;
-      //     }
-      // }
+        res = await res.paging.next();
+      }
+      result = entries.find(ex => ex.type === externalIdType);
     } else {
-        // return this.mockIdentity.getExternalIdsOfGlobalId(managedObjectId);
+      const entries = new Array<IExternalIdentity>();
+      let res = await this.mockIdentity.list(managedObjectId);
+      while (res.data.length) {
+        entries.push(...(res.data as IExternalIdentity[]));
+        if (res.data.length < res.paging.pageSize) {
+          break;
+        }
+        if (!res.paging.nextPage) {
+          break;
+        }
+
+        res = await res.paging.next();
+      }
+      result = entries.find(ex => ex.type === externalIdType);
     }
     return result;
   }

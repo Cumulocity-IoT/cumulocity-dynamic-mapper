@@ -29,7 +29,7 @@
     'm-b-40',
     'p-0',
     'flex-no-shrink'
-  ]"
+  ]" (onStepChange)="onStepChange($event)" 
 >
   <!-- override icons -->
   <ng-template c8yStepperIcon="final">
@@ -81,7 +81,7 @@
     <div class="col-xs-12 flex-grow no-gutter">
       <d11r-mapping-properties
         [mapping]="mapping"
-        [deploymentMapEntry]="deploymentMapEntry"
+        [supportsMessageContext]="supportsMessageContext"
         [stepperConfiguration]="stepperConfiguration"
         [propertyFormly]="propertyFormly"
       >

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 
-
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -40,7 +39,7 @@ import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 
 @Service
 @EnableScheduling
@@ -83,7 +82,6 @@ public class BootstrapService {
 	private MicroserviceSubscriptionsService subscriptionsService;
 
 	private HashMap<String, Instant> cacheRetentionStartMap = new HashMap<>();
-
 
 	@PreDestroy
 	public void destroy() {
@@ -253,25 +251,26 @@ public class BootstrapService {
 
 	// shutdownAndRemoveConnector will unsubscribe the subscriber which drops all
 	// queues
-	public void shutdownAndRemoveConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
-		// connectorRegistry.unregisterClient(tenant, connectorIdent);
+	public void shutdownAndRemoveConnector(String tenant, String connectorIdentifier) throws ConnectorRegistryException {
+		// connectorRegistry.unregisterClient(tenant, connectorIdentifier);
 		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 		if (serviceConfiguration.isOutboundMappingEnabled()) {
 			configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriberByConnector(tenant,
-					connectorIdent);
-			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
+					connectorIdentifier);
+			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdentifier);
 		}
 	}
 
 	// DisableConnector will just clean-up maps and disconnects Notification 2.0 -
 	// queues will be kept
-	public void disableConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
-		connectorRegistry.unregisterClient(tenant, connectorIdent);
+	public void disableConnector(String tenant, String connectorIdentifier) throws ConnectorRegistryException {
+		connectorRegistry.unregisterClient(tenant, connectorIdentifier);
 		ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
 		if (serviceConfiguration.isOutboundMappingEnabled()) {
-			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
+			configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdentifier);
 		}
 	}
+
 	@Scheduled(cron = "0 * * * * *")
 	public void cleanUpCaches() {
 		subscriptionsService.runForEachTenant(() -> {
@@ -282,10 +281,12 @@ public class BootstrapService {
 						.getServiceConfiguration(tenant);
 				int inboundCacheRetention = serviceConfiguration.getInboundExternalIdCacheRetention();
 				int cacheSize = Integer.valueOf(c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
-				if (inboundCacheRetention > 0 && Duration.between(cacheRetentionStart, Instant.now()).getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
+				if (inboundCacheRetention > 0 && Duration.between(cacheRetentionStart, Instant.now())
+						.getSeconds() >= Duration.ofDays(inboundCacheRetention).getSeconds()) {
 					c8YAgent.clearInboundExternalIdCache(tenant, false, cacheSize);
 					cacheRetentionStartMap.put(tenant, Instant.now());
-					log.info("Tenant {} - Identity Cache cleared by scheduler. Old Size: {}, New size: {}", tenant, cacheSize, c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
+					log.info("Tenant {} - Identity Cache cleared by scheduler. Old Size: {}, New size: {}", tenant,
+							cacheSize, c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
 				}
 			}
 		});

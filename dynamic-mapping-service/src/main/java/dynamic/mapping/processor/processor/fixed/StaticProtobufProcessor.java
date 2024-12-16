@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
+import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -47,8 +48,9 @@ public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]>
     }
 
     @Override
-    public ProcessingContext<byte[]> deserializePayload(ProcessingContext<byte[]> context, ConnectorMessage message)
+    public ProcessingContext<byte[]> deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
+        ProcessingContext<byte[]> context = new ProcessingContext<byte[]>();
         context.setPayload(message.getPayload());
         return context;
     }
@@ -103,4 +105,9 @@ public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]>
 
         }
     }
+
+@Override
+public void applyFilter(ProcessingContext<byte[]> context) {
+        //do nothing
+}
 }

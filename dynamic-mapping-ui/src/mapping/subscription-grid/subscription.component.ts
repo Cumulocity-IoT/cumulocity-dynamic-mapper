@@ -49,18 +49,13 @@ import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
+import { DeploymentMapEntry, LabelRendererComponent, SharedService, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { APIRendererComponent } from '../renderer/api.renderer.component';
+import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { NameRendererComponent } from '../renderer/name.renderer.component';
-// import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
+import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
-// import { TemplateRendererComponent } from '../renderer/template.renderer.component';
-import { StepperConfiguration } from '../../shared';
-import { DeploymentMapEntry } from '../../shared/model/shared.model';
-import { SharedService } from '../../shared/shared.service';
-import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
-import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
 
 @Component({
@@ -174,30 +169,25 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
-            header: 'Subscription topic',
-            name: 'subscriptionTopic',
-            path: 'mapping.subscriptionTopic',
-            filterable: true
-          }
+          header: 'Mapping topic',
+          name: 'mappingTopic',
+          path: 'mapping.mappingTopic',
+          filterable: true
+        }
         : {
-            header: 'Publish topic',
-            name: 'publishTopic',
-            path: 'mapping.publishTopic',
-            filterable: true
-          },
+          header: 'Publish topic',
+          name: 'publishTopic',
+          path: 'mapping.publishTopic',
+          filterable: true
+        },
       this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-            header: 'Mapping topic',
-            name: 'mappingTopic',
-            path: 'mapping.mappingTopic',
-            filterable: true
-          }
+        ? undefined
         : {
-            header: 'Publish topic sample',
-            name: 'publishTopicSample',
-            path: 'mapping.publishTopicSample',
-            filterable: true
-          },
+          header: 'Publish topic sample',
+          name: 'publishTopicSample',
+          path: 'mapping.publishTopicSample',
+          filterable: true
+        },
       {
         name: 'targetAPI',
         header: 'API',
@@ -205,7 +195,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
         filterable: true,
         sortable: true,
         dataType: ColumnDataType.TextShort,
-        cellRendererComponent: APIRendererComponent,
+        cellRendererComponent: LabelRendererComponent,
         gridTrackSize: '7%'
       },
       {
@@ -227,16 +217,16 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
-            // header: 'Test/Debug/Snoop',
-            header: 'Templates snooped',
-            name: 'snoopedTemplates',
-            path: 'mapping',
-            filterable: false,
-            sortable: false,
-            cellCSSClassName: 'text-align-center',
-            cellRendererComponent: SnoopedTemplateRendererComponent,
-            gridTrackSize: '8%'
-          }
+          // header: 'Test/Debug/Snoop',
+          header: 'Templates snooped',
+          name: 'snoopedTemplates',
+          path: 'mapping',
+          filterable: false,
+          sortable: false,
+          cellCSSClassName: 'text-align-center',
+          cellRendererComponent: SnoopedTemplateRendererComponent,
+          gridTrackSize: '8%'
+        }
         : undefined,
       {
         header: 'Activate',
@@ -332,6 +322,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       this.subscription = await this.mappingService.updateSubscriptions(
         this.subscription
       );
+      this.subscriptionGrid.reload();
       this.alertService.success(gettext('Subscriptions updated successfully'));
     } catch (error) {
       this.alertService.danger(
@@ -347,7 +338,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   private async reloadMappingsInBackend() {
     const response2 = await this.shareService.runOperation(
-      Operation.RELOAD_MAPPINGS
+    { operation: Operation.RELOAD_MAPPINGS}
     );
     // console.log('Activate mapping response:', response2);
     if (response2.status < 300) {

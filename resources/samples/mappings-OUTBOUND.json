@@ -1,44 +1,39 @@
 [
   {
     "publishTopicSample": "evt/outbound/berlin_01",
-    "ident": "ek2kpo",
+    "identifier": "ek2kpo",
     "tested": false,
     "autoAckOperation": true,
-    "source": "{\"source\":{\"id\":\"38268445\"},\"type\":\"c8y_BusEvent\",\"text\":\"Bus was stopped\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"bus_event\":\"stop_event\"}",
+    "sourceTemplate": "{\"source\":{\"id\":\"38268445\"},\"type\":\"c8y_BusEvent\",\"text\":\"Bus was stopped\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"bus_event\":\"stop_event\"}",
     "externalIdType": "c8y_Serial",
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
-        "pathSource": "source.id",
+        "pathSource": "_IDENTITY_.c8yId",
         "pathTarget": "_TOPIC_LEVEL_[2]",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "type",
         "pathTarget": "eventType",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "bus_event",
         "pathTarget": "bus_event",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": true,
-        "pathSource": "source.id",
+        "pathSource": "_IDENTITY_.externalId",
         "pathTarget": "deviceId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
@@ -50,12 +45,12 @@
     "subscriptionTopic": "",
     "direction": "OUTBOUND",
     "snoopStatus": "NONE",
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "targetAPI": "EVENT",
-    "filterOutbound": "bus_event",
+    "filterMapping": "bus_event",
     "publishTopic": "evt/outbound/#",
-    "target": "{\"deviceId\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\",\"bus_event\":\"stop_event\",\"_TOPIC_LEVEL_\":[\"evt\",\"outbound\",\"berlin_01\"]}",
+    "targetTemplate": "{\"deviceId\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\",\"bus_event\":\"stop_event\",\"_TOPIC_LEVEL_\":[\"evt\",\"outbound\",\"berlin_01\"]}",
     "mappingTopic": "",
     "updateExistingDevice": false,
     "mappingType": "JSON",
@@ -65,30 +60,27 @@
   },
   {
     "publishTopicSample": "opp/outbound/berlin_01",
-    "ident": "utnidm",
+    "identifier": "utnidm",
     "tested": false,
     "autoAckOperation": true,
-    "source": "{\"deviceId\":\"909090\",\"bus_opp\":\"New engine restart operation!\"}",
+    "sourceTemplate": "{\"deviceId\":\"909090\",\"bus_opp\":\"New engine restart operation!\"}",
     "externalIdType": "c8y_Serial",
     "qos": "AT_LEAST_ONCE",
     "substitutions": [
       {
-        "resolve2ExternalId": true,
-        "pathSource": "deviceId",
+        "pathSource": "_IDENTITY_.externalId",
         "pathTarget": "_TOPIC_LEVEL_[2]",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "bus_opp",
         "pathTarget": "decription",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
-        "pathSource": "deviceId",
+        "pathSource": "_IDENTITY_.c8yId",
         "pathTarget": "c8y_Id",
         "repairStrategy": "DEFAULT",
         "expandArray": false
@@ -100,12 +92,12 @@
     "subscriptionTopic": "",
     "direction": "OUTBOUND",
     "snoopStatus": "NONE",
-    "mapDeviceIdentifier": true,
+    "useExternalId": true,
     "active": false,
     "targetAPI": "OPERATION",
-    "filterOutbound": "bus_opp",
+    "filterMapping": "bus_opp",
     "publishTopic": "opp/outbound/#",
-    "target": "{\"c8y_Id\":\"909090\",\"decription\":\"dummy operation\",\"type\":\"bus_operation\",\"_TOPIC_LEVEL_\":[\"opp\",\"outbound\",\"berlin_01\"]}",
+    "targetTemplate": "{\"c8y_Id\":\"909090\",\"decription\":\"dummy operation\",\"type\":\"bus_operation\",\"_TOPIC_LEVEL_\":[\"opp\",\"outbound\",\"berlin_01\"]}",
     "mappingTopic": "",
     "updateExistingDevice": false,
     "mappingType": "JSON",

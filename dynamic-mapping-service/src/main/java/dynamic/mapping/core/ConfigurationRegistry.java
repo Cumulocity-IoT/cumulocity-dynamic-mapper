@@ -24,7 +24,7 @@ import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
-import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
+import dynamic.mapping.processor.extension.ExtensibleProcessor;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.GenericBinaryProcessorInbound;
@@ -52,7 +52,7 @@ public class ConfigurationRegistry {
 	@Getter
 	private Map<String, Map<MappingType, BasePayloadProcessorInbound<?>>> payloadProcessorsInbound = new HashMap<>();
 
-	// structure: <tenant, <connectorIdent, <mappingType,
+	// structure: <tenant, <connectorIdentifier, <mappingType,
 	// extensibleProcessorOutbound>>>
 	@Getter
 	private Map<String, Map<String, Map<MappingType, BasePayloadProcessorOutbound<?>>>> payloadProcessorsOutbound = new HashMap<>();
@@ -60,11 +60,9 @@ public class ConfigurationRegistry {
 	@Getter
 	private Map<String, ServiceConfiguration> serviceConfigurations = new HashMap<>();
 
-	// structure: <tenant, <extensibleProcessorInbound>>
+	// structure: <tenant, <extensibleProcessorSource>>
 	@Getter
-	private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
-
-
+	private Map<String, ExtensibleProcessor> extensibleProcessors = new HashMap<>();
 
 	@Getter
 	private C8YAgent c8yAgent;
@@ -121,13 +119,14 @@ public class ConfigurationRegistry {
 	private ExecutorService virtThreadPool;
 
 	public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-		ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
+		ExtensibleProcessor extensibleProcessor = getExtensibleProcessors().get(tenant);
 		return Map.of(
 				MappingType.JSON, new JSONProcessorInbound(this),
 				MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
 				MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
 				MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
-				MappingType.PROCESSOR_EXTENSION, extensibleProcessor);
+				MappingType.PROCESSOR_EXTENSION_SOURCE, extensibleProcessor,
+				MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET, extensibleProcessor);
 	}
 
 	public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
@@ -137,20 +136,20 @@ public class ConfigurationRegistry {
 			connectorClient = new MQTTClient(this, connectorConfiguration,
 					null,
 					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
-					connectorConfiguration.getIdent());
+			log.info("Tenant {} - Initializing MQTT Connector with identifier {}", tenant,
+					connectorConfiguration.getIdentifier());
 		} else if (ConnectorType.CUMULOCITY_MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
 			connectorClient = new MQTTServiceClient(this, connectorConfiguration,
 					null,
 					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing MQTTService Connector with ident {}", tenant,
-					connectorConfiguration.getIdent());
+			log.info("Tenant {} - Initializing MQTTService Connector with identifier {}", tenant,
+					connectorConfiguration.getIdentifier());
 		} else if (ConnectorType.KAFKA.equals(connectorConfiguration.getConnectorType())) {
 			connectorClient = new KafkaClient(this, connectorConfiguration,
 					null,
 					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing Kafka Connector with ident {}", tenant,
-					connectorConfiguration.getIdent());
+			log.info("Tenant {} - Initializing Kafka Connector with identifier {}", tenant,
+					connectorConfiguration.getIdentifier());
 		}
 		return connectorClient;
 	}

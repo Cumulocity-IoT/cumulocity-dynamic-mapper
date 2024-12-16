@@ -23,7 +23,7 @@ import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { TestingComponent } from './grid/testing.component';
 import { SharedModule } from '../shared';
-import { NODE2 } from '../shared/model/util';
+import { NODE2 } from '../shared/mapping/util';
 
 @NgModule({
   declarations: [

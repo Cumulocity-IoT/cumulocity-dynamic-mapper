@@ -29,7 +29,7 @@ import {
   RepairStrategy
 } from '../../../shared';
 import { EditorMode } from '../../shared/stepper-model';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
+import { StepperConfiguration } from 'src/shared/mapping/shared.model';
 import { definesDeviceIdentifier } from '../../shared/util';
 import { FormBuilder, FormGroup } from '@angular/forms';
 
@@ -57,17 +57,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   Direction = Direction;
 
   constructor(private fb: FormBuilder) {
-    this.createForm();
-  }
-
-  createForm() {
-    this.substitutionForm = this.fb.group({
-      pathSource: [{ value: '', disabled: true }],
-      pathTarget: [{ value: '', disabled: true }],
-      expandArray: [false],
-      resolve2ExternalId: [false],
-      repairStrategy: ['']
-    });
   }
 
   ngOnInit(): void {
@@ -75,6 +64,8 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       ok: this.isDuplicate ? 'Overwrite' : 'Save',
       cancel: 'Cancel'
     };
+    this.createForm();
+
     this.editedSubstitution = this.substitution;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
       .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
@@ -93,8 +84,9 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
 
     const marksDeviceIdentifier = definesDeviceIdentifier(
       this.mapping.targetAPI,
+      this.mapping.externalIdType,
+      this.stepperConfiguration.direction,
       this.substitution,
-      this.stepperConfiguration.direction
     )
       ? '* '
       : '';
@@ -106,11 +98,19 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       pathSource: this.editedSubstitution.pathSource,
       pathTarget: this.editedSubstitution.pathTarget,
       expandArray: this.editedSubstitution.expandArray,
-      resolve2ExternalId: this.editedSubstitution.resolve2ExternalId,
       repairStrategy: this.editedSubstitution.repairStrategy
     });
     // console.log("Repair Options:", this.repairStrategyOptions);
     // console.log('Existing substitution:', this.existingSubstitution);
+  }
+
+  createForm() {
+    this.substitutionForm = this.fb.group({
+      pathSource: [{ value: '', disabled: true }],
+      pathTarget: [{ value: '', disabled: true }],
+      expandArray: [{ value: false, disabled: this.isExpandToArrayDisabled() }],
+      repairStrategy: ['']
+    });
   }
 
   onDismiss() {
@@ -147,14 +147,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     // );
     // const r = d0 || d1 || (!d1 && d2);
     const r = d0 || d1;
-    // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
-    return r;
-  }
-
-  isResolve2ExternalIdDisabled() {
-    const r =
-      this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-      this.stepperConfiguration.direction == Direction.INBOUND;
     // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }

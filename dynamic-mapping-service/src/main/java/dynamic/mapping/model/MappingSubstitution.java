@@ -30,7 +30,7 @@ import lombok.Getter;
 import lombok.ToString;
 import dynamic.mapping.processor.model.RepairStrategy;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -62,21 +62,21 @@ public class MappingSubstitution implements Serializable {
             DocumentContext dc;
             switch (type) {
                 case OBJECT:
-                    Map <String,Object> ro = null;
+                    Map<String, Object> ro = null;
                     if (value != null && !value.isNull()) {
                         dc = JsonPath.parse(value.toString());
                         ro = dc.read("$");
                     } else {
-                        ro= null;
+                        ro = null;
                     }
                     return ro;
                 case ARRAY:
-                    List<Map <String,Object>> ra = null;
+                    List<Map<String, Object>> ra = null;
                     if (value != null && !value.isNull()) {
                         dc = JsonPath.parse(value.toString());
                         ra = dc.read("$");
                     } else {
-                        ra= null;
+                        ra = null;
                     }
                     return ra;
                 case IGNORE:
@@ -112,17 +112,24 @@ public class MappingSubstitution implements Serializable {
     public RepairStrategy repairStrategy;
 
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean definesDeviceIdentifier(API api, Direction direction) {
+    public boolean definesDeviceIdentifier(API api, String externalIdType, Direction direction,
+            MappingSubstitution sub) {
         if (Direction.INBOUND.equals(direction)) {
-            return api.identifier.equals(pathTarget);
+            if (externalIdType != null && !("").equals(externalIdType)) {
+                return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
+            } else {
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
+            }
         } else {
-            return api.identifier.equals(pathSource);
+            if (externalIdType != null && !("").equals(externalIdType)) {
+                return (Mapping.IDENTITY + ".externalId").equals(sub.pathSource);
+            } else {
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathSource);
+            }
         }
     }
 
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean expandArray;
 
-    @JsonSetter(nulls = Nulls.SKIP)
-    public boolean resolve2ExternalId;
 }

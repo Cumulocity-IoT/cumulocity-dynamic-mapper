@@ -43,13 +43,15 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 })
 export class SubstitutionRendererComponent {
   @Input()
-  substitutions: MappingSubstitution[] = [];
-  @Input()
   targetAPI: string;
   @Input()
-  settings: any;
+  externalIdType: string;
   @Input()
   direction: Direction;
+  @Input()
+  substitutions: MappingSubstitution[] = [];
+  @Input()
+  settings: any;
 
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
