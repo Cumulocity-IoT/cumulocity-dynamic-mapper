@@ -118,13 +118,13 @@ public class MappingSubstitution implements Serializable {
             if (externalIdType != null && !("").equals(externalIdType)) {
                 return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
             } else {
-                return (Mapping.IDENTITY + ".c8yId").equals(sub.pathTarget);
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
             }
         } else {
             if (externalIdType != null && !("").equals(externalIdType)) {
                 return (Mapping.IDENTITY + ".externalId").equals(sub.pathSource);
             } else {
-                return (Mapping.IDENTITY + ".c8yId").equals(sub.pathSource);
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathSource);
             }
         }
     }

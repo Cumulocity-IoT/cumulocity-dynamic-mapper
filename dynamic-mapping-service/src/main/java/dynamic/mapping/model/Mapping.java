@@ -201,7 +201,7 @@ public class Mapping implements Serializable {
         if (externalIdType != null && !("").equals(externalIdType)) {
             return (Mapping.IDENTITY + ".externalId");
         } else {
-            return (Mapping.IDENTITY + ".c8yId");
+            return (Mapping.IDENTITY + ".c8ySourceId");
         }
     }
 

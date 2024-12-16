@@ -419,13 +419,13 @@ export function definesDeviceIdentifier(
     if (externalIdType) {
       return sub?.pathTarget == `${IDENTITY}.externalId`;
     } else {
-      return sub?.pathTarget == `${IDENTITY}.c8yId`;
+      return sub?.pathTarget == `${IDENTITY}.c8ySourceId`;
     }
   } else {
     if (externalIdType) {
       return sub?.pathSource == `${IDENTITY}.externalId`;
     } else {
-      return sub?.pathSource == `${IDENTITY}.c8yId`;
+      return sub?.pathSource == `${IDENTITY}.c8ySourceId`;
     }
   }
 }
@@ -486,7 +486,7 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
       _IDENTITY_: {
         // externalIdType: mapping.externalIdType,
         externalId: 'any_SerialNumber',
-        // c8yId: '909090'
+        // c8ySourceId: '909090'
       }
     };
     return result;
@@ -494,7 +494,7 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
     result = {
       ...template,
       _IDENTITY_: {
-        c8yId: '909090'
+        c8ySourceId: '909090'
       }
     };
     return result;
@@ -537,7 +537,7 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
   if (mapping.externalIdType && mapping.externalIdType !== '') {
     return `${IDENTITY}.externalId`;
   } else {
-    return `${IDENTITY}.c8yId`;
+    return `${IDENTITY}.c8ySourceId`;
   }
 }
 

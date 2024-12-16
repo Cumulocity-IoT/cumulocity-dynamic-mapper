@@ -81,7 +81,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
          */
         ObjectNode identityFragment = objectMapper.createObjectNode();
         var sourceId = extractContent(context, mapping, payloadJsonNode, payloadAsString, mapping.targetAPI.identifier);
-        identityFragment.set("c8yId",
+        identityFragment.set("c8ySourceId",
                 sourceId);
         identityFragment.set("externalIdType", TextNode.valueOf(mapping.externalIdType));
         if (mapping.externalIdType != null && !("").equals(mapping.externalIdType)) {

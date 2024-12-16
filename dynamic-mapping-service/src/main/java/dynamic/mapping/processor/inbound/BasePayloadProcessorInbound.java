@@ -164,7 +164,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         //     payloadTarget.put("$", "_IDENTITY_",
         //             Collections.singletonMap("_IDENTITY_",
         //                     Map.of(
-        //                             "c8yId", "someId")));
+        //                             "c8ySourceId", "someId")));
         // }
         for (String pathTarget : pathTargets) {
             MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
@@ -310,8 +310,9 @@ public abstract class BasePayloadProcessorInbound<T> {
         try {
             if ("$".equals(keys)) {
                 Object replacement = sub.typedValue();
-                if (replacement instanceof Map<?, ?>) {
-                    Map<String, Object> rm = (Map<String, Object>) replacement;
+                if (replacement instanceof Map<?, ?> map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> rm = (Map<String, Object>) map;
                     for (Map.Entry<String, Object> entry : rm.entrySet()) {
                         jsonObject.put("$", entry.getKey(), entry.getValue());
                     }
