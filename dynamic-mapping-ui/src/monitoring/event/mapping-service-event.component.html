@@ -66,7 +66,7 @@
     </c8y-form-group>
   </div>
 </c8y-action-bar-item>
-<div class="d-flex d-col bg-inherit content-fullpage bg-gray-white">
+<!-- <div class="d-flex d-col bg-inherit content-fullpage bg-gray-white">
   <div class="card-header large-padding separator sticky-top">
     <span class="card-title" translate>
       Mapping service events
@@ -74,54 +74,75 @@
   </div>
   <div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
     <div class="d-flex">
+      <div class="c8y-list--timeline__item__date">
+        <p class="m-0 text-medium text-truncate" title="Date">
+          Date
+        </p>
+      </div>
+
       <div class="c8y-list__item__block flex-grow">
         <div class="c8y-list__item__body">
-          <div class="content-flex-50">
-            <div class="col-2">Date</div>
-            <div class="col-2">Event type</div>
-            <div class="col-2">Connector</div>
-            <div class="col-6">Message</div>
+          <div class="d-flex">
+            <div class="col-md-2">Event type</div>
+            <div class="col-md-2">Connector</div>
+            <div class="col-md-8">Message</div>
           </div>
         </div>
       </div>
     </div>
+
   </div>
-  <div class="inner-scroll">
-    <c8y-list-group class="c8y-list__group--strip">
-      <ng-template c8yFor let-event [c8yForOf]="events$" [c8yForRealtime]="realtime"
-        [c8yForRealtimeOptions]="{ entityOrId: device }" [c8yForLoadMore]="'hidden'" [c8yForNotFound]="empty"
-        (c8yForLoadMoreComponent)="
-          loadMoreComponent = $event; loadMoreComponent.useIntersection = false
-        ">
-        <c8y-li class="pointer" [ngClass]="{ }">
-          <c8y-li-icon [ngClass]="{  }">
-            <i c8yIcon="events"></i>
-          </c8y-li-icon>
-          <c8y-li-body class="content-flex-100">
-            <div class="col-2">
-              <span>
-                {{ event.time | c8yDate: 'MMM d, y, h:mm:ss a' }}
-              </span>
-            </div>
-            <div class="col-2">
-              <span class="text-10 label label-primary">
-                {{ event.type }}
-              </span>
-            </div>
-            <div class="col-2">
-              <span class="text-10 label label-primary">
-                {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : ''
-                }}
-              </span>
-            </div>
-            <div class="col-6">
-              <span>
-                {{ event.text }}
-              </span>
-            </div>
-          </c8y-li-body>
-        </c8y-li>
-      </ng-template>
-    </c8y-list-group>
+</div> -->
+
+<div class="card-header large-padding separator sticky-top">
+  <span class="card-title" translate>
+    Mapping service events
+  </span>
+</div>
+<div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
+  <div class="d-flex">
+    <div class="c8y-list--timeline__item__date a-s-center">
+      <label>{{ 'Date' | translate }}</label>
+    </div>
+    <div class="c8y-list__item__block flex-grow">
+      <div class="c8y-list__item__body">
+        <div class="d-flex m-r-48">
+          <div class="col-md-2">Event type</div>
+          <div class="col-md-3">Connector</div>
+          <div class="col-md-7">Message</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
+<c8y-list-group>
+  <c8y-li-timeline *c8yFor="let event of events$| async; loadMore: 'auto'; let i = index">
+    {{ event.time | c8yDate: 'MMM d, y, h:mm:ss a' }}
+    <c8y-li #li [collapsed]="true">
+      <c8y-li-body>
+        <div class="d-flex">
+          <div class="col-md-2">
+            <span class="text-10 label label-primary">
+              {{ event.type }}
+            </span>
+          </div>
+          <div class="col-md-3">
+            <span class="text-10 label label-primary">
+              {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : ''
+              }}
+            </span>
+          </div>
+          <div class="col-md-7">
+            <span>
+              {{ event.text }}
+            </span>
+          </div>
+        </div>
+      </c8y-li-body>
+      <c8y-li-collapse>
+       <small>{{event | json}}</small> 
+      </c8y-li-collapse>
+    </c8y-li>
+  </c8y-li-timeline>
+</c8y-list-group>

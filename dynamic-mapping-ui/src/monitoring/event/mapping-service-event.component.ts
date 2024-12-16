@@ -21,7 +21,6 @@
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   AlertService,
-  LoadMoreComponent,
   Pagination
 } from '@c8y/ngx-components';
 import { BehaviorSubject, from, Observable, Subject, switchMap, takeUntil } from 'rxjs';
@@ -50,7 +49,6 @@ export class MapppingServiceEventComponent implements OnInit, OnDestroy {
     currentPage: 1
   };
   events$: Observable<IResultList<IEvent>>;
-  loadMoreComponent: LoadMoreComponent;
   LoggingEventTypeMap = LoggingEventTypeMap;
   filterMappingServiceEvent = {type:'ALL'};
   filterSubject$ = new BehaviorSubject<void>(null);
