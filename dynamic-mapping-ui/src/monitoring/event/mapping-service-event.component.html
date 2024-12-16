@@ -43,13 +43,12 @@
         {{ 'From' | translate }}
       </label>
       <input [name]="'fromPicker'" [id]="'fromPicker'" [(ngModel)]="filterMappingServiceEvent.dateFrom"
-      (ngModelChange)="onDateFromChange($event)"  class="form-control"
-        [attr.aria-label]="'Date from' | translate" placeholder="{{ 'Date from' | translate }}"
-        [bsConfig]="{ 
+        (ngModelChange)="onDateFromChange($event)" class="form-control" [attr.aria-label]="'Date from' | translate"
+        placeholder="{{ 'Date from' | translate }}" [bsConfig]="{ 
           dateInputFormat: 'YYYY-MM-DD',
           customTodayClass: 'today', 
           adaptivePosition: true 
-        }"  bsDatepicker />
+        }" bsDatepicker />
     </c8y-form-group>
   </div>
   <div class="form-group datepicker">
@@ -58,13 +57,12 @@
         {{ 'To' | translate }}
       </label>
       <input [name]="'toPicker'" [id]="'toPicker'" [(ngModel)]="filterMappingServiceEvent.dateTo"
-      (ngModelChange)="onDateToChange($event)" class="form-control"
-        [attr.aria-label]="'Date to' | translate" placeholder="{{ 'Date to' | translate }}"
-        [bsConfig]="{ 
+        (ngModelChange)="onDateToChange($event)" class="form-control" [attr.aria-label]="'Date to' | translate"
+        placeholder="{{ 'Date to' | translate }}" [bsConfig]="{ 
           dateInputFormat: 'YYYY-MM-DD',
           customTodayClass: 'today', 
           adaptivePosition: true 
-        }"  bsDatepicker />
+        }" bsDatepicker />
     </c8y-form-group>
   </div>
 </c8y-action-bar-item>
@@ -81,7 +79,8 @@
           <div class="content-flex-50">
             <div class="col-2">Date</div>
             <div class="col-2">Event type</div>
-            <div class="col-8">Message</div>
+            <div class="col-2">Connector</div>
+            <div class="col-6">Message</div>
           </div>
         </div>
       </div>
@@ -101,7 +100,7 @@
           <c8y-li-body class="content-flex-100">
             <div class="col-2">
               <span>
-                {{ event.time }}
+                {{ event.time | c8yDate: 'MMM d, y, h:mm:ss a' }}
               </span>
             </div>
             <div class="col-2">
@@ -109,7 +108,13 @@
                 {{ event.type }}
               </span>
             </div>
-            <div class="col-8">
+            <div class="col-2">
+              <span class="text-10 label label-primary">
+                {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : ''
+                }}
+              </span>
+            </div>
+            <div class="col-6">
               <span>
                 {{ event.text }}
               </span>

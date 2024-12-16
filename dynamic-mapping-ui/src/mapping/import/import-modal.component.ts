@@ -80,9 +80,9 @@ export class ImportMappingsComponent implements OnDestroy {
         await this.mappingService.createMapping(m);
         this.progress$.next((100 * i) / countMappings);
       } catch (ex) {
-        this.errorMessage = `Failed to import mappings: ${i}`;
+        this.errorMessage = `Failed to import mappings ${m.name}`;
         errors.push(this.errorMessage);
-        this.alertService.warning(ex);
+        this.alertService.warning(`${this.errorMessage}, ${ex}`);
       }
     });
     this.isAppCreated = true;
