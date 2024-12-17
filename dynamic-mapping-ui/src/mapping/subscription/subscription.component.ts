@@ -49,13 +49,8 @@ import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
-import { DeploymentMapEntry, LabelRendererComponent, SharedService, StepperConfiguration } from '../../shared';
+import { DeploymentMapEntry, SharedService, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
-import { NameRendererComponent } from '../renderer/name.renderer.component';
-import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
-import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
-import { StatusRendererComponent } from '../renderer/status.renderer.component';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
 
 @Component({
@@ -88,7 +83,6 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     hover: true
   };
 
-  columnsMappings: Column[];
   columnsSubscriptions: Column[] = [
     {
       name: 'id',
@@ -132,7 +126,6 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       ? Direction.INBOUND
       : Direction.OUTBOUND;
 
-    this.columnsMappings = this.getColumnsMappings();
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
     this.loadSubscriptions();
   }
@@ -152,93 +145,6 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       type: BuiltInActionType.Delete,
       callback: this.deleteSubscriptionWithConfirmation.bind(this)
     });
-  }
-
-  getColumnsMappings(): Column[] {
-    const cols: Column[] = [
-      {
-        name: 'name',
-        header: 'Name',
-        path: 'mapping.name',
-        filterable: false,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: NameRendererComponent,
-        sortOrder: 'asc',
-        visible: true,
-        gridTrackSize: '10%'
-      },
-      this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-          header: 'Mapping topic',
-          name: 'mappingTopic',
-          path: 'mapping.mappingTopic',
-          filterable: true
-        }
-        : {
-          header: 'Publish topic',
-          name: 'publishTopic',
-          path: 'mapping.publishTopic',
-          filterable: true
-        },
-      this.stepperConfiguration.direction === Direction.INBOUND
-        ? undefined
-        : {
-          header: 'Publish topic sample',
-          name: 'publishTopicSample',
-          path: 'mapping.publishTopicSample',
-          filterable: true
-        },
-      {
-        name: 'targetAPI',
-        header: 'API',
-        path: 'mapping.targetAPI',
-        filterable: true,
-        sortable: true,
-        dataType: ColumnDataType.TextShort,
-        cellRendererComponent: LabelRendererComponent,
-        gridTrackSize: '7%'
-      },
-      {
-        header: 'For connectors',
-        name: 'connectors',
-        path: 'connectors',
-        filterable: true,
-        sortable: false,
-        cellRendererComponent: MappingDeploymentRendererComponent
-      },
-      {
-        header: 'Status',
-        name: 'tested',
-        path: 'mapping',
-        filterable: false,
-        sortable: false,
-        cellRendererComponent: StatusRendererComponent,
-        gridTrackSize: '10%'
-      },
-      this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-          // header: 'Test/Debug/Snoop',
-          header: 'Templates snooped',
-          name: 'snoopedTemplates',
-          path: 'mapping',
-          filterable: false,
-          sortable: false,
-          cellCSSClassName: 'text-align-center',
-          cellRendererComponent: SnoopedTemplateRendererComponent,
-          gridTrackSize: '8%'
-        }
-        : undefined,
-      {
-        header: 'Activate',
-        name: 'active',
-        path: 'mapping.active',
-        filterable: false,
-        sortable: true,
-        cellRendererComponent: StatusActivationRendererComponent,
-        gridTrackSize: '9%'
-      }
-    ];
-    return cols;
   }
 
   onDefineSubscription() {

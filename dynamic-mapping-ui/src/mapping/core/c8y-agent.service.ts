@@ -29,7 +29,7 @@ import {
   IOperation
 } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
-import { API } from '../../shared';
+import { API, MAPPING_TEST_DEVICE_FRAGMENT } from '../../shared';
 import { FacadeIdentityService } from './facade/facade-identity.service';
 import { FacadeInventoryService } from './facade/facade-inventory.service';
 import { ProcessingContext } from '../processor/processor.model';
@@ -143,9 +143,11 @@ export class C8YAgent {
       // );
     }
 
+    const currentRequest = context.requests[context.requests.length-1];
     const device: Partial<IManagedObject> = {
       c8y_IsDevice: {},
-      d11r_testDevice: {},
+      [MAPPING_TEST_DEVICE_FRAGMENT]: {},
+      name: currentRequest.request['name'],
       com_cumulocity_model_Agent: {}
     };
     // remove device identifier

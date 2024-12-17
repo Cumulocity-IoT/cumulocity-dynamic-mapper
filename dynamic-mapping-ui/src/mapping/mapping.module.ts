@@ -45,7 +45,7 @@ import { MappingStepPropertiesComponent } from './step-property/mapping-properti
 import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
 import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
 import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
-import { DeviceSelectorSubscriptionComponent } from './subscription-grid/device-selector/device-selector-subscription.component';
+import { DeviceSelectorSubscriptionComponent } from './subscription/device-selector/device-selector-subscription.component';
 import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 
@@ -55,7 +55,7 @@ import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
 import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
 import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
-import { MappingSubscriptionComponent } from './subscription-grid/subscription.component';
+import { MappingSubscriptionComponent } from './subscription/subscription.component';
 
 @NgModule({
   declarations: [
