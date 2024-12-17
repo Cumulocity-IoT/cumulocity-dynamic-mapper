@@ -205,6 +205,9 @@ public class Mapping implements Serializable {
         }
     }
 
+    /*
+    * "_IDENTITY_.externalId" => source.id
+    */
     public String transformGenericPath2C8YPath(String originalPath) {
         // "_IDENTITY_.externalId" => source.id
         if (getGenericDeviceIdentifier().equals(originalPath)) {
@@ -214,8 +217,10 @@ public class Mapping implements Serializable {
         }
     }
 
+    /*
+    * source.id => "_IDENTITY_.externalId" 
+    */
     public String transformC8YPath2GenericPath(String originalPath) {
-        // source.id => "_IDENTITY_.externalId" ource.id
         if (targetAPI.identifier.equals(originalPath)) {
             return getGenericDeviceIdentifier();
         } else {
