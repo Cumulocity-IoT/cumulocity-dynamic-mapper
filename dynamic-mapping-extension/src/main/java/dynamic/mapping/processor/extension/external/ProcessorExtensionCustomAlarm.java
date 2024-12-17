@@ -27,6 +27,7 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.dashjoin.jsonata.json.Json;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
@@ -46,7 +47,6 @@ import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import jakarta.ws.rs.ProcessingException;
-import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,7 +60,10 @@ import java.util.Set;
 public class ProcessorExtensionCustomAlarm
         implements ProcessorExtensionSource<byte[]>, ProcessorExtensionTarget<byte[]> {
 
+    private ObjectMapper objectMapper;
+
     public ProcessorExtensionCustomAlarm() {
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -69,7 +72,7 @@ public class ProcessorExtensionCustomAlarm
         Map jsonObject;
         try {
             jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new ProcessingException(e.getMessage());
         }
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context

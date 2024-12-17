@@ -27,7 +27,6 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
@@ -59,7 +58,6 @@ import java.util.concurrent.TimeUnit;
 public abstract class BasePayloadProcessorInbound<T> {
 
     public BasePayloadProcessorInbound(ConfigurationRegistry configurationRegistry) {
-        this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.processingCachePool = configurationRegistry.getProcessingCachePool();
     }
@@ -168,7 +166,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         // }
         for (String pathTarget : pathTargets) {
             MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
-                    new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                    "NOT_DEFINED", MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
             if (finalI < postProcessingCache.get(pathTarget).size()) {
                 substituteValue = postProcessingCache.get(pathTarget).get(finalI).clone();
@@ -211,7 +209,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                                     null);
                             var response = objectMapper.writeValueAsString(attocDevice);
                             context.getCurrentRequest().setResponse(response);
-                            substituteValue.value = new TextNode(attocDevice.getId().getValue());
+                            substituteValue.value = attocDevice.getId().getValue();
                             predecessor = newPredecessor;
                         } catch (ProcessingException | JsonProcessingException e) {
                             context.getCurrentRequest().setError(e);
@@ -224,7 +222,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                     } else if (sourceId == null) {
                         substituteValue.value = null;
                     } else {
-                        substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
+                        substituteValue.value = sourceId.getManagedObject().getId().getValue();
                     }
 
                 }

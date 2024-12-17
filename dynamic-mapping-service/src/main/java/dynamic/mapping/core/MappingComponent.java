@@ -22,6 +22,8 @@
 package dynamic.mapping.core;
 
 import static java.util.Map.entry;
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -51,7 +53,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.dashjoin.jsonata.json.Json;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -95,7 +97,8 @@ public class MappingComponent {
     // structure: <tenant, initialized>
     private Map<String, Boolean> initializedMappingStatus = new HashMap<>();
 
-    // structure: <tenant, < connectorIdentifier , <connectorProperty , connectorValue>>>
+    // structure: <tenant, < connectorIdentifier , <connectorProperty ,
+    // connectorValue>>>
     @Getter
     private Map<String, Map<String, Map<String, String>>> consolidatedConnectorStatus = new HashMap<>();
 
@@ -459,25 +462,27 @@ public class MappingComponent {
         return updatedMappings;
     }
 
-    public List<Mapping> resolveMappingOutbound(String tenant, JsonNode message, API api) throws ResolveException {
+    public List<Mapping> resolveMappingOutbound(String tenant, String message, API api) throws ResolveException {
         // use mappingCacheOutbound and the key filterMapping to identify the matching
         // mappings.
         // the need to be returned in a list
         List<Mapping> result = new ArrayList<>();
         try {
+            Map messageAsMap = (Map) Json.parseJson(message);
             for (Mapping m : cacheMappingOutbound.get(tenant).values()) {
                 // test if message has property associated for this mapping, JsonPointer must
                 // begin with "/"
                 String key = "/" + m.getFilterMapping().replace('.', '/');
-                JsonNode testNode = message.at(key);
-                if (!testNode.isMissingNode() && m.targetAPI.equals(api)) {
+                var expression = jsonata(key);
+                Object extractedContent = expression.evaluate(messageAsMap);
+                if (extractedContent != null  && m.targetAPI.equals(api)) {
                     log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant, key,
-                            message.get("id"));
+                            messageAsMap.get("id"));
                     result.add(m);
                 } else {
                     log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant,
                             key,
-                            m.getFilterMapping(), message.get("id"), api, message.toPrettyString());
+                            m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
                 }
             }
         } catch (IllegalArgumentException e) {

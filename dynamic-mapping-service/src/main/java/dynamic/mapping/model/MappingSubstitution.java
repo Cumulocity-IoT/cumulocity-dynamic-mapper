@@ -35,7 +35,6 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 
-
 @Getter
 @ToString()
 public class MappingSubstitution implements Serializable {
@@ -101,29 +100,41 @@ public class MappingSubstitution implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean expandArray;
 
-    public static Boolean isArray( Object obj){
+    public static Boolean isArray(Object obj) {
         return obj != null && obj instanceof Collection;
     }
 
-    public static Boolean isObject( Object obj){
+    public static Boolean isObject(Object obj) {
         return obj != null && obj instanceof Map;
     }
 
-    public static Boolean isTextual( Object obj){
+    public static Boolean isTextual(Object obj) {
         return obj != null && obj instanceof String;
     }
 
-    public static Boolean isNumber( Object obj){
+    public static Boolean isNumber(Object obj) {
         return obj != null && obj instanceof Number;
     }
 
-    public static Boolean isBoolean( Object obj){
+    public static Boolean isBoolean(Object obj) {
         return obj != null && obj instanceof Boolean;
     }
 
-    public static String toPrettyPrint (Object obj) {
-        if (obj instanceof Map || obj instanceof  Collection) {
+    public static String toPrettyJsonString(Object obj) {
+        if (obj == null) {
+            return null;
+        } else if (obj instanceof Map || obj instanceof Collection) {
             return JsonFormatter.prettyPrint(JsonPath.parse(obj).jsonString());
+        } else {
+            return obj.toString();
+        }
+    }
+
+    public static String toJsonString(Object obj) {
+        if (obj == null) {
+            return null;
+        } else if (obj instanceof Map || obj instanceof Collection) {
+            return JsonPath.parse(obj).jsonString();
         } else {
             return obj.toString();
         }

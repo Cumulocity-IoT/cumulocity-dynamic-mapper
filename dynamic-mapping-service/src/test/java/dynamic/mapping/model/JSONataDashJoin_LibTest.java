@@ -22,10 +22,8 @@
 package dynamic.mapping.model;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 import com.dashjoin.jsonata.json.Json;
-
-import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.internal.JsonFormatter;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,35 +36,35 @@ import org.junit.jupiter.api.Test;
 @Slf4j
 public class JSONataDashJoin_LibTest {
     String jsonString = """
-        {
-            "mea": [
                 {
-                "tid": "uuid_01",
-                "iniialized": true,
-                "psid": "Crest",
-                "devicePath": "path01_80_X03_VVB001StatusB_Crest",
-                "values": [
-                    {
-                    "value": 64.6,
-                    "timestamp": 1734299911000
-                    }
-                ]
-                },
-                {
-                "tid": "uuid_02",
-                "iniialized": false,
-                "psid": "Crest",
-                "devicePath": "path01_80_X03_VVB001StatusB_Crest",
-                "values": [
-                    {
-                    "value": 15.6,
-                    "timestamp": 1734299921347
-                    }
-                ]
-                }
-            ]
-    }
-    """;
+                    "mea": [
+                        {
+                        "tid": "uuid_01",
+                        "iniialized": true,
+                        "psid": "Crest",
+                        "devicePath": "path01_80_X03_VVB001StatusB_Crest",
+                        "values": [
+                            {
+                            "value": 64.6,
+                            "timestamp": 1734299911000
+                            }
+                        ]
+                        },
+                        {
+                        "tid": "uuid_02",
+                        "iniialized": false,
+                        "psid": "Crest",
+                        "devicePath": "path01_80_X03_VVB001StatusB_Crest",
+                        "values": [
+                            {
+                            "value": 15.6,
+                            "timestamp": 1734299921347
+                            }
+                        ]
+                        }
+                    ]
+            }
+            """;
 
     @Test
     void testExtractArray() {
@@ -75,7 +73,7 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractArray(): {}", prettyPrint(extractedContent));
+            log.info("Result in test testExtractArray(): {}", toPrettyJsonString(extractedContent));
             assertEquals(true, extractedContent instanceof Collection);
         } catch (Exception e) {
             log.error("Exception in test testExtractArray()", e);
@@ -89,13 +87,13 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractObject(): {} is type: {}", prettyPrint(extractedContent), extractedContent.getClass().getName());
+            log.info("Result in test testExtractObject(): {} is type: {}", toPrettyJsonString(extractedContent),
+                    extractedContent.getClass().getName());
             assertEquals(true, extractedContent instanceof Map);
         } catch (Exception e) {
             log.error("Exception in test testExtractObject()", e);
         }
     }
-
 
     @Test
     void testExtractBoolean() {
@@ -104,7 +102,8 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractBoolean(): {} is type: {}", prettyPrint(extractedContent), extractedContent.getClass().getName());
+            log.info("Result in test testExtractBoolean(): {} is type: {}", toPrettyJsonString(extractedContent),
+                    extractedContent.getClass().getName());
             assertEquals(true, extractedContent instanceof Boolean);
         } catch (Exception e) {
             log.error("Exception in test testExtractBoolean()", e);
@@ -118,7 +117,8 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractString(): {} is type: {}", prettyPrint(extractedContent), extractedContent.getClass().getName());
+            log.info("Result in test testExtractString(): {} is type: {}", toPrettyJsonString(extractedContent),
+                    extractedContent.getClass().getName());
             assertEquals(true, extractedContent instanceof String);
         } catch (Exception e) {
             log.error("Exception in test testExtractString()", e);
@@ -132,20 +132,28 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractNumber(): {} is type: {}", prettyPrint(extractedContent), extractedContent.getClass().getName());
+            log.info("Result in test testExtractNumber(): {} is type: {}", toPrettyJsonString(extractedContent),
+                    extractedContent.getClass().getName());
             assertEquals(true, extractedContent instanceof Number);
         } catch (Exception e) {
             log.error("Exception in test testExtractNumber()", e);
         }
     }
 
-
-    static String prettyPrint (Object obj) {
-        if (obj instanceof Map || obj instanceof  Collection) {
-            return JsonFormatter.prettyPrint(JsonPath.parse(obj).jsonString());
-        } else {
-            return obj.toString();
+    @Test
+    void testExtractFailure() {
+        String expString = "mea[0].new";
+        try {
+            Object payloadJsonNode = Json.parseJson(jsonString);
+            var expression = jsonata(expString);
+            Object extractedContent = expression.evaluate(payloadJsonNode);
+            log.info("Result in test testExtractFailure(): {} is type: {}", toPrettyJsonString(extractedContent),
+                    extractedContent == null ? "null" : extractedContent.getClass().getName());
+            assertEquals(true, extractedContent == null);
+        } catch (Exception e) {
+            log.error("Exception in test testExtractFailure()", e);
         }
     }
+
 
 }

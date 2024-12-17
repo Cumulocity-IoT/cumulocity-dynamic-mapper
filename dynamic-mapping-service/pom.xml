@@ -99,11 +99,6 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-aspects</artifactId>
 		</dependency>
-
-		<dependency>
-			<groupId>com.ibm.jsonata4java</groupId>
-			<artifactId>JSONata4Java</artifactId>
-		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>

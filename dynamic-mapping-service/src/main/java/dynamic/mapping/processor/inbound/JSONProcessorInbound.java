@@ -26,7 +26,7 @@ import static dynamic.mapping.model.MappingSubstitution.isObject;
 import static dynamic.mapping.model.MappingSubstitution.isTextual;
 import static dynamic.mapping.model.MappingSubstitution.isNumber;
 import static dynamic.mapping.model.MappingSubstitution.isBoolean;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyPrint;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.io.IOException;
@@ -38,9 +38,7 @@ import java.util.Map;
 
 import org.joda.time.DateTime;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import com.dashjoin.jsonata.json.Json;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
@@ -63,9 +61,9 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
     @Override
     public ProcessingContext<Object> deserializePayload(
             Mapping mapping, ConnectorMessage message) throws IOException {
-        Object jsonNode = objectMapper.readTree(message.getPayload());
+        Object jsonObject = Json.parseJson(new String(message.getPayload(), "UTF-8"));
         ProcessingContext<Object> context = new ProcessingContext<Object>();
-        context.setPayload(jsonNode);
+        context.setPayload(jsonObject);
         return context;
     }
 
@@ -83,23 +81,20 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
          */
-        ArrayNode topicLevels = objectMapper.createArrayNode();
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-        splitTopicAsList.forEach(s -> topicLevels.add(s));
-        if (payloadObjectNode instanceof ObjectNode) {
-            ((ObjectNode) payloadObjectNode).set(Mapping.TOKEN_TOPIC_LEVEL, topicLevels);
+        if (payloadObjectNode instanceof Map) {
+            ((Map) payloadObjectNode).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
             if (context.isSupportsMessageContext() && context.getKey() != null) {
-                ObjectNode contextData = objectMapper.createObjectNode();
                 String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
-                contextData.put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
-                ((ObjectNode) payloadObjectNode).set(Mapping.TOKEN_CONTEXT_DATA, contextData);
+                Map contextData = Map.of(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
+                ((Map) payloadObjectNode).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
         } else {
             log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                     tenant);
         }
 
-        String payload = toPrettyPrint(payloadObjectNode);
+        String payload = toPrettyJsonString(payloadObjectNode);
         if (serviceConfiguration.logPayload || mapping.debug) {
             log.debug("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
                     mapping.debug, serviceConfiguration.logPayload || mapping.debug);
@@ -134,7 +129,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
             } else {
                 if (isArray(extractedSourceContent)) {
                     if (substitution.expandArray) {
-                        Collection extractedSourceContentCollection = (Collection)extractedSourceContent;
+                        Collection extractedSourceContentCollection = (Collection) extractedSourceContent;
                         // extracted result from sourcePayload is an array, so we potentially have to
                         // iterate over the result, e.g. creating multiple devices
                         for (Object jn : extractedSourceContentCollection) {
@@ -216,7 +211,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
                     Mapping.TIME,
                     new ArrayList<MappingSubstitution.SubstituteValue>());
             postProcessingCacheEntry.add(
-                    new MappingSubstitution.SubstituteValue(new TextNode(new DateTime().toString()),
+                    new MappingSubstitution.SubstituteValue(new DateTime().toString(),
                             MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT));
             postProcessingCache.put(Mapping.TIME, postProcessingCacheEntry);
         }
@@ -228,12 +223,12 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
         String mappingFilter = context.getMapping().getFilterMapping();
         if (mappingFilter != null && !("").equals(mappingFilter)) {
             Object payloadObjectNode = context.getPayload();
-            String payload = toPrettyPrint(payloadObjectNode);
+            String payload = toPrettyJsonString(payloadObjectNode);
             try {
                 var expr = jsonata(mappingFilter);
                 Object extractedSourceContent = expr.evaluate(payloadObjectNode);
                 context.setIgnoreFurtherProcessing(!isNodeTrue(extractedSourceContent));
-            }  catch (Exception e) {
+            } catch (Exception e) {
                 log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
                         payload, e);
             }
@@ -248,14 +243,12 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
 
         // Case 2: String value that can be converted to boolean
         if (node instanceof String) {
-            String text =( (String) node).trim().toLowerCase();
+            String text = ((String) node).trim().toLowerCase();
             return "true".equals(text) || "1".equals(text) || "yes".equals(text);
             // Add more string variations if needed
         }
 
         return false;
     }
-
-    
 
 }

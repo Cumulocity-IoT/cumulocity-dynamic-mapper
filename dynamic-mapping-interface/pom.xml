@@ -51,10 +51,6 @@
 			<artifactId>hivemq-mqtt-client</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.ibm.jsonata4java</groupId>
-			<artifactId>JSONata4Java</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>com.dashjoin</groupId>
 			<artifactId>jsonata</artifactId>
 		</dependency>

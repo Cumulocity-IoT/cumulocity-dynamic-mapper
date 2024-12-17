@@ -26,7 +26,7 @@ import static dynamic.mapping.model.Mapping.findDeviceIdentifier;
 import static dynamic.mapping.model.MappingSubstitution.isArray;
 import static dynamic.mapping.model.MappingSubstitution.isNumber;
 import static dynamic.mapping.model.MappingSubstitution.isTextual;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyPrint;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -75,7 +75,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
         Object payloadObjectNode = context.getPayload();
 
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
-        String payloadAsString = toPrettyPrint(payloadObjectNode);
+        String payloadAsString = toPrettyJsonString(payloadObjectNode);
         /*
          * step 0 patch payload with dummy property _IDENTITY_ in case the content
          * is required in the payload for a substitution
@@ -97,7 +97,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
                     tenant);
         }
 
-        payloadAsString = toPrettyPrint(payloadObjectNode);
+        payloadAsString = toPrettyJsonString(payloadObjectNode);
         if (serviceConfiguration.logPayload || mapping.debug) {
             log.info("Tenant {} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant, payloadAsString,
                     serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
@@ -162,7 +162,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
                 } else if (isTextual(extractedSourceContent)) {
                     if (ps.equals(findDeviceIdentifier(mapping).pathSource)) {
                         log.debug("Tenant {} - Finding external Id: resolveGlobalId2ExternalId: {}, {}, {}",
-                                context.getTenant(), ps, toPrettyPrint(extractedSourceContent),
+                                context.getTenant(), ps, toPrettyJsonString(extractedSourceContent),
                                 extractedSourceContent);
                         ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                                 new GId(extractedSourceContent.toString()), mapping.externalIdType,

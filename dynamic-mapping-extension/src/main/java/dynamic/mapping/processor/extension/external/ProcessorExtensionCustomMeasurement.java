@@ -21,11 +21,9 @@
 
 package dynamic.mapping.processor.extension.external;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.dashjoin.jsonata.json.Json;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.FloatNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -34,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 
 import jakarta.ws.rs.ProcessingException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -52,10 +49,10 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
-        JsonNode jsonNode;
+        Map jsonObject;
         try {
-            jsonNode = objectMapper.readTree(context.getPayload());
-        } catch (IOException e) {
+            jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
+        } catch (Exception e) {
             throw new ProcessingException(e.getMessage());
         }
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context
@@ -64,17 +61,14 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
         postProcessingCache.put("time",
                 new ArrayList<MappingSubstitution.SubstituteValue>(
                         Arrays.asList(new MappingSubstitution.SubstituteValue(
-                                new TextNode(new DateTime(
-                                        jsonNode.get("time").textValue())
-                                        .toString()),
+                                new DateTime(
+                                        jsonObject.get("time"))
+                                        .toString(),
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                 RepairStrategy.DEFAULT))));
 
-        ObjectNode fragmentTemperature = objectMapper.createObjectNode();
-        ObjectNode fragmentTemperatureSeries = objectMapper.createObjectNode();
-        fragmentTemperature.set("T", fragmentTemperatureSeries);
-        fragmentTemperatureSeries.set("value", new FloatNode(jsonNode.get("temperature").floatValue()));
-        fragmentTemperatureSeries.set("unit", new TextNode(jsonNode.get("unit").textValue()));
+        Map fragmentTemperatureSeries = Map.of("value", jsonObject.get("temperature"), "unit", jsonObject.get("unit"));
+        Map fragmentTemperature = Map.of("T", fragmentTemperatureSeries);
 
         postProcessingCache.put("c8y_Fragment_to_remove",
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
@@ -91,32 +85,29 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
         postProcessingCache.put(context.getMapping().targetAPI.identifier,
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(
-                                new TextNode(jsonNode.get("externalId").textValue()),
+                                jsonObject.get("externalId"),
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                 RepairStrategy.DEFAULT))));
 
-        float unexpected = Float.NaN;
-        if (jsonNode.get("unexpected") != null) {
+        Number unexpected = Float.NaN;
+        if (jsonObject.get("unexpected") != null) {
             // it is important to use RepairStrategy.CREATE_IF_MISSING as the node
             // "unexpected" does not yet exists in the target payload
-            ObjectNode fragmentUnexpected = objectMapper.createObjectNode();
-            ObjectNode fragmentUnexpectedSeries = objectMapper.createObjectNode();
-            fragmentUnexpected.set("U", fragmentUnexpectedSeries);
-            fragmentUnexpectedSeries.set("value", new FloatNode(jsonNode.get("unexpected").floatValue()));
-            fragmentUnexpectedSeries.set("unit", new TextNode("unknown"));
+            Map fragmentUnexpectedSeries = Map.of("value", jsonObject.get("unexpected"),"unit", "unknown");
+            Map fragmentUnexpected = Map.of("U", fragmentUnexpectedSeries);
             postProcessingCache.put("c8y_Unexpected",
                     new ArrayList<MappingSubstitution.SubstituteValue>(
                             Arrays.asList(new MappingSubstitution.SubstituteValue(
                                     fragmentUnexpected,
                                     MappingSubstitution.SubstituteValue.TYPE.OBJECT,
                                     RepairStrategy.CREATE_IF_MISSING))));
-            unexpected = jsonNode.get("unexpected").floatValue();
+            unexpected = (Number)jsonObject.get("unexpected");
 
         }
 
         log.info("Tenant {} - New measurement over json processor: {}, {}, {}, {}", context.getTenant(),
-                jsonNode.get("time").textValue(),
-                jsonNode.get("unit").textValue(), jsonNode.get("temperature").floatValue(),
+                jsonObject.get("time").toString(),
+                jsonObject.get("unit").toString(), jsonObject.get("temperature"),
                 unexpected);
     }
 }
