@@ -58,6 +58,10 @@
 			<artifactId>json-path</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.dashjoin</groupId>
+			<artifactId>jsonata</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>com.nsn.cumulocity.model</groupId>
 			<artifactId>device-capability-model</artifactId>
 		</dependency>

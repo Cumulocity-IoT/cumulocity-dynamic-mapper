@@ -21,96 +21,96 @@
 
 package dynamic.mapping.processor.outbound;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapping.model.Mapping.findDeviceIdentifier;
+import static dynamic.mapping.model.MappingSubstitution.isArray;
+import static dynamic.mapping.model.MappingSubstitution.isNumber;
+import static dynamic.mapping.model.MappingSubstitution.isTextual;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyPrint;
 
-import com.api.jsonata4java.expressions.EvaluateException;
-import com.api.jsonata4java.expressions.EvaluateRuntimeException;
-import com.api.jsonata4java.expressions.Expressions;
-import com.api.jsonata4java.expressions.ParseException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
+import com.dashjoin.jsonata.json.Json;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
-import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import lombok.extern.slf4j.Slf4j;
+
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;
+import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import jakarta.validation.constraints.NotNull;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode> {
+public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> {
 
     public JSONProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         super(configurationRegistry, connectorClient);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(Mapping mapping,
+    public ProcessingContext<Object> deserializePayload(Mapping mapping,
             C8YMessage c8yMessage) throws IOException {
-        JsonNode jsonNode = objectMapper.readTree(c8yMessage.getPayload());
-        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
+        Object jsonNode = Json.parseJson(c8yMessage.getPayload());
+        ProcessingContext<Object> context = new ProcessingContext<Object>();
         context.setPayload(jsonNode);
         return context;
     }
 
     @Override
-    public void extractFromSource(ProcessingContext<JsonNode> context)
+    public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        JsonNode payloadJsonNode = context.getPayload();
+        Object payloadObjectNode = context.getPayload();
 
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
-        String payloadAsString = payloadJsonNode.toPrettyString();
+        String payloadAsString = toPrettyPrint(payloadObjectNode);
         /*
          * step 0 patch payload with dummy property _IDENTITY_ in case the content
          * is required in the payload for a substitution
          */
-        ObjectNode identityFragment = objectMapper.createObjectNode();
-        var sourceId = extractContent(context, mapping, payloadJsonNode, payloadAsString, mapping.targetAPI.identifier);
-        identityFragment.set("c8ySourceId",
-                sourceId);
-        identityFragment.set("externalIdType", TextNode.valueOf(mapping.externalIdType));
+        var sourceId = extractContent(context, mapping, payloadObjectNode, payloadAsString, mapping.targetAPI.identifier);
+        Map identityFragment = Map.of("c8ySourceId",
+                sourceId.toString(), "externalIdType", mapping.externalIdType);
         if (mapping.externalIdType != null && !("").equals(mapping.externalIdType)) {
             ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
-                    new GId(sourceId.textValue()), mapping.externalIdType,
+                    new GId(sourceId.toString()), mapping.externalIdType,
                     context);
-            identityFragment.set("externalId", new TextNode(externalId.getExternalId()));
+    
+            identityFragment.put("externalId", externalId.getExternalId());
         }
-        if (payloadJsonNode instanceof ObjectNode) {
-            ((ObjectNode) payloadJsonNode).set(Mapping.IDENTITY, identityFragment);
+        if (payloadObjectNode instanceof Map) {
+            ((Map) payloadObjectNode).put(Mapping.IDENTITY, identityFragment);
         } else {
             log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                     tenant);
         }
 
-        payloadAsString = payloadJsonNode.toPrettyString();
+        payloadAsString = toPrettyPrint(payloadObjectNode);
         if (serviceConfiguration.logPayload || mapping.debug) {
             log.info("Tenant {} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant, payloadAsString,
                     serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
         for (MappingSubstitution substitution : mapping.substitutions) {
-            JsonNode extractedSourceContent = null;
+            Object extractedSourceContent = null;
 
             /*
              * step 1 extract content from inbound payload
              */
             var ps = substitution.pathSource;
-            extractedSourceContent = extractContent(context, mapping, payloadJsonNode, payloadAsString, ps);
+            extractedSourceContent = extractContent(context, mapping, payloadObjectNode, payloadAsString, ps);
             /*
              * step 2 analyse extracted content: textual, array
              */
@@ -125,17 +125,18 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                 MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
                 postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
             } else {
-                if (extractedSourceContent.isArray()) {
+                if (isArray(extractedSourceContent)) {
                     if (substitution.expandArray) {
+                        Collection extractedSourceContentCollection = (Collection)extractedSourceContent;
                         // extracted result from sourcePayload is an array, so we potentially have to
                         // iterate over the result, e.g. creating multiple devices
-                        for (JsonNode jn : extractedSourceContent) {
-                            if (jn.isTextual()) {
+                        for (Object jn : extractedSourceContentCollection) {
+                            if (isTextual(jn)) {
                                 postProcessingCacheEntry
                                         .add(new MappingSubstitution.SubstituteValue(jn,
                                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                                 substitution.repairStrategy));
-                            } else if (jn.isNumber()) {
+                            } else if (isNumber(jn)) {
                                 postProcessingCacheEntry
                                         .add(new MappingSubstitution.SubstituteValue(jn,
                                                 MappingSubstitution.SubstituteValue.TYPE.NUMBER,
@@ -143,10 +144,10 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                             } else {
                                 log.warn("Tenant {} - Since result is not textual or number it is ignored: {}",
                                         context.getTenant(),
-                                        jn.asText());
+                                        jn);
                             }
                         }
-                        context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
+                        context.addCardinality(substitution.pathTarget, extractedSourceContentCollection.size());
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     } else {
                         // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE
@@ -158,31 +159,31 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                         substitution.repairStrategy));
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
-                } else if (extractedSourceContent.isTextual()) {
+                } else if (isTextual(extractedSourceContent)) {
                     if (ps.equals(findDeviceIdentifier(mapping).pathSource)) {
                         log.debug("Tenant {} - Finding external Id: resolveGlobalId2ExternalId: {}, {}, {}",
-                                context.getTenant(), ps, extractedSourceContent.toPrettyString(),
-                                extractedSourceContent.asText());
+                                context.getTenant(), ps, toPrettyPrint(extractedSourceContent),
+                                extractedSourceContent);
                         ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
-                                new GId(extractedSourceContent.asText()), mapping.externalIdType,
+                                new GId(extractedSourceContent.toString()), mapping.externalIdType,
                                 context);
                         if (externalId == null && context.isSendPayload()) {
                             throw new RuntimeException(String.format("External id %s for type %s not found!",
-                                    extractedSourceContent.asText(), mapping.externalIdType));
+                                    extractedSourceContent, mapping.externalIdType));
                         } else if (externalId == null) {
-                            extractedSourceContent = null;
+                            extractedSourceContent = "_UNKNOWN_";
                         } else {
-                            extractedSourceContent = new TextNode(externalId.getExternalId());
+                            extractedSourceContent = externalId.getExternalId();
                         }
                     }
-                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
+                    context.addCardinality(substitution.pathTarget, 1);
                     postProcessingCacheEntry.add(
                             new MappingSubstitution.SubstituteValue(extractedSourceContent,
                                     MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                    context.setSource(extractedSourceContent.asText());
-                } else if (extractedSourceContent.isNumber()) {
-                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
+                    context.setSource(extractedSourceContent.toString());
+                } else if (isNumber(extractedSourceContent)) {
+                    context.addCardinality(substitution.pathTarget, 1);
                     postProcessingCacheEntry
                             .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                                     MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
@@ -190,7 +191,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                 } else {
                     log.debug("Tenant {} - This substitution, involves an objects for: {}, {}", context.getTenant(),
                             substitution.pathSource, extractedSourceContent.toString());
-                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
+                    context.addCardinality(substitution.pathTarget, 1);
                     postProcessingCacheEntry
                             .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                                     MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
@@ -207,16 +208,13 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
 
     }
 
-    private JsonNode extractContent(ProcessingContext<JsonNode> context, Mapping mapping, JsonNode payloadJsonNode,
+    private Object extractContent(ProcessingContext<Object> context, Mapping mapping, Object payloadJsonNode,
             String payloadAsString, @NotNull String ps) {
-        JsonNode extractedSourceContent = null;
+        Object extractedSourceContent = null;
         try {
-            Expressions expr = Expressions.parse(mapping.transformGenericPath2C8YPath(ps));
+            var expr = jsonata(mapping.transformGenericPath2C8YPath(ps));
             extractedSourceContent = expr.evaluate(payloadJsonNode);
-        } catch (ParseException | IOException | EvaluateException e) {
-            log.error("Tenant {} - Exception for: {}, {}: ", context.getTenant(), ps,
-                    payloadAsString, e);
-        } catch (EvaluateRuntimeException e) {
+        }  catch (Exception e) {
             log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
                     ps,
                     payloadAsString, e);

@@ -23,17 +23,18 @@ package dynamic.mapping.model;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.internal.JsonFormatter;
+
 import lombok.Getter;
 import lombok.ToString;
 import dynamic.mapping.processor.model.RepairStrategy;
 
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
+
 
 @Getter
 @ToString()
@@ -48,46 +49,14 @@ public class MappingSubstitution implements Serializable {
             TEXTUAL,
         }
 
-        public JsonNode value;
+        public Object value;
         public TYPE type;
         public RepairStrategy repairStrategy;
 
-        public SubstituteValue(JsonNode value, TYPE type, RepairStrategy repair) {
+        public SubstituteValue(Object value, TYPE type, RepairStrategy repair) {
             this.type = type;
             this.value = value;
             this.repairStrategy = repair;
-        }
-
-        public Object typedValue() {
-            DocumentContext dc;
-            switch (type) {
-                case OBJECT:
-                    Map<String, Object> ro = null;
-                    if (value != null && !value.isNull()) {
-                        dc = JsonPath.parse(value.toString());
-                        ro = dc.read("$");
-                    } else {
-                        ro = null;
-                    }
-                    return ro;
-                case ARRAY:
-                    List<Map<String, Object>> ra = null;
-                    if (value != null && !value.isNull()) {
-                        dc = JsonPath.parse(value.toString());
-                        ra = dc.read("$");
-                    } else {
-                        ra = null;
-                    }
-                    return ra;
-                case IGNORE:
-                    return null;
-                case NUMBER:
-                    return value.numberValue();
-                case TEXTUAL:
-                    return value.textValue();
-                default:
-                    return value.toString();
-            }
         }
 
         @Override
@@ -131,5 +100,33 @@ public class MappingSubstitution implements Serializable {
 
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean expandArray;
+
+    public static Boolean isArray( Object obj){
+        return obj != null && obj instanceof Collection;
+    }
+
+    public static Boolean isObject( Object obj){
+        return obj != null && obj instanceof Map;
+    }
+
+    public static Boolean isTextual( Object obj){
+        return obj != null && obj instanceof String;
+    }
+
+    public static Boolean isNumber( Object obj){
+        return obj != null && obj instanceof Number;
+    }
+
+    public static Boolean isBoolean( Object obj){
+        return obj != null && obj instanceof Boolean;
+    }
+
+    public static String toPrettyPrint (Object obj) {
+        if (obj instanceof Map || obj instanceof  Collection) {
+            return JsonFormatter.prettyPrint(JsonPath.parse(obj).jsonString());
+        } else {
+            return obj.toString();
+        }
+    }
 
 }

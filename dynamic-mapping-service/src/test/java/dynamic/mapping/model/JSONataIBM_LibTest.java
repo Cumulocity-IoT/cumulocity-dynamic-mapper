@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.Test;
 
 @Slf4j
-public class JSONataTest {
+public class JSONataIBM_LibTest {
     ObjectMapper mapper = new ObjectMapper();
 
     // test is disabled because of a current limitation in the JSONata library: https://github.com/IBM/JSONata4Java/issues/305

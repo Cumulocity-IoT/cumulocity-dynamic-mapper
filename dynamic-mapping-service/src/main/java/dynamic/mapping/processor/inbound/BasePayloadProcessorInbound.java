@@ -192,22 +192,22 @@ public abstract class BasePayloadProcessorInbound<T> {
                 if (pathTarget.equals(deviceIdentifierMapped2PathTarget) && mapping.useExternalId) {
 
                     ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                            new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
+                            new ID(mapping.externalIdType, substituteValue.toString()), context);
                     if (sourceId == null && mapping.createNonExistingDevice) {
                         ManagedObjectRepresentation attocDevice = null;
                         Map<String, Object> request = new HashMap<String, Object>();
                         request.put("name",
-                                "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
+                                "device_" + mapping.externalIdType + "_" + substituteValue.value.toString());
                         request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
                         request.put("c8y_IsDevice", null);
                         request.put("com_cumulocity_model_Agent", null);
                         try {
                             var requestString = objectMapper.writeValueAsString(request);
                             var newPredecessor = context.addRequest(
-                                    new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
+                                    new C8YRequest(predecessor, RequestMethod.PATCH, device.value.toString(),
                                             mapping.externalIdType, requestString, null, API.INVENTORY, null));
                             attocDevice = c8yAgent.upsertDevice(tenant,
-                                    new ID(mapping.externalIdType, substituteValue.value.asText()), context,
+                                    new ID(mapping.externalIdType, substituteValue.value.toString()), context,
                                     null);
                             var response = objectMapper.writeValueAsString(attocDevice);
                             context.getCurrentRequest().setResponse(response);
@@ -219,7 +219,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                     } else if (sourceId == null && context.isSendPayload()) {
                         throw new RuntimeException(String.format(
                                 "External id %s for type %s not found!",
-                                substituteValue.typedValue().toString(),
+                                substituteValue.toString(),
                                 mapping.externalIdType));
                     } else if (sourceId == null) {
                         substituteValue.value = null;
@@ -247,15 +247,15 @@ public abstract class BasePayloadProcessorInbound<T> {
         if (mapping.targetAPI.equals(API.INVENTORY)) {
             ManagedObjectRepresentation attocDevice = null;
             var newPredecessor = context.addRequest(
-                    new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
+                    new C8YRequest(predecessor, RequestMethod.PATCH, device.value.toString(),
                             mapping.externalIdType,
                             payloadTarget.jsonString(),
                             null, API.INVENTORY, null));
             try {
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                        new ID(mapping.externalIdType, device.value.asText()), context);
+                        new ID(mapping.externalIdType, device.value.toString()), context);
                 attocDevice = c8yAgent.upsertDevice(tenant,
-                        new ID(mapping.externalIdType, device.value.asText()), context, sourceId);
+                        new ID(mapping.externalIdType, device.value.toString()), context, sourceId);
                 var response = objectMapper.writeValueAsString(attocDevice);
                 context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
@@ -265,7 +265,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
             AbstractExtensibleRepresentation attocRequest = null;
             var newPredecessor = context.addRequest(
-                    new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(),
+                    new C8YRequest(predecessor, RequestMethod.POST, device.value.toString(),
                             mapping.externalIdType,
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
@@ -306,10 +306,10 @@ public abstract class BasePayloadProcessorInbound<T> {
             DocumentContext jsonObject, String keys)
             throws JSONException {
         boolean subValueMissing = sub.value == null;
-        boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
+        boolean subValueNull = (sub.value == null) || (sub.value != null);
         try {
             if ("$".equals(keys)) {
-                Object replacement = sub.typedValue();
+                Object replacement = sub;
                 if (replacement instanceof Map<?, ?> map) {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> rm = (Map<String, Object>) map;
@@ -327,10 +327,10 @@ public abstract class BasePayloadProcessorInbound<T> {
                     //     throw new JSONException("Can only create new nodes on the root level!");
                     // }
                     //jsonObject.put("$", keys, sub.typedValue());
-                    jsonObject.set("$."+ keys, sub.typedValue());
+                    jsonObject.set("$."+ keys, sub);
 
                 } else {
-                    jsonObject.set(keys, sub.typedValue());
+                    jsonObject.set(keys, sub);
                 }
             }
         } catch (PathNotFoundException e) {
