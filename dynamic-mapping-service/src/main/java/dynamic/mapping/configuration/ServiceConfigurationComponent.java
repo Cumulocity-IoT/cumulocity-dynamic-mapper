@@ -88,11 +88,12 @@ public class ServiceConfigurationComponent {
 			} catch (SDKException exception) {
 				log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
 				rt = initialize(tenant);
-			} catch (JsonMappingException e) {
-				e.printStackTrace();
-			} catch (JsonProcessingException e) {
-				e.printStackTrace();
-			}
+			} catch (Exception e) {
+                String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+                String msg = String.format("Failed to convert service object. Error: %s",
+                        exceptionMsg);
+                log.warn(msg);
+            }
 			return rt;
 		});
 		return result;

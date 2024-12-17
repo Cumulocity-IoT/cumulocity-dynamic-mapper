@@ -156,9 +156,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         cellRendererComponent: CheckedRendererComponent
       },
       {
-        name: 'ident',
-        header: 'Ident',
-        path: 'ident',
+        name: 'identifier',
+        header: 'Identifier',
+        path: 'identifier',
         filterable: false,
         sortOrder: 'asc',
         visible: false,
@@ -215,12 +215,12 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         if (this.selectable) {
           this.deploymentMapEntry.connectors = se;
           this.deploymentMapEntry.connectorsDetailed = conf.filter((con) =>
-            se.includes(con.ident)
+            se.includes(con.identifier)
           );
           this.deploymentMapEntryChange.emit(this.deploymentMapEntry);
           if (this.readOnly)
             this.configurations?.forEach(
-              (conf) => (conf['checked'] = this.selected.includes(conf.ident))
+              (conf) => (conf['checked'] = this.selected.includes(conf.identifier))
             );
         }
       }
@@ -235,7 +235,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
 
   public onSelectToggle(id: string) {
     if (this.isSelected(id)) {
-      this.selected = this.selected.filter((ident) => id !== ident);
+      this.selected = this.selected.filter((identifier) => id !== identifier);
     } else {
       this.selected.push(id);
     }
@@ -252,7 +252,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
       this.selected = [];
     } else {
       this.selectedAll = true;
-      this.configurations.forEach((con) => this.selected.push(con.ident));
+      this.configurations.forEach((con) => this.selected.push(con.identifier));
     }
     this.selected$.next(this.selected);
   }
@@ -275,7 +275,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
 
   async onConfigurationUpdate(config: ConnectorConfiguration) {
     const index = this.configurations.findIndex(
-      (conf) => conf.ident == config.ident
+      (conf) => conf.identifier == config.identifier
     );
     const configuration = _.clone(this.configurations[index]);
     const initialState = {
@@ -296,7 +296,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         this.configurations[index] = editedConfiguration;
         // avoid to include status$
         const clonedConfiguration = {
-          ident: editedConfiguration.ident,
+          identifier: editedConfiguration.identifier,
           connectorType: editedConfiguration.connectorType,
           enabled: editedConfiguration.enabled,
           name: editedConfiguration.name,
@@ -320,11 +320,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
 
   async onConfigurationCopy(config: ConnectorConfiguration) {
     const index = this.configurations.findIndex(
-      (conf) => conf.ident == config.ident
+      (conf) => conf.identifier == config.identifier
     );
     const configuration = _.clone(this.configurations[index]);
     // const configuration = _.clone(config);
-    configuration.ident = uuidCustom();
+    configuration.identifier = uuidCustom();
     configuration.name = `${configuration.name}_copy`;
     this.alertService.warning(
       gettext(
@@ -349,7 +349,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         this.configurations[index] = editedConfiguration;
         // avoid to include status$
         const clonedConfiguration = {
-          ident: editedConfiguration.ident,
+          identifier: editedConfiguration.identifier,
           connectorType: editedConfiguration.connectorType,
           enabled: editedConfiguration.enabled,
           name: editedConfiguration.name,
@@ -373,7 +373,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
 
   async onConfigurationDelete(config: ConnectorConfiguration) {
     const index = this.configurations.findIndex(
-      (conf) => conf.ident == config.ident
+      (conf) => conf.identifier == config.identifier
     );
     const configuration = _.clone(this.configurations[index]);
 
@@ -395,7 +395,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         if (result) {
           const response =
             await this.connectorConfigurationService.deleteConnectorConfiguration(
-              configuration.ident
+              configuration.identifier
             );
           if (response.status < 300) {
             this.alertService.success(gettext('Deleted successfully.'));
@@ -414,7 +414,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   async onConfigurationAdd() {
     const configuration: Partial<ConnectorConfiguration> = {
       properties: {},
-      ident: uuidCustom()
+      identifier: uuidCustom()
     };
     const initialState = {
       add: true,
@@ -434,7 +434,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         this.configurations.push(addedConfiguration);
         // avoid to include status$
         const clonedConfiguration = {
-          ident: addedConfiguration.ident,
+          identifier: addedConfiguration.identifier,
           connectorType: addedConfiguration.connectorType,
           enabled: addedConfiguration.enabled,
           name: addedConfiguration.name,
@@ -458,7 +458,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     });
   }
 
-  findNameByIdent(ident: string): string {
-    return this.configurations?.find((conf) => conf.ident == ident)?.name;
+  findNameByIdent(identifier: string): string {
+    return this.configurations?.find((conf) => conf.identifier == identifier)?.name;
   }
 }

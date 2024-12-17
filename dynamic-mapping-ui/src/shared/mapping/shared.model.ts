@@ -28,11 +28,10 @@ export interface MappingSubstitution {
   pathTarget: string;
   repairStrategy: RepairStrategy;
   expandArray: boolean;
-  resolve2ExternalId: boolean;
 }
 
 export interface DeploymentMapEntry {
-  ident: string;
+  identifier: string;
   connectors: string[];
   connectorsDetailed?: ConnectorConfiguration[];
 }
@@ -43,33 +42,33 @@ export interface DeploymentMap {
 
 export interface Mapping {
   [x: string]: any;
-  name: string;
   id: string;
-  ident: string;
+  identifier: string;
+  name: string;
   publishTopic?: string;
   publishTopicSample?: string;
   mappingTopic?: string;
   mappingTopicSample?: string;
   targetAPI: string;
+  direction?: Direction;
   sourceTemplate: string;
   targetTemplate: string;
-  active: boolean;
-  tested: boolean;
-  qos: QOS;
+  mappingType: MappingType;
   substitutions?: MappingSubstitution[];
-  mapDeviceIdentifier: boolean;
+  filterMapping?: string;
+  active: boolean;
+  debug?: boolean;
+  tested: boolean;
+  supportsMessageContext?: boolean;
   createNonExistingDevice: boolean;
   updateExistingDevice: boolean;
+  autoAckOperation?: boolean;
+  useExternalId: boolean;
   externalIdType: string;
   snoopStatus: SnoopStatus;
   snoopedTemplates?: string[];
-  mappingType: MappingType;
   extension?: ExtensionEntry;
-  direction?: Direction;
-  filterMapping?: string;
-  autoAckOperation?: boolean;
-  debug?: boolean;
-  supportsMessageContext?: boolean;
+  qos: QOS;
   lastUpdate: number;
 }
 
@@ -81,7 +80,7 @@ export interface MappingEnriched {
 }
 
 export interface DeploymentMapEntryDetailed {
-  ident: string;
+  identifier: string;
   connectors?: ConnectorConfiguration[];
 }
 
@@ -304,7 +303,7 @@ export enum ExtensionStatus {
 export interface MappingStatus {
   id: number;
   name: string;
-  ident: string;
+  identifier: string;
   direction: Direction;
   mappingTopic: string;
   errors: number;

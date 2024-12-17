@@ -47,7 +47,7 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
   configurations$: Observable<ConnectorConfiguration[]> = new Observable();
   statusLogs$: Observable<any[]> ;
   filterStatusLog = {
-    connectorIdent: 'ALL',
+    connectorIdentifier: 'ALL',
     type: LoggingEventType.ALL,
   };
   LoggingEventTypeMap = LoggingEventTypeMap;

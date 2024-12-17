@@ -91,14 +91,14 @@ public class MonitoringController {
 	@Value("${APP.mappingCreateRole}")
 	private String mappingCreateRole;
 
-	@RequestMapping(value = "/monitoring/status/connector/{connectorIdent}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<ConnectorStatusEvent> getConnectorStatus(@PathVariable @NotNull String connectorIdent) {
+	@RequestMapping(value = "/monitoring/status/connector/{connectorIdentifier}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<ConnectorStatusEvent> getConnectorStatus(@PathVariable @NotNull String connectorIdentifier) {
 		try {
 			String tenant = contextService.getContext().getTenant();
 			AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-					connectorIdent);
+					connectorIdentifier);
 			ConnectorStatusEvent st = client.getConnectorStatus();
-			log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorIdent, st);
+			log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorIdentifier, st);
 			return new ResponseEntity<>(st, HttpStatus.OK);
 		} catch (ConnectorRegistryException e) {
 			throw new RuntimeException(e);
@@ -114,7 +114,7 @@ public class MonitoringController {
 			List<ConnectorConfiguration> configurationList = connectorConfigurationComponent.getConnectorConfigurations(
 					tenant);
 			for (ConnectorConfiguration conf : configurationList) {
-				connectorsStatus.put(conf.getIdent(), ConnectorStatusEvent.unknown(conf.name, conf.ident));
+				connectorsStatus.put(conf.getIdentifier(), ConnectorStatusEvent.unknown(conf.name, conf.identifier));
 			}
 
 			// overwrite status with last remembered status of once enabled connectors
@@ -157,12 +157,12 @@ public class MonitoringController {
 		return ResponseEntity.status(HttpStatus.OK).body(result);
 	}
 
-	@RequestMapping(value = "/monitoring/subscription/{connectorIdent}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(@PathVariable @NotNull String connectorIdent) {
+	@RequestMapping(value = "/monitoring/subscription/{connectorIdentifier}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(@PathVariable @NotNull String connectorIdentifier) {
 		String tenant = contextService.getContext().getTenant();
 		AConnectorClient client = null;
 		try {
-			client = connectorRegistry.getClientForTenant(tenant, connectorIdent);
+			client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
 			Map<String, MutableInt> as = client.getActiveSubscriptions();
 			Map<String, Integer> result = as.entrySet().stream()
 					.map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(),

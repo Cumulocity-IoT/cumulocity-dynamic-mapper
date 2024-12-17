@@ -89,7 +89,7 @@ public class TestController {
 
 	@RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
-			@RequestParam URI topic, @RequestParam String connectorIdent,
+			@RequestParam URI topic, @RequestParam String connectorIdentifier,
 			@Valid @RequestBody Map<String, Object> payload) {
 		String path = topic.getPath();
 		List<ProcessingContext<?>> result = null;
@@ -100,7 +100,7 @@ public class TestController {
 			boolean send = ("send").equals(method);
 			try {
 				AConnectorClient connectorClient = connectorRegistry
-						.getClientForTenant(tenant, connectorIdent);
+						.getClientForTenant(tenant, connectorIdentifier);
 				result = connectorClient.test(path, send, payload);
 			} catch (ConnectorRegistryException e) {
 				throw new RuntimeException(e);

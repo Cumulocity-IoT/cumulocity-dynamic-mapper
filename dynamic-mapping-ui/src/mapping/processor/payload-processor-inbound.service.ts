@@ -28,7 +28,7 @@ import {
   RepairStrategy,
   MAPPING_TEST_DEVICE_TYPE
 } from '../../shared';
-import { findDeviceIdentifier, getTypedValue } from '../shared/util';
+import { findDeviceIdentifier, getGenericDeviceIdentifier, getTypedValue, transformGenericPath2C8YPath } from '../shared/util';
 import { C8YAgent } from '../core/c8y-agent.service';
 import {
   ProcessingContext,
@@ -41,7 +41,7 @@ export abstract class PayloadProcessorInbound {
   constructor(
     private alert: AlertService,
     private c8yClient: C8YAgent
-  ) {}
+  ) { }
 
   abstract deserializePayload(
     context: ProcessingContext,
@@ -57,14 +57,16 @@ export abstract class PayloadProcessorInbound {
   protected JSONATA = require('jsonata');
 
   async substituteInTargetAndSend(context: ProcessingContext) {
+
     // step 3 replace target with extract content from inbound payload
+
     const { mapping } = context;
 
     const { postProcessingCache } = context;
-    let maxEntry: string = findDeviceIdentifier(context.mapping).pathTarget;
+    let deviceIdentifierMapped2PathTarget: string = findDeviceIdentifier(context.mapping).pathTarget;
     for (const entry of postProcessingCache.entries()) {
-      if (postProcessingCache.get(maxEntry).length < entry[1].length) {
-        maxEntry = entry[0];
+      if (postProcessingCache.get(deviceIdentifierMapped2PathTarget).length < entry[1].length) {
+        deviceIdentifierMapped2PathTarget = entry[0];
       }
     }
 
@@ -73,7 +75,7 @@ export abstract class PayloadProcessorInbound {
     );
 
     const countMaxlistEntries: number =
-      postProcessingCache.get(maxEntry).length;
+      postProcessingCache.get(deviceIdentifierMapped2PathTarget).length;
     const [toDouble] = deviceEntries;
     while (deviceEntries.length < countMaxlistEntries) {
       deviceEntries.push(toDouble);
@@ -102,7 +104,7 @@ export abstract class PayloadProcessorInbound {
           // events/alarms/measurements/inventory
           if (
             substituteValue.repairStrategy ==
-              RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
+            RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
             substituteValue.repairStrategy == RepairStrategy.DEFAULT
           ) {
             substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
@@ -120,27 +122,33 @@ export abstract class PayloadProcessorInbound {
           );
         }
 
+        let sourceId: SubstituteValue = {
+          value: undefined,
+          type: SubstituteValueType.TEXTUAL,
+          repairStrategy: RepairStrategy.CREATE_IF_MISSING
+        };;
         if (mapping.targetAPI != API.INVENTORY.name) {
           if (
             pathTarget == findDeviceIdentifier(mapping).pathTarget &&
-            mapping.mapDeviceIdentifier
+            mapping.useExternalId
           ) {
-            let sourceId: string;
             try {
               const identity = {
                 externalId: substituteValue.value.toString(),
                 type: mapping.externalIdType
               };
-              sourceId = await this.c8yClient.resolveExternalId2GlobalId(
-                identity,
-                context
-              );
+              sourceId = {
+                value: await this.c8yClient.resolveExternalId2GlobalId(
+                  identity,
+                  context
+                ), repairStrategy: RepairStrategy.DEFAULT, type: SubstituteValueType.TEXTUAL
+              };
             } catch (e) {
               // console.log(
               //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
               // );
             }
-            if (!sourceId && mapping.createNonExistingDevice) {
+            if (!sourceId.value && mapping.createNonExistingDevice) {
               const request = {
                 c8y_IsDevice: {},
                 name: `device_${mapping.externalIdType}_${substituteValue.value}`,
@@ -148,6 +156,7 @@ export abstract class PayloadProcessorInbound {
                 d11r_testDevice: {},
                 type: MAPPING_TEST_DEVICE_TYPE
               };
+              
               const newPredecessor = context.requests.push({
                 predecessor: predecessor,
                 method: 'PATCH',
@@ -156,6 +165,7 @@ export abstract class PayloadProcessorInbound {
                 request: request,
                 targetAPI: API.INVENTORY.name
               });
+
               try {
                 const response = await this.c8yClient.upsertDevice(
                   {
@@ -166,6 +176,7 @@ export abstract class PayloadProcessorInbound {
                 );
                 context.requests[newPredecessor - 1].response = response;
                 substituteValue.value = response.id as any;
+                sourceId.value = response.id;
               } catch (e) {
                 context.requests[newPredecessor - 1].error = e;
               }
@@ -174,26 +185,43 @@ export abstract class PayloadProcessorInbound {
               throw new Error(
                 `External id ${substituteValue} for type ${mapping.externalIdType} not found!`
               );
-            } else if (!sourceId) {
-              substituteValue.value = substituteValue.value.toString();
-            } else {
-              substituteValue.value = sourceId.toString();
             }
+            // else {
+            //   substituteValue.value = sourceId.toString();
+            // }
           }
-          this.substituteValueInObject(
+
+          this.substituteValueInPayload(
             mapping.mappingType,
             substituteValue,
             payloadTarget,
             pathTarget
           );
+          if (getGenericDeviceIdentifier(mapping) === pathTarget) {
+            this.substituteValueInPayload(
+              mapping.mappingType,
+              sourceId,
+              payloadTarget,
+              transformGenericPath2C8YPath(mapping, pathTarget)
+            )
+          };
+
           // } else if (pathTarget != API[mapping.targetAPI].identifier) {
         } else {
-          this.substituteValueInObject(
+          this.substituteValueInPayload(
             mapping.mappingType,
             substituteValue,
             payloadTarget,
             pathTarget
           );
+          if (getGenericDeviceIdentifier(mapping) === pathTarget) {
+            this.substituteValueInPayload(
+              mapping.mappingType,
+              sourceId,
+              payloadTarget,
+              transformGenericPath2C8YPath(mapping, pathTarget)
+            )
+          };
         }
       }
       /*
@@ -249,15 +277,15 @@ export abstract class PayloadProcessorInbound {
     }
   }
 
-  substituteValueInObject(
+  substituteValueInPayload(
     type: MappingType,
     sub: SubstituteValue,
     jsonObject: JSON,
     keys: string
   ) {
-    const subValueMissing: boolean = sub.value == null;
+    const subValueMissing: boolean = !sub || sub.value == null;
     const subValueNull: boolean =
-      sub.value == null || (sub.value != null && sub.value != undefined);
+      !sub || sub.value == null || (sub.value != null && sub.value != undefined);
 
     if (keys == '$') {
       Object.keys(getTypedValue(sub)).forEach((key) => {
@@ -271,10 +299,10 @@ export abstract class PayloadProcessorInbound {
       ) {
         _.unset(jsonObject, keys);
       } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-        const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-        if (pathIsNested) {
-          throw new Error('Can only crrate new nodes ion the root level!');
-        }
+        // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
+        // if (pathIsNested) {
+        //   throw new Error('Can only create new nodes on the root level!');
+        // }
         // jsonObject.put("$", keys, sub.typedValue());
         _.set(jsonObject, keys, getTypedValue(sub));
       } else {

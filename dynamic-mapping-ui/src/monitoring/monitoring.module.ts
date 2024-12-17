@@ -33,6 +33,7 @@ import { NgxEchartsModule } from 'ngx-echarts';
 import { MapppingServiceEventComponent } from './event/mapping-service-event.component';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { SharedModule } from '../shared';
+import { CollapseModule } from 'ngx-bootstrap/collapse';
 
 @NgModule({
   declarations: [
@@ -50,6 +51,7 @@ import { SharedModule } from '../shared';
     NgxEchartsModule.forRoot({
       echarts: () => import('echarts')
     }),
+    CollapseModule,
     SharedModule
   ],
   exports: [],

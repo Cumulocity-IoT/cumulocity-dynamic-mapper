@@ -140,8 +140,8 @@ public class KafkaClient extends AConnectorClient {
 		this.connectorConfiguration = connectorConfiguration;
 		// ensure the client knows its identity even if configuration is set to null
 		this.connectorName = connectorConfiguration.name;
-		this.connectorIdent = connectorConfiguration.ident;
-		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
+		this.connectorIdentifier = connectorConfiguration.identifier;
+		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.identifier);
 		this.c8yAgent = configurationRegistry.getC8yAgent();
 		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();
@@ -243,7 +243,7 @@ public class KafkaClient extends AConnectorClient {
 			log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
 					getConnectorName(),
 					shouldConnect(), bootstrapServers);
-			log.info("Tenant {} - Successfully connected to broker {}", tenant,
+			log.info("Tenant {} - Connected to broker {}", tenant,
 					bootstrapServers);
 			try {
 				// test if the mqtt connection is configured and enabled
@@ -313,7 +313,7 @@ public class KafkaClient extends AConnectorClient {
 
 	@Override
 	public String getConnectorIdent() {
-		return connectorIdent;
+		return connectorIdentifier;
 	}
 
 	@Override
@@ -349,7 +349,7 @@ public class KafkaClient extends AConnectorClient {
 					try {
 						// kafkaConsumer.close();
 						unsubscribe(mapIdent);
-						getMappingsDeployedInbound().remove(map.ident);
+						getMappingsDeployedInbound().remove(map.identifier);
 						log.warn(
 								"Tenant {} - Failed to subscribe to mappingTopic {} for mapping {} in connector {}!",
 								tenant, map.mappingTopic, map, getConnectorName());

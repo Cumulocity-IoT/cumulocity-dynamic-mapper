@@ -112,7 +112,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     this.editorTestingPayloadTemplateEmitter.subscribe((current) => {
       this.currentContext = current;
-      this.source = JSON.parse(this.currentContext.mapping.sourceTemplate);
+      this.source = current.sourceTemplate;
       this.currentContext.mapping.sourceTemplate = JSON.stringify(current.sourceTemplate);
       this.currentContext.mapping.targetTemplate = JSON.stringify(current.targetTemplate);
       const editorTestingRequestRef =

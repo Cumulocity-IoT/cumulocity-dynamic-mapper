@@ -198,7 +198,7 @@ public class ProcessorExtensionCustomAlarm
 			}
 
 			if (!mapping.targetAPI.equals(API.INVENTORY)) {
-				if (pathTarget.equals(deviceIdentifierMapped2PathTarget2) && mapping.mapDeviceIdentifier) {
+				if (pathTarget.equals(deviceIdentifierMapped2PathTarget2) && mapping.useExternalId) {
 
 					ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
 							new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
@@ -239,9 +239,9 @@ public class ProcessorExtensionCustomAlarm
 					}
 
 				}
-				BasePayloadProcessorInbound.substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+				BasePayloadProcessorInbound.substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
 			} else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
-				BasePayloadProcessorInbound.substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+				BasePayloadProcessorInbound.substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
 			}
 		}
 		/*

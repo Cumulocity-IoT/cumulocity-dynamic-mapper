@@ -44,7 +44,7 @@ export interface ConnectorProperty {
 }
 
 export interface ConnectorConfiguration {
-  ident: string;
+  identifier: string;
   connectorType: string;
   enabled: boolean;
   status?: any;

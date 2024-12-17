@@ -78,7 +78,7 @@ public abstract class AConnectorClient {
 
     protected static final int WAIT_PERIOD_MS = 10000;
 
-    protected String connectorIdent;
+    protected String connectorIdentifier;
 
     protected String connectorName;
 
@@ -137,12 +137,12 @@ public abstract class AConnectorClient {
     // a) is it active,
     // b) does it comply with the capabilities of the connector, i.e. supports
     // wildcards
-    // structure < ident, mapping >
+    // structure < identifier, mapping >
     @Getter
     @Setter
     private Map<String, Mapping> mappingsDeployedInbound = new ConcurrentHashMap<>();
 
-    // structure < ident, mapping >
+    // structure < identifier, mapping >
     @Getter
     @Setter
     private Map<String, Mapping> mappingsDeployedOutbound = new ConcurrentHashMap<>();
@@ -336,7 +336,7 @@ public abstract class AConnectorClient {
         message.setSupportsMessageContext(getSupportsMessageContext());
         message.setTopic(topic);
         message.setSendPayload(sendPayload);
-        message.setConnectorIdent(getConnectorIdent());
+        message.setConnectorIdentifier(getConnectorIdent());
         message.setPayload(payloadMessage.getBytes());
         return dispatcher.processMessage(message).get();
     }
@@ -353,7 +353,7 @@ public abstract class AConnectorClient {
             MutableInt activeSubs = getActiveSubscriptions()
                     .get(mapping.mappingTopic);
             activeSubs.subtract(1);
-            getMappingsDeployedInbound().remove(mapping.ident);
+            getMappingsDeployedInbound().remove(mapping.identifier);
             if (activeSubs.intValue() <= 0) {
                 try {
                     unsubscribe(mapping.mappingTopic);
@@ -364,7 +364,7 @@ public abstract class AConnectorClient {
                 }
             }
         } else if (mapping.direction == Direction.INBOUND) {
-            getMappingsDeployedOutbound().remove(mapping.ident);
+            getMappingsDeployedOutbound().remove(mapping.identifier);
         }
     }
 
@@ -384,29 +384,29 @@ public abstract class AConnectorClient {
     }
 
     public void updateActiveSubscriptionOutbound(Mapping mapping, Boolean create, Boolean activationChanged) {
-        List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.ident);
+        List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
         boolean isDeployed = false;
         if (deploymentMapEntry != null) {
             isDeployed = deploymentMapEntry.contains(getConnectorIdent());
         }
         if (mapping.active && isDeployed) {
-            getMappingsDeployedOutbound().put(mapping.ident, mapping);
+            getMappingsDeployedOutbound().put(mapping.identifier, mapping);
         } else {
-            getMappingsDeployedOutbound().remove(mapping.ident);
+            getMappingsDeployedOutbound().remove(mapping.identifier);
         }
     }
 
     public void updateActiveSubscriptionsOutbound(List<Mapping> updatedMappings) {
         setMappingsDeployedOutbound(new ConcurrentHashMap<>());
         updatedMappings.forEach(mapping -> {
-            List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.ident);
+            List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
             boolean isDeployed = false;
             if (deploymentMapEntry != null) {
                 isDeployed = deploymentMapEntry.contains(getConnectorIdent());
             }
 
             if (mapping.isActive() && isDeployed) {
-                getMappingsDeployedOutbound().put(mapping.ident, mapping);
+                getMappingsDeployedOutbound().put(mapping.identifier, mapping);
             }
         });
     }
@@ -421,22 +421,23 @@ public abstract class AConnectorClient {
      * Only inactive mappings can be updated except activation/deactivation.
      **/
     public boolean updateActiveSubscriptionInbound(Mapping mapping, Boolean create, Boolean activationChanged) {
+        boolean result = true;
+        boolean isDeployed = false;
         if (isConnected()) {
             Boolean containsWildcards = mapping.mappingTopic.matches(".*[#\\+].*");
             boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
+            List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
+            if (deploymentMapEntry != null) {
+                isDeployed = deploymentMapEntry.contains(getConnectorIdent());
+            }
             if (validDeployment) {
                 if (!getActiveSubscriptions().containsKey(mapping.mappingTopic)) {
                     getActiveSubscriptions().put(mapping.mappingTopic, new MutableInt(0));
                 }
-                List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.ident);
-                boolean isDeployed = false;
-                if (deploymentMapEntry != null) {
-                    isDeployed = deploymentMapEntry.contains(getConnectorIdent());
-                }
                 if (mapping.active && isDeployed) {
-                    getMappingsDeployedInbound().put(mapping.ident, mapping);
+                    getMappingsDeployedInbound().put(mapping.identifier, mapping);
                 } else {
-                    getMappingsDeployedInbound().remove(mapping.ident);
+                    getMappingsDeployedInbound().remove(mapping.identifier);
                 }
                 MutableInt updatedMappingSubs = getActiveSubscriptions()
                         .get(mapping.mappingTopic);
@@ -491,13 +492,13 @@ public abstract class AConnectorClient {
                         }
                     }
                 }
-            } else {
+            } else if (isDeployed) {
                 log.warn("Tenant {} - Mapping {} contains wildcards like #,+ which are not support by connector {}",
                         tenant, mapping.getId(), connectorName);
-                return false;
+                result = false;
             }
         }
-        return true;
+        return result;
     }
 
     /**
@@ -521,7 +522,7 @@ public abstract class AConnectorClient {
                 if (!validDeployment)
                     log.warn("Tenant {} - Mapping {} contains wildcards like #,+ which are not support by connector {}",
                             tenant, mapping.getId(), connectorName);
-                List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.ident);
+                List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
                 boolean isDeployed = false;
                 if (deploymentMapEntry != null) {
                     isDeployed = deploymentMapEntry.contains(getConnectorIdent());
@@ -533,7 +534,7 @@ public abstract class AConnectorClient {
                     }
                     MutableInt activeSubs = updatedSubscriptionCache.get(mapping.mappingTopic);
                     activeSubs.add(1);
-                    getMappingsDeployedInbound().put(mapping.ident, mapping);
+                    getMappingsDeployedInbound().put(mapping.identifier, mapping);
                 }
             });
 
@@ -594,9 +595,9 @@ public abstract class AConnectorClient {
                     entry("status", connectorStatus.getStatus().name()),
                     entry("message", connectorStatus.message),
                     entry("connectorName", getConnectorName()),
-                    entry("connectorIdent", getConnectorIdent()),
+                    entry("connectorIdentifier", getConnectorIdent()),
                     entry("date", date));
-            c8yAgent.createEvent("Connector status:" + connectorStatus.status,
+            c8yAgent.createEvent("Connector status: " + connectorStatus.status,
                     LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
                     DateTime.now(), mappingServiceRepresentation, tenant, stMap);
         }
@@ -620,9 +621,9 @@ public abstract class AConnectorClient {
 
     public void connectionLost(String closeMessage, Throwable closeException) {
         String tenant = getTenant();
-        String connectorIdent = getConnectorIdent();
+        String connectorIdentifier = getConnectorIdent();
         if (closeException != null) {
-            log.error("Tenant {} - Connection lost to broker {}: {}", tenant, connectorIdent,
+            log.error("Tenant {} - Connection lost to broker {}: {}", tenant, connectorIdentifier,
                     closeException.getMessage());
             closeException.printStackTrace();
         }
@@ -656,15 +657,15 @@ public abstract class AConnectorClient {
     }
 
     public void updateActiveSubscriptionOutbound(Mapping mapping) {
-        List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.ident);
+        List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
         boolean isDeployed = false;
         if (deploymentMapEntry != null) {
             isDeployed = deploymentMapEntry.contains(getConnectorIdent());
         }
         if (mapping.active && isDeployed) {
-            getMappingsDeployedOutbound().put(mapping.ident, mapping);
+            getMappingsDeployedOutbound().put(mapping.identifier, mapping);
         } else {
-            getMappingsDeployedOutbound().remove(mapping.ident);
+            getMappingsDeployedOutbound().remove(mapping.identifier);
         }
     }
 

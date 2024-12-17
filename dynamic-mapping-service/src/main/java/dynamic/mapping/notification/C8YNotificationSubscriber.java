@@ -23,7 +23,6 @@ package dynamic.mapping.notification;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
-import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation;
@@ -38,9 +37,7 @@ import com.cumulocity.sdk.client.messaging.notifications.Token;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
@@ -58,7 +55,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -95,7 +91,7 @@ public class C8YNotificationSubscriber {
 	@Qualifier("cachedThreadPool")
 	private ExecutorService cachedThreadPool;
 
-	// structure: <tenant, <connectorIdent, asynchronousDispatcherOutbound>>
+	// structure: <tenant, <connectorIdentifier, asynchronousDispatcherOutbound>>
 	@Getter
 	private Map<String, Map<String, AsynchronousDispatcherOutbound>> dispatcherOutboundMaps = new HashMap<>();
 
@@ -113,17 +109,17 @@ public class C8YNotificationSubscriber {
 
 	private Map<String, Map<String, Mqtt3Client>> activePushConnections = new HashMap<>();
 
-	// structure: <tenant, <connectorIdent, tokenSeed>>
+	// structure: <tenant, <connectorIdentifier, tokenSeed>>
 	private Map<String, Map<String, String>> deviceTokenPerConnector = new HashMap<>();
 
-	public void addSubscriber(String tenant, String ident, AsynchronousDispatcherOutbound dispatcherOutbound) {
+	public void addSubscriber(String tenant, String identifier, AsynchronousDispatcherOutbound dispatcherOutbound) {
 		Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
 		if (dispatcherOutboundMap == null) {
 			dispatcherOutboundMap = new HashMap<>();
-			dispatcherOutboundMap.put(ident, dispatcherOutbound);
+			dispatcherOutboundMap.put(identifier, dispatcherOutbound);
 			getDispatcherOutboundMaps().put(tenant, dispatcherOutboundMap);
 		} else {
-			dispatcherOutboundMap.put(ident, dispatcherOutbound);
+			dispatcherOutboundMap.put(identifier, dispatcherOutbound);
 		}
 
 	}
@@ -229,7 +225,7 @@ public class C8YNotificationSubscriber {
 				.cleanSession(true)
 				.keepAlive(60)
 				.send().thenRun(() -> {
-					log.info("Tenant {} - Successfully connected to C8Y MQTT host {} for device {}", tenant, mqttHost,
+					log.info("Tenant {} - Connected to C8Y MQTT host {} for device {}", tenant, mqttHost,
 							deviceId);
 					client.toAsync().subscribeWith().topicFilter("s/ds").qos(MqttQos.AT_LEAST_ONCE)
 							.callback(publish -> {
@@ -462,15 +458,15 @@ public class C8YNotificationSubscriber {
 
 	}
 
-	public void unsubscribeDeviceSubscriberByConnector(String tenant, String connectorIdent) {
+	public void unsubscribeDeviceSubscriberByConnector(String tenant, String connectorIdentifier) {
 		if (deviceTokenPerConnector.get(tenant) != null) {
-			if (deviceTokenPerConnector.get(tenant).get(connectorIdent) != null) {
+			if (deviceTokenPerConnector.get(tenant).get(connectorIdentifier) != null) {
 				try {
-					tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdent)));
-					log.info("Tenant {} - Subscriber for Connector {} successfully unsubscribed for Notification 2.0!", tenant, connectorIdent);
-					deviceTokenPerConnector.get(tenant).remove(connectorIdent);
+					tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdentifier)));
+					log.info("Tenant {} - Subscriber for Connector {} successfully unsubscribed for Notification 2.0!", tenant, connectorIdentifier);
+					deviceTokenPerConnector.get(tenant).remove(connectorIdentifier);
 				} catch (SDKException e) {
-					log.error("Tenant {} - Could not unsubscribe subscriber for connector {}:", tenant, connectorIdent, e);
+					log.error("Tenant {} - Could not unsubscribe subscriber for connector {}:", tenant, connectorIdentifier, e);
 				}
 			}
 		}
@@ -501,17 +497,17 @@ public class C8YNotificationSubscriber {
 	// section 5: add, remove connectors
 	//
 
-	public void removeConnector(String tenant, String connectorIdent) {
+	public void removeConnector(String tenant, String connectorIdentifier) {
 		// Remove Dispatcher from list
 		if (this.dispatcherOutboundMaps.get(tenant) != null)
-			this.dispatcherOutboundMaps.get(tenant).remove(connectorIdent);
+			this.dispatcherOutboundMaps.get(tenant).remove(connectorIdentifier);
 		if (this.deviceClientMap.get(tenant) != null) {
 			// Test if connector was created at all and then close WS connection for
 			// connector
-			if (this.deviceClientMap.get(tenant).get(connectorIdent) != null) {
-				this.deviceClientMap.get(tenant).get(connectorIdent).close();
+			if (this.deviceClientMap.get(tenant).get(connectorIdentifier) != null) {
+				this.deviceClientMap.get(tenant).get(connectorIdentifier).close();
 				// Remove client from client Map
-				this.deviceClientMap.get(tenant).remove(connectorIdent);
+				this.deviceClientMap.get(tenant).remove(connectorIdentifier);
 			}
 		}
 		if (this.dispatcherOutboundMaps.get(tenant) != null && dispatcherOutboundMaps.get(tenant).keySet().isEmpty()) {
@@ -519,7 +515,7 @@ public class C8YNotificationSubscriber {
 		}
 	}
 
-	public void addConnector(String tenant, String connectorIdent, AsynchronousDispatcherOutbound dispatcherOutbound) {
+	public void addConnector(String tenant, String connectorIdentifier, AsynchronousDispatcherOutbound dispatcherOutbound) {
 		Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
 		if (dispatcherOutboundMap == null) {
 			dispatcherOutboundMap = new HashMap<>();
@@ -530,7 +526,7 @@ public class C8YNotificationSubscriber {
 			deviceTokens = new HashMap<>();
 			deviceTokenPerConnector.put(tenant, deviceTokens);
 		}
-		dispatcherOutboundMap.put(connectorIdent, dispatcherOutbound);
+		dispatcherOutboundMap.put(connectorIdentifier, dispatcherOutbound);
 	}
 
 	//

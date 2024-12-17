@@ -36,7 +36,7 @@ public class ConnectorStatusEvent implements Serializable {
 	public String connectorName;
 
 	@NotNull
-	public String connectorIdent;
+	public String connectorIdentifier;
 
 	@NotNull
 	public ConnectorStatus status;
@@ -59,10 +59,10 @@ public class ConnectorStatusEvent implements Serializable {
 		this.message = "";
 	}
 
-	public static ConnectorStatusEvent unknown(String name, String ident) {
+	public static ConnectorStatusEvent unknown(String name, String identifier) {
 		var res = new ConnectorStatusEvent(ConnectorStatus.UNKNOWN);
 		res.connectorName = name;
-		res.connectorIdent = ident;
+		res.connectorIdentifier = identifier;
 
 		return res;
 	}

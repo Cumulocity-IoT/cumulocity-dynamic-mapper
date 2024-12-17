@@ -114,9 +114,9 @@ public class OperationController {
 					client.updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 				}
 			} else if (operation.getOperation().equals(Operation.CONNECT)) {
-				String connectorIdent = operation.getParameter().get("connectorIdent");
+				String connectorIdentifier = operation.getParameter().get("connectorIdentifier");
 				ConnectorConfiguration configuration = connectorConfigurationComponent
-						.getConnectorConfiguration(connectorIdent, tenant);
+						.getConnectorConfiguration(connectorIdentifier, tenant);
 				configuration.setEnabled(true);
 				connectorConfigurationComponent.saveConnectorConfiguration(configuration);
 
@@ -127,18 +127,18 @@ public class OperationController {
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 
 				AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-						connectorIdent);
+						connectorIdentifier);
 
 				client.submitConnect();
 			} else if (operation.getOperation().equals(Operation.DISCONNECT)) {
-				String connectorIdent = operation.getParameter().get("connectorIdent");
+				String connectorIdentifier = operation.getParameter().get("connectorIdentifier");
 				ConnectorConfiguration configuration = connectorConfigurationComponent
-						.getConnectorConfiguration(connectorIdent, tenant);
+						.getConnectorConfiguration(connectorIdentifier, tenant);
 				configuration.setEnabled(false);
 				connectorConfigurationComponent.saveConnectorConfiguration(configuration);
 
 				AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-						connectorIdent);
+						connectorIdentifier);
 				// client.submitDisconnect();
 				bootstrapService.disableConnector(tenant, client.getConnectorIdent());
 				// We might need to Reconnect other Notification Clients for other connectors
@@ -165,7 +165,7 @@ public class OperationController {
 					if (updatedMapping.direction == Direction.INBOUND) {
 						if (!client.updateActiveSubscriptionInbound(updatedMapping, false, true)) {
 							ConnectorConfiguration conf = client.getConnectorConfiguration();
-							failed.put(conf.getIdent(), conf.getName());
+							failed.put(conf.getIdentifier(), conf.getName());
 						}
 						;
 					} else {
@@ -174,13 +174,6 @@ public class OperationController {
 				}
 
 				if (failed.size() > 0) {
-					// configurationRegistry.getC8yAgent().createEvent("Activation of mapping: " +
-					// updatedMapping.name,
-					// C8YAgent.STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
-					// DateTime.now(),
-					// configurationRegistry.getMappingServiceRepresentations().get(tenant),
-					// tenant,
-					// failed);
 					return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
 				}
 

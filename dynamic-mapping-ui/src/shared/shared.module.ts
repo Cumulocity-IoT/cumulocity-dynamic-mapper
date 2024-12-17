@@ -39,6 +39,7 @@ import { FieldTextareaCustom } from './component/formly/textarea.type.component'
 import { FieldInputCustom } from './component/formly/input-custom.type.component';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { StatusEnabledRendererComponent } from './connector-configuration/renderer/status-enabled-renderer.component';
+import { FilterJsonPipe } from './misc/filter-json.pipe';
 
 @NgModule({
   declarations: [
@@ -46,6 +47,7 @@ import { StatusEnabledRendererComponent } from './connector-configuration/render
     JsonEditorComponent,
     ConfirmationModalComponent,
     CamelCasePipe,
+    FilterJsonPipe,
     CapitalizeCasePipe,
     FormatStringPipe,
     DisableDirective,
@@ -68,6 +70,7 @@ import { StatusEnabledRendererComponent } from './connector-configuration/render
     JsonEditorComponent,
     ConfirmationModalComponent,
     CamelCasePipe,
+    FilterJsonPipe,
     CapitalizeCasePipe,
     DisableDirective,
     FormatStringPipe,

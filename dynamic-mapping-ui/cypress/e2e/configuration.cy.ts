@@ -77,12 +77,12 @@ describe('Specs for connector configuration', () => {
     cy.get('a[title="Connector"]').as('configuration').should('exist');
     cy.get('@configuration').click();
 
-    // read ident from previously added connector
+    // read identifier from previously added connector
     cy.fixture('mqttConnectionPostRequest').then((data) => {
       this.mqttConnectionPostRequest = data;
-      // cy.get(`#connector_${this.mqttConnectionPostRequest.ident} btn[title="Action"]`)
+      // cy.get(`#connector_${this.mqttConnectionPostRequest.identifier} btn[title="Action"]`)
       // identify respective row with connector
-      cy.get(`#connector_${this.mqttConnectionPostRequest.ident}`, { timeout: 10000 }).click();
+      cy.get(`#connector_${this.mqttConnectionPostRequest.identifier}`, { timeout: 10000 }).click();
       cy.get('.dropdown #delete').click({ force: true });
       cy.get('[data-cy="c8y-confirm-modal--ok"]').click();
     });

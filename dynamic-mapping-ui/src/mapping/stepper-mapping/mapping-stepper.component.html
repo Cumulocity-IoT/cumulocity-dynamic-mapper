@@ -146,7 +146,7 @@
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
-                        (contentChanged)="onsourceTemplateChanged($event)" [data]="sourceTemplate"
+                        (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container
                         *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal">
@@ -165,7 +165,8 @@
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorTarget"
                         [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
                         [class]="'jse-main-medium'" (initialized)="onEditorTargetInitialized()"
-                        (contentChanged)="ontargetTemplateChanged($event)" [data]="targetTemplate" #editorGeneral>
+                        (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
+                        #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>
                     </div>
                   </div>
@@ -197,16 +198,10 @@
                           [options]="editorOptionsSourceSubstitution" [class]="'jse-main-small'"
                           (pathChanged)="onSelectedPathSourceChanged($event)"
                           (initialized)="onEditorSourceInitialized()" [data]="sourceTemplate"
-                          #editorSourceStepTemplate></d11r-mapping-json-editor2>
-                        <span class="text-warning text-12 p-l-8" *ngIf="
-                                substitutionModel.pathSource === ''
-                              ">Select source node to define substitution!</span>
-                        <span class="text-info text-12 p-l-8" *ngIf="
-                                substitutionModel.pathSource !== ''
-                              ">{{
-                          'Selected source node: ' +
-                          substitutionModel.pathSource
-                          }}</span>
+                          #editorSourceStepSubstitution></d11r-mapping-json-editor2>
+                        <span class="text-info text-12 p-l-8">{{substitutionModel.pathSource === '' ?'Select source
+                          node to define substitution!':'Selected source node: ' +
+                          substitutionModel.pathSource }}</span>
                       </div>
                       <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
@@ -239,19 +234,12 @@
                       <d11r-mapping-json-editor2 [updateEditor]="updateTargetEditor"
                         [options]="editorOptionsTargetSubstitution" [class]="'jse-main-small'"
                         (pathChanged)="onSelectedPathTargetChanged($event)" (initialized)="onEditorTargetInitialized()"
-                        [data]="targetTemplate" #editorTargetStepTemplate>
+                        [data]="targetTemplate" #editorTargetStepSubstitution>
                       </d11r-mapping-json-editor2>
-                      <span class="text-warning text-12 p-l-8" *ngIf="
-                            substitutionModel.pathTarget === '' &&
-                            stepperConfiguration.showEditorSource
-                          ">Select target node to define substitution!</span>
-                      <span class="text-info text-12 p-l-8" *ngIf="
-                            substitutionModel.pathTarget !== '' &&
-                            stepperConfiguration.showEditorSource
-                          ">{{
-                        'Selected target node: ' +
-                        substitutionModel.pathTarget
-                        }}</span>
+                      <span class="text-info text-12 p-l-8">{{substitutionModel.pathTarget === '' &&
+                        stepperConfiguration.showEditorSource ?'Select target
+                        node to define substitution!':'Selected source node: ' +
+                        substitutionModel.pathSource }}</span>
                     </div>
                   </div>
                 </div>
@@ -332,8 +320,8 @@
                 <div class="row">
                   <div class="col-lg-10 col-lg-offset-1">
                     <div style="min-height: 32px">
-                      <d11r-mapping-substitution-grid [substitutions]="mapping.substitutions"
-                        [targetAPI]="mapping.targetAPI" [settings]="{
+                      <d11r-mapping-substitution-grid [targetAPI]="mapping.targetAPI"
+                        [externalIdType]="mapping.externalIdType" [substitutions]="mapping.substitutions" [settings]="{
                             color: COLOR_HIGHLIGHTED,
                             selectedSubstitutionIndex: selectedSubstitution,
                             editorMode: stepperConfiguration.editorMode
@@ -342,10 +330,8 @@
                       </d11r-mapping-substitution-grid>
                     </div>
                     <span class="text-warning text-12 p-l-8" *ngIf="
-                          (countDeviceIdentifiers$ | async) !== 1 &&
-                          !stepperConfiguration.allowNoDefinedIdentifier
-                        ">Exactly one substitution defining the DeviceIdentifier
-                      must be used</span>
+                          (isSubstitutionValid$ | async) != true
+                        ">One substitution for <code *ngIf="mapping.useExternalId" class="text-warning text-10" >_IDENTITY_.externalId</code>  <code *ngIf="!mapping.useExternalId" class="text-warning text-10">_IDENTITY_.c8ySourceId<</code> must exist.</span>
                   </div>
                 </div>
               </div>

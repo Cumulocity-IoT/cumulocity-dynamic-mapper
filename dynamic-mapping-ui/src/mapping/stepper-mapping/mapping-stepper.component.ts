@@ -65,6 +65,7 @@ import {
   definesDeviceIdentifier,
   expandC8YTemplate,
   expandExternalTemplate,
+  getGenericDeviceIdentifier,
   isDisabled,
   reduceSourceTemplate,
   reduceTargetTemplate,
@@ -85,7 +86,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<Mapping>();
   private _deploymentMapEntry: DeploymentMapEntry;
-
 
   @Input()
   get deploymentMapEntry(): DeploymentMapEntry {
@@ -120,6 +120,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   countDeviceIdentifiers$: BehaviorSubject<number> =
     new BehaviorSubject<number>(0);
+  isSubstitutionValid$: BehaviorSubject<boolean> =
+    new BehaviorSubject<boolean>(false);
   labels: any = {
     next: 'Next',
     cancel: 'Cancel'
@@ -181,6 +183,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   editorSourceStepTemplate: JsonEditorComponent;
   @ViewChild('editorTargetStepTemplate', { static: false })
   editorTargetStepTemplate: JsonEditorComponent;
+  @ViewChild('editorSourceStepSubstitution', { static: false })
+  editorSourceStepSubstitution: JsonEditorComponent;
+  @ViewChild('editorTargetStepSubstitution', { static: false })
+  editorTargetStepSubstitution: JsonEditorComponent;
 
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
@@ -224,7 +230,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       pathSource: '',
       pathTarget: '',
       repairStrategy: RepairStrategy.DEFAULT,
-      resolve2ExternalId: false,
       expandArray: false,
       targetExpression: {
         result: '',
@@ -334,7 +339,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     ];
 
     this.setTemplateForm();
-    this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
+  }
+
+  private updateSubstiutionValid() {
+    const ni = countDeviceIdentifiers(this.mapping);
+    // console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
+    // (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
+    this.countDeviceIdentifiers$.next(ni);
+    this.isSubstitutionValid$.next((ni == 1 && this.mapping.direction == Direction.INBOUND) ||
+      (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier || this.currentStepIndex < 3);
   }
 
   private setTemplateForm(): void {
@@ -365,6 +378,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         }
       )
     });
+    this.isSubstitutionValid$.subscribe(valid => {
+      if (valid) {
+        this.templateForm.setErrors(null);
+      } else {
+        this.templateForm.setErrors({ 'incorrect': true });
+      }
+    })
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -442,17 +462,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
       const definesDI = definesDeviceIdentifier(
         this.mapping.targetAPI,
-        this.substitutionModel,
-        this.mapping.direction
+        this.mapping.externalIdType,
+        this.mapping.direction,
+        this.substitutionModel
       );
       if (this.expertMode) {
         this.substitutionFormly.get('pathTarget').setErrors(null);
-        if (definesDI && this.mapping.mapDeviceIdentifier) {
-          const txt = `${API[this.mapping.targetAPI].identifier
-            } is resolved using the external Id ${this.mapping.externalIdType
-            } defined in the previous step.`;
-          this.targetCustomMessage$.next(txt);
-        } else if (path == '$') {
+        // if (definesDI && this.mapping.useExternalId) {
+        //   const txt = `${API[this.mapping.targetAPI].identifier
+        //     } is resolved using the external Id ${this.mapping.externalIdType
+        //     } defined in the previous step.`;
+        //   this.targetCustomMessage$.next(txt);
+        // } else 
+        if (path == '$') {
           const txt = `By specifying "$" you selected the root of the target 
           template and this result in merging the source expression with the target template.`;
           this.targetCustomMessage$.next(txt);
@@ -478,7 +500,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  onSelectedPathSourceChanged(path: string) {
+  async onSelectedPathSourceChanged(path: string) {
     if (this.expertMode) {
       this.substitutionFormly.get('pathSource').setValue(path);
       this.substitutionModel.pathSource = path;
@@ -486,9 +508,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.substitutionModel.pathSource = path;
       this.updateSourceExpressionResult(path);
     }
+    if (path == API[this.mapping.targetAPI].identifier) {
+      const gi = getGenericDeviceIdentifier(this.mapping);
+      await this.editorSourceStepSubstitution.setSelectionToPath(
+        getGenericDeviceIdentifier(this.mapping)
+      );
+      this.alertService.info(`Please use the selected node ${gi} to map the identiy from the source`);
+    }
+
   }
 
-  onSelectedPathTargetChanged(path: string) {
+  async onSelectedPathTargetChanged(path: string) {
     if (this.expertMode) {
       this.substitutionFormly.get('pathTarget').setValue(path);
       this.substitutionModel.pathTarget = path;
@@ -496,27 +526,44 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.substitutionModel.pathTarget = path;
       this.updateTargetExpressionResult(path);
     }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onsourceTemplateChanged(content: Content) {
-    if (_.has(content, 'text') && content['text']) {
-      this.mapping.sourceTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
-    } else {
-      this.mapping.sourceTemplate = reduceSourceTemplate(content['json'], false);
+    if (path == API[this.mapping.targetAPI].identifier) {
+      const gi = getGenericDeviceIdentifier(this.mapping);
+      await this.editorTargetStepSubstitution.setSelectionToPath(
+        gi
+      );
+      this.alertService.info(`Please use the selected node ${gi} to map the identiy from the source`);
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ontargetTemplateChanged(content: Content) {
+  onSourceTemplateChanged(content: Content) {
+    let contentAsJson;
     if (_.has(content, 'text') && content['text']) {
-      this.mapping.targetTemplate = reduceSourceTemplate(JSON.parse(content['text']), false);
+      contentAsJson = JSON.parse(content['text']);
     } else {
-      this.mapping.targetTemplate = reduceSourceTemplate(content['json'], false);
+      contentAsJson = content['json'];
     }
+    this.sourceTemplate = contentAsJson;
+
+    // console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate, this.mapping.targetTemplate);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onTargetTemplateChanged(content: Content) {
+    let contentAsJson;
+    if (_.has(content, 'text') && content['text']) {
+      contentAsJson = JSON.parse(content['text']);
+    } else {
+      contentAsJson = content['json'];
+    }
+    this.targetTemplate = contentAsJson;
+
+    // console.log("Step onTargetTemplateChanged",this.mapping.sourceTemplate,  this.mapping.targetTemplate);
   }
 
   async onCommitButton() {
+    this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
+    this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
     this.commit.emit(this.mapping);
   }
 
@@ -559,9 +606,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log("StepChange:", index);
     // this.step == 'Add and select connector'
     this.currentStepIndex = index;
+    this.updateSubstiutionValid();
     if (index == 1) {
       this.templateModel.mapping = this.mapping;
-      this.expandTemplates();
+
       this.extensions =
         (await this.extensionService.getProcessorExtensions()) as Map<string, Extension>;
       if (this.mapping?.extension?.extensionName) {
@@ -578,15 +626,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
         }
       }
-
-      // this.step == 'Define substitutions'
+    } else if (index == 2) {
+      // this.step == 'Select templates'
+      // console.log("Step index 1 - before", this.targetTemplate);
+      this.expandTemplates();
+      // console.log("Step index 1 - afer", this.targetTemplate);
     } else if (index == 3) {
       this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
+      // console.log("Step 3: onStepChange targetTemplate ", this.mapping.targetTemplate);
+      this.updateSubstiutionValid();
       this.onSelectSubstitution(0);
       // this.step == 'Select templates'
     } else if (index == 4) {
-      this.sourceTemplate = this.editorSourceStepTemplate?.get();
-      this.targetTemplate = this.editorTargetStepTemplate?.get();
+      // console.log("Step 4: onStepChange targetTemplate ", this.mapping.targetTemplate);
     }
 
   }
@@ -618,7 +670,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     stepper: C8yStepper;
     step: CdkStep;
   }): Promise<void> {
-
     this.step = event.step.label;
     if (this.step == 'Test mapping') {
       const editorTestingRequestRef =
@@ -626,7 +677,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (editorTestingRequestRef != null) {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
-    } else if (this.step == 'Select templates') {
+    } else if (this.step == 'Select templates' || this.step == 'General sesstings') {
       this.templatesInitialized = false;
     }
     event.stepper.previous();
@@ -774,7 +825,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.isSubstitutionValid()) {
       this.substitutionModel.expandArray = false;
       this.substitutionModel.repairStrategy = RepairStrategy.DEFAULT;
-      this.substitutionModel.resolve2ExternalId = false;
       this.addSubstitution(this.substitutionModel);
       this.selectedSubstitution = -1;
     } else {
@@ -788,7 +838,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);
     }
-    this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
+    this.updateSubstiutionValid();
   }
 
   toggleExpertMode() {
@@ -819,10 +869,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       modalRef.content.closeSubject.subscribe((editedSub) => {
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
+          this.updateSubstiutionValid();
           //this.substitutionModel = editedSub; not needed
         }
       });
-      this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
+
+
       // console.log("Updated subs I:", this.mapping.substitutions);
     }
   }
@@ -857,9 +909,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         } else if (newSub && isDuplicate) {
           this.mapping.substitutions[duplicateSubstitutionIndex] = newSub;
         }
+        this.updateSubstiutionValid();
       });
     } else {
       this.mapping.substitutions.push(sub);
+      this.updateSubstiutionValid();
     }
   }
 
@@ -868,10 +922,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.selectedSubstitution = selected;
       this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      await this.editorSourceStepTemplate?.setSelectionToPath(
+      await this.editorSourceStepSubstitution.setSelectionToPath(
         this.substitutionModel.pathSource
       );
-      await this.editorTargetStepTemplate.setSelectionToPath(
+      await this.editorTargetStepSubstitution.setSelectionToPath(
         this.substitutionModel.pathTarget
       );
     }
@@ -880,6 +934,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.countDeviceIdentifiers$.complete();
+    this.isSubstitutionValid$.complete();
     this.extensionEvents$.complete();
     this.onDestroy$.complete();
   }

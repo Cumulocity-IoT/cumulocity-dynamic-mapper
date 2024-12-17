@@ -64,6 +64,6 @@ export enum SubstituteValueType {
 
 export interface SubstituteValue {
   value: any;
-  type: SubstituteValueType;
+  type?: SubstituteValueType;
   repairStrategy: RepairStrategy;
 }

@@ -52,7 +52,7 @@ public class MappingStatus implements Serializable {
   public String name;
 
   @NotNull
-  public String ident;
+  public String identifier;
 
   @NotNull
   public Direction direction;

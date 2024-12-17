@@ -84,8 +84,9 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
 
     const marksDeviceIdentifier = definesDeviceIdentifier(
       this.mapping.targetAPI,
+      this.mapping.externalIdType,
+      this.stepperConfiguration.direction,
       this.substitution,
-      this.stepperConfiguration.direction
     )
       ? '* '
       : '';
@@ -97,7 +98,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       pathSource: this.editedSubstitution.pathSource,
       pathTarget: this.editedSubstitution.pathTarget,
       expandArray: this.editedSubstitution.expandArray,
-      resolve2ExternalId: this.editedSubstitution.resolve2ExternalId,
       repairStrategy: this.editedSubstitution.repairStrategy
     });
     // console.log("Repair Options:", this.repairStrategyOptions);
@@ -109,7 +109,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       pathSource: [{ value: '', disabled: true }],
       pathTarget: [{ value: '', disabled: true }],
       expandArray: [{ value: false, disabled: this.isExpandToArrayDisabled() }],
-      resolve2ExternalId: [{ value: false, disabled: this.isResolve2ExternalIdDisabled() }],
       repairStrategy: ['']
     });
   }
@@ -148,14 +147,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     // );
     // const r = d0 || d1 || (!d1 && d2);
     const r = d0 || d1;
-    // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
-    return r;
-  }
-
-  isResolve2ExternalIdDisabled() {
-    const r =
-      this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-      this.stepperConfiguration.direction == Direction.INBOUND;
     // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }

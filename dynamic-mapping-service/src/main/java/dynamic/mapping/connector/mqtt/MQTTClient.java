@@ -122,8 +122,8 @@ public class MQTTClient extends AConnectorClient {
 		this.connectorConfiguration = connectorConfiguration;
 		// ensure the client knows its identity even if configuration is set to null
 		this.connectorName = connectorConfiguration.name;
-		this.connectorIdent = connectorConfiguration.ident;
-		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
+		this.connectorIdentifier = connectorConfiguration.identifier;
+		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.identifier);
 		// this.connectorType = connectorConfiguration.connectorType;
 		this.c8yAgent = configurationRegistry.getC8yAgent();
 		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
@@ -332,7 +332,7 @@ public class MQTTClient extends AConnectorClient {
 					}
 
 					connectionState.setTrue();
-					log.info("Tenant {} - Successfully connected to broker {}", tenant,
+					log.info("Tenant {} - Connected to broker {}", tenant,
 							mqttClient.getConfig().getServerHost());
 					updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
 					List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
@@ -454,7 +454,7 @@ public class MQTTClient extends AConnectorClient {
 
 	@Override
 	public String getConnectorIdent() {
-		return connectorIdent;
+		return connectorIdentifier;
 	}
 
 	@Override

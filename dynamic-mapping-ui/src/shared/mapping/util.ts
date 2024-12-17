@@ -28,24 +28,16 @@ export const SAMPLE_TEMPLATES_C8Y = {
               "unit": "C" }
           },
       "time":"2022-08-05T00:14:49.389+02:00",
-      "source": {
-        "id":"909090" },
       "type": "c8y_TemperatureMeasurement"
   }`,
   ALARM: `{                                            
-    "source": {
-    "id": "909090"
-    },\
-    "type": "c8y_TestAlarm",
-    "text": "This is a new test alarm!",
     "severity": "MAJOR",
     "status": "ACTIVE",
+    "text": "This is a new test alarm!",
     "time": "2022-08-05T00:14:49.389+02:00"
+    "type": "c8y_TestAlarm",
   }`,
   EVENT: `{ 
-    "source": {
-    "id": "909090"
-    },
     "text": "This is a new test event.",
     "time": "2022-08-05T00:14:49.389+02:00",
     "type": "c8y_TestEvent"
@@ -53,11 +45,10 @@ export const SAMPLE_TEMPLATES_C8Y = {
   INVENTORY: `{ 
     "c8y_IsDevice": {},
     "name": "Vibration Sensor",
-    "type": "maker_Vibration_Sensor",
-    "com_cumulocity_model_Agent": {}
+    "com_cumulocity_model_Agent": {},
+    "type": "maker_Vibration_Sensor"
  }`,
   OPERATION: `{ 
-   "deviceId": "909090",
    "description": "New camera operation!",
    "type": "maker_Vibration_Sensor"
 }`
@@ -107,7 +98,7 @@ export const SCHEMA_EVENT = {
   $id: 'http://example.com/root.json',
   type: 'object',
   title: 'EVENT',
-  required: ['source', 'type', 'text', 'time'],
+  required: ['type', 'text', 'time'],
   properties: {
     source: {
       $id: '#/properties/source',
@@ -148,7 +139,7 @@ export const SCHEMA_ALARM = {
   $id: 'http://example.com/root.json',
   type: 'object',
   title: 'ALARM',
-  required: ['source', 'type', 'text', 'time', 'severity'],
+  required: ['type', 'text', 'time', 'severity'],
   properties: {
     source: {
       $id: '#/properties/source',
@@ -196,7 +187,7 @@ export const SCHEMA_MEASUREMENT = {
   $id: 'http://example.com/root.json',
   type: 'object',
   title: 'MEASUREMENT',
-  required: ['source', 'type', 'time'],
+  required: ['type', 'time'],
   properties: {
     source: {
       $id: '#/properties/source',
@@ -232,7 +223,7 @@ export const SCHEMA_INVENTORY = {
   $id: 'http://example.com/root.json',
   type: 'object',
   title: 'INVENTORY',
-  required: ['c8y_IsDevice', 'type', 'name', 'id'],
+  required: ['c8y_IsDevice', 'type', 'name'],
   properties: {
     c8y_IsDevice: {
       $id: '#/properties/c8y_IsDevice',
@@ -296,7 +287,7 @@ export const SCHEMA_OPERATION = {
   $id: 'http://example.com/root.json',
   type: 'object',
   title: 'OPERATION',
-  required: ['deviceId'],
+  required: [],
   properties: {
     deviceId: {
       $id: '#/properties/deviceId',

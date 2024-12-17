@@ -22,7 +22,7 @@ public class ConnectorMessage {
     private String topic;
 
     @NotNull
-    private String connectorIdent;
+    private String connectorIdentifier;
 
     private boolean sendPayload;
 

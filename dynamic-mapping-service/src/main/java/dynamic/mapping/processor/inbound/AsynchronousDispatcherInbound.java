@@ -113,11 +113,11 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(message.getTenant());
             this.inboundProcessingTimer = Timer.builder("dynmapper_inbound_processing_time")
-                    .tag("tenant", connectorMessage.getTenant()).tag("connector", connectorMessage.getConnectorIdent())
+                    .tag("tenant", connectorMessage.getTenant()).tag("connector", connectorMessage.getConnectorIdentifier())
                     .description("Processing time of inbound messages").register(Metrics.globalRegistry);
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
-                    .tag("connector", connectorMessage.getConnectorIdent()).register(Metrics.globalRegistry);
+                    .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
 
         }
 
@@ -134,7 +134,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
-                if (mapping.isActive() && connectorClient.getMappingsDeployedInbound().containsKey(mapping.ident)) {
+                if (mapping.isActive() && connectorClient.getMappingsDeployedInbound().containsKey(mapping.identifier)) {
                     MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
                     BasePayloadProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
