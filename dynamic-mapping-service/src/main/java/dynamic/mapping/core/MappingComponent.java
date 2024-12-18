@@ -472,16 +472,16 @@ public class MappingComponent {
             for (Mapping m : cacheMappingOutbound.get(tenant).values()) {
                 // test if message has property associated for this mapping, JsonPointer must
                 // begin with "/"
-                String key = "/" + m.getFilterMapping().replace('.', '/');
-                var expression = jsonata(key);
+                var expression = jsonata(m.getFilterMapping());
                 Object extractedContent = expression.evaluate(messageAsMap);
-                if (extractedContent != null  && m.targetAPI.equals(api)) {
-                    log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant, key,
+                if (extractedContent != null && m.targetAPI.equals(api)) {
+                    log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant,
+                            m.getFilterMapping(),
                             messageAsMap.get("id"));
                     result.add(m);
                 } else {
                     log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant,
-                            key,
+                            m.getFilterMapping(),
                             m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
                 }
             }
