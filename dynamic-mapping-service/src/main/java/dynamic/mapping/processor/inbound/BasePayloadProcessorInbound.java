@@ -166,37 +166,37 @@ public abstract class BasePayloadProcessorInbound<T> {
         //                             "c8ySourceId", "someId")));
         // }
         for (String pathTarget : pathTargets) {
-            MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
+            MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
                     "NOT_DEFINED", MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
             if (finalI < postProcessingCache.get(pathTarget).size()) {
-                substituteValue = postProcessingCache.get(pathTarget).get(finalI).clone();
+                substitute = postProcessingCache.get(pathTarget).get(finalI).clone();
             } else if (postProcessingCache.get(pathTarget).size() == 1) {
                 // this is an indication that the substitution is the same for all
                 // events/alarms/measurements/inventory
-                if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
-                        substituteValue.repairStrategy.equals(RepairStrategy.DEFAULT)) {
-                    substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
-                } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
+                if (substitute.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
+                        substitute.repairStrategy.equals(RepairStrategy.DEFAULT)) {
+                    substitute = postProcessingCache.get(pathTarget).get(0).clone();
+                } else if (substitute.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
                     int last = postProcessingCache.get(pathTarget).size() - 1;
-                    substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
+                    substitute = postProcessingCache.get(pathTarget).get(last).clone();
                 }
                 log.warn(
                         "Tenant {} - During the processing of this pathTarget: '{}' a repair strategy: '{}' was used.",
                         tenant,
-                        pathTarget, substituteValue.repairStrategy);
+                        pathTarget, substitute.repairStrategy);
             }
 
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 if (pathTarget.equals(deviceIdentifierMapped2PathTarget) && mapping.useExternalId) {
 
                     ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                            new ID(mapping.externalIdType, substituteValue.toString()), context);
+                            new ID(mapping.externalIdType, substitute.value.toString()), context);
                     if (sourceId == null && mapping.createNonExistingDevice) {
                         ManagedObjectRepresentation attocDevice = null;
                         Map<String, Object> request = new HashMap<String, Object>();
                         request.put("name",
-                                "device_" + mapping.externalIdType + "_" + substituteValue.value.toString());
+                                "device_" + mapping.externalIdType + "_" + substitute.value.toString());
                         request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
                         request.put("c8y_IsDevice", null);
                         request.put("com_cumulocity_model_Agent", null);
@@ -206,11 +206,11 @@ public abstract class BasePayloadProcessorInbound<T> {
                                     new C8YRequest(predecessor, RequestMethod.PATCH, device.value.toString(),
                                             mapping.externalIdType, requestString, null, API.INVENTORY, null));
                             attocDevice = c8yAgent.upsertDevice(tenant,
-                                    new ID(mapping.externalIdType, substituteValue.value.toString()), context,
+                                    new ID(mapping.externalIdType, substitute.value.toString()), context,
                                     null);
                             var response = objectMapper.writeValueAsString(attocDevice);
                             context.getCurrentRequest().setResponse(response);
-                            substituteValue.value = attocDevice.getId().getValue();
+                            substitute.value = attocDevice.getId().getValue();
                             predecessor = newPredecessor;
                         } catch (ProcessingException | JsonProcessingException e) {
                             context.getCurrentRequest().setError(e);
@@ -218,26 +218,26 @@ public abstract class BasePayloadProcessorInbound<T> {
                     } else if (sourceId == null && context.isSendPayload()) {
                         throw new RuntimeException(String.format(
                                 "External id %s for type %s not found!",
-                                substituteValue.toString(),
+                                substitute.toString(),
                                 mapping.externalIdType));
                     } else if (sourceId == null) {
-                        substituteValue.value = null;
+                        substitute.value = null;
                     } else {
-                        substituteValue.value = sourceId.getManagedObject().getId().getValue();
+                        substitute.value = sourceId.getManagedObject().getId().getValue();
                     }
 
                 }
                 // since the attributes identifying the MEA and Invnetory requests are removed during the design time, htey have to be added before sending
                 if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
-                    substituteValue.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+                    substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
                 }
-                substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+                substituteValueInPayload(mapping.mappingType, substitute, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
             } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget)) {
                 // since the attributes identifying the MEA and Invnetory requests are removed during the design time, htey have to be added before sending
                 if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
-                    substituteValue.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+                    substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
                 }
-                substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+                substituteValueInPayload(mapping.mappingType, substitute, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
             }
         }
         /*

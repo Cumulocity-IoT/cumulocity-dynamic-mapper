@@ -103,13 +103,13 @@ public abstract class BasePayloadProcessorOutbound<T> {
         String deviceSource = context.getSource();
 
         for (String pathTarget : pathTargets) {
-            MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
+            MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
                     "NOT_DEFINED", MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
             if (postProcessingCache.get(pathTarget).size() > 0) {
-                substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+                substitute = postProcessingCache.get(pathTarget).get(0).clone();
             }
-            substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+            substituteValueInPayload(mapping.mappingType, substitute, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to mqttBroker
@@ -174,24 +174,24 @@ public abstract class BasePayloadProcessorOutbound<T> {
         return context;
     }
 
-    public void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue sub,
+    public void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue substitute,
             DocumentContext jsonObject, String keys)
             throws JSONException {
-        boolean subValueMissing = sub.value == null;
-        boolean subValueNull = (sub.value == null) || (sub.value != null);
+        boolean subValueMissing = substitute.value == null;
+        boolean subValueNull = (substitute.value == null) || (substitute.value != null);
         try {
-            if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                    (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
+            if ((substitute.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+                    (substitute.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
                 jsonObject.delete(keys);
-            } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
+            } else if (substitute.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
                 // boolean pathIsNested = keys.contains(".") || keys.contains("[");
                 // if (pathIsNested) {
                 // throw new JSONException("Can only create new nodes on the root level!");
                 // }
                 // jsonObject.put("$", keys, sub);
-                jsonObject.set("$." + keys, sub.value);
+                jsonObject.set("$." + keys, substitute.value);
             } else {
-                jsonObject.set(keys, sub.value);
+                jsonObject.set(keys, substitute.value);
             }
         } catch (PathNotFoundException e) {
             throw new PathNotFoundException(String.format("Path: %s not found!", keys));
