@@ -149,13 +149,7 @@ public class MappingSubstitution implements Serializable {
                         (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
                     jsonObject.delete(keys);
                 } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                    // boolean pathIsNested = keys.contains(".") || keys.contains("[");
-                    // if (pathIsNested) {
-                    // throw new JSONException("Can only create new nodes on the root level!");
-                    // }
-                    // jsonObject.put("$", keys, sub.typedValue());
                     jsonObject.set("$." + keys, sub.value);
-
                 } else {
                     jsonObject.set(keys, sub.value);
                 }
