@@ -80,25 +80,8 @@ public class MappingSubstitution implements Serializable {
     public RepairStrategy repairStrategy;
 
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean definesDeviceIdentifier(API api, String externalIdType, Direction direction,
-            MappingSubstitution sub) {
-        if (Direction.INBOUND.equals(direction)) {
-            if (externalIdType != null && !("").equals(externalIdType)) {
-                return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
-            } else {
-                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
-            }
-        } else {
-            if (externalIdType != null && !("").equals(externalIdType)) {
-                return (Mapping.IDENTITY + ".externalId").equals(sub.pathSource);
-            } else {
-                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathSource);
-            }
-        }
-    }
-
-    @JsonSetter(nulls = Nulls.SKIP)
     public boolean expandArray;
+
 
     public static Boolean isArray(Object obj) {
         return obj != null && obj instanceof Collection;

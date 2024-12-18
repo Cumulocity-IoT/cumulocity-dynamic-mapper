@@ -110,7 +110,9 @@ public class ProcessorExtensionCustomAlarm
                                         jsonObject.get("message"),
                                         MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                         RepairStrategy.DEFAULT))));
-        postProcessingCache.put(context.getMapping().targetAPI.identifier,
+                                        
+        // as the mappping uses useExternalId we have to map the id to _IDENTITY_.externalId
+        postProcessingCache.put(context.getMapping().getGenericDeviceIdentifier(),
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(
                                 jsonObject.get("externalId"),

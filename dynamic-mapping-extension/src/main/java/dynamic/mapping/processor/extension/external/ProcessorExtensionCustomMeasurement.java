@@ -22,7 +22,6 @@
 package dynamic.mapping.processor.extension.external;
 
 import com.dashjoin.jsonata.json.Json;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
@@ -40,10 +39,7 @@ import java.util.Map;
 @Slf4j
 public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSource<byte[]> {
 
-    private ObjectMapper objectMapper;
-
     public ProcessorExtensionCustomMeasurement() {
-        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -81,8 +77,8 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
                         new MappingSubstitution.SubstituteValue(fragmentTemperature,
                                 MappingSubstitution.SubstituteValue.TYPE.OBJECT,
                                 RepairStrategy.DEFAULT))));
-
-        postProcessingCache.put(context.getMapping().targetAPI.identifier,
+        // as the mappping uses useExternalId we have to map the id to _IDENTITY_.externalId
+        postProcessingCache.put(context.getMapping().getGenericDeviceIdentifier(),
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(
                                 jsonObject.get("externalId"),
