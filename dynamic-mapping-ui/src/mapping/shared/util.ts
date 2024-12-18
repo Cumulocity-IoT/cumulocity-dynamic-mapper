@@ -572,8 +572,7 @@ export function   substituteValueInPayload(
   keys: string
 ) {
   const subValueMissing: boolean = !sub || sub.value == null;
-  const subValueNull: boolean =
-    !sub || sub.value == null || (sub.value != null && sub.value != undefined);
+  const subValueNull: boolean = subValueMissing;
 
   if (keys == '$') {
     Object.keys(getTypedValue(sub)).forEach((key) => {

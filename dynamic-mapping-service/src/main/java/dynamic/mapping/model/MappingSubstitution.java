@@ -133,7 +133,7 @@ public class MappingSubstitution implements Serializable {
         boolean subValueMissing = sub.value == null;
         // TOFDO fix this, we have to differentiate between {"nullField": null } and
         // "nonExisting"
-        boolean subValueNull = false;
+        boolean subValueNull = subValueMissing;
         try {
             if ("$".equals(keys)) {
                 Object replacement = sub;
