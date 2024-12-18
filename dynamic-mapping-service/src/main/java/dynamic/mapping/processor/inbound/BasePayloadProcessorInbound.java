@@ -110,6 +110,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         // if devices have to be created implicitly, then request have to b process in
         // sequence, other multiple threads will try to create a device with the same
         // externalId
+
         if (mapping.createNonExistingDevice) {
             for (int i = 0; i < deviceEntries.size(); i++) {
                 // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
@@ -123,9 +124,7 @@ public abstract class BasePayloadProcessorInbound<T> {
             for (int i = 0; i < deviceEntries.size(); i++) {
                 // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
                 int finalI = i;
-                contextFutureList.add(virtCachePool.submit(() -> {
-                    return getBuildProcessingContext(context, finalI, postProcessingCache);
-                }));
+                contextFutureList.add(virtCachePool.submit(() -> getBuildProcessingContext(context, finalI, postProcessingCache)));
             }
             int j = 0;
             for (Future<ProcessingContext<T>> currentContext : contextFutureList) {

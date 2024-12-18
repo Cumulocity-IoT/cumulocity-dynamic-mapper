@@ -279,18 +279,18 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 									mappingStatus.errors++;
 								}
 							}
-						} catch (Exception e) {
-							log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
-									e.getMessage());
-							log.error("Tenant {} - Message Stacktrace: ", tenant, e);
-							mappingStatus.errors++;
-						}
+                            processingResult.add(context);
 					} else {
 						mappingStatusUnspecified.errors++;
 						log.error("Tenant {} - No process for MessageType: {} registered, ignoring this message!",
-								tenant, mappingType);
+								tenant, mapping.mappingType);
 					}
-					processingResult.add(context);
+                    } catch (Exception e) {
+                        log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
+                                e.getMessage());
+                        log.error("Tenant {} - Message Stacktrace: ", tenant, e);
+                        mappingStatus.errors++;
+                    }
 				}
 			});
             timer.stop(outboundProcessingTimer);
