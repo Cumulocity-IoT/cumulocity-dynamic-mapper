@@ -141,7 +141,7 @@
         </div>
       </c8y-li-body>
       <c8y-li-collapse>
-       <small>{{event | json}}</small> 
+       <small>{{event | filterJson:['self', 'source', 'creationTime', 'lastUpdated']:true |  json}}</small> 
       </c8y-li-collapse>
     </c8y-li>
   </c8y-li-timeline>

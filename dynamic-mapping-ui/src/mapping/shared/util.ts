@@ -489,6 +489,9 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
         // c8ySourceId: '909090'
       }
     };
+    if (mapping.direction == Direction.OUTBOUND) {
+      result[IDENTITY].c8ySourceId = '909090';
+    }
     return result;
   } else {
     result = {
@@ -542,8 +545,18 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function transformGenericPath2C8YPath(mapping: Mapping, originalPath: string): string {
+  // "_IDENTITY_.externalId" => source.id
   if (getGenericDeviceIdentifier(mapping) === originalPath) {
     return API[mapping.targetAPI].identifier;
+  } else {
+    return originalPath;
+  }
+}
+
+export function transformC8YPath2GenericPath(mapping: Mapping, originalPath: string): string {
+  // source.id => "_IDENTITY_.externalId" source.id
+  if (API[mapping.targetAPI].identifier === originalPath) {
+    return getGenericDeviceIdentifier(mapping);
   } else {
     return originalPath;
   }

@@ -808,7 +808,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     entry("connectorName", C8Y_NOTIFICATION_CONNECTOR),
                     entry("connectorIdentifier", "000000"),
                     entry("date", date));
-            createEvent("Connector status:" + connectorStatus.name(),
+            createEvent("Connector status: " + connectorStatus.name(),
                     LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE, DateTime.now(),
                     configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
                     stMap);

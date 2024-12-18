@@ -597,7 +597,7 @@ public abstract class AConnectorClient {
                     entry("connectorName", getConnectorName()),
                     entry("connectorIdentifier", getConnectorIdent()),
                     entry("date", date));
-            c8yAgent.createEvent("Connector status:" + connectorStatus.status,
+            c8yAgent.createEvent("Connector status: " + connectorStatus.status,
                     LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
                     DateTime.now(), mappingServiceRepresentation, tenant, stMap);
         }

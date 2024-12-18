@@ -28,9 +28,9 @@ import {
 } from '../processor.model';
 import { Injectable } from '@angular/core';
 import {
+  IDENTITY,
   TIME,
   TOKEN_TOPIC_LEVEL,
-  findDeviceIdentifier,
   isNumeric,
   splitTopicExcludingSeparator
 } from '../../shared/util';
@@ -58,6 +58,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
     // iterate over substitutions BEGIN
     // mapping.substitutions.forEach(async (substitution) => {
     for (const substitution of mapping.substitutions) {
+      console.log('Substitution: ', substitution);
       let extractedSourceContent: any;
       try {
         // step 1 extract content from inbound payload
@@ -140,10 +141,9 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
             }
           } else if (isNumeric(extractedSourceContent)) {
             context.cardinality.set(substitution.pathTarget, 1);
-
             if (
               substitution.pathSource ==
-                findDeviceIdentifier(mapping).pathSource
+              `${IDENTITY}.c8ySourceId`
             ) {
               let externalId: string;
               try {
@@ -161,10 +161,13 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                   throw new Error(
                     `External id ${extractedSourceContent} for type ${mapping.externalIdType} not found!`
                   );
+                } else {
+                  // if this was runnning in Cumulocity, the external id could be resolved. Thus we create a device and use this for simulation
+                  const simulatedDevice = await this.c8yAgent.upsertDevice({externalId:extractedSourceContent, type: mapping.externalIdType}, context);
                 }
                 externalId = extractedSourceContent;
               }
-              extractedSourceContent = `${externalId}_${mapping.externalIdType}`;
+              extractedSourceContent = externalId;
               postProcessingCacheEntry.push({
                 value: extractedSourceContent,
                 type: SubstituteValueType.TEXTUAL,
@@ -186,7 +189,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
 
             if (
               substitution.pathSource ==
-                findDeviceIdentifier(mapping).pathSource 
+              `${IDENTITY}.c8ySourceId`
             ) {
               const externalId: string =
                 await this.c8yAgent.resolveGlobalId2ExternalId(

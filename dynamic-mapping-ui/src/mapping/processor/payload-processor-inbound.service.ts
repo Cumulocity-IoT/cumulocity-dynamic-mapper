@@ -26,7 +26,8 @@ import {
   Mapping,
   MappingType,
   RepairStrategy,
-  MAPPING_TEST_DEVICE_TYPE
+  MAPPING_TEST_DEVICE_TYPE,
+  MAPPING_TEST_DEVICE_FRAGMENT
 } from '../../shared';
 import { findDeviceIdentifier, getGenericDeviceIdentifier, getTypedValue, transformGenericPath2C8YPath } from '../shared/util';
 import { C8YAgent } from '../core/c8y-agent.service';
@@ -153,7 +154,7 @@ export abstract class PayloadProcessorInbound {
                 c8y_IsDevice: {},
                 name: `device_${mapping.externalIdType}_${substituteValue.value}`,
                 d11r_device_generatedType: {},
-                d11r_testDevice: {},
+                [MAPPING_TEST_DEVICE_FRAGMENT]: {},
                 type: MAPPING_TEST_DEVICE_TYPE
               };
               
@@ -162,7 +163,7 @@ export abstract class PayloadProcessorInbound {
                 method: 'PATCH',
                 source: device.value,
                 externalIdType: mapping.externalIdType,
-                request: request,
+                request,
                 targetAPI: API.INVENTORY.name
               });
 
