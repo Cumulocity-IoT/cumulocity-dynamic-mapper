@@ -21,6 +21,8 @@
 
 package dynamic.mapping.processor.inbound;
 
+import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
+
 import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
@@ -29,7 +31,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
 
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
@@ -41,10 +42,8 @@ import dynamic.mapping.model.API;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
-import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
-import org.json.JSONException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
@@ -299,42 +298,6 @@ public abstract class BasePayloadProcessorInbound<T> {
                 mapping.targetAPI,
                 deviceEntries.size());
         return context;
-    }
-
-    public static void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue sub,
-            DocumentContext jsonObject, String keys)
-            throws JSONException {
-        boolean subValueMissing = sub.value == null;
-        boolean subValueNull = (sub.value == null) || (sub.value != null);
-        try {
-            if ("$".equals(keys)) {
-                Object replacement = sub;
-                if (replacement instanceof Map<?, ?> map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> rm = (Map<String, Object>) map;
-                    for (Map.Entry<String, Object> entry : rm.entrySet()) {
-                        jsonObject.put("$", entry.getKey(), entry.getValue());
-                    }
-                }
-            } else {
-                if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                        (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
-                    jsonObject.delete(keys);
-                } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                    // boolean pathIsNested = keys.contains(".") || keys.contains("[");
-                    // if (pathIsNested) {
-                    //     throw new JSONException("Can only create new nodes on the root level!");
-                    // }
-                    //jsonObject.put("$", keys, sub.typedValue());
-                    jsonObject.set("$."+ keys, sub.value);
-
-                } else {
-                    jsonObject.set(keys, sub.value);
-                }
-            }
-        } catch (PathNotFoundException e) {
-            throw new PathNotFoundException(String.format("Path: %s not found!", keys));
-        }
     }
 
 }

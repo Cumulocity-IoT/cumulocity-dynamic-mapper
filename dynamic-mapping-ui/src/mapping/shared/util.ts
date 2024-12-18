@@ -24,10 +24,13 @@ import {
   Direction,
   Mapping,
   MappingSubstitution,
+  MappingType,
+  RepairStrategy,
   SnoopStatus
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
 import { SubstituteValue, SubstituteValueType } from '../processor/processor.model';
+import * as _ from 'lodash';
 
 export const IDENTITY = '_IDENTITY_';
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
@@ -559,5 +562,46 @@ export function transformC8YPath2GenericPath(mapping: Mapping, originalPath: str
     return getGenericDeviceIdentifier(mapping);
   } else {
     return originalPath;
+  }
+}
+
+export function   substituteValueInPayload(
+  type: MappingType,
+  sub: SubstituteValue,
+  jsonObject: JSON,
+  keys: string
+) {
+  const subValueMissing: boolean = !sub || sub.value == null;
+  const subValueNull: boolean =
+    !sub || sub.value == null || (sub.value != null && sub.value != undefined);
+
+  if (keys == '$') {
+    Object.keys(getTypedValue(sub)).forEach((key) => {
+      jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
+    });
+  } else {
+    if (
+      (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
+        subValueMissing) ||
+      (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
+    ) {
+      _.unset(jsonObject, keys);
+    } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
+      // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
+      // if (pathIsNested) {
+      //   throw new Error('Can only create new nodes on the root level!');
+      // }
+      // jsonObject.put("$", keys, sub.typedValue());
+      _.set(jsonObject, keys, getTypedValue(sub));
+    } else {
+      if (_.has(jsonObject, keys)) {
+        _.set(jsonObject, keys, getTypedValue(sub));
+      } else {
+        this.alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
+        throw new Error(
+          `Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`
+        );
+      }
+    }
   }
 }

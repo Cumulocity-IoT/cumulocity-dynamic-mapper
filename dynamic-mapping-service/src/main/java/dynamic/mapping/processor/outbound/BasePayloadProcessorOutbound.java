@@ -21,6 +21,8 @@
 
 package dynamic.mapping.processor.outbound;
 
+import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -28,12 +30,10 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.json.JSONException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -45,7 +45,6 @@ import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
-import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import lombok.extern.slf4j.Slf4j;
@@ -173,29 +172,4 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 1);
         return context;
     }
-
-    public void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue substitute,
-            DocumentContext jsonObject, String keys)
-            throws JSONException {
-        boolean subValueMissing = substitute.value == null;
-        boolean subValueNull = (substitute.value == null) || (substitute.value != null);
-        try {
-            if ((substitute.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                    (substitute.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
-                jsonObject.delete(keys);
-            } else if (substitute.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                // boolean pathIsNested = keys.contains(".") || keys.contains("[");
-                // if (pathIsNested) {
-                // throw new JSONException("Can only create new nodes on the root level!");
-                // }
-                // jsonObject.put("$", keys, sub);
-                jsonObject.set("$." + keys, substitute.value);
-            } else {
-                jsonObject.set(keys, substitute.value);
-            }
-        } catch (PathNotFoundException e) {
-            throw new PathNotFoundException(String.format("Path: %s not found!", keys));
-        }
-    }
-
 }

@@ -22,10 +22,8 @@
 package dynamic.mapping.processor.inbound;
 
 import static dynamic.mapping.model.MappingSubstitution.isArray;
-import static dynamic.mapping.model.MappingSubstitution.isObject;
 import static dynamic.mapping.model.MappingSubstitution.isTextual;
 import static dynamic.mapping.model.MappingSubstitution.isNumber;
-import static dynamic.mapping.model.MappingSubstitution.isBoolean;
 import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 

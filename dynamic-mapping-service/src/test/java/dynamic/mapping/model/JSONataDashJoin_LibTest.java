@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 public class JSONataDashJoin_LibTest {
     String jsonString = """
                 {
+                    "isNullField": null,
                     "mea": [
                         {
                         "tid": "uuid_01",
@@ -152,6 +153,37 @@ public class JSONataDashJoin_LibTest {
             assertEquals(true, extractedContent == null);
         } catch (Exception e) {
             log.error("Exception in test testExtractFailure()", e);
+        }
+    }
+
+
+    @Test
+    void testNonExisting() {
+        String expString = "notExisting";
+        try {
+            Object payloadJsonNode = Json.parseJson(jsonString);
+            var expression = jsonata(expString);
+            Object extractedContent = expression.evaluate(payloadJsonNode);
+            log.info("Result in test testNonExisting(): {} is type: {}", toPrettyJsonString(extractedContent),
+                    extractedContent == null ? "null" : extractedContent.getClass().getName());
+            assertEquals(true, extractedContent == null);
+        } catch (Exception e) {
+            log.error("Exception in test testNonExisting()", e);
+        }
+    }
+
+    @Test
+    void testIsNull() {
+        String expString = "isNullField";
+        try {
+            Object payloadJsonNode = Json.parseJson(jsonString);
+            var expression = jsonata(expString);
+            Object extractedContent = expression.evaluate(payloadJsonNode);
+            log.info("Result in test testIsNull(): {} is type: {}", toPrettyJsonString(extractedContent),
+                    extractedContent == null ? "null" : extractedContent.getClass().getName());
+            assertEquals(true, extractedContent == null);
+        } catch (Exception e) {
+            log.error("Exception in test testIsNull()", e);
         }
     }
 

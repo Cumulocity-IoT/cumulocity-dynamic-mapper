@@ -23,17 +23,22 @@ package dynamic.mapping.model;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 import com.jayway.jsonpath.internal.JsonFormatter;
 
 import lombok.Getter;
 import lombok.ToString;
+import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.RepairStrategy;
 
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
+
+import org.json.JSONException;
 
 @Getter
 @ToString()
@@ -82,7 +87,6 @@ public class MappingSubstitution implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean expandArray;
 
-
     public static Boolean isArray(Object obj) {
         return obj != null && obj instanceof Collection;
     }
@@ -120,6 +124,44 @@ public class MappingSubstitution implements Serializable {
             return JsonPath.parse(obj).jsonString();
         } else {
             return obj.toString();
+        }
+    }
+
+    public static void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue sub,
+            DocumentContext jsonObject, String keys)
+            throws JSONException {
+        boolean subValueMissing = sub.value == null;
+        // TOFDO fix this, we have to differentiate between {"nullField": null } and
+        // "nonExisting"
+        boolean subValueNull = false;
+        try {
+            if ("$".equals(keys)) {
+                Object replacement = sub;
+                if (replacement instanceof Map<?, ?> map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> rm = (Map<String, Object>) map;
+                    for (Map.Entry<String, Object> entry : rm.entrySet()) {
+                        jsonObject.put("$", entry.getKey(), entry.getValue());
+                    }
+                }
+            } else {
+                if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+                        (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
+                    jsonObject.delete(keys);
+                } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
+                    // boolean pathIsNested = keys.contains(".") || keys.contains("[");
+                    // if (pathIsNested) {
+                    // throw new JSONException("Can only create new nodes on the root level!");
+                    // }
+                    // jsonObject.put("$", keys, sub.typedValue());
+                    jsonObject.set("$." + keys, sub.value);
+
+                } else {
+                    jsonObject.set(keys, sub.value);
+                }
+            }
+        } catch (PathNotFoundException e) {
+            throw new PathNotFoundException(String.format("Path: %s not found!", keys));
         }
     }
 
