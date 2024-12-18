@@ -21,6 +21,8 @@
 
 package dynamic.mapping.processor.extension.external;
 
+import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
+
 import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
@@ -37,7 +39,6 @@ import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.extension.ProcessorExtensionTarget;
-import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
@@ -237,10 +238,10 @@ public class ProcessorExtensionCustomAlarm
                     }
 
                 }
-                BasePayloadProcessorInbound.substituteValueInPayload(mapping.mappingType, substituteValue,
+                substituteValueInPayload(mapping.mappingType, substituteValue,
                         payloadTarget, pathTarget);
             } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
-                BasePayloadProcessorInbound.substituteValueInPayload(mapping.mappingType, substituteValue,
+                substituteValueInPayload(mapping.mappingType, substituteValue,
                         payloadTarget, pathTarget);
             }
         }

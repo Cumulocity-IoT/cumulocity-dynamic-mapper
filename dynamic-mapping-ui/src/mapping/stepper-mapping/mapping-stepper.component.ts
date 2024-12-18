@@ -36,7 +36,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { Content, JSONEditorPropsOptional, Mode } from 'vanilla-jsoneditor';
+import { Content, Mode } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
   API,
@@ -59,7 +59,7 @@ import {
 import { JsonEditorComponent } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
-import { EditorMode } from '../shared/stepper-model';
+import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper-model';
 import {
   countDeviceIdentifiers,
   definesDeviceIdentifier,
@@ -68,7 +68,6 @@ import {
   getGenericDeviceIdentifier,
   isDisabled,
   reduceSourceTemplate,
-  reduceTargetTemplate,
   splitTopicExcludingSeparator
 } from '../shared/util';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
@@ -115,6 +114,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   sourceTemplate: any;
   targetTemplate: any;
+  sourceTemplateUpdated: any;
+  targetTemplateUpdated: any;
   sourceSystem: string;
   targetSystem: string;
 
@@ -194,6 +195,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild('stepper', { static: false })
   stepper: C8yStepper;
 
+  stepperForward: boolean = true;
   currentStepIndex: number;
 
   constructor(
@@ -543,7 +545,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else {
       contentAsJson = content['json'];
     }
-    this.sourceTemplate = contentAsJson;
+    this.sourceTemplateUpdated = contentAsJson;
 
     // console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate, this.mapping.targetTemplate);
   }
@@ -556,7 +558,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     } else {
       contentAsJson = content['json'];
     }
-    this.targetTemplate = contentAsJson;
+    this.targetTemplateUpdated = contentAsJson;
 
     // console.log("Step onTargetTemplateChanged",this.mapping.sourceTemplate,  this.mapping.targetTemplate);
   }
@@ -607,9 +609,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // this.step == 'Add and select connector'
     this.currentStepIndex = index;
     this.updateSubstiutionValid();
-    if (index == 1) {
+    if (index == STEP_GENERAL_SETTINGS) {
       this.templateModel.mapping = this.mapping;
-
+      this.templatesInitialized = false;
       this.extensions =
         (await this.extensionService.getProcessorExtensions()) as Map<string, Extension>;
       if (this.mapping?.extension?.extensionName) {
@@ -626,18 +628,24 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
         }
       }
-    } else if (index == 2) {
+    } else if (index == STEP_SELECT_TEMPLATES) {
       // this.step == 'Select templates'
       // console.log("Step index 1 - before", this.targetTemplate);
-      this.expandTemplates();
+      if (this.stepperForward) {
+        this.expandTemplates();
+      }
       // console.log("Step index 1 - afer", this.targetTemplate);
-    } else if (index == 3) {
-      this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
+    } else if (index == STEP_DEFINE_SUBSTITUTIONS) {
       // console.log("Step 3: onStepChange targetTemplate ", this.mapping.targetTemplate);
+      this.sourceTemplate = this.sourceTemplateUpdated ? this.sourceTemplateUpdated : this.sourceTemplate;
+      this.targetTemplate = this.targetTemplateUpdated ? this.targetTemplateUpdated : this.targetTemplate;
+      this.editorSourceStepSubstitution.set(this.sourceTemplate);
+      this.editorTargetStepSubstitution.set(this.targetTemplate);
       this.updateSubstiutionValid();
       this.onSelectSubstitution(0);
+      this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
       // this.step == 'Select templates'
-    } else if (index == 4) {
+    } else if (index == STEP_TEST_MAPPING) {
       // console.log("Step 4: onStepChange targetTemplate ", this.mapping.targetTemplate);
     }
 
@@ -647,6 +655,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     stepper: C8yStepper;
     step: CdkStep;
   }): void {
+    this.stepperForward = true;
     if (this.stepperConfiguration.advanceFromStepToEndStep && this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
       this.goToLastStep();
       this.alertService.info('The other steps have been skipped for this mapping type!');
@@ -671,13 +680,16 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     step: CdkStep;
   }): Promise<void> {
     this.step = event.step.label;
+    this.stepperForward = false;
     if (this.step == 'Test mapping') {
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector('#editorTestingRequest');
       if (editorTestingRequestRef != null) {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
-    } else if (this.step == 'Select templates' || this.step == 'General sesstings') {
+    } else if (this.step == 'General sesstings') {
+      this.templatesInitialized = false;
+    } else if (this.step == 'Select templates') {
       this.templatesInitialized = false;
     }
     event.stepper.previous();
