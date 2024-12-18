@@ -58,6 +58,7 @@ import java.util.concurrent.TimeUnit;
 public abstract class BasePayloadProcessorInbound<T> {
 
     public BasePayloadProcessorInbound(ConfigurationRegistry configurationRegistry) {
+        this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.processingCachePool = configurationRegistry.getProcessingCachePool();
     }
@@ -325,10 +326,10 @@ public abstract class BasePayloadProcessorInbound<T> {
                     //     throw new JSONException("Can only create new nodes on the root level!");
                     // }
                     //jsonObject.put("$", keys, sub.typedValue());
-                    jsonObject.set("$."+ keys, sub);
+                    jsonObject.set("$."+ keys, sub.value);
 
                 } else {
-                    jsonObject.set(keys, sub);
+                    jsonObject.set(keys, sub.value);
                 }
             }
         } catch (PathNotFoundException e) {

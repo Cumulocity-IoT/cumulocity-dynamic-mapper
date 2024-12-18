@@ -189,9 +189,9 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 // throw new JSONException("Can only create new nodes on the root level!");
                 // }
                 // jsonObject.put("$", keys, sub);
-                jsonObject.set("$." + keys, sub);
+                jsonObject.set("$." + keys, sub.value);
             } else {
-                jsonObject.set(keys, sub);
+                jsonObject.set(keys, sub.value);
             }
         } catch (PathNotFoundException e) {
             throw new PathNotFoundException(String.format("Path: %s not found!", keys));
