@@ -77,7 +77,7 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
                         new MappingSubstitution.SubstituteValue(fragmentTemperature,
                                 MappingSubstitution.SubstituteValue.TYPE.OBJECT,
                                 RepairStrategy.DEFAULT))));
-        // as the mappping uses useExternalId we have to map the id to _IDENTITY_.externalId
+        // as the mapping uses useExternalId we have to map the id to _IDENTITY_.externalId
         postProcessingCache.put(context.getMapping().getGenericDeviceIdentifier(),
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(

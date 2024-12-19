@@ -85,7 +85,7 @@ public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<b
                                         MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                         RepairStrategy.DEFAULT))));
                                         
-        // as the mappping uses useExternalId we have to map the id to _IDENTITY_.externalId
+        // as the mapping uses useExternalId we have to map the id to _IDENTITY_.externalId
         postProcessingCache.put(context.getMapping().getGenericDeviceIdentifier(),
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(

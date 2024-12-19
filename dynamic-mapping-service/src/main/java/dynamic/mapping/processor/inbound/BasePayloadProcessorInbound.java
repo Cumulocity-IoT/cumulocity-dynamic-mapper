@@ -98,9 +98,9 @@ public abstract class BasePayloadProcessorInbound<T> {
                 : null;
         List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
                 .get(firstPathTargetForDeviceIdentifiers);
-        int countMaxlistEntries = postProcessingCache.get(entryWithMaxSubstitues).size();
+        int countMaxEntries = postProcessingCache.get(entryWithMaxSubstitues).size();
         MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
-        while (deviceEntries.size() < countMaxlistEntries) {
+        while (deviceEntries.size() < countMaxEntries) {
             deviceEntries.add(toDuplicate);
         }
 

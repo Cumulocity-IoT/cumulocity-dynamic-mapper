@@ -112,7 +112,7 @@ public class ProcessorExtensionCustomAlarm
                                         MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                         RepairStrategy.DEFAULT))));
                                         
-        // as the mappping uses useExternalId we have to map the id to _IDENTITY_.externalId
+        // as the mapping uses useExternalId we have to map the id to _IDENTITY_.externalId
         postProcessingCache.put(context.getMapping().getGenericDeviceIdentifier(),
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(
@@ -148,9 +148,9 @@ public class ProcessorExtensionCustomAlarm
         String deviceIdentifierMapped2PathTarget2 = mapping.targetAPI.identifier;
         List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
                 .get(deviceIdentifierMapped2PathTarget2);
-        int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
+        int countMaxEntries = postProcessingCache.get(maxEntry).size();
         MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
-        while (deviceEntries.size() < countMaxlistEntries) {
+        while (deviceEntries.size() < countMaxEntries) {
             deviceEntries.add(toDuplicate);
         }
 

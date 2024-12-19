@@ -74,10 +74,17 @@ export abstract class PayloadProcessorInbound {
       firstPathTargetForDeviceIdentifiers
     );
 
-    const countMaxlistEntries: number =
-      postProcessingCache.get(firstPathTargetForDeviceIdentifiers).length;
+    const entryWithMaxSubstitutes = Array.from(postProcessingCache.entries())
+      .reduce((max, [key, value]) =>
+        value.length > (max[1]?.length ?? 0)
+          ? [key, value]
+          : max
+      )[0];
+
+    const countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).length;
+
     const [toDouble] = deviceEntries;
-    while (deviceEntries.length < countMaxlistEntries) {
+    while (deviceEntries.length < countMaxEntries) {
       deviceEntries.push(toDouble);
     }
 
