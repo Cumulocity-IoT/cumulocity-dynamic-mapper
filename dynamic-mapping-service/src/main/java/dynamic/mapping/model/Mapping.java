@@ -170,9 +170,9 @@ public class Mapping implements Serializable {
 
     public void sortSubstitutions() {
         MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
-                (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI, externalIdType, direction, s1))
+                (s1, s2) -> -(Boolean.valueOf(definesDeviceIdentifier(s1))
                         .compareTo(
-                                Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI, externalIdType, direction, s2)))))
+                                Boolean.valueOf(definesDeviceIdentifier(s2)))))
                 .toArray(size -> new MappingSubstitution[size]);
         substitutions = sortedSubstitutions;
     }
@@ -198,16 +198,33 @@ public class Mapping implements Serializable {
     }
 
     public String getGenericDeviceIdentifier() {
-        if (externalIdType != null && !("").equals(externalIdType)) {
+        if (useExternalId && !("").equals(externalIdType)) {
             return (Mapping.IDENTITY + ".externalId");
         } else {
             return (Mapping.IDENTITY + ".c8ySourceId");
         }
     }
 
+    public boolean definesDeviceIdentifier(
+            MappingSubstitution sub) {
+        if (Direction.INBOUND.equals(direction)) {
+            if (useExternalId && !("").equals(externalIdType)) {
+                return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
+            } else {
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
+            }
+        } else {
+            if (useExternalId && !("").equals(externalIdType)) {
+                return (Mapping.IDENTITY + ".externalId").equals(sub.pathSource);
+            } else {
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathSource);
+            }
+        }
+    }
+
     /*
-    * "_IDENTITY_.externalId" => source.id
-    */
+     * "_IDENTITY_.externalId" => source.id
+     */
     public String transformGenericPath2C8YPath(String originalPath) {
         // "_IDENTITY_.externalId" => source.id
         if (getGenericDeviceIdentifier().equals(originalPath)) {
@@ -218,8 +235,8 @@ public class Mapping implements Serializable {
     }
 
     /*
-    * source.id => "_IDENTITY_.externalId" 
-    */
+     * source.id => "_IDENTITY_.externalId"
+     */
     public String transformC8YPath2GenericPath(String originalPath) {
         if (targetAPI.identifier.equals(originalPath)) {
             return getGenericDeviceIdentifier();
@@ -234,8 +251,7 @@ public class Mapping implements Serializable {
     static public ArrayList<ValidationError> isSubstitutionValid(Mapping mapping) {
         ArrayList<ValidationError> result = new ArrayList<ValidationError>();
         long count = Arrays.asList(mapping.substitutions).stream()
-                .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction,
-                        sub))
+                .filter(sub -> mapping.definesDeviceIdentifier(sub))
                 .count();
 
         if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
@@ -405,15 +421,26 @@ public class Mapping implements Serializable {
         return nt;
     }
 
-    static public MappingSubstitution findDeviceIdentifier(Mapping mapping) {
-        Object[] mp = Arrays.stream(mapping.substitutions)
-                .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction,
-                        sub))
-                .toArray();
-        if (mp.length > 0) {
-            return (MappingSubstitution) mp[0];
-        } else {
-            return null;
-        }
+    static public List<MappingSubstitution> getDeviceIdentifiers(Mapping mapping) {
+        List<MappingSubstitution> mp = Arrays.stream(mapping.substitutions)
+                .filter(sub -> mapping.definesDeviceIdentifier(sub))
+                .toList();
+        return mp;
+    }
+
+    static public List<String> getPathSourceForDeviceIdentifiers(Mapping mapping) {
+        List<String> pss = Arrays.stream(mapping.substitutions)
+                .filter(sub -> mapping.definesDeviceIdentifier(sub))
+                .map(sub -> sub.pathSource)
+                .toList();
+        return pss;
+    }
+
+    static public List<String> getPathTargetForDeviceIdentifiers(Mapping mapping) {
+        List<String> pss = Arrays.stream(mapping.substitutions)
+                .filter(sub -> mapping.definesDeviceIdentifier(sub))
+                .map(sub -> sub.pathTarget)
+                .toList();
+        return pss;
     }
 }

@@ -192,12 +192,12 @@ export class C8YAgent {
     identity: string,
     externalIdType: string,
     context: ProcessingContext
-  ): Promise<string> {
-    const data = await this.identity.resolveGlobalId2ExternalId(
+  ): Promise<IExternalIdentity> {
+    const externalId = await this.identity.resolveGlobalId2ExternalId(
       identity,
       externalIdType,
       context
     );
-    return data.managedObject.id as string;
+    return externalId;
   }
 }

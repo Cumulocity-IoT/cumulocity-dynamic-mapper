@@ -24,12 +24,11 @@ import * as _ from 'lodash';
 import {
   API,
   Mapping,
-  MappingType,
   RepairStrategy,
   MAPPING_TEST_DEVICE_TYPE,
   MAPPING_TEST_DEVICE_FRAGMENT
 } from '../../shared';
-import { findDeviceIdentifier, getGenericDeviceIdentifier, getTypedValue, transformGenericPath2C8YPath } from '../shared/util';
+import { findDeviceIdentifier, getGenericDeviceIdentifier, getPathTargetForDeviceIdentifiers, getTypedValue, substituteValueInPayload, transformGenericPath2C8YPath } from '../shared/util';
 import { C8YAgent } from '../core/c8y-agent.service';
 import {
   ProcessingContext,
@@ -45,8 +44,9 @@ export abstract class PayloadProcessorInbound {
   ) { }
 
   abstract deserializePayload(
-    context: ProcessingContext,
-    mapping: Mapping
+    mapping: Mapping,
+    message: any,
+    context: ProcessingContext
   ): ProcessingContext;
 
   abstract extractFromSource(context: ProcessingContext): void;
@@ -62,21 +62,19 @@ export abstract class PayloadProcessorInbound {
     // step 3 replace target with extract content from inbound payload
 
     const { mapping } = context;
-
     const { postProcessingCache } = context;
-    let deviceIdentifierMapped2PathTarget: string = findDeviceIdentifier(context.mapping).pathTarget;
-    for (const entry of postProcessingCache.entries()) {
-      if (postProcessingCache.get(deviceIdentifierMapped2PathTarget).length < entry[1].length) {
-        deviceIdentifierMapped2PathTarget = entry[0];
-      }
-    }
+
+    const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(mapping);
+    const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
+      ? pathsTargetForDeviceIdentifiers[0]
+      : null;
 
     const deviceEntries: SubstituteValue[] = postProcessingCache.get(
       findDeviceIdentifier(context.mapping).pathTarget
     );
 
     const countMaxlistEntries: number =
-      postProcessingCache.get(deviceIdentifierMapped2PathTarget).length;
+      postProcessingCache.get(firstPathTargetForDeviceIdentifiers).length;
     const [toDouble] = deviceEntries;
     while (deviceEntries.length < countMaxlistEntries) {
       deviceEntries.push(toDouble);
@@ -157,7 +155,7 @@ export abstract class PayloadProcessorInbound {
                 [MAPPING_TEST_DEVICE_FRAGMENT]: {},
                 type: MAPPING_TEST_DEVICE_TYPE
               };
-              
+
               const newPredecessor = context.requests.push({
                 predecessor: predecessor,
                 method: 'PATCH',
@@ -192,14 +190,14 @@ export abstract class PayloadProcessorInbound {
             // }
           }
 
-          this.substituteValueInPayload(
+          substituteValueInPayload(
             mapping.mappingType,
             substituteValue,
             payloadTarget,
             pathTarget
           );
           if (getGenericDeviceIdentifier(mapping) === pathTarget) {
-            this.substituteValueInPayload(
+            substituteValueInPayload(
               mapping.mappingType,
               sourceId,
               payloadTarget,
@@ -209,14 +207,14 @@ export abstract class PayloadProcessorInbound {
 
           // } else if (pathTarget != API[mapping.targetAPI].identifier) {
         } else {
-          this.substituteValueInPayload(
+          substituteValueInPayload(
             mapping.mappingType,
             substituteValue,
             payloadTarget,
             pathTarget
           );
           if (getGenericDeviceIdentifier(mapping) === pathTarget) {
-            this.substituteValueInPayload(
+            substituteValueInPayload(
               mapping.mappingType,
               sourceId,
               payloadTarget,
@@ -275,47 +273,6 @@ export abstract class PayloadProcessorInbound {
       //  `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: ${deviceEntries.length}`
       // );
       i++;
-    }
-  }
-
-  substituteValueInPayload(
-    type: MappingType,
-    sub: SubstituteValue,
-    jsonObject: JSON,
-    keys: string
-  ) {
-    const subValueMissing: boolean = !sub || sub.value == null;
-    const subValueNull: boolean =
-      !sub || sub.value == null || (sub.value != null && sub.value != undefined);
-
-    if (keys == '$') {
-      Object.keys(getTypedValue(sub)).forEach((key) => {
-        jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
-      });
-    } else {
-      if (
-        (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
-          subValueMissing) ||
-        (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
-      ) {
-        _.unset(jsonObject, keys);
-      } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-        // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-        // if (pathIsNested) {
-        //   throw new Error('Can only create new nodes on the root level!');
-        // }
-        // jsonObject.put("$", keys, sub.typedValue());
-        _.set(jsonObject, keys, getTypedValue(sub));
-      } else {
-        if (_.has(jsonObject, keys)) {
-          _.set(jsonObject, keys, getTypedValue(sub));
-        } else {
-          this.alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
-          throw new Error(
-            `Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`
-          );
-        }
-      }
     }
   }
 

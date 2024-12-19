@@ -169,24 +169,4 @@ public class MappingsRepresentationJUnitTest {
         log.info(
                 String.join("[^\\/]+", st.replace("/", "\\/").split("\\+")).replace("#", ".*"));
     }
-
-    @Test
-    void testNeedsRepair() {
-
-        ProcessingContext<String> p1 = new ProcessingContext<String>();
-        p1.addCardinality("value1", 5);
-        p1.addCardinality("value2", 5);
-        p1.addCardinality(ProcessingContext.SOURCE_ID, 1);
-        // log.info("My neeRepair1: {}", p1.needsRepair);
-        assertEquals(false, p1.isNeedsRepair());
-
-        ProcessingContext<String> p2 = new ProcessingContext<String>();
-        p2.addCardinality("value1", 5);
-        p2.addCardinality("value2", 4);
-        p2.addCardinality(ProcessingContext.SOURCE_ID, 1);
-        // log.info("My neeRepair1: {}", p2.needsRepair);
-        assertEquals(true, p2.isNeedsRepair());
-
-    }
-
 }

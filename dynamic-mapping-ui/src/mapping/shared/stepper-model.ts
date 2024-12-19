@@ -33,3 +33,9 @@ export enum AdvisorAction {
   CONTINUE_SNOOPING = 'CONTINUE_SNOOPING',
   EDIT = 'EDIT'
 }
+
+export const STEP_SELECT_CONNECTOR = 0;
+export const STEP_GENERAL_SETTINGS = 1;
+export const STEP_SELECT_TEMPLATES = 2;
+export const STEP_DEFINE_SUBSTITUTIONS = 3;
+export const STEP_TEST_MAPPING = 4;

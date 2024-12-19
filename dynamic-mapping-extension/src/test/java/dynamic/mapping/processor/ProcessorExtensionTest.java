@@ -61,8 +61,8 @@ public class ProcessorExtensionTest {
     ArrayList<MappingSubstitution.SubstituteValue> extractedTypes = (ArrayList) context.getPostProcessingCache().get("type");
     assertEquals( extractedTypes.size(), 1);
     MappingSubstitution.SubstituteValue extractedType = extractedTypes.get(0);
-    log.info("Extracted: {}", extractedType.typedValue());
-    assertEquals( (String)extractedType.typedValue(), "type_Dummy");
+    log.info("Extracted: {}, {} ", extractedType.value, extractedType.value.getClass().getName());
+    assertEquals( extractedType.value, "type_Dummy");
    // assertEquals( (JsonNode)extractedType.typedValue(), "Dummy Text");
 
   }

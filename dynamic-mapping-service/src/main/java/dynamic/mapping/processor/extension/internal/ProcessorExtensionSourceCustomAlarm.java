@@ -28,7 +28,6 @@ import java.util.Map;
 
 import org.joda.time.DateTime;
 
-import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import dynamic.mapping.model.MappingSubstitution;
@@ -56,29 +55,29 @@ public class ProcessorExtensionSourceCustomAlarm implements ProcessorExtensionSo
         postProcessingCache.put("time",
                 new ArrayList<MappingSubstitution.SubstituteValue>(
                         Arrays.asList(new MappingSubstitution.SubstituteValue(
-                                new TextNode(new DateTime(
+                                new DateTime(
                                         payloadProtobuf.getTimestamp())
-                                        .toString()),
+                                        .toString(),
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                 RepairStrategy.DEFAULT))));
         postProcessingCache.put("text",
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(
-                                new TextNode(payloadProtobuf.getTxt()),
+                                payloadProtobuf.getTxt(),
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                 RepairStrategy.DEFAULT))));
         postProcessingCache.put("type",
                 new ArrayList<MappingSubstitution.SubstituteValue>(
                         Arrays.asList(
                                 new MappingSubstitution.SubstituteValue(
-                                        new TextNode(payloadProtobuf
-                                                .getAlarmType()),
+                                        payloadProtobuf
+                                                .getAlarmType(),
                                         MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                         RepairStrategy.DEFAULT))));
         postProcessingCache.put(context.getMapping().targetAPI.identifier,
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(
-                                new TextNode(payloadProtobuf.getExternalId()),
+                                payloadProtobuf.getExternalId(),
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                 RepairStrategy.DEFAULT))));
         log.info("Tenant {} - New alarm over protobuf: {}, {}, {}, {}, {}", context.getTenant(),

@@ -40,10 +40,10 @@ export interface ProcessingContext {
   requests?: C8YRequest[];
   errors?: string[];
   processingType?: ProcessingType;
-  cardinality: Map<string, number>;
   mappingType: MappingType;
   postProcessingCache: Map<string, SubstituteValue[]>;
   sendPayload?: boolean;
+  sourceId?: string;
 }
 
 export enum ProcessingType {

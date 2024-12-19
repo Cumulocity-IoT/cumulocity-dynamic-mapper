@@ -21,7 +21,6 @@
 
 package dynamic.mapping.processor.inbound;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
@@ -39,14 +38,14 @@ public class FlatFileProcessorInbound extends JSONProcessorInbound {
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(Mapping mapping, ConnectorMessage message)
+    public ProcessingContext<Object> deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
         String payloadMessage = (message.getPayload() != null
                 ? new String(message.getPayload(), Charset.defaultCharset())
                 : "");
-        JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));
-        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
-        context.setPayload(payloadJsonNode);
+        Object payloadObjectNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));
+        ProcessingContext<Object> context = new ProcessingContext<Object>();
+        context.setPayload(payloadObjectNode);
         return context;
     }
 }

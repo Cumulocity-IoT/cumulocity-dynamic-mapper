@@ -116,5 +116,9 @@ export const ValidationFormlyError = {
 
 export class C8YNotificationSubscription {
   api: string;
-  devices: IIdentified[];
+  devices: Device[];
+}
+export class Device {
+  id: string;
+  name?: string;
 }

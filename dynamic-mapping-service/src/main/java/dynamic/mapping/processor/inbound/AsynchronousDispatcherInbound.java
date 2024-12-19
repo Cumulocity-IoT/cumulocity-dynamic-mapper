@@ -21,8 +21,9 @@
 
 package dynamic.mapping.processor.inbound;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
+
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
 import io.micrometer.core.instrument.Counter;
@@ -113,7 +114,8 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(message.getTenant());
             this.inboundProcessingTimer = Timer.builder("dynmapper_inbound_processing_time")
-                    .tag("tenant", connectorMessage.getTenant()).tag("connector", connectorMessage.getConnectorIdentifier())
+                    .tag("tenant", connectorMessage.getTenant())
+                    .tag("connector", connectorMessage.getConnectorIdentifier())
                     .description("Processing time of inbound messages").register(Metrics.globalRegistry);
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
@@ -134,7 +136,8 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
-                if (mapping.isActive() && connectorClient.getMappingsDeployedInbound().containsKey(mapping.identifier)) {
+                if (mapping.isActive()
+                        && connectorClient.getMappingsDeployedInbound().containsKey(mapping.identifier)) {
                     MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
                     BasePayloadProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
@@ -165,14 +168,17 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
                                     || mapping.snoopStatus == SnoopStatus.STARTED) {
                                 String serializedPayload = null;
-                                if (context.getPayload() instanceof JsonNode) {
-                                    serializedPayload = objectMapper
-                                            .writeValueAsString((JsonNode) context.getPayload());
-                                } else if (context.getPayload() instanceof String) {
-                                    serializedPayload = (String) context.getPayload();
-                                }
-                                if (context.getPayload() instanceof byte[]) {
-                                    serializedPayload = Hex.encodeHexString((byte[]) context.getPayload());
+                                Object payload = context.getPayload();
+                                switch (payload) {
+                                    case String payloadString:
+                                        serializedPayload = payloadString;
+                                        break;
+                                    case byte[] payloadByte:
+                                        serializedPayload = Hex.encodeHexString((byte[]) payloadByte);
+                                        break;
+                                    case Object payloadObject:
+                                        serializedPayload = JsonPath.parse(payloadObject).jsonString();
+                                        break;
                                 }
 
                                 if (serializedPayload != null) {

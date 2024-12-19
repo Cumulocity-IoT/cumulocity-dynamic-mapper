@@ -21,8 +21,6 @@
 
 package dynamic.mapping.processor.processor.fixed;
 
-import com.fasterxml.jackson.databind.node.FloatNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.Mapping;
@@ -72,14 +70,14 @@ public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]>
                     .put("time",
                             new ArrayList<MappingSubstitution.SubstituteValue>(
                                     Arrays.asList(new MappingSubstitution.SubstituteValue(
-                                            new TextNode(new DateTime(
+                                            new DateTime(
                                                     payloadProtobuf.getTimestamp())
-                                                    .toString()),
+                                                    .toString(),
                                             MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                             RepairStrategy.DEFAULT))));
             postProcessingCache.put("c8y_GenericMeasurement.Module.value",
                     new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                            new MappingSubstitution.SubstituteValue(new FloatNode(payloadProtobuf.getValue()),
+                            new MappingSubstitution.SubstituteValue(payloadProtobuf.getValue(),
                                     MappingSubstitution.SubstituteValue.TYPE.NUMBER,
                                     RepairStrategy.DEFAULT))));
             postProcessingCache
@@ -87,19 +85,19 @@ public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]>
                             new ArrayList<MappingSubstitution.SubstituteValue>(
                                     Arrays.asList(
                                             new MappingSubstitution.SubstituteValue(
-                                                    new TextNode(payloadProtobuf
-                                                            .getMeasurementType()),
+                                                    payloadProtobuf
+                                                            .getMeasurementType(),
                                                     MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                                     RepairStrategy.DEFAULT))));
             postProcessingCache.put("c8y_GenericMeasurement.Module.unit",
                     new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                            new MappingSubstitution.SubstituteValue(new TextNode(payloadProtobuf.getUnit()),
+                            new MappingSubstitution.SubstituteValue(payloadProtobuf.getUnit(),
                                     MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                     RepairStrategy.DEFAULT))));
             postProcessingCache.put(context.getMapping().targetAPI.identifier,
                     new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                             new MappingSubstitution.SubstituteValue(
-                                    new TextNode(payloadProtobuf.getExternalId()),
+                                    payloadProtobuf.getExternalId(),
                                     MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                     RepairStrategy.DEFAULT))));
 

@@ -18,7 +18,8 @@
  *
  * @authors Christof Strack
  */
-import { API, Direction, Mapping, MappingType } from './shared.model';
+import { SubstituteValue, SubstituteValueType } from 'src/mapping/processor/processor.model';
+import { API, Direction, Mapping, MappingSubstitution, MappingType } from './shared.model';
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -366,33 +367,12 @@ export function getSchema(
       return SCHEMA_MEASUREMENT;
     } else if (targetAPI == API.INVENTORY.name) {
       if (isTarget) return SCHEMA_C8Y_INVENTORY;
-       else return SCHEMA_INVENTORY
+      else return SCHEMA_INVENTORY
     } else {
       return SCHEMA_OPERATION;
     }
   } else {
     return SCHEMA_PAYLOAD;
-  }
-}
-
-export function whatIsIt(object) {
-  const stringConstructor = 'test'.constructor;
-  const arrayConstructor = [].constructor;
-  const objectConstructor = {}.constructor;
-  if (object === null) {
-    return 'null';
-  } else if (object === undefined) {
-    return 'undefined';
-  } else if (object.constructor === stringConstructor) {
-    return 'String';
-  } else if (object.constructor === arrayConstructor) {
-    return 'Array';
-  } else if (object.constructor === objectConstructor) {
-    return 'Object';
-  } else if (typeof object === 'number') {
-    return 'number';
-  } else {
-    return "don't know";
   }
 }
 
