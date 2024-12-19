@@ -65,6 +65,14 @@ export abstract class PayloadProcessorInbound {
     const { mapping } = context;
     const { postProcessingCache } = context;
 
+    // if there are too few devices identified, then we replicate the first device
+    const entryWithMaxSubstitutes = Array.from(postProcessingCache.entries())
+      .reduce((max, [key, value]) =>
+        value.length > (max[1]?.length ?? 0)
+          ? [key, value]
+          : max)[0];
+    const countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).length;
+
     const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(mapping);
     const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
       ? pathsTargetForDeviceIdentifiers[0]
@@ -73,16 +81,6 @@ export abstract class PayloadProcessorInbound {
     const deviceEntries: SubstituteValue[] = postProcessingCache.get(
       firstPathTargetForDeviceIdentifiers
     );
-
-    const entryWithMaxSubstitutes = Array.from(postProcessingCache.entries())
-      .reduce((max, [key, value]) =>
-        value.length > (max[1]?.length ?? 0)
-          ? [key, value]
-          : max
-      )[0];
-
-    const countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).length;
-
     const [toDouble] = deviceEntries;
     while (deviceEntries.length < countMaxEntries) {
       deviceEntries.push(toDouble);
@@ -99,33 +97,33 @@ export abstract class PayloadProcessorInbound {
         throw e;
       }
       for (const pathTarget of postProcessingCache.keys()) {
-        let substituteValue: SubstituteValue = {
+        let substitute: SubstituteValue = {
           value: 'NOT_DEFINED' as any,
           type: SubstituteValueType.TEXTUAL,
           repairStrategy: RepairStrategy.DEFAULT
         };
         if (i < postProcessingCache.get(pathTarget).length) {
-          substituteValue = _.clone(postProcessingCache.get(pathTarget)[i]);
+          substitute = _.clone(postProcessingCache.get(pathTarget)[i]);
         } else if (postProcessingCache.get(pathTarget).length == 1) {
           // this is an indication that the substitution is the same for all
           // events/alarms/measurements/inventory
           if (
-            substituteValue.repairStrategy ==
+            substitute.repairStrategy ==
             RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
-            substituteValue.repairStrategy == RepairStrategy.DEFAULT
+            substitute.repairStrategy == RepairStrategy.DEFAULT
           ) {
-            substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
+            substitute = _.clone(postProcessingCache.get(pathTarget)[0]);
           } else if (
-            substituteValue.repairStrategy ==
+            substitute.repairStrategy ==
             RepairStrategy.USE_LAST_VALUE_OF_ARRAY
           ) {
             const last: number = postProcessingCache.get(pathTarget).length - 1;
-            substituteValue = _.clone(
+            substitute = _.clone(
               postProcessingCache.get(pathTarget)[last]
             );
           }
           console.warn(
-            `During the processing of this pathTarget: ${pathTarget} a repair strategy: ${substituteValue.repairStrategy} was used!`
+            `During the processing of this pathTarget: ${pathTarget} a repair strategy: ${substitute.repairStrategy} was used!`
           );
         }
 
@@ -136,13 +134,12 @@ export abstract class PayloadProcessorInbound {
         };;
         if (mapping.targetAPI != API.INVENTORY.name) {
           if (
-            //  pathTarget == findDeviceIdentifier(mapping).pathTarget &&
             pathsTargetForDeviceIdentifiers.includes(pathTarget) &&
             mapping.useExternalId
           ) {
             try {
               const identity = {
-                externalId: substituteValue.value.toString(),
+                externalId: substitute.value.toString(),
                 type: mapping.externalIdType
               };
               sourceId = {
@@ -159,7 +156,7 @@ export abstract class PayloadProcessorInbound {
             if (!sourceId.value && mapping.createNonExistingDevice) {
               const request = {
                 c8y_IsDevice: {},
-                name: `device_${mapping.externalIdType}_${substituteValue.value}`,
+                name: `device_${mapping.externalIdType}_${substitute.value}`,
                 d11r_device_generatedType: {},
                 [MAPPING_TEST_DEVICE_FRAGMENT]: {},
                 type: MAPPING_TEST_DEVICE_TYPE
@@ -177,52 +174,42 @@ export abstract class PayloadProcessorInbound {
               try {
                 const response = await this.c8yClient.upsertDevice(
                   {
-                    externalId: substituteValue.value.toString(),
+                    externalId: substitute.value.toString(),
                     type: mapping.externalIdType
                   },
                   context
                 );
                 context.requests[newPredecessor - 1].response = response;
-                substituteValue.value = response.id as any;
-                sourceId.value = response.id;
+                substitute.value = response.id as any;
               } catch (e) {
                 context.requests[newPredecessor - 1].error = e;
               }
               predecessor = newPredecessor;
             } else if (!sourceId && context.sendPayload) {
               throw new Error(
-                `External id ${substituteValue} for type ${mapping.externalIdType} not found!`
+                `External id ${substitute} for type ${mapping.externalIdType} not found!`
               );
             }
-            // else {
-            //   substituteValue.value = sourceId.toString();
-            // }
+            if (getGenericDeviceIdentifier(mapping) === pathTarget) {
+              substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+              substituteValueInPayload(
+                mapping.mappingType,
+                substitute,
+                payloadTarget,
+                transformGenericPath2C8YPath(mapping, pathTarget)
+              )
+            };
           }
-
           substituteValueInPayload(
             mapping.mappingType,
-            substituteValue,
+            substitute,
             payloadTarget,
             pathTarget
           );
-          if (getGenericDeviceIdentifier(mapping) === pathTarget) {
-            substituteValueInPayload(
-              mapping.mappingType,
-              sourceId,
-              payloadTarget,
-              transformGenericPath2C8YPath(mapping, pathTarget)
-            )
-          };
 
-          // } else if (pathTarget != API[mapping.targetAPI].identifier) {
         } else {
-          substituteValueInPayload(
-            mapping.mappingType,
-            substituteValue,
-            payloadTarget,
-            pathTarget
-          );
           if (getGenericDeviceIdentifier(mapping) === pathTarget) {
+            substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             substituteValueInPayload(
               mapping.mappingType,
               sourceId,
@@ -230,6 +217,12 @@ export abstract class PayloadProcessorInbound {
               transformGenericPath2C8YPath(mapping, pathTarget)
             )
           };
+          substituteValueInPayload(
+            mapping.mappingType,
+            substitute,
+            payloadTarget,
+            pathTarget
+          );
         }
       }
       /*

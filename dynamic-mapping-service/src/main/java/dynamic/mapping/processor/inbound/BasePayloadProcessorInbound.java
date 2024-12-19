@@ -91,14 +91,15 @@ public abstract class BasePayloadProcessorInbound<T> {
                 .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
                         .compareTo(e2.getValue()))
                 .get().getKey();
+        int countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).size();
 
         List<String> pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
         String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
                 ? pathsTargetForDeviceIdentifiers.get(0)
                 : null;
+
         List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
                 .get(firstPathTargetForDeviceIdentifiers);
-        int countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).size();
         MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxEntries) {
             deviceEntries.add(toDuplicate);
@@ -142,7 +143,8 @@ public abstract class BasePayloadProcessorInbound<T> {
 
     private ProcessingContext<T> getBuildProcessingContext(ProcessingContext<T> context,
             Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache,
-            MappingSubstitution.SubstituteValue device, List<String> pathsTargetForDeviceIdentifiers, int finalI, int size) {
+            MappingSubstitution.SubstituteValue device, List<String> pathsTargetForDeviceIdentifiers, int finalI,
+            int size) {
         Set<String> pathTargets = postProcessingCache.keySet();
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
@@ -172,6 +174,7 @@ public abstract class BasePayloadProcessorInbound<T> {
             }
 
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                // this block resolves the externalId (if used) to the Cumulocity sourceId in substitute.value
                 if (pathsTargetForDeviceIdentifiers.contains(pathTarget) && mapping.useExternalId) {
                     ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                             new ID(mapping.externalIdType, substitute.value.toString()), context);
@@ -208,21 +211,15 @@ public abstract class BasePayloadProcessorInbound<T> {
                     } else {
                         substitute.value = sourceId.getManagedObject().getId().getValue();
                     }
-
-                }
-                // since the attributes identifying the MEA and Invnetory requests are removed
-                // during the design time, they have to be added before sending
-                if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
-                    substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+                    // since the attributes identifying the MEA and Inventory requests are removed
+                    // during the design time, they have to be added before sending
+                    if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
+                        substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+                    }
                 }
                 substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
-            } else if (!pathTarget.equals(pathsTargetForDeviceIdentifiers)) {
-                // since the attributes identifying the MEA and Invnetory requests are removed
-                // during the design time, they have to be added before sending
-                if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
-                    substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
-                }
+            } else if (!pathsTargetForDeviceIdentifiers.contains(pathTarget)) {
                 substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
             }
