@@ -39,7 +39,7 @@ import {
   getSchema
 } from '../../shared/';
 import { MappingService } from '../core/mapping.service';
-import { C8YRequest, ProcessingContext } from '../processor/processor.model';
+import { C8YRequest, ProcessingContext } from '../core/processor/processor.model';
 import { StepperConfiguration } from 'src/shared/mapping/shared.model';
 import { isDisabled, patchC8YTemplateForTesting } from '../shared/util';
 

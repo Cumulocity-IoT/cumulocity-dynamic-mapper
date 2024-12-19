@@ -56,13 +56,13 @@ import {
   LoggingEventTypeMap,
   LoggingEventType
 } from '../../shared';
-import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
-import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
+import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
+import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
 import {
   ProcessingContext,
   ProcessingType,
   SubstituteValue
-} from '../processor/processor.model';
+} from './processor/processor.model';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
 import {
   EventRealtimeService,

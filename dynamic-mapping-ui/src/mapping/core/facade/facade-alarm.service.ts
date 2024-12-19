@@ -20,7 +20,7 @@
  */
 import { Injectable } from '@angular/core';
 import { IAlarm, IResult, AlarmService, IFetchResponse } from '@c8y/client';
-import { ProcessingContext } from '../../processor/processor.model';
+import { ProcessingContext } from '../processor/processor.model';
 import { HttpStatusCode } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })

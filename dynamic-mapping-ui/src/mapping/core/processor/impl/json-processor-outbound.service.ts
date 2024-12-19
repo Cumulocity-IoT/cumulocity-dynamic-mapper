@@ -20,16 +20,15 @@
  */
 import * as _ from 'lodash';
 import { PayloadProcessorOutbound } from '../payload-processor-outbound.service';
-import { API, Mapping } from '../../../shared';
+import { API, Mapping } from '../../../../shared';
 import {
   ProcessingContext,
   SubstituteValue} from '../processor.model';
 import { Injectable } from '@angular/core';
 import {
-  patchC8YTemplateForTesting,
-  processSubstitute,
-  randomString} from '../../shared/util';
+  randomString} from '../../../shared/util';
 import { IExternalIdentity } from '@c8y/client';
+import { processSubstitute } from '../util';
 
 @Injectable({ providedIn: 'root' })
 export class JSONProcessorOutbound extends PayloadProcessorOutbound {

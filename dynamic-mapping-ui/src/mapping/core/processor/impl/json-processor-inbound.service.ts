@@ -20,7 +20,7 @@
  */
 import { Injectable } from '@angular/core';
 import * as _ from 'lodash';
-import { API, Mapping, RepairStrategy } from '../../../shared';
+import { API, Mapping, RepairStrategy } from '../../../../shared';
 import { PayloadProcessorInbound } from '../payload-processor-inbound.service';
 import {
   ProcessingContext,
@@ -30,9 +30,9 @@ import {
 import {
   TIME,
   TOKEN_TOPIC_LEVEL,
-  processSubstitute,
   splitTopicExcludingSeparator
-} from '../../shared/util';
+} from '../../../shared/util';
+import { processSubstitute } from '../util';
 
 @Injectable({ providedIn: 'root' })
 export class JSONProcessorInbound extends PayloadProcessorInbound {

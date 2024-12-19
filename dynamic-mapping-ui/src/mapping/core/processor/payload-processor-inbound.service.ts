@@ -27,14 +27,15 @@ import {
   RepairStrategy,
   MAPPING_TEST_DEVICE_TYPE,
   MAPPING_TEST_DEVICE_FRAGMENT
-} from '../../shared';
-import { findDeviceIdentifier, getGenericDeviceIdentifier, getPathTargetForDeviceIdentifiers, getTypedValue, substituteValueInPayload, transformGenericPath2C8YPath } from '../shared/util';
-import { C8YAgent } from '../core/c8y-agent.service';
+} from '../../../shared';
+import { getGenericDeviceIdentifier } from '../../shared/util';
+import { C8YAgent } from '../c8y-agent.service';
 import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType
 } from './processor.model';
+import { getPathTargetForDeviceIdentifiers, getTypedValue, substituteValueInPayload, transformGenericPath2C8YPath } from './util';
 
 @Injectable({ providedIn: 'root' })
 export abstract class PayloadProcessorInbound {
@@ -70,7 +71,7 @@ export abstract class PayloadProcessorInbound {
       : null;
 
     const deviceEntries: SubstituteValue[] = postProcessingCache.get(
-      findDeviceIdentifier(context.mapping).pathTarget
+      firstPathTargetForDeviceIdentifiers
     );
 
     const countMaxlistEntries: number =
@@ -128,7 +129,8 @@ export abstract class PayloadProcessorInbound {
         };;
         if (mapping.targetAPI != API.INVENTORY.name) {
           if (
-            pathTarget == findDeviceIdentifier(mapping).pathTarget &&
+            //  pathTarget == findDeviceIdentifier(mapping).pathTarget &&
+            pathsTargetForDeviceIdentifiers.includes(pathTarget) &&
             mapping.useExternalId
           ) {
             try {

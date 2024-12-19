@@ -29,7 +29,7 @@ import {
   SnoopStatus
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
-import { SubstituteValue, SubstituteValueType } from '../processor/processor.model';
+import { SubstituteValue, SubstituteValueType } from '../core/processor/processor.model';
 import * as _ from 'lodash';
 import { MappingSubscriptionComponent } from '../subscription/subscription.component';
 import { identifierName } from '@angular/compiler';
@@ -421,17 +421,6 @@ export function definesDeviceIdentifier(
   }
 }
 
-export function findDeviceIdentifier(mapping: Mapping): MappingSubstitution {
-  const mp = mapping.substitutions.filter((sub) =>
-    definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction, sub)
-  );
-  if (mp && mp.length > 0) {
-    return mp[0];
-  } else {
-    return null;
-  }
-}
-
 export function cloneSubstitution(
   sub: MappingSubstitution
 ): MappingSubstitution {
@@ -536,65 +525,6 @@ export function isDisabled(condition: boolean) {
   return condition ? '' : null;
 }
 
-
-export function getGenericDeviceIdentifier(mapping: Mapping): string {
-  if (mapping.externalIdType && mapping.externalIdType !== '') {
-    return `${IDENTITY}.externalId`;
-  } else {
-    return `${IDENTITY}.c8ySourceId`;
-  }
-}
-
-export function getDeviceIdentifiers(mapping: Mapping): MappingSubstitution[] {
-  const mp: MappingSubstitution[] = mapping.substitutions
-    .filter(sub => definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType
-      , mapping.direction, sub));
-  return mp;
-}
-
-export function getPathSourceForDeviceIdentifiers(mapping: Mapping): string[] {
-  const pss = mapping.substitutions
-    .filter(sub => definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType
-      , mapping.direction, sub))
-    .map(sub => sub.pathSource);
-  return pss;
-}
-
-export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
-  const pss = mapping.substitutions
-    .filter(sub => definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType
-      , mapping.direction, sub))
-    .map(sub => sub.pathTarget);
-  return pss;
-}
-
-export function transformGenericPath2C8YPath(mapping: Mapping, originalPath: string): string {
-  // "_IDENTITY_.externalId" => source.id
-  if (getGenericDeviceIdentifier(mapping) === originalPath) {
-    return API[mapping.targetAPI].identifier;
-  } else {
-    return originalPath;
-  }
-}
-
-export function transformC8YPath2GenericPath(mapping: Mapping, originalPath: string): string {
-  // source.id => "_IDENTITY_.externalId" source.id
-  if (API[mapping.targetAPI].identifier === originalPath) {
-    return getGenericDeviceIdentifier(mapping);
-  } else {
-    return originalPath;
-  }
-}
-
-export function getTypedValue(subValue: SubstituteValue): any {
-  if (subValue.type == SubstituteValueType.NUMBER) {
-    return Number(subValue.value);
-  } else if (subValue.type == SubstituteValueType.TEXTUAL) {
-    return String(subValue.value);
-  } else {
-    return subValue.value;
-  }
-}
 export function isTypeOf(object) {
   const stringConstructor = 'test'.constructor;
   const arrayConstructor = [].constructor;
@@ -616,89 +546,10 @@ export function isTypeOf(object) {
   }
 }
 
-export const isNumeric = (num: any) =>
-  (typeof num === 'number' || (typeof num === 'string' && num.trim() !== '')) &&
-  !isNaN(num as number);
-
-
-export function processSubstitute(postProcessingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: MappingSubstitution, mapping: Mapping) {
-  if (isTypeOf(extractedSourceContent) == 'null') {
-    postProcessingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.IGNORE,
-      repairStrategy: substitution.repairStrategy
-    });
-    console.error(
-      'No substitution for: ',
-      substitution.pathSource
-    );
-  } else if (isTypeOf(extractedSourceContent) == 'String') {
-    postProcessingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.TEXTUAL,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (isTypeOf(extractedSourceContent) == 'Number') {
-    postProcessingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.NUMBER,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (isTypeOf(extractedSourceContent) == 'Array') {
-    postProcessingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.ARRAY,
-      repairStrategy: substitution.repairStrategy
-    });
-  } else if (isTypeOf(extractedSourceContent) == 'Object') {
-    postProcessingCacheEntry.push({
-      value: extractedSourceContent,
-      type: SubstituteValueType.OBJECT,
-      repairStrategy: substitution.repairStrategy
-    });
+export function getGenericDeviceIdentifier(mapping: Mapping): string {
+  if (mapping.externalIdType && mapping.externalIdType !== '') {
+    return `${IDENTITY}.externalId`;
   } else {
-    console.warn(
-      `Since result is not (number, array, textual, object), it is ignored: ${extractedSourceContent}`
-    );
-  }
-}
-
-export function substituteValueInPayload(
-  type: MappingType,
-  sub: SubstituteValue,
-  jsonObject: JSON,
-  keys: string
-) {
-  const subValueMissing: boolean = !sub || sub.value == null;
-  const subValueNull: boolean = subValueMissing;
-
-  if (keys == '$') {
-    Object.keys(getTypedValue(sub)).forEach((key) => {
-      jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
-    });
-  } else {
-    if (
-      (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
-        subValueMissing) ||
-      (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
-    ) {
-      _.unset(jsonObject, keys);
-    } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-      // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-      // if (pathIsNested) {
-      //   throw new Error('Can only create new nodes on the root level!');
-      // }
-      // jsonObject.put("$", keys, sub.typedValue());
-      _.set(jsonObject, keys, getTypedValue(sub));
-    } else {
-      if (_.has(jsonObject, keys)) {
-        _.set(jsonObject, keys, getTypedValue(sub));
-      } else {
-        this.alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
-        throw new Error(
-          `Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`
-        );
-      }
-    }
+    return `${IDENTITY}.c8ySourceId`;
   }
 }

@@ -18,8 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { SubstituteValue, SubstituteValueType } from 'src/mapping/processor/processor.model';
-import { API, Direction, Mapping, MappingSubstitution, MappingType } from './shared.model';
+import { API, Direction, Mapping, MappingType } from './shared.model';
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               

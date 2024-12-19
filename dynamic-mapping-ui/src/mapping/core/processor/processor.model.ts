@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Mapping, MappingType, RepairStrategy } from '../../shared';
+import { Mapping, MappingType, RepairStrategy } from '../../../shared';
 
 export interface C8YRequest {
   predecessor?: number;
