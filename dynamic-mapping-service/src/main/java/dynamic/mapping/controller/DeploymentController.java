@@ -47,7 +47,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.model.DeploymentMapEntryDetailed;
+import dynamic.mapping.model.DeploymentMapEntry;
 
 @Slf4j
 @RestController
@@ -87,9 +87,9 @@ public class DeploymentController {
 	private String mappingCreateRole;
 
 	@RequestMapping(value = "/deployment/effective", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, DeploymentMapEntryDetailed>> getMappingsDeployed() {
+	public ResponseEntity<Map<String, DeploymentMapEntry>> getMappingsDeployed() {
 		String tenant = contextService.getContext().getTenant();
-		Map<String, DeploymentMapEntryDetailed> mappingsDeployed = new HashMap<>();
+		Map<String, DeploymentMapEntry> mappingsDeployed = new HashMap<>();
 		try {
 			Map<String, AConnectorClient> connectorMap = connectorRegistry
 					.getClientsForTenant(tenant);

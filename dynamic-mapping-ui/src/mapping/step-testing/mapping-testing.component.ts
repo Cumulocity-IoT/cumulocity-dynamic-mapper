@@ -29,6 +29,7 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
+import * as _ from 'lodash';
 import { AlertService } from '@c8y/ngx-components';
 import { BehaviorSubject } from 'rxjs';
 import {
@@ -38,9 +39,9 @@ import {
   getSchema
 } from '../../shared/';
 import { MappingService } from '../core/mapping.service';
-import { C8YRequest } from '../processor/processor.model';
+import { C8YRequest, ProcessingContext } from '../core/processor/processor.model';
 import { StepperConfiguration } from 'src/shared/mapping/shared.model';
-import { isDisabled } from '../shared/util';
+import { isDisabled, patchC8YTemplateForTesting } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-testing',
@@ -58,6 +59,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   Direction = Direction;
   isDisabled = isDisabled;
 
+  testContext: ProcessingContext;
   testingModel: {
     payload?: any;
     results: C8YRequest[];
@@ -89,7 +91,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   editorTestingRequest: JsonEditorComponent;
   @ViewChild('editorTestingResponse', { static: false })
   editorTestingResponse: JsonEditorComponent;
-  source: any;
+  sourceTemplate: any;
 
   constructor(
     public mappingService: MappingService,
@@ -111,10 +113,16 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     // );
 
     this.editorTestingPayloadTemplateEmitter.subscribe((current) => {
+      // prepare local data
       this.currentContext = current;
-      this.source = current.sourceTemplate;
       this.currentContext.mapping.sourceTemplate = JSON.stringify(current.sourceTemplate);
       this.currentContext.mapping.targetTemplate = JSON.stringify(current.targetTemplate);
+
+      // add c8y data for testing: source.id
+      this.sourceTemplate = _.clone(current.sourceTemplate);
+      if (this.currentContext.mapping.direction == Direction.OUTBOUND) patchC8YTemplateForTesting(this.sourceTemplate, this.currentContext.mapping);
+
+      this.testContext = this.mappingService.initializeContext(this.currentContext.mapping);
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector('#editorTestingRequest');
       if (editorTestingRequestRef != null) {
@@ -123,7 +131,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
           getSchema(this.mapping.targetAPI, this.mapping.direction, true, true)
         );
         this.testingModel = {
-          payload: this.source,
+          payload: this.sourceTemplate,
           results: [],
           selectedResult: -1,
           request: {},
@@ -135,20 +143,20 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   async onTestTransformation() {
-    const testProcessingContext = await this.mappingService.testResult(
-      this.currentContext.mapping,
-      false
+    this.testContext.sendPayload = false;
+    this.testContext = await this.mappingService.testResult(
+      this.testContext, this.sourceTemplate
     );
-    this.testingModel.results = testProcessingContext.requests;
+    this.testingModel.results = this.testContext.requests;
     const errors = [];
-    testProcessingContext.requests?.forEach((r) => {
+    this.testContext.requests?.forEach((r) => {
       if (r?.error) {
         errors.push(r?.error);
       }
     });
-    if (testProcessingContext.errors.length > 0 || errors.length > 0) {
+    if (this.testContext.errors.length > 0 || errors.length > 0) {
       this.alertService.warning('Testing transformation was not successful!');
-      testProcessingContext.errors.forEach((msg) => {
+      this.testContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
     } else {
@@ -158,26 +166,26 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   async onSendTest() {
-    const testProcessingContext = await this.mappingService.testResult(
-      this.currentContext.mapping,
-      true
+    this.testContext.sendPayload = true;
+    this.testContext = await this.mappingService.testResult(
+      this.testContext, this.sourceTemplate
     );
-    this.testingModel.results = testProcessingContext.requests;
+    this.testingModel.results = this.testContext.requests;
     const errors = [];
-    testProcessingContext.requests?.forEach((r) => {
+    this.testContext.requests?.forEach((r) => {
       if (r?.error) {
         errors.push(r?.error);
       }
     });
-    if (testProcessingContext.errors.length > 0 || errors.length > 0) {
+    if (this.testContext.errors.length > 0 || errors.length > 0) {
       this.alertService.warning('Testing transformation was not successful!');
-      testProcessingContext.errors.forEach((msg) => {
+      this.testContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
       this.testResult.emit(false);
     } else {
       this.alertService.info(
-        `Sending transformation was successful: ${testProcessingContext.requests[0].response.id}`
+        `Sending transformation was successful: ${this.testContext.requests[0].response.id}`
       );
       this.testResult.emit(true);
       // console.log("RES", testProcessingContext.requests[0].response);
@@ -186,12 +194,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   onResetTransformation() {
+    patchC8YTemplateForTesting(this.sourceTemplate, this.currentContext.mapping);
     this.testingModel = {
-      payload: this.source,
+      payload: this.sourceTemplate,
       results: [],
+      selectedResult: -1,
       request: {},
-      response: {},
-      selectedResult: -1
+      response: {}
     };
     this.editorTestingRequest.set(this.testingModel.request);
     this.editorTestingResponse.set(this.testingModel.response);

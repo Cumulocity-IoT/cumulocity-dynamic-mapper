@@ -32,7 +32,7 @@ import { AlertService } from '@c8y/ngx-components';
 import { API, MAPPING_TEST_DEVICE_FRAGMENT } from '../../shared';
 import { FacadeIdentityService } from './facade/facade-identity.service';
 import { FacadeInventoryService } from './facade/facade-inventory.service';
-import { ProcessingContext } from '../processor/processor.model';
+import { ProcessingContext } from './processor/processor.model';
 import { FacadeAlarmService } from './facade/facade-alarm.service';
 import { FacadeEventService } from './facade/facade-event.service';
 import { FacadeMeasurementService } from './facade/facade-measurement.service';
@@ -192,12 +192,12 @@ export class C8YAgent {
     identity: string,
     externalIdType: string,
     context: ProcessingContext
-  ): Promise<string> {
-    const data = await this.identity.resolveGlobalId2ExternalId(
+  ): Promise<IExternalIdentity> {
+    const externalId = await this.identity.resolveGlobalId2ExternalId(
       identity,
       externalIdType,
       context
     );
-    return data.managedObject.id as string;
+    return externalId;
   }
 }

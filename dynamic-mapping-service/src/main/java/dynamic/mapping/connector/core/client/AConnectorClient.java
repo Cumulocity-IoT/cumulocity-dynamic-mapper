@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import dynamic.mapping.connector.core.ConnectorSpecification;
-import dynamic.mapping.model.DeploymentMapEntryDetailed;
+import dynamic.mapping.model.DeploymentMapEntry;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.LoggingEventType;
 import dynamic.mapping.model.Mapping;
@@ -669,15 +669,15 @@ public abstract class AConnectorClient {
         }
     }
 
-    public void collectSubscribedMappingsAll(Map<String, DeploymentMapEntryDetailed> mappingsDeployed) {
+    public void collectSubscribedMappingsAll(Map<String, DeploymentMapEntry> mappingsDeployed) {
         ConnectorConfiguration cleanedConfiguration = getConnectorConfiguration()
                 .getCleanedConfig(connectorSpecification);
         List<String> subscribedMappingsInbound = getMappingsDeployedInbound().keySet().stream()
                 .collect(Collectors.toList());
         // iterate over all mappings for specific client
         subscribedMappingsInbound.forEach(mappingIdent -> {
-            DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(mappingIdent,
-                    new DeploymentMapEntryDetailed(mappingIdent));
+            DeploymentMapEntry mappingDeployed = mappingsDeployed.getOrDefault(mappingIdent,
+                    new DeploymentMapEntry(mappingIdent));
             mappingDeployed.getConnectors().add(cleanedConfiguration);
             mappingsDeployed.put(mappingIdent, mappingDeployed);
         });
@@ -685,8 +685,8 @@ public abstract class AConnectorClient {
                 .collect(Collectors.toList());
         // iterate over all mappings for specific client
         subscribedMappingsOutbound.forEach(mappingIdent -> {
-            DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(mappingIdent,
-                    new DeploymentMapEntryDetailed(mappingIdent));
+            DeploymentMapEntry mappingDeployed = mappingsDeployed.getOrDefault(mappingIdent,
+                    new DeploymentMapEntry(mappingIdent));
             mappingDeployed.getConnectors().add(cleanedConfiguration);
             mappingsDeployed.put(mappingIdent, mappingDeployed);
         });

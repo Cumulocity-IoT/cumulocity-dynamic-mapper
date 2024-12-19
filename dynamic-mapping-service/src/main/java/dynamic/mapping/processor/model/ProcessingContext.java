@@ -68,6 +68,7 @@ public class ProcessingContext<O> {
 
     private MappingType mappingType;
 
+    // <pathTarget, substitueValues>
     private Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
     
     private boolean sendPayload = false;
@@ -84,7 +85,7 @@ public class ProcessingContext<O> {
 
     private byte[] key;
 
-    private String source;
+    private String sourceId;
 
     public static final String SOURCE_ID = "source.id";
 
@@ -109,14 +110,14 @@ public class ProcessingContext<O> {
      * @return true if all added cardinalities are the same, false if at least two
      * different cardinalities exist.
      */
-    public void addCardinality(String pathTarget, Integer card) {
-        cardinality.put(pathTarget, card);
-        Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
-        Stream<Entry<String, Integer>> stream1 = entries.stream()
-                .filter(e -> !ProcessingContext.SOURCE_ID.equals(e.getKey()));
-        Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
-        needsRepair = (collect.size() != 1);
-    }
+    // public void addCardinality(String pathTarget, Integer card) {
+    //     cardinality.put(pathTarget, card);
+    //     Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
+    //     Stream<Entry<String, Integer>> stream1 = entries.stream()
+    //             .filter(e -> !ProcessingContext.SOURCE_ID.equals(e.getKey()));
+    //     Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
+    //     needsRepair = (collect.size() != 1);
+    // }
 
     public C8YRequest getCurrentRequest() {
         return requests.get(requests.size()-1);

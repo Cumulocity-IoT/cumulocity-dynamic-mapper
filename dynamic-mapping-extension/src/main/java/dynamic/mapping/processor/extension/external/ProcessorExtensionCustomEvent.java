@@ -34,66 +34,67 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
 
-import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<byte[]> {
-        @Override
-        public void extractFromSource(ProcessingContext<byte[]> context)
-                        throws ProcessingException {
-                CustomEventOuter.CustomEvent payloadProtobuf;
-                try {
-                        byte[] payload = context.getPayload();
-                        if (payload == null) {
-                                log.info("Tenant {} - Preparing new event failed, payload == null",
-                                                context.getTenant());
+    @Override
+    public void extractFromSource(ProcessingContext<byte[]> context)
+            throws ProcessingException {
+        CustomEventOuter.CustomEvent payloadProtobuf;
+        try {
+            byte[] payload = context.getPayload();
+            if (payload == null) {
+                log.info("Tenant {} - Preparing new event failed, payload == null",
+                        context.getTenant());
 
-                        } else {
-                                log.info("Tenant {} - Preparing new event: {}", context.getTenant(),
-                                                new String(payload));
-                        }
-                        payloadProtobuf = CustomEventOuter.CustomEvent
-                                        .parseFrom(payload);
-                } catch (InvalidProtocolBufferException e) {
-                        throw new ProcessingException(e.getMessage());
-                }
-                Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context
-                                .getPostProcessingCache();
-
-                postProcessingCache.put("time",
-                                new ArrayList<MappingSubstitution.SubstituteValue>(
-                                                Arrays.asList(new MappingSubstitution.SubstituteValue(
-                                                                new TextNode(new DateTime(
-                                                                                payloadProtobuf.getTimestamp())
-                                                                                .toString()),
-                                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                                RepairStrategy.DEFAULT))));
-                postProcessingCache.put("text",
-                                new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                                                new MappingSubstitution.SubstituteValue(
-                                                                new TextNode(payloadProtobuf.getTxt()),
-                                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                                RepairStrategy.DEFAULT))));
-                postProcessingCache.put("type",
-                                new ArrayList<MappingSubstitution.SubstituteValue>(
-                                                Arrays.asList(
-                                                                new MappingSubstitution.SubstituteValue(
-                                                                                new TextNode(payloadProtobuf
-                                                                                                .getEventType()),
-                                                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                                                RepairStrategy.DEFAULT))));
-                postProcessingCache.put(context.getMapping().targetAPI.identifier,
-                                new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                                                new MappingSubstitution.SubstituteValue(
-                                                                new TextNode(payloadProtobuf.getExternalId()),
-                                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                                RepairStrategy.DEFAULT))));
-                log.info("Tenant {} - New event over protobuf: {}, {}, {}, {}", context.getTenant(),
-                                payloadProtobuf.getTimestamp(),
-                                payloadProtobuf.getTxt(), payloadProtobuf.getEventType(),
-                                payloadProtobuf.getExternalId());
+            } else {
+                log.info("Tenant {} - Preparing new event: {}", context.getTenant(),
+                        new String(payload));
+            }
+            payloadProtobuf = CustomEventOuter.CustomEvent
+                    .parseFrom(payload);
+        } catch (InvalidProtocolBufferException e) {
+            throw new ProcessingException(e.getMessage());
         }
+        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context
+                .getPostProcessingCache();
+
+        postProcessingCache.put("time",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(new MappingSubstitution.SubstituteValue(
+                                new DateTime(
+                                        payloadProtobuf.getTimestamp())
+                                        .toString(),
+                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
+        postProcessingCache.put("text",
+                new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
+                        new MappingSubstitution.SubstituteValue(
+                                payloadProtobuf.getTxt(),
+                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
+        postProcessingCache.put("type",
+                new ArrayList<MappingSubstitution.SubstituteValue>(
+                        Arrays.asList(
+                                new MappingSubstitution.SubstituteValue(
+                                        payloadProtobuf
+                                                .getEventType(),
+                                        MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                        RepairStrategy.DEFAULT))));
+                                        
+        // as the mappping uses useExternalId we have to map the id to _IDENTITY_.externalId
+        postProcessingCache.put(context.getMapping().getGenericDeviceIdentifier(),
+                new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
+                        new MappingSubstitution.SubstituteValue(
+                                payloadProtobuf.getExternalId(),
+                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
+        log.info("Tenant {} - New event over protobuf: {}, {}, {}, {}", context.getTenant(),
+                payloadProtobuf.getTimestamp(),
+                payloadProtobuf.getTxt(), payloadProtobuf.getEventType(),
+                payloadProtobuf.getExternalId());
+    }
 }

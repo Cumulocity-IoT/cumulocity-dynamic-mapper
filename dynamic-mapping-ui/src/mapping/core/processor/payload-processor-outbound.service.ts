@@ -21,20 +21,20 @@
 import { Injectable } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
-import { API, Mapping, MappingType, RepairStrategy } from '../../shared';
+import { API, Mapping, MappingType, RepairStrategy } from '../../../shared';
 import {
   TOKEN_TOPIC_LEVEL,
-  getTypedValue,
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator
-} from '../shared/util';
-import { C8YAgent } from '../core/c8y-agent.service';
+} from '../../shared/util';
+import { C8YAgent } from '../c8y-agent.service';
 import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType
 } from './processor.model';
-import { MQTTClient } from '../core/mqtt-client.service';
+import { MQTTClient } from '../mqtt-client.service';
+import { getTypedValue } from './util';
 
 @Injectable({ providedIn: 'root' })
 export abstract class PayloadProcessorOutbound {
@@ -42,11 +42,12 @@ export abstract class PayloadProcessorOutbound {
     private alert: AlertService,
     public c8yAgent: C8YAgent,
     private mqttClient: MQTTClient
-  ) {}
+  ) { }
 
   abstract deserializePayload(
-    context: ProcessingContext,
-    mapping: Mapping
+    mapping: Mapping,
+    message: any,
+    context: ProcessingContext
   ): ProcessingContext;
 
   abstract extractFromSource(context: ProcessingContext): void;

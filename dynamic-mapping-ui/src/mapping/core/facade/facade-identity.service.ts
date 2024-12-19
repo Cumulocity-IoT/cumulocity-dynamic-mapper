@@ -26,7 +26,7 @@ import {
   IResult,
   IResultList
 } from '@c8y/client';
-import { ProcessingContext } from '../../processor/processor.model';
+import { ProcessingContext } from '../processor/processor.model';
 import { MockIdentityService } from '../mock/mock-identity.service';
 
 @Injectable({ providedIn: 'root' })

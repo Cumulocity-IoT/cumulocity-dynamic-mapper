@@ -30,7 +30,7 @@
         (ngModelChange)="onFilterMappingServiceEventSelect($event)" name="type">
         <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
           <option [ngValue]="lt.key">
-            {{ lt.key | formatStringAsWords }}
+            {{ lt.key | formatStringAsWords:1 }}
           </option>
         </ng-container>
       </select>

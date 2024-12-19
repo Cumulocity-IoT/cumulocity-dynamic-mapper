@@ -24,8 +24,8 @@ package dynamic.mapping.processor.outbound;
 import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -202,7 +202,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
-                if (mapping.isActive() && connectorClient.getMappingsDeployedOutbound().containsKey(mapping.identifier)) {
+                if (mapping.isActive()
+                        && connectorClient.getMappingsDeployedOutbound().containsKey(mapping.identifier)) {
                     MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
                     BasePayloadProcessorOutbound processor = payloadProcessorsOutbound.get(mapping.mappingType);
@@ -234,14 +235,17 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
                                     || mapping.snoopStatus == SnoopStatus.STARTED) {
                                 String serializedPayload = null;
-                                if (context.getPayload() instanceof JsonNode) {
-                                    serializedPayload = objectMapper
-                                            .writeValueAsString((JsonNode) context.getPayload());
-                                } else if (context.getPayload() instanceof String) {
-                                    serializedPayload = (String) context.getPayload();
-                                }
-                                if (context.getPayload() instanceof byte[]) {
-                                    serializedPayload = Hex.encodeHexString((byte[]) context.getPayload());
+                                Object payload = context.getPayload();
+                                switch (payload) {
+                                    case String payloadString:
+                                        serializedPayload = payloadString;
+                                        break;
+                                    case byte[] payloadByte:
+                                        serializedPayload = Hex.encodeHexString((byte[]) payloadByte);
+                                        break;
+                                    case Object payloadObject:
+                                        serializedPayload = JsonPath.parse(payloadObject).jsonString();
+                                        break;
                                 }
 
                                 if (serializedPayload != null) {
@@ -314,8 +318,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         }
         if (c8yMessage.getPayload() != null) {
             try {
-                JsonNode message = objectMapper.readTree(c8yMessage.getPayload());
-                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, message, c8yMessage.getApi());
+                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage.getPayload(), c8yMessage.getApi());
                 if (resolvedMappings.size() > 0 && op != null)
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
             } catch (Exception e) {

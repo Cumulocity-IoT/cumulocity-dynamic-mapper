@@ -21,29 +21,7 @@
 
 package dynamic.mapping.processor.outbound;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
-
-import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.configuration.ServiceConfiguration;
-import dynamic.mapping.connector.core.client.AConnectorClient;
-import dynamic.mapping.core.C8YAgent;
-import dynamic.mapping.core.ConfigurationRegistry;
-import dynamic.mapping.model.API;
-import dynamic.mapping.processor.C8YMessage;
-import dynamic.mapping.processor.ProcessingException;
-import dynamic.mapping.processor.model.C8YRequest;
-import dynamic.mapping.processor.model.MappingType;
-import dynamic.mapping.processor.model.ProcessingContext;
-import dynamic.mapping.processor.model.RepairStrategy;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.json.JSONException;
-import org.springframework.web.bind.annotation.RequestMethod;
+import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -51,18 +29,35 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
+
+import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
+import dynamic.mapping.model.API;
+import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.processor.C8YMessage;
+import dynamic.mapping.processor.ProcessingException;
+import dynamic.mapping.processor.model.C8YRequest;
+import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.processor.model.RepairStrategy;
+import lombok.extern.slf4j.Slf4j;
+
 @Slf4j
 public abstract class BasePayloadProcessorOutbound<T> {
 
     public BasePayloadProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
-        this.objectMapper = configurationRegistry.getObjectMapper();
         this.connectorClient = connectorClient;
         this.c8yAgent = configurationRegistry.getC8yAgent();
     }
 
     protected C8YAgent c8yAgent;
-
-    protected ObjectMapper objectMapper;
 
     protected AConnectorClient connectorClient;
 
@@ -104,16 +99,16 @@ public abstract class BasePayloadProcessorOutbound<T> {
                     serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
-        String deviceSource = context.getSource();
+        String deviceSource = context.getSourceId();
 
         for (String pathTarget : pathTargets) {
-            MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
-                    new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+            MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
+                    "NOT_DEFINED", MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
             if (postProcessingCache.get(pathTarget).size() > 0) {
-                substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+                substitute = postProcessingCache.get(pathTarget).get(0).clone();
             }
-            substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+            substituteValueInPayload(mapping.mappingType, substitute, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to mqttBroker
@@ -177,29 +172,4 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 1);
         return context;
     }
-
-    public void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue sub,
-            DocumentContext jsonObject, String keys)
-            throws JSONException {
-        boolean subValueMissing = sub.value == null;
-        boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
-        try {
-            if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                    (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
-                jsonObject.delete(keys);
-            } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                // boolean pathIsNested = keys.contains(".") || keys.contains("[");
-                // if (pathIsNested) {
-                // throw new JSONException("Can only create new nodes on the root level!");
-                // }
-                // jsonObject.put("$", keys, sub.typedValue());
-                jsonObject.set("$." + keys, sub.typedValue());
-            } else {
-                jsonObject.set(keys, sub.typedValue());
-            }
-        } catch (PathNotFoundException e) {
-            throw new PathNotFoundException(String.format("Path: %s not found!", keys));
-        }
-    }
-
 }
