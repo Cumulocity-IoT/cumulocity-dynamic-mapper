@@ -68,6 +68,7 @@ import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
+import { patchC8YTemplateForTesting } from '../shared/util';
 
 @Injectable({
   providedIn: 'root'
@@ -259,7 +260,7 @@ export class MappingService {
       ),
       map(([mappings, mappingsDeployed]) => {
         const mappingsEnriched = [];
-        mappings.forEach((m) => {
+        mappings?.forEach((m) => {
           mappingsEnriched.push({
             id: m.id,
             mapping: m,
@@ -438,9 +439,8 @@ export class MappingService {
     return m;
   }
 
-  private initializeContext(
+  public initializeContext(
     mapping: Mapping,
-    sendPayload: boolean
   ): ProcessingContext {
     const ctx: ProcessingContext = {
       mapping: mapping,
@@ -449,27 +449,27 @@ export class MappingService {
           ? mapping.mappingTopicSample
           : mapping.publishTopicSample,
       processingType: ProcessingType.UNDEFINED,
-      cardinality: new Map<string, number>(),
       errors: [],
       mappingType: mapping.mappingType,
       postProcessingCache: new Map<string, SubstituteValue[]>(),
-      sendPayload: sendPayload,
+      sendPayload: false,
       requests: []
     };
+    // since the Cumulocity identifiers are not included in the sourceTemplate, we add them for local testing
     return ctx;
   }
 
   async testResult(
-    mapping: Mapping,
-    sendPayload: boolean
+    context: ProcessingContext,
+    message: any
   ): Promise<ProcessingContext> {
-    const context = this.initializeContext(mapping, sendPayload);
+    const { mapping } = context;
     if (mapping.direction == Direction.INBOUND) {
-      this.jsonProcessorInbound.deserializePayload(context, mapping);
+      this.jsonProcessorInbound.deserializePayload(mapping, message, context);
       await this.jsonProcessorInbound.extractFromSource(context);
       await this.jsonProcessorInbound.substituteInTargetAndSend(context);
     } else {
-      this.jsonProcessorOutbound.deserializePayload(context, mapping);
+      this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
       await this.jsonProcessorOutbound.extractFromSource(context);
       await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
     }

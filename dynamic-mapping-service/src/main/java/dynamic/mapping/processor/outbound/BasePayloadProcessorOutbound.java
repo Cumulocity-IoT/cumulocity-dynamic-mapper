@@ -99,7 +99,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                     serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
-        String deviceSource = context.getSource();
+        String deviceSource = context.getSourceId();
 
         for (String pathTarget : pathTargets) {
             MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(

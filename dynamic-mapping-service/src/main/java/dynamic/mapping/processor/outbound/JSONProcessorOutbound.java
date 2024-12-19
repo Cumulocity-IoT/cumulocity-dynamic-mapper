@@ -22,10 +22,8 @@
 package dynamic.mapping.processor.outbound;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
-import static dynamic.mapping.model.Mapping.findDeviceIdentifier;
+import static dynamic.mapping.model.Mapping.getPathSourceForDeviceIdentifiers;
 import static dynamic.mapping.model.MappingSubstitution.isArray;
-import static dynamic.mapping.model.MappingSubstitution.isNumber;
-import static dynamic.mapping.model.MappingSubstitution.isTextual;
 import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 
 import java.io.IOException;
@@ -83,13 +81,20 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
          */
         var sourceId = extractContent(context, mapping, payloadObjectNode, payloadAsString,
                 mapping.targetAPI.identifier);
+        context.setSourceId(sourceId.toString());
         Map<String, String> identityFragment = new HashMap<>();
         identityFragment.put("c8ySourceId", sourceId.toString());
         identityFragment.put("externalIdType", mapping.externalIdType);
-        if (mapping.externalIdType != null && !("").equals(mapping.externalIdType)) {
+        if (mapping.useExternalId && !("").equals(mapping.externalIdType)) {
             ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                     new GId(sourceId.toString()), mapping.externalIdType,
                     context);
+            if (externalId == null) {
+                if (context.isSendPayload()) {
+                    throw new RuntimeException(String.format("External id %s for type %s not found!",
+                            sourceId.toString(), mapping.externalIdType));
+                }
+            }
             identityFragment.put("externalId", externalId.getExternalId());
         }
         if (payloadObjectNode instanceof Map) {
@@ -112,8 +117,8 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
             /*
              * step 1 extract content from inbound payload
              */
-            var ps = substitution.pathSource;
-            extractedSourceContent = extractContent(context, mapping, payloadObjectNode, payloadAsString, ps);
+            extractedSourceContent = extractContent(context, mapping, payloadObjectNode, payloadAsString,
+                    substitution.pathSource);
             /*
              * step 2 analyse extracted content: textual, array
              */
@@ -122,7 +127,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
                     new ArrayList<MappingSubstitution.SubstituteValue>());
 
             if (isArray(extractedSourceContent) && substitution.expandArray) {
-                Collection extractedSourceContentCollection = (Collection) extractedSourceContent;
+                var extractedSourceContentCollection = (Collection) extractedSourceContent;
                 // extracted result from sourcePayload is an array, so we potentially have to
                 // iterate over the result, e.g. creating multiple devices
                 for (Object jn : extractedSourceContentCollection) {
@@ -130,23 +135,6 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
                             substitution, mapping);
                 }
             } else {
-                if (ps.equals(findDeviceIdentifier(mapping).pathSource)) {
-                    log.debug("Tenant {} - Finding external Id: resolveGlobalId2ExternalId: {}, {}, {}",
-                            context.getTenant(), ps, toPrettyJsonString(extractedSourceContent),
-                            extractedSourceContent);
-                    ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
-                            new GId(extractedSourceContent.toString()), mapping.externalIdType,
-                            context);
-                    if (externalId == null && context.isSendPayload()) {
-                        throw new RuntimeException(String.format("External id %s for type %s not found!",
-                                extractedSourceContent, mapping.externalIdType));
-                    } else if (externalId == null) {
-                        extractedSourceContent = "_UNKNOWN_";
-                    } else {
-                        extractedSourceContent = externalId.getExternalId();
-                    }
-                    context.setSource(extractedSourceContent.toString());
-                }
                 MappingSubstitution.processSubstitute(tenant, postProcessingCacheEntry, extractedSourceContent,
                         substitution, mapping);
             }
@@ -158,7 +146,6 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
                         substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
             }
         }
-
     }
 
     private Object extractContent(ProcessingContext<Object> context, Mapping mapping, Object payloadJsonNode,

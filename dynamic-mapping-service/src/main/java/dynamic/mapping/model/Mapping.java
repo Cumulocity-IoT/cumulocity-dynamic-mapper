@@ -208,13 +208,13 @@ public class Mapping implements Serializable {
     public boolean definesDeviceIdentifier(
             MappingSubstitution sub) {
         if (Direction.INBOUND.equals(direction)) {
-            if (externalIdType != null && !("").equals(externalIdType)) {
+            if (useExternalId && !("").equals(externalIdType)) {
                 return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
             } else {
                 return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
             }
         } else {
-            if (externalIdType != null && !("").equals(externalIdType)) {
+            if (useExternalId && !("").equals(externalIdType)) {
                 return (Mapping.IDENTITY + ".externalId").equals(sub.pathSource);
             } else {
                 return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathSource);
@@ -421,14 +421,26 @@ public class Mapping implements Serializable {
         return nt;
     }
 
-    static public MappingSubstitution findDeviceIdentifier(Mapping mapping) {
-        Object[] mp = Arrays.stream(mapping.substitutions)
+    static public List<MappingSubstitution> getDeviceIdentifiers(Mapping mapping) {
+        List<MappingSubstitution> mp = Arrays.stream(mapping.substitutions)
                 .filter(sub -> mapping.definesDeviceIdentifier(sub))
-                .toArray();
-        if (mp.length > 0) {
-            return (MappingSubstitution) mp[0];
-        } else {
-            return null;
-        }
+                .toList();
+        return mp;
+    }
+
+    static public List<String> getPathSourceForDeviceIdentifiers(Mapping mapping) {
+        List<String> pss = Arrays.stream(mapping.substitutions)
+                .filter(sub -> mapping.definesDeviceIdentifier(sub))
+                .map(sub -> sub.pathSource)
+                .toList();
+        return pss;
+    }
+
+    static public List<String> getPathTargetForDeviceIdentifiers(Mapping mapping) {
+        List<String> pss = Arrays.stream(mapping.substitutions)
+                .filter(sub -> mapping.definesDeviceIdentifier(sub))
+                .map(sub -> sub.pathTarget)
+                .toList();
+        return pss;
     }
 }

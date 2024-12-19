@@ -21,6 +21,7 @@
 
 package dynamic.mapping.processor.inbound;
 
+import static dynamic.mapping.model.Mapping.getPathTargetForDeviceIdentifiers;
 import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
 
 import com.cumulocity.model.ID;
@@ -91,14 +92,12 @@ public abstract class BasePayloadProcessorInbound<T> {
                         .compareTo(e2.getValue()))
                 .get().getKey();
 
-        // the following stmt does not work for mapping_type protobuf
-        // String deviceIdentifierMapped2PathTarget =
-        // MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
-        // using alternative method
-        // String deviceIdentifierMapped2PathTarget = mapping.targetAPI.identifier;
-        String deviceIdentifierMapped2PathTarget = mapping.getGenericDeviceIdentifier();
+        List<String> pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
+        String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
+                ? pathsTargetForDeviceIdentifiers.get(0)
+                : null;
         List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
-                .get(deviceIdentifierMapped2PathTarget);
+                .get(firstPathTargetForDeviceIdentifiers);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
         MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxlistEntries) {
@@ -111,7 +110,8 @@ public abstract class BasePayloadProcessorInbound<T> {
         if (mapping.createNonExistingDevice) {
             for (int i = 0; i < deviceEntries.size(); i++) {
                 // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
-                getBuildProcessingContext(context, i, postProcessingCache);
+                getBuildProcessingContext(context, postProcessingCache, deviceEntries.get(i),
+                        pathsTargetForDeviceIdentifiers, i, deviceEntries.size());
             }
             log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {} !", tenant,
                     mapping.createNonExistingDevice);
@@ -122,7 +122,8 @@ public abstract class BasePayloadProcessorInbound<T> {
                 // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
                 int finalI = i;
                 contextFutureList.add(processingCachePool.submit(() -> {
-                    return getBuildProcessingContext(context, finalI, postProcessingCache);
+                    return getBuildProcessingContext(context, postProcessingCache, deviceEntries.get(finalI),
+                            pathsTargetForDeviceIdentifiers, finalI, deviceEntries.size());
                 }));
             }
             int j = 0;
@@ -139,15 +140,13 @@ public abstract class BasePayloadProcessorInbound<T> {
         }
     }
 
-    private ProcessingContext<T> getBuildProcessingContext(ProcessingContext<T> context, int finalI,
-            Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache) {
+    private ProcessingContext<T> getBuildProcessingContext(ProcessingContext<T> context,
+            Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache,
+            MappingSubstitution.SubstituteValue device, List<String> pathsTargetForDeviceIdentifiers, int finalI, int size) {
         Set<String> pathTargets = postProcessingCache.keySet();
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        String deviceIdentifierMapped2PathTarget = mapping.getGenericDeviceIdentifier();
-        List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
-                .get(deviceIdentifierMapped2PathTarget);
-        MappingSubstitution.SubstituteValue device = deviceEntries.get(finalI);
+
         int predecessor = -1;
         DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
         for (String pathTarget : pathTargets) {
@@ -173,8 +172,7 @@ public abstract class BasePayloadProcessorInbound<T> {
             }
 
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                if (pathTarget.equals(deviceIdentifierMapped2PathTarget) && mapping.useExternalId) {
-
+                if (pathsTargetForDeviceIdentifiers.contains(pathTarget) && mapping.useExternalId) {
                     ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                             new ID(mapping.externalIdType, substitute.value.toString()), context);
                     if (sourceId == null && mapping.createNonExistingDevice) {
@@ -219,7 +217,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                 }
                 substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
-            } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget)) {
+            } else if (!pathTarget.equals(pathsTargetForDeviceIdentifiers)) {
                 // since the attributes identifying the MEA and Invnetory requests are removed
                 // during the design time, htey have to be added before sending
                 if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
@@ -274,7 +272,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         }
         log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
                 mapping.targetAPI,
-                deviceEntries.size());
+                size);
         return context;
     }
 

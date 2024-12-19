@@ -54,7 +54,6 @@ import {
   StepperConfiguration,
   getExternalTemplate,
   getSchema,
-  whatIsIt
 } from '../../shared';
 import { JsonEditorComponent } from '../../shared';
 import { MappingService } from '../core/mapping.service';
@@ -67,6 +66,7 @@ import {
   expandExternalTemplate,
   getGenericDeviceIdentifier,
   isDisabled,
+  isTypeOf,
   reduceSourceTemplate,
   splitTopicExcludingSeparator
 } from '../shared/util';
@@ -424,7 +424,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         path
       );
       this.substitutionModel.sourceExpression = {
-        resultType: whatIsIt(r),
+        resultType: isTypeOf(r),
         result: JSON.stringify(r, null, 4),
         valid: true
       };
@@ -457,7 +457,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         path
       );
       this.substitutionModel.targetExpression = {
-        resultType: whatIsIt(r),
+        resultType: isTypeOf(r),
         result: JSON.stringify(r, null, 4),
         valid: true
       };

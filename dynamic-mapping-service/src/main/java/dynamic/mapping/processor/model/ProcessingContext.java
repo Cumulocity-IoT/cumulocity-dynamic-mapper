@@ -68,6 +68,7 @@ public class ProcessingContext<O> {
 
     private MappingType mappingType;
 
+    // <pathTarget, substitueValues>
     private Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
     
     private boolean sendPayload = false;
@@ -84,7 +85,7 @@ public class ProcessingContext<O> {
 
     private byte[] key;
 
-    private String source;
+    private String sourceId;
 
     public static final String SOURCE_ID = "source.id";
 

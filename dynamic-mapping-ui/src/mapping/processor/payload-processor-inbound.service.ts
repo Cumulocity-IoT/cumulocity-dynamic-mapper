@@ -28,7 +28,7 @@ import {
   MAPPING_TEST_DEVICE_TYPE,
   MAPPING_TEST_DEVICE_FRAGMENT
 } from '../../shared';
-import { findDeviceIdentifier, getGenericDeviceIdentifier, getTypedValue, substituteValueInPayload, transformGenericPath2C8YPath } from '../shared/util';
+import { findDeviceIdentifier, getGenericDeviceIdentifier, getPathTargetForDeviceIdentifiers, getTypedValue, substituteValueInPayload, transformGenericPath2C8YPath } from '../shared/util';
 import { C8YAgent } from '../core/c8y-agent.service';
 import {
   ProcessingContext,
@@ -44,8 +44,9 @@ export abstract class PayloadProcessorInbound {
   ) { }
 
   abstract deserializePayload(
-    context: ProcessingContext,
-    mapping: Mapping
+    mapping: Mapping,
+    message: any,
+    context: ProcessingContext
   ): ProcessingContext;
 
   abstract extractFromSource(context: ProcessingContext): void;
@@ -61,21 +62,19 @@ export abstract class PayloadProcessorInbound {
     // step 3 replace target with extract content from inbound payload
 
     const { mapping } = context;
-
     const { postProcessingCache } = context;
-    let deviceIdentifierMapped2PathTarget: string = findDeviceIdentifier(context.mapping).pathTarget;
-    for (const entry of postProcessingCache.entries()) {
-      if (postProcessingCache.get(deviceIdentifierMapped2PathTarget).length < entry[1].length) {
-        deviceIdentifierMapped2PathTarget = entry[0];
-      }
-    }
+
+    const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(mapping);
+    const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
+      ? pathsTargetForDeviceIdentifiers[0]
+      : null;
 
     const deviceEntries: SubstituteValue[] = postProcessingCache.get(
       findDeviceIdentifier(context.mapping).pathTarget
     );
 
     const countMaxlistEntries: number =
-      postProcessingCache.get(deviceIdentifierMapped2PathTarget).length;
+      postProcessingCache.get(firstPathTargetForDeviceIdentifiers).length;
     const [toDouble] = deviceEntries;
     while (deviceEntries.length < countMaxlistEntries) {
       deviceEntries.push(toDouble);
@@ -156,7 +155,7 @@ export abstract class PayloadProcessorInbound {
                 [MAPPING_TEST_DEVICE_FRAGMENT]: {},
                 type: MAPPING_TEST_DEVICE_TYPE
               };
-              
+
               const newPredecessor = context.requests.push({
                 predecessor: predecessor,
                 method: 'PATCH',

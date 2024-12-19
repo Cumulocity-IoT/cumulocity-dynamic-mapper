@@ -42,11 +42,12 @@ export abstract class PayloadProcessorOutbound {
     private alert: AlertService,
     public c8yAgent: C8YAgent,
     private mqttClient: MQTTClient
-  ) {}
+  ) { }
 
   abstract deserializePayload(
-    context: ProcessingContext,
-    mapping: Mapping
+    mapping: Mapping,
+    message: any,
+    context: ProcessingContext
   ): ProcessingContext;
 
   abstract extractFromSource(context: ProcessingContext): void;

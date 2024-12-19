@@ -31,22 +31,14 @@ import {
 import { ValidationFormlyError } from './mapping.model';
 import { SubstituteValue, SubstituteValueType } from '../processor/processor.model';
 import * as _ from 'lodash';
+import { MappingSubscriptionComponent } from '../subscription/subscription.component';
+import { identifierName } from '@angular/compiler';
 
 export const IDENTITY = '_IDENTITY_';
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
 export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
 export const TIME = 'time';
-
-export function getTypedValue(subValue: SubstituteValue): any {
-  if (subValue.type == SubstituteValueType.NUMBER) {
-    return Number(subValue.value);
-  } else if (subValue.type == SubstituteValueType.TEXTUAL) {
-    return String(subValue.value);
-  } else {
-    return subValue.value;
-  }
-}
 
 export function splitTopicExcludingSeparator(topic: string): string[] {
   let topix = topic;
@@ -408,10 +400,6 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
-export const isNumeric = (num: any) =>
-  (typeof num === 'number' || (typeof num === 'string' && num.trim() !== '')) &&
-  !isNaN(num as number);
-
 export function definesDeviceIdentifier(
   api: string,
   externalIdType: string,
@@ -508,6 +496,16 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
   }
 }
 
+export function randomString(){
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
+  const identifier = randomString();
+  _.set(template, API[mapping.targetAPI].identifier, identifier);
+  _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
+}
+
 export function reduceSourceTemplate(
   template: object,
   returnPatched: boolean
@@ -547,6 +545,29 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
   }
 }
 
+export function getDeviceIdentifiers(mapping: Mapping): MappingSubstitution[] {
+  const mp: MappingSubstitution[] = mapping.substitutions
+    .filter(sub => definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType
+      , mapping.direction, sub));
+  return mp;
+}
+
+export function getPathSourceForDeviceIdentifiers(mapping: Mapping): string[] {
+  const pss = mapping.substitutions
+    .filter(sub => definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType
+      , mapping.direction, sub))
+    .map(sub => sub.pathSource);
+  return pss;
+}
+
+export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
+  const pss = mapping.substitutions
+    .filter(sub => definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType
+      , mapping.direction, sub))
+    .map(sub => sub.pathTarget);
+  return pss;
+}
+
 export function transformGenericPath2C8YPath(mapping: Mapping, originalPath: string): string {
   // "_IDENTITY_.externalId" => source.id
   if (getGenericDeviceIdentifier(mapping) === originalPath) {
@@ -565,7 +586,84 @@ export function transformC8YPath2GenericPath(mapping: Mapping, originalPath: str
   }
 }
 
-export function   substituteValueInPayload(
+export function getTypedValue(subValue: SubstituteValue): any {
+  if (subValue.type == SubstituteValueType.NUMBER) {
+    return Number(subValue.value);
+  } else if (subValue.type == SubstituteValueType.TEXTUAL) {
+    return String(subValue.value);
+  } else {
+    return subValue.value;
+  }
+}
+export function isTypeOf(object) {
+  const stringConstructor = 'test'.constructor;
+  const arrayConstructor = [].constructor;
+  const objectConstructor = {}.constructor;
+  if (object === null) {
+    return 'null';
+  } else if (object === undefined) {
+    return 'undefined';
+  } else if (object.constructor === stringConstructor) {
+    return 'String';
+  } else if (object.constructor === arrayConstructor) {
+    return 'Array';
+  } else if (object.constructor === objectConstructor) {
+    return 'Object';
+  } else if (typeof object === 'number') {
+    return 'Number';
+  } else {
+    return "don't know";
+  }
+}
+
+export const isNumeric = (num: any) =>
+  (typeof num === 'number' || (typeof num === 'string' && num.trim() !== '')) &&
+  !isNaN(num as number);
+
+
+export function processSubstitute(postProcessingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: MappingSubstitution, mapping: Mapping) {
+  if (isTypeOf(extractedSourceContent) == 'null') {
+    postProcessingCacheEntry.push({
+      value: extractedSourceContent,
+      type: SubstituteValueType.IGNORE,
+      repairStrategy: substitution.repairStrategy
+    });
+    console.error(
+      'No substitution for: ',
+      substitution.pathSource
+    );
+  } else if (isTypeOf(extractedSourceContent) == 'String') {
+    postProcessingCacheEntry.push({
+      value: extractedSourceContent,
+      type: SubstituteValueType.TEXTUAL,
+      repairStrategy: substitution.repairStrategy
+    });
+  } else if (isTypeOf(extractedSourceContent) == 'Number') {
+    postProcessingCacheEntry.push({
+      value: extractedSourceContent,
+      type: SubstituteValueType.NUMBER,
+      repairStrategy: substitution.repairStrategy
+    });
+  } else if (isTypeOf(extractedSourceContent) == 'Array') {
+    postProcessingCacheEntry.push({
+      value: extractedSourceContent,
+      type: SubstituteValueType.ARRAY,
+      repairStrategy: substitution.repairStrategy
+    });
+  } else if (isTypeOf(extractedSourceContent) == 'Object') {
+    postProcessingCacheEntry.push({
+      value: extractedSourceContent,
+      type: SubstituteValueType.OBJECT,
+      repairStrategy: substitution.repairStrategy
+    });
+  } else {
+    console.warn(
+      `Since result is not (number, array, textual, object), it is ignored: ${extractedSourceContent}`
+    );
+  }
+}
+
+export function substituteValueInPayload(
   type: MappingType,
   sub: SubstituteValue,
   jsonObject: JSON,
