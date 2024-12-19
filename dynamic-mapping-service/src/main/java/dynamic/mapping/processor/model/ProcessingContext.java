@@ -109,14 +109,14 @@ public class ProcessingContext<O> {
      * @return true if all added cardinalities are the same, false if at least two
      * different cardinalities exist.
      */
-    public void addCardinality(String pathTarget, Integer card) {
-        cardinality.put(pathTarget, card);
-        Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
-        Stream<Entry<String, Integer>> stream1 = entries.stream()
-                .filter(e -> !ProcessingContext.SOURCE_ID.equals(e.getKey()));
-        Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
-        needsRepair = (collect.size() != 1);
-    }
+    // public void addCardinality(String pathTarget, Integer card) {
+    //     cardinality.put(pathTarget, card);
+    //     Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
+    //     Stream<Entry<String, Integer>> stream1 = entries.stream()
+    //             .filter(e -> !ProcessingContext.SOURCE_ID.equals(e.getKey()));
+    //     Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
+    //     needsRepair = (collect.size() != 1);
+    // }
 
     public C8YRequest getCurrentRequest() {
         return requests.get(requests.size()-1);

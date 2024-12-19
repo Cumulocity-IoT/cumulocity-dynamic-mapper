@@ -144,26 +144,12 @@ public abstract class BasePayloadProcessorInbound<T> {
         Set<String> pathTargets = postProcessingCache.keySet();
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        // String deviceIdentifierMapped2PathTarget = mapping.targetAPI.identifier;
-                // String deviceIdentifierMapped2PathTarget = mapping.targetAPI.identifier;
-                String deviceIdentifierMapped2PathTarget = mapping.getGenericDeviceIdentifier();
+        String deviceIdentifierMapped2PathTarget = mapping.getGenericDeviceIdentifier();
         List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
                 .get(deviceIdentifierMapped2PathTarget);
         MappingSubstitution.SubstituteValue device = deviceEntries.get(finalI);
         int predecessor = -1;
         DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
-        // patch target template with IDENTITY attribute
-        // if (mapping.externalIdType != null && !("").equals(mapping.externalIdType)) {
-        //     payloadTarget.put("$", "_IDENTITY_",
-        //             Collections.singletonMap("_IDENTITY_",
-        //                     Map.of("externalIdType", "someType",
-        //                             "externalId", "someId")));
-        // } else {
-        //     payloadTarget.put("$", "_IDENTITY_",
-        //             Collections.singletonMap("_IDENTITY_",
-        //                     Map.of(
-        //                             "c8ySourceId", "someId")));
-        // }
         for (String pathTarget : pathTargets) {
             MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
                     "NOT_DEFINED", MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
@@ -226,17 +212,21 @@ public abstract class BasePayloadProcessorInbound<T> {
                     }
 
                 }
-                // since the attributes identifying the MEA and Invnetory requests are removed during the design time, htey have to be added before sending
+                // since the attributes identifying the MEA and Invnetory requests are removed
+                // during the design time, htey have to be added before sending
                 if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
                     substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
                 }
-                substituteValueInPayload(mapping.mappingType, substitute, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+                substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
+                        mapping.transformGenericPath2C8YPath(pathTarget));
             } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget)) {
-                // since the attributes identifying the MEA and Invnetory requests are removed during the design time, htey have to be added before sending
+                // since the attributes identifying the MEA and Invnetory requests are removed
+                // during the design time, htey have to be added before sending
                 if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
                     substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
                 }
-                substituteValueInPayload(mapping.mappingType, substitute, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+                substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
+                        mapping.transformGenericPath2C8YPath(pathTarget));
             }
         }
         /*
@@ -272,18 +262,6 @@ public abstract class BasePayloadProcessorInbound<T> {
                     c8yAgent.createMEAO(context);
                     String response = objectMapper.writeValueAsString(attocRequest);
                     context.getCurrentRequest().setResponse(response);
-                    /*
-                     * c8yAgent.createMEAOAsync(context).thenApply(resp -> {
-                     * String response = null;
-                     * try {
-                     * response = objectMapper.writeValueAsString(attocRequest);
-                     * } catch (JsonProcessingException e) {
-                     * context.getCurrentRequest().setError(e);
-                     * }
-                     * context.getCurrentRequest().setResponse(response);
-                     * return null;
-                     * });
-                     */
                 }
 
             } catch (Exception e) {

@@ -117,85 +117,23 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
             List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
                     substitution.pathTarget,
                     new ArrayList<MappingSubstitution.SubstituteValue>());
-            if (extractedSourceContent == null) {
-                log.warn("Tenant {} - Substitution {} not in message payload. Check your mapping {}", tenant,
-                        substitution.pathSource, mapping.getMappingTopic());
-                postProcessingCacheEntry
-                        .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
-                postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
+
+            if (isArray(extractedSourceContent) && substitution.expandArray) {
+                // extracted result from sourcePayload is an array, so we potentially have to
+                // iterate over the result, e.g. creating multiple devices
+                for (Object jn : (Collection) extractedSourceContent) {
+                    MappingSubstitution.processSubstitute(tenant, postProcessingCacheEntry, jn,
+                            substitution, mapping);
+                }
             } else {
-                if (isArray(extractedSourceContent)) {
-                    if (substitution.expandArray) {
-                        Collection extractedSourceContentCollection = (Collection) extractedSourceContent;
-                        // extracted result from sourcePayload is an array, so we potentially have to
-                        // iterate over the result, e.g. creating multiple devices
-                        for (Object jn : extractedSourceContentCollection) {
-                            if (isTextual(jn)) {
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                substitution.repairStrategy));
-                            } else if (isNumber(jn)) {
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.NUMBER,
-                                                substitution.repairStrategy));
-                            } else if (isArray(jn)) {
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.ARRAY,
-                                                substitution.repairStrategy));
-                            } else {
-                                // log.warn("Tenant {} - Since result is not textual or number it is ignored:
-                                // {}", tenant
-                                // jn.asText());
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.OBJECT,
-                                                substitution.repairStrategy));
-                            }
-                        }
-                        context.addCardinality(substitution.pathTarget, extractedSourceContentCollection.size());
-                        postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                    } else {
-                        // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE
-                        // substitution
-                        context.addCardinality(substitution.pathTarget, 1);
-                        postProcessingCacheEntry
-                                .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                        MappingSubstitution.SubstituteValue.TYPE.ARRAY,
-                                        substitution.repairStrategy));
-                        postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                    }
-                } else if (isTextual(extractedSourceContent)) {
-                    context.addCardinality(substitution.pathTarget, 1);
-                    postProcessingCacheEntry.add(
-                            new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                    MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
-                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                } else if (isNumber(extractedSourceContent)) {
-                    context.addCardinality(substitution.pathTarget, 1);
-                    postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                    MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
-                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                } else {
-                    if (serviceConfiguration.logSubstitution || mapping.debug) {
-                        log.debug("Tenant {} - This substitution, involves an objects for: {}, {}", tenant,
-                                substitution.pathSource, extractedSourceContent.toString());
-                    }
-                    context.addCardinality(substitution.pathTarget, 1);
-                    postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                    MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
-                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                }
-                if (serviceConfiguration.logSubstitution || mapping.debug) {
-                    log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
-                            tenant,
-                            substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
-                }
+                MappingSubstitution.processSubstitute(tenant, postProcessingCacheEntry, extractedSourceContent,
+                        substitution, mapping);
+            }
+            postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
+            if (serviceConfiguration.logSubstitution || mapping.debug) {
+                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                        tenant,
+                        substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
             }
 
             if (substitution.pathTarget.equals(Mapping.TIME)) {
