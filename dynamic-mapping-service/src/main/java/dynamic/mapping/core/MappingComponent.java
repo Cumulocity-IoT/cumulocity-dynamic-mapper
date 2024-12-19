@@ -240,7 +240,7 @@ public class MappingComponent {
     // ic List<MappingStatus> getMappingLoadingError(String tenant) {
     // // log.info("Tenant {} - get MappingStatus: {
     // ", tenant, m.identifier);
-    // Map<String, MappingStatus> mappingLoadErro
+    // Map<String, MappingStatus> mappingLoadError
     // = tenantMappingLoadingError.get(tenant);
     // List<MappingStatus> mappingLoadErrorList =
     // mappingLoadError.values().stream().collect(Collectors.toList());

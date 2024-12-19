@@ -36,12 +36,12 @@ import java.util.ArrayList;
 @NoArgsConstructor
 public class DeploymentMapEntry implements Serializable {
 	public DeploymentMapEntry(String identifier) {
-		this.identfier = identifier;
+		this.identifier = identifier;
 		this.connectors = new ArrayList<>();
 	}
 
 	@NotNull
-	public String identfier;
+	public String identifier;
 	@NotNull
 	public ArrayList<ConnectorConfiguration> connectors;
 }

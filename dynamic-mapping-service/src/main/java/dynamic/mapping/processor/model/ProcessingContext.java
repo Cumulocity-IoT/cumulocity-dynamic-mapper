@@ -68,7 +68,7 @@ public class ProcessingContext<O> {
 
     private MappingType mappingType;
 
-    // <pathTarget, substitueValues>
+    // <pathTarget, substituteValues>
     private Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
     
     private boolean sendPayload = false;

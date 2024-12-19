@@ -211,7 +211,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 
                 }
                 // since the attributes identifying the MEA and Invnetory requests are removed
-                // during the design time, htey have to be added before sending
+                // during the design time, they have to be added before sending
                 if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
                     substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
                 }
@@ -219,7 +219,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                         mapping.transformGenericPath2C8YPath(pathTarget));
             } else if (!pathTarget.equals(pathsTargetForDeviceIdentifiers)) {
                 // since the attributes identifying the MEA and Invnetory requests are removed
-                // during the design time, htey have to be added before sending
+                // during the design time, they have to be added before sending
                 if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
                     substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
                 }

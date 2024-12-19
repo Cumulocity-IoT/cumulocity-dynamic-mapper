@@ -72,7 +72,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
             `External id ${externalId} for type ${mapping.externalIdType} not found!`
           );
         } else {
-          // if this was runnning in Cumulocity, the external id could be resolved. Thus we create a device and use this for simulation
+          // if this was running in Cumulocity, the external id could be resolved. Thus we create a device and use this for simulation
           const externalIentifier = `GENERATED_EXTERNAL_ID_${randomString()}`;
           const simulatedDevice = await this.c8yAgent.upsertDevice({ externalId: `${externalIentifier}`, type: mapping.externalIdType }, context);
           externalId = await this.c8yAgent.resolveGlobalId2ExternalId(

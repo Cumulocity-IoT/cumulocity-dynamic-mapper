@@ -515,7 +515,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       await this.editorSourceStepSubstitution.setSelectionToPath(
         getGenericDeviceIdentifier(this.mapping)
       );
-      this.alertService.info(`Please use the selected node ${gi} to map the identiy from the source`);
+      this.alertService.info(`Please use the selected node ${gi} to map the identity from the source`);
     }
 
   }
@@ -533,7 +533,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       await this.editorTargetStepSubstitution.setSelectionToPath(
         gi
       );
-      this.alertService.info(`Please use the selected node ${gi} to map the identiy from the source`);
+      this.alertService.info(`Please use the selected node ${gi} to map the identity from the source`);
     }
   }
 
@@ -634,7 +634,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (this.stepperForward) {
         this.expandTemplates();
       }
-      // console.log("Step index 1 - afer", this.targetTemplate);
+      // console.log("Step index 1 - after", this.targetTemplate);
     } else if (index == STEP_DEFINE_SUBSTITUTIONS) {
       // console.log("Step 3: onStepChange targetTemplate ", this.mapping.targetTemplate);
       this.sourceTemplate = this.sourceTemplateUpdated ? this.sourceTemplateUpdated : this.sourceTemplate;
