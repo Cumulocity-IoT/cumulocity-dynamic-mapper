@@ -41,7 +41,7 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
     message: any,
     context:ProcessingContext
   ): ProcessingContext {
-    context.payload = JSON.parse(message);
+    context.payload = message;
     return context;
   }
 
