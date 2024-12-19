@@ -8,7 +8,7 @@ set -e
 # 1. rename 'source' -> 'sourceTemplate'
 # 2. rename 'target' -> 'targetTemplate'
 # 3. rename 'filterOutbound' -> 'filterMapping' only for outbound mappings
-# 4. remove 'subscriptionTopic', instead the conent of 'mappingTopic' is used for managing the subscriptions
+# 4. remove 'subscriptionTopic', instead the content of 'mappingTopic' is used for managing the subscriptions
 # 5. rename 'extension.event' -> 'extension.eventName'
 # 6. rename 'extension.name' -> 'extension.extensionName'
 # 6. add 'extension.extensionType: 'PROCESSOR_EXTENSION_SOURCE'
