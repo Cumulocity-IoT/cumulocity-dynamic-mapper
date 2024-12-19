@@ -343,7 +343,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.setTemplateForm();
   }
 
-  private updateSubstiutionValid() {
+  private updateSubstitutionValid() {
     const ni = countDeviceIdentifiers(this.mapping);
     // console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
     // (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
@@ -608,7 +608,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log("StepChange:", index);
     // this.step == 'Add and select connector'
     this.currentStepIndex = index;
-    this.updateSubstiutionValid();
+    this.updateSubstitutionValid();
     if (index == STEP_GENERAL_SETTINGS) {
       this.templateModel.mapping = this.mapping;
       this.templatesInitialized = false;
@@ -641,7 +641,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.targetTemplate = this.targetTemplateUpdated ? this.targetTemplateUpdated : this.targetTemplate;
       this.editorSourceStepSubstitution.set(this.sourceTemplate);
       this.editorTargetStepSubstitution.set(this.targetTemplate);
-      this.updateSubstiutionValid();
+      this.updateSubstitutionValid();
       this.onSelectSubstitution(0);
       this.editorTestingPayloadTemplateEmitter.emit({ mapping: this.mapping, sourceTemplate: this.sourceTemplate, targetTemplate: this.targetTemplate });
       // this.step == 'Select templates'
@@ -850,7 +850,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);
     }
-    this.updateSubstiutionValid();
+    this.updateSubstitutionValid();
   }
 
   toggleExpertMode() {
@@ -881,7 +881,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       modalRef.content.closeSubject.subscribe((editedSub) => {
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
-          this.updateSubstiutionValid();
+          this.updateSubstitutionValid();
           //this.substitutionModel = editedSub; not needed
         }
       });
@@ -921,11 +921,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         } else if (newSub && isDuplicate) {
           this.mapping.substitutions[duplicateSubstitutionIndex] = newSub;
         }
-        this.updateSubstiutionValid();
+        this.updateSubstitutionValid();
       });
     } else {
       this.mapping.substitutions.push(sub);
-      this.updateSubstiutionValid();
+      this.updateSubstitutionValid();
     }
   }
 

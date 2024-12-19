@@ -85,7 +85,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 
         // if there are too few devices identified, then we replicate the first device
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
-        String entryWithMaxSubstitues = postProcessingCache.entrySet()
+        String entryWithMaxSubstitutes = postProcessingCache.entrySet()
                 .stream()
                 .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
                 .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
@@ -98,7 +98,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                 : null;
         List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
                 .get(firstPathTargetForDeviceIdentifiers);
-        int countMaxEntries = postProcessingCache.get(entryWithMaxSubstitues).size();
+        int countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).size();
         MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxEntries) {
             deviceEntries.add(toDuplicate);

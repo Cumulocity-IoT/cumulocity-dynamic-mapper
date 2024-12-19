@@ -30,7 +30,7 @@ import { MonitoringChartComponent } from './chart/chart.component';
 import { MonitoringTabFactory } from './monitoring-tab.factory';
 import { NODE2 } from '../shared/mapping/util';
 import { NgxEchartsModule } from 'ngx-echarts';
-import { MapppingServiceEventComponent } from './event/mapping-service-event.component';
+import { MappingServiceEventComponent } from './event/mapping-service-event.component';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { SharedModule } from '../shared';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
@@ -38,7 +38,7 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
 @NgModule({
   declarations: [
     MonitoringComponent,
-    MapppingServiceEventComponent,
+    MappingServiceEventComponent,
     IdRendererComponent,
     NumberRendererComponent,
     DirectionRendererComponent,
@@ -66,7 +66,7 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
     }),
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/serviceEvent`,
-      component: MapppingServiceEventComponent
+      component: MappingServiceEventComponent
     }),
     hookTab(MonitoringTabFactory)
   ]
