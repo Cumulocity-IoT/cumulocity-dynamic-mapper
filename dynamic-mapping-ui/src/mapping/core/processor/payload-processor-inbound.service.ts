@@ -164,7 +164,8 @@ export abstract class PayloadProcessorInbound {
                   source: device.value,
                   externalIdType: mapping.externalIdType,
                   request,
-                  targetAPI: API.INVENTORY.name
+                  targetAPI: API.INVENTORY.name,
+                  hide: true
                 });
                 const response = await this.c8yClient.upsertDevice(
                   {
@@ -176,7 +177,7 @@ export abstract class PayloadProcessorInbound {
                 context.requests[newPredecessor - 1].response = response;
                 substitute.value = response.id as any;
               } catch (e) {
-                console.log ("Error", e);
+                console.log("Error", e);
               }
             }
             if (!sourceId.value && mapping.createNonExistingDevice) {

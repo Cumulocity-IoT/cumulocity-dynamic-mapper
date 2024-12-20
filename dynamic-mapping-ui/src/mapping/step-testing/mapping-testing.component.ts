@@ -204,37 +204,54 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   onNextTestResult() {
-    if (
-      this.testingModel.selectedResult >=
-      this.testingModel.results.length - 1
-    ) {
-      this.testingModel.selectedResult = -1;
-    }
-    this.testingModel.selectedResult++;
-    this.selectedResult$.next(this.testingModel.selectedResult + 1);
-    if (
-      this.testingModel.selectedResult >= 0 &&
-      this.testingModel.selectedResult < this.testingModel.results.length
-    ) {
-      this.testingModel.request =
-        this.testingModel.results[this.testingModel.selectedResult].request;
-      this.testingModel.response =
-        this.testingModel.results[this.testingModel.selectedResult].response;
-      this.editorTestingRequest.setSchema(
-        getSchema(
-          this.testingModel.results[this.testingModel.selectedResult].targetAPI,
-          this.mapping.direction,
-          true, true
-        )
-      );
-      this.testingModel.errorMsg =
-        this.testingModel.results[this.testingModel.selectedResult].error;
+    const { testingModel } = this;
+    const { results, selectedResult } = testingModel;
+    
+    // Function to find next visible result
+    const findNextVisibleResult = (currentIndex: number): number => {
+        let nextIndex = currentIndex;
+        do {
+            nextIndex = (nextIndex >= results.length - 1) ? 0 : nextIndex + 1;
+            if (!results[nextIndex].hide) {
+                return nextIndex;
+            }
+        } while (nextIndex !== currentIndex);
+        
+        // If all results are hidden, return the current index
+        return currentIndex;
+    };
+
+    // Update selected result index with wrapping, skipping hidden results
+    testingModel.selectedResult = findNextVisibleResult(selectedResult);
+
+    this.selectedResult$.next(testingModel.selectedResult + 1);
+
+    // Check if selected result is valid
+    const currentResult = results[testingModel.selectedResult];
+    
+    if (currentResult) {
+        // Valid result - set properties from current result
+        const { request, response, targetAPI, error } = currentResult;
+        
+        testingModel.request = request;
+        testingModel.response = response;
+        testingModel.errorMsg = error;
+        
+        this.editorTestingRequest.setSchema(
+            getSchema(
+                targetAPI,
+                this.mapping.direction,
+                true,
+                true
+            )
+        );
     } else {
-      this.testingModel.request = JSON.parse('{}');
-      this.testingModel.response = JSON.parse('{}');
-      this.testingModel.errorMsg = undefined;
+        // Invalid result - reset properties
+        testingModel.request = {};
+        testingModel.response = {};
+        testingModel.errorMsg = undefined;
     }
-  }
+}
 
   ngOnDestroy() {
     this.selectedResult$.complete();
