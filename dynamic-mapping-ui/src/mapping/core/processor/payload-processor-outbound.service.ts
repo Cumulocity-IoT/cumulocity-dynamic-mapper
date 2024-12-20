@@ -163,8 +163,7 @@ export abstract class PayloadProcessorOutbound {
     jsonObject: JSON,
     keys: string
   ) {
-    const subValueMissing: boolean = sub.value == null;
-    const subValueNull: boolean =
+    const subValueMissingOrNull: boolean =
       sub.value == null || (sub.value != null && sub.value != undefined);
 
     if (keys == '$') {
@@ -172,11 +171,7 @@ export abstract class PayloadProcessorOutbound {
         jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
       });
     } else {
-      if (
-        (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
-          subValueMissing) ||
-        (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
-      ) {
+      if (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL && subValueMissingOrNull) {
         _.unset(jsonObject, keys);
       } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
         // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');

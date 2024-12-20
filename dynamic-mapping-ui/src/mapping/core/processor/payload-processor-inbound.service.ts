@@ -165,7 +165,7 @@ export abstract class PayloadProcessorInbound {
                   externalIdType: mapping.externalIdType,
                   request,
                   targetAPI: API.INVENTORY.name,
-                  hide: true
+                  hidden: true
                 });
                 const response = await this.c8yClient.upsertDevice(
                   {

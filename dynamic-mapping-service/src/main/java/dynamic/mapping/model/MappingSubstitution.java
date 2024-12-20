@@ -133,10 +133,9 @@ public class MappingSubstitution implements Serializable {
     public static void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue sub,
             DocumentContext jsonObject, String keys)
             throws JSONException {
-        boolean subValueMissing = sub.value == null;
+        boolean subValueMissingOrNull = sub == null || sub.value == null;
         // TOFDO fix this, we have to differentiate between {"nullField": null } and
         // "nonExisting"
-        boolean subValueNull = subValueMissing;
         try {
             if ("$".equals(keys)) {
                 Object replacement = sub;
@@ -148,8 +147,7 @@ public class MappingSubstitution implements Serializable {
                     }
                 }
             } else {
-                if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                        (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
+                if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING_OR_NULL) && subValueMissingOrNull)) {
                     jsonObject.delete(keys);
                 } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
                     jsonObject.set("$." + keys, sub.value);

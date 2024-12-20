@@ -35,7 +35,7 @@ import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, filter, Subject, take } from 'rxjs';
 import { Content, Mode } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
@@ -860,92 +860,130 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.expertMode = !this.expertMode;
   }
 
-  onUpdateSubstitution() {
-    if (this.selectedSubstitution != -1) {
-      const selected = this.selectedSubstitution;
-      const initialState = {
-        substitution: _.clone(this.mapping.substitutions[selected]),
-        mapping: this.mapping,
-        stepperConfiguration: this.stepperConfiguration,
-        isUpdate: true
-      };
-      if (
-        this.substitutionModel.sourceExpression.valid &&
-        this.substitutionModel.targetExpression.valid
-      ) {
-        initialState.substitution.pathSource =
-          this.substitutionModel.pathSource;
-        initialState.substitution.pathTarget =
-          this.substitutionModel.pathTarget;
-      }
-      const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
-        initialState
-      });
-      modalRef.content.closeSubject.subscribe((editedSub) => {
-        if (editedSub) {
-          this.mapping.substitutions[selected] = editedSub;
-          this.updateSubstitutionValid();
-          //this.substitutionModel = editedSub; not needed
-        }
-      });
-
-
-      // console.log("Updated subs I:", this.mapping.substitutions);
+  onUpdateSubstitution(): void {
+    const { selectedSubstitution, mapping, stepperConfiguration, substitutionModel } = this;
+    
+    // Early return if no substitution is selected
+    if (selectedSubstitution === -1) {
+        return;
     }
-  }
 
-  private addSubstitution(ns: MappingSubstitution) {
-    const sub: MappingSubstitution = _.clone(ns);
-    let duplicateSubstitutionIndex = -1;
-    let duplicate;
-    this.mapping.substitutions.forEach((s, index) => {
-      if (sub.pathTarget == s.pathTarget) {
-        duplicateSubstitutionIndex = index;
-        duplicate = this.mapping.substitutions[index];
-      }
-    });
-    const isDuplicate = duplicateSubstitutionIndex != -1;
+    // Prepare initial state
     const initialState = {
-      isDuplicate,
-      duplicate,
-      duplicateSubstitutionIndex,
-      substitution: sub,
-      mapping: this.mapping,
-      stepperConfiguration: this.stepperConfiguration
+        substitution: { ...mapping.substitutions[selectedSubstitution] },
+        mapping,
+        stepperConfiguration,
+        isUpdate: true
     };
-    if (this.expertMode || isDuplicate) {
-      const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
-        initialState
-      });
 
-      modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
-        if (newSub && !isDuplicate) {
-          this.mapping.substitutions.push(newSub);
-        } else if (newSub && isDuplicate) {
-          this.mapping.substitutions[duplicateSubstitutionIndex] = newSub;
-        }
-        this.updateSubstitutionValid();
-      });
-    } else {
-      this.mapping.substitutions.push(sub);
-      this.updateSubstitutionValid();
+    // Update paths if expressions are valid
+    const { sourceExpression, targetExpression, pathSource, pathTarget } = substitutionModel;
+    if (sourceExpression.valid && targetExpression.valid) {
+        initialState.substitution = {
+            ...initialState.substitution,
+            pathSource,
+            pathTarget
+        };
     }
-  }
+
+    // Show modal and handle response
+    const modalRef = this.bsModalService.show(EditSubstitutionComponent, { initialState });
+
+    modalRef.content.closeSubject
+        .pipe(
+            take(1), // Automatically unsubscribe after first emission
+            filter(Boolean) // Only proceed if we have valid data
+        )
+        .subscribe({
+            next: (editedSubstitution: MappingSubstitution) => {
+                try {
+                    mapping.substitutions[selectedSubstitution] = editedSubstitution;
+                    this.updateSubstitutionValid();
+                } catch (error) {
+                    console.log('Failed to update substitution', error);
+                }
+            },
+            error: (error) => console.log('Error in modal operation', error)
+        });
+}
+
+  private addSubstitution(newSubstitution: MappingSubstitution): void {
+    const substitution = { ...newSubstitution };
+    const { mapping, stepperConfiguration, expertMode } = this;
+    
+    // Find duplicate substitution
+    const duplicateIndex = mapping.substitutions.findIndex(
+        sub => sub.pathTarget === substitution.pathTarget
+    );
+    
+    const isDuplicate = duplicateIndex !== -1;
+    const duplicate = isDuplicate ? mapping.substitutions[duplicateIndex] : undefined;
+
+    const initialState = {
+        isDuplicate,
+        duplicate,
+        duplicateSubstitutionIndex: duplicateIndex,
+        substitution,
+        mapping,
+        stepperConfiguration
+    };
+
+    // Handle simple case first (non-expert mode, no duplicates)
+    if (!expertMode && !isDuplicate) {
+        mapping.substitutions.push(substitution);
+        this.updateSubstitutionValid();
+        return;
+    }
+
+    // Handle expert mode or duplicates
+    const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
+        initialState
+    });
+
+    modalRef.content.closeSubject
+        .pipe(
+            take(1) // Automatically unsubscribe after first emission
+        )
+        .subscribe((updatedSubstitution: MappingSubstitution) => {
+            if (!updatedSubstitution) return;
+
+            if (isDuplicate) {
+                mapping.substitutions[duplicateIndex] = updatedSubstitution;
+            } else {
+                mapping.substitutions.push(updatedSubstitution);
+            }
+            
+            this.updateSubstitutionValid();
+        });
+}
 
   async onSelectSubstitution(selected: number) {
-    if (selected < this.mapping.substitutions.length && selected > -1) {
-      this.selectedSubstitution = selected;
-      this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
-      this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      await this.editorSourceStepSubstitution.setSelectionToPath(
-        this.substitutionModel.pathSource
-      );
-      await this.editorTargetStepSubstitution.setSelectionToPath(
-        this.substitutionModel.pathTarget
-      );
+    const { mapping, stepperConfiguration } = this;
+    const { substitutions } = mapping;
+    
+    // Early return if selection is out of bounds
+    if (selected < 0 || selected >= substitutions.length) {
+        return;
     }
-    // console.log("Updated subs II:", this.mapping.substitutions);
-  }
+
+    this.selectedSubstitution = selected;
+    
+    // Create substitution model
+    this.substitutionModel = {
+        ...substitutions[selected],
+        stepperConfiguration
+    };
+
+    // Parallel execution of path selections
+    await Promise.all([
+        this.editorSourceStepSubstitution.setSelectionToPath(
+            this.substitutionModel.pathSource
+        ),
+        this.editorTargetStepSubstitution.setSelectionToPath(
+            this.substitutionModel.pathTarget
+        )
+    ]);
+}
 
   ngOnDestroy() {
     this.countDeviceIdentifiers$.complete();

@@ -167,8 +167,7 @@ export function substituteValueInPayload(
   jsonObject: JSON,
   keys: string
 ) {
-  const subValueMissing: boolean = !sub || sub.value == null;
-  const subValueNull: boolean = subValueMissing;
+  const subValueMissingOrNull: boolean = !sub || sub.value == null;
 
   if (keys == '$') {
     Object.keys(getTypedValue(sub)).forEach((key) => {
@@ -176,9 +175,8 @@ export function substituteValueInPayload(
     });
   } else {
     if (
-      (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
-        subValueMissing) ||
-      (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
+      (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL &&
+        subValueMissingOrNull)
     ) {
       _.unset(jsonObject, keys);
     } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {

@@ -212,7 +212,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         let nextIndex = currentIndex;
         do {
             nextIndex = (nextIndex >= results.length - 1) ? 0 : nextIndex + 1;
-            if (!results[nextIndex].hide) {
+            if (!results[nextIndex].hidden) {
                 return nextIndex;
             }
         } while (nextIndex !== currentIndex);

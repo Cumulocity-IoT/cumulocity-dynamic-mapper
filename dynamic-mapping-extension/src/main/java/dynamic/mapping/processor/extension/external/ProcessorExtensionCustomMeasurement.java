@@ -70,7 +70,7 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(null,
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                RepairStrategy.REMOVE_IF_NULL))));
+                                RepairStrategy.REMOVE_IF_MISSING_OR_NULL))));
 
         postProcessingCache.put("c8y_Temperature",
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(

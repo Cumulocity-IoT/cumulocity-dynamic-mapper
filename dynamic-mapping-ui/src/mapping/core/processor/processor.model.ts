@@ -29,7 +29,7 @@ export interface C8YRequest {
   response?: any;
   targetAPI?: string;
   error?: string;
-  hide?:boolean;
+  hidden?:boolean;
 }
 
 export interface ProcessingContext {

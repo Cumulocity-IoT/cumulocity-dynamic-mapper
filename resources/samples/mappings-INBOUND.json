@@ -374,7 +374,7 @@
       {
         "pathSource": "model",
         "pathTarget": "customProperties",
-        "repairStrategy": "REMOVE_IF_MISSING",
+        "repairStrategy": "REMOVE_IF_MISSING_OR_NULL",
         "expandArray": false
       }
     ],
@@ -701,13 +701,13 @@
       {
         "pathSource": " Measurementname = \"Airsensor\" ? {Seriesname:{\"value\": value, \"unit\": unit}} : null",
         "pathTarget": "Airsensor",
-        "repairStrategy": "REMOVE_IF_NULL",
+        "repairStrategy": "REMOVE_IF_MISSING_OR_NULL",
         "expandArray": false
       },
       {
         "pathSource": "Measurementname = \"Liquidsensor\" ? {Seriesname:{\"value\": value, \"unit\": unit}} : null",
         "pathTarget": "Liquidsensor",
-        "repairStrategy": "REMOVE_IF_NULL",
+        "repairStrategy": "REMOVE_IF_MISSING_OR_NULL",
         "expandArray": false
       },
       {
@@ -977,7 +977,7 @@
       {
         "pathSource": "(oil?{\"Motor\": {\"value\":oil, \"unit\":\"l\"}}:null)",
         "pathTarget": "c8y_OilMeasurement",
-        "repairStrategy": "REMOVE_IF_NULL",
+        "repairStrategy": "REMOVE_IF_MISSING_OR_NULL",
         "expandArray": false
       }
     ],
