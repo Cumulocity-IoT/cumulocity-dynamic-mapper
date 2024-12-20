@@ -149,7 +149,7 @@ export abstract class PayloadProcessorInbound {
                 ), repairStrategy: RepairStrategy.DEFAULT, type: SubstituteValueType.TEXTUAL
               };
             } catch (e) {
-              // here we create a mock device to tesing locally 
+              // here we create a mock device to testing locally 
               try {
                 const request = {
                   c8y_IsDevice: {},
