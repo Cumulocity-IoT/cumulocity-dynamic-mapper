@@ -18,29 +18,42 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  EventEmitter,
-  Input,
-  OnDestroy,
-  OnInit,
-  Output,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewEncapsulation } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { MappingService } from '../core/mapping.service';
-import { isDisabled } from '../shared/util';
-import { EditorMode } from '../shared/stepper-model';
-import { SnoopStatus, DeploymentMapEntry, StepperConfiguration, Direction, Mapping, SAMPLE_TEMPLATES_C8Y, SharedService } from '../../shared';
 import { CdkStep } from '@angular/cdk/stepper';
-import {
-  HOUSEKEEPING_INTERVAL_SECONDS,
-  SNOOP_TEMPLATES_MAX
-} from '../shared/mapping.model';
 
+import { isDisabled } from '../shared/util';
+import { 
+  Direction, 
+  SnoopStatus, 
+  DeploymentMapEntry, 
+  StepperConfiguration, 
+  Mapping, 
+  SAMPLE_TEMPLATES_C8Y, 
+  SharedService
+} from '../../shared';
+import { EditorMode } from '../shared/stepper-model';
+import { MappingService } from '../core/mapping.service';
+import { BsModalService } from 'ngx-bootstrap/modal';
+
+interface StepperLabels {
+  next: string;
+  cancel: string;
+}
+
+const CONSTANTS = {
+  HOUSEKEEPING_INTERVAL_SECONDS: 30,
+  SNOOP_TEMPLATES_MAX: 10
+} as const;
+
+@Component({
+  selector: 'd11r-snooping-stepper',
+  templateUrl: 'snooping-stepper.component.html',
+  styleUrls: ['../shared/mapping.style.css'],
+  encapsulation: ViewEncapsulation.None
+})
 @Component({
   selector: 'd11r-snooping-stepper',
   templateUrl: 'snooping-stepper.component.html',
@@ -50,88 +63,126 @@ import {
 export class SnoopingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
-  private _deploymentMapEntry: DeploymentMapEntry;
-  isButtonDisabled$: BehaviorSubject<boolean> = new BehaviorSubject(true);
-
-  @Input()
+  
+  @Input() set deploymentMapEntry(value: DeploymentMapEntry) {
+    this._deploymentMapEntry = value;
+    this.deploymentMapEntryChange(value); // Add this line to handle changes
+  }
   get deploymentMapEntry(): DeploymentMapEntry {
     return this._deploymentMapEntry;
   }
-  set deploymentMapEntry(value: DeploymentMapEntry) {
-    this._deploymentMapEntry = value;
-  }
-  @Output() cancel = new EventEmitter<any>();
+
+  @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<Mapping>();
 
-  Direction = Direction;
-  EditorMode = EditorMode;
-  SnoopStatus = SnoopStatus;
-  isDisabled = isDisabled;
+  readonly Direction = Direction;
+  readonly EditorMode = EditorMode;
+  readonly SnoopStatus = SnoopStatus;
+  readonly isDisabled = isDisabled;
 
-  propertyFormly: FormGroup = new FormGroup({});
+  propertyFormly = new FormGroup({});
+  isButtonDisabled$ = new BehaviorSubject<boolean>(true);
+  private readonly destroy$ = new Subject<void>();
+  private _deploymentMapEntry: DeploymentMapEntry;
 
-  snoopedTemplateCounter: number = 0;
+  snoopedTemplateCounter = 0;
   stepLabel: any;
-  onDestroy$ = new Subject<void>();
-  labels: any = {
+  labels: StepperLabels = {
     next: 'Next',
     cancel: 'Cancel'
   };
 
   constructor(
-    public bsModalService: BsModalService,
-    public mappingService: MappingService,
-    public alertService: AlertService,
-    public sharedService: SharedService
-  ) { }
+    private bsModalService: BsModalService,
+    private mappingService: MappingService,
+    private alertService: AlertService,
+    private sharedService: SharedService
+  ) {}
 
-  deploymentMapEntryChange(e) {
-    // console.log(
-    //   'New getDeploymentMap',
-    //   this._deploymentMapEntry,
-    //   !this._deploymentMapEntry?.connectors
-    // );
-    this.isButtonDisabled$.next(
-      !this._deploymentMapEntry?.connectors ||
-      this._deploymentMapEntry?.connectors?.length == 0
-    );
-    // console.log('New setDeploymentMap from grid', e);
+  // Add back the deploymentMapEntryChange method
+  deploymentMapEntryChange(entry: DeploymentMapEntry): void {
+    const isDisabled = !entry?.connectors || entry?.connectors?.length === 0;
+    this.isButtonDisabled$.next(isDisabled);
   }
 
-  ngOnInit() {
+  ngOnInit(): void {
+    // Initial check for button state
+    this.deploymentMapEntryChange(this._deploymentMapEntry);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.isButtonDisabled$.complete();
+  }
+
+  private initializeComponent(): void {
+    // Add any initialization logic here
+    this.updateButtonState();
+  }
+
+  private cleanup(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.isButtonDisabled$.complete();
+  }
+
+  private updateButtonState(): void {
+    const isDisabled = !this._deploymentMapEntry?.connectors || 
+                      this._deploymentMapEntry?.connectors?.length === 0;
+    this.isButtonDisabled$.next(isDisabled);
+  }
+
   getCurrentMapping(): Mapping {
-    this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
-    return {
-      ...this.mapping,
-      lastUpdate: Date.now()
-    };
+    try {
+      return {
+        ...this.mapping,
+        targetTemplate: SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI],
+        lastUpdate: Date.now()
+      };
+    } catch (error) {
+      this.handleError('Error getting current mapping', error);
+      return this.mapping;
+    }
   }
 
-  async onCommitButton() {
-    this.commit.emit(this.getCurrentMapping());
+  async onCommitButton(): Promise<void> {
+    try {
+      const currentMapping = this.getCurrentMapping();
+      this.commit.emit(currentMapping);
+    } catch (error) {
+      this.handleError('Error committing changes', error);
+    }
   }
 
-  async onCancelButton() {
+  onCancelButton(): void {
     this.cancel.emit();
   }
 
-  async onStepChange(index: number) {
-    this.alertService.info(
-      `Wait ${HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. Only the last ${SNOOP_TEMPLATES_MAX} messages are visible!`
-    );
+  async onStepChange(index: number): Promise<void> {
+    try {
+      this.showSnoopingInfo();
+    } catch (error) {
+      this.handleError('Error changing step', error);
+    }
   }
 
-  onNextStep(event: {
-    stepper: C8yStepper;
-    step: CdkStep;
-  }): void {
-    event.stepper.next();
+  onNextStep(event: { stepper: C8yStepper; step: CdkStep }): void {
+    try {
+      event.stepper.next();
+    } catch (error) {
+      this.handleError('Error moving to next step', error);
+    }
   }
 
-  ngOnDestroy() {
-    this.onDestroy$.complete();
+  private showSnoopingInfo(): void {
+    const message = `Wait ${CONSTANTS.HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. ` +
+                   `Only the last ${CONSTANTS.SNOOP_TEMPLATES_MAX} messages are visible!`;
+    this.alertService.info(message);
+  }
+
+  private handleError(message: string, error: Error): void {
+    console.error(message, error);
+    this.alertService.danger(`${message}: ${error.message}`);
   }
 }

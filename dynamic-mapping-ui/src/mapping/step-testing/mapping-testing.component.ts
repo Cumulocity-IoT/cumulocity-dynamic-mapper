@@ -31,7 +31,7 @@ import {
 } from '@angular/core';
 import * as _ from 'lodash';
 import { AlertService } from '@c8y/ngx-components';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import {
   Direction,
   JsonEditorComponent,
@@ -43,6 +43,20 @@ import { C8YRequest, ProcessingContext } from '../core/processor/processor.model
 import { StepperConfiguration } from 'src/shared/mapping/shared.model';
 import { isDisabled, patchC8YTemplateForTesting } from '../shared/util';
 
+interface TestingModel {
+  payload?: any;
+  results: C8YRequest[];
+  errorMsg?: string;
+  request?: any;
+  response?: any;
+  selectedResult: number;
+}
+
+interface TestResult {
+  success: boolean;
+  errors: string[];
+}
+
 @Component({
   selector: 'd11r-mapping-testing',
   templateUrl: 'mapping-testing.component.html',
@@ -53,30 +67,17 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() editorTestingPayloadTemplateEmitter: EventEmitter<any>;
-
   @Output() testResult: EventEmitter<boolean> = new EventEmitter<boolean>();
 
-  Direction = Direction;
-  isDisabled = isDisabled;
+  @ViewChild('editorTestingPayload') editorTestingPayload: JsonEditorComponent;
+  @ViewChild('editorTestingRequest') editorTestingRequest: JsonEditorComponent;
+  @ViewChild('editorTestingResponse') editorTestingResponse: JsonEditorComponent;
 
-  testContext: ProcessingContext;
-  testingModel: {
-    payload?: any;
-    results: C8YRequest[];
-    errorMsg?: string;
-    request?: any;
-    response?: any;
-    selectedResult: number;
-  } = {
-      results: [],
-      selectedResult: -1
-    };
-  testMapping: Mapping;
+  readonly Direction = Direction;
+  readonly isDisabled = isDisabled;
 
-  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
-  sourceSystem: string;
-  targetSystem: string;
-  editorOptionsTesting: any = {
+  private subscription: Subscription;
+  private readonly defaultEditorOptions = {
     mode: 'tree',
     removeModes: ['text', 'table'],
     mainMenuBar: true,
@@ -85,112 +86,126 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     readOnly: true
   };
 
-  @ViewChild('editorTestingPayload', { static: false })
-  editorTestingPayload: JsonEditorComponent;
-  @ViewChild('editorTestingRequest', { static: false })
-  editorTestingRequest: JsonEditorComponent;
-  @ViewChild('editorTestingResponse', { static: false })
-  editorTestingResponse: JsonEditorComponent;
+  testContext: ProcessingContext;
+  testingModel: TestingModel = { results: [], selectedResult: -1 };
+  testMapping: Mapping;
   sourceTemplate: any;
+  sourceSystem: string;
+  targetSystem: string;
+  selectedResult$ = new BehaviorSubject<number>(0);
+  editorOptionsTesting = this.defaultEditorOptions;
 
   constructor(
-    public mappingService: MappingService,
+    private mappingService: MappingService,
     private alertService: AlertService,
     private elementRef: ElementRef
-  ) { }
+  ) {}
 
-  ngOnInit() {
-    // set value for backward compatiblility
-    if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
-    this.targetSystem =
-      this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
-    this.sourceSystem =
-      this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    // console.log(
-    //  'Mapping to be tested:',
-    //  this.mapping,
-    //  this.stepperConfiguration
-    // );
+  ngOnInit(): void {
+    this.initializeMapping();
+    this.setupSubscriptions();
+  }
 
-    this.editorTestingPayloadTemplateEmitter.subscribe((testMapping) => {
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
+    this.selectedResult$.complete();
+  }
+
+  private initializeMapping(): void {
+    this.mapping.direction = this.mapping.direction || Direction.INBOUND;
+    this.setSystemDirections();
+  }
+
+  private setSystemDirections(): void {
+    const isInbound = this.mapping.direction === Direction.INBOUND;
+    this.targetSystem = isInbound ? 'Cumulocity' : 'Broker';
+    this.sourceSystem = !isInbound ? 'Cumulocity' : 'Broker';
+  }
+
+  private setupSubscriptions(): void {
+    this.subscription = this.editorTestingPayloadTemplateEmitter.subscribe(
+      this.handleTestMappingUpdate.bind(this)
+    );
+  }
+
+  private async handleTestMappingUpdate(testMapping: any): Promise<void> {
+    try {
       this.testMapping = testMapping;
-      // prepare local data add c8y data for testing: source.id
       this.sourceTemplate = JSON.parse(testMapping.sourceTemplate);
-      if (testMapping.direction == Direction.OUTBOUND) patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
 
-      this.testContext = this.mappingService.initializeContext(testMapping);
-      const editorTestingRequestRef =
-        this.elementRef.nativeElement.querySelector('#editorTestingRequest');
-      if (editorTestingRequestRef != null) {
-        // set schema for editors
-        this.editorTestingRequest.setSchema(
-          getSchema(this.mapping.targetAPI, this.mapping.direction, true, true)
-        );
-        this.testingModel = {
-          payload: this.sourceTemplate,
-          results: [],
-          selectedResult: -1,
-          request: {},
-          response: {}
-        };
+      if (testMapping.direction === Direction.OUTBOUND) {
+        patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
       }
-      // console.log('New test template:', this.currentSourceTemplate);
-    });
-  }
 
-  async onTestTransformation() {
-    this.testContext.sendPayload = false;
-    this.testContext = await this.mappingService.testResult(
-      this.testContext, this.sourceTemplate
-    );
-    this.testingModel.results = this.testContext.requests;
-    const errors = [];
-    this.testContext.requests?.forEach((r) => {
-      if (r?.error) {
-        errors.push(r?.error);
-      }
-    });
-    if (this.testContext.errors.length > 0 || errors.length > 0) {
-      this.alertService.warning('Testing transformation was not successful!');
-      this.testContext.errors.forEach((msg) => {
-        this.alertService.danger(msg);
-      });
-    } else {
-      this.alertService.success('Testing transformation was successful.');
+      await this.initializeTestContext(testMapping);
+    } catch (error) {
+      this.handleError('Failed to update test mapping', error);
     }
-    this.onNextTestResult();
   }
 
-  async onSendTest() {
-    this.testContext.sendPayload = true;
-    this.testContext = await this.mappingService.testResult(
-      this.testContext, this.sourceTemplate
-    );
-    this.testingModel.results = this.testContext.requests;
-    const errors = [];
-    this.testContext.requests?.forEach((r) => {
-      if (r?.error) {
-        errors.push(r?.error);
-      }
-    });
-    if (this.testContext.errors.length > 0 || errors.length > 0) {
-      this.alertService.warning('Testing transformation was not successful!');
-      this.testContext.errors.forEach((msg) => {
-        this.alertService.danger(msg);
-      });
-      this.testResult.emit(false);
-    } else {
-      this.alertService.info(
-        `Sending transformation was successful: ${this.testContext.requests[0].response.id}`
-      );
-      this.testResult.emit(true);
-      // console.log("RES", testProcessingContext.requests[0].response);
+  private async initializeTestContext(testMapping: any): Promise<void> {
+    this.testContext = this.mappingService.initializeContext(testMapping);
+    
+    if (this.isEditorAvailable()) {
+      await this.setupEditor();
     }
-    this.onNextTestResult();
   }
 
-  onResetTransformation() {
-    patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
+  private isEditorAvailable(): boolean {
+    return !!this.elementRef.nativeElement.querySelector('#editorTestingRequest');
+  }
+
+  private async setupEditor(): Promise<void> {
+    const schema = getSchema(
+      this.mapping.targetAPI,
+      this.mapping.direction,
+      true,
+      true
+    );
+    
+    this.editorTestingRequest?.setSchema(schema);
+    this.resetTestingModel();
+  }
+
+  async onTestTransformation(): Promise<void> {
+    await this.executeTest(false);
+  }
+
+  async onSendTest(): Promise<void> {
+    await this.executeTest(true);
+  }
+
+  onResetTransformation(): void {
+    try {
+      patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
+      this.resetTestingModel();
+      this.updateEditors();
+      this.mappingService.initializeCache(this.mapping.direction);
+    } catch (error) {
+      this.handleError('Failed to reset transformation', error);
+    }
+  }
+
+  onNextTestResult(): void {
+    try {
+      const nextIndex = this.calculateNextVisibleResultIndex();
+      this.updateTestResult(nextIndex);
+    } catch (error) {
+      this.handleError('Failed to process next test result', error);
+    }
+  }
+
+  private async executeTest(sendPayload: boolean): Promise<void> {
+    try {
+      const result = await this.performTestExecution(sendPayload);
+      this.handleTestResult(result, sendPayload);
+      this.onNextTestResult();
+    } catch (error) {
+      this.handleUnexpectedError(error);
+    }
+  }
+
+  private resetTestingModel(): void {
     this.testingModel = {
       payload: this.sourceTemplate,
       results: [],
@@ -198,62 +213,121 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       request: {},
       response: {}
     };
-    this.editorTestingRequest.set(this.testingModel.request);
-    this.editorTestingResponse.set(this.testingModel.response);
-    this.mappingService.initializeCache(this.mapping.direction);
   }
 
-  onNextTestResult() {
-    const { testingModel } = this;
-    const { results, selectedResult } = testingModel;
-    
-    // Function to find next visible result
-    const findNextVisibleResult = (currentIndex: number): number => {
-        let nextIndex = currentIndex;
-        do {
-            nextIndex = (nextIndex >= results.length - 1) ? 0 : nextIndex + 1;
-            if (!results[nextIndex].hidden) {
-                return nextIndex;
-            }
-        } while (nextIndex !== currentIndex);
-        
-        // If all results are hidden, return the current index
-        return currentIndex;
-    };
+  private updateEditors(): void {
+    this.editorTestingRequest?.set(this.testingModel.request);
+    this.editorTestingResponse?.set(this.testingModel.response);
+  }
 
-    // Update selected result index with wrapping, skipping hidden results
-    testingModel.selectedResult = findNextVisibleResult(selectedResult);
+  private calculateNextVisibleResultIndex(): number {
+    const { results, selectedResult } = this.testingModel;
+    let nextIndex = selectedResult;
 
-    this.selectedResult$.next(testingModel.selectedResult + 1);
+    do {
+      nextIndex = (nextIndex >= results.length - 1) ? 0 : nextIndex + 1;
+    } while (nextIndex !== selectedResult && results[nextIndex]?.hidden);
 
-    // Check if selected result is valid
-    const currentResult = results[testingModel.selectedResult];
-    
+    return nextIndex;
+  }
+
+  private updateTestResult(index: number): void {
+    this.testingModel.selectedResult = index;
+    this.selectedResult$.next(index + 1);
+
+    const currentResult = this.testingModel.results[index];
     if (currentResult) {
-        // Valid result - set properties from current result
-        const { request, response, targetAPI, error } = currentResult;
-        
-        testingModel.request = request;
-        testingModel.response = response;
-        testingModel.errorMsg = error;
-        
-        this.editorTestingRequest.setSchema(
-            getSchema(
-                targetAPI,
-                this.mapping.direction,
-                true,
-                true
-            )
-        );
+      this.updateTestingModelFromResult(currentResult);
     } else {
-        // Invalid result - reset properties
-        testingModel.request = {};
-        testingModel.response = {};
-        testingModel.errorMsg = undefined;
+      this.resetTestingModelProperties();
     }
-}
-
-  ngOnDestroy() {
-    this.selectedResult$.complete();
   }
+
+  private updateTestingModelFromResult(result: C8YRequest): void {
+    const { request, response, targetAPI, error } = result;
+    this.testingModel.request = request;
+    this.testingModel.response = response;
+    this.testingModel.errorMsg = error;
+
+    this.editorTestingRequest?.setSchema(
+      getSchema(targetAPI, this.mapping.direction, true, true)
+    );
+  }
+
+  private resetTestingModelProperties(): void {
+    this.testingModel.request = {};
+    this.testingModel.response = {};
+    this.testingModel.errorMsg = undefined;
+  }
+
+  private handleError(message: string, error: any): void {
+    console.error(message, error);
+    this.alertService.danger(`${message}: ${error.message}`);
+  }
+
+
+  private async performTestExecution(sendPayload: boolean): Promise<TestResult> {
+    this.testContext.sendPayload = sendPayload;
+
+    // Update test context
+    this.testContext = await this.mappingService.testResult(
+      this.testContext,
+      this.sourceTemplate
+    );
+
+    // Update testing model
+    this.testingModel.results = this.testContext.requests;
+
+    // Collect all errors
+    const requestErrors = this.collectRequestErrors();
+    const contextErrors = this.testContext.errors || [];
+
+    return {
+      success: requestErrors.length === 0 && contextErrors.length === 0,
+      errors: [...contextErrors, ...requestErrors]
+    };
+  }
+
+  private collectRequestErrors(): string[] {
+    return (this.testContext.requests || [])
+      .filter(request => request?.error)
+      .map(request => request.error);
+  }
+
+  private handleTestResult(result: TestResult, sendPayload: boolean): void {
+    if (!result.success) {
+      this.handleTestFailure(result.errors);
+      if (sendPayload) {
+        this.testResult.emit(false);
+      }
+    } else {
+      this.handleTestSuccess(sendPayload);
+    }
+  }
+
+  private handleTestFailure(errors: string[]): void {
+    this.alertService.warning('Testing transformation was not successful!');
+    errors.forEach(message => {
+      this.alertService.danger(message);
+    });
+  }
+
+  private handleTestSuccess(sendPayload: boolean): void {
+    if (sendPayload) {
+      const responseId = this.testContext.requests?.[0]?.response?.id;
+      this.alertService.info(
+        `Sending transformation was successful: ${responseId}`
+      );
+      this.testResult.emit(true);
+    } else {
+      this.alertService.success('Testing transformation was successful.');
+    }
+  }
+
+  private handleUnexpectedError(error: any): void {
+    this.alertService.danger('An unexpected error occurred during testing');
+    console.error('Test execution error:', error);
+    this.testResult.emit(false);
+  }
+
 }
