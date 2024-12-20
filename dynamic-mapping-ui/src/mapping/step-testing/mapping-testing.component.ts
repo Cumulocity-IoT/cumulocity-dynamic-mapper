@@ -71,11 +71,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       results: [],
       selectedResult: -1
     };
+  testMapping: Mapping;
 
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-  currentContext: any;
   editorOptionsTesting: any = {
     mode: 'tree',
     removeModes: ['text', 'table'],
@@ -112,17 +112,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     //  this.stepperConfiguration
     // );
 
-    this.editorTestingPayloadTemplateEmitter.subscribe((current) => {
-      // prepare local data
-      this.currentContext = current;
-      this.currentContext.mapping.sourceTemplate = JSON.stringify(current.sourceTemplate);
-      this.currentContext.mapping.targetTemplate = JSON.stringify(current.targetTemplate);
+    this.editorTestingPayloadTemplateEmitter.subscribe((testMapping) => {
+      this.testMapping = testMapping;
+      // prepare local data add c8y data for testing: source.id
+      this.sourceTemplate = JSON.parse(testMapping.sourceTemplate);
+      if (testMapping.direction == Direction.OUTBOUND) patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
 
-      // add c8y data for testing: source.id
-      this.sourceTemplate = _.clone(current.sourceTemplate);
-      if (this.currentContext.mapping.direction == Direction.OUTBOUND) patchC8YTemplateForTesting(this.sourceTemplate, this.currentContext.mapping);
-
-      this.testContext = this.mappingService.initializeContext(this.currentContext.mapping);
+      this.testContext = this.mappingService.initializeContext(testMapping);
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector('#editorTestingRequest');
       if (editorTestingRequestRef != null) {
@@ -194,7 +190,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   onResetTransformation() {
-    patchC8YTemplateForTesting(this.sourceTemplate, this.currentContext.mapping);
+    patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
     this.testingModel = {
       payload: this.sourceTemplate,
       results: [],

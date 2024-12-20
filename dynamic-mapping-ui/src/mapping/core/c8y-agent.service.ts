@@ -143,7 +143,7 @@ export class C8YAgent {
       // );
     }
 
-    const currentRequest = context.requests[context.requests.length-1];
+    const currentRequest = context.requests?.slice(-1)[0] ?? null;
     const device: Partial<IManagedObject> = {
       c8y_IsDevice: {},
       [MAPPING_TEST_DEVICE_FRAGMENT]: {},

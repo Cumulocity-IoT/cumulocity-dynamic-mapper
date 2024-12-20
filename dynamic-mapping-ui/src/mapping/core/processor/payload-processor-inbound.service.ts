@@ -149,9 +149,35 @@ export abstract class PayloadProcessorInbound {
                 ), repairStrategy: RepairStrategy.DEFAULT, type: SubstituteValueType.TEXTUAL
               };
             } catch (e) {
-              // console.log(
-              //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
-              // );
+              // here we create a mock device to tesing locally 
+              try {
+                const request = {
+                  c8y_IsDevice: {},
+                  name: `device_${mapping.externalIdType}_${substitute.value}`,
+                  d11r_device_generatedType: {},
+                  [MAPPING_TEST_DEVICE_FRAGMENT]: {},
+                  type: MAPPING_TEST_DEVICE_TYPE
+                };
+                const newPredecessor = context.requests.push({
+                  predecessor: predecessor,
+                  method: 'POST',
+                  source: device.value,
+                  externalIdType: mapping.externalIdType,
+                  request,
+                  targetAPI: API.INVENTORY.name
+                });
+                const response = await this.c8yClient.upsertDevice(
+                  {
+                    externalId: substitute.value.toString(),
+                    type: mapping.externalIdType
+                  },
+                  context
+                );
+                context.requests[newPredecessor - 1].response = response;
+                substitute.value = response.id as any;
+              } catch (e) {
+                console.log ("Error", e);
+              }
             }
             if (!sourceId.value && mapping.createNonExistingDevice) {
               const request = {
