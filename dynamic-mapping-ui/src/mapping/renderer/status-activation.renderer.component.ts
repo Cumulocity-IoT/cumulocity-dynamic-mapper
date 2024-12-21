@@ -80,7 +80,7 @@ export class StatusActivationRendererComponent {
         `Mapping could only activate partially. It failed for the following connectors: ${failedList}`
       );
     } else {
-      this.alertService.success(`${action} mapping: ${mapping.id}`);
+      this.alertService.success(`${action} for mapping: ${mapping.name} was successful`);
     }
     this.mappingService.refreshMappings(Direction.INBOUND);
     this.mappingService.refreshMappings(Direction.OUTBOUND);

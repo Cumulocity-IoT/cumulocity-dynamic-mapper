@@ -82,17 +82,9 @@ import { SubstitutionRendererComponent } from '../substitution/substitution-grid
 export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
+  @Input() deploymentMapEntry: DeploymentMapEntry;
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<Mapping>();
-  private _deploymentMapEntry: DeploymentMapEntry;
-
-  @Input()
-  get deploymentMapEntry(): DeploymentMapEntry {
-    return this._deploymentMapEntry;
-  }
-  set deploymentMapEntry(value: DeploymentMapEntry) {
-    this._deploymentMapEntry = value;
-  }
 
   ValidationError = ValidationError;
   Direction = Direction;
@@ -101,7 +93,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   SnoopStatus = SnoopStatus;
   isDisabled = isDisabled;
 
-  editorTestingPayloadTemplateEmitter = new EventEmitter<any>();
+  updateTestingTemplate = new EventEmitter<any>();
   updateSourceEditor: EventEmitter<any> = new EventEmitter<any>();
   updateTargetEditor: EventEmitter<any> = new EventEmitter<any>();
 
@@ -343,6 +335,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.setTemplateForm();
   }
 
+  ngOnDestroy() {
+    this.countDeviceIdentifiers$.complete();
+    this.isSubstitutionValid$.complete();
+    this.extensionEvents$.complete();
+    this.onDestroy$.complete();
+  }
+
   private updateSubstitutionValid() {
     const ni = countDeviceIdentifiers(this.mapping);
     // console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
@@ -392,13 +391,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   deploymentMapEntryChange(e) {
     this.isButtonDisabled$.next(
-      !this._deploymentMapEntry?.connectors ||
-      this._deploymentMapEntry?.connectors?.length == 0
+      !this.deploymentMapEntry?.connectors ||
+      this.deploymentMapEntry?.connectors?.length == 0
     );
 
     setTimeout(() => {
       this.supportsMessageContext =
-        this._deploymentMapEntry.connectorsDetailed?.some(
+        this.deploymentMapEntry.connectorsDetailed?.some(
           (con) => con.connectorType == ConnectorType.KAFKA
         );
     });
@@ -646,7 +645,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       const testMapping = _.clone(this.mapping);
       testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
       testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-      this.editorTestingPayloadTemplateEmitter.emit(testMapping);
+      this.updateTestingTemplate.emit(testMapping);
       // this.step == 'Select templates'
     } else if (index == STEP_TEST_MAPPING) {
       // console.log("Step 4: onStepChange targetTemplate ", this.mapping.targetTemplate);
@@ -985,10 +984,4 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     ]);
 }
 
-  ngOnDestroy() {
-    this.countDeviceIdentifiers$.complete();
-    this.isSubstitutionValid$.complete();
-    this.extensionEvents$.complete();
-    this.onDestroy$.complete();
-  }
 }

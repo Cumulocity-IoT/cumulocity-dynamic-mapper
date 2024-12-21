@@ -346,8 +346,8 @@
 
     <cdk-step state="final" stepLabel="step3" label="Test mapping">
       <div class="col-xs-12 flex-grow no-gutter">
-        <d11r-mapping-testing [editorTestingPayloadTemplateEmitter]="
-              editorTestingPayloadTemplateEmitter
+        <d11r-mapping-testing [updateTestingTemplate]="
+              updateTestingTemplate
             " [mapping]="mapping" (testResult)="updateTestResult($event)"
           [stepperConfiguration]="stepperConfiguration"></d11r-mapping-testing>
       </div>

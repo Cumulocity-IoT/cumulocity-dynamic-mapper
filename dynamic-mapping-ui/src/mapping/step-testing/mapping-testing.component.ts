@@ -66,7 +66,7 @@ interface TestResult {
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
-  @Input() editorTestingPayloadTemplateEmitter: EventEmitter<any>;
+  @Input() updateTestingTemplate: EventEmitter<any>;
   @Output() testResult: EventEmitter<boolean> = new EventEmitter<boolean>();
 
   @ViewChild('editorTestingPayload') editorTestingPayload: JsonEditorComponent;
@@ -123,7 +123,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private setupSubscriptions(): void {
-    this.subscription = this.editorTestingPayloadTemplateEmitter.subscribe(
+    this.subscription = this.updateTestingTemplate.subscribe(
       this.handleTestMappingUpdate.bind(this)
     );
   }

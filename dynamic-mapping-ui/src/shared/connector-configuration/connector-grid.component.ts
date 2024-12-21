@@ -74,14 +74,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   @Input() selectable = true;
   @Input() readOnly = false;
   @Input() deploy: string[];
-  private _deploymentMapEntry: DeploymentMapEntry;
-  @Input()
-  get deploymentMapEntry(): DeploymentMapEntry {
-    return this._deploymentMapEntry;
-  }
-  set deploymentMapEntry(value: DeploymentMapEntry) {
-    this._deploymentMapEntry = value;
-  }
+  @Input() deploymentMapEntry: DeploymentMapEntry;
+  
   @Output() deploymentMapEntryChange = new EventEmitter<any>();
   selected: string[] = [];
   selected$: Subject<string[]>;

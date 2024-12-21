@@ -58,7 +58,7 @@ import {
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Subject, take } from 'rxjs';
+import { BehaviorSubject, filter, finalize, Subject, switchMap, take } from 'rxjs';
 import { LabelRendererComponent, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
@@ -73,7 +73,6 @@ import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployme
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
 import {
-  C8YNotificationSubscription,
   PayloadWrapper
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper-model';
@@ -99,7 +98,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   );
   mappingsCount: number = 0;
   mappingToUpdate: Mapping;
-  subscription: C8YNotificationSubscription;
   devices: IIdentified[] = [];
   snoopStatus: SnoopStatus = SnoopStatus.NONE;
   Direction = Direction;
@@ -162,11 +160,6 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.columnsMappings = this.getColumnsMappings();
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
-    this.loadSubscriptions();
-  }
-
-  async loadSubscriptions() {
-    this.subscription = await this.mappingService.getSubscriptions();
   }
 
   async ngOnInit() {
@@ -308,23 +301,53 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.updateMapping(m);
       });
   }
-  editMessageFilter(m: MappingEnriched) {
+
+  async editMessageFilter(m: MappingEnriched) {
     const { mapping } = m;
-    const initialState = {
-      mapping
+    const initialState = { mapping };
+    try {
+      const modalRef = this.bsModalService.show(MappingFilterComponent, {
+        initialState
+      });
+      await new Promise((resolve) => {
+        modalRef.content.closeSubject
+          .pipe(
+            take(1),
+            filter(filterMapping => !!filterMapping),
+            switchMap(filterMapping => this.applyMappingFilter(filterMapping, mapping.id)),
+            finalize(() => {
+              modalRef.hide();
+              resolve(undefined);
+            })
+          )
+          .subscribe({
+            next: (filterMapping) => {
+              this.alertService.success(`Applied filter ${filterMapping} to mapping ${mapping.name}`);
+            },
+            error: (error) => {
+              this.alertService.danger('Failed to apply mapping filter', error);
+              resolve(undefined);
+            }
+          });
+      });
+    } catch (error) {
+      this.alertService.danger(`'Failed to apply mapping filter': ${error.message}`);
+    }
+  }
+
+  private async applyMappingFilter(filterMapping: string, mappingId: string): Promise<string> {
+    const params = {
+      filterMapping,
+      id: mappingId
     };
-    const modalRef = this.bsModalService.show(MappingFilterComponent, {
-      initialState
+
+    await this.shareService.runOperation({
+      operation: Operation.APPLY_MAPPING_FILTER,
+      parameter: params
     });
-    modalRef.content.closeSubject.subscribe(async (filterMapping) => {
-      // console.log('Was selected:', result);
-      if (filterMapping) {
-        await this.shareService.runOperation({ operation: Operation.APPLY_MAPPING_FILTER, parameter: { filterMapping, id: mapping.id } });
-        this.mappingService.refreshMappings(Direction.INBOUND);
-        this.alertService.success(`Applied filter ${filterMapping}`);
-      }
-      modalRef.hide();
-    });
+
+    await this.mappingService.refreshMappings(Direction.INBOUND);
+    return filterMapping;
   }
 
   getColumnsMappings(): Column[] {
@@ -535,21 +558,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
   }
 
-  async deleteSubscription(device: IIdentified) {
-    // console.log('Delete device', device);
-    try {
-      await this.mappingService.deleteSubscriptions(device);
-      this.alertService.success(
-        gettext('Subscription for this device deleted successfully')
-      );
-      this.loadSubscriptions();
-    } catch (error) {
-      this.alertService.danger(
-        gettext('Failed to delete subscription:') + error
-      );
-    }
-  }
-
   async updateMapping(m: MappingEnriched) {
     let action = AdvisorAction.CONTINUE;
     const { mapping } = m;
@@ -643,12 +651,17 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
-    this.mappingToUpdate.snoopStatus = SnoopStatus.NONE;
-    this.mappingToUpdate.snoopedTemplates = [];
-    this.mappingToUpdate.name = `${this.mappingToUpdate.name} - Copy`;
-    this.mappingToUpdate.identifier = uuidCustom();
-    this.mappingToUpdate.id = this.mappingToUpdate.identifier;
-    this.mappingToUpdate.active = false;
+
+    this.mappingToUpdate = {
+      ...this.mappingToUpdate,
+      snoopStatus: SnoopStatus.NONE,
+      snoopedTemplates: [],
+      name: `${this.mappingToUpdate.name} - Copy`,
+      identifier: uuidCustom(),
+      id: uuidCustom(),
+      active: false,
+    }
+
     const deploymentMapEntry =
       await this.mappingService.getDefinedDeploymentMapEntry(mapping.identifier);
     this.deploymentMapEntry = {
@@ -656,14 +669,14 @@ export class MappingComponent implements OnInit, OnDestroy {
       connectors: deploymentMapEntry.connectors
     };
     // console.log('Copying mapping', this.mappingToUpdate);
-    if (
-      mapping.snoopStatus === SnoopStatus.NONE ||
-      mapping.snoopStatus === SnoopStatus.STOPPED
-    ) {
-      this.showConfigMapping = true;
-    } else {
-      this.showSnoopingMapping = true;
-    }
+
+    // update view state
+    const isInactiveSnoop = mapping.snoopStatus === SnoopStatus.NONE ||
+      mapping.snoopStatus === SnoopStatus.STOPPED;
+
+    this.showConfigMapping = isInactiveSnoop;
+    this.showSnoopingMapping = !isInactiveSnoop;
+
   }
 
   async activateMapping(m: MappingEnriched) {
@@ -677,10 +690,10 @@ export class MappingComponent implements OnInit, OnDestroy {
       const failedMap = await response.json();
       const failedList = Object.values(failedMap).join(',');
       this.alertService.warning(
-        `Mapping could only activate partially. It failed for the following connectors: ${failedList}`
+        `Mapping ${mapping.name} could only activate partially. It failed for the following connectors: ${failedList}`
       );
     } else {
-      this.alertService.success(`${action} mapping: ${mapping.id}`);
+      this.alertService.success(`${action} for mapping: ${mapping.name} was successful`);
     }
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
     // return this.mappingService.
@@ -690,7 +703,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     const newDebug = !mapping.debug;
     const action = newDebug ? 'Activated' : 'Deactivated';
-    this.alertService.success(`Debugging ${action} for mapping: ${mapping.id}`);
+    this.alertService.success(`Debugging ${action} for mapping: ${mapping.id} was successful`);
     const parameter = { id: mapping.id, debug: newDebug };
     await this.mappingService.changeDebuggingMapping(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
@@ -710,7 +723,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       newSnoop = SnoopStatus.NONE;
       action = 'Deactivated';
     }
-    this.alertService.success(`Snooping ${action} for mapping: ${mapping.id}`);
+    this.alertService.success(`Snooping ${action} for mapping: ${mapping.name}`);
     const parameter = { id: mapping.id, snoopStatus: newSnoop };
     await this.mappingService.changeSnoopStatusMapping(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
@@ -719,7 +732,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   async resetSnoop(m: MappingEnriched) {
     const { mapping } = m;
     this.alertService.success(
-      `Reset snooped messages for mapping: ${mapping.id}`
+      `Reset snooped messages for mapping: ${mapping.name}`
     );
     const parameter = { id: mapping.id };
     await this.mappingService.resetSnoop(parameter);
@@ -763,14 +776,16 @@ export class MappingComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  async deleteMapping(m: MappingEnriched) {
+  async deleteMapping(m: MappingEnriched): Promise<boolean> {
     const { mapping } = m;
     try {
       await this.mappingService.deleteMapping(mapping.id);
-      this.alertService.success(gettext('Mapping deleted successfully'));
+      this.alertService.success(gettext(`Mapping ${mapping.name} deleted successfully'`));
       this.isConnectionToMQTTEstablished = true;
+      return true;
     } catch (error) {
-      this.alertService.danger(gettext('Failed to delete mapping:') + error);
+      this.alertService.danger(gettext(`Failed to delete mapping ${mapping.name}:`) + error);
+      return false;
     }
   }
 
@@ -788,10 +803,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         // console.log('Update existing mapping:', mapping);
         try {
           await this.mappingService.updateMapping(mapping);
-          this.alertService.success(gettext('Mapping updated successfully'));
+          this.alertService.success(gettext(`Mapping ${mapping.name} updated successfully`));
         } catch (error) {
           this.alertService.danger(
-            gettext('Failed to updated mapping: ') + error.message
+            gettext(`Failed to updated mapping ${mapping.name}: `) + error.message
           );
         }
         // this.activateMappings();
@@ -803,10 +818,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         // console.log('Push new mapping:', mapping);
         try {
           await this.mappingService.createMapping(mapping);
-          this.alertService.success(gettext('Mapping created successfully'));
+          this.alertService.success(gettext(`Mapping ${mapping.name} created successfully`));
         } catch (error) {
           this.alertService.danger(
-            gettext('Failed to create mapping:') + error
+            gettext(`Failed to updated mapping ${mapping.name}: `) + error
           );
         }
         // this.activateMappings();
@@ -867,7 +882,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         const action = 'Activated';
         const parameter = { id: m.id, active: true };
         await this.mappingService.changeActivationMapping(parameter);
-        this.alertService.success(`${action} mapping: ${m.id}`);
+        this.alertService.success(`${action} mapping: ${m.name} was successful`);
       }
       this.mappingService.refreshMappings(this.stepperConfiguration.direction);
     });
@@ -884,7 +899,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         const action = 'Deactivated';
         const parameter = { id: m.id, active: false };
         await this.mappingService.changeActivationMapping(parameter);
-        this.alertService.success(`${action} mapping: ${m.id}`);
+        this.alertService.success(`${action} mapping: ${m.name} was successful`);
       }
       this.mappingService.refreshMappings(this.stepperConfiguration.direction);
     });
