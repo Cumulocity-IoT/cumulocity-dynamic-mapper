@@ -178,6 +178,9 @@ public abstract class BasePayloadProcessorInbound<T> {
                 if (pathsTargetForDeviceIdentifiers.contains(pathTarget) && mapping.useExternalId) {
                     ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                             new ID(mapping.externalIdType, substitute.value.toString()), context);
+                    // since the attributes identifying the MEA and Inventory requests are removed
+                    // during the design time, they have to be added before sending
+                    substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
                     if (sourceId == null && mapping.createNonExistingDevice) {
                         ManagedObjectRepresentation attocDevice = null;
                         Map<String, Object> request = new HashMap<String, Object>();
@@ -210,12 +213,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                         substitute.value = null;
                     } else {
                         substitute.value = sourceId.getManagedObject().getId().getValue();
-                    }
-                    // since the attributes identifying the MEA and Inventory requests are removed
-                    // during the design time, they have to be added before sending
-                    if (mapping.getGenericDeviceIdentifier().equals(pathTarget)) {
-                        substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
-                    }
+                    } 
                 }
                 substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));

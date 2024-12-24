@@ -37,6 +37,7 @@ import dynamic.mapping.processor.model.RepairStrategy;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -137,6 +138,7 @@ public class MappingSubstitution implements Serializable {
         // TOFDO fix this, we have to differentiate between {"nullField": null } and
         // "nonExisting"
         try {
+            if (sub == null) return;
             if ("$".equals(keys)) {
                 Object replacement = sub;
                 if (replacement instanceof Map<?, ?> map) {
@@ -150,7 +152,8 @@ public class MappingSubstitution implements Serializable {
                 if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING_OR_NULL) && subValueMissingOrNull)) {
                     jsonObject.delete(keys);
                 } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                    jsonObject.set("$." + keys, sub.value);
+                    // jsonObject.put("$", keys, sub.value);
+                    addNestedValue(jsonObject, keys, sub.value);
                 } else {
                     jsonObject.set(keys, sub.value);
                 }
@@ -160,11 +163,30 @@ public class MappingSubstitution implements Serializable {
         }
     }
 
-    public static void processSubstitute(String tenant, List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry,
+    public static void addNestedValue(DocumentContext jsonObject, String path, Object value) {
+        String[] parts = path.split("\\.");
+        StringBuilder currentPath = new StringBuilder("$");
+        
+        // Create all parent objects except the last one
+        for (int i = 0; i < parts.length - 1; i++) {
+            if (i == 0) {
+                jsonObject.put("$", parts[i], new HashMap<>());
+            } else {
+                jsonObject.put(currentPath.toString(), parts[i], new HashMap<>());
+            }
+            currentPath.append(".").append(parts[i]);
+        }
+        
+        // Add the final value
+        jsonObject.put(currentPath.toString(), parts[parts.length - 1], value);
+    }
+    
+    public static void processSubstitute(String tenant,
+            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry,
             Object extractedSourceContent, MappingSubstitution substitution, Mapping mapping) {
         if (extractedSourceContent == null) {
             log.warn("Tenant {} - Substitution {} not in message payload. Check your mapping {}", tenant,
-            substitution.pathSource, mapping.getMappingTopic());
+                    substitution.pathSource, mapping.getMappingTopic());
             postProcessingCacheEntry
                     .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                             MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
@@ -176,7 +198,7 @@ public class MappingSubstitution implements Serializable {
             postProcessingCacheEntry
                     .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                             MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
-        }  else if (isArray(extractedSourceContent)) {
+        } else if (isArray(extractedSourceContent)) {
             postProcessingCacheEntry
                     .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                             MappingSubstitution.SubstituteValue.TYPE.ARRAY, substitution.repairStrategy));
