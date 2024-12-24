@@ -175,11 +175,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     await this.executeTest(true);
   }
 
-  onResetTransformation(): void {
+  async onResetTransformation(): Promise<void> {
     try {
       patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
       this.resetTestingModel();
       this.updateEditors();
+      await this.initializeTestContext(this.testMapping);
       this.mappingService.initializeCache(this.mapping.direction);
     } catch (error) {
       this.handleError('Failed to reset transformation', error);
@@ -211,7 +212,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       results: [],
       selectedResult: -1,
       request: {},
-      response: {}
+      response: {},
     };
   }
 
