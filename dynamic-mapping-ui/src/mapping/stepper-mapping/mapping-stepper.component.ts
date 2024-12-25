@@ -636,10 +636,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // console.log("Step index 1 - after", this.targetTemplate);
     } else if (index == STEP_DEFINE_SUBSTITUTIONS) {
       // console.log("Step 3: onStepChange targetTemplate ", this.mapping.targetTemplate);
-      this.sourceTemplate = this.sourceTemplateUpdated ? this.sourceTemplateUpdated : this.sourceTemplate;
-      this.targetTemplate = this.targetTemplateUpdated ? this.targetTemplateUpdated : this.targetTemplate;
-      this.editorSourceStepSubstitution.set(this.sourceTemplate);
-      this.editorTargetStepSubstitution.set(this.targetTemplate);
+      this.updateTemplatesInEditors();
       this.updateSubstitutionValid();
       this.onSelectSubstitution(0);
       const testMapping = _.clone(this.mapping);
@@ -651,6 +648,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // console.log("Step 4: onStepChange targetTemplate ", this.mapping.targetTemplate);
     }
 
+  }
+
+  private updateTemplatesInEditors() {
+    this.sourceTemplate = this.sourceTemplateUpdated ? this.sourceTemplateUpdated : this.sourceTemplate;
+    this.targetTemplate = this.targetTemplateUpdated ? this.targetTemplateUpdated : this.targetTemplate;
+    this.editorSourceStepSubstitution?.set(this.sourceTemplate);
+    this.editorTargetStepSubstitution?.set(this.targetTemplate);
   }
 
   onNextStep(event: {
@@ -674,6 +678,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
     });
     // Select the last step
+    this.updateTemplatesInEditors();
     this.stepper.selectedIndex = this.stepper.steps.length - 1;
   }
 
@@ -819,15 +824,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
-      this.updateTargetEditor.emit(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, true, false)
-      );
+      const schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
+      this.updateTargetEditor.emit({ schema: schemaTarget });
     } else {
       this.mapping.sourceTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.targetTemplate = getExternalTemplate(this.mapping);
-      this.updateSourceEditor.emit(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, false, false)
-      );
+      const schemaSource = getSchema(this.mapping.targetAPI, this.mapping.direction, false, false);
+      this.updateSourceEditor.emit({ schema: schemaSource });
     }
   }
 
@@ -861,127 +864,127 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onUpdateSubstitution(): void {
     const { selectedSubstitution, mapping, stepperConfiguration, substitutionModel } = this;
-    
+
     // Early return if no substitution is selected
     if (selectedSubstitution === -1) {
-        return;
+      return;
     }
 
     // Prepare initial state
     const initialState = {
-        substitution: { ...mapping.substitutions[selectedSubstitution] },
-        mapping,
-        stepperConfiguration,
-        isUpdate: true
+      substitution: { ...mapping.substitutions[selectedSubstitution] },
+      mapping,
+      stepperConfiguration,
+      isUpdate: true
     };
 
     // Update paths if expressions are valid
     const { sourceExpression, targetExpression, pathSource, pathTarget } = substitutionModel;
     if (sourceExpression.valid && targetExpression.valid) {
-        initialState.substitution = {
-            ...initialState.substitution,
-            pathSource,
-            pathTarget
-        };
+      initialState.substitution = {
+        ...initialState.substitution,
+        pathSource,
+        pathTarget
+      };
     }
 
     // Show modal and handle response
     const modalRef = this.bsModalService.show(EditSubstitutionComponent, { initialState });
 
     modalRef.content.closeSubject
-        .pipe(
-            take(1), // Automatically unsubscribe after first emission
-            filter(Boolean) // Only proceed if we have valid data
-        )
-        .subscribe({
-            next: (editedSubstitution: MappingSubstitution) => {
-                try {
-                    mapping.substitutions[selectedSubstitution] = editedSubstitution;
-                    this.updateSubstitutionValid();
-                } catch (error) {
-                    console.log('Failed to update substitution', error);
-                }
-            },
-            error: (error) => console.log('Error in modal operation', error)
-        });
-}
+      .pipe(
+        take(1), // Automatically unsubscribe after first emission
+        filter(Boolean) // Only proceed if we have valid data
+      )
+      .subscribe({
+        next: (editedSubstitution: MappingSubstitution) => {
+          try {
+            mapping.substitutions[selectedSubstitution] = editedSubstitution;
+            this.updateSubstitutionValid();
+          } catch (error) {
+            console.log('Failed to update substitution', error);
+          }
+        },
+        error: (error) => console.log('Error in modal operation', error)
+      });
+  }
 
   private addSubstitution(newSubstitution: MappingSubstitution): void {
     const substitution = { ...newSubstitution };
     const { mapping, stepperConfiguration, expertMode } = this;
-    
+
     // Find duplicate substitution
     const duplicateIndex = mapping.substitutions.findIndex(
-        sub => sub.pathTarget === substitution.pathTarget
+      sub => sub.pathTarget === substitution.pathTarget
     );
-    
+
     const isDuplicate = duplicateIndex !== -1;
     const duplicate = isDuplicate ? mapping.substitutions[duplicateIndex] : undefined;
 
     const initialState = {
-        isDuplicate,
-        duplicate,
-        duplicateSubstitutionIndex: duplicateIndex,
-        substitution,
-        mapping,
-        stepperConfiguration
+      isDuplicate,
+      duplicate,
+      duplicateSubstitutionIndex: duplicateIndex,
+      substitution,
+      mapping,
+      stepperConfiguration
     };
 
     // Handle simple case first (non-expert mode, no duplicates)
     if (!expertMode && !isDuplicate) {
-        mapping.substitutions.push(substitution);
-        this.updateSubstitutionValid();
-        return;
+      mapping.substitutions.push(substitution);
+      this.updateSubstitutionValid();
+      return;
     }
 
     // Handle expert mode or duplicates
     const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
-        initialState
+      initialState
     });
 
     modalRef.content.closeSubject
-        .pipe(
-            take(1) // Automatically unsubscribe after first emission
-        )
-        .subscribe((updatedSubstitution: MappingSubstitution) => {
-            if (!updatedSubstitution) return;
+      .pipe(
+        take(1) // Automatically unsubscribe after first emission
+      )
+      .subscribe((updatedSubstitution: MappingSubstitution) => {
+        if (!updatedSubstitution) return;
 
-            if (isDuplicate) {
-                mapping.substitutions[duplicateIndex] = updatedSubstitution;
-            } else {
-                mapping.substitutions.push(updatedSubstitution);
-            }
-            
-            this.updateSubstitutionValid();
-        });
-}
+        if (isDuplicate) {
+          mapping.substitutions[duplicateIndex] = updatedSubstitution;
+        } else {
+          mapping.substitutions.push(updatedSubstitution);
+        }
+
+        this.updateSubstitutionValid();
+      });
+  }
 
   async onSelectSubstitution(selected: number) {
     const { mapping, stepperConfiguration } = this;
     const { substitutions } = mapping;
-    
+
     // Early return if selection is out of bounds
     if (selected < 0 || selected >= substitutions.length) {
-        return;
+      return;
     }
 
     this.selectedSubstitution = selected;
-    
+
     // Create substitution model
     this.substitutionModel = {
-        ...substitutions[selected],
-        stepperConfiguration
+      ...substitutions[selected],
+      stepperConfiguration
     };
 
     // Parallel execution of path selections
     await Promise.all([
-        this.editorSourceStepSubstitution.setSelectionToPath(
-            this.substitutionModel.pathSource
-        ),
-        this.editorTargetStepSubstitution.setSelectionToPath(
-            this.substitutionModel.pathTarget
-        )
+      this.editorSourceStepSubstitution.setSelectionToPath(
+        this.substitutionModel.pathSource
+      ),
+      this.editorTargetStepSubstitution.setSelectionToPath(
+        this.substitutionModel.pathTarget
+      )
     ]);
-}
+  }
 
 }

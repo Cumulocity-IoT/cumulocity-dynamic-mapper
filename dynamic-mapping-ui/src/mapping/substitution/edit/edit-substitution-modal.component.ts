@@ -68,7 +68,8 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
 
     this.editedSubstitution = this.substitution;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
-      .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
+      // .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
+      .filter((key) => key != 'IGNORE')
       .map((key) => {
         return {
           label: key,

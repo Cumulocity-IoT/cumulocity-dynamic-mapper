@@ -34,8 +34,8 @@ export const SAMPLE_TEMPLATES_C8Y = {
     "severity": "MAJOR",
     "status": "ACTIVE",
     "text": "This is a new test alarm!",
-    "time": "2022-08-05T00:14:49.389+02:00"
-    "type": "c8y_TestAlarm",
+    "time": "2022-08-05T00:14:49.389+02:00",
+    "type": "c8y_TestAlarm"
   }`,
   EVENT: `{ 
     "text": "This is a new test event.",
