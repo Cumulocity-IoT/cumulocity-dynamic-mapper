@@ -177,7 +177,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                                         serializedPayload = Hex.encodeHexString((byte[]) payloadByte);
                                         break;
                                     case Object payloadObject:
-                                        serializedPayload = JsonPath.parse(payloadObject).jsonString();
+                                        serializedPayload = JsonPath.parse(payloadObject).json().toString();
                                         break;
                                 }
 
