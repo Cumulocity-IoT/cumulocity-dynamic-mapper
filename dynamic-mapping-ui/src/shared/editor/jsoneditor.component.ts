@@ -245,6 +245,10 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async setSelectionToPath(pathString: string) {
+    const containsSpecialChars = (str: string): boolean => {
+      const regex = /[\$\(\)&]/;
+      return regex.test(str);
+  }
     if (pathString) {
       const path = parseJSONPath(pathString);
       // console.log('Set selection to path:', pathString, path);
@@ -254,7 +258,9 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
       selection.triggeredSelection = false;
 
       try {
-        await this.editor.select(selection);
+        if (!containsSpecialChars(pathString)){
+          await this.editor.select(selection);
+        }
       } catch (error) {
         console.warn('Set selection to path not possible:', pathString, error);
       }
