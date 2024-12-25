@@ -152,7 +152,7 @@ export abstract class PayloadProcessorInbound {
             } catch (e) {
               //ignore this exception, we create a device in the next block
             }
-            if (!sourceId.value && mapping.createNonExistingDevice) {
+            if (!sourceId.value) {
               const request = {
                 c8y_IsDevice: {},
                 name: `device_${mapping.externalIdType}_${substitute.value}`,

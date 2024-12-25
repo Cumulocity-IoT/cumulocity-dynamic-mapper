@@ -38,7 +38,7 @@ import { EditorMode } from '../shared/stepper-model';
 import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic } from '../shared/util';
-import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus} from '../../shared';
+import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -71,7 +71,8 @@ export class MappingStepPropertiesComponent
     mappingService: MappingService,
     sharedService: SharedService,
     private alertService: AlertService,
-    private configService: FormlyConfig
+    private configService: FormlyConfig,
+    private formatStringPipe: FormatStringPipe
   ) { }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -249,7 +250,7 @@ export class MappingStepPropertiesComponent
               options: Object.keys(API)
                 .filter((key) => key != API.ALL.name)
                 .map((key) => {
-                  return { label: key, value: key };
+                  return { label: this.formatStringPipe.transform(key), value: key };
                 }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
@@ -346,7 +347,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'QOS',
               options: Object.values(QOS).map((key) => {
-                return { label: key, value: key };
+                return { label: this.formatStringPipe.transform(key), value: key };
               }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
