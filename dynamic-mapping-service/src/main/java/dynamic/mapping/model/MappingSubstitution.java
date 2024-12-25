@@ -140,7 +140,7 @@ public class MappingSubstitution implements Serializable {
         try {
             if (sub == null) return;
             if ("$".equals(keys)) {
-                Object replacement = sub;
+                Object replacement = sub.value;
                 if (replacement instanceof Map<?, ?> map) {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> rm = (Map<String, Object>) map;

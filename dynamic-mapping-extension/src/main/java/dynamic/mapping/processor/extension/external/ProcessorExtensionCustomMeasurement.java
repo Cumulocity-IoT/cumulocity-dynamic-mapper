@@ -89,7 +89,7 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
         if (jsonObject.get("unexpected") != null) {
             // it is important to use RepairStrategy.CREATE_IF_MISSING as the node
             // "unexpected" does not yet exists in the target payload
-            Map fragmentUnexpectedSeries = Map.of("value", jsonObject.get("unexpected"),"unit", "unknown");
+            Map fragmentUnexpectedSeries = Map.of("value", jsonObject.get("unexpected"),"unit", "unknown_unit");
             Map fragmentUnexpected = Map.of("U", fragmentUnexpectedSeries);
             postProcessingCache.put("c8y_Unexpected",
                     new ArrayList<MappingSubstitution.SubstituteValue>(
