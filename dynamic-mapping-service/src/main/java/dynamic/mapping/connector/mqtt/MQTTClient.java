@@ -495,7 +495,7 @@ public class MQTTClient extends AConnectorClient {
 		sendSubscriptionEvents(topic, "Unsubscribing");
 		Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
 		asyncMqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
-			log.info("Tenant {} - Successfully unsubscribed on topic: {} for connector {}", tenant, topic,
+			log.info("Tenant {} - Successfully unsubscribed from topic: {} for connector {}", tenant, topic,
 					connectorName);
 		}).exceptionally(throwable -> {
 			log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,

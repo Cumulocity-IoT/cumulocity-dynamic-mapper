@@ -43,8 +43,11 @@ import dynamic.mapping.model.API;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
+import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
+
+import org.checkerframework.checker.units.qual.m;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
@@ -93,7 +96,12 @@ public abstract class BasePayloadProcessorInbound<T> {
                 .get().getKey();
         int countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).size();
 
-        List<String> pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
+        List<String> pathsTargetForDeviceIdentifiers;
+        if (mapping.extension == null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
+            pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
+        } else {
+            pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
+        }
         String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
                 ? pathsTargetForDeviceIdentifiers.get(0)
                 : null;
@@ -174,7 +182,8 @@ public abstract class BasePayloadProcessorInbound<T> {
             }
 
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                // this block resolves the externalId (if used) to the Cumulocity sourceId in substitute.value
+                // this block resolves the externalId (if used) to the Cumulocity sourceId in
+                // substitute.value
                 if (pathsTargetForDeviceIdentifiers.contains(pathTarget) && mapping.useExternalId) {
                     ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                             new ID(mapping.externalIdType, substitute.value.toString()), context);
@@ -213,7 +222,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                         substitute.value = null;
                     } else {
                         substitute.value = sourceId.getManagedObject().getId().getValue();
-                    } 
+                    }
                 }
                 substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));

@@ -46,18 +46,31 @@ public class ProtobufMqttClient {
 
     public static void main(String[] args) {
 
-        Mqtt3SimpleAuth simpleAuth = Mqtt3SimpleAuth.builder().username(broker_username)
-                .password(broker_password.getBytes()).build();
-        Mqtt3BlockingClient sampleClient = Mqtt3Client.builder()
-                .serverHost(broker_host)
-                .serverPort(broker_port)
-                .identifier(client_id)
-                .simpleAuth(simpleAuth)
-                .sslWithDefaultConfig()
-                .buildBlocking();
-        ProtobufMqttClient client = new ProtobufMqttClient(sampleClient);
-        client.testSendMeasurement();
-        client.testSendAlarm();
+        if (broker_username == null || broker_username.isEmpty() ||
+                broker_password == null || broker_password.isEmpty()) {
+            Mqtt3BlockingClient sampleClient = Mqtt3Client.builder()
+                    .serverHost(broker_host)
+                    .serverPort(broker_port)
+                    .identifier(client_id)
+                    .sslWithDefaultConfig()
+                    .buildBlocking();
+            ProtobufMqttClient client = new ProtobufMqttClient(sampleClient);
+            client.testSendMeasurement();
+            client.testSendAlarm();
+        } else {
+            Mqtt3SimpleAuth simpleAuth = Mqtt3SimpleAuth.builder().username(broker_username)
+                    .password(broker_password.getBytes()).build();
+            Mqtt3BlockingClient sampleClient = Mqtt3Client.builder()
+                    .serverHost(broker_host)
+                    .serverPort(broker_port)
+                    .identifier(client_id)
+                    .simpleAuth(simpleAuth)
+                    .sslWithDefaultConfig()
+                    .buildBlocking();
+            ProtobufMqttClient client = new ProtobufMqttClient(sampleClient);
+            client.testSendMeasurement();
+            client.testSendAlarm();
+        }
 
     }
 
