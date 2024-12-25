@@ -22,6 +22,7 @@ import * as _ from 'lodash';
 import { Direction, MappingSubstitution, Mapping, API, MappingType, RepairStrategy } from '../../../shared';
 import { SubstituteValue, SubstituteValueType } from './processor.model';
 import { getGenericDeviceIdentifier, isTypeOf } from '../../../mapping/shared/util';
+import { AlertService } from '@c8y/ngx-components';
 
 export const IDENTITY = '_IDENTITY_';
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
@@ -165,7 +166,8 @@ export function substituteValueInPayload(
   type: MappingType,
   sub: SubstituteValue,
   jsonObject: JSON,
-  keys: string
+  keys: string,
+  alert: AlertService
 ) {
   const subValueMissingOrNull: boolean = !sub || sub.value == null;
 
@@ -190,7 +192,7 @@ export function substituteValueInPayload(
       if (_.has(jsonObject, keys)) {
         _.set(jsonObject, keys, getTypedValue(sub));
       } else {
-        this.alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
+        alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
         throw new Error(
           `Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`
         );

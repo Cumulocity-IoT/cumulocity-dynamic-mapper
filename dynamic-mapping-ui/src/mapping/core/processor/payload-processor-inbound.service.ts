@@ -196,7 +196,8 @@ export abstract class PayloadProcessorInbound {
                 mapping.mappingType,
                 substitute,
                 payloadTarget,
-                transformGenericPath2C8YPath(mapping, pathTarget)
+                transformGenericPath2C8YPath(mapping, pathTarget),
+                this.alert
               )
             };
           }
@@ -204,7 +205,8 @@ export abstract class PayloadProcessorInbound {
             mapping.mappingType,
             substitute,
             payloadTarget,
-            pathTarget
+            pathTarget,
+            this.alert
           );
 
         } else {
@@ -214,14 +216,16 @@ export abstract class PayloadProcessorInbound {
               mapping.mappingType,
               sourceId,
               payloadTarget,
-              transformGenericPath2C8YPath(mapping, pathTarget)
+              transformGenericPath2C8YPath(mapping, pathTarget),
+              this.alert
             )
           };
           substituteValueInPayload(
             mapping.mappingType,
             substitute,
             payloadTarget,
-            pathTarget
+            pathTarget,
+            this.alert
           );
         }
       }
