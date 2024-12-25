@@ -87,8 +87,6 @@ public class ProcessingContext<O> {
 
     private String sourceId;
 
-    private String targetPathIdentifier;
-
     public static final String SOURCE_ID = "source.id";
 
     public boolean hasError() {

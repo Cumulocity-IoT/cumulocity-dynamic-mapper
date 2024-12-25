@@ -74,7 +74,7 @@ public class ProcessorExtensionSourceCustomAlarm implements ProcessorExtensionSo
                                                 .getAlarmType(),
                                         MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                         RepairStrategy.DEFAULT))));
-        postProcessingCache.put(context.getMapping().targetAPI.identifier,
+        postProcessingCache.put(context.getMapping().getGenericDeviceIdentifier(),
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
                         new MappingSubstitution.SubstituteValue(
                                 payloadProtobuf.getExternalId(),

@@ -97,7 +97,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         int countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).size();
 
         List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.extension == null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
+        if (mapping.extension != null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
