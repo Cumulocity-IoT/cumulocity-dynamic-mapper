@@ -71,9 +71,6 @@ public class ProcessingContext<O> {
     @Builder.Default
     private ProcessingType processingType = ProcessingType.UNDEFINED;
 
-    @Builder.Default
-    private Map<String, Integer> cardinality = new HashMap<String, Integer>();
-
     private MappingType mappingType;
 
     // <pathTarget, substituteValues>
@@ -82,7 +79,7 @@ public class ProcessingContext<O> {
 
     @Builder.Default
     private boolean sendPayload = false;
-    
+
     @Builder.Default
     private boolean needsRepair = false;
 
