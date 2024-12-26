@@ -82,7 +82,6 @@ public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
     @Override
     public void substituteInTargetAndSend(ProcessingContext<byte[]> context) {
         ProcessorExtensionTarget extension = null;
-        String tenant = context.getTenant();
 
         extension = getProcessorExtensionTarget(context.getMapping().extension);
         // the extension is only meant to be used on the source side, extracting. From

@@ -37,7 +37,7 @@ import { MQTTClient } from '../mqtt-client.service';
 import { getTypedValue } from './util';
 
 @Injectable({ providedIn: 'root' })
-export abstract class PayloadProcessorOutbound {
+export abstract class BaseProcessorOutbound {
   constructor(
     private alert: AlertService,
     public c8yAgent: C8YAgent,

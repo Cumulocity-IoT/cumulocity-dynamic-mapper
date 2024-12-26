@@ -21,7 +21,7 @@
 import { Injectable } from '@angular/core';
 import * as _ from 'lodash';
 import { API, Mapping, RepairStrategy } from '../../../../shared';
-import { PayloadProcessorInbound } from '../payload-processor-inbound.service';
+import { BaseProcessorInbound } from '../base-processor-inbound.service';
 import {
   ProcessingContext,
   SubstituteValue,
@@ -35,7 +35,7 @@ import {
 import { processSubstitute } from '../util';
 
 @Injectable({ providedIn: 'root' })
-export class JSONProcessorInbound extends PayloadProcessorInbound {
+export class JSONProcessorInbound extends BaseProcessorInbound {
   deserializePayload(
     mapping: Mapping,
     message: any,

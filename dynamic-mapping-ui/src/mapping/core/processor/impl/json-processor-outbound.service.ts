@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { PayloadProcessorOutbound } from '../payload-processor-outbound.service';
+import { BaseProcessorOutbound } from '../base-processor-outbound.service';
 import { API, Mapping } from '../../../../shared';
 import {
   ProcessingContext,
@@ -31,7 +31,7 @@ import { IExternalIdentity } from '@c8y/client';
 import { processSubstitute } from '../util';
 
 @Injectable({ providedIn: 'root' })
-export class JSONProcessorOutbound extends PayloadProcessorOutbound {
+export class JSONProcessorOutbound extends BaseProcessorOutbound {
   deserializePayload(
     mapping: Mapping,
     message: any,

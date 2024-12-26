@@ -20,7 +20,7 @@
  */
 import * as _ from 'lodash';
 import { Direction, MappingSubstitution, Mapping, API, MappingType, RepairStrategy } from '../../../shared';
-import { SubstituteValue, SubstituteValueType } from './processor.model';
+import { ProcessingContext, SubstituteValue, SubstituteValueType } from './processor.model';
 import { getGenericDeviceIdentifier, isTypeOf } from '../../../mapping/shared/util';
 import { AlertService } from '@c8y/ngx-components';
 
@@ -160,6 +160,18 @@ export function processSubstitute(processingCacheEntry: SubstituteValue[], extra
       `Since result is not (number, array, textual, object), it is ignored: ${extractedSourceContent}`
     );
   }
+}
+
+export function getDeviceEntries(context: ProcessingContext) : SubstituteValue[] {
+  const { processingCache, mapping } = context;
+  const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(mapping);
+  const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
+    ? pathsTargetForDeviceIdentifiers[0]
+    : null;
+  const deviceEntries: SubstituteValue[] = processingCache.get(
+    firstPathTargetForDeviceIdentifiers
+  );
+  return deviceEntries;
 }
 
 export function substituteValueInPayload(

@@ -35,14 +35,16 @@ import {
   SubstituteValue,
   SubstituteValueType
 } from './processor.model';
-import { getPathTargetForDeviceIdentifiers, getTypedValue, substituteValueInPayload, transformGenericPath2C8YPath } from './util';
+import { getDeviceEntries, getPathTargetForDeviceIdentifiers, getTypedValue, substituteValueInPayload, transformGenericPath2C8YPath } from './util';
 
 @Injectable({ providedIn: 'root' })
-export abstract class PayloadProcessorInbound {
+export abstract class BaseProcessorInbound {
   constructor(
     private alert: AlertService,
     private c8yClient: C8YAgent
   ) { }
+
+  protected JSONATA = require('jsonata');
 
   abstract deserializePayload(
     mapping: Mapping,
@@ -50,20 +52,14 @@ export abstract class PayloadProcessorInbound {
     context: ProcessingContext
   ): ProcessingContext;
 
-  abstract extractFromSource(context: ProcessingContext): void;
-
   initializeCache(): void {
     this.c8yClient.initializeCache();
   }
 
-  protected JSONATA = require('jsonata');
+  abstract extractFromSource(context: ProcessingContext): void;
 
-  async substituteInTargetAndSend(context: ProcessingContext) {
-
-    // step 3 replace target with extract content from inbound payload
-
-    const { mapping } = context;
-    const { processingCache } = context;
+  validateProcessingCache(context: ProcessingContext) {
+    const { processingCache, mapping } = context;
 
     // if there are too few devices identified, then we replicate the first device
     const entryWithMaxSubstitutes = Array.from(processingCache.entries())
@@ -85,6 +81,15 @@ export abstract class PayloadProcessorInbound {
     while (deviceEntries.length < countMaxEntries) {
       deviceEntries.push(toDouble);
     }
+  }
+
+  async substituteInTargetAndSend(context: ProcessingContext) {
+
+    // step 3 replace target with extract content from inbound payload
+
+    const { processingCache, mapping } = context;
+    const deviceEntries = getDeviceEntries(context);
+    const pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
 
     let i: number = 0;
     for (const device of deviceEntries) {
@@ -102,9 +107,10 @@ export abstract class PayloadProcessorInbound {
           type: SubstituteValueType.TEXTUAL,
           repairStrategy: RepairStrategy.DEFAULT
         };
-        if (i < processingCache.get(pathTarget).length) {
-          substitute = _.clone(processingCache.get(pathTarget)[i]);
-        } else if (processingCache.get(pathTarget).length == 1) {
+        const pathTargetSubstitue = processingCache.get(pathTarget);
+        if (i < pathTargetSubstitue.length) {
+          substitute = _.clone(pathTargetSubstitue[i]);
+        } else if (pathTargetSubstitue.length == 1) {
           // this is an indication that the substitution is the same for all
           // events/alarms/measurements/inventory
           if (
@@ -112,14 +118,14 @@ export abstract class PayloadProcessorInbound {
             RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
             substitute.repairStrategy == RepairStrategy.DEFAULT
           ) {
-            substitute = _.clone(processingCache.get(pathTarget)[0]);
+            substitute = _.clone(pathTargetSubstitue[0]);
           } else if (
             substitute.repairStrategy ==
             RepairStrategy.USE_LAST_VALUE_OF_ARRAY
           ) {
-            const last: number = processingCache.get(pathTarget).length - 1;
+            const last: number = pathTargetSubstitue.length - 1;
             substitute = _.clone(
-              processingCache.get(pathTarget)[last]
+              pathTargetSubstitue[last]
             );
           }
           console.warn(

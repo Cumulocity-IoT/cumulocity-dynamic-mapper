@@ -200,6 +200,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                                 }
                             } else {
                                 processor.extractFromSource(context);
+                                processor.validateProcessingCache(context);
                                 processor.applyFilter(context);
                                 if (!context.isIgnoreFurtherProcessing()) {
                                     processor.substituteInTargetAndSend(context);

@@ -21,7 +21,6 @@
 
 package dynamic.mapping.processor.extension.external;
 
-import static dynamic.mapping.model.Mapping.getPathTargetForDeviceIdentifiers;
 import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
 
 import com.cumulocity.model.ID;
@@ -38,11 +37,11 @@ import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
 import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.extension.ProcessorExtensionTarget;
 import dynamic.mapping.processor.model.C8YRequest;
-import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import dynamic.mapping.core.C8YAgent;
@@ -51,13 +50,9 @@ import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import jakarta.ws.rs.ProcessingException;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 @Slf4j
@@ -109,41 +104,12 @@ public class ProcessorExtensionCustomAlarm
          */
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-
-        // if there are too few devices identified then we replicate the first device
-        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
-        String maxEntry = processingCache.entrySet()
-                .stream()
-                .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
-                .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
-                        .compareTo(e2.getValue()))
-                .get().getKey();
-
-        // the following stmt does not work for mapping_type protobuf
-        // String deviceIdentifierMapped2PathTarget2 =
-        // MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
-        // using alternative method
-        List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.extension != null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
-            pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
-        } else {
-            pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
-        }
-        String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
-                ? pathsTargetForDeviceIdentifiers.get(0)
-                : null;
-        List<MappingSubstitution.SubstituteValue> deviceEntries = processingCache
-                .get(firstPathTargetForDeviceIdentifiers);
-        int countMaxEntries = processingCache.get(maxEntry).size();
-        MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
-        while (deviceEntries.size() < countMaxEntries) {
-            deviceEntries.add(toDuplicate);
-        }
+        List<MappingSubstitution.SubstituteValue> deviceEntries = context.getDeviceEntries();
 
         for (int i = 0; i < deviceEntries.size(); i++) {
             // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
-            getBuildProcessingContext(context, processingCache, deviceEntries.get(i),
-                    pathsTargetForDeviceIdentifiers, i, deviceEntries.size(), c8yAgent);
+            getBuildProcessingContext(context, deviceEntries.get(i),
+             i, deviceEntries.size(), c8yAgent);
         }
         log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {} !", tenant,
                 mapping.createNonExistingDevice);
@@ -151,29 +117,30 @@ public class ProcessorExtensionCustomAlarm
     }
 
     private ProcessingContext<byte[]> getBuildProcessingContext(ProcessingContext<byte[]> context,
-            Map<String, List<MappingSubstitution.SubstituteValue>> processingCache,
-            MappingSubstitution.SubstituteValue device, List<String> pathsTargetForDeviceIdentifiers, int finalI,
+            MappingSubstitution.SubstituteValue device, int finalI,
             int size, C8YAgent c8yAgent) {
-        Set<String> pathTargets = processingCache.keySet();
+        Set<String> pathTargets = context.getPathTargets();
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
+        List<String> pathsTargetForDeviceIdentifiers = context.getPathsTargetForDeviceIdentifiers();
         int predecessor = -1;
         DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
         for (String pathTarget : pathTargets) {
             MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
                     "NOT_DEFINED", TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
-            if (finalI < processingCache.get(pathTarget).size()) {
-                substitute = processingCache.get(pathTarget).get(finalI).clone();
-            } else if (processingCache.get(pathTarget).size() == 1) {
+            List<SubstituteValue> pathTargetSubstitue = context.getFromProcessingCache(pathTarget);
+            if (finalI < pathTargetSubstitue.size()) {
+                substitute = pathTargetSubstitue.get(finalI).clone();
+            } else if (pathTargetSubstitue.size() == 1) {
                 // this is an indication that the substitution is the same for all
                 // events/alarms/measurements/inventory
                 if (substitute.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
                         substitute.repairStrategy.equals(RepairStrategy.DEFAULT)) {
-                    substitute = processingCache.get(pathTarget).get(0).clone();
+                    substitute = pathTargetSubstitue.get(0).clone();
                 } else if (substitute.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
-                    int last = processingCache.get(pathTarget).size() - 1;
-                    substitute = processingCache.get(pathTarget).get(last).clone();
+                    int last = pathTargetSubstitue.size() - 1;
+                    substitute = pathTargetSubstitue.get(last).clone();
                 }
                 log.warn(
                         "Tenant {} - During the processing of this pathTarget: '{}' a repair strategy: '{}' was used.",
@@ -274,7 +241,7 @@ public class ProcessorExtensionCustomAlarm
             predecessor = newPredecessor;
         } else {
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
-                    processingCache.size());
+                    context.getProcessingCacheSize());
         }
         log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
                 mapping.targetAPI,

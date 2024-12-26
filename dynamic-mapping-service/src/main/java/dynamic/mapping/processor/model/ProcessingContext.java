@@ -25,10 +25,13 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import dynamic.mapping.processor.ProcessingException;
+
+import static dynamic.mapping.model.Mapping.getPathTargetForDeviceIdentifiers;
 
 import java.util.*;
 
@@ -112,6 +115,44 @@ public class ProcessingContext<O> {
                                         value,
                                         type,
                                         repairStrategy))));
+    }
+
+    public List<MappingSubstitution.SubstituteValue> getDeviceEntries() {
+                List<String> pathsTargetForDeviceIdentifiers;
+        if (mapping.extension != null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
+            pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
+        } else {
+            pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
+        }
+        String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
+                ? pathsTargetForDeviceIdentifiers.get(0)
+                : null;
+        List<MappingSubstitution.SubstituteValue> deviceEntries = processingCache
+        .get(firstPathTargetForDeviceIdentifiers);
+        return deviceEntries;
+    }
+
+    public List<String> getPathsTargetForDeviceIdentifiers() {
+        List<String> pathsTargetForDeviceIdentifiers;
+        if (mapping.extension != null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
+            pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
+        } else {
+            pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
+        }
+            pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
+        return pathsTargetForDeviceIdentifiers;
+    }
+
+    public Set<String> getPathTargets() {
+        return processingCache.keySet();
+    }
+
+    public List<SubstituteValue> getFromProcessingCache(String pathTarget) {
+        return processingCache.get(pathTarget);
+    }
+
+    public Integer getProcessingCacheSize() {
+        return processingCache.size();
     }
 
 }
