@@ -223,8 +223,8 @@ public class ProcessorExtensionCustomAlarm
                     }
 
                 }
-                substituteValueInPayload(mapping.mappingType, substitute,
-                        payloadTarget, pathTarget);
+                substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
+                        mapping.transformGenericPath2C8YPath(pathTarget));
             } else if (!pathsTargetForDeviceIdentifiers.contains(pathTarget)) {
                 substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
