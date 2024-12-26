@@ -42,6 +42,7 @@ import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
@@ -74,8 +75,8 @@ public abstract class BasePayloadProcessorOutbound<T> {
         String tenant = context.getTenant();
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
-        Set<String> pathTargets = postProcessingCache.keySet();
+        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        Set<String> pathTargets = processingCache.keySet();
 
         int predecessor = -1;
         DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
@@ -103,10 +104,10 @@ public abstract class BasePayloadProcessorOutbound<T> {
 
         for (String pathTarget : pathTargets) {
             MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
-                    "NOT_DEFINED", MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                    "NOT_DEFINED", TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
-            if (postProcessingCache.get(pathTarget).size() > 0) {
-                substitute = postProcessingCache.get(pathTarget).get(0).clone();
+            if (processingCache.get(pathTarget).size() > 0) {
+                substitute = processingCache.get(pathTarget).get(0).clone();
             }
             substituteValueInPayload(mapping.mappingType, substitute, payloadTarget, pathTarget);
         }
@@ -165,7 +166,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
             predecessor = newPredecessor;
         } else {
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
-                    postProcessingCache.size());
+                    processingCache.size());
         }
         log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
                 mapping.targetAPI,

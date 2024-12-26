@@ -48,7 +48,7 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
   async extractFromSource(context: ProcessingContext) {
     const { mapping } = context;
     const payloadJsonNode: JSON = context.payload;
-    const { postProcessingCache } = context;
+    const { processingCache } = context;
     const topicLevels = splitTopicExcludingSeparator(context.topic);
     payloadJsonNode[TOKEN_TOPIC_LEVEL] = topicLevels;
 
@@ -67,8 +67,8 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
         );
 
         // step 2 analyse extracted content: textual, array
-        const postProcessingCacheEntry: SubstituteValue[] = _.get(
-          postProcessingCache,
+        const processingCacheEntry: SubstituteValue[] = _.get(
+          processingCache,
           substitution.pathTarget,
           []
         );
@@ -76,14 +76,14 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
           // extracted result from sourcePayload is an array, so we potentially have to
           // iterate over the result, e.g. creating multiple devices
           extractedSourceContent.forEach((jn) => {
-            processSubstitute(postProcessingCacheEntry, jn, substitution, mapping);
+            processSubstitute(processingCacheEntry, jn, substitution, mapping);
           });
         } else {
-          processSubstitute(postProcessingCacheEntry, extractedSourceContent, substitution, mapping);
+          processSubstitute(processingCacheEntry, extractedSourceContent, substitution, mapping);
         }
-        postProcessingCache.set(
+        processingCache.set(
           substitution.pathTarget,
-          postProcessingCacheEntry
+          processingCacheEntry
         );
 
         //console.log(
@@ -100,18 +100,18 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
 
     // no substitution for the time property exists, then use the system time
     if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name && mapping.targetAPI != API.OPERATION.name) {
-      const postProcessingCacheEntry: SubstituteValue[] = _.get(
-        postProcessingCache,
+      const processingCacheEntry: SubstituteValue[] = _.get(
+        processingCache,
         TIME,
         []
       );
-      postProcessingCacheEntry.push({
+      processingCacheEntry.push({
         value: new Date().toISOString(),
         type: SubstituteValueType.TEXTUAL,
         repairStrategy: RepairStrategy.DEFAULT
       });
 
-      postProcessingCache.set(TIME, postProcessingCacheEntry);
+      processingCache.set(TIME, processingCacheEntry);
     }
   }
 }

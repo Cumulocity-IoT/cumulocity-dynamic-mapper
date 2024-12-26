@@ -73,7 +73,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
 
         Object payloadObjectNode = context.getPayload();
 
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
         String payloadAsString = toPrettyJsonString(payloadObjectNode);
         /*
          * step 0 patch payload with dummy property _IDENTITY_ in case the content
@@ -122,23 +122,23 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> 
             /*
              * step 2 analyse extracted content: textual, array
              */
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
+            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     substitution.pathTarget,
-                    new ArrayList<MappingSubstitution.SubstituteValue>());
+                    new ArrayList<>());
 
             if (isArray(extractedSourceContent) && substitution.expandArray) {
                 var extractedSourceContentCollection = (Collection) extractedSourceContent;
                 // extracted result from sourcePayload is an array, so we potentially have to
                 // iterate over the result, e.g. creating multiple devices
                 for (Object jn : extractedSourceContentCollection) {
-                    MappingSubstitution.processSubstitute(tenant, postProcessingCacheEntry, jn,
+                    MappingSubstitution.processSubstitute(tenant, processingCacheEntry, jn,
                             substitution, mapping);
                 }
             } else {
-                MappingSubstitution.processSubstitute(tenant, postProcessingCacheEntry, extractedSourceContent,
+                MappingSubstitution.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
                         substitution, mapping);
             }
-            postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
+            processingCache.put(substitution.pathTarget, processingCacheEntry);
 
             if (context.getServiceConfiguration().logSubstitution || mapping.debug) {
                 log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",

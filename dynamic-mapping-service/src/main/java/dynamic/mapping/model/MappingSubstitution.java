@@ -33,6 +33,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.RepairStrategy;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -182,28 +183,28 @@ public class MappingSubstitution implements Serializable {
     }
     
     public static void processSubstitute(String tenant,
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry,
+            List<MappingSubstitution.SubstituteValue> processingCacheEntry,
             Object extractedSourceContent, MappingSubstitution substitution, Mapping mapping) {
         if (extractedSourceContent == null) {
             log.warn("Tenant {} - Substitution {} not in message payload. Check your mapping {}", tenant,
                     substitution.pathSource, mapping.getMappingTopic());
-            postProcessingCacheEntry
+            processingCacheEntry
                     .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                             MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
         } else if (isTextual(extractedSourceContent)) {
-            postProcessingCacheEntry.add(
+            processingCacheEntry.add(
                     new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                            MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
+                            TYPE.TEXTUAL, substitution.repairStrategy));
         } else if (isNumber(extractedSourceContent)) {
-            postProcessingCacheEntry
+            processingCacheEntry
                     .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                             MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
         } else if (isArray(extractedSourceContent)) {
-            postProcessingCacheEntry
+            processingCacheEntry
                     .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                             MappingSubstitution.SubstituteValue.TYPE.ARRAY, substitution.repairStrategy));
         } else {
-            postProcessingCacheEntry
+            processingCacheEntry
                     .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                             MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
         }

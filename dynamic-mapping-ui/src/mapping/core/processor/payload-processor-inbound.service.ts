@@ -63,22 +63,22 @@ export abstract class PayloadProcessorInbound {
     // step 3 replace target with extract content from inbound payload
 
     const { mapping } = context;
-    const { postProcessingCache } = context;
+    const { processingCache } = context;
 
     // if there are too few devices identified, then we replicate the first device
-    const entryWithMaxSubstitutes = Array.from(postProcessingCache.entries())
+    const entryWithMaxSubstitutes = Array.from(processingCache.entries())
       .reduce((max, [key, value]) =>
         value.length > (max[1]?.length ?? 0)
           ? [key, value]
           : max)[0];
-    const countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).length;
+    const countMaxEntries = processingCache.get(entryWithMaxSubstitutes).length;
 
     const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(mapping);
     const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
       ? pathsTargetForDeviceIdentifiers[0]
       : null;
 
-    const deviceEntries: SubstituteValue[] = postProcessingCache.get(
+    const deviceEntries: SubstituteValue[] = processingCache.get(
       firstPathTargetForDeviceIdentifiers
     );
     const [toDouble] = deviceEntries;
@@ -96,15 +96,15 @@ export abstract class PayloadProcessorInbound {
         this.alert.warning('Target Payload is not a valid json object!');
         throw e;
       }
-      for (const pathTarget of postProcessingCache.keys()) {
+      for (const pathTarget of processingCache.keys()) {
         let substitute: SubstituteValue = {
           value: 'NOT_DEFINED' as any,
           type: SubstituteValueType.TEXTUAL,
           repairStrategy: RepairStrategy.DEFAULT
         };
-        if (i < postProcessingCache.get(pathTarget).length) {
-          substitute = _.clone(postProcessingCache.get(pathTarget)[i]);
-        } else if (postProcessingCache.get(pathTarget).length == 1) {
+        if (i < processingCache.get(pathTarget).length) {
+          substitute = _.clone(processingCache.get(pathTarget)[i]);
+        } else if (processingCache.get(pathTarget).length == 1) {
           // this is an indication that the substitution is the same for all
           // events/alarms/measurements/inventory
           if (
@@ -112,14 +112,14 @@ export abstract class PayloadProcessorInbound {
             RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
             substitute.repairStrategy == RepairStrategy.DEFAULT
           ) {
-            substitute = _.clone(postProcessingCache.get(pathTarget)[0]);
+            substitute = _.clone(processingCache.get(pathTarget)[0]);
           } else if (
             substitute.repairStrategy ==
             RepairStrategy.USE_LAST_VALUE_OF_ARRAY
           ) {
-            const last: number = postProcessingCache.get(pathTarget).length - 1;
+            const last: number = processingCache.get(pathTarget).length - 1;
             substitute = _.clone(
-              postProcessingCache.get(pathTarget)[last]
+              processingCache.get(pathTarget)[last]
             );
           }
           console.warn(
@@ -272,7 +272,7 @@ export abstract class PayloadProcessorInbound {
         predecessor = context.requests.length;
       } else {
         console.warn(
-          'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}'
+          'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${processingCache.size}'
         );
       }
       // console.log(

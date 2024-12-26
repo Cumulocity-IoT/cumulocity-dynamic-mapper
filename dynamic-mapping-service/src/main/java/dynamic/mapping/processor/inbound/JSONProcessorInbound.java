@@ -21,9 +21,9 @@
 
 package dynamic.mapping.processor.inbound;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapping.model.MappingSubstitution.isArray;
 import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
-import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +42,7 @@ import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
@@ -71,7 +72,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
         Object payloadObjectNode = context.getPayload();
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
 
         /*
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
@@ -112,22 +113,22 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
             /*
              * step 2 analyse extracted content: textual, array
              */
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
+            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     substitution.pathTarget,
-                    new ArrayList<MappingSubstitution.SubstituteValue>());
+                    new ArrayList<>());
 
             if (isArray(extractedSourceContent) && substitution.expandArray) {
                 // extracted result from sourcePayload is an array, so we potentially have to
                 // iterate over the result, e.g. creating multiple devices
                 for (Object jn : (Collection) extractedSourceContent) {
-                    MappingSubstitution.processSubstitute(tenant, postProcessingCacheEntry, jn,
+                    MappingSubstitution.processSubstitute(tenant, processingCacheEntry, jn,
                             substitution, mapping);
                 }
             } else {
-                MappingSubstitution.processSubstitute(tenant, postProcessingCacheEntry, extractedSourceContent,
+                MappingSubstitution.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
                         substitution, mapping);
             }
-            postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
+            processingCache.put(substitution.pathTarget, processingCacheEntry);
             if (serviceConfiguration.logSubstitution || mapping.debug) {
                 log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
                         tenant,
@@ -141,13 +142,13 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
 
         // no substitution for the time property exists, then use the system time
         if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
+            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     Mapping.TIME,
-                    new ArrayList<MappingSubstitution.SubstituteValue>());
-            postProcessingCacheEntry.add(
+                    new ArrayList<>());
+            processingCacheEntry.add(
                     new MappingSubstitution.SubstituteValue(new DateTime().toString(),
-                            MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT));
-            postProcessingCache.put(Mapping.TIME, postProcessingCacheEntry);
+                            TYPE.TEXTUAL, RepairStrategy.DEFAULT));
+            processingCache.put(Mapping.TIME, processingCacheEntry);
         }
     }
 

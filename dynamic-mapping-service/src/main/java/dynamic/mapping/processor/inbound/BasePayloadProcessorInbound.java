@@ -35,6 +35,7 @@ import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
@@ -47,7 +48,6 @@ import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 
-import org.checkerframework.checker.units.qual.m;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
@@ -87,14 +87,14 @@ public abstract class BasePayloadProcessorInbound<T> {
         String tenant = context.getTenant();
 
         // if there are too few devices identified, then we replicate the first device
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
-        String entryWithMaxSubstitutes = postProcessingCache.entrySet()
+        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        String entryWithMaxSubstitutes = processingCache.entrySet()
                 .stream()
                 .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
                 .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
                         .compareTo(e2.getValue()))
                 .get().getKey();
-        int countMaxEntries = postProcessingCache.get(entryWithMaxSubstitutes).size();
+        int countMaxEntries = processingCache.get(entryWithMaxSubstitutes).size();
 
         List<String> pathsTargetForDeviceIdentifiers;
         if (mapping.extension != null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
@@ -106,7 +106,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                 ? pathsTargetForDeviceIdentifiers.get(0)
                 : null;
 
-        List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
+        List<MappingSubstitution.SubstituteValue> deviceEntries = processingCache
                 .get(firstPathTargetForDeviceIdentifiers);
         MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxEntries) {
@@ -119,7 +119,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         if (mapping.createNonExistingDevice) {
             for (int i = 0; i < deviceEntries.size(); i++) {
                 // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
-                getBuildProcessingContext(context, postProcessingCache, deviceEntries.get(i),
+                getBuildProcessingContext(context, processingCache, deviceEntries.get(i),
                         pathsTargetForDeviceIdentifiers, i, deviceEntries.size());
             }
             log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {} !", tenant,
@@ -131,7 +131,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                 // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
                 int finalI = i;
                 contextFutureList.add(processingCachePool.submit(() -> {
-                    return getBuildProcessingContext(context, postProcessingCache, deviceEntries.get(finalI),
+                    return getBuildProcessingContext(context, processingCache, deviceEntries.get(finalI),
                             pathsTargetForDeviceIdentifiers, finalI, deviceEntries.size());
                 }));
             }
@@ -150,10 +150,10 @@ public abstract class BasePayloadProcessorInbound<T> {
     }
 
     private ProcessingContext<T> getBuildProcessingContext(ProcessingContext<T> context,
-            Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache,
+            Map<String, List<MappingSubstitution.SubstituteValue>> processingCache,
             MappingSubstitution.SubstituteValue device, List<String> pathsTargetForDeviceIdentifiers, int finalI,
             int size) {
-        Set<String> pathTargets = postProcessingCache.keySet();
+        Set<String> pathTargets = processingCache.keySet();
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
@@ -161,19 +161,19 @@ public abstract class BasePayloadProcessorInbound<T> {
         DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
         for (String pathTarget : pathTargets) {
             MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
-                    "NOT_DEFINED", MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                    "NOT_DEFINED", TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
-            if (finalI < postProcessingCache.get(pathTarget).size()) {
-                substitute = postProcessingCache.get(pathTarget).get(finalI).clone();
-            } else if (postProcessingCache.get(pathTarget).size() == 1) {
+            if (finalI < processingCache.get(pathTarget).size()) {
+                substitute = processingCache.get(pathTarget).get(finalI).clone();
+            } else if (processingCache.get(pathTarget).size() == 1) {
                 // this is an indication that the substitution is the same for all
                 // events/alarms/measurements/inventory
                 if (substitute.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
                         substitute.repairStrategy.equals(RepairStrategy.DEFAULT)) {
-                    substitute = postProcessingCache.get(pathTarget).get(0).clone();
+                    substitute = processingCache.get(pathTarget).get(0).clone();
                 } else if (substitute.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
-                    int last = postProcessingCache.get(pathTarget).size() - 1;
-                    substitute = postProcessingCache.get(pathTarget).get(last).clone();
+                    int last = processingCache.get(pathTarget).size() - 1;
+                    substitute = processingCache.get(pathTarget).get(last).clone();
                 }
                 log.warn(
                         "Tenant {} - During the processing of this pathTarget: '{}' a repair strategy: '{}' was used.",
@@ -272,7 +272,7 @@ public abstract class BasePayloadProcessorInbound<T> {
             predecessor = newPredecessor;
         } else {
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
-                    postProcessingCache.size());
+                    processingCache.size());
         }
         log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
                 mapping.targetAPI,

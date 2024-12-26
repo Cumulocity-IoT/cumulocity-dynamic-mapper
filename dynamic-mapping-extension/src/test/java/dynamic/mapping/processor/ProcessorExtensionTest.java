@@ -27,6 +27,7 @@ import java.util.ArrayList;
 
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +59,7 @@ public class ProcessorExtensionTest {
 
     extension.extractFromSource(context);
 
-    ArrayList<MappingSubstitution.SubstituteValue> extractedTypes = (ArrayList) context.getPostProcessingCache().get("type");
+    ArrayList<SubstituteValue> extractedTypes = (ArrayList) context.getProcessingCache().get("type");
     assertEquals( extractedTypes.size(), 1);
     MappingSubstitution.SubstituteValue extractedType = extractedTypes.get(0);
     log.info("Extracted: {}, {} ", extractedType.value, extractedType.value.getClass().getName());

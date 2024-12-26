@@ -43,7 +43,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
 
   async extractFromSource(context: ProcessingContext) {
     const { mapping } = context;
-    const { postProcessingCache } = context;
+    const { processingCache } = context;
     const payload: string = JSON.stringify(context.payload, null, 4);
 
     const payloadObjectNode = context.payload;
@@ -97,8 +97,8 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
         );
 
         // step 2 analyse extracted content: textual, array
-        const postProcessingCacheEntry: SubstituteValue[] = _.get(
-          postProcessingCache,
+        const processingCacheEntry: SubstituteValue[] = _.get(
+          processingCache,
           substitution.pathTarget,
           []
         );
@@ -107,14 +107,14 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
           // extracted result from sourcePayload is an array, so we potentially have to
           // iterate over the result, e.g. creating multiple devices
           extractedSourceContent.forEach((jn) => {
-            processSubstitute(postProcessingCacheEntry, jn, substitution, mapping);
+            processSubstitute(processingCacheEntry, jn, substitution, mapping);
           });
         } else {
-          processSubstitute(postProcessingCacheEntry, extractedSourceContent, substitution, mapping);
+          processSubstitute(processingCacheEntry, extractedSourceContent, substitution, mapping);
         }
-        postProcessingCache.set(
+        processingCache.set(
           substitution.pathTarget,
-          postProcessingCacheEntry
+          processingCacheEntry
         );
 
         //console.log(

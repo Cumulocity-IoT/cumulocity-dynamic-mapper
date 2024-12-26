@@ -31,9 +31,6 @@ import lombok.Setter;
 import dynamic.mapping.processor.ProcessingException;
 
 import java.util.*;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Getter
 @Setter
@@ -60,7 +57,7 @@ public class ProcessingContext<O> {
 
     private List<C8YRequest> requests = new ArrayList<C8YRequest>();
 
-    private List<Exception> errors  = new ArrayList<Exception>();
+    private List<Exception> errors = new ArrayList<Exception>();
 
     private ProcessingType processingType = ProcessingType.UNDEFINED;
 
@@ -69,8 +66,8 @@ public class ProcessingContext<O> {
     private MappingType mappingType;
 
     // <pathTarget, substituteValues>
-    private Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
-    
+    private Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
+
     private boolean sendPayload = false;
 
     private boolean needsRepair = false;
@@ -98,33 +95,23 @@ public class ProcessingContext<O> {
         return requests.size() - 1;
     }
 
-    /*
-     * Keep track of the extracted size of every extracted values for a
-     * <code>pathTarget</code>
-     * 
-     * @param pathTarget jsonPath of target in a substitution
-     * 
-     * @param card cardinality of this <code>pathTarget</code> found when extracting
-     * values from the payload
-     * 
-     * @return true if all added cardinalities are the same, false if at least two
-     * different cardinalities exist.
-     */
-    // public void addCardinality(String pathTarget, Integer card) {
-    //     cardinality.put(pathTarget, card);
-    //     Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
-    //     Stream<Entry<String, Integer>> stream1 = entries.stream()
-    //             .filter(e -> !ProcessingContext.SOURCE_ID.equals(e.getKey()));
-    //     Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
-    //     needsRepair = (collect.size() != 1);
-    // }
-
     public C8YRequest getCurrentRequest() {
-        return requests.get(requests.size()-1);
+        return requests.get(requests.size() - 1);
     }
 
     public void addError(ProcessingException processingException) {
         errors.add(processingException);
+    }
+
+    public void addToProcessingCache(String key, Object value, MappingSubstitution.SubstituteValue.TYPE type,
+            RepairStrategy repairStrategy) {
+        processingCache.put(key,
+                new ArrayList<>(
+                        Arrays.asList(
+                                new MappingSubstitution.SubstituteValue(
+                                        value,
+                                        type,
+                                        repairStrategy))));
     }
 
 }

@@ -120,9 +120,9 @@ export const isNumeric = (num: any) =>
   !isNaN(num as number);
 
 
-export function processSubstitute(postProcessingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: MappingSubstitution, mapping: Mapping) {
+export function processSubstitute(processingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: MappingSubstitution, mapping: Mapping) {
   if (isTypeOf(extractedSourceContent) == 'null') {
-    postProcessingCacheEntry.push({
+    processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.IGNORE,
       repairStrategy: substitution.repairStrategy
@@ -132,25 +132,25 @@ export function processSubstitute(postProcessingCacheEntry: SubstituteValue[], e
       substitution.pathSource
     );
   } else if (isTypeOf(extractedSourceContent) == 'String') {
-    postProcessingCacheEntry.push({
+    processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.TEXTUAL,
       repairStrategy: substitution.repairStrategy
     });
   } else if (isTypeOf(extractedSourceContent) == 'Number') {
-    postProcessingCacheEntry.push({
+    processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.NUMBER,
       repairStrategy: substitution.repairStrategy
     });
   } else if (isTypeOf(extractedSourceContent) == 'Array') {
-    postProcessingCacheEntry.push({
+    processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.ARRAY,
       repairStrategy: substitution.repairStrategy
     });
   } else if (isTypeOf(extractedSourceContent) == 'Object') {
-    postProcessingCacheEntry.push({
+    processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.OBJECT,
       repairStrategy: substitution.repairStrategy

@@ -451,7 +451,7 @@ export class MappingService {
       processingType: ProcessingType.UNDEFINED,
       errors: [],
       mappingType: mapping.mappingType,
-      postProcessingCache: new Map<string, SubstituteValue[]>(),
+      processingCache: new Map<string, SubstituteValue[]>(),
       sendPayload: false,
       requests: []
     };

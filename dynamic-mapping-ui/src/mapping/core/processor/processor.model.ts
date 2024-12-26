@@ -42,7 +42,7 @@ export interface ProcessingContext {
   errors?: string[];
   processingType?: ProcessingType;
   mappingType: MappingType;
-  postProcessingCache: Map<string, SubstituteValue[]>;
+  processingCache: Map<string, SubstituteValue[]>;
   sendPayload?: boolean;
   sourceId?: string;
 }

@@ -359,8 +359,8 @@
     <ng-template #extensionTemplateSource let-form="form">
       <div
         *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
-        <div class="form-group">
-          <label translate>Extensions for {{ mapping.mappingType }}</label>
+        <div class="form-group p-b-8">
+          <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
             <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
               (change)="

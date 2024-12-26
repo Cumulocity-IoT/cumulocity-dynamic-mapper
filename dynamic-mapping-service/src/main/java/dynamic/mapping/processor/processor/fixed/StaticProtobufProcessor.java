@@ -25,6 +25,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.ProcessingException;
@@ -64,48 +65,29 @@ public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]>
             } catch (InvalidProtocolBufferException e) {
                 throw new ProcessingException(e.getMessage());
             }
-            Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
-            postProcessingCache
-                    .put("time",
-                            new ArrayList<MappingSubstitution.SubstituteValue>(
-                                    Arrays.asList(new MappingSubstitution.SubstituteValue(
-                                            new DateTime(
-                                                    payloadProtobuf.getTimestamp())
-                                                    .toString(),
-                                            MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                            RepairStrategy.DEFAULT))));
-            postProcessingCache.put("c8y_GenericMeasurement.Module.value",
-                    new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                            new MappingSubstitution.SubstituteValue(payloadProtobuf.getValue(),
-                                    MappingSubstitution.SubstituteValue.TYPE.NUMBER,
-                                    RepairStrategy.DEFAULT))));
-            postProcessingCache
-                    .put("type",
-                            new ArrayList<MappingSubstitution.SubstituteValue>(
-                                    Arrays.asList(
-                                            new MappingSubstitution.SubstituteValue(
-                                                    payloadProtobuf
-                                                            .getMeasurementType(),
-                                                    MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                    RepairStrategy.DEFAULT))));
-            postProcessingCache.put("c8y_GenericMeasurement.Module.unit",
-                    new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                            new MappingSubstitution.SubstituteValue(payloadProtobuf.getUnit(),
-                                    MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                    RepairStrategy.DEFAULT))));
-            postProcessingCache.put(context.getMapping().getGenericDeviceIdentifier(),
-                    new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                            new MappingSubstitution.SubstituteValue(
-                                    payloadProtobuf.getExternalId(),
-                                    MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                    RepairStrategy.DEFAULT))));
+            context.addToProcessingCache("time", new DateTime(
+                    payloadProtobuf.getTimestamp())
+                    .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+            context.addToProcessingCache("c8y_GenericMeasurement.Module.value",
+                    payloadProtobuf.getValue(), TYPE.NUMBER, RepairStrategy.DEFAULT);
+            context.addToProcessingCache("type",
+                    payloadProtobuf.getMeasurementType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+            context.addToProcessingCache("c8y_GenericMeasurement.Module.unit",
+                    payloadProtobuf.getUnit(), TYPE.NUMBER, RepairStrategy.DEFAULT);
+
+            // as the mapping uses useExternalId we have to map the id to
+            // _IDENTITY_.externalId
+            context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
+                    payloadProtobuf.getExternalId()
+                            .toString(),
+                    TYPE.TEXTUAL, RepairStrategy.DEFAULT);
 
         }
     }
 
-@Override
-public void applyFilter(ProcessingContext<byte[]> context) {
-        //do nothing
-}
+    @Override
+    public void applyFilter(ProcessingContext<byte[]> context) {
+        // do nothing
+    }
 }

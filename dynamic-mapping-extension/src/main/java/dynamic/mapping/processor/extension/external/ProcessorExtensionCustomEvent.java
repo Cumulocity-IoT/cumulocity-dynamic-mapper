@@ -21,14 +21,9 @@
 
 package dynamic.mapping.processor.extension.external;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
 import jakarta.ws.rs.ProcessingException;
 
-import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
@@ -59,39 +54,22 @@ public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<b
         } catch (InvalidProtocolBufferException e) {
             throw new ProcessingException(e.getMessage());
         }
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context
-                .getPostProcessingCache();
 
-        postProcessingCache.put("time",
-                new ArrayList<MappingSubstitution.SubstituteValue>(
-                        Arrays.asList(new MappingSubstitution.SubstituteValue(
-                                new DateTime(
-                                        payloadProtobuf.getTimestamp())
-                                        .toString(),
-                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                RepairStrategy.DEFAULT))));
-        postProcessingCache.put("text",
-                new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                        new MappingSubstitution.SubstituteValue(
-                                payloadProtobuf.getTxt(),
-                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                RepairStrategy.DEFAULT))));
-        postProcessingCache.put("type",
-                new ArrayList<MappingSubstitution.SubstituteValue>(
-                        Arrays.asList(
-                                new MappingSubstitution.SubstituteValue(
-                                        payloadProtobuf
-                                                .getEventType(),
-                                        MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                        RepairStrategy.DEFAULT))));
-                                        
-        // as the mapping uses useExternalId we have to map the id to _IDENTITY_.externalId
-        postProcessingCache.put(context.getMapping().getGenericDeviceIdentifier(),
-                new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                        new MappingSubstitution.SubstituteValue(
-                                payloadProtobuf.getExternalId(),
-                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                RepairStrategy.DEFAULT))));
+        context.addToProcessingCache("time", new DateTime(
+                payloadProtobuf.getTimestamp())
+                .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+        context.addToProcessingCache("text",
+                payloadProtobuf.getTxt(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+        context.addToProcessingCache("type", 
+                payloadProtobuf.getEventType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+
+        // as the mapping uses useExternalId we have to map the id to
+        // _IDENTITY_.externalId
+        context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
+                payloadProtobuf.getExternalId()
+                        .toString(),
+                TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+
         log.info("Tenant {} - New event over protobuf: {}, {}, {}, {}", context.getTenant(),
                 payloadProtobuf.getTimestamp(),
                 payloadProtobuf.getTxt(), payloadProtobuf.getEventType(),

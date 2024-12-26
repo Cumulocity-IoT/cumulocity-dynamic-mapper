@@ -58,8 +58,8 @@ export abstract class PayloadProcessorOutbound {
     // step 3 replace target with extract content from o payload
     const { mapping } = context;
 
-    const { postProcessingCache } = context;
-    const pathTargets = postProcessingCache.keys();
+    const { processingCache } = context;
+    const pathTargets = processingCache.keys();
 
     let predecessor: number = -1;
     let payloadTarget: JSON = null;
@@ -86,8 +86,8 @@ export abstract class PayloadProcessorOutbound {
         type: SubstituteValueType.TEXTUAL,
         repairStrategy: RepairStrategy.DEFAULT
       };
-      if (postProcessingCache.get(pathTarget).length > 0) {
-        substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
+      if (processingCache.get(pathTarget).length > 0) {
+        substituteValue = _.clone(processingCache.get(pathTarget)[0]);
       }
 
       this.substituteValueInPayload(
@@ -149,7 +149,7 @@ export abstract class PayloadProcessorOutbound {
       predecessor = context.requests.length;
     } else {
       console.warn(
-        'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}'
+        'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${processingCache.size}'
       );
     }
     //console.log(
