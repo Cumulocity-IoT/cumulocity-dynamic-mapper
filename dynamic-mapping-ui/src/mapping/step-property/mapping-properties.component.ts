@@ -409,7 +409,7 @@ export class MappingStepPropertiesComponent
             wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               switchMode: true,
-              label: 'Supports key message context',
+              label: 'Use message context',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
