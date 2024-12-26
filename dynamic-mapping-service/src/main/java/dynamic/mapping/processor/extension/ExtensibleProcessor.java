@@ -46,11 +46,9 @@ public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
     }
 
     @Override
-    public ProcessingContext<byte[]> deserializePayload(Mapping mapping, ConnectorMessage message)
+    public byte[] deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
-        ProcessingContext<byte[]> context = new ProcessingContext<byte[]>();
-        context.setPayload(message.getPayload());
-        return context;
+        return message.getPayload();
     }
 
     @Override

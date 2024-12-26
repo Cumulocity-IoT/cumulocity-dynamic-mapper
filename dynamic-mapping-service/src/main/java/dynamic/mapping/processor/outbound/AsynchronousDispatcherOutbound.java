@@ -25,7 +25,6 @@ import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -48,7 +47,6 @@ import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.notification.websocket.Notification;
 import dynamic.mapping.processor.C8YMessage;
-import org.apache.commons.codec.binary.Hex;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -209,16 +207,13 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     BasePayloadProcessorOutbound processor = payloadProcessorsOutbound.get(mapping.mappingType);
                     try {
                         if (processor != null) {
-                            ProcessingContext<?> context = processor.deserializePayload(mapping, c8yMessage);
-                            context.setTopic(mapping.publishTopic);
-                            context.setMappingType(mapping.mappingType);
-                            context.setMapping(mapping);
-                            context.setSupportsMessageContext(mapping.supportsMessageContext);
-                            ;
-                            context.setSendPayload(sendPayload);
-                            context.setTenant(tenant);
-                            context.setQos(mapping.getQos());
-                            context.setServiceConfiguration(serviceConfiguration);
+                            Object payload = processor.deserializePayload(mapping, c8yMessage);
+                            ProcessingContext<?> context = ProcessingContext.builder().payload(payload)
+                                    .topic(mapping.publishTopic)
+                                    .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
+                                    .tenant(tenant).supportsMessageContext(mapping.supportsMessageContext)
+                                    .qos(mapping.qos).serviceConfiguration(serviceConfiguration)
+                                    .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info(
                                         "Tenant {} - New message for topic: {}, for connector: {}, wrapped message: {}",
@@ -234,20 +229,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
                                     || mapping.snoopStatus == SnoopStatus.STARTED) {
-                                String serializedPayload = null;
-                                Object payload = context.getPayload();
-                                switch (payload) {
-                                    case String payloadString:
-                                        serializedPayload = payloadString;
-                                        break;
-                                    case byte[] payloadByte:
-                                        serializedPayload = Hex.encodeHexString((byte[]) payloadByte);
-                                        break;
-                                    case Object payloadObject:
-                                        serializedPayload = JsonPath.parse(payloadObject).jsonString();
-                                        break;
-                                }
-
+                                String serializedPayload = context.getPayloadAsString();
                                 if (serializedPayload != null) {
                                     mapping.addSnoopedTemplate(serializedPayload);
                                     mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
@@ -318,7 +300,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         }
         if (c8yMessage.getPayload() != null) {
             try {
-                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage.getPayload(), c8yMessage.getApi());
+                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage.getPayload(),
+                        c8yMessage.getApi());
                 if (resolvedMappings.size() > 0 && op != null)
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
             } catch (Exception e) {

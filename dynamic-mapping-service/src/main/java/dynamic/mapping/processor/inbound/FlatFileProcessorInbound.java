@@ -26,7 +26,6 @@ import static java.util.Map.entry;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.processor.model.ProcessingContext;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -41,7 +40,7 @@ public class FlatFileProcessorInbound extends JSONProcessorInbound {
     }
 
     @Override
-    public ProcessingContext<Object> deserializePayload(Mapping mapping, ConnectorMessage message)
+    public Object deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
         String payloadMessage = (message.getPayload() != null
                 ? new String(message.getPayload(), Charset.defaultCharset())
@@ -49,8 +48,6 @@ public class FlatFileProcessorInbound extends JSONProcessorInbound {
         // Object payloadObjectNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));
         Object payloadObjectNode = new HashMap<>(Map.ofEntries(
             entry("message", payloadMessage)));
-        ProcessingContext<Object> context = new ProcessingContext<Object>();
-        context.setPayload(payloadObjectNode);
-        return context;
+        return payloadObjectNode;
     }
 }

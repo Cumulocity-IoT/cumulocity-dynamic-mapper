@@ -24,7 +24,6 @@ package dynamic.mapping.processor.processor.fixed;
 import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -34,12 +33,6 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
 public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]> {
 
     public StaticProtobufProcessor(ConfigurationRegistry configurationRegistry) {
@@ -47,11 +40,8 @@ public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]>
     }
 
     @Override
-    public ProcessingContext<byte[]> deserializePayload(Mapping mapping, ConnectorMessage message)
-            throws IOException {
-        ProcessingContext<byte[]> context = new ProcessingContext<byte[]>();
-        context.setPayload(message.getPayload());
-        return context;
+    public byte[] deserializePayload(Mapping mapping, ConnectorMessage message){
+        return message.getPayload();
     }
 
     @Override

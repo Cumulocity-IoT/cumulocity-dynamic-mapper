@@ -26,7 +26,6 @@ import static java.util.Map.entry;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.codec.binary.Hex;
 
 import java.io.IOException;
@@ -41,14 +40,9 @@ public class GenericBinaryProcessorInbound extends JSONProcessorInbound {
     }
 
     @Override
-    public ProcessingContext<Object> deserializePayload(Mapping mapping, ConnectorMessage message)
+    public Object deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
-        // Object payloadObjectNode = objectMapper
-        // .valueToTree(new PayloadWrapper("0x" +
-        // Hex.encodeHexString(message.getPayload())));
         Object payloadObjectNode = new HashMap<>(Map.ofEntries(entry("message", "0x" + Hex.encodeHexString(message.getPayload()))));
-        ProcessingContext<Object> context = new ProcessingContext<Object>();
-        context.setPayload(payloadObjectNode);
-        return context;
+        return payloadObjectNode;
     }
 }

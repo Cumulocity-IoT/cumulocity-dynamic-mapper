@@ -26,8 +26,8 @@ import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
+import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import dynamic.mapping.processor.ProcessingException;
 
@@ -35,9 +35,13 @@ import static dynamic.mapping.model.Mapping.getPathTargetForDeviceIdentifiers;
 
 import java.util.*;
 
+import org.apache.commons.codec.binary.Hex;
+
+import com.jayway.jsonpath.JsonPath;
+
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
 /*
  * The class <code>ProcessingContext</code> collects all relevant information:
  * <code>mapping</code>, <code>topic</code>, <code>payload</code>,
@@ -58,29 +62,38 @@ public class ProcessingContext<O> {
 
     private byte[] payloadRaw;
 
+    @Builder.Default
     private List<C8YRequest> requests = new ArrayList<C8YRequest>();
 
+    @Builder.Default
     private List<Exception> errors = new ArrayList<Exception>();
 
+    @Builder.Default
     private ProcessingType processingType = ProcessingType.UNDEFINED;
 
+    @Builder.Default
     private Map<String, Integer> cardinality = new HashMap<String, Integer>();
 
     private MappingType mappingType;
 
     // <pathTarget, substituteValues>
+    @Builder.Default
     private Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
 
+    @Builder.Default
     private boolean sendPayload = false;
-
+    
+    @Builder.Default
     private boolean needsRepair = false;
 
     private String tenant;
 
     private ServiceConfiguration serviceConfiguration;
 
+    @Builder.Default
     private boolean supportsMessageContext = false;
 
+    @Builder.Default
     private boolean ignoreFurtherProcessing = false;
 
     private byte[] key;
@@ -118,7 +131,7 @@ public class ProcessingContext<O> {
     }
 
     public List<MappingSubstitution.SubstituteValue> getDeviceEntries() {
-                List<String> pathsTargetForDeviceIdentifiers;
+        List<String> pathsTargetForDeviceIdentifiers;
         if (mapping.extension != null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
@@ -128,7 +141,7 @@ public class ProcessingContext<O> {
                 ? pathsTargetForDeviceIdentifiers.get(0)
                 : null;
         List<MappingSubstitution.SubstituteValue> deviceEntries = processingCache
-        .get(firstPathTargetForDeviceIdentifiers);
+                .get(firstPathTargetForDeviceIdentifiers);
         return deviceEntries;
     }
 
@@ -139,7 +152,7 @@ public class ProcessingContext<O> {
         } else {
             pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
         }
-            pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
+        pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         return pathsTargetForDeviceIdentifiers;
     }
 
@@ -153,6 +166,23 @@ public class ProcessingContext<O> {
 
     public Integer getProcessingCacheSize() {
         return processingCache.size();
+    }
+
+    public String getPayloadAsString() {
+        String serializedPayload;
+        Object payload = getPayload();
+        switch (payload) {
+            case String payloadString:
+                serializedPayload = payloadString;
+                break;
+            case byte[] payloadByte:
+                serializedPayload = Hex.encodeHexString((byte[]) payloadByte);
+                break;
+            case Object payloadObject:
+                serializedPayload = JsonPath.parse(payloadObject).json().toString();
+                break;
+        }
+        return serializedPayload;
     }
 
 }

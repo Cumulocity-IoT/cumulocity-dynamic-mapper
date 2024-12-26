@@ -51,11 +51,10 @@ public class ProcessorExtensionTest {
     .build();
 
     ProcessorExtensionCustomEvent extension = new ProcessorExtensionCustomEvent();
-    ProcessingContext<byte[]> context = new ProcessingContext<>();
-    context.setPayload(proto.toByteArray());
+    Object payload = proto.toByteArray();
     Mapping m1 = new Mapping();
     m1.setTargetAPI(API.EVENT);
-    context.setMapping(m1);
+    ProcessingContext context = ProcessingContext.builder().payload(payload).mapping(m1).build();
 
     extension.extractFromSource(context);
 

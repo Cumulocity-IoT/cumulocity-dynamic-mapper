@@ -22,7 +22,6 @@
 package dynamic.mapping.processor.inbound;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
@@ -41,7 +40,6 @@ import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
-import org.apache.commons.codec.binary.Hex;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -144,16 +142,12 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     try {
                         if (processor != null) {
                             inboundProcessingCounter.increment();
-                            ProcessingContext<?> context = processor.deserializePayload(mapping, connectorMessage);
-                            context.setTopic(topic);
-                            context.setMappingType(mapping.mappingType);
-                            context.setMapping(mapping);
-                            context.setSendPayload(sendPayload);
-                            context.setTenant(tenant);
-                            context.setSupportsMessageContext(
-                                    connectorMessage.isSupportsMessageContext() && mapping.supportsMessageContext);
-                            context.setKey(connectorMessage.getKey());
-                            context.setServiceConfiguration(serviceConfiguration);
+                            Object payload = processor.deserializePayload(mapping, connectorMessage);
+                            ProcessingContext<?> context = ProcessingContext.builder().payload(payload).topic(topic)
+                                    .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
+                                    .tenant(tenant).supportsMessageContext(connectorMessage.isSupportsMessageContext()
+                                            && mapping.supportsMessageContext).key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
+                                    .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",
                                         tenant,
@@ -167,20 +161,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
                                     || mapping.snoopStatus == SnoopStatus.STARTED) {
-                                String serializedPayload = null;
-                                Object payload = context.getPayload();
-                                switch (payload) {
-                                    case String payloadString:
-                                        serializedPayload = payloadString;
-                                        break;
-                                    case byte[] payloadByte:
-                                        serializedPayload = Hex.encodeHexString((byte[]) payloadByte);
-                                        break;
-                                    case Object payloadObject:
-                                        serializedPayload = JsonPath.parse(payloadObject).json().toString();
-                                        break;
-                                }
-
+                                String serializedPayload = context.getPayloadAsString();
                                 if (serializedPayload != null) {
                                     mapping.addSnoopedTemplate(serializedPayload);
                                     mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();

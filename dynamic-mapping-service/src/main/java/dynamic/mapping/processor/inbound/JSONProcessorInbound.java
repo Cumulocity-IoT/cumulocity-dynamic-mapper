@@ -56,12 +56,10 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
     }
 
     @Override
-    public ProcessingContext<Object> deserializePayload(
+    public Object deserializePayload(
             Mapping mapping, ConnectorMessage message) throws IOException {
         Object jsonObject = Json.parseJson(new String(message.getPayload(), "UTF-8"));
-        ProcessingContext<Object> context = new ProcessingContext<Object>();
-        context.setPayload(jsonObject);
-        return context;
+        return jsonObject;
     }
 
     @Override

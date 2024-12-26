@@ -71,7 +71,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 
     protected ExecutorService processingCachePool;
 
-    public abstract ProcessingContext<T> deserializePayload(Mapping mapping, ConnectorMessage message)
+    public abstract T deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
