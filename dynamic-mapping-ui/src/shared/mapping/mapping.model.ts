@@ -350,13 +350,6 @@ export interface Feature {
   return mp;
 }
 
-export function getPathSourceForDeviceIdentifiers(mapping: Mapping): string[] {
-  const pss = mapping.substitutions
-    .filter(sub => definesDeviceIdentifier(mapping, sub))
-    .map(sub => sub.pathSource);
-  return pss;
-}
-
 export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
   const pss = mapping.substitutions
     .filter(sub => definesDeviceIdentifier(mapping, sub))
@@ -430,7 +423,7 @@ export function countDeviceIdentifiers(mapping: Mapping): number {
 }
 export const IDENTITY = '_IDENTITY_';
 export function getGenericDeviceIdentifier(mapping: Mapping): string {
-  if (mapping.externalIdType && mapping.externalIdType !== '') {
+  if (mapping.useExternalId && mapping.externalIdType !== '') {
     return `${IDENTITY}.externalId`;
   } else {
     return `${IDENTITY}.c8ySourceId`;

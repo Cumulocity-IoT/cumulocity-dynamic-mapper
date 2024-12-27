@@ -233,15 +233,6 @@ public class Mapping implements Serializable {
     }
 
     @JsonIgnore
-    public List<String> getPathSourceForDeviceIdentifiers() {
-        List<String> pss = Arrays.stream(substitutions)
-                .filter(sub -> definesDeviceIdentifier(sub))
-                .map(sub -> sub.pathSource)
-                .toList();
-        return pss;
-    }
-
-    @JsonIgnore
     public List<String> getPathTargetForDeviceIdentifiers() {
         List<String> pss = Arrays.stream(substitutions)
                 .filter(sub -> definesDeviceIdentifier(sub))

@@ -209,36 +209,35 @@ public abstract class BasePayloadProcessorInbound<T> {
                     // since the attributes identifying the MEA and Inventory requests are removed
                     // during the design time, they have to be added before sending
                     substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
-                    if (sourceId == null && mapping.createNonExistingDevice) {
-                        ManagedObjectRepresentation attocDevice = null;
-                        Map<String, Object> request = new HashMap<String, Object>();
-                        request.put("name",
-                                "device_" + mapping.externalIdType + "_" + substitute.value.toString());
-                        request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
-                        request.put("c8y_IsDevice", null);
-                        request.put("com_cumulocity_model_Agent", null);
-                        try {
-                            var requestString = objectMapper.writeValueAsString(request);
-                            var newPredecessor = context.addRequest(
-                                    new C8YRequest(predecessor, RequestMethod.PATCH, device.value.toString(),
-                                            mapping.externalIdType, requestString, null, API.INVENTORY, null));
-                            attocDevice = c8yAgent.upsertDevice(tenant,
-                                    new ID(mapping.externalIdType, substitute.value.toString()), context,
-                                    null);
-                            var response = objectMapper.writeValueAsString(attocDevice);
-                            context.getCurrentRequest().setResponse(response);
-                            substitute.value = attocDevice.getId().getValue();
-                            predecessor = newPredecessor;
-                        } catch (ProcessingException | JsonProcessingException e) {
-                            context.getCurrentRequest().setError(e);
+                    if (sourceId == null) {
+                        if (mapping.createNonExistingDevice) {
+                            Map<String, Object> request = new HashMap<String, Object>();
+                            request.put("name",
+                                    "device_" + mapping.externalIdType + "_" + substitute.value.toString());
+                            request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
+                            request.put("c8y_IsDevice", null);
+                            request.put("com_cumulocity_model_Agent", null);
+                            try {
+                                var requestString = objectMapper.writeValueAsString(request);
+                                var newPredecessor = context.addRequest(
+                                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.toString(),
+                                                mapping.externalIdType, requestString, null, API.INVENTORY, null));
+                                ManagedObjectRepresentation attocDevice = c8yAgent.upsertDevice(tenant,
+                                        new ID(mapping.externalIdType, substitute.value.toString()), context,
+                                        null);
+                                var response = objectMapper.writeValueAsString(attocDevice);
+                                context.getCurrentRequest().setResponse(response);
+                                substitute.value = attocDevice.getId().getValue();
+                                predecessor = newPredecessor;
+                            } catch (ProcessingException | JsonProcessingException e) {
+                                context.getCurrentRequest().setError(e);
+                            }
+                        } else if (context.isSendPayload()) {
+                            throw new RuntimeException(String.format(
+                                    "External id %s for type %s not found!",
+                                    substitute.toString(),
+                                    mapping.externalIdType));
                         }
-                    } else if (sourceId == null && context.isSendPayload()) {
-                        throw new RuntimeException(String.format(
-                                "External id %s for type %s not found!",
-                                substitute.toString(),
-                                mapping.externalIdType));
-                    } else if (sourceId == null) {
-                        substitute.value = null;
                     } else {
                         substitute.value = sourceId.getManagedObject().getId().getValue();
                     }
@@ -254,17 +253,17 @@ public abstract class BasePayloadProcessorInbound<T> {
          * step 4 prepare target payload for sending to c8y
          */
         if (mapping.targetAPI.equals(API.INVENTORY)) {
-            ManagedObjectRepresentation attocDevice = null;
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor, RequestMethod.PATCH, device.value.toString(),
                             mapping.externalIdType,
                             payloadTarget.jsonString(),
                             null, API.INVENTORY, null));
             try {
+                ID identity = new ID(mapping.externalIdType, device.value.toString());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                        new ID(mapping.externalIdType, device.value.toString()), context);
-                attocDevice = c8yAgent.upsertDevice(tenant,
-                        new ID(mapping.externalIdType, device.value.toString()), context, sourceId);
+                        identity, context);
+                ManagedObjectRepresentation attocDevice = c8yAgent.upsertDevice(tenant,
+                        identity, context, sourceId);
                 var response = objectMapper.writeValueAsString(attocDevice);
                 context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {

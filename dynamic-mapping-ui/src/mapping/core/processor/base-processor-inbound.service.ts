@@ -32,11 +32,12 @@ import { splitTopicExcludingSeparator } from '../../shared/util';
 import { getGenericDeviceIdentifier } from '../../../shared/mapping/mapping.model';
 import { C8YAgent } from '../c8y-agent.service';
 import {
+  IDENTITY,
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType
 } from './processor.model';
-import { TOKEN_TOPIC_LEVEL } from './util';
+import { TOKEN_TOPIC_LEVEL } from './processor.model';
 import { getDeviceEntries, getTypedValue, substituteValueInPayload } from './processor.model';
 import { getPathTargetForDeviceIdentifiers, transformGenericPath2C8YPath } from '../../../shared/mapping/mapping.model';
 
@@ -152,77 +153,62 @@ export abstract class BaseProcessorInbound {
             pathsTargetForDeviceIdentifiers.includes(pathTarget) &&
             mapping.useExternalId
           ) {
-            try {
-              const identity = {
-                externalId: substitute.value.toString(),
-                type: mapping.externalIdType
-              };
-              sourceId = {
-                value: await this.c8yClient.resolveExternalId2GlobalId(
-                  identity,
-                  context
-                ), repairStrategy: RepairStrategy.DEFAULT, type: SubstituteValueType.TEXTUAL
-              };
-              substitute.value = sourceId.value;
-            } catch (e) {
-              //ignore this exception, we create a device in the next block
-            }
-            if (!sourceId.value) {
-              const request = {
-                c8y_IsDevice: {},
-                name: `device_${mapping.externalIdType}_${substitute.value}`,
-                d11r_device_generatedType: {},
-                [MAPPING_TEST_DEVICE_FRAGMENT]: {},
-                type: MAPPING_TEST_DEVICE_TYPE
-              };
-
-              const newPredecessor = context.requests.push({
-                predecessor: predecessor,
-                method: 'PATCH',
-                source: device.value,
-                externalIdType: mapping.externalIdType,
-                request,
-                targetAPI: API.INVENTORY.name,
-                hidden: !mapping.createNonExistingDevice
-              });
-
-              try {
-                const response = await this.c8yClient.upsertDevice(
-                  {
-                    externalId: substitute.value.toString(),
-                    type: mapping.externalIdType
-                  },
-                  context
-                );
-                context.requests[newPredecessor - 1].response = response;
-                substitute.value = response.id as any;
-              } catch (e) {
-                context.requests[newPredecessor - 1].error = e;
-              }
-              predecessor = newPredecessor;
-            } else if (!sourceId && context.sendPayload) {
-              throw new Error(
-                `External id ${substitute} for type ${mapping.externalIdType} not found!`
-              );
-            }
-            if (getGenericDeviceIdentifier(mapping) === pathTarget) {
-              substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
-              substituteValueInPayload(
-                substitute,
-                payloadTarget,
-                transformGenericPath2C8YPath(mapping, pathTarget),
-                this.alert
-              )
+          try {
+            const identity = {
+              externalId: substitute.value.toString(),
+              type: mapping.externalIdType
             };
+            sourceId = {
+              value: await this.c8yClient.resolveExternalId2GlobalId(
+                identity,
+                context
+              ), repairStrategy: RepairStrategy.DEFAULT, type: SubstituteValueType.TEXTUAL
+            };
+            substitute.value = sourceId.value;
+          } catch (e) {
+            //ignore this exception, we create a device in the next block
           }
-          substituteValueInPayload(
-            substitute,
-            payloadTarget,
-            pathTarget,
-            this.alert
-          );
 
-        } else {
+          // since we simulate the processing of the inbound messages, 
+          // we always have to create a simulation device locally. If this is the case the flag hidden ist set
+          if (!sourceId.value) {
+            const request = {
+              c8y_IsDevice: {},
+              name: `device_${mapping.externalIdType}_${substitute.value}`,
+              d11r_device_generatedType: {},
+              [MAPPING_TEST_DEVICE_FRAGMENT]: {},
+              type: MAPPING_TEST_DEVICE_TYPE
+            };
+
+            const newPredecessor = context.requests.push({
+              predecessor: predecessor,
+              method: 'PATCH',
+              source: device.value,
+              externalIdType: mapping.externalIdType,
+              request,
+              targetAPI: API.INVENTORY.name,
+              hidden: !mapping.createNonExistingDevice
+            });
+
+            try {
+              const response = await this.c8yClient.upsertDevice(
+                {
+                  externalId: substitute.value.toString(),
+                  type: mapping.externalIdType
+                },
+                context
+              );
+              context.requests[newPredecessor - 1].response = response;
+              substitute.value = response.id as any;
+            } catch (e) {
+              context.requests[newPredecessor - 1].error = e;
+            }
+            predecessor = newPredecessor;
+          } else if (!sourceId && context.sendPayload) {
+            throw new Error(
+              `External id ${substitute} for type ${mapping.externalIdType} not found!`
+            );
+          }
           if (getGenericDeviceIdentifier(mapping) === pathTarget) {
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             substituteValueInPayload(
@@ -232,13 +218,30 @@ export abstract class BaseProcessorInbound {
               this.alert
             )
           };
-          substituteValueInPayload(
-            substitute,
-            payloadTarget,
-            pathTarget,
-            this.alert
-          );
         }
+        substituteValueInPayload(
+          substitute,
+          payloadTarget,
+          pathTarget,
+          this.alert
+        );
+      } else {
+        if (getGenericDeviceIdentifier(mapping) === pathTarget) {
+          substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+          substituteValueInPayload(
+            sourceId,
+            payloadTarget,
+            transformGenericPath2C8YPath(mapping, pathTarget),
+            this.alert
+          )
+        };
+        substituteValueInPayload(
+          substitute,
+          payloadTarget,
+          pathTarget,
+          this.alert
+        );
+      }
       }
       /*
        * step 4 prepare target payload for sending to c8y
