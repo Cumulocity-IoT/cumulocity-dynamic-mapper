@@ -21,6 +21,7 @@
 
 package dynamic.mapping.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import lombok.Getter;
@@ -158,6 +159,34 @@ public class Mapping implements Serializable {
         return (m instanceof Mapping) && id == ((Mapping) m).id;
     }
 
+    @JsonIgnore
+    public String getGenericDeviceIdentifier() {
+        if (useExternalId && !("").equals(externalIdType)) {
+            return (Mapping.IDENTITY + ".externalId");
+        } else {
+            return (Mapping.IDENTITY + ".c8ySourceId");
+        }
+    }
+
+    @JsonIgnore
+    public boolean definesDeviceIdentifier(
+            MappingSubstitution sub) {
+        if (Direction.INBOUND.equals(direction)) {
+            if (useExternalId && !("").equals(externalIdType)) {
+                return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
+            } else {
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
+            }
+        } else {
+            if (useExternalId && !("").equals(externalIdType)) {
+                return (Mapping.IDENTITY + ".externalId").equals(sub.pathSource);
+            } else {
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathSource);
+            }
+        }
+    }
+
+    @JsonIgnore
     public void addSnoopedTemplate(String payloadMessage) {
         snoopedTemplates.add(payloadMessage);
         if (snoopedTemplates.size() > SNOOP_TEMPLATES_MAX) {
@@ -168,6 +197,7 @@ public class Mapping implements Serializable {
         }
     }
 
+    @JsonIgnore
     public void sortSubstitutions() {
         MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
                 (s1, s2) -> -(Boolean.valueOf(definesDeviceIdentifier(s1))
@@ -175,6 +205,49 @@ public class Mapping implements Serializable {
                                 Boolean.valueOf(definesDeviceIdentifier(s2)))))
                 .toArray(size -> new MappingSubstitution[size]);
         substitutions = sortedSubstitutions;
+    }
+
+    /*
+     * "_IDENTITY_.externalId" => source.id
+     */
+    @JsonIgnore
+    public String transformGenericPath2C8YPath(String originalPath) {
+        // "_IDENTITY_.externalId" => source.id
+        if (getGenericDeviceIdentifier().equals(originalPath)) {
+            return targetAPI.identifier;
+        } else {
+            return originalPath;
+        }
+    }
+
+    /*
+     * source.id => "_IDENTITY_.externalId"
+     */
+    @JsonIgnore
+    public String transformC8YPath2GenericPath(String originalPath) {
+        if (targetAPI.identifier.equals(originalPath)) {
+            return getGenericDeviceIdentifier();
+        } else {
+            return originalPath;
+        }
+    }
+
+    @JsonIgnore
+    public List<String> getPathSourceForDeviceIdentifiers() {
+        List<String> pss = Arrays.stream(substitutions)
+                .filter(sub -> definesDeviceIdentifier(sub))
+                .map(sub -> sub.pathSource)
+                .toList();
+        return pss;
+    }
+
+    @JsonIgnore
+    public List<String> getPathTargetForDeviceIdentifiers() {
+        List<String> pss = Arrays.stream(substitutions)
+                .filter(sub -> definesDeviceIdentifier(sub))
+                .map(sub -> sub.pathTarget)
+                .toList();
+        return pss;
     }
 
     public static String[] splitTopicIncludingSeparatorAsArray(String topic) {
@@ -195,54 +268,6 @@ public class Mapping implements Serializable {
     public static List<String> splitTopicExcludingSeparatorAsList(String topic) {
         return new ArrayList<String>(
                 Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
-    }
-
-    public String getGenericDeviceIdentifier() {
-        if (useExternalId && !("").equals(externalIdType)) {
-            return (Mapping.IDENTITY + ".externalId");
-        } else {
-            return (Mapping.IDENTITY + ".c8ySourceId");
-        }
-    }
-
-    public boolean definesDeviceIdentifier(
-            MappingSubstitution sub) {
-        if (Direction.INBOUND.equals(direction)) {
-            if (useExternalId && !("").equals(externalIdType)) {
-                return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
-            } else {
-                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
-            }
-        } else {
-            if (useExternalId && !("").equals(externalIdType)) {
-                return (Mapping.IDENTITY + ".externalId").equals(sub.pathSource);
-            } else {
-                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathSource);
-            }
-        }
-    }
-
-    /*
-     * "_IDENTITY_.externalId" => source.id
-     */
-    public String transformGenericPath2C8YPath(String originalPath) {
-        // "_IDENTITY_.externalId" => source.id
-        if (getGenericDeviceIdentifier().equals(originalPath)) {
-            return targetAPI.identifier;
-        } else {
-            return originalPath;
-        }
-    }
-
-    /*
-     * source.id => "_IDENTITY_.externalId"
-     */
-    public String transformC8YPath2GenericPath(String originalPath) {
-        if (targetAPI.identifier.equals(originalPath)) {
-            return getGenericDeviceIdentifier();
-        } else {
-            return originalPath;
-        }
     }
 
     /*
@@ -428,19 +453,4 @@ public class Mapping implements Serializable {
         return mp;
     }
 
-    public List<String> getPathSourceForDeviceIdentifiers() {
-        List<String> pss = Arrays.stream(substitutions)
-                .filter(sub -> definesDeviceIdentifier(sub))
-                .map(sub -> sub.pathSource)
-                .toList();
-        return pss;
-    }
-
-    public List<String> getPathTargetForDeviceIdentifiers() {
-        List<String> pss = Arrays.stream(substitutions)
-                .filter(sub -> definesDeviceIdentifier(sub))
-                .map(sub -> sub.pathTarget)
-                .toList();
-        return pss;
-    }
 }

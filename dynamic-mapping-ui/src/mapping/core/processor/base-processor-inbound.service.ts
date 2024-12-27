@@ -116,10 +116,10 @@ export abstract class BaseProcessorInbound {
           type: SubstituteValueType.TEXTUAL,
           repairStrategy: RepairStrategy.DEFAULT
         };
-        const pathTargetSubstitue = processingCache.get(pathTarget);
-        if (i < pathTargetSubstitue.length) {
-          substitute = _.clone(pathTargetSubstitue[i]);
-        } else if (pathTargetSubstitue.length == 1) {
+        const pathTargetSubstitute = processingCache.get(pathTarget);
+        if (i < pathTargetSubstitute.length) {
+          substitute = _.clone(pathTargetSubstitute[i]);
+        } else if (pathTargetSubstitute.length == 1) {
           // this is an indication that the substitution is the same for all
           // events/alarms/measurements/inventory
           if (
@@ -127,14 +127,14 @@ export abstract class BaseProcessorInbound {
             RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
             substitute.repairStrategy == RepairStrategy.DEFAULT
           ) {
-            substitute = _.clone(pathTargetSubstitue[0]);
+            substitute = _.clone(pathTargetSubstitute[0]);
           } else if (
             substitute.repairStrategy ==
             RepairStrategy.USE_LAST_VALUE_OF_ARRAY
           ) {
-            const last: number = pathTargetSubstitue.length - 1;
+            const last: number = pathTargetSubstitute.length - 1;
             substitute = _.clone(
-              pathTargetSubstitue[last]
+              pathTargetSubstitute[last]
             );
           }
           console.warn(
