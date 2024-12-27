@@ -50,6 +50,7 @@ import dynamic.mapping.processor.model.RepairStrategy;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
@@ -77,6 +78,28 @@ public abstract class BasePayloadProcessorInbound<T> {
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
 
     public abstract void applyFilter(ProcessingContext<T> context);
+
+    public void enrichPayload(ProcessingContext<T> context) {
+        /*
+         * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
+         * is required in the payload for a substitution
+         */
+        String tenant = context.getTenant();
+        Object payloadObject = context.getPayload();
+
+        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+        if (payloadObject instanceof Map) {
+            ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
+            if (context.isSupportsMessageContext() && context.getKey() != null) {
+                String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
+                Map contextData = Map.of(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
+                ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
+            }
+        } else {
+            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+                    tenant);
+        }
+    }
 
     public void validateProcessingCache(ProcessingContext<T> context) {
         // if there are too few devices identified, then we replicate the first device

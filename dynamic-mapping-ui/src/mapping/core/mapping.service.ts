@@ -466,6 +466,7 @@ export class MappingService {
     const { mapping } = context;
     if (mapping.direction == Direction.INBOUND) {
       this.jsonProcessorInbound.deserializePayload(mapping, message, context);
+      this.jsonProcessorInbound.enrichPayload(context);
       await this.jsonProcessorInbound.extractFromSource(context);
       this.jsonProcessorInbound.validateProcessingCache(context);
       await this.jsonProcessorInbound.substituteInTargetAndSend(context);

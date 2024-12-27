@@ -248,6 +248,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                                             context.getPayload().getClass());
                                 }
                             } else {
+                                processor.enrichPayload(context);
                                 processor.extractFromSource(context);
                                 processor.substituteInTargetAndSend(context);
                                 Counter.builder("dynmapper_outbound_message_total")

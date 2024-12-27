@@ -31,8 +31,6 @@ import lombok.Getter;
 import lombok.Setter;
 import dynamic.mapping.processor.ProcessingException;
 
-import static dynamic.mapping.model.Mapping.getPathTargetForDeviceIdentifiers;
-
 import java.util.*;
 
 import org.apache.commons.codec.binary.Hex;
@@ -132,7 +130,7 @@ public class ProcessingContext<O> {
         if (mapping.extension != null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
-            pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
+            pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
         }
         String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
                 ? pathsTargetForDeviceIdentifiers.get(0)
@@ -147,7 +145,7 @@ public class ProcessingContext<O> {
         if (mapping.extension != null || MappingType.PROTOBUF_STATIC.equals(mapping.getMappingType())) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
-            pathsTargetForDeviceIdentifiers = getPathTargetForDeviceIdentifiers(mapping);
+            pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
         }
         pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         return pathsTargetForDeviceIdentifiers;

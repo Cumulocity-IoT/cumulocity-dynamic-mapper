@@ -28,14 +28,14 @@ import {
   MAPPING_TEST_DEVICE_TYPE,
   MAPPING_TEST_DEVICE_FRAGMENT
 } from '../../../shared';
-import { getGenericDeviceIdentifier } from '../../shared/util';
+import { getGenericDeviceIdentifier, splitTopicExcludingSeparator } from '../../shared/util';
 import { C8YAgent } from '../c8y-agent.service';
 import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType
 } from './processor.model';
-import { getDeviceEntries, getPathTargetForDeviceIdentifiers, getTypedValue, substituteValueInPayload, transformGenericPath2C8YPath } from './util';
+import { getDeviceEntries, getPathTargetForDeviceIdentifiers, getTypedValue, substituteValueInPayload, TOKEN_TOPIC_LEVEL, transformGenericPath2C8YPath } from './util';
 
 @Injectable({ providedIn: 'root' })
 export abstract class BaseProcessorInbound {
@@ -57,6 +57,12 @@ export abstract class BaseProcessorInbound {
   }
 
   abstract extractFromSource(context: ProcessingContext): void;
+
+  enrichPayload(context: ProcessingContext): void {
+    const { mapping, payload } = context;
+    const topicLevels = splitTopicExcludingSeparator(context.topic);
+    payload[TOKEN_TOPIC_LEVEL] = topicLevels;
+  }
 
   validateProcessingCache(context: ProcessingContext) {
     const { processingCache, mapping } = context;

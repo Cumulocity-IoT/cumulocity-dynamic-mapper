@@ -428,17 +428,17 @@ public class Mapping implements Serializable {
         return mp;
     }
 
-    static public List<String> getPathSourceForDeviceIdentifiers(Mapping mapping) {
-        List<String> pss = Arrays.stream(mapping.substitutions)
-                .filter(sub -> mapping.definesDeviceIdentifier(sub))
+    public List<String> getPathSourceForDeviceIdentifiers() {
+        List<String> pss = Arrays.stream(substitutions)
+                .filter(sub -> definesDeviceIdentifier(sub))
                 .map(sub -> sub.pathSource)
                 .toList();
         return pss;
     }
 
-    static public List<String> getPathTargetForDeviceIdentifiers(Mapping mapping) {
-        List<String> pss = Arrays.stream(mapping.substitutions)
-                .filter(sub -> mapping.definesDeviceIdentifier(sub))
+    public List<String> getPathTargetForDeviceIdentifiers() {
+        List<String> pss = Arrays.stream(substitutions)
+                .filter(sub -> definesDeviceIdentifier(sub))
                 .map(sub -> sub.pathTarget)
                 .toList();
         return pss;

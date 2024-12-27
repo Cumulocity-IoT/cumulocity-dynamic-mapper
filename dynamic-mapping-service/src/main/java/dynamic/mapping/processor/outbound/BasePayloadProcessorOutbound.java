@@ -22,6 +22,8 @@
 package dynamic.mapping.processor.outbound;
 
 import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -32,6 +34,8 @@ import java.util.Set;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
@@ -48,6 +52,7 @@ import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -66,6 +71,42 @@ public abstract class BasePayloadProcessorOutbound<T> {
             throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
+
+    public void enrichPayload(ProcessingContext<T> context) {
+
+        /*
+         * step 0 patch payload with dummy property _IDENTITY_ in case the content
+         * is required in the payload for a substitution
+         */
+        String tenant = context.getTenant();
+        Object payloadObject = context.getPayload();
+        Mapping mapping = context.getMapping();
+        String payloadAsString = toPrettyJsonString(payloadObject);
+        var sourceId = extractContent(context, mapping, payloadObject, payloadAsString,
+                mapping.targetAPI.identifier);
+        context.setSourceId(sourceId.toString());
+        Map<String, String> identityFragment = new HashMap<>();
+        identityFragment.put("c8ySourceId", sourceId.toString());
+        identityFragment.put("externalIdType", mapping.externalIdType);
+        if (mapping.useExternalId && !("").equals(mapping.externalIdType)) {
+            ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
+                    new GId(sourceId.toString()), mapping.externalIdType,
+                    context);
+            if (externalId == null) {
+                if (context.isSendPayload()) {
+                    throw new RuntimeException(String.format("External id %s for type %s not found!",
+                            sourceId.toString(), mapping.externalIdType));
+                }
+            }
+            identityFragment.put("externalId", externalId.getExternalId());
+        }
+        if (payloadObject instanceof Map) {
+            ((Map) payloadObject).put(Mapping.IDENTITY, identityFragment);
+        } else {
+            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+                    tenant);
+        }
+    }
 
     public ProcessingContext<T> substituteInTargetAndSend(ProcessingContext<T> context) {
         /*
@@ -172,5 +213,19 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 mapping.targetAPI,
                 1);
         return context;
+    }
+
+    protected Object extractContent(ProcessingContext<T> context, Mapping mapping, Object payloadJsonNode,
+            String payloadAsString, @NotNull String ps) {
+        Object extractedSourceContent = null;
+        try {
+            var expr = jsonata(mapping.transformGenericPath2C8YPath(ps));
+            extractedSourceContent = expr.evaluate(payloadJsonNode);
+        } catch (Exception e) {
+            log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
+                    ps,
+                    payloadAsString, e);
+        }
+        return extractedSourceContent;
     }
 }

@@ -42,14 +42,10 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
   }
 
   async extractFromSource(context: ProcessingContext) {
-    const { mapping } = context;
-    const { processingCache } = context;
-    const payload: string = JSON.stringify(context.payload, null, 4);
-
-    const payloadObjectNode = context.payload;
+    const { mapping, processingCache, payload } = context;
 
     let sourceId: any  = await this.evaluateExpression(
-      payloadObjectNode,
+      payload,
       API[mapping.targetAPI].identifier
     );
 
@@ -92,7 +88,7 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
       try {
         // step 1 extract content from inbound payload
         let extractedSourceContent: any  = await this.evaluateExpression(
-          payloadObjectNode,
+          payload,
           substitution.pathSource
         );
 

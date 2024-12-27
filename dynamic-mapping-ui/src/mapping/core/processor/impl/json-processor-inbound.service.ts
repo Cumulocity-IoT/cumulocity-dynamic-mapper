@@ -46,13 +46,10 @@ export class JSONProcessorInbound extends BaseProcessorInbound {
   }
 
   async extractFromSource(context: ProcessingContext) {
-    const { mapping } = context;
-    const payloadJsonNode: JSON = context.payload;
+    const { mapping, payload } = context;
     const { processingCache } = context;
-    const topicLevels = splitTopicExcludingSeparator(context.topic);
-    payloadJsonNode[TOKEN_TOPIC_LEVEL] = topicLevels;
 
-    const payload: string = JSON.stringify(payloadJsonNode, null, 4);
+    const payloadAsString: string = JSON.stringify(payload, null, 4);
     let substitutionTimeExists: boolean = false;
 
     // iterate over substitutions BEGIN

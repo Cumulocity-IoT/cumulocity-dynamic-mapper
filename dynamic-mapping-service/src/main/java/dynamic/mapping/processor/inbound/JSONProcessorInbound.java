@@ -69,27 +69,10 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
         Mapping mapping = context.getMapping();
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        Object payloadObjectNode = context.getPayload();
+        Object payloadObject = context.getPayload();
         Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
 
-        /*
-         * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
-         * is required in the payload for a substitution
-         */
-        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-        if (payloadObjectNode instanceof Map) {
-            ((Map) payloadObjectNode).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
-            if (context.isSupportsMessageContext() && context.getKey() != null) {
-                String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
-                Map contextData = Map.of(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
-                ((Map) payloadObjectNode).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
-            }
-        } else {
-            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
-                    tenant);
-        }
-
-        String payload = toPrettyJsonString(payloadObjectNode);
+        String payload = toPrettyJsonString(payloadObject);
         if (serviceConfiguration.logPayload || mapping.debug) {
             log.debug("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
                     mapping.debug, serviceConfiguration.logPayload || mapping.debug);
@@ -103,7 +86,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
              */
             try {
                 var expr = jsonata(substitution.pathSource);
-                extractedSourceContent = expr.evaluate(payloadObjectNode);
+                extractedSourceContent = expr.evaluate(payloadObject);
             } catch (Exception e) {
                 log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
                         payload, e);

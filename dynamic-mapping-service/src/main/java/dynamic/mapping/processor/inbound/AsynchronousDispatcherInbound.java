@@ -180,6 +180,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                                             context.getPayload().getClass());
                                 }
                             } else {
+                                processor.enrichPayload(context);
                                 processor.extractFromSource(context);
                                 processor.validateProcessingCache(context);
                                 processor.applyFilter(context);

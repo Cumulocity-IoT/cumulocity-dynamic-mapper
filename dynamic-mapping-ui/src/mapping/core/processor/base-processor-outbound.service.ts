@@ -56,9 +56,7 @@ export abstract class BaseProcessorOutbound {
 
   async substituteInTargetAndSend(context: ProcessingContext) {
     // step 3 replace target with extract content from o payload
-    const { mapping } = context;
-
-    const { processingCache } = context;
+    const { mapping, processingCache } = context;
     const pathTargets = processingCache.keys();
 
     let predecessor: number = -1;
