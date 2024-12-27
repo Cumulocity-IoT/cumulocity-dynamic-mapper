@@ -26,14 +26,15 @@ import {
   Output,
   ViewEncapsulation
 } from '@angular/core';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import {
   ConfirmationModalComponent,
+  definesDeviceIdentifier,
   Direction,
   MappingSubstitution
 } from '../../shared';
-import { definesDeviceIdentifier, isDisabled } from '../shared/util';
-import { EditorMode } from '../shared/stepper-model';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { EditorMode } from '../shared/stepper.model';
+import { isDisabled } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-substitution-grid',

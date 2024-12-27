@@ -28,14 +28,17 @@ import {
   MAPPING_TEST_DEVICE_TYPE,
   MAPPING_TEST_DEVICE_FRAGMENT
 } from '../../../shared';
-import { getGenericDeviceIdentifier, splitTopicExcludingSeparator } from '../../shared/util';
+import { splitTopicExcludingSeparator } from '../../shared/util';
+import { getGenericDeviceIdentifier } from '../../../shared/mapping/mapping.model';
 import { C8YAgent } from '../c8y-agent.service';
 import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType
 } from './processor.model';
-import { getDeviceEntries, getPathTargetForDeviceIdentifiers, getTypedValue, substituteValueInPayload, TOKEN_TOPIC_LEVEL, transformGenericPath2C8YPath } from './util';
+import { TOKEN_TOPIC_LEVEL } from './util';
+import { getDeviceEntries, getTypedValue, substituteValueInPayload } from './processor.model';
+import { getPathTargetForDeviceIdentifiers, transformGenericPath2C8YPath } from '../../../shared/mapping/mapping.model';
 
 @Injectable({ providedIn: 'root' })
 export abstract class BaseProcessorInbound {
@@ -205,7 +208,6 @@ export abstract class BaseProcessorInbound {
             if (getGenericDeviceIdentifier(mapping) === pathTarget) {
               substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
               substituteValueInPayload(
-                mapping.mappingType,
                 substitute,
                 payloadTarget,
                 transformGenericPath2C8YPath(mapping, pathTarget),
@@ -214,7 +216,6 @@ export abstract class BaseProcessorInbound {
             };
           }
           substituteValueInPayload(
-            mapping.mappingType,
             substitute,
             payloadTarget,
             pathTarget,
@@ -225,7 +226,6 @@ export abstract class BaseProcessorInbound {
           if (getGenericDeviceIdentifier(mapping) === pathTarget) {
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             substituteValueInPayload(
-              mapping.mappingType,
               sourceId,
               payloadTarget,
               transformGenericPath2C8YPath(mapping, pathTarget),
@@ -233,7 +233,6 @@ export abstract class BaseProcessorInbound {
             )
           };
           substituteValueInPayload(
-            mapping.mappingType,
             substitute,
             payloadTarget,
             pathTarget,

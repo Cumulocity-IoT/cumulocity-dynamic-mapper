@@ -28,7 +28,7 @@ import { Injectable } from '@angular/core';
 import {
   randomString} from '../../../shared/util';
 import { IExternalIdentity } from '@c8y/client';
-import { processSubstitute } from '../util';
+import { processSubstitute } from '../processor.model';
 
 @Injectable({ providedIn: 'root' })
 export class JSONProcessorOutbound extends BaseProcessorOutbound {
@@ -103,10 +103,10 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
           // extracted result from sourcePayload is an array, so we potentially have to
           // iterate over the result, e.g. creating multiple devices
           extractedSourceContent.forEach((jn) => {
-            processSubstitute(processingCacheEntry, jn, substitution, mapping);
+            processSubstitute(processingCacheEntry, jn, substitution);
           });
         } else {
-          processSubstitute(processingCacheEntry, extractedSourceContent, substitution, mapping);
+          processSubstitute(processingCacheEntry, extractedSourceContent, substitution);
         }
         processingCache.set(
           substitution.pathTarget,

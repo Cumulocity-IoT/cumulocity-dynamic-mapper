@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { API, Direction, Mapping, MappingType } from './shared.model';
+import { API, Direction, Mapping, MappingType } from './mapping.model';
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               

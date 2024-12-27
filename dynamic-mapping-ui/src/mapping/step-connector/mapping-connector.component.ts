@@ -35,7 +35,7 @@ import {
   Feature,
   StepperConfiguration
 } from '../../shared';
-import { EditorMode } from '../shared/stepper-model';
+import { EditorMode } from '../shared/stepper.model';
 import { ConnectorGridComponent, SharedService } from '../../shared';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ConnectorConfigurationService } from '../../connector';

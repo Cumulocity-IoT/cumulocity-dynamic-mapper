@@ -20,6 +20,7 @@
  */
 
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
 import { ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
@@ -28,10 +29,8 @@ import {
   MappingSubstitution,
   RepairStrategy
 } from '../../../shared';
-import { EditorMode } from '../../shared/stepper-model';
-import { StepperConfiguration } from 'src/shared/mapping/shared.model';
-import { definesDeviceIdentifier } from '../../shared/util';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { definesDeviceIdentifier, StepperConfiguration } from '../../../shared/mapping/mapping.model';
+import { EditorMode } from '../../shared/stepper.model';
 
 @Component({
   selector: 'd11r-edit-substitution-modal',
@@ -84,9 +83,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       });
 
     const marksDeviceIdentifier = definesDeviceIdentifier(
-      this.mapping.targetAPI,
-      this.mapping.externalIdType,
-      this.stepperConfiguration.direction,
+      this.mapping,
       this.substitution,
     )
       ? '* '

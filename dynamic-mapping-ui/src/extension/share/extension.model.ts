@@ -1,3 +1,8 @@
+import { inject } from "@angular/core";
+import { ResolveFn } from "@angular/router";
+import { IManagedObject } from "@c8y/client";
+import { ExtensionService } from "../extension.service";
+
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -26,3 +31,9 @@ export enum ERROR_TYPE {
   INVALID_PACKAGE = 'INVALID_PACKAGE',
   INVALID_APPLICATION = 'INVALID_APPLICATION'
 }
+
+export const extensionResolver: ResolveFn<IManagedObject[]> = (route) => {
+  const extensionService = inject(ExtensionService);
+  const id = route.paramMap.get('id');
+  return extensionService.getExtensionsEnriched(id);
+};

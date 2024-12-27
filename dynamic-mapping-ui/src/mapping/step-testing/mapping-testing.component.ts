@@ -40,7 +40,7 @@ import {
 } from '../../shared/';
 import { MappingService } from '../core/mapping.service';
 import { C8YRequest, ProcessingContext } from '../core/processor/processor.model';
-import { StepperConfiguration } from 'src/shared/mapping/shared.model';
+import { StepperConfiguration } from '../../shared/mapping/mapping.model';
 import { isDisabled, patchC8YTemplateForTesting } from '../shared/util';
 
 interface TestingModel {

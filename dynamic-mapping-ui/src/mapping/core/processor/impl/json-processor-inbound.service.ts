@@ -32,7 +32,7 @@ import {
   TOKEN_TOPIC_LEVEL,
   splitTopicExcludingSeparator
 } from '../../../shared/util';
-import { processSubstitute } from '../util';
+import { processSubstitute } from '../processor.model';
 
 @Injectable({ providedIn: 'root' })
 export class JSONProcessorInbound extends BaseProcessorInbound {
@@ -73,10 +73,10 @@ export class JSONProcessorInbound extends BaseProcessorInbound {
           // extracted result from sourcePayload is an array, so we potentially have to
           // iterate over the result, e.g. creating multiple devices
           extractedSourceContent.forEach((jn) => {
-            processSubstitute(processingCacheEntry, jn, substitution, mapping);
+            processSubstitute(processingCacheEntry, jn, substitution);
           });
         } else {
-          processSubstitute(processingCacheEntry, extractedSourceContent, substitution, mapping);
+          processSubstitute(processingCacheEntry, extractedSourceContent, substitution);
         }
         processingCache.set(
           substitution.pathTarget,

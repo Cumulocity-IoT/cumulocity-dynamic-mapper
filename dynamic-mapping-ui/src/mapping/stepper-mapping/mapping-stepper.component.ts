@@ -58,18 +58,16 @@ import {
 import { JsonEditorComponent } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
-import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper-model';
+import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
-  countDeviceIdentifiers,
-  definesDeviceIdentifier,
   expandC8YTemplate,
   expandExternalTemplate,
-  getGenericDeviceIdentifier,
   isDisabled,
   isTypeOf,
   reduceSourceTemplate,
   splitTopicExcludingSeparator
 } from '../shared/util';
+import { countDeviceIdentifiers, getGenericDeviceIdentifier } from '../../shared/mapping/mapping.model';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 
@@ -461,12 +459,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         valid: true
       };
 
-      const definesDI = definesDeviceIdentifier(
-        this.mapping.targetAPI,
-        this.mapping.externalIdType,
-        this.mapping.direction,
-        this.substitutionModel
-      );
       if (this.expertMode) {
         this.substitutionFormly.get('pathTarget').setErrors(null);
         // if (definesDI && this.mapping.useExternalId) {

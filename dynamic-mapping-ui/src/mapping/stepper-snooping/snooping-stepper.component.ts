@@ -34,7 +34,7 @@ import {
   SAMPLE_TEMPLATES_C8Y, 
   SharedService
 } from '../../shared';
-import { EditorMode } from '../shared/stepper-model';
+import { EditorMode } from '../shared/stepper.model';
 import { MappingService } from '../core/mapping.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
 

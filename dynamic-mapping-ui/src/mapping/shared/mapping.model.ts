@@ -19,17 +19,9 @@
  * @authors Christof Strack
  */
 
-import { IIdentified } from '@c8y/client';
 
 export const SNOOP_TEMPLATES_MAX = 10;
 export const HOUSEKEEPING_INTERVAL_SECONDS = 30;
-
-export enum ExtensionStatus {
-  COMPLETE = 'COMPLETE',
-  PARTIALLY = 'PARTIALLY',
-  NOT_LOADED = 'NOT_LOADED',
-  UNKNOWN = 'UNKNOWN'
-}
 
 export interface PayloadWrapper {
   message: string;

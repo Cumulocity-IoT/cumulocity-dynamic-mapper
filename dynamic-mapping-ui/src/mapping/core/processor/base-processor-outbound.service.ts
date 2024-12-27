@@ -34,7 +34,7 @@ import {
   SubstituteValueType
 } from './processor.model';
 import { MQTTClient } from '../mqtt-client.service';
-import { getTypedValue } from './util';
+import { getTypedValue } from './processor.model';
 
 @Injectable({ providedIn: 'root' })
 export abstract class BaseProcessorOutbound {

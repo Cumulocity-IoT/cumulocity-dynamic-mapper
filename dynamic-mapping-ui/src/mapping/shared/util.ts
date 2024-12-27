@@ -19,22 +19,16 @@
  * @authors Christof Strack
  */
 import { AbstractControl } from '@angular/forms';
+import * as _ from 'lodash';
 import {
   API,
   Direction,
   Mapping,
-  MappingSubstitution,
-  MappingType,
-  RepairStrategy,
   SnoopStatus
 } from '../../shared';
+import { IDENTITY } from '../../shared/mapping/mapping.model';
 import { ValidationFormlyError } from './mapping.model';
-import { SubstituteValue, SubstituteValueType } from '../core/processor/processor.model';
-import * as _ from 'lodash';
-import { MappingSubscriptionComponent } from '../subscription/subscription.component';
-import { identifierName } from '@angular/compiler';
 
-export const IDENTITY = '_IDENTITY_';
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
 export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
@@ -104,28 +98,6 @@ export function isWildcardTopic(topic: string): boolean {
     topic.includes(TOPIC_WILDCARD_MULTI) ||
     topic.includes(TOPIC_WILDCARD_SINGLE);
   return result;
-}
-
-export function isSubstitutionValid(mapping: Mapping): boolean {
-  const count = mapping.substitutions
-    .filter((sub) =>
-      definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction, sub)
-    )
-    .map(() => 1)
-    .reduce((previousValue: number, currentValue: number) => {
-      return previousValue + currentValue;
-    }, 0);
-  return (
-    (mapping.direction != Direction.OUTBOUND && count == 1) ||
-    mapping.direction == Direction.OUTBOUND
-  );
-}
-
-export function countDeviceIdentifiers(mapping: Mapping): number {
-  const n = mapping.substitutions.filter((sub) =>
-    definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction, sub)
-  ).length;
-  return n;
 }
 
 export function checkNotSnooping(control: AbstractControl) {
@@ -400,38 +372,6 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
-export function definesDeviceIdentifier(
-  api: string,
-  externalIdType: string,
-  direction: Direction,
-  sub: MappingSubstitution,
-): boolean {
-  if (direction == Direction.INBOUND) {
-    if (externalIdType) {
-      return sub?.pathTarget == `${IDENTITY}.externalId`;
-    } else {
-      return sub?.pathTarget == `${IDENTITY}.c8ySourceId`;
-    }
-  } else {
-    if (externalIdType) {
-      return sub?.pathSource == `${IDENTITY}.externalId`;
-    } else {
-      return sub?.pathSource == `${IDENTITY}.c8ySourceId`;
-    }
-  }
-}
-
-export function cloneSubstitution(
-  sub: MappingSubstitution
-): MappingSubstitution {
-  return {
-    pathSource: sub.pathSource,
-    pathTarget: sub.pathTarget,
-    repairStrategy: sub.repairStrategy,
-    expandArray: sub.expandArray,
-  };
-}
-
 export function expandExternalTemplate(
   template: object,
   mapping: Mapping,
@@ -543,13 +483,5 @@ export function isTypeOf(object) {
     return 'Number';
   } else {
     return "don't know";
-  }
-}
-
-export function getGenericDeviceIdentifier(mapping: Mapping): string {
-  if (mapping.externalIdType && mapping.externalIdType !== '') {
-    return `${IDENTITY}.externalId`;
-  } else {
-    return `${IDENTITY}.c8ySourceId`;
   }
 }

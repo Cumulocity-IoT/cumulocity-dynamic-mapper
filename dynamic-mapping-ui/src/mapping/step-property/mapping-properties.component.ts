@@ -34,7 +34,7 @@ import { AlertService } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
-import { EditorMode } from '../shared/stepper-model';
+import { EditorMode } from '../shared/stepper.model';
 import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic } from '../shared/util';

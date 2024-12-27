@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 
-import { EditorMode } from '../../mapping/shared/stepper-model';
+import { EditorMode } from '../../mapping/shared/stepper.model';
 import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 
 export interface MappingSubstitution {
@@ -344,4 +344,96 @@ export interface Feature {
   externalExtensionsEnabled: boolean;
   userHasMappingCreateRole: boolean;
   userHasMappingAdminRole: boolean;
+}export function getDeviceIdentifiers(mapping: Mapping): MappingSubstitution[] {
+  const mp: MappingSubstitution[] = mapping.substitutions
+    .filter(sub => definesDeviceIdentifier(mapping, sub));
+  return mp;
 }
+
+export function getPathSourceForDeviceIdentifiers(mapping: Mapping): string[] {
+  const pss = mapping.substitutions
+    .filter(sub => definesDeviceIdentifier(mapping, sub))
+    .map(sub => sub.pathSource);
+  return pss;
+}
+
+export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
+  const pss = mapping.substitutions
+    .filter(sub => definesDeviceIdentifier(mapping, sub))
+    .map(sub => sub.pathTarget);
+  return pss;
+}
+
+export function transformGenericPath2C8YPath(mapping: Mapping, originalPath: string): string {
+  // "_IDENTITY_.externalId" => source.id
+  if (getGenericDeviceIdentifier(mapping) === originalPath) {
+    return API[mapping.targetAPI].identifier;
+  } else {
+    return originalPath;
+  }
+}
+
+export function transformC8YPath2GenericPath(mapping: Mapping, originalPath: string): string {
+  // source.id => "_IDENTITY_.externalId" source.id
+  if (API[mapping.targetAPI].identifier === originalPath) {
+    return getGenericDeviceIdentifier(mapping);
+  } else {
+    return originalPath;
+  }
+}
+export function cloneSubstitution(
+  sub: MappingSubstitution
+): MappingSubstitution {
+  return {
+    pathSource: sub.pathSource,
+    pathTarget: sub.pathTarget,
+    repairStrategy: sub.repairStrategy,
+    expandArray: sub.expandArray,
+  };
+}
+export function definesDeviceIdentifier(
+  mapping: Mapping,
+  sub: MappingSubstitution
+): boolean {
+  if (mapping.direction == Direction.INBOUND) {
+    if (mapping.externalIdType) {
+      return sub?.pathTarget == `${IDENTITY}.externalId`;
+    } else {
+      return sub?.pathTarget == `${IDENTITY}.c8ySourceId`;
+    }
+  } else {
+    if (mapping.externalIdType) {
+      return sub?.pathSource == `${IDENTITY}.externalId`;
+    } else {
+      return sub?.pathSource == `${IDENTITY}.c8ySourceId`;
+    }
+  }
+}
+export function isSubstitutionValid(mapping: Mapping): boolean {
+  const count = mapping.substitutions
+    .filter((sub) => definesDeviceIdentifier(mapping, sub)
+    )
+    .map(() => 1)
+    .reduce((previousValue: number, currentValue: number) => {
+      return previousValue + currentValue;
+    }, 0);
+  return (
+    (mapping.direction != Direction.OUTBOUND && count == 1) ||
+    mapping.direction == Direction.OUTBOUND
+  );
+}
+
+export function countDeviceIdentifiers(mapping: Mapping): number {
+  const n = mapping.substitutions.filter((sub) => definesDeviceIdentifier(mapping, sub)
+  ).length;
+  return n;
+}
+export const IDENTITY = '_IDENTITY_';
+export function getGenericDeviceIdentifier(mapping: Mapping): string {
+  if (mapping.externalIdType && mapping.externalIdType !== '') {
+    return `${IDENTITY}.externalId`;
+  } else {
+    return `${IDENTITY}.c8ySourceId`;
+  }
+}
+

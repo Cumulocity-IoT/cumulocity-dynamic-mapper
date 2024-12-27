@@ -181,18 +181,18 @@ public abstract class BasePayloadProcessorInbound<T> {
             MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
                     "NOT_DEFINED", TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
-            List<SubstituteValue> pathTargetSubstitue = context.getFromProcessingCache(pathTarget);
-            if (finalI < pathTargetSubstitue.size()) {
-                substitute = pathTargetSubstitue.get(finalI).clone();
-            } else if (pathTargetSubstitue.size() == 1) {
+            List<SubstituteValue> pathTargetSubstitute = context.getFromProcessingCache(pathTarget);
+            if (finalI < pathTargetSubstitute.size()) {
+                substitute = pathTargetSubstitute.get(finalI).clone();
+            } else if (pathTargetSubstitute.size() == 1) {
                 // this is an indication that the substitution is the same for all
                 // events/alarms/measurements/inventory
                 if (substitute.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
                         substitute.repairStrategy.equals(RepairStrategy.DEFAULT)) {
-                    substitute = pathTargetSubstitue.get(0).clone();
+                    substitute = pathTargetSubstitute.get(0).clone();
                 } else if (substitute.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
-                    int last = pathTargetSubstitue.size() - 1;
-                    substitute = pathTargetSubstitue.get(last).clone();
+                    int last = pathTargetSubstitute.size() - 1;
+                    substitute = pathTargetSubstitute.get(last).clone();
                 }
                 log.warn(
                         "Tenant {} - During the processing of this pathTarget: '{}' a repair strategy: '{}' was used.",

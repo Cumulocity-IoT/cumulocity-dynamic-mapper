@@ -75,7 +75,7 @@ import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.r
 import {
   PayloadWrapper
 } from '../shared/mapping.model';
-import { AdvisorAction, EditorMode } from '../shared/stepper-model';
+import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
 
 @Component({

@@ -53,7 +53,7 @@ import {
 } from 'vanilla-jsoneditor';
 
 import type { JSONPath } from 'immutable-json-patch'
-import { IDENTITY } from '../../mapping/shared/util';
+import { IDENTITY } from '../mapping/mapping.model';
 
 @Component({
   selector: 'd11r-mapping-json-editor2',

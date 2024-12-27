@@ -28,7 +28,7 @@ import { ExtensionCardComponent } from './card/extension-card.component';
 import { AddExtensionComponent } from './add/add-extension-modal.component';
 import { ExtensionComponent } from './grid/extension.component';
 import { ExtensionPropertiesComponent } from './properties/extension-properties.component';
-import { extensionResolver } from './share/utils';
+import { extensionResolver } from './share/extension.model';
 
 @NgModule({
   declarations: [
@@ -64,3 +64,10 @@ import { extensionResolver } from './share/utils';
   ]
 })
 export class ExtensionModule {}
+
+export enum ExtensionStatus {
+  COMPLETE = 'COMPLETE',
+  PARTIALLY = 'PARTIALLY',
+  NOT_LOADED = 'NOT_LOADED',
+  UNKNOWN = 'UNKNOWN'
+}

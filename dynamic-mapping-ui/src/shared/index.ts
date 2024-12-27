@@ -9,7 +9,7 @@ export * from './connector-configuration/create/connector-configuration-modal.co
 export * from './connector-log/connector-log.component';
 export * from './connector-log/connector-log.model';
 export * from './editor/jsoneditor.component';
-export * from './mapping/shared.model';
+export * from './mapping/mapping.model';
 export * from './mapping/util';
 export * from './misc/admin.guard';
 export * from './misc/camel-case.pipe';
