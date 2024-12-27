@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import { IManagedObject, InventoryService, IResult } from '@c8y/client';
+import { IdReference, IManagedObject, InventoryService, IResult } from '@c8y/client';
 import { ProcessingContext } from '../processor/processor.model';
 import { MockInventoryService } from '../mock/mock-inventory.service';
 
@@ -33,6 +33,17 @@ export class FacadeInventoryService {
 
   initializeCache(): void {
     this.mockInventory.initializeCache();
+  }
+
+  detail(
+    managedObjectOrId: IdReference,
+    context: ProcessingContext
+  ): Promise<IResult<IManagedObject>> {
+    if (context.sendPayload) {
+      return this.inventory.detail(managedObjectOrId);
+    } else {
+      return this.mockInventory.detail(managedObjectOrId);
+    }
   }
 
   update(

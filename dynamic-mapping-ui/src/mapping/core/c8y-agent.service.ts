@@ -26,7 +26,8 @@ import {
   IManagedObject,
   IResult,
   IExternalIdentity,
-  IOperation
+  IOperation,
+  IdReference
 } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
 import { API, MAPPING_TEST_DEVICE_FRAGMENT } from '../../shared';
@@ -199,5 +200,16 @@ export class C8YAgent {
       context
     );
     return externalId;
+  }
+
+  async detail(
+    managedObjectOrId: IdReference,
+    context: ProcessingContext
+  ): Promise<IResult<IManagedObject>> {
+    const managedObject = await this.inventory.detail(
+      managedObjectOrId,
+      context
+    );
+    return managedObject;
   }
 }

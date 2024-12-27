@@ -20,18 +20,34 @@
  */
 import { HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { IFetchResponse, IManagedObject, IResult } from '@c8y/client';
+import { IdReference, IFetchResponse, IManagedObject, IResult } from '@c8y/client';
 import * as _ from 'lodash';
 
 @Injectable({ providedIn: 'root' })
 export class MockInventoryService {
-  inventoryCache: Map<string, Map<string, any>>;
+  inventoryCache: Map<string, Partial<IManagedObject>>;
   constructor() {
     this.initializeCache();
   }
 
   initializeCache(): void {
-    this.inventoryCache = new Map<string, Map<string, IManagedObject>>();
+    this.inventoryCache = new Map<string, IManagedObject>();
+  }
+
+  detail(managedObjectOrId: IdReference): Promise<IResult<IManagedObject>> {
+    let managedObject = this.inventoryCache.get(managedObjectOrId as string);
+    let promise;
+    if (managedObject) {
+      promise = Promise.resolve({
+        data: managedObject as IManagedObject,
+        res: { status: HttpStatusCode.Ok } as IFetchResponse
+      });
+    } else {
+      promise = Promise.resolve({
+        res: { status: HttpStatusCode.NotFound } as IFetchResponse
+      });
+    }
+    return promise;
   }
 
   update(
@@ -43,6 +59,7 @@ export class MockInventoryService {
       lastUpdated: new Date().toISOString()
     };
     copyManagedObject.lastUpdated = new Date().toISOString();
+    this.inventoryCache.set(managedObject.id, copyManagedObject);
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
       res: { status: HttpStatusCode.Ok } as IFetchResponse
@@ -53,11 +70,13 @@ export class MockInventoryService {
   create(
     managedObject: Partial<IManagedObject>
   ): Promise<IResult<IManagedObject>> {
+    const id = Math.floor(100000 + Math.random() * 900000).toString();
     const copyManagedObject = {
       ...managedObject,
-      id: Math.floor(100000 + Math.random() * 900000).toString(),
+      id,
       lastUpdated: new Date().toISOString()
     };
+    this.inventoryCache.set(id, copyManagedObject);
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
       res: { status: HttpStatusCode.Ok } as IFetchResponse
