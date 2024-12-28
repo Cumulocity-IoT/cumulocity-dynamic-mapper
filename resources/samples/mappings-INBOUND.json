@@ -1058,5 +1058,49 @@
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735221431554,
     "genericDeviceIdentifier": "_IDENTITY_.externalId"
+  },
+  {
+    "id": "5725916",
+    "identifier": "t7vj81",
+    "name": "Mapping - 25",
+    "mappingTopic": "alarm/tires_c8ySourceId",
+    "mappingTopicSample": "alarm/tires_c8ySourceId",
+    "targetAPI": "ALARM",
+    "direction": "INBOUND",
+    "sourceTemplate": "{\"msg_type\":\"c8y_FlatTireAlarm\",\"tx\":\"Left rear tire loses air!\",\"bus_c8ySourceId\":\"10203040\"}",
+    "targetTemplate": "{\"type\":\"c8y_FlatTireAlarm\",\"text\":\"Left rear tire loses air!\",\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"time\":\"2022-03-19T12:03:27.845Z\"}",
+    "mappingType": "JSON",
+    "substitutions": [
+      {
+        "pathSource": "bus_c8ySourceId",
+        "pathTarget": "_IDENTITY_.c8ySourceId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "tx",
+        "pathTarget": "text",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "msg_type",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "active": true,
+    "debug": false,
+    "tested": false,
+    "supportsMessageContext": false,
+    "createNonExistingDevice": false,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": false,
+    "snoopStatus": "NONE",
+    "snoopedTemplates": [],
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1735420127589
   }
 ]

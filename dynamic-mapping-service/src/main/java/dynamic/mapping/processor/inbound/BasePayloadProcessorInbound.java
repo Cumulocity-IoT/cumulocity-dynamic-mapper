@@ -225,8 +225,9 @@ public abstract class BasePayloadProcessorInbound<T> {
                 substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.value.toString());
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+            } else {
+                substituteValueInPayload(substitute, payloadTarget, pathTarget);
             }
-            substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to c8y
