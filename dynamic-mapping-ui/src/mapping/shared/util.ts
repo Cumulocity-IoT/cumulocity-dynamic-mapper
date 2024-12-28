@@ -425,12 +425,12 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
   }
 }
 
-export function randomString(){
+export function randomIdAsString(){
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
-  const identifier = randomString();
+  const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
   _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
 }

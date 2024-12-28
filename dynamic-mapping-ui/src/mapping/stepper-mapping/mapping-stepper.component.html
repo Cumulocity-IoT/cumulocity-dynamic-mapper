@@ -320,18 +320,18 @@
                 <div class="row">
                   <div class="col-lg-10 col-lg-offset-1">
                     <div style="min-height: 32px">
-                      <d11r-mapping-substitution-grid [targetAPI]="mapping.targetAPI"
-                        [externalIdType]="mapping.externalIdType" [substitutions]="mapping.substitutions" [settings]="{
+                      <d11r-mapping-substitution-grid [mapping]="mapping" [settings]="{
                             color: COLOR_HIGHLIGHTED,
                             selectedSubstitutionIndex: selectedSubstitution,
                             editorMode: stepperConfiguration.editorMode
-                          }" [direction]="mapping.direction" (selectSub)="onSelectSubstitution($event)"
-                        (deleteSub)="onDeleteSubstitution($event)">
+                          }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)">
                       </d11r-mapping-substitution-grid>
                     </div>
                     <span class="text-warning text-12 p-l-8" *ngIf="
                           (isSubstitutionValid$ | async) != true
-                        ">One substitution for <code *ngIf="mapping.useExternalId" class="text-warning text-10" >_IDENTITY_.externalId</code>  <code *ngIf="!mapping.useExternalId" class="text-warning text-10">_IDENTITY_.c8ySourceId<</code> must exist.</span>
+                        ">One substitution for <code *ngIf="mapping.useExternalId"
+                        class="text-warning text-10">_IDENTITY_.externalId</code> <code *ngIf="!mapping.useExternalId"
+                        class="text-warning text-10">_IDENTITY_.c8ySourceId<</code> must exist.</span>
                   </div>
                 </div>
               </div>

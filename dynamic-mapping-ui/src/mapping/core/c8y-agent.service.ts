@@ -50,7 +50,7 @@ export class C8YAgent {
     private measurement: FacadeMeasurementService,
     private operation: FacadeOperationService,
     private alert: AlertService
-  ) {}
+  ) { }
 
   initializeCache(): void {
     this.inventory.initializeCache();
@@ -131,13 +131,17 @@ export class C8YAgent {
   }
 
   async upsertDevice(
-    identityx: IExternalIdentity,
-    context: ProcessingContext
+    identity: IExternalIdentity,
+    context: ProcessingContext,
   ): Promise<IManagedObject> {
-    let identity = identityx;
-    let deviceId: string;
+    let sourceId: string;
     try {
-      deviceId = await this.resolveExternalId2GlobalId(identity, context);
+      if (identity) { 
+        sourceId = await this.resolveExternalId2GlobalId(identity, context) 
+      } else {
+        const { data } = await this.detail(context.sourceId, context);
+        sourceId = data.id;
+      }
     } catch (e) {
       // console.log(
       //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
@@ -153,8 +157,8 @@ export class C8YAgent {
     };
     // remove device identifier
 
-    if (deviceId) {
-      device.id = deviceId;
+    if (sourceId) {
+      device.id = sourceId;
       const response: IResult<IManagedObject> = await this.inventory.update(
         device,
         context

@@ -450,8 +450,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return result;
     }
 
-    public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context,
-            ExternalIDRepresentation extId)
+    public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context)
             throws ProcessingException {
         StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
@@ -465,7 +464,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 try {
                     // ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity,
                     // context);
-                    if (extId == null) {
+                    if (context.getSourceId() == null) {
                         // Device does not exist
                         // append external id to name
                         mor.setName(mor.getName());
@@ -492,7 +491,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         identityApi.create(mor, identity, context);
                     } else {
                         // Device exists - update needed
-                        mor.setId(extId.getManagedObject().getId());
+                        mor.setId(new GId(context.getSourceId()));
                         mor = inventoryApi.update(mor, context);
                         if (serviceConfiguration.logPayload)
                             log.info("Tenant {} - Device updated: {}", tenant, mor);

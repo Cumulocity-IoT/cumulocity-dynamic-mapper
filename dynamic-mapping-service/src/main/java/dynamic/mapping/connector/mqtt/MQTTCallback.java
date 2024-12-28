@@ -1,6 +1,5 @@
 package dynamic.mapping.connector.mqtt;
 
-import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
 import com.hivemq.client.mqtt.datatypes.MqttTopic;
@@ -26,18 +25,29 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
 
     @Override
     public void accept(Mqtt3Publish mqttMessage) {
-        ConnectorMessage connectorMessage = new ConnectorMessage();
-        if (mqttMessage.getPayload().isPresent()) {
-            ByteBuffer byteBuffer = mqttMessage.getPayload().get();
-            byte[] byteArray = new byte[byteBuffer.remaining()];
-            byteBuffer.get(byteArray);
-            connectorMessage.setPayload(byteArray);
-        }
-        connectorMessage.setTenant(tenant);
-        connectorMessage.setSendPayload(true);
         String topic = String.join(TOPIC_LEVEL_SEPARATOR, mqttMessage.getTopic().getLevels());
-        connectorMessage.setTopic(topic);
-        connectorMessage.setConnectorIdentifier(connectorIdentifier);
+        // if (mqttMessage.getPayload().isPresent()) {
+        // ByteBuffer byteBuffer = mqttMessage.getPayload().get();
+        // byte[] byteArray = new byte[byteBuffer.remaining()];
+        // byteBuffer.get(byteArray);
+        // connectorMessage.setPayload(byteArray);
+        // }
+        byte[] payloadBytes = mqttMessage.getPayload()
+                .map(byteBuffer -> {
+                    byte[] bytes = new byte[byteBuffer.remaining()];
+                    byteBuffer.get(bytes);
+                    return bytes;
+                })
+                .orElse(null);
+        ConnectorMessage connectorMessage = ConnectorMessage.builder()
+                .tenant(tenant)
+                .supportsMessageContext(supportsMessageContext)
+                .topic(topic)
+                .sendPayload(true)
+                .connectorIdentifier(connectorIdentifier)
+                .payload(payloadBytes)
+                .build();
+
         connectorMessage.setSupportsMessageContext(supportsMessageContext);
         genericMessageCallback.onMessage(connectorMessage);
     }

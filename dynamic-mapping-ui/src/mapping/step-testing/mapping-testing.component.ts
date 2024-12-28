@@ -326,7 +326,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private handleUnexpectedError(error: any): void {
-    this.alertService.danger('An unexpected error occurred during testing');
+    this.alertService.danger(`An unexpected error occurred during testing: ${error.message}`);
     console.error('Test execution error:', error);
     this.testResult.emit(false);
   }

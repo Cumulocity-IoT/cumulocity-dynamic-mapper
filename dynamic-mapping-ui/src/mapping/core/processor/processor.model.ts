@@ -62,13 +62,13 @@
  */
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
-import { isTypeOf } from '../../../mapping/shared/util';
+import { isTypeOf, randomIdAsString } from '../../../mapping/shared/util';
 import { API, Direction, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
 
 export interface C8YRequest {
   predecessor?: number;
   method?: string;
-  source?: any;
+  sourceId?: any;
   externalIdType?: string;
   request?: any;
   response?: any;
@@ -225,12 +225,9 @@ export const TIME = 'time';
 export const TOPIC_WILDCARD_MULTI = '#';
 export const TOPIC_WILDCARD_SINGLE = '+';
 
-export function randomString() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
 
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
-  const identifier = randomString();
+  const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
   _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
 }

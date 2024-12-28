@@ -133,7 +133,7 @@ export abstract class BaseProcessorOutbound {
       const newPredecessor = context.requests.push({
         predecessor: predecessor,
         method: 'POST',
-        source: deviceSource,
+        sourceId: deviceSource,
         externalIdType: mapping.externalIdType,
         request: payloadTarget,
         targetAPI: API[mapping.targetAPI].name

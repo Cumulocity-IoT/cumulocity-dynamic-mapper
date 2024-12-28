@@ -377,7 +377,7 @@ public class KafkaClient extends AConnectorClient {
 	public void publishMEAO(ProcessingContext<?> context) {
 		C8YRequest currentRequest = context.getCurrentRequest();
 		String payload = currentRequest.getRequest();
-		String key = currentRequest.getSource();
+		String key = currentRequest.getSourceId();
 		if (context.isSupportsMessageContext() && context.getKey() != null) {
 			key = new String(context.getKey());
 		}

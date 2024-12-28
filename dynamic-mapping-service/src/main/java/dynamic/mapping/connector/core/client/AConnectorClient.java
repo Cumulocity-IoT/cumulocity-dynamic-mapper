@@ -331,14 +331,15 @@ public abstract class AConnectorClient {
     public List<ProcessingContext<?>> test(String topic, boolean sendPayload, Map<String, Object> payload)
             throws Exception {
         String payloadMessage = objectMapper.writeValueAsString(payload);
-        ConnectorMessage message = new ConnectorMessage();
-        message.setTenant(tenant);
-        message.setSupportsMessageContext(getSupportsMessageContext());
-        message.setTopic(topic);
-        message.setSendPayload(sendPayload);
-        message.setConnectorIdentifier(getConnectorIdent());
-        message.setPayload(payloadMessage.getBytes());
-        return dispatcher.processMessage(message).get();
+        ConnectorMessage connectorMessage =  ConnectorMessage.builder()
+        .tenant(tenant)
+        .supportsMessageContext(getSupportsMessageContext())
+        .topic(topic)
+        .sendPayload(sendPayload)
+        .connectorIdentifier(getConnectorIdent())
+        .payload(payloadMessage.getBytes())
+        .build();
+        return dispatcher.processMessage(connectorMessage).get();
     }
 
     public void reconnect() {

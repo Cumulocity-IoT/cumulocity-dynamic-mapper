@@ -44,14 +44,15 @@ public class TopicConsumerCallback implements TopicConsumerListener {
 
     @Override
     public void onEvent(byte[] key, byte[] event) throws Exception {
-        ConnectorMessage connectorMessage = new ConnectorMessage();
-        connectorMessage.setPayload(event);
-        connectorMessage.setKey(key);
-        connectorMessage.setTenant(tenant);
-        connectorMessage.setSendPayload(true);
-        connectorMessage.setTopic(topic);
-        connectorMessage.setConnectorIdentifier(connectorIdentifier);
-        connectorMessage.setSupportsMessageContext(supportsMessageContext);
+        ConnectorMessage connectorMessage =  ConnectorMessage.builder()
+        .tenant(tenant)
+        .supportsMessageContext(supportsMessageContext)
+        .topic(topic)
+        .sendPayload(true)
+        .connectorIdentifier(connectorIdentifier)
+        .key(key)
+        .payload(event)
+        .build();
         genericMessageCallback.onMessage(connectorMessage);
     }
 

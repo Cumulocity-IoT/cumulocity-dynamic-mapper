@@ -26,7 +26,7 @@ import {
   SubstituteValue} from '../processor.model';
 import { Injectable } from '@angular/core';
 import {
-  randomString} from '../../../shared/util';
+  randomIdAsString} from '../../../shared/util';
 import { IExternalIdentity } from '@c8y/client';
 import { processSubstitute } from '../processor.model';
 
@@ -69,7 +69,7 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
           );
         } else {
           // if this was running in Cumulocity, the external id could be resolved. Thus we create a device and use this for simulation
-          const externalIentifier = `GENERATED_EXTERNAL_ID_${randomString()}`;
+          const externalIentifier = `GENERATED_EXTERNAL_ID_${randomIdAsString()}`;
           const simulatedDevice = await this.c8yAgent.upsertDevice({ externalId: `${externalIentifier}`, type: mapping.externalIdType }, context);
           externalId = await this.c8yAgent.resolveGlobalId2ExternalId(
             context.sourceId,

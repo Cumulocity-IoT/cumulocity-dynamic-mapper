@@ -29,7 +29,7 @@ export class FacadeInventoryService {
   constructor(
     private mockInventory: MockInventoryService,
     private inventory: InventoryService
-  ) {}
+  ) { }
 
   initializeCache(): void {
     this.mockInventory.initializeCache();
@@ -64,6 +64,11 @@ export class FacadeInventoryService {
     if (context.sendPayload) {
       return this.inventory.create(managedObject);
     } else {
+      // We force the creation of a device with a given id. 
+      // This is required to keep the source.id and deviceId consistant, across request.
+      // E.g. an alarm with a c8ySourceId = '102030' is tested in teh UI, then we need 
+      // to create a device with that given id = '102030'
+      managedObject.id = context.sourceId;
       return this.mockInventory.create(managedObject);
     }
   }

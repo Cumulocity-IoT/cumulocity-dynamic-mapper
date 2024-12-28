@@ -150,7 +150,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
             if (processingCache.get(pathTarget).size() > 0) {
                 substitute = processingCache.get(pathTarget).get(0).clone();
             }
-            substituteValueInPayload(mapping.mappingType, substitute, payloadTarget, pathTarget);
+            substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to mqttBroker

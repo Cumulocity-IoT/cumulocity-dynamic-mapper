@@ -132,7 +132,7 @@ public class MappingSubstitution implements Serializable {
         }
     }
 
-    public static void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue sub,
+    public static void substituteValueInPayload(MappingSubstitution.SubstituteValue sub,
             DocumentContext jsonObject, String keys)
             throws JSONException {
         boolean subValueMissingOrNull = sub == null || sub.value == null;

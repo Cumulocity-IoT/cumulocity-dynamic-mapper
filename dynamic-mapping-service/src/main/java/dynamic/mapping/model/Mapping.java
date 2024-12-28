@@ -128,7 +128,6 @@ public class Mapping implements Serializable {
     @NotNull
     public boolean useExternalId;
 
-    @NotNull
     public String externalIdType;
 
     @NotNull

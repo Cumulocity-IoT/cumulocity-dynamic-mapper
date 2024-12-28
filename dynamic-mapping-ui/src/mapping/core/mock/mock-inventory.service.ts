@@ -22,6 +22,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { IdReference, IFetchResponse, IManagedObject, IResult } from '@c8y/client';
 import * as _ from 'lodash';
+import { randomIdAsString } from 'src/mapping/shared/util';
 
 @Injectable({ providedIn: 'root' })
 export class MockInventoryService {
@@ -70,7 +71,11 @@ export class MockInventoryService {
   create(
     managedObject: Partial<IManagedObject>
   ): Promise<IResult<IManagedObject>> {
-    const id = Math.floor(100000 + Math.random() * 900000).toString();
+    // We force the creation of a device with a given id. 
+    // This is required to keep the source.id and deviceId consistant, across request.
+    // E.g. an alarm with a c8ySourceId = '102030' is tested in teh UI, then we need 
+    // to create a device with that given id = '102030'
+    const id = managedObject.id ? managedObject.id : randomIdAsString();
     const copyManagedObject = {
       ...managedObject,
       id,

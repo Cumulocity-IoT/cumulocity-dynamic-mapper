@@ -30,7 +30,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import {
   ConfirmationModalComponent,
   definesDeviceIdentifier,
-  Direction,
+  Mapping,
   MappingSubstitution
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
@@ -42,26 +42,21 @@ import { isDisabled } from '../shared/util';
   styleUrls: ['./substitution-grid.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class SubstitutionRendererComponent {
+export class SubstitutionRendererComponent  {
   @Input()
-  targetAPI: string;
-  @Input()
-  externalIdType: string;
-  @Input()
-  direction: Direction;
-  @Input()
-  substitutions: MappingSubstitution[] = [];
+  mapping: Mapping;
   @Input()
   settings: any;
-
+  
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
   @Output() editSub = new EventEmitter<number>();
-
+  
   id = Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
   isDisabled = isDisabled;
   EditorMode = EditorMode;
+  substitutions: MappingSubstitution[] = [];
 
   constructor(
     private elementRef: ElementRef,
