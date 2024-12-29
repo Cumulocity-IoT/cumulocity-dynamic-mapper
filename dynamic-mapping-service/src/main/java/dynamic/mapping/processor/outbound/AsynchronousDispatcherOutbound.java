@@ -43,7 +43,6 @@ import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.model.API;
-import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.notification.websocket.Notification;
 import dynamic.mapping.processor.C8YMessage;
@@ -189,7 +188,6 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
-            long startTime = System.nanoTime();
 
             Timer.Sample timer = Timer.start(Metrics.globalRegistry);
             String tenant = c8yMessage.getTenant();

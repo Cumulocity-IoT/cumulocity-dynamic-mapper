@@ -124,13 +124,13 @@ public final class CustomEventOuter {
      * Protobuf type {@code processor.protobuf.CustomEvent}
      */
     public static final class CustomEvent extends
-            com.google.protobuf.GeneratedMessageV3 implements
+            com.google.protobuf.GeneratedMessage implements
             // @@protoc_insertion_point(message_implements:processor.protobuf.CustomEvent)
             CustomEventOrBuilder {
         private static final long serialVersionUID = 0L;
 
         // Use CustomEvent.newBuilder() to construct.
-        private CustomEvent(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+        private CustomEvent(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
             super(builder);
         }
 
@@ -159,7 +159,7 @@ public final class CustomEventOuter {
         }
 
         @java.lang.Override
-        protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable internalGetFieldAccessorTable() {
+        protected com.google.protobuf.GeneratedMessage.FieldAccessorTable internalGetFieldAccessorTable() {
             return CustomEventOuter.internal_static_processor_protobuf_CustomEvent_fieldAccessorTable
                     .ensureFieldAccessorsInitialized(
                             CustomEventOuter.CustomEvent.class, CustomEventOuter.CustomEvent.Builder.class);
@@ -393,20 +393,20 @@ public final class CustomEventOuter {
             if (timestamp_ != 0L) {
                 output.writeInt64(1, timestamp_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(txt_)) {
-                com.google.protobuf.GeneratedMessageV3.writeString(output, 2, txt_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(txt_)) {
+                com.google.protobuf.GeneratedMessage.writeString(output, 2, txt_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(unit_)) {
-                com.google.protobuf.GeneratedMessageV3.writeString(output, 3, unit_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(unit_)) {
+                com.google.protobuf.GeneratedMessage.writeString(output, 3, unit_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalIdType_)) {
-                com.google.protobuf.GeneratedMessageV3.writeString(output, 4, externalIdType_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalIdType_)) {
+                com.google.protobuf.GeneratedMessage.writeString(output, 4, externalIdType_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalId_)) {
-                com.google.protobuf.GeneratedMessageV3.writeString(output, 5, externalId_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalId_)) {
+                com.google.protobuf.GeneratedMessage.writeString(output, 5, externalId_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(eventType_)) {
-                com.google.protobuf.GeneratedMessageV3.writeString(output, 6, eventType_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(eventType_)) {
+                com.google.protobuf.GeneratedMessage.writeString(output, 6, eventType_);
             }
             getUnknownFields().writeTo(output);
         }
@@ -422,20 +422,20 @@ public final class CustomEventOuter {
                 size += com.google.protobuf.CodedOutputStream
                         .computeInt64Size(1, timestamp_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(txt_)) {
-                size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, txt_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(txt_)) {
+                size += com.google.protobuf.GeneratedMessage.computeStringSize(2, txt_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(unit_)) {
-                size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, unit_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(unit_)) {
+                size += com.google.protobuf.GeneratedMessage.computeStringSize(3, unit_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalIdType_)) {
-                size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, externalIdType_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalIdType_)) {
+                size += com.google.protobuf.GeneratedMessage.computeStringSize(4, externalIdType_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalId_)) {
-                size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, externalId_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalId_)) {
+                size += com.google.protobuf.GeneratedMessage.computeStringSize(5, externalId_);
             }
-            if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(eventType_)) {
-                size += com.google.protobuf.GeneratedMessageV3.computeStringSize(6, eventType_);
+            if (!com.google.protobuf.GeneratedMessage.isStringEmpty(eventType_)) {
+                size += com.google.protobuf.GeneratedMessage.computeStringSize(6, eventType_);
             }
             size += getUnknownFields().getSerializedSize();
             memoizedSize = size;
@@ -539,7 +539,7 @@ public final class CustomEventOuter {
 
         public static CustomEventOuter.CustomEvent parseFrom(java.io.InputStream input)
                 throws java.io.IOException {
-            return com.google.protobuf.GeneratedMessageV3
+            return com.google.protobuf.GeneratedMessage
                     .parseWithIOException(PARSER, input);
         }
 
@@ -547,13 +547,13 @@ public final class CustomEventOuter {
                 java.io.InputStream input,
                 com.google.protobuf.ExtensionRegistryLite extensionRegistry)
                 throws java.io.IOException {
-            return com.google.protobuf.GeneratedMessageV3
+            return com.google.protobuf.GeneratedMessage
                     .parseWithIOException(PARSER, input, extensionRegistry);
         }
 
         public static CustomEventOuter.CustomEvent parseDelimitedFrom(java.io.InputStream input)
                 throws java.io.IOException {
-            return com.google.protobuf.GeneratedMessageV3
+            return com.google.protobuf.GeneratedMessage
                     .parseDelimitedWithIOException(PARSER, input);
         }
 
@@ -561,14 +561,14 @@ public final class CustomEventOuter {
                 java.io.InputStream input,
                 com.google.protobuf.ExtensionRegistryLite extensionRegistry)
                 throws java.io.IOException {
-            return com.google.protobuf.GeneratedMessageV3
+            return com.google.protobuf.GeneratedMessage
                     .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
         }
 
         public static CustomEventOuter.CustomEvent parseFrom(
                 com.google.protobuf.CodedInputStream input)
                 throws java.io.IOException {
-            return com.google.protobuf.GeneratedMessageV3
+            return com.google.protobuf.GeneratedMessage
                     .parseWithIOException(PARSER, input);
         }
 
@@ -576,7 +576,7 @@ public final class CustomEventOuter {
                 com.google.protobuf.CodedInputStream input,
                 com.google.protobuf.ExtensionRegistryLite extensionRegistry)
                 throws java.io.IOException {
-            return com.google.protobuf.GeneratedMessageV3
+            return com.google.protobuf.GeneratedMessage
                     .parseWithIOException(PARSER, input, extensionRegistry);
         }
 
@@ -602,7 +602,7 @@ public final class CustomEventOuter {
 
         @java.lang.Override
         protected Builder newBuilderForType(
-                com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+                com.google.protobuf.GeneratedMessage.BuilderParent parent) {
             Builder builder = new Builder(parent);
             return builder;
         }
@@ -611,7 +611,7 @@ public final class CustomEventOuter {
          * Protobuf type {@code processor.protobuf.CustomEvent}
          */
         public static final class Builder extends
-                com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+                com.google.protobuf.GeneratedMessage.Builder<Builder> implements
                 // @@protoc_insertion_point(builder_implements:processor.protobuf.CustomEvent)
                 CustomEventOuter.CustomEventOrBuilder {
             public static final com.google.protobuf.Descriptors.Descriptor getDescriptor() {
@@ -619,7 +619,7 @@ public final class CustomEventOuter {
             }
 
             @java.lang.Override
-            protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable internalGetFieldAccessorTable() {
+            protected com.google.protobuf.GeneratedMessage.FieldAccessorTable internalGetFieldAccessorTable() {
                 return CustomEventOuter.internal_static_processor_protobuf_CustomEvent_fieldAccessorTable
                         .ensureFieldAccessorsInitialized(
                                 CustomEventOuter.CustomEvent.class, CustomEventOuter.CustomEvent.Builder.class);
@@ -632,7 +632,7 @@ public final class CustomEventOuter {
             }
 
             private Builder(
-                    com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+                    com.google.protobuf.GeneratedMessage.BuilderParent parent) {
                 super(parent);
 
             }
@@ -1348,7 +1348,7 @@ public final class CustomEventOuter {
     }
 
     private static final com.google.protobuf.Descriptors.Descriptor internal_static_processor_protobuf_CustomEvent_descriptor;
-    private static final com.google.protobuf.GeneratedMessageV3.FieldAccessorTable internal_static_processor_protobuf_CustomEvent_fieldAccessorTable;
+    private static final com.google.protobuf.GeneratedMessage.FieldAccessorTable internal_static_processor_protobuf_CustomEvent_fieldAccessorTable;
 
     public static com.google.protobuf.Descriptors.FileDescriptor getDescriptor() {
         return descriptor;
@@ -1369,7 +1369,7 @@ public final class CustomEventOuter {
                         new com.google.protobuf.Descriptors.FileDescriptor[] {
                         });
         internal_static_processor_protobuf_CustomEvent_descriptor = getDescriptor().getMessageTypes().get(0);
-        internal_static_processor_protobuf_CustomEvent_fieldAccessorTable = new com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_processor_protobuf_CustomEvent_fieldAccessorTable = new com.google.protobuf.GeneratedMessage.FieldAccessorTable(
                 internal_static_processor_protobuf_CustomEvent_descriptor,
                 new java.lang.String[] { "Timestamp", "Txt", "Unit", "ExternalIdType", "ExternalId", "EventType", });
     }

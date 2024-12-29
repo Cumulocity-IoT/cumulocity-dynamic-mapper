@@ -22,7 +22,6 @@
 package dynamic.mapping.model;
 
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.processor.model.ProcessingContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

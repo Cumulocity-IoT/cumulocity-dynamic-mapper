@@ -47,7 +47,6 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 
-import org.springframework.objenesis.instantiator.sun.SunReflectionFactoryInstantiator;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
@@ -80,6 +79,7 @@ public abstract class BasePayloadProcessorInbound<T> {
 
     public abstract void applyFilter(ProcessingContext<T> context);
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public void enrichPayload(ProcessingContext<T> context) {
         /*
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
@@ -199,6 +199,9 @@ public abstract class BasePayloadProcessorInbound<T> {
                         pathTarget, substitute.repairStrategy);
             }
 
+            /*
+             * step 4 resolve externalIds to c8ySourceIds and create attroc devices
+             */
             ID identity;
             // check if the targetPath == externalId and we need to resolve an external id
             if ((Mapping.IDENTITY + ".externalId").equals(pathTarget)) {
@@ -230,7 +233,7 @@ public abstract class BasePayloadProcessorInbound<T> {
             }
         }
         /*
-         * step 4 prepare target payload for sending to c8y
+         * step 5 prepare target payload for sending to c8y
          */
         if (mapping.targetAPI.equals(API.INVENTORY)) {
             var newPredecessor = context.addRequest(

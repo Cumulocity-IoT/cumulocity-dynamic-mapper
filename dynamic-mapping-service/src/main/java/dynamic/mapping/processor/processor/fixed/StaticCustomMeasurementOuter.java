@@ -103,12 +103,12 @@ public final class StaticCustomMeasurementOuter {
    * Protobuf type {@code processor.protobuf.StaticCustomMeasurement}
    */
   public static final class StaticCustomMeasurement extends
-      com.google.protobuf.GeneratedMessageV3 implements
+      com.google.protobuf.GeneratedMessage implements
       // @@protoc_insertion_point(message_implements:processor.protobuf.StaticCustomMeasurement)
       StaticCustomMeasurementOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use StaticCustomMeasurement.newBuilder() to construct.
-    private StaticCustomMeasurement(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+    private StaticCustomMeasurement(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
     }
     private StaticCustomMeasurement() {
@@ -136,7 +136,7 @@ public final class StaticCustomMeasurementOuter {
     }
 
     @java.lang.Override
-    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return StaticCustomMeasurementOuter.internal_static_processor_protobuf_StaticCustomMeasurement_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
@@ -337,17 +337,17 @@ public final class StaticCustomMeasurementOuter {
       if (java.lang.Float.floatToRawIntBits(value_) != 0) {
         output.writeFloat(2, value_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(unit_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, unit_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(unit_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 3, unit_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalIdType_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, externalIdType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalIdType_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 4, externalIdType_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 5, externalId_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalId_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 5, externalId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(measurementType_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 6, measurementType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(measurementType_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 6, measurementType_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -366,17 +366,17 @@ public final class StaticCustomMeasurementOuter {
         size += com.google.protobuf.CodedOutputStream
           .computeFloatSize(2, value_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(unit_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, unit_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(unit_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(3, unit_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalIdType_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, externalIdType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalIdType_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(4, externalIdType_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, externalId_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalId_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(5, externalId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(measurementType_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(6, measurementType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(measurementType_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(6, measurementType_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -470,39 +470,39 @@ public final class StaticCustomMeasurementOuter {
     }
     public static StaticCustomMeasurementOuter.StaticCustomMeasurement parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input);
     }
     public static StaticCustomMeasurementOuter.StaticCustomMeasurement parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
     public static StaticCustomMeasurementOuter.StaticCustomMeasurement parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseDelimitedWithIOException(PARSER, input);
     }
     public static StaticCustomMeasurementOuter.StaticCustomMeasurement parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
     public static StaticCustomMeasurementOuter.StaticCustomMeasurement parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input);
     }
     public static StaticCustomMeasurementOuter.StaticCustomMeasurement parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
@@ -522,7 +522,7 @@ public final class StaticCustomMeasurementOuter {
 
     @java.lang.Override
     protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
@@ -530,7 +530,7 @@ public final class StaticCustomMeasurementOuter {
      * Protobuf type {@code processor.protobuf.StaticCustomMeasurement}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
         // @@protoc_insertion_point(builder_implements:processor.protobuf.StaticCustomMeasurement)
         StaticCustomMeasurementOuter.StaticCustomMeasurementOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
@@ -539,7 +539,7 @@ public final class StaticCustomMeasurementOuter {
       }
 
       @java.lang.Override
-      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return StaticCustomMeasurementOuter.internal_static_processor_protobuf_StaticCustomMeasurement_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
@@ -552,7 +552,7 @@ public final class StaticCustomMeasurementOuter {
       }
 
       private Builder(
-          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
 
       }
@@ -1177,7 +1177,7 @@ public final class StaticCustomMeasurementOuter {
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_processor_protobuf_StaticCustomMeasurement_descriptor;
   private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_processor_protobuf_StaticCustomMeasurement_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
@@ -1203,7 +1203,7 @@ public final class StaticCustomMeasurementOuter {
     internal_static_processor_protobuf_StaticCustomMeasurement_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_processor_protobuf_StaticCustomMeasurement_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_processor_protobuf_StaticCustomMeasurement_descriptor,
         new java.lang.String[] { "Timestamp", "Value", "Unit", "ExternalIdType", "ExternalId", "MeasurementType", });
   }

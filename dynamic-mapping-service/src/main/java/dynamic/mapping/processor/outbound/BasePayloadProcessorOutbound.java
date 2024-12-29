@@ -97,8 +97,9 @@ public abstract class BasePayloadProcessorOutbound<T> {
                     throw new RuntimeException(String.format("External id %s for type %s not found!",
                             sourceId.toString(), mapping.externalIdType));
                 }
+            } else {
+                identityFragment.put("externalId", externalId.getExternalId());
             }
-            identityFragment.put("externalId", externalId.getExternalId());
         }
         if (payloadObject instanceof Map) {
             ((Map) payloadObject).put(Mapping.IDENTITY, identityFragment);

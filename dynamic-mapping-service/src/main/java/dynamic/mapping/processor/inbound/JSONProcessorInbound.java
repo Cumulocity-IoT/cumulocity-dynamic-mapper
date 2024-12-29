@@ -61,6 +61,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
         return jsonObject;
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
@@ -97,7 +98,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
                     substitution.pathTarget,
                     new ArrayList<>());
 
-            if (isArray(extractedSourceContent) && substitution.expandArray) {
+            if (extractedSourceContent != null && isArray(extractedSourceContent) && substitution.expandArray) {
                 // extracted result from sourcePayload is an array, so we potentially have to
                 // iterate over the result, e.g. creating multiple devices
                 for (Object jn : (Collection) extractedSourceContent) {
@@ -112,7 +113,9 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
             if (serviceConfiguration.logSubstitution || mapping.debug) {
                 log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
                         tenant,
-                        substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
+                        substitution.pathSource,
+                        extractedSourceContent == null ? null : extractedSourceContent.toString(),
+                        substitution.pathTarget);
             }
 
             if (substitution.pathTarget.equals(Mapping.TIME)) {

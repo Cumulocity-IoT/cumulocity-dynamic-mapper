@@ -173,7 +173,7 @@ public class MappingTreeNode {
 					throw new ResolveException(String.format(
 							"multiple inner nodes are registered : %s",
 							children.toString()));
-				} else if (innerNodes.size() == 1) {
+				} else if (innerNodes != null && innerNodes.size() == 1) {
 					child = innerNodes.get(0);
 				} else {
 					child = MappingTreeNode.createInnerNode(this, levels.get(currentLevel));

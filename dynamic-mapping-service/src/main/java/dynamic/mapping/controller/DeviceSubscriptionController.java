@@ -57,12 +57,14 @@ public class DeviceSubscriptionController {
                             managedObject.getId());
                 }
             }
-            for (Device device : allChildDevices) {
-                ManagedObjectRepresentation childDeviceMor = c8yAgent
-                        .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
-                // Creates subscription for each connector
-                configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor, subscription.getApi());
-            }
+            if (allChildDevices != null) {
+                for (Device device : allChildDevices) {
+                    ManagedObjectRepresentation childDeviceMor = c8yAgent
+                            .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
+                    // Creates subscription for each connector
+                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor, subscription.getApi());
+                }
+            } 
             subscription.setDevices(allChildDevices);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());

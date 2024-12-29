@@ -25,7 +25,6 @@ import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
@@ -76,15 +75,9 @@ public class MQTTServiceClient extends MQTTClient {
 		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false);
 	}
 
-	private static Random random = new Random();
-
-	private static String nextId() {
-		return "CUMULOCITY_MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
-	}
 	private static String getClientId(String identifier, String suffix) {
 		return "CUMULOCITY_MQTT_SERVICE" + identifier + suffix;
 	}
-	// return random.nextInt(max - min) + min;
 
 	public MQTTServiceClient(ConfigurationRegistry configurationRegistry,
 			ConnectorConfiguration connectorConfiguration,

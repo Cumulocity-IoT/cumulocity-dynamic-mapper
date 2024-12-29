@@ -31,7 +31,6 @@ import com.jayway.jsonpath.internal.JsonFormatter;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.RepairStrategy;
 import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 
