@@ -588,7 +588,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       // console.log('Result from next step:', mapping, action);
     }
 
-    if (action != AdvisorAction.CANCEL) {
+    if (action != AdvisorAction.CANCEL && action != AdvisorAction.CONTINUE_SNOOPING) {
       // stop snooping
       if (action == AdvisorAction.STOP_SNOOPING_AND_EDIT) {
         mapping.snoopStatus = SnoopStatus.STOPPED;

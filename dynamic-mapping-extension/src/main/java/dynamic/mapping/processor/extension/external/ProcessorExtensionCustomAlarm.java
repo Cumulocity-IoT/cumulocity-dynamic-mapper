@@ -170,8 +170,7 @@ public class ProcessorExtensionCustomAlarm
                                     new C8YRequest(predecessor, RequestMethod.PATCH, device.value.toString(),
                                             mapping.externalIdType, requestString, null, API.INVENTORY, null));
                             attocDevice = c8yAgent.upsertDevice(tenant,
-                                    new ID(mapping.externalIdType, substitute.value.toString()), context,
-                                    null);
+                                    new ID(mapping.externalIdType, substitute.value.toString()), context);
                             var response = objectMapper.writeValueAsString(attocDevice);
                             context.getCurrentRequest().setResponse(response);
                             substitute.value = attocDevice.getId().getValue();
@@ -193,10 +192,10 @@ public class ProcessorExtensionCustomAlarm
                     }
 
                 }
-                substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
+                substituteValueInPayload( substitute, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
             } else if (!pathsTargetForDeviceIdentifiers.contains(pathTarget)) {
-                substituteValueInPayload(mapping.mappingType, substitute, payloadTarget,
+                substituteValueInPayload( substitute, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
             }
         }
@@ -211,10 +210,12 @@ public class ProcessorExtensionCustomAlarm
                             payloadTarget.jsonString(),
                             null, API.INVENTORY, null));
             try {
+                ID identity = new ID(mapping.externalIdType, device.value.toString());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                        new ID(mapping.externalIdType, device.value.toString()), context);
+                        identity, context);
+                context.setSourceId(sourceId.getManagedObject().getId().getValue());
                 attocDevice = c8yAgent.upsertDevice(tenant,
-                        new ID(mapping.externalIdType, device.value.toString()), context, sourceId);
+                        identity, context);
                 var response = objectMapper.writeValueAsString(attocDevice);
                 context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
