@@ -26,7 +26,6 @@ import static dynamic.mapping.model.MappingSubstitution.isArray;
 import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;

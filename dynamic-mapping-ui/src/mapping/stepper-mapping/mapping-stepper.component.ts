@@ -46,16 +46,17 @@ import {
   Direction,
   Extension,
   ExtensionEntry,
+  getExternalTemplate,
+  getSchema,
+  JsonEditorComponent,
   Mapping,
   MappingSubstitution,
   RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
   StepperConfiguration,
-  getExternalTemplate,
-  getSchema,
 } from '../../shared';
-import { JsonEditorComponent } from '../../shared';
+import { countDeviceIdentifiers, getGenericDeviceIdentifier } from '../../shared/mapping/mapping.model';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
@@ -67,7 +68,6 @@ import {
   reduceSourceTemplate,
   splitTopicExcludingSeparator
 } from '../shared/util';
-import { countDeviceIdentifiers, getGenericDeviceIdentifier } from '../../shared/mapping/mapping.model';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 

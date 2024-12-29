@@ -227,45 +227,23 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                                         context.getTopic(), connectorClient.getConnectorIdent(), sendPayload);
                             }
                             mappingStatus.messagesReceived++;
-                            if (mapping.snoopStatus == SnoopStatus.ENABLED
-                                    || mapping.snoopStatus == SnoopStatus.STARTED) {
-                                String serializedPayload = context.getPayloadAsString();
-                                if (serializedPayload != null) {
-                                    mapping.addSnoopedTemplate(serializedPayload);
-                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
-                                    mappingStatus.snoopedTemplatesActive++;
+                            processor.enrichPayload(context);
+                            processor.extractFromSource(context);
+                            processor.substituteInTargetAndSend(context);
+                            Counter.builder("dynmapper_outbound_message_total")
+                                    .tag("tenant", c8yMessage.getTenant())
+                                    .description("Total number of outbound messages")
+                                    .tag("connector", processor.connectorClient.getConnectorIdent())
+                                    .register(Metrics.globalRegistry).increment();
+                            timer.stop(Timer.builder("dynmapper_outbound_processing_time")
+                                    .tag("tenant", c8yMessage.getTenant())
+                                    .tag("connector", processor.connectorClient.getConnectorIdent())
+                                    .description("Processing time of outbound messages")
+                                    .register(Metrics.globalRegistry));
 
-                                    log.debug("Tenant {} - Adding snoopedTemplate to map: {},{},{}", tenant,
-                                            mapping.mappingTopic,
-                                            mapping.snoopedTemplates.size(),
-                                            mapping.snoopStatus);
-                                    mappingStatusComponent.addDirtyMapping(tenant, mapping);
-
-                                } else {
-                                    log.warn(
-                                            "Tenant {} - Message could NOT be parsed, ignoring this message, as class is not valid: {}",
-                                            tenant,
-                                            context.getPayload().getClass());
-                                }
-                            } else {
-                                processor.enrichPayload(context);
-                                processor.extractFromSource(context);
-                                processor.substituteInTargetAndSend(context);
-                                Counter.builder("dynmapper_outbound_message_total")
-                                        .tag("tenant", c8yMessage.getTenant())
-                                        .description("Total number of outbound messages")
-                                        .tag("connector", processor.connectorClient.getConnectorIdent())
-                                        .register(Metrics.globalRegistry).increment();
-                                timer.stop(Timer.builder("dynmapper_outbound_processing_time")
-                                        .tag("tenant", c8yMessage.getTenant())
-                                        .tag("connector", processor.connectorClient.getConnectorIdent())
-                                        .description("Processing time of outbound messages")
-                                        .register(Metrics.globalRegistry));
-
-                                List<C8YRequest> resultRequests = context.getRequests();
-                                if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
-                                    mappingStatus.errors++;
-                                }
+                            List<C8YRequest> resultRequests = context.getRequests();
+                            if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
+                                mappingStatus.errors++;
                             }
                             processingResult.add(context);
                         } else {

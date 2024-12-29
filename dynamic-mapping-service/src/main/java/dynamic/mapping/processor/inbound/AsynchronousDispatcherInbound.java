@@ -161,7 +161,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
                                     || mapping.snoopStatus == SnoopStatus.STARTED) {
-                                String serializedPayload = context.getPayloadAsString();
+                                String serializedPayload = objectMapper.writeValueAsString(context.getPayload());
                                 if (serializedPayload != null) {
                                     mapping.addSnoopedTemplate(serializedPayload);
                                     mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();

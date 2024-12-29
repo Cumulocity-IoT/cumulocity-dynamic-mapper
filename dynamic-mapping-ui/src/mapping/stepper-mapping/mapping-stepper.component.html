@@ -189,7 +189,7 @@
               <div [formGroup]="templateForm">
                 <div class="row" #editorsTemplate>
                   <div class="col-lg-5 col-lg-offset-1 column-right-border" #leftTemplateTemplate>
-                    <div class="form-group">
+                    <div class="form-group m-b-0">
                       <div class="d-flex j-c-between">
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
@@ -199,9 +199,6 @@
                           (pathChanged)="onSelectedPathSourceChanged($event)"
                           (initialized)="onEditorSourceInitialized()" [data]="sourceTemplate"
                           #editorSourceStepSubstitution></d11r-mapping-json-editor2>
-                        <span class="text-info text-12 p-l-8">{{substitutionModel.pathSource === '' ?'Select source
-                          node to define substitution!':'Selected source node: ' +
-                          substitutionModel.pathSource }}</span>
                       </div>
                       <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
@@ -215,7 +212,7 @@
                     </div>
                   </div>
                   <div class="col-lg-5 column-left-border" #rightTemplateTemplate>
-                    <div class="form-group">
+                    <div class="form-group m-b-0">
                       <div class="d-flex j-c-between">
                         <div class="d-flex">
                           <label>Target Template - {{ targetSystem }}</label>
@@ -236,10 +233,25 @@
                         (pathChanged)="onSelectedPathTargetChanged($event)" (initialized)="onEditorTargetInitialized()"
                         [data]="targetTemplate" #editorTargetStepSubstitution>
                       </d11r-mapping-json-editor2>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" #messages>
+                  <div class="col-lg-5 col-lg-offset-1" #leftTemplateTemplate>
+                    <div class="form-group m-b-8">
+                      <div *ngIf="stepperConfiguration.showEditorSource">
+                        <span class="text-info text-12 p-l-8">{{substitutionModel.pathSource === '' ?'Select source
+                          node to define substitution!':'Selected source node: ' +
+                          substitutionModel.pathSource }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-lg-5" #rightTemplateTemplate>
+                    <div class="form-group m-b-8">
                       <span class="text-info text-12 p-l-8">{{substitutionModel.pathTarget === '' &&
                         stepperConfiguration.showEditorSource ?'Select target
-                        node to define substitution!':'Selected source node: ' +
-                        substitutionModel.pathSource }}</span>
+                        node to define substitution!':'Selected target node: ' +
+                        substitutionModel.pathTarget }}</span>
                     </div>
                   </div>
                 </div>
