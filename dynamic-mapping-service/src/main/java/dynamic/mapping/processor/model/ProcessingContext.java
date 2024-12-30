@@ -21,21 +21,23 @@
 
 package dynamic.mapping.processor.model;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.model.QOS;
 import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
+import dynamic.mapping.model.QOS;
+import dynamic.mapping.processor.ProcessingException;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import dynamic.mapping.processor.ProcessingException;
 
-import java.util.*;
-
-import org.apache.commons.codec.binary.Hex;
-
-import com.jayway.jsonpath.JsonPath;
 
 @Getter
 @Setter
@@ -56,6 +58,9 @@ public class ProcessingContext<O> {
 
     private String resolvedPublishTopic;
 
+    /**
+     * contains the deserialized payload
+     */
     private O payload;
 
     private byte[] payloadRaw;
@@ -162,22 +167,4 @@ public class ProcessingContext<O> {
     public Integer getProcessingCacheSize() {
         return processingCache.size();
     }
-
-    public String getPayloadAsString() {
-        String serializedPayload;
-        Object payload = getPayload();
-        switch (payload) {
-            case String payloadString:
-                serializedPayload = payloadString;
-                break;
-            case byte[] payloadByte:
-                serializedPayload = Hex.encodeHexString((byte[]) payloadByte);
-                break;
-            case Object payloadObject:
-                serializedPayload = JsonPath.parse(payloadObject).json().toString();
-                break;
-        }
-        return serializedPayload;
-    }
-
 }
