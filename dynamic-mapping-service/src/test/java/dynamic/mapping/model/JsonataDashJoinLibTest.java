@@ -34,7 +34,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 @Slf4j
-public class JSONataDashJoin_LibTest {
+public class JsonataDashJoinLibTest {
     String jsonString = """
                 {
                     "isNullField": null,
@@ -74,7 +74,7 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractArray(): {}", toPrettyJsonString(extractedContent));
+            // log.info("Result in test testExtractArray(): {}", toPrettyJsonString(extractedContent));
             assertEquals(true, extractedContent instanceof Collection);
         } catch (Exception e) {
             log.error("Exception in test testExtractArray()", e);
@@ -88,8 +88,8 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractObject(): {} is type: {}", toPrettyJsonString(extractedContent),
-                    extractedContent.getClass().getName());
+            // log.info("Result in test testExtractObject(): {} is type: {}", toPrettyJsonString(extractedContent),
+            //        extractedContent.getClass().getName());
             assertEquals(true, extractedContent instanceof Map);
         } catch (Exception e) {
             log.error("Exception in test testExtractObject()", e);
@@ -103,8 +103,8 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractBoolean(): {} is type: {}", toPrettyJsonString(extractedContent),
-                    extractedContent.getClass().getName());
+            // log.info("Result in test testExtractBoolean(): {} is type: {}", toPrettyJsonString(extractedContent),
+            //       extractedContent.getClass().getName());
             assertEquals(true, extractedContent instanceof Boolean);
         } catch (Exception e) {
             log.error("Exception in test testExtractBoolean()", e);
@@ -118,8 +118,8 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractString(): {} is type: {}", toPrettyJsonString(extractedContent),
-                    extractedContent.getClass().getName());
+            // log.info("Result in test testExtractString(): {} is type: {}", toPrettyJsonString(extractedContent),
+            //        extractedContent.getClass().getName());
             assertEquals(true, extractedContent instanceof String);
         } catch (Exception e) {
             log.error("Exception in test testExtractString()", e);
@@ -133,8 +133,8 @@ public class JSONataDashJoin_LibTest {
             Object payloadJsonNode = Json.parseJson(jsonString);
             var expression = jsonata(expString);
             Object extractedContent = expression.evaluate(payloadJsonNode);
-            log.info("Result in test testExtractNumber(): {} is type: {}", toPrettyJsonString(extractedContent),
-                    extractedContent.getClass().getName());
+            //log.info("Result in test testExtractNumber(): {} is type: {}", toPrettyJsonString(extractedContent),
+            //        extractedContent.getClass().getName());
             assertEquals(true, extractedContent instanceof Number);
         } catch (Exception e) {
             log.error("Exception in test testExtractNumber()", e);
