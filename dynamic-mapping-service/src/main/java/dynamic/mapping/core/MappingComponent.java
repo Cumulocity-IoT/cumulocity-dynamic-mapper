@@ -290,7 +290,7 @@ public class MappingComponent {
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             MappingRepresentation m = toMappingObject(mo);
-            if (m.getC8yMQTTMapping().isActive()) {
+            if (m.getC8yMQTTMapping().getActive()) {
                 throw new IllegalArgumentException(String.format(
                         "Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, id));
             }
@@ -346,7 +346,7 @@ public class MappingComponent {
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
             // when we do housekeeping tasks we need to update active mapping, e.g. add
             // snooped messages. This is an exception
-            if (!allowUpdateWhenActive && mapping.isActive()) {
+            if (!allowUpdateWhenActive && mapping.getActive()) {
                 throw new IllegalArgumentException(
                         String.format("Tenant %s - Mapping %s is still active, deactivate mapping before updating!",
                                 tenant, mapping.id));

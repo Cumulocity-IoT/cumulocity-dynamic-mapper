@@ -350,5 +350,49 @@
     "mappingType": "JSON",
     "lastUpdate": 1728564332182,
     "supportsMessageContext": false
+  },
+  {
+    "id": "000000008",
+    "name": "Mapping - 08",
+    "mappingTopic": "device/test",
+    "mappingTopicSample": "device/test",
+    "tested": false,
+    "autoAckOperation": true,
+    "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
+    "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
+    "externalIdType": "c8y_Serial",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "_IDENTITY_.externalId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "Temperature.value",
+        "pathTarget": "c8y_TemperatureMeasurement.T.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "direction": "INBOUND",
+    "snoopStatus": "NONE",
+    "debug": false,
+    "useExternalId": true,
+    "active": false,
+    "targetAPI": "MEASUREMENT",
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1728564487231,
+    "supportsMessageContext": false
   }
 ]

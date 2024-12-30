@@ -5,8 +5,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import dynamic.util.LogLevelExtension;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,6 +18,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(LogLevelExtension.class)
 @Slf4j
 class MappingTreeTest {
     private ObjectMapper objectMapper;
@@ -37,7 +42,7 @@ class MappingTreeTest {
         @DisplayName("Should successfully deserialize mappings from JSON file")
         void testDeserializeMapping() {
             assertNotNull(mappings, "Mappings should not be null");
-            assertEquals(8, mappings.size(), "Should have 4 mappings");
+            assertEquals(9, mappings.size(), "Should have 4 mappings");
             // Add more specific assertions about the mapping content
         }
 
@@ -122,12 +127,36 @@ class MappingTreeTest {
             tree.deleteMapping(mappings.get(1));
 
             resolvedMappings = tree.resolveMapping("device/test/sub/subsub");
-            assertEquals(1, resolvedMappings.size(), "Should still return the leaf mapping, even if an inner node is deleted");
+            assertEquals(1, resolvedMappings.size(),
+                    "Should still return the leaf mapping, even if an inner node is deleted");
             assertEquals("Mapping - 02", resolvedMappings.get(0).getName(), "Should resolve mapping 02");
 
             resolvedMappings = tree.resolveMapping("device/test/sub");
             assertEquals(0, resolvedMappings.size(), "Should not resolve to any mapping");
 
+        }
+
+        @Test
+        @DisplayName("Should handle removing and adding mappings")
+        void testBuildMappingAddMappingTwice() throws ResolveException {
+            List<Mapping> resolvedMappings;
+            // Now you can use the mappings initialized in setUp()
+            assertNotNull(mappings, "Mappings should be available for tree building");
+
+            // Add your tree building logic and assertions
+            MappingTreeNode tree = MappingTreeNode.createRootNode("TEST_TENANT");
+            tree.addMapping(mappings.get(0));
+            tree.addMapping(mappings.get(8));
+
+            resolvedMappings = tree.resolveMapping("device/test");
+            assertEquals(2, resolvedMappings.size(), "Should resolve 1 mapping");
+            assertEquals("Mapping - 00", resolvedMappings.get(0).getName(), "Should resolve mapping 02");
+            assertEquals("Mapping - 08", resolvedMappings.get(1).getName(), "Should resolve mapping 02");
+
+            tree.deleteMapping(mappings.get(0));
+            resolvedMappings = tree.resolveMapping("device/test");
+            assertEquals(1, resolvedMappings.size(), "Should resolve 1 mapping");
+            assertEquals("Mapping - 08", resolvedMappings.get(0).getName(), "Should resolve mapping 01");
         }
     }
 

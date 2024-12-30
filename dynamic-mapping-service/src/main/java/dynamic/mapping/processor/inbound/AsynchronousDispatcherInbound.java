@@ -134,7 +134,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
-                if (mapping.isActive()
+                if (mapping.getActive()
                         && connectorClient.getMappingsDeployedInbound().containsKey(mapping.identifier)) {
                     MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type

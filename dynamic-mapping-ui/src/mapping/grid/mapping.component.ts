@@ -991,7 +991,9 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.destroy$.unsubscribe();
     this.mappingService.stopChangedMappingEvents();
   }
+
   refreshMappings() {
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
+
 }

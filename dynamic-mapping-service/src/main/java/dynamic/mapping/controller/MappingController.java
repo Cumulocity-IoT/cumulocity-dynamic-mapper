@@ -95,7 +95,7 @@ public class MappingController {
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
 
-    @GetMapping(value = "/mapping", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<Mapping>> getMappings(@RequestParam(required = false) Direction direction) {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Get mappings", tenant);

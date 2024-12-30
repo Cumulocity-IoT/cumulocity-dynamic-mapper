@@ -23,6 +23,9 @@ package dynamic.mapping.model;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import dynamic.util.LogLevelExtension;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @Slf4j
+@ExtendWith(LogLevelExtension.class)
 public class MappingsRepresentationTest {
 
     @Test

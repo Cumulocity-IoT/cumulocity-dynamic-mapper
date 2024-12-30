@@ -28,6 +28,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.Builder;
+import lombok.Builder.Default;
 import dynamic.mapping.processor.model.MappingType;
 
 import jakarta.validation.constraints.NotNull;
@@ -105,28 +107,29 @@ public class Mapping implements Serializable {
     public MappingSubstitution[] substitutions;
 
     @NotNull
-    public boolean active;
+    public Boolean active;
 
     @NotNull
-    public boolean debug;
+    public Boolean debug;
 
     @NotNull
-    public boolean tested;
+    public Boolean tested;
 
     @NotNull
-    public boolean supportsMessageContext;
+    public Boolean supportsMessageContext;
 
     @NotNull
-    public boolean createNonExistingDevice;
+    public Boolean createNonExistingDevice;
 
     @NotNull
-    public boolean updateExistingDevice;
+    public Boolean updateExistingDevice;
 
     @JsonSetter(nulls = Nulls.SKIP)
     public Boolean autoAckOperation;
 
     @NotNull
-    public boolean useExternalId;
+
+    public Boolean useExternalId = false;;
 
     public String externalIdType;
 
@@ -168,7 +171,7 @@ public class Mapping implements Serializable {
     }
 
     @JsonIgnore
-    public boolean definesDeviceIdentifier(
+    public Boolean definesDeviceIdentifier(
             MappingSubstitution sub) {
         if (Direction.INBOUND.equals(direction)) {
             if (useExternalId && !("").equals(externalIdType)) {
@@ -303,7 +306,7 @@ public class Mapping implements Serializable {
         return result;
     }
 
-    static public boolean isWildcardTopic(String topic) {
+    static public Boolean isWildcardTopic(String topic) {
         var result = topic.contains(TOPIC_WILDCARD_MULTI) || topic.contains(TOPIC_WILDCARD_SINGLE);
         return result;
     }

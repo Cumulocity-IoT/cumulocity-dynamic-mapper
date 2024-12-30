@@ -327,12 +327,12 @@ export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
 export const PATH_MAPPING_TREE_ENDPOINT = 'monitoring/tree';
 export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = 'monitoring/tree';
 export const PATH_STATUS_CONNECTORS_ENDPOINT = 'monitoring/status/connectors';
-export const PATH_FEATURE_ENDPOINT = 'feature';
+export const PATH_FEATURE_ENDPOINT = 'configuration/feature';
 export const PATH_EXTENSION_ENDPOINT = 'extension';
 export const PATH_SUBSCRIPTION_ENDPOINT = 'subscription';
 export const PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT = 'deployment/effective';
 export const PATH_DEPLOYMENT_DEFINED_ENDPOINT = 'deployment/defined';
-export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscriptions';
+export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscription';
 export const PATH_MAPPING_ENDPOINT = 'mapping';
 
 export const AGENT_ID = 'd11r_mappingService';
