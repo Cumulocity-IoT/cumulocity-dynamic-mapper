@@ -19,22 +19,22 @@
   ~ @authors Christof Strack
   -->
 
-<div>
-  <div class="legend form-block col-lg-12">Connector Logs</div>
-  <div class="p-l-24">
+<div class="p-24">
+  <div>
     <c8y-form-group>
       <form class="form-inline">
-        <div class="c8y-select-wrapper button-bottom-margin">
+        <label class="control-label m-r-8" title="{{ 'Filter connector logs' | translate }}">Filter connector logs</label>
+        <div class="c8y-select-wrapper">
           <select class="form-control" style="width: 280px" [(ngModel)]="filterStatusLog.type" name="type">
             <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
-              <option [ngValue]="lt.key"  
+              <option [ngValue]="lt.key"
                 *ngIf="lt.value['component'] == 'd11r_connector' || lt.value['component'] == LoggingEventTypeMap[LoggingEventType.ALL].component">
                 {{ lt.key | formatStringAsWords }}
               </option>
             </ng-container>
           </select>
         </div>
-        <div class="c8y-select-wrapper button-bottom-margin m-l-16">
+        <div class="c8y-select-wrapper m-l-16">
           <select class="form-control" style="width: 180px" [(ngModel)]="filterStatusLog.connectorIdentifier"
             name="connectorIdentifier">
             <option [value]="'ALL'">ALL connectors</option>
@@ -44,7 +44,7 @@
             </option>
           </select>
         </div>
-        <button type="submit" (click)="updateStatusLogs()" class="btn btn-default btn-sm m-b-8 m-l-16">
+        <button type="submit" (click)="updateStatusLogs()" class="btn btn-default btn-sm m-l-16">
           Update
         </button>
       </form>

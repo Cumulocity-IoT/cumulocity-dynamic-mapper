@@ -21,21 +21,13 @@
 
 <c8y-title>Configuration</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button
-    class="btn btn-link"
-    title="{{ 'Add connector' | translate }}"
-    (click)="onConfigurationAdd()"
-  >
+  <button class="btn btn-link" title="{{ 'Add connector' | translate }}" (click)="onConfigurationAdd()">
     <i c8yIcon="connected"></i>
     {{ 'Add connector' | translate }}
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
-  <button
-    class="btn btn-link"
-    title="{{ 'Refresh' | translate }}"
-    (click)="refresh()"
-  >
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
   </button>
@@ -44,11 +36,12 @@
 <div class="card card--fullpage">
   <div class="col-lg-12">
     <div class="card-block">
-      <d11r-mapping-connector-configuration
-        #connectorConfigurationBroker
-        [selectable]="false"
-      ></d11r-mapping-connector-configuration>
+      <d11r-mapping-connector-configuration #connectorConfigurationBroker
+        [selectable]="false"></d11r-mapping-connector-configuration>
     </div>
   </div>
 </div>
-<d11r-mapping-connector-log></d11r-mapping-connector-log>
+
+<div class="elevation-sm">
+  <d11r-mapping-connector-log></d11r-mapping-connector-log>
+</div>

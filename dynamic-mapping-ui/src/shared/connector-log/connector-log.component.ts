@@ -27,10 +27,8 @@ import {
   ConnectorConfiguration,
   ConnectorSpecification,
   ConnectorStatus,
-  Feature,
   LoggingEventType,
   LoggingEventTypeMap,
-  SharedService,
 } from '..';
 import { ConnectorStatusService } from '../service/connector-status.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
