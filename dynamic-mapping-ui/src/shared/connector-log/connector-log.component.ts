@@ -30,7 +30,7 @@ import {
   LoggingEventType,
   LoggingEventTypeMap,
 } from '..';
-import { ConnectorStatusService } from '../service/connector-status.service';
+import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 
 @Component({
@@ -54,7 +54,7 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
 
   constructor(
     public bsModalService: BsModalService,
-    public connectorStatusService: ConnectorStatusService,
+    public connectorStatusService: ConnectorLogService,
     public connectorConfigurationService: ConnectorConfigurationService,
     public alertService: AlertService,
   ) {}

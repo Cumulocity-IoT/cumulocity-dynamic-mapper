@@ -132,6 +132,8 @@ public class OperationController {
                     return handleRefreshNotifications(tenant);
                 case CLEAR_CACHE:
                     return handleClearCache(tenant, parameters);
+                case UPDATE_TEMPLATE:
+                    return handleUpdateTemplate(tenant, parameters);
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
@@ -139,6 +141,13 @@ public class OperationController {
             log.error("Tenant {} - Error running operation: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
+    }
+
+    private ResponseEntity<?> handleUpdateTemplate(String tenant, Map<String, String> parameters) throws Exception {
+        String id = parameters.get("id");
+        Integer index = Integer.parseInt(parameters.get("index"));
+        mappingComponent.updateSourceTemplate(tenant, id, index);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {

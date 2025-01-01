@@ -148,6 +148,15 @@ export class MappingService {
     );
   }
 
+  async updateTemplate(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
+      {
+        operation: Operation.UPDATE_TEMPLATE,
+        parameter
+      }
+    );
+  }
+
   resetCache() {
     // this._mappingsInbound = undefined;
     // this._mappingsOutbound = undefined;

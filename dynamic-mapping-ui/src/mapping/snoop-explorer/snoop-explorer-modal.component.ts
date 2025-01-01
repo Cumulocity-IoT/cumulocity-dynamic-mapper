@@ -43,12 +43,16 @@ export class SnoopExplorerComponent implements OnInit {
 
   @ViewChild('editorGeneral', { static: false })
   editorGeneral: JsonEditorComponent;
-  
+
+  @ViewChild('modal', { static: false }) private modal;
+
+  pending: boolean = false;
   mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();
   labels: ModalLabels;
   isDisabled = isDisabled;
   template: any;
+  index: number;
 
   editorOptionsGeneral = {
     mode: 'tree',
@@ -62,6 +66,7 @@ export class SnoopExplorerComponent implements OnInit {
   ngOnInit(): void {
     this.mapping = this.enrichedMapping.mapping;
     this.onSelectSnoopedTemplate(0);
+    this.index = 0;
     this.labels = {
       ok: 'Delete templates',
       cancel: 'Close'
@@ -69,18 +74,21 @@ export class SnoopExplorerComponent implements OnInit {
   }
 
   onCancel() {
-    this.closeSubject.next(undefined);
+    this.modal._dismiss();
   }
 
   async onSelectSnoopedTemplate(index: any) {
+    this.index = index;
     this.template = JSON.parse(this.mapping.snoopedTemplates[index]);
   }
 
   async onResetSnoop() {
-    console.log('Clicked onResetSnoop!');
+    // console.log('Clicked onResetSnoop!');
+    this.pending = true;
     const result: IFetchResponse = await this.mappingService.resetSnoop({
       id: this.mapping.id
     });
+    this.pending = false;
     if (result.status == HttpStatusCode.Created) {
       this.alertService.success(
         `Reset snooping for mapping ${this.mapping.id}`
@@ -89,6 +97,29 @@ export class SnoopExplorerComponent implements OnInit {
       this.alertService.warning(
         `Failed to reset snooping for mapping ${this.mapping.id}`
       );
+      this.pending = false;
     }
+    this.modal._dismiss();
+  }
+
+
+  async onUpdateSourceTemplate() {
+    this.pending = true;
+    const result: IFetchResponse = await this.mappingService.updateTemplate({
+      id: this.mapping.id,
+      index: this.index
+    });
+    this.pending = false;
+    if (result.status == HttpStatusCode.Created) {
+      this.alertService.success(
+        `Update source template for mapping ${this.mapping.id}`
+      );
+    } else {
+      this.alertService.warning(
+        `Failed to update source template for mapping ${this.mapping.id}`
+      );
+      this.pending = false;
+    }
+    this.modal._dismiss();
   }
 }

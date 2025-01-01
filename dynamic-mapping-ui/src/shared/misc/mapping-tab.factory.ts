@@ -80,7 +80,7 @@ export class MappingTabFactory implements TabFactory {
         path: `sag-ps-pkg-dynamic-mapping/${NODE3}/extension`,
         priority: 500,
         label: 'Processor extension',
-        icon: 'plugin',
+        icon: 'extension',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({

@@ -33,15 +33,16 @@
   </button>
 </c8y-action-bar-item>
 
-<div class="card card--fullpage">
-  <div class="col-lg-12">
-    <div class="card-block">
+<div class="card content-fullpage d-grid grid__row--6-6--md">
+  <div class="card card--grid card--grid__inner-scroll">
+    <div class="p-l-16 p-r-16">
       <d11r-mapping-connector-configuration #connectorConfigurationBroker
         [selectable]="false"></d11r-mapping-connector-configuration>
     </div>
   </div>
-</div>
-
-<div class="elevation-sm">
-  <d11r-mapping-connector-log></d11r-mapping-connector-log>
+  <div class="card card--grid card--grid__inner-scroll">
+    <div class="p-l-16 p-r-16">
+      <d11r-mapping-connector-log></d11r-mapping-connector-log>
+    </div>
+  </div>
 </div>

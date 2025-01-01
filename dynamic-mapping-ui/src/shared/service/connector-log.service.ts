@@ -39,7 +39,7 @@ import {
 @Injectable({
   providedIn: 'root'
 })
-export class ConnectorStatusService {
+export class ConnectorLogService {
   constructor(
     private eventService: EventService,
     private sharedService: SharedService
@@ -140,7 +140,7 @@ export class ConnectorStatusService {
         } else {
           sortedAcc = val.concat(acc);
         }
-        sortedAcc = sortedAcc?.slice(0, 9);
+        sortedAcc = sortedAcc?.slice(0, 20);
         return sortedAcc;
       }, []),
       shareReplay(1)
