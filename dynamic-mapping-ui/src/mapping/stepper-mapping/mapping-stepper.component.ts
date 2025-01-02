@@ -55,8 +55,9 @@ import {
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
   StepperConfiguration,
+  countDeviceIdentifiers,
+  getGenericDeviceIdentifier
 } from '../../shared';
-import { countDeviceIdentifiers, getGenericDeviceIdentifier } from '../../shared/mapping/mapping.model';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';

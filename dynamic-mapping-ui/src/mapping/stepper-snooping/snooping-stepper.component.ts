@@ -18,25 +18,22 @@
  *
  * @authors Christof Strack
  */
+import { CdkStep } from '@angular/cdk/stepper';
 import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewEncapsulation } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { CdkStep } from '@angular/cdk/stepper';
 
-import { isDisabled } from '../shared/util';
-import { 
-  Direction, 
-  SnoopStatus, 
-  DeploymentMapEntry, 
-  StepperConfiguration, 
-  Mapping, 
-  SAMPLE_TEMPLATES_C8Y, 
-  SharedService
+import {
+  ConnectorType,
+  DeploymentMapEntry,
+  Direction,
+  Mapping,
+  SAMPLE_TEMPLATES_C8Y, SnoopStatus,
+  StepperConfiguration
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
-import { MappingService } from '../core/mapping.service';
-import { BsModalService } from 'ngx-bootstrap/modal';
+import { isDisabled } from '../shared/util';
 
 interface StepperLabels {
   next: string;
@@ -54,36 +51,22 @@ const CONSTANTS = {
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-@Component({
-  selector: 'd11r-snooping-stepper',
-  templateUrl: 'snooping-stepper.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
-})
 export class SnoopingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
-  
-  @Input() set deploymentMapEntry(value: DeploymentMapEntry) {
-    this._deploymentMapEntry = value;
-    this.deploymentMapEntryChange(value); // Add this line to handle changes
-  }
-  get deploymentMapEntry(): DeploymentMapEntry {
-    return this._deploymentMapEntry;
-  }
-
+  @Input() deploymentMapEntry: DeploymentMapEntry;
   @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<Mapping>();
 
-  readonly Direction = Direction;
-  readonly EditorMode = EditorMode;
-  readonly SnoopStatus = SnoopStatus;
-  readonly isDisabled = isDisabled;
+  Direction = Direction;
+  EditorMode = EditorMode;
+  SnoopStatus = SnoopStatus;
+  isDisabled = isDisabled;
 
   propertyFormly = new FormGroup({});
   isButtonDisabled$ = new BehaviorSubject<boolean>(true);
+  supportsMessageContext: boolean;
   private readonly destroy$ = new Subject<void>();
-  private _deploymentMapEntry: DeploymentMapEntry;
 
   snoopedTemplateCounter = 0;
   stepLabel: any;
@@ -93,21 +76,13 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   };
 
   constructor(
-    private bsModalService: BsModalService,
-    private mappingService: MappingService,
     private alertService: AlertService,
-    private sharedService: SharedService
-  ) {}
+  ) { }
 
-  // Add back the deploymentMapEntryChange method
-  deploymentMapEntryChange(entry: DeploymentMapEntry): void {
-    const isDisabled = !entry?.connectors || entry?.connectors?.length === 0;
-    this.isButtonDisabled$.next(isDisabled);
-  }
+
 
   ngOnInit(): void {
     // Initial check for button state
-    this.deploymentMapEntryChange(this._deploymentMapEntry);
   }
 
   ngOnDestroy(): void {
@@ -116,10 +91,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
     this.isButtonDisabled$.complete();
   }
 
-  private initializeComponent(): void {
-    // Add any initialization logic here
-    this.updateButtonState();
-  }
 
   private cleanup(): void {
     this.destroy$.next();
@@ -127,10 +98,19 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
     this.isButtonDisabled$.complete();
   }
 
-  private updateButtonState(): void {
-    const isDisabled = !this._deploymentMapEntry?.connectors || 
-                      this._deploymentMapEntry?.connectors?.length === 0;
-    this.isButtonDisabled$.next(isDisabled);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  deploymentMapEntryChange(e) {
+    this.isButtonDisabled$.next(
+      !this.deploymentMapEntry?.connectors ||
+      this.deploymentMapEntry?.connectors?.length == 0
+    );
+
+    setTimeout(() => {
+      this.supportsMessageContext =
+        this.deploymentMapEntry.connectorsDetailed?.some(
+          (con) => con.connectorType == ConnectorType.KAFKA
+        );
+    });
   }
 
   getCurrentMapping(): Mapping {
@@ -177,7 +157,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
 
   private showSnoopingInfo(): void {
     const message = `Wait ${CONSTANTS.HOUSEKEEPING_INTERVAL_SECONDS} seconds before snooped messages are visible. ` +
-                   `Only the last ${CONSTANTS.SNOOP_TEMPLATES_MAX} messages are visible!`;
+      `Only the last ${CONSTANTS.SNOOP_TEMPLATES_MAX} messages are visible!`;
     this.alertService.info(message);
   }
 

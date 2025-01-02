@@ -43,7 +43,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
   appName: string;
   isStandaloneApp: boolean = false;
   configurations: ConnectorConfiguration[] = [];
-  readonly staticNodes = {
+  staticNodesStandalone = {
     rootNode: new NavigatorNode({
       label: gettext('Home'),
       icon: 'home',
@@ -80,7 +80,43 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       priority: 300,
       preventDuplicates: true
     })
-   } as const;
+  } as const;
+
+  staticNodesPlugin = {
+    rootNode: new NavigatorNode({
+      label: gettext('Dynamic Data Mapper'),
+      icon: 'home',
+      path: '/sag-ps-pkg-dynamic-mapping/landing',
+      priority: 600,
+      preventDuplicates: true
+    }),
+    configurationNode: new NavigatorNode({
+      parent: gettext('Dynamic Data Mapper'),
+      label: gettext('Configuration'),
+      icon: 'cog',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+      priority: 550,
+      preventDuplicates: true
+    }),
+    mappingNode: new NavigatorNode({
+      parent: gettext('Dynamic Data Mapper'),
+      label: gettext('Mapping'),
+      icon: 'rules',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+      priority: 400,
+      preventDuplicates: true
+    }),
+    monitoringNode: new NavigatorNode({
+      parent: gettext('Dynamic Data Mapper'),
+      label: gettext('Monitoring'),
+      icon: 'pie-chart',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
+      priority: 300,
+      preventDuplicates: true
+    })
+  } as const;
+
+  staticNodes = {};
 
   constructor(
     private applicationService: ApplicationService,
@@ -103,7 +139,22 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     });
 
     this.connectorConfigurationService.getConnectorConfigurationsAsObservable().subscribe(configs => {
-      const connectorsNavNode = this.staticNodes.connectorNode;
+      let connectorsNavNode;
+      if (this.isStandaloneApp) {
+        connectorsNavNode = this.staticNodesStandalone['connectorNode'];
+      } else {
+        connectorsNavNode = new NavigatorNode({
+          // parent: gettext('Configuration'),
+          // parent: gettext('Dynamic Data Mapper'),
+          label: gettext('Connectors'),
+          icon: 'c8y-device-management',
+          path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+          priority: 500,
+          preventDuplicates: true
+        });
+        const configurationNode = this.staticNodesPlugin['configurationNode'];
+        configurationNode.add(connectorsNavNode);
+      }
       // lets clear the array
       connectorsNavNode.children.length = 0;
       configs.forEach(config => {
@@ -119,8 +170,25 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     });
   }
 
-  get() {
-    const navsFixed = Object.values(this.staticNodes);
-    return navsFixed;
+  async get() {
+    const feature: any = await this.sharedService.getFeatures();
+    let navs;
+    if (this.isStandaloneApp) {
+      navs = Object.values(this.staticNodesStandalone) as NavigatorNode[];
+    } else {
+      navs = Object.values(this.staticNodesPlugin) as NavigatorNode[];
+    }
+    return this.applicationService
+      .isAvailable(MappingNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)
+      .then((data) => {
+        if (!data.data || !feature) {
+          this.alertService.danger(
+            'Microservice:dynamic-mapping-service not subscribed. Please subscribe this service before using the mapping editor!'
+          );
+          console.error('dynamic-mapping-service microservice not subscribed!');
+          return [];
+        }
+        return navs;
+      });
   }
 }

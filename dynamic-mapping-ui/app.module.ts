@@ -22,6 +22,7 @@ import { NgModule } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule as ngRouterModule } from '@angular/router';
 import { BootstrapComponent, CoreModule, RouterModule } from '@c8y/ngx-components';
+import { DynamicMappingModule } from './src/dynamic-mapping.module';
 import './src/shared/styles/shared.css';
 
 @NgModule({
@@ -31,6 +32,7 @@ import './src/shared/styles/shared.css';
     ngRouterModule.forRoot([], { enableTracing: false, useHash: true }),
     RouterModule.forRoot(),
     CoreModule.forRoot(),
+    DynamicMappingModule
   ],
   bootstrap: [BootstrapComponent]
 })

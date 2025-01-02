@@ -28,7 +28,7 @@ export default {
       {
         name: 'Dynamic Mapping Mapper Plugin',
         module: 'DynamicMappingModule',
-        path: './src/dynamic-mapping.module',
+        path: './src/dynamic-mapping.module.ts',
         description: 'Adds a Dynamic Mapping Mapper Plugin',
         scope: 'self'
       }

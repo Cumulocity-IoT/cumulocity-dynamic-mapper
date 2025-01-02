@@ -65,7 +65,6 @@ import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
-// import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { HttpStatusCode } from '@angular/common/http';
 import { DeploymentMapEntry, ExtensionType, MappingTypeDescriptionMap, StepperConfiguration } from '../../shared';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
