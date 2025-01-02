@@ -624,7 +624,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 .newInstance();
                         // springUtil.registerBean(key, clazz);
                         extensionEntry.setExtensionImplSource(extensionImpl);
-                        extensionEntry.setExtensionType(ExtensionType.PROCESSOR_EXTENSION_SOURCE);
+                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE);
                         log.debug("Tenant {} - Successfully registered extensionImplSource : {} for key: {}",
                                 tenant,
                                 newExtensions.getProperty(key),
@@ -637,7 +637,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         // springUtil.registerBean(key, clazz);
                         extensionEntry.setExtensionImplTarget(extensionImpl);
                         // overwrite type since it implements both
-                        extensionEntry.setExtensionType(ExtensionType.PROCESSOR_EXTENSION_SOURCE_TARGET);
+                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE_TARGET);
                         log.debug("Tenant {} - Successfully registered extensionImplTarget : {} for key: {}",
                                 tenant,
                                 newExtensions.getProperty(key),

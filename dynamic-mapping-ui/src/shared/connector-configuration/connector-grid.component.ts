@@ -64,6 +64,7 @@ import { StatusEnabledRendererComponent } from './renderer/status-enabled-render
 import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
 import { CheckedRendererComponent } from './renderer/checked-renderer.component';
 import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
+import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
@@ -165,6 +166,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortOrder: 'asc',
         visible: true,
+        cellRendererComponent: ConnectorDetailCellRendererComponent,
         gridTrackSize: '30%'
       },
       {
@@ -398,7 +400,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
               gettext('Failed to delete connector configuration')
             );
           }
-          await this.reloadData();
+          this.refresh();
         }
         confirmDeletionModalRef.hide();
       }

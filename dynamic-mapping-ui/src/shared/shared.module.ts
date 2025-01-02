@@ -40,6 +40,9 @@ import { FieldInputCustom } from './component/formly/input-custom.type.component
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { StatusEnabledRendererComponent } from './connector-configuration/renderer/status-enabled-renderer.component';
 import { FilterJsonPipe } from './misc/filter-json.pipe';
+import { ConnectorDetailCellRendererComponent } from './connector-configuration/renderer/connector-link.renderer.component';
+import { RouterModule } from '@angular/router';
+import { ConnectorDetailsComponent } from './connector-details/connector-details.component';
 
 @NgModule({
   declarations: [
@@ -53,9 +56,11 @@ import { FilterJsonPipe } from './misc/filter-json.pipe';
     DisableDirective,
     ConnectorStatusComponent,
     ConnectorGridComponent,
+    ConnectorDetailsComponent,
     ConnectorConfigurationModalComponent,
     StatusEnabledRendererComponent,
     ConnectorStatusRendererComponent,
+    ConnectorDetailCellRendererComponent,
     WrapperCustomFormField,
     FieldTextareaCustom,
     FieldInputCustom,
@@ -64,6 +69,7 @@ import { FilterJsonPipe } from './misc/filter-json.pipe';
     CoreModule,
     BsDatepickerModule,
     PaginationModule,
+    RouterModule,
     BsDropdownModule.forRoot()
   ],
   exports: [
@@ -76,6 +82,7 @@ import { FilterJsonPipe } from './misc/filter-json.pipe';
     FormatStringPipe,
     ConnectorStatusComponent,
     ConnectorGridComponent,
+    ConnectorDetailsComponent,
     ConnectorConfigurationModalComponent,
     WrapperCustomFormField,
     FieldTextareaCustom,

@@ -200,7 +200,7 @@ export class ConnectorConfigurationService {
 
   async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instances`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
       {
         headers: {
           accept: 'application/json'
@@ -211,6 +211,25 @@ export class ConnectorConfigurationService {
     this._connectorConfigurations = await response.json();
 
     return this._connectorConfigurations;
+  }
+
+  async getConnectorConfiguration(identifier: string): Promise<ConnectorConfiguration>{
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${identifier}`,
+      {
+        headers: {
+          accept: 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    const result = await response.json();
+
+    return result;
+  }
+
+  getConnectorConfigurationsAsObservable(): Observable<ConnectorConfiguration[]> {
+    return this.connectorConfigurations$;
   }
 
   // private getConnectorStatusEvents(): Observable<ConnectorStatusEvent> {

@@ -154,7 +154,7 @@ public class ConfigurationController {
         }
     }
 
-    @GetMapping(value = "/connector/instances",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/connector/instance",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(@RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details", tenant);

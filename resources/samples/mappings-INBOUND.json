@@ -636,7 +636,7 @@
     "direction": "INBOUND",
     "sourceTemplate": "{\"deviceId\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\"}",
     "targetTemplate": "{\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
-    "mappingType": "PROCESSOR_EXTENSION_SOURCE",
+    "mappingType": "EXTENSION_SOURCE",
     "substitutions": [],
     "active": false,
     "debug": false,
@@ -653,7 +653,7 @@
       "extensionName": "dynamic-mapping-extension",
       "eventName": "CustomEvent",
       "loaded": false,
-      "extensionType": "PROCESSOR_EXTENSION_SOURCE"
+      "extensionType": "EXTENSION_SOURCE"
     },
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735217875869,
@@ -865,7 +865,7 @@
     "direction": "INBOUND",
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
     "targetTemplate": "{\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_Temperature\",\"c8y_Temperature\":\"dummy\",\"c8y_Fragment_to_remove\":\"remove_me\"}",
-    "mappingType": "PROCESSOR_EXTENSION_SOURCE",
+    "mappingType": "EXTENSION_SOURCE",
     "substitutions": [],
     "active": true,
     "debug": false,
@@ -882,7 +882,7 @@
       "extensionName": "dynamic-mapping-extension",
       "eventName": "CustomMeasurement",
       "loaded": false,
-      "extensionType": "PROCESSOR_EXTENSION_SOURCE"
+      "extensionType": "EXTENSION_SOURCE"
     },
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735152784594,
@@ -1036,7 +1036,7 @@
     "direction": "INBOUND",
     "sourceTemplate": "{\"deviceId\":\"909090\",\"alarmType\":\"TestAlarm\",\"description\":\"This is a new test alarm!\",\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"time\":\"2022-08-05T00:14:49.389+02:00\"}",
     "targetTemplate": "{\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"text\":\"This is a new test alarm!\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestAlarm\"}",
-    "mappingType": "PROCESSOR_EXTENSION_SOURCE_TARGET",
+    "mappingType": "EXTENSION_SOURCE_TARGET",
     "substitutions": [],
     "active": true,
     "debug": false,
@@ -1053,7 +1053,7 @@
       "extensionName": "dynamic-mapping-extension",
       "eventName": "CustomAlarm",
       "loaded": false,
-      "extensionType": "PROCESSOR_EXTENSION_SOURCE_TARGET"
+      "extensionType": "EXTENSION_SOURCE_TARGET"
     },
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735221431554,

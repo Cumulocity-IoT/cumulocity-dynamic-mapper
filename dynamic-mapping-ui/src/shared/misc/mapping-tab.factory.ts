@@ -68,14 +68,14 @@ export class MappingTabFactory implements TabFactory {
         icon: 'reflector-bulb',
         orientation: 'horizontal'
       } as Tab);
-    } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node3/g)) {
-      tabs.push({
-        path: `sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-        priority: 910,
-        label: 'Connector',
-        icon: 'connected',
-        orientation: 'horizontal'
-      } as Tab);
+    } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node3\/extension/g) || this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node3\/serviceConfiguration/g)) {
+      // tabs.push({
+      //   path: `sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+      //   priority: 910,
+      //   label: 'Connector',
+      //   icon: 'connected',
+      //   orientation: 'horizontal'
+      // } as Tab);
       tabs.push({
         path: `sag-ps-pkg-dynamic-mapping/${NODE3}/extension`,
         priority: 500,

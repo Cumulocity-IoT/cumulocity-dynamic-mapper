@@ -115,8 +115,8 @@ export interface ExtensionEntry {
 }
 
 export enum ExtensionType {
-  PROCESSOR_EXTENSION_SOURCE = 'PROCESSOR_EXTENSION_SOURCE',
-  PROCESSOR_EXTENSION_SOURCE_TARGET = 'PROCESSOR_EXTENSION_SOURCE_TARGET',
+  EXTENSION_SOURCE = 'EXTENSION_SOURCE',
+  EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
 }
 
 export enum QOS {
@@ -145,8 +145,8 @@ export enum MappingType {
   FLAT_FILE = 'FLAT_FILE',
   GENERIC_BINARY = 'GENERIC_BINARY',
   PROTOBUF_STATIC = 'PROTOBUF_STATIC',
-  PROCESSOR_EXTENSION_SOURCE = 'PROCESSOR_EXTENSION_SOURCE',
-  PROCESSOR_EXTENSION_SOURCE_TARGET = 'PROCESSOR_EXTENSION_SOURCE_TARGET'
+  EXTENSION_SOURCE = 'EXTENSION_SOURCE',
+  EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET'
 }
 
 export interface MappingTypeProperties {
@@ -242,8 +242,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       allowTestSending: false
     }
   },
-  [MappingType.PROCESSOR_EXTENSION_SOURCE]: {
-    key: MappingType.PROCESSOR_EXTENSION_SOURCE,
+  [MappingType.EXTENSION_SOURCE]: {
+    key: MappingType.EXTENSION_SOURCE,
     description:
       'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
     properties: {
@@ -262,10 +262,10 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       advanceFromStepToEndStep: 2
     }
   },
-  [MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET]: {
-    key: MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET,
+  [MappingType.EXTENSION_SOURCE_TARGET]: {
+    key: MappingType.EXTENSION_SOURCE_TARGET,
     description:
-      'Mapping handles payloads in custom format. In contrast to the PROCESSOR_EXTENSION_SOURCE the completed processing of the payload: extract values from the incoming payload and then transform this to a Cumulocity API call. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
+      'Mapping handles payloads in custom format. In contrast to the EXTENSION_SOURCE the completed processing of the payload: extract values from the incoming payload and then transform this to a Cumulocity API call. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
     properties: {
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }

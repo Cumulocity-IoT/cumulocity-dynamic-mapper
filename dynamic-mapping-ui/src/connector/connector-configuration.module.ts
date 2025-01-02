@@ -22,10 +22,11 @@
 
 import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
-import { SharedModule } from '../shared';
+import { connectorResolver, SharedModule } from '../shared';
 import { ConnectorConfigurationComponent } from './connector-configuration.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { NODE3 } from '../shared/mapping/util';
+import { ConnectorDetailsComponent } from '../shared/connector-details/connector-details.component';
 
 @NgModule({
   declarations: [ConnectorConfigurationComponent],
@@ -38,7 +39,18 @@ import { NODE3 } from '../shared/mapping/util';
   providers: [
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-      component: ConnectorConfigurationComponent,
+            children: [
+              {
+                path: '',
+                pathMatch: 'full',
+                component: ConnectorConfigurationComponent
+              },
+              {
+                path: 'details/:identifier',
+                component: ConnectorDetailsComponent,
+                resolve: { connector: connectorResolver }
+              }
+            ]
     })
   ]
 })

@@ -22,7 +22,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { IdReference, IFetchResponse, IManagedObject, IResult } from '@c8y/client';
 import * as _ from 'lodash';
-import { randomIdAsString } from 'src/mapping/shared/util';
+import { randomIdAsString } from '../../../mapping/shared/util';
 
 @Injectable({ providedIn: 'root' })
 export class MockInventoryService {

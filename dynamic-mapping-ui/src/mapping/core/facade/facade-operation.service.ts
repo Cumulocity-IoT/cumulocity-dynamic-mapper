@@ -27,7 +27,7 @@ import {
 } from '@c8y/client';
 import { ProcessingContext } from '../processor/processor.model';
 import { HttpStatusCode } from '@angular/common/http';
-import { randomIdAsString } from 'src/mapping/shared/util';
+import { randomIdAsString } from '../../../mapping/shared/util';
 
 @Injectable({ providedIn: 'root' })
 export class FacadeOperationService {

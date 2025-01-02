@@ -532,17 +532,17 @@ export class MappingComponent implements OnInit, OnDestroy {
         ...mapping,
         sourceTemplate: sampleSource
       };
-    } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION_SOURCE) {
+    } else if (this.mappingType == MappingType.EXTENSION_SOURCE) {
       mapping.extension = {
         extensionName: undefined,
         eventName: undefined,
-        extensionType: ExtensionType.PROCESSOR_EXTENSION_SOURCE,
+        extensionType: ExtensionType.EXTENSION_SOURCE,
       };
-    } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET) {
+    } else if (this.mappingType == MappingType.EXTENSION_SOURCE_TARGET) {
       mapping.extension = {
         extensionName: undefined,
         eventName: undefined,
-        extensionType: ExtensionType.PROCESSOR_EXTENSION_SOURCE_TARGET,
+        extensionType: ExtensionType.EXTENSION_SOURCE_TARGET,
       };
     }
 

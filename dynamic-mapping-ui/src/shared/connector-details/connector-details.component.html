@@ -1,0 +1,103 @@
+<!--
+  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ @authors Christof Strack
+  -->
+  <c8y-title>Connectors</c8y-title>
+  <c8y-breadcrumb>
+    <c8y-breadcrumb-item
+      [icon]="'cog'"
+      [label]="'Configuration' | translate"
+      [path]="'sag-ps-pkg-dynamic-mapping/node3/serviceConfiguration'"
+    >
+    </c8y-breadcrumb-item>
+    <c8y-breadcrumb-item
+      [icon]="''"
+      [label]="'Connectors' | translate"
+    ></c8y-breadcrumb-item>
+    <c8y-breadcrumb-item
+    [icon]="''"
+    [label]="'Connector' | translate"
+  ></c8y-breadcrumb-item>
+  </c8y-breadcrumb>
+  <div class="">
+    <c8y-form-group class="p-l-24">
+      <form class="form-inline">
+        <label class="control-label m-r-8" title="{{ 'Filter connector logs' | translate }}">Filter connector logs</label>
+        <div class="c8y-select-wrapper">
+          <select class="form-control" style="width: 280px" [(ngModel)]="filterStatusLog.type" name="type">
+            <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
+              <option [ngValue]="lt.key"
+                *ngIf="lt.value['component'] == 'd11r_connector' || lt.value['component'] == LoggingEventTypeMap[LoggingEventType.ALL].component">
+                {{ lt.key | formatStringAsWords }}
+              </option>
+            </ng-container>
+          </select>
+        </div>
+        <div class="c8y-select-wrapper m-l-16">
+          <select class="form-control" style="width: 180px" [(ngModel)]="filterStatusLog.connectorIdentifier"
+            name="connectorIdentifier">
+            <option [value]="'ALL'">ALL connectors</option>
+
+            <option [value]="t.identifier" *ngFor="let t of configurations$ | async">
+              {{ t.name }}
+            </option>
+          </select>
+        </div>
+        <button type="submit" (click)="updateStatusLogs()" class="btn btn-default btn-sm m-l-16">
+          Update
+        </button>
+      </form>
+    </c8y-form-group>
+  <div class="hidden-xs c8y-list__item c8y-list--timeline">
+    <div class="d-flex">
+      <div class="c8y-list--timeline__item__date">
+        <p class="m-0 text-medium text-truncate" title="Date">Date</p>
+      </div>
+      <div class="c8y-list__item__block flex-grow">
+        <div class="c8y-list__item__body">
+          <div class="d-flex">
+            <div class="col-md-1">Status</div>
+            <div class="col-md-2">Connector</div>
+            <div class="col-md-9">Message</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <c8y-list-group>
+    <c8y-li-timeline *ngFor="let event of statusLogs$ | async">
+      {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
+      <c8y-li>
+        <c8y-li-body>
+          <div class="d-flex">
+            <div class="col-md-1">
+              <div class="label label-primary">
+                {{ event.status ? event.status : '-' }}
+              </div>
+            </div>
+            <div class="col-md-2">{{ event.connectorName }}</div>
+            <div class="col-md-9">
+              <div>{{ event.message ? event.message : '-' }}</div>
+            </div>
+          </div>
+        </c8y-li-body>
+      </c8y-li>
+    </c8y-li-timeline>
+  </c8y-list-group>
+</div>

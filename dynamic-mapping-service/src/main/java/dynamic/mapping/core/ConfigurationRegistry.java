@@ -130,8 +130,8 @@ public class ConfigurationRegistry {
 				MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
 				MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
 				MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
-				MappingType.PROCESSOR_EXTENSION_SOURCE, extensibleProcessor,
-				MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET, extensibleProcessor);
+				MappingType.EXTENSION_SOURCE, extensibleProcessor,
+				MappingType.EXTENSION_SOURCE_TARGET, extensibleProcessor);
 	}
 
 	public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,

@@ -273,8 +273,8 @@ public class Mapping implements Serializable {
                 .count();
 
         if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
-                && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE)
-                && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET)
+                && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE)
+                && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE_TARGET)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)
                 && !mapping.direction.equals(Direction.OUTBOUND)) {
             if (count > 1) {
@@ -416,7 +416,7 @@ public class Mapping implements Serializable {
             result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
         }
 
-        if (!mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE)
+        if (!mapping.mappingType.equals(MappingType.EXTENSION_SOURCE)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)) {
             try {
                 new JSONObject(mapping.targetTemplate);
