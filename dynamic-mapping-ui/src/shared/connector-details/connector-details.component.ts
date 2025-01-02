@@ -19,9 +19,9 @@
  * @authors Christof Strack
  */
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, ContextData } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { Observable, Subject, takeUntil } from 'rxjs';
+import { Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
 import {
   ConnectorConfiguration,
@@ -45,12 +45,14 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   specifications: ConnectorSpecification[] = [];
   configurations$: Observable<ConnectorConfiguration[]> = new Observable();
   statusLogs$: Observable<any[]> ;
+  connector: ConnectorConfiguration;
   filterStatusLog = {
     connectorIdentifier: 'ALL',
     type: LoggingEventType.ALL,
   };
   LoggingEventTypeMap = LoggingEventTypeMap;
   LoggingEventType = LoggingEventType;
+  title:string;
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -64,6 +66,8 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     // console.log('Running version', this.version);
     const {connector} = this.route.snapshot.data;
+    this.filterStatusLog.connectorIdentifier = connector.identifier;
+    this.connector = connector;
     console.log('Details for connector', connector);
 
     this.connectorStatusService.initConnectorLogsRealtime();
@@ -78,6 +82,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       error: (error) => console.error('Error receiving logs:', error),
       complete: () => console.log('Completed') // optional
     });
+    this.updateStatusLogs();
   }
 
   updateStatusLogs() {

@@ -18,86 +18,69 @@
   ~
   ~ @authors Christof Strack
   -->
-  <c8y-title>Connectors</c8y-title>
-  <c8y-breadcrumb>
-    <c8y-breadcrumb-item
-      [icon]="'cog'"
-      [label]="'Configuration' | translate"
-      [path]="'sag-ps-pkg-dynamic-mapping/node3/serviceConfiguration'"
-    >
-    </c8y-breadcrumb-item>
-    <c8y-breadcrumb-item
-      [icon]="''"
-      [label]="'Connectors' | translate"
-    ></c8y-breadcrumb-item>
-    <c8y-breadcrumb-item
-    [icon]="''"
-    [label]="'Connector' | translate"
-  ></c8y-breadcrumb-item>
-  </c8y-breadcrumb>
-  <div class="">
-    <c8y-form-group class="p-l-24">
-      <form class="form-inline">
-        <label class="control-label m-r-8" title="{{ 'Filter connector logs' | translate }}">Filter connector logs</label>
-        <div class="c8y-select-wrapper">
-          <select class="form-control" style="width: 280px" [(ngModel)]="filterStatusLog.type" name="type">
-            <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
-              <option [ngValue]="lt.key"
-                *ngIf="lt.value['component'] == 'd11r_connector' || lt.value['component'] == LoggingEventTypeMap[LoggingEventType.ALL].component">
-                {{ lt.key | formatStringAsWords }}
-              </option>
-            </ng-container>
-          </select>
-        </div>
-        <div class="c8y-select-wrapper m-l-16">
-          <select class="form-control" style="width: 180px" [(ngModel)]="filterStatusLog.connectorIdentifier"
-            name="connectorIdentifier">
-            <option [value]="'ALL'">ALL connectors</option>
-
-            <option [value]="t.identifier" *ngFor="let t of configurations$ | async">
-              {{ t.name }}
+<c8y-title>Connectors details</c8y-title>
+<c8y-breadcrumb>
+  <c8y-breadcrumb-item [icon]="'cog'" [label]="'Configuration' | translate"
+    [path]="'sag-ps-pkg-dynamic-mapping/node3/serviceConfiguration'">
+  </c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [icon]="''" [label]="'Connectors' | translate"
+    [path]="'sag-ps-pkg-dynamic-mapping/node3/connectorConfiguration'"></c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [icon]="''" [label]="connector?.name"></c8y-breadcrumb-item>
+</c8y-breadcrumb>
+<div>
+  <c8y-form-group class="p-l-24">
+    <form class="form-inline">
+      <label class="control-label m-r-8" title="{{ 'Filter connector logs' | translate }}">Filter connector logs</label>
+      <div class="c8y-select-wrapper">
+        <select class="form-control" style="width: 280px" [(ngModel)]="filterStatusLog.type" name="type">
+          <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
+            <option [ngValue]="lt.key"
+              *ngIf="lt.value['component'] == 'd11r_connector' || lt.value['component'] == LoggingEventTypeMap[LoggingEventType.ALL].component">
+              {{ lt.key | formatStringAsWords }}
             </option>
-          </select>
-        </div>
-        <button type="submit" (click)="updateStatusLogs()" class="btn btn-default btn-sm m-l-16">
-          Update
-        </button>
-      </form>
-    </c8y-form-group>
-  <div class="hidden-xs c8y-list__item c8y-list--timeline">
-    <div class="d-flex">
-      <div class="c8y-list--timeline__item__date">
-        <p class="m-0 text-medium text-truncate" title="Date">Date</p>
+          </ng-container>
+        </select>
       </div>
-      <div class="c8y-list__item__block flex-grow">
-        <div class="c8y-list__item__body">
-          <div class="d-flex">
-            <div class="col-md-1">Status</div>
-            <div class="col-md-2">Connector</div>
-            <div class="col-md-9">Message</div>
-          </div>
+      <button type="submit" (click)="updateStatusLogs()" class="btn btn-default btn-sm m-l-16">
+        Update
+      </button>
+    </form>
+  </c8y-form-group>
+</div>
+
+<div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
+  <div class="d-flex">
+    <div class="c8y-list--timeline__item__date">
+      <p class="m-0 text-medium text-truncate" title="Date">Date</p>
+    </div>
+    <div class="c8y-list__item__block flex-grow">
+      <div class="c8y-list__item__body">
+        <div class="d-flex">
+          <div class="col-md-1">Status</div>
+          <div class="col-md-2">Connector</div>
+          <div class="col-md-9">Message</div>
         </div>
       </div>
     </div>
   </div>
-  <c8y-list-group>
-    <c8y-li-timeline *ngFor="let event of statusLogs$ | async">
-      {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
-      <c8y-li>
-        <c8y-li-body>
-          <div class="d-flex">
-            <div class="col-md-1">
-              <div class="label label-primary">
-                {{ event.status ? event.status : '-' }}
-              </div>
-            </div>
-            <div class="col-md-2">{{ event.connectorName }}</div>
-            <div class="col-md-9">
-              <div>{{ event.message ? event.message : '-' }}</div>
+</div>
+<c8y-list-group>
+  <c8y-li-timeline *ngFor="let event of statusLogs$ | async">
+    {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
+    <c8y-li>
+      <c8y-li-body>
+        <div class="d-flex">
+          <div class="col-md-1">
+            <div class="label label-primary">
+              {{ event.status ? event.status : '-' }}
             </div>
           </div>
-        </c8y-li-body>
-      </c8y-li>
-    </c8y-li-timeline>
-  </c8y-list-group>
-</div>
+          <div class="col-md-2">{{ event.connectorName }}</div>
+          <div class="col-md-9">
+            <div>{{ event.message ? event.message : '-' }}</div>
+          </div>
+        </div>
+      </c8y-li-body>
+    </c8y-li>
+  </c8y-li-timeline>
+</c8y-list-group>

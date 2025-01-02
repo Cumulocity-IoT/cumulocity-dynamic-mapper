@@ -18,6 +18,7 @@
  *
  * @authors Christof Strack
  */
+
 import { Injectable } from '@angular/core';
 import { ApplicationService } from '@c8y/client';
 import * as _ from 'lodash';
@@ -32,7 +33,6 @@ import { SharedService } from '../service/shared.service';
 import { NODE1, NODE2, NODE3 } from '../mapping/util';
 import { Router } from '@angular/router';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
-import { combineLatest, map, Observable, of } from 'rxjs';
 import { ConnectorConfiguration } from '..';
 
 @Injectable()
@@ -43,6 +43,44 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
   appName: string;
   isStandaloneApp: boolean = false;
   configurations: ConnectorConfiguration[] = [];
+  readonly staticNodes = {
+    rootNode: new NavigatorNode({
+      label: gettext('Home'),
+      icon: 'home',
+      path: '/sag-ps-pkg-dynamic-mapping/landing',
+      priority: 600,
+      preventDuplicates: true
+    }),
+    configurationNode: new NavigatorNode({
+      label: gettext('Configuration'),
+      icon: 'cog',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+      priority: 500,
+      preventDuplicates: true
+    }),
+    connectorNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Connectors'),
+      icon: 'c8y-device-management',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+      priority: 500,
+      preventDuplicates: true
+    }),
+    mappingNode: new NavigatorNode({
+      label: gettext('Mapping'),
+      icon: 'rules',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+      priority: 400,
+      preventDuplicates: true
+    }),
+    monitoringNode: new NavigatorNode({
+      label: gettext('Monitoring'),
+      icon: 'pie-chart',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
+      priority: 300,
+      preventDuplicates: true
+    })
+   } as const;
 
   constructor(
     private applicationService: ApplicationService,
@@ -63,136 +101,26 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       //   );
       this.appName = cur.name;
     });
-  }
 
-   get() {
-    let navsFixed: NavigatorNode[];
-    // console.log(
-    //   'Get: AppName in MappingNavigationFactory',
-    //   this.isStandaloneApp
-    // );
-    if (this.isStandaloneApp) {
-      const rootNode = new NavigatorNode({
-        label: gettext('Home'),
-        icon: 'home',
-        path: '/sag-ps-pkg-dynamic-mapping/landing',
-        priority: 600,
-        preventDuplicates: true
-      });
-      const configurationNode = new NavigatorNode({
-        label: gettext('Configuration'),
-        icon: 'cog',
-        path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
-        priority: 500,
-        preventDuplicates: true
-      });
-      const connectorNode = new NavigatorNode({
-        parent: gettext('Configuration'),
-        label: gettext('Connectors'),
-        icon: 'c8y-device-management',
-        path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-        priority: 500,
-        preventDuplicates: true
-      });
-      const mappingNode = new NavigatorNode({
-        label: gettext('Mapping'),
-        icon: 'rules',
-        path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
-        priority: 400,
-        preventDuplicates: true
-      });
-      const monitoringNode = new NavigatorNode({
-        label: gettext('Monitoring'),
-        icon: 'pie-chart',
-        path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
-        priority: 300,
-        preventDuplicates: true
-      });
-      navsFixed = [rootNode, mappingNode, monitoringNode, configurationNode, connectorNode];
-      return combineLatest([
-        of(navsFixed), 
-        this.connectorConfigurationService.getConnectorConfigurationsAsObservable()
-      ]).pipe(
-        map(([navsFixed, connectors]) => {
-          const navs = [...navsFixed];
-          connectors.forEach(con => {
-            navs.push(new NavigatorNode({
-              parent: gettext('Connectors'),
-              label: gettext(con.name),
-              icon: 'connected',
-              path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-              priority: 500,
-              preventDuplicates: true
-            }));
-          });
-          return navs;
-        })
-      );
-    } else {
-      const rootNode = new NavigatorNode({
-        label: gettext('Dynamic Data Mapper'),
-        icon: 'compare',
-        path: '/sag-ps-pkg-dynamic-mapping/landing',
-        priority: 99,
-        preventDuplicates: true
-      });
-      const configurationNode = new NavigatorNode({
-        label: gettext('Configuration'),
-        icon: 'cog',
-        path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
-        priority: 500,
-        preventDuplicates: true
-      });
-      const connectorNode = new NavigatorNode({
-        parent: gettext('Configuration'),
-        label: gettext('Connectors'),
-        icon: 'c8y-device-management',
-        path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-        priority: 500,
-        preventDuplicates: true
-      });
-      const mappingNode = new NavigatorNode({
-        parent: gettext('Dynamic Data Mapper'),
-        label: gettext('Mapping'),
-        icon: 'file-type-document',
-        path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
-        priority: 400,
-        preventDuplicates: true
-      });
-      const monitoringNode = new NavigatorNode({
-        parent: gettext('Dynamic Data Mapper'),
-        label: gettext('Monitoring'),
-        icon: 'pie-chart',
-        path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
-        priority: 300,
-        preventDuplicates: true
-      });
-      navsFixed = [rootNode, mappingNode, monitoringNode, configurationNode, connectorNode];
-      this.configurations.forEach(con => {
-        navsFixed.push(new NavigatorNode({
+    this.connectorConfigurationService.getConnectorConfigurationsAsObservable().subscribe(configs => {
+      const connectorsNavNode = this.staticNodes.connectorNode;
+      // lets clear the array
+      connectorsNavNode.children.length = 0;
+      configs.forEach(config => {
+        connectorsNavNode.add(new NavigatorNode({
           parent: gettext('Connectors'),
-          label: gettext(con.name),
+          label: gettext(config.name),
           icon: 'connected',
-          path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+          path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration/details/${config.identifier}`,
           priority: 500,
           preventDuplicates: true
-        }))
-      })
-      return of(navsFixed);
-    }
+        }));
+      });
+    });
+  }
 
-    const feature: any = this.sharedService.getFeatures();
-    // return this.applicationService
-    //   .isAvailable(MappingNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)
-    //   .then((data) => {
-    //     if (!data.data || !feature) {
-    //       this.alertService.danger(
-    //         'Microservice:dynamic-mapping-service not subscribed. Please subscribe this service before using the mapping editor!'
-    //       );
-    //       console.error('dynamic-mapping-service microservice not subscribed!');
-    //       return [];
-    //     }
-    //     return navs;
-    //   });
+  get() {
+    const navsFixed = Object.values(this.staticNodes);
+    return navsFixed;
   }
 }
