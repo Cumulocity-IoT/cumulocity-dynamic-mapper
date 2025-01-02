@@ -43,7 +43,6 @@ import {
 })
 export class ConnectorConfigurationModalComponent implements OnInit {
   @Input() add: boolean;
-  @Input() readOnly: boolean;
   @Input() configuration: Partial<ConnectorConfiguration>;
   @Input() specifications: ConnectorSpecification[];
   @Input() configurationsCount: number;

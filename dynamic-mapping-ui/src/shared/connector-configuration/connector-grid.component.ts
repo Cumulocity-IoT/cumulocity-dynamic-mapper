@@ -278,7 +278,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
       add: false,
       configuration: configuration,
       specifications: this.specifications,
-      readOnly: this.readOnly
+      readOnly: configuration.enabled
     };
     const modalRef = this.bsModalService.show(
       ConnectorConfigurationModalComponent,
@@ -331,7 +331,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     const initialState = {
       add: false,
       configuration: configuration,
-      specifications: this.specifications
+      specifications: this.specifications,
+      readOnly: configuration.enabled
     };
     const modalRef = this.bsModalService.show(
       ConnectorConfigurationModalComponent,
@@ -416,7 +417,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
       add: true,
       configuration: configuration,
       specifications: this.specifications,
-      configurationsCount: this.configurations?.length
+      configurationsCount: this.configurations?.length,
+      readOnly: configuration.enabled
     };
     const modalRef = this.bsModalService.show(
       ConnectorConfigurationModalComponent,

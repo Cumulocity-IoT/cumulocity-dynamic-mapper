@@ -41,7 +41,6 @@ import { ConnectorConfigurationService } from '../service/connector-configuratio
 export class ConnectorStatusComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
   monitorings$: Observable<ConnectorStatus>;
-  specifications: ConnectorSpecification[] = [];
   configurations$: Observable<ConnectorConfiguration[]> = new Observable();
   statusLogs$: Observable<any[]> ;
   filterStatusLog = {
