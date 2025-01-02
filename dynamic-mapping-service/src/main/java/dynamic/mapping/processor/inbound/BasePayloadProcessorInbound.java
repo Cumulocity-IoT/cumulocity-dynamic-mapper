@@ -202,35 +202,8 @@ public abstract class BasePayloadProcessorInbound<T> {
             /*
              * step 4 resolve externalIds to c8ySourceIds and create attroc devices
              */
-            ID identity;
             // check if the targetPath == externalId and we need to resolve an external id
-            if ((Mapping.IDENTITY + ".externalId").equals(pathTarget)) {
-                identity = new ID(mapping.externalIdType, substitute.value.toString());
-                MappingSubstitution.SubstituteValue sourceId = new MappingSubstitution.SubstituteValue(substitute.value,
-                        TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING);
-                if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
-                    if (resolvedSourceId == null) {
-                        if (mapping.createNonExistingDevice) {
-                            sourceId.value = createAttocDevice(identity, context);
-                        }
-                    } else {
-                        sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
-                    }
-                    substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
-                    context.setSourceId(sourceId.value.toString());
-                    substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
-                }
-            } else if ((Mapping.IDENTITY + ".c8ySourceId").equals(pathTarget)) {
-                MappingSubstitution.SubstituteValue sourceId = new MappingSubstitution.SubstituteValue(substitute.value,
-                        TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING);
-                // in this case the device needs to exists beforehand
-                substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
-                context.setSourceId(sourceId.value.toString());
-                substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
-            } else {
-                substituteValueInPayload(substitute, payloadTarget, pathTarget);
-            }
+            prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
         }
         /*
          * step 5 prepare target payload for sending to c8y
@@ -283,6 +256,39 @@ public abstract class BasePayloadProcessorInbound<T> {
                 mapping.targetAPI,
                 size);
         return context;
+    }
+
+    private void prepareAndSubstituteInPayload(ProcessingContext<T> context, DocumentContext payloadTarget,
+            String pathTarget, MappingSubstitution.SubstituteValue substitute) {
+        Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
+        if ((Mapping.IDENTITY + ".externalId").equals(pathTarget)) {
+            ID identity = new ID(mapping.externalIdType, substitute.value.toString());
+            MappingSubstitution.SubstituteValue sourceId = new MappingSubstitution.SubstituteValue(substitute.value,
+                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING);
+            if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
+                if (resolvedSourceId == null) {
+                    if (mapping.createNonExistingDevice) {
+                        sourceId.value = createAttocDevice(identity, context);
+                    }
+                } else {
+                    sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
+                }
+                substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+                context.setSourceId(sourceId.value.toString());
+                substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+            }
+        } else if ((Mapping.IDENTITY + ".c8ySourceId").equals(pathTarget)) {
+            MappingSubstitution.SubstituteValue sourceId = new MappingSubstitution.SubstituteValue(substitute.value,
+                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING);
+            // in this case the device needs to exists beforehand
+            substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+            context.setSourceId(sourceId.value.toString());
+            substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+        } else {
+            substituteValueInPayload(substitute, payloadTarget, pathTarget);
+        }
     }
 
     protected String createAttocDevice(ID identity, ProcessingContext<T> context) {

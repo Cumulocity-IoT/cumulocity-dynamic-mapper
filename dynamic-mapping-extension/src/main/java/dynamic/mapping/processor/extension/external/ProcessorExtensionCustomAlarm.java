@@ -44,12 +44,13 @@ import dynamic.mapping.processor.extension.ProcessorExtensionTarget;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
+import dynamic.mapping.processor.ProcessingException;
+
 import dynamic.mapping.core.C8YAgent;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import jakarta.ws.rs.ProcessingException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -109,7 +110,7 @@ public class ProcessorExtensionCustomAlarm
         for (int i = 0; i < deviceEntries.size(); i++) {
             // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
             getBuildProcessingContext(context, deviceEntries.get(i),
-             i, deviceEntries.size(), c8yAgent);
+                    i, deviceEntries.size(), c8yAgent);
         }
         log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {} !", tenant,
                 mapping.createNonExistingDevice);
@@ -122,7 +123,6 @@ public class ProcessorExtensionCustomAlarm
         Set<String> pathTargets = context.getPathTargets();
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        List<String> pathsTargetForDeviceIdentifiers = context.getPathsTargetForDeviceIdentifiers();
         int predecessor = -1;
         DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
         for (String pathTarget : pathTargets) {
@@ -148,64 +148,20 @@ public class ProcessorExtensionCustomAlarm
                         pathTarget, substitute.repairStrategy);
             }
 
-            if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                if (pathsTargetForDeviceIdentifiers.contains(pathTarget) && mapping.useExternalId) {
-
-                    ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
-                            new ID(mapping.externalIdType, substitute.value.toString()), context);
-                    // since the attributes identifying the MEA and Inventory requests are removed
-                    // during the design time, they have to be added before sending
-                    substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
-                    if (sourceId == null && mapping.createNonExistingDevice) {
-                        ManagedObjectRepresentation attocDevice = null;
-                        Map<String, Object> request = new HashMap<String, Object>();
-                        request.put("name",
-                                "device_" + mapping.externalIdType + "_" + substitute.value);
-                        request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
-                        request.put("c8y_IsDevice", null);
-                        request.put("com_cumulocity_model_Agent", null);
-                        try {
-                            var requestString = objectMapper.writeValueAsString(request);
-                            var newPredecessor = context.addRequest(
-                                    new C8YRequest(predecessor, RequestMethod.PATCH, device.value.toString(),
-                                            mapping.externalIdType, requestString, null, API.INVENTORY, null));
-                            attocDevice = c8yAgent.upsertDevice(tenant,
-                                    new ID(mapping.externalIdType, substitute.value.toString()), context);
-                            var response = objectMapper.writeValueAsString(attocDevice);
-                            context.getCurrentRequest().setResponse(response);
-                            substitute.value = attocDevice.getId().getValue();
-                            predecessor = newPredecessor;
-                        } catch (ProcessingException | JsonProcessingException e) {
-                            context.getCurrentRequest().setError(e);
-                        } catch (dynamic.mapping.processor.ProcessingException e) {
-                            context.getCurrentRequest().setError(e);
-                        }
-                    } else if (sourceId == null && context.isSendPayload()) {
-                        throw new RuntimeException(String.format(
-                                "External id %s for type %s not found!",
-                                substitute.toString(),
-                                mapping.externalIdType));
-                    } else if (sourceId == null) {
-                        substitute.value = null;
-                    } else {
-                        substitute.value = sourceId.getManagedObject().getId().getValue();
-                    }
-
-                }
-                substituteValueInPayload( substitute, payloadTarget,
-                        mapping.transformGenericPath2C8YPath(pathTarget));
-            } else if (!pathsTargetForDeviceIdentifiers.contains(pathTarget)) {
-                substituteValueInPayload( substitute, payloadTarget,
-                        mapping.transformGenericPath2C8YPath(pathTarget));
-            }
+            /*
+             * step 4 resolve externalIds to c8ySourceIds and create attroc devices
+             */
+            // check if the targetPath == externalId and we need to resolve an external id
+            prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute, c8yAgent);
         }
         /*
-         * step 4 prepare target payload for sending to c8y
+         * step 5 prepare target payload for sending to c8y
          */
         if (mapping.targetAPI.equals(API.INVENTORY)) {
-            ManagedObjectRepresentation attocDevice = null;
             var newPredecessor = context.addRequest(
-                    new C8YRequest(predecessor, RequestMethod.PATCH, device.value.toString(),
+                    new C8YRequest(predecessor,
+                            context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH,
+                            device.value.toString(),
                             mapping.externalIdType,
                             payloadTarget.jsonString(),
                             null, API.INVENTORY, null));
@@ -214,10 +170,11 @@ public class ProcessorExtensionCustomAlarm
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                         identity, context);
                 context.setSourceId(sourceId.getManagedObject().getId().getValue());
-                attocDevice = c8yAgent.upsertDevice(tenant,
+                ManagedObjectRepresentation attocDevice = c8yAgent.upsertDevice(tenant,
                         identity, context);
                 var response = objectMapper.writeValueAsString(attocDevice);
                 context.getCurrentRequest().setResponse(response);
+                context.getCurrentRequest().setSourceId(attocDevice.getId().getValue());
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);
             }
@@ -248,6 +205,65 @@ public class ProcessorExtensionCustomAlarm
                 mapping.targetAPI,
                 size);
         return context;
+    }
+
+    private void prepareAndSubstituteInPayload(ProcessingContext<byte[]> context, DocumentContext payloadTarget,
+            String pathTarget, MappingSubstitution.SubstituteValue substitute, C8YAgent c8yAgent) {
+        Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
+        if ((Mapping.IDENTITY + ".externalId").equals(pathTarget)) {
+            ID identity = new ID(mapping.externalIdType, substitute.value.toString());
+            MappingSubstitution.SubstituteValue sourceId = new MappingSubstitution.SubstituteValue(substitute.value,
+                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING);
+            if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
+                if (resolvedSourceId == null) {
+                    if (mapping.createNonExistingDevice) {
+                        sourceId.value = createAttocDevice(identity, context, c8yAgent);
+                    }
+                } else {
+                    sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
+                }
+                substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+                context.setSourceId(sourceId.value.toString());
+                substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+            }
+        } else if ((Mapping.IDENTITY + ".c8ySourceId").equals(pathTarget)) {
+            MappingSubstitution.SubstituteValue sourceId = new MappingSubstitution.SubstituteValue(substitute.value,
+                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING);
+            // in this case the device needs to exists beforehand
+            substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+            context.setSourceId(sourceId.value.toString());
+            substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+        } else {
+            substituteValueInPayload(substitute, payloadTarget, pathTarget);
+        }
+    }
+
+    private String createAttocDevice(ID identity, ProcessingContext<byte[]> context, C8YAgent c8yAgent)  {
+        Map<String, Object> request = new HashMap<String, Object>();
+        request.put("name",
+                "device_" + identity.getType() + "_" + identity.getValue());
+        request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
+        request.put("c8y_IsDevice", null);
+        request.put("com_cumulocity_model_Agent", null);
+        try {
+            var predecessor = context.getRequests().size();
+            var requestString = objectMapper.writeValueAsString(request);
+            context.addRequest(
+                    new C8YRequest(predecessor,
+                            context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH, null,
+                            context.getMapping().externalIdType, requestString, null, API.INVENTORY, null));
+            ManagedObjectRepresentation attocDevice = c8yAgent.upsertDevice(context.getTenant(),
+                    identity, context);
+            var response = objectMapper.writeValueAsString(attocDevice);
+            context.getCurrentRequest().setResponse(response);
+            context.getCurrentRequest().setSourceId(attocDevice.getId().getValue());
+            return attocDevice.getId().getValue();
+        } catch (ProcessingException | JsonProcessingException e) {
+            context.getCurrentRequest().setError(e);
+        }
+        return null;
     }
 
 }
