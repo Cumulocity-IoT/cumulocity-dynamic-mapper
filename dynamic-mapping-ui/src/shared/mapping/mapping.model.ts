@@ -143,8 +143,8 @@ export interface StepperConfiguration {
 export enum MappingType {
   JSON = 'JSON',
   FLAT_FILE = 'FLAT_FILE',
-  GENERIC_BINARY = 'GENERIC_BINARY',
-  PROTOBUF_STATIC = 'PROTOBUF_STATIC',
+  BINARY = 'BINARY',
+  PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
   EXTENSION_SOURCE = 'EXTENSION_SOURCE',
   EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET'
 }
@@ -206,8 +206,8 @@ export const MappingTypeDescriptionMap: Record<
       allowTestSending: true
     }
   },
-  [MappingType.GENERIC_BINARY]: {
-    key: MappingType.GENERIC_BINARY,
+  [MappingType.BINARY]: {
+    key: MappingType.BINARY,
     description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x". 
 Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
     properties: {
@@ -224,8 +224,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       allowTestSending: true
     }
   },
-  [MappingType.PROTOBUF_STATIC]: {
-    key: MappingType.PROTOBUF_STATIC,
+  [MappingType.PROTOBUF_INTERNAL]: {
+    key: MappingType.PROTOBUF_INTERNAL,
     description: 'Mapping handles payloads in protobuf format.',
     properties: {
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },

@@ -43,7 +43,7 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<Object> {
+public class JSONProcessorOutbound extends BaseProcessorOutbound<Object> {
 
     public JSONProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         super(configurationRegistry, connectorClient);

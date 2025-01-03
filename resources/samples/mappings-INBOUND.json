@@ -453,7 +453,7 @@
     "direction": "INBOUND",
     "sourceTemplate": "{}",
     "targetTemplate": "{ \n    \"text\": \"This is a new test event.\",\n    \"time\": \"2022-08-05T00:14:49.389+02:00\",\n    \"type\": \"c8y_TestEvent\"\n }",
-    "mappingType": "GENERIC_BINARY",
+    "mappingType": "BINARY",
     "substitutions": [],
     "active": true,
     "debug": false,
@@ -523,7 +523,7 @@
     "direction": "INBOUND",
     "sourceTemplate": "{\"message\":\"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 \"}",
     "targetTemplate": "{\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
-    "mappingType": "GENERIC_BINARY",
+    "mappingType": "BINARY",
     "substitutions": [
       {
         "pathSource": "\"Temp: \"&$number($substring(message,0,4))&\" C\"",
@@ -609,7 +609,7 @@
     "direction": "INBOUND",
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
     "targetTemplate": "{\"c8y_GenericMeasurement\":{\"Module\":{\"value\":110,\"unit\":\"l\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_GenericMeasurement_type\"}",
-    "mappingType": "PROTOBUF_STATIC",
+    "mappingType": "PROTOBUF_INTERNAL",
     "substitutions": [],
     "active": true,
     "debug": false,

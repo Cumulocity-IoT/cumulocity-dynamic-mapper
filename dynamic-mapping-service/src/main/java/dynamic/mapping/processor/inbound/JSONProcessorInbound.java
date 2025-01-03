@@ -48,7 +48,7 @@ import dynamic.mapping.processor.model.RepairStrategy;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class JSONProcessorInbound extends BasePayloadProcessorInbound<Object> {
+public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
 
     public JSONProcessorInbound(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);

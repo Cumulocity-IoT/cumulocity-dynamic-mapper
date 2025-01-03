@@ -46,7 +46,7 @@ import dynamic.mapping.model.C8YNotificationSubscription;
 import dynamic.mapping.model.Device;
 import dynamic.mapping.notification.websocket.CustomWebSocketClient;
 import dynamic.mapping.notification.websocket.NotificationCallback;
-import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
+import dynamic.mapping.processor.outbound.DispatcherOutbound;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.ArrayStack;
@@ -93,7 +93,7 @@ public class C8YNotificationSubscriber {
 
 	// structure: <tenant, <connectorIdentifier, asynchronousDispatcherOutbound>>
 	@Getter
-	private Map<String, Map<String, AsynchronousDispatcherOutbound>> dispatcherOutboundMaps = new HashMap<>();
+	private Map<String, Map<String, DispatcherOutbound>> dispatcherOutboundMaps = new HashMap<>();
 
 	@Value("${C8Y.baseURL}")
 	private String baseUrl;
@@ -112,8 +112,8 @@ public class C8YNotificationSubscriber {
 	// structure: <tenant, <connectorIdentifier, tokenSeed>>
 	private Map<String, Map<String, String>> deviceTokenPerConnector = new HashMap<>();
 
-	public void addSubscriber(String tenant, String identifier, AsynchronousDispatcherOutbound dispatcherOutbound) {
-		Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
+	public void addSubscriber(String tenant, String identifier, DispatcherOutbound dispatcherOutbound) {
+		Map<String, DispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
 		if (dispatcherOutboundMap == null) {
 			dispatcherOutboundMap = new HashMap<>();
 			dispatcherOutboundMap.put(identifier, dispatcherOutbound);
@@ -156,7 +156,7 @@ public class C8YNotificationSubscriber {
 			try {
 				// For each dispatcher/connector create a new connection
 				if (dispatcherOutboundMaps.get(tenant) != null) {
-					for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
+					for (DispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
 							.values()) {
 						//Only connect if connector is enabled
 						if(dispatcherOutbound.getConnectorClient().getConnectorConfiguration().isEnabled()){
@@ -307,7 +307,7 @@ public class C8YNotificationSubscriber {
 								"Tenant {} - No Outbound dispatcher for any connector is registered, add a connector first!",
 								tenant);
 
-					for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
+					for (DispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
 							.values()) {
 						String tokenSeed = DEVICE_SUBSCRIBER
 								+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
@@ -515,8 +515,8 @@ public class C8YNotificationSubscriber {
 		}
 	}
 
-	public void addConnector(String tenant, String connectorIdentifier, AsynchronousDispatcherOutbound dispatcherOutbound) {
-		Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
+	public void addConnector(String tenant, String connectorIdentifier, DispatcherOutbound dispatcherOutbound) {
+		Map<String, DispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
 		if (dispatcherOutboundMap == null) {
 			dispatcherOutboundMap = new HashMap<>();
 			getDispatcherOutboundMaps().put(tenant, dispatcherOutboundMap);

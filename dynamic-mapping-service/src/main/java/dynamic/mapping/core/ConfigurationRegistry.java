@@ -25,14 +25,14 @@ import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessor;
-import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
+import dynamic.mapping.processor.inbound.BaseProcessorInbound;
 import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
-import dynamic.mapping.processor.inbound.GenericBinaryProcessorInbound;
+import dynamic.mapping.processor.inbound.BinaryProcessorInbound;
 import dynamic.mapping.processor.inbound.JSONProcessorInbound;
 import dynamic.mapping.processor.model.MappingType;
-import dynamic.mapping.processor.outbound.BasePayloadProcessorOutbound;
+import dynamic.mapping.processor.outbound.BaseProcessorOutbound;
 import dynamic.mapping.processor.outbound.JSONProcessorOutbound;
-import dynamic.mapping.processor.processor.fixed.StaticProtobufProcessor;
+import dynamic.mapping.processor.processor.fixed.InternalProtobufProcessor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -50,12 +50,12 @@ public class ConfigurationRegistry {
 
 	// structure: <tenant, <mappingType, extensibleProcessorInbound>>
 	@Getter
-	private Map<String, Map<MappingType, BasePayloadProcessorInbound<?>>> payloadProcessorsInbound = new HashMap<>();
+	private Map<String, Map<MappingType, BaseProcessorInbound<?>>> payloadProcessorsInbound = new HashMap<>();
 
 	// structure: <tenant, <connectorIdentifier, <mappingType,
 	// extensibleProcessorOutbound>>>
 	@Getter
-	private Map<String, Map<String, Map<MappingType, BasePayloadProcessorOutbound<?>>>> payloadProcessorsOutbound = new HashMap<>();
+	private Map<String, Map<String, Map<MappingType, BaseProcessorOutbound<?>>>> payloadProcessorsOutbound = new HashMap<>();
 
 	@Getter
 	private Map<String, ServiceConfiguration> serviceConfigurations = new HashMap<>();
@@ -123,13 +123,13 @@ public class ConfigurationRegistry {
 	@Autowired
 	private ExecutorService processingCachePool;
 
-	public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
+	public Map<MappingType, BaseProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
 		ExtensibleProcessor extensibleProcessor = getExtensibleProcessors().get(tenant);
 		return Map.of(
 				MappingType.JSON, new JSONProcessorInbound(this),
 				MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
-				MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
-				MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
+				MappingType.BINARY, new BinaryProcessorInbound(this),
+				MappingType.PROTOBUF_INTERNAL, new InternalProtobufProcessor(this),
 				MappingType.EXTENSION_SOURCE, extensibleProcessor,
 				MappingType.EXTENSION_SOURCE_TARGET, extensibleProcessor);
 	}
@@ -159,7 +159,7 @@ public class ConfigurationRegistry {
 		return connectorClient;
 	}
 
-	public Map<MappingType, BasePayloadProcessorOutbound<?>> createPayloadProcessorsOutbound(
+	public Map<MappingType, BaseProcessorOutbound<?>> createPayloadProcessorsOutbound(
 			AConnectorClient connectorClient) {
 		return Map.of(
 				MappingType.JSON, new JSONProcessorOutbound(this, connectorClient));
@@ -172,7 +172,7 @@ public class ConfigurationRegistry {
 	}
 
 	public void initializePayloadProcessorsOutbound(AConnectorClient connectorClient) {
-		Map<String, Map<MappingType, BasePayloadProcessorOutbound<?>>> processorPerTenant = payloadProcessorsOutbound
+		Map<String, Map<MappingType, BaseProcessorOutbound<?>>> processorPerTenant = payloadProcessorsOutbound
 				.get(connectorClient.getTenant());
 		if (processorPerTenant == null) {
 			// log.info("Tenant {} - HIER III {} {}", connectorClient.getTenant(),

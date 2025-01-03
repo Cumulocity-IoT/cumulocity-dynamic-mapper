@@ -56,9 +56,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class BasePayloadProcessorOutbound<T> {
+public abstract class BaseProcessorOutbound<T> {
 
-    public BasePayloadProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
+    public BaseProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.c8yAgent = configurationRegistry.getC8yAgent();
     }

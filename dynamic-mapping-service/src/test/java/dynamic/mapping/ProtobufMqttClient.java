@@ -29,8 +29,8 @@ import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 
 import dynamic.mapping.processor.extension.internal.InternalCustomAlarmOuter;
 import dynamic.mapping.processor.extension.internal.InternalCustomAlarmOuter.InternalCustomAlarm;
-import dynamic.mapping.processor.processor.fixed.StaticCustomMeasurementOuter;
-import dynamic.mapping.processor.processor.fixed.StaticCustomMeasurementOuter.StaticCustomMeasurement;
+import dynamic.mapping.processor.processor.fixed.InternalCustomMeasurementOuter;
+import dynamic.mapping.processor.processor.fixed.InternalCustomMeasurementOuter.InternalCustomMeasurement;
 
 public class ProtobufMqttClient {
     Mqtt3BlockingClient testClient;
@@ -79,7 +79,7 @@ public class ProtobufMqttClient {
 
         System.out.println("Publishing message on topic" + topic);
 
-        StaticCustomMeasurementOuter.StaticCustomMeasurement proto = StaticCustomMeasurement.newBuilder()
+        InternalCustomMeasurementOuter.InternalCustomMeasurement proto = InternalCustomMeasurement.newBuilder()
                 .setExternalIdType("c8y_Serial")
                 .setExternalId("berlin_01")
                 .setUnit("C")

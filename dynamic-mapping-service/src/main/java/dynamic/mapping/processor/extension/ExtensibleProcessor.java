@@ -27,7 +27,7 @@ import dynamic.mapping.model.ExtensionEntry;
 import dynamic.mapping.model.ExtensionStatus;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.processor.ProcessingException;
-import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
+import dynamic.mapping.processor.inbound.BaseProcessorInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -37,7 +37,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
+public class ExtensibleProcessor extends BaseProcessorInbound<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 

@@ -46,7 +46,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
-import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.StringUtils;
@@ -113,7 +113,7 @@ public class MQTTClient extends AConnectorClient {
 
 	public MQTTClient(ConfigurationRegistry configurationRegistry,
 			ConnectorConfiguration connectorConfiguration,
-			AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+			DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
 		this();
 		this.configurationRegistry = configurationRegistry;
 		this.mappingComponent = configurationRegistry.getMappingComponent();

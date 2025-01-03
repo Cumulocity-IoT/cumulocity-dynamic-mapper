@@ -75,7 +75,7 @@ import java.util.concurrent.*;
  * ** send the resulting target payload to connectorClient, e.g. MQTT broker
  */
 @Slf4j
-public class AsynchronousDispatcherOutbound implements NotificationCallback {
+public class DispatcherOutbound implements NotificationCallback {
 
     @Getter
     protected AConnectorClient connectorClient;
@@ -92,12 +92,12 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     protected ConfigurationRegistry configurationRegistry;
 
-    protected Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
+    protected Map<MappingType, BaseProcessorOutbound<?>> payloadProcessorsOutbound;
 
     // The Outbound Dispatcher is hardly connected to the Connector otherwise it is
     // not possible to correlate messages received bei Notification API to the
     // correct Connector
-    public AsynchronousDispatcherOutbound(ConfigurationRegistry configurationRegistry,
+    public DispatcherOutbound(ConfigurationRegistry configurationRegistry,
             AConnectorClient connectorClient) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
@@ -163,7 +163,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     public static class MappingOutboundTask<T> implements Callable<List<ProcessingContext<?>>> {
         List<Mapping> resolvedMappings;
-        Map<MappingType, BasePayloadProcessorOutbound<T>> payloadProcessorsOutbound;
+        Map<MappingType, BaseProcessorOutbound<T>> payloadProcessorsOutbound;
         C8YMessage c8yMessage;
         MappingComponent mappingStatusComponent;
         C8YAgent c8yAgent;
@@ -173,7 +173,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
         public MappingOutboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 MappingComponent mappingStatusComponent,
-                Map<MappingType, BasePayloadProcessorOutbound<T>> payloadProcessorsOutbound,
+                Map<MappingType, BaseProcessorOutbound<T>> payloadProcessorsOutbound,
                 C8YMessage c8yMessage, AConnectorClient connectorClient) {
             this.connectorClient = connectorClient;
             this.resolvedMappings = resolvedMappings;
@@ -202,7 +202,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                         && connectorClient.getMappingsDeployedOutbound().containsKey(mapping.identifier)) {
                     MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
-                    BasePayloadProcessorOutbound processor = payloadProcessorsOutbound.get(mapping.mappingType);
+                    BaseProcessorOutbound processor = payloadProcessorsOutbound.get(mapping.mappingType);
                     try {
                         if (processor != null) {
                             Object payload = processor.deserializePayload(mapping, c8yMessage);

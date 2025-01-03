@@ -72,7 +72,7 @@ import dynamic.mapping.model.LoggingEventType;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.model.QOS;
-import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -135,7 +135,7 @@ public abstract class AConnectorClient {
 
     @Getter
     @Setter
-    protected AsynchronousDispatcherInbound dispatcher;
+    protected DispatcherInbound dispatcher;
 
     protected ObjectMapper objectMapper;
 

@@ -70,7 +70,7 @@ import java.util.concurrent.Future;
  */
 
 @Slf4j
-public class AsynchronousDispatcherInbound implements GenericMessageCallback {
+public class DispatcherInbound implements GenericMessageCallback {
 
     private AConnectorClient connectorClient;
 
@@ -80,7 +80,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     private ConfigurationRegistry configurationRegistry;
 
-    public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry,
+    public DispatcherInbound(ConfigurationRegistry configurationRegistry,
             AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
@@ -90,7 +90,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     public static class MappingInboundTask<T> implements Callable<List<ProcessingContext<?>>> {
         List<Mapping> resolvedMappings;
-        Map<MappingType, BasePayloadProcessorInbound<?>> payloadProcessorsInbound;
+        Map<MappingType, BaseProcessorInbound<?>> payloadProcessorsInbound;
         ConnectorMessage connectorMessage;
         MappingComponent mappingComponent;
         C8YAgent c8yAgent;
@@ -138,7 +138,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                         && connectorClient.getMappingsDeployedInbound().containsKey(mapping.identifier)) {
                     MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
-                    BasePayloadProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
+                    BaseProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
                     try {
                         if (processor != null) {
                             inboundProcessingCounter.increment();

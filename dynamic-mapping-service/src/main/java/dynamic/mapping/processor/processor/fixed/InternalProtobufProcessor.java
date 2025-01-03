@@ -25,7 +25,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
+import dynamic.mapping.processor.inbound.BaseProcessorInbound;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.MappingType;
@@ -33,9 +33,9 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
 
-public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]> {
+public class InternalProtobufProcessor extends BaseProcessorInbound<byte[]> {
 
-    public StaticProtobufProcessor(ConfigurationRegistry configurationRegistry) {
+    public InternalProtobufProcessor(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 
@@ -47,10 +47,10 @@ public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]>
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
-        if (MappingType.PROTOBUF_STATIC.equals(context.getMapping().mappingType)) {
-            StaticCustomMeasurementOuter.StaticCustomMeasurement payloadProtobuf;
+        if (MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().mappingType)) {
+            InternalCustomMeasurementOuter.InternalCustomMeasurement payloadProtobuf;
             try {
-                payloadProtobuf = StaticCustomMeasurementOuter.StaticCustomMeasurement
+                payloadProtobuf = InternalCustomMeasurementOuter.InternalCustomMeasurement
                         .parseFrom((byte[]) context.getPayload());
             } catch (InvalidProtocolBufferException e) {
                 throw new ProcessingException(e.getMessage());

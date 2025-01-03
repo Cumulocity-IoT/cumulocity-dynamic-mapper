@@ -58,9 +58,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public abstract class BasePayloadProcessorInbound<T> {
+public abstract class BaseProcessorInbound<T> {
 
-    public BasePayloadProcessorInbound(ConfigurationRegistry configurationRegistry) {
+    public BaseProcessorInbound(ConfigurationRegistry configurationRegistry) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.processingCachePool = configurationRegistry.getProcessingCachePool();

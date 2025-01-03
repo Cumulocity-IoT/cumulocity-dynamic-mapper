@@ -119,8 +119,8 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 
 1. `JSON`: if your payload is in JSON format
 1. `FLAT_FILE`: if your payload is in a CSV format
-1. `GENERIC_BINARY`: if your payload is in HEX format
-1. `PROTOBUF_STATIC`: if your payload is a serialized protobuf message
+1. `BINARY`: if your payload is in HEX format
+1. `PROTOBUF_INTERNAL`: if your payload is a serialized protobuf message
 1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension
 
 <p align="center">
@@ -134,14 +134,14 @@ The wizard to define a mapping consists of the steps:
 
 - `JSON`
 - `FLAT_FILE`
-- `GENERIC_BINARY`
-- `PROTOBUF_STATIC`
+- `BINARY`
+- `PROTOBUF_INTERNAL`
 - `PROCESSOR_EXTENSION`
 
 ---
 
 **NOTE:**
-Payload for `FLAT_FILE` and `GENERIC_BINARY` are wrapped.
+Payload for `FLAT_FILE` and `BINARY` are wrapped.
 For example for a flat file messages:
 
 ```
