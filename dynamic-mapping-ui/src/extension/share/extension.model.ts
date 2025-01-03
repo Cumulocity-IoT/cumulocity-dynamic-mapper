@@ -1,8 +1,3 @@
-import { inject } from "@angular/core";
-import { ResolveFn } from "@angular/router";
-import { IManagedObject } from "@c8y/client";
-import { ExtensionService } from "../extension.service";
-
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -23,6 +18,11 @@ import { ExtensionService } from "../extension.service";
  *
  * @authors Christof Strack
  */
+import { inject } from "@angular/core";
+import { ResolveFn } from "@angular/router";
+import { IManagedObject } from "@c8y/client";
+import { ExtensionService } from "../extension.service";
+
 export enum ERROR_TYPE {
   TYPE_VALIDATION = 'TYPE_VALIDATION',
   ALREADY_SUBSCRIBED = 'ALREADY_SUBSCRIBED',

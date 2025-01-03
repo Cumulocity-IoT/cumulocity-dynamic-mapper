@@ -21,18 +21,16 @@
 import { Injectable } from '@angular/core';
 import * as _ from 'lodash';
 import { API, Mapping, RepairStrategy } from '../../../../shared';
+import {
+  TIME,
+} from '../../../shared/util';
 import { BaseProcessorInbound } from '../base-processor-inbound.service';
 import {
   ProcessingContext,
+  processSubstitute,
   SubstituteValue,
   SubstituteValueType
 } from '../processor.model';
-import {
-  TIME,
-  TOKEN_TOPIC_LEVEL,
-  splitTopicExcludingSeparator
-} from '../../../shared/util';
-import { processSubstitute } from '../processor.model';
 
 @Injectable({ providedIn: 'root' })
 export class JSONProcessorInbound extends BaseProcessorInbound {

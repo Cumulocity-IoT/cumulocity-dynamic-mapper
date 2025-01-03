@@ -23,7 +23,6 @@ import { Injectable } from '@angular/core';
 import {
   IExternalIdentity,
   IFetchResponse,
-  IIdentified,
   IResult,
   IResultList
 } from '@c8y/client';

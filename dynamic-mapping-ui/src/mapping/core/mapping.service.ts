@@ -68,7 +68,6 @@ import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
-import { patchC8YTemplateForTesting } from '../shared/util';
 
 @Injectable({
   providedIn: 'root'

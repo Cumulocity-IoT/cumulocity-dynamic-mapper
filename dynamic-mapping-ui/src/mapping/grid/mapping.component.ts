@@ -55,22 +55,21 @@ import {
   uuidCustom
 } from '../../shared';
 
+import { HttpStatusCode } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, filter, finalize, Subject, switchMap, take } from 'rxjs';
-import { LabelRendererComponent, SharedService } from '../../shared';
+import { BehaviorSubject, Subject, filter, finalize, switchMap, take } from 'rxjs';
+import { DeploymentMapEntry, ExtensionType, LabelRendererComponent, MappingTypeDescriptionMap, SharedService, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
+import { MappingFilterComponent } from '../filter/mapping-filter.component';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
-import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
-import { StatusRendererComponent } from '../renderer/status.renderer.component';
-import { HttpStatusCode } from '@angular/common/http';
-import { DeploymentMapEntry, ExtensionType, MappingTypeDescriptionMap, StepperConfiguration } from '../../shared';
-import { MappingFilterComponent } from '../filter/mapping-filter.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
+import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
+import { StatusRendererComponent } from '../renderer/status.renderer.component';
 import {
   PayloadWrapper
 } from '../shared/mapping.model';

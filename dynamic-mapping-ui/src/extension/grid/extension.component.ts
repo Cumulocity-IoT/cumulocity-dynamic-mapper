@@ -21,13 +21,13 @@
 
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { IManagedObject } from '@c8y/client';
+import { AlertService } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { catchError, retry, shareReplay, switchMap, takeUntil, tap, timeout } from 'rxjs/operators';
-import { ExtensionService } from '../extension.service';
-import { AddExtensionComponent } from '../add/add-extension-modal.component';
-import { AlertService } from '@c8y/ngx-components';
 import { Feature, Operation, SharedService } from '../../shared';
+import { AddExtensionComponent } from '../add/add-extension-modal.component';
+import { ExtensionService } from '../extension.service';
 
 interface ExtensionState {
   reloading: boolean;

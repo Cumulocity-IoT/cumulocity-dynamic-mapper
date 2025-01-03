@@ -30,7 +30,7 @@ import {
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { Direction, MappingTypeDescriptionMap, MappingType } from '../../shared';
+import { Direction, MappingType, MappingTypeDescriptionMap } from '../../shared';
 import { isDisabled } from '../shared/util';
 
 @Component({

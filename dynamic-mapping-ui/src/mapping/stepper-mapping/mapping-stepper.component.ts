@@ -42,11 +42,13 @@ import {
   API,
   COLOR_HIGHLIGHTED,
   ConnectorType,
+  countDeviceIdentifiers,
   DeploymentMapEntry,
   Direction,
   Extension,
   ExtensionEntry,
   getExternalTemplate,
+  getGenericDeviceIdentifier,
   getSchema,
   JsonEditorComponent,
   Mapping,
@@ -54,9 +56,7 @@ import {
   RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
-  StepperConfiguration,
-  countDeviceIdentifiers,
-  getGenericDeviceIdentifier
+  StepperConfiguration
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';

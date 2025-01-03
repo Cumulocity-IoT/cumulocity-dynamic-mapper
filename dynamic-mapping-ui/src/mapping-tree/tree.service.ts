@@ -18,13 +18,13 @@
  *
  * @authors Christof Strack
  */
+import { HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { FetchClient, InventoryService } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
-import { BASE_URL, PATH_MAPPING_TREE_ENDPOINT } from '../shared';
 import * as _ from 'lodash';
-import { HttpStatusCode } from '@angular/common/http';
 import { isTypeOf } from '../mapping/shared/util';
+import { BASE_URL, PATH_MAPPING_TREE_ENDPOINT } from '../shared';
 
 @Injectable({ providedIn: 'root' })
 export class MappingTreeService {

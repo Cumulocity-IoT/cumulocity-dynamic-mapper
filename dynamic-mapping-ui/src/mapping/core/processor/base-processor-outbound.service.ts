@@ -28,13 +28,13 @@ import {
   splitTopicIncludingSeparator
 } from '../../shared/util';
 import { C8YAgent } from '../c8y-agent.service';
+import { MQTTClient } from '../mqtt-client.service';
 import {
   ProcessingContext,
   SubstituteValue,
-  SubstituteValueType
+  SubstituteValueType,
+  getTypedValue
 } from './processor.model';
-import { MQTTClient } from '../mqtt-client.service';
-import { getTypedValue } from './processor.model';
 
 @Injectable({ providedIn: 'root' })
 export abstract class BaseProcessorOutbound {

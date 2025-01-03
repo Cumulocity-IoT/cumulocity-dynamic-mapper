@@ -18,15 +18,18 @@
  *
  * @authors Christof Strack
  */
+import { HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { IExternalIdentity } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import {
   API,
+  MAPPING_TEST_DEVICE_FRAGMENT,
+  MAPPING_TEST_DEVICE_TYPE,
   Mapping,
   RepairStrategy,
-  MAPPING_TEST_DEVICE_TYPE,
-  MAPPING_TEST_DEVICE_FRAGMENT
+  getPathTargetForDeviceIdentifiers, transformGenericPath2C8YPath
 } from '../../../shared';
 import { randomIdAsString, splitTopicExcludingSeparator } from '../../shared/util';
 import { C8YAgent } from '../c8y-agent.service';
@@ -34,14 +37,10 @@ import {
   IDENTITY,
   ProcessingContext,
   SubstituteValue,
-  SubstituteValueType
+  SubstituteValueType,
+  TOKEN_TOPIC_LEVEL,
+  getDeviceEntries, getTypedValue, substituteValueInPayload
 } from './processor.model';
-import { TOKEN_TOPIC_LEVEL } from './processor.model';
-import { getDeviceEntries, getTypedValue, substituteValueInPayload } from './processor.model';
-import { getPathTargetForDeviceIdentifiers, transformGenericPath2C8YPath } from '../../../shared/mapping/mapping.model';
-import { HttpStatusCode } from '@angular/common/http';
-import { IExternalIdentity } from '@c8y/client';
-import { map } from 'cypress/types/bluebird';
 
 @Injectable({ providedIn: 'root' })
 export abstract class BaseProcessorInbound {
