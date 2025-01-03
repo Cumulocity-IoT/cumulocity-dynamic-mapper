@@ -21,19 +21,11 @@
 
 <c8y-title translate>Monitoring</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-	<button
-    class="btn btn-link"
-    title="{{ 'Reset monitoring' | translate }}"
-    (click)="resetStatusMapping()"
-  >
+  <button class="btn btn-link" title="{{ 'Reset monitoring' | translate }}" (click)="resetStatusMapping()">
     <i c8yIcon="reset"></i>
     {{ 'Reset monitoring' | translate }}
   </button>
-  <button
-    class="btn btn-link"
-    title="{{ 'Refresh' | translate }}"
-    (click)="refreshMappingStatus()"
-  >
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refreshMappingStatus()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
   </button>
@@ -41,13 +33,8 @@
 <div class="card">
   <!-- <div class="card-block" style="max-height: 400px; overflow: auto"> -->
   <div class="card-block">
-    <c8y-data-grid
-      [title]="'Mapping monitoring' | translate"
-      [columns]="columns"
-      [rows]="mappingStatus$ | async"
-      [pagination]="pagination"
-      [actionControls]="actionControls"
-    >
+    <c8y-data-grid [configureColumnsEnabled]="false" [title]="'Mapping monitoring' | translate" [columns]="columns"
+      [rows]="mappingStatus$ | async" [pagination]="pagination" [actionControls]="actionControls">
     </c8y-data-grid>
   </div>
 </div>

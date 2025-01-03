@@ -32,7 +32,7 @@
     subscription?.devices
   ">
   <div class="card-block content-fullpage border-top border-bottom">
-    <c8y-data-grid #subscriptionGrid [selectable]="true" [title]="titleSubscription | translate"
+    <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false" [title]="titleSubscription | translate"
       [columns]="columnsSubscriptions" [rows]="subscription?.devices" [pagination]="pagination"
       [actionControls]="actionControlSubscription" [bulkActionControls]="bulkActionControlSubscription">
       <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-mail'"

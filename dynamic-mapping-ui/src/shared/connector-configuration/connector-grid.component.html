@@ -21,8 +21,8 @@
 
 <div class="">
   <c8y-data-grid class="content-fullpage" #connectorGrid [title]="'Connectors'" [selectable]="selectable && !readOnly"
-    [columns]="columns" [selectionPrimaryKey]="'identifier'" [rows]="configurations$ | async" [pagination]="pagination"
-    [actionControls]="actionControls" (itemsSelect)="onSelectionChanged($event)">
+    [columns]="columns" [selectionPrimaryKey]="'identifier'"[configureColumnsEnabled]="false" [rows]="configurations$ | async" [pagination]="pagination"
+    [actionControls]="actionControls" [showSearch]= "false" (itemsSelect)="onSelectionChanged($event)">
     <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-connected'" [title]="'No connectors exist.' | translate"
       [subtitle]="
   'Create your first connector.' | translate
