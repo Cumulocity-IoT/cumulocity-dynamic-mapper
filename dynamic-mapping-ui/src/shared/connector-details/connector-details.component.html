@@ -69,7 +69,7 @@
     </form>
   </div>
   <div class="elevation-sm _inner-scroll m-t-16 p-24">
-    <c8y-form-group >
+    <c8y-form-group>
       <form class="form-inline">
         <label class="control-label m-r-8" title="{{ 'Filter connector logs' | translate }}">Filter connector
           logs</label>
@@ -88,7 +88,7 @@
         </button>
       </form>
     </c8y-form-group>
-    <div class="inner-scroll" >
+    <div class="inner-scroll">
       <div class="page-sticky-header c8y-list__item c8y-list--timeline" style="top: 0px !important">
         <div class="d-flex">
           <!-- <div class="c8y-list--timeline__item__date">
@@ -125,6 +125,8 @@
             </c8y-li-body>
           </c8y-li>
         </c8y-li-timeline>
+        <c8y-ui-empty-state *ngIf="(statusLogs$ | async)?.length === 0" [icon]="'logs'"
+          [title]="'No logs entries for this connectors.'" [horizontal]="true"></c8y-ui-empty-state>
       </c8y-list-group>
     </div>
   </div>
