@@ -186,7 +186,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortable: true,
         cellRendererComponent: ConnectorStatusRendererComponent,
-        gridTrackSize: (this.selectable) ? '12%' : '15%'
+        gridTrackSize: (this.selectable) ? '17%' : '21%'
       },
       {
         header: 'Enabled',
@@ -195,7 +195,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         filterable: false,
         sortable: true,
         cellRendererComponent: StatusEnabledRendererComponent,
-        gridTrackSize: (this.selectable) ? '8%' : '15%'
+        gridTrackSize: (this.selectable) ? '16%' : '19%'
       }
     );
 
