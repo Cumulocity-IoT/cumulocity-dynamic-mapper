@@ -25,7 +25,8 @@ import {
   OnInit,
   Output,
   ViewChild,
-  AfterViewInit
+  AfterViewInit,
+  ViewEncapsulation,
 } from '@angular/core';
 import {
   ActionControl,
@@ -62,21 +63,21 @@ import {
 } from './connector.model';
 import { StatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
 import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
-import { CheckedRendererComponent } from './renderer/checked-renderer.component';
 import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
 import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
   styleUrls: ['./connector-grid.component.style.css'],
-  templateUrl: 'connector-grid.component.html'
+  templateUrl: 'connector-grid.component.html',
+  encapsulation: ViewEncapsulation.None
 })
 export class ConnectorGridComponent implements OnInit, AfterViewInit {
   @Input() selectable = true;
   @Input() readOnly = false;
   @Input() deploy: string[];
   @Input() deploymentMapEntry: DeploymentMapEntry;
-  
+
   @Output() deploymentMapEntryChange = new EventEmitter<any>();
   selected: string[] = [];
   selected$: Subject<string[]>;
@@ -84,6 +85,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   monitoring$: Observable<ConnectorStatus>;
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
+  customClasses: string;
   configurations$: Observable<ConnectorConfiguration[]>;
   LoggingEventType = LoggingEventType;
   pagination: Pagination = {
@@ -99,12 +101,12 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   constructor(
     private bsModalService: BsModalService,
     private connectorConfigurationService: ConnectorConfigurationService,
-    private alertService: AlertService
+    private alertService: AlertService,
   ) { }
 
   ngAfterViewInit(): void {
     setTimeout(async () => {
-      if (this.selectable && !this.readOnly) {
+      if (this.selectable) {
         this.connectorGrid.setItemsSelected(this.selected, true);
       }
     }, 0);
@@ -140,16 +142,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     );
 
     this.columns.push(
-      {
-        name: ' ',
-        header: '',
-        path: 'checked',
-        filterable: false,
-        sortOrder: 'asc',
-        visible: this.selectable && this.readOnly,
-        gridTrackSize: '10%',
-        cellRendererComponent: CheckedRendererComponent
-      },
       {
         name: 'identifier',
         header: 'Identifier',
@@ -227,38 +219,17 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
       .subscribe((specs) => {
         this.specifications = specs;
       });
+
+    this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
   }
 
-  public onSelectToggle(id: string) {
-    if (this.isSelected(id)) {
-      this.selected = this.selected.filter((identifier) => id !== identifier);
-    } else {
-      this.selected.push(id);
-    }
-    this.selected$.next(this.selected);
+  get shouldHideBulkActionsAndReadOnly(): boolean {
+    return this.selectable && this.readOnly;
   }
 
-  public isSelected(id: string): boolean {
-    return this.selected.includes(id);
-  }
-
-  public onSelectToggleAll() {
-    if (this.isSelectedAll()) {
-      this.selectedAll = false;
-      this.selected = [];
-    } else {
-      this.selectedAll = true;
-      this.configurations.forEach((con) => this.selected.push(con.identifier));
-    }
-    this.selected$.next(this.selected);
-  }
   public onSelectionChanged(selected: any) {
     this.selected = selected;
     this.selected$?.next(this.selected);
-  }
-
-  public isSelectedAll(): boolean {
-    return this.selectedAll;
   }
 
   refresh() {
