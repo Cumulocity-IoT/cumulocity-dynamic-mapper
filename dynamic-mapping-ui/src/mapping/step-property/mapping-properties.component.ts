@@ -237,6 +237,10 @@ export class MappingStepPropertiesComponent
           }
         ]
       },
+      {  
+        type: 'template',
+        template: '<div class="legend form-block col-xs-12">Properties</div>'
+      },
       {
         fieldGroupClassName: 'row',
         fieldGroup: [
