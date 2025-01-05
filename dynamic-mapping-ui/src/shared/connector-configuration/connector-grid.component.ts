@@ -208,7 +208,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
           this.deploymentMapEntryChange.emit(this.deploymentMapEntry);
           if (this.readOnly)
             this.configurations?.forEach(
-              (conf) => (conf['checked'] = this.selected.includes(conf.identifier))
+              (conf) => {conf['checked'] = this.selected.includes(conf.identifier);
+                conf['readOnly'] = this.readOnly;
+              }
             );
         }
       }

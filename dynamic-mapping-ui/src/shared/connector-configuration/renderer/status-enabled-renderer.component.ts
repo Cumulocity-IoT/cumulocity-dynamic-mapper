@@ -45,6 +45,7 @@ import { HttpStatusCode } from '@angular/common/http';
         <input
           type="checkbox"
           [checked]="context.value"
+          [disabled]="context.item.readOnly"
           (change)="onConfigurationToggle()"
         />
         <span></span>
@@ -59,7 +60,7 @@ export class StatusEnabledRendererComponent {
     public sharedService: SharedService,
     private connectorConfigurationService: ConnectorConfigurationService
   ) {
-    // console.log('Status', context, context.value);
+    console.log('Status', context, context.value);
   }
 
   async onConfigurationToggle() {
