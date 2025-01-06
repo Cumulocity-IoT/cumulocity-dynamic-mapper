@@ -103,8 +103,11 @@ export class C8YAgent {
       }
     }
 
+
     if (error != '') {
-      this.alert.danger(`Failed to test mapping: ${error}`);
+      // throw new Error(error);
+      // this.alert.danger(`Failed to test mapping: ${error}`);
+      context.requests[context.requests.length - 1].error = error;
       return '';
     }
 
@@ -118,13 +121,13 @@ export class C8YAgent {
         return data;
       } else {
         const e = await res.text();
-        this.alert.danger(`Failed to test mapping: ${e}`);
+        //this.alert.danger(`Failed to test mapping: ${e}`);
         context.requests[context.requests.length - 1].error = e;
         return '';
       }
     } catch (e) {
       const { res } = await e;
-      this.alert.danger(`Failed to test mapping: ${res.statusText}`);
+      // this.alert.danger(`Failed to test mapping: ${res.statusText}`);
       context.requests[context.requests.length - 1].error = res.statusText;
       return '';
     }
@@ -136,49 +139,62 @@ export class C8YAgent {
   ): Promise<IManagedObject> {
     let sourceId: string;
     try {
-      if (identity) { 
-        sourceId = await this.resolveExternalId2GlobalId(identity, context) 
+      if (identity) {
+        sourceId = await this.resolveExternalId2GlobalId(identity, context)
       } else {
         const { data } = await this.detail(context.sourceId, context);
-        sourceId = data.id;
+        sourceId = data?.id;
       }
     } catch (e) {
+      const { res, data } = e;
+      // enrich error message
+      if (res?.status == HttpStatusCode.NotFound) {
+        e.message = `Device with ${context.sourceId} not found!`;
+      }
+      // throw e;
+      console.error(e);
       // console.log(
       //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
       // );
     }
 
     const currentRequest = context.requests?.slice(-1)[0] ?? null;
-    const device: Partial<IManagedObject> = {
-      c8y_IsDevice: {},
-      [MAPPING_TEST_DEVICE_FRAGMENT]: {},
-      name: currentRequest.request['name'],
-      com_cumulocity_model_Agent: {}
-    };
-    // remove device identifier
-
-    if (sourceId) {
-      device.id = sourceId;
-      const response: IResult<IManagedObject> = await this.inventory.update(
-        device,
-        context
-      );
-      return response.data;
-    } else {
-      delete device[API.INVENTORY.identifier];
-      const response: IResult<IManagedObject> = await this.inventory.create(
-        device,
-        context
-      );
-      // create identity for mo
-      identity = {
-        ...identity,
-        managedObject: {
-          id: response.data.id
-        }
+    if (!currentRequest.hidden) {
+      const device: Partial<IManagedObject> = {
+        c8y_IsDevice: {},
+        [MAPPING_TEST_DEVICE_FRAGMENT]: {},
+        name: currentRequest.request['name'],
+        com_cumulocity_model_Agent: {}
       };
-      await this.identity.create(identity, context);
-      return response.data;
+      // remove device identifier
+
+      if (sourceId) {
+        device.id = sourceId;
+        const response: IResult<IManagedObject> = await this.inventory.update(
+          device,
+          context
+        );
+        return response.data;
+      } else {
+        delete device[API.INVENTORY.identifier];
+        const response: IResult<IManagedObject> = await this.inventory.create(
+          device,
+          context
+        );
+        // create identity for mo
+        if (identity) {
+          identity = {
+            ...identity,
+            managedObject: {
+              id: response.data.id
+            }
+          };
+          await this.identity.create(identity, context);
+        }
+        return response.data;
+      }
+    } else {
+      return { id: sourceId } as IManagedObject;
     }
   }
 

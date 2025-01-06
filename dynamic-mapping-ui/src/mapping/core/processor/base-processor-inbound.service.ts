@@ -31,7 +31,7 @@ import {
   RepairStrategy,
   getPathTargetForDeviceIdentifiers, transformGenericPath2C8YPath
 } from '../../../shared';
-import { randomIdAsString, splitTopicExcludingSeparator } from '../../shared/util';
+import { splitTopicExcludingSeparator } from '../../shared/util';
 import { C8YAgent } from '../c8y-agent.service';
 import {
   IDENTITY,
@@ -183,18 +183,28 @@ export abstract class BaseProcessorInbound {
             repairStrategy: RepairStrategy.CREATE_IF_MISSING,
             type: SubstituteValueType.TEXTUAL
           };
+          context.sourceId = substitute.value;
+
           if (mapping.targetAPI != API.INVENTORY.name) {
             // check if we need to create an attoc device
-            const { res } = await this.c8yClient.detail(substitute.value, context);
-            if (res.status == HttpStatusCode.NotFound) {
-              const identity = {
-                externalId: `SIMMULATION_DEVICE_${randomIdAsString()}`,
-                type: 'c8y_Serial'
-              };
+            try {
+              const { res } = await this.c8yClient.detail(substitute.value, context);
+              if (res.status == HttpStatusCode.NotFound) {
+                if (mapping.createNonExistingDevice) {
+                  sourceId.value = await this.createAttocDevice(undefined, context);
+                } else {
+                  const e = new Error(`Device with id: ${substitute.value} does not exist. Set option createNonExistingDevice!`);
+                  e['possibleIgnoreErrorNonExisting'] = true;
+                  throw e;
+                }
+              }
+            } catch (error) {
               if (mapping.createNonExistingDevice) {
-                sourceId.value = await this.createAttocDevice(identity, context);
+                sourceId.value = await this.createAttocDevice(undefined, context);
               } else {
-                throw new Error(`Device with id: ${substitute.value} does not exist. Set option createNonExistingDevice!`);
+                const e = new Error(`Device with id: ${substitute.value} does not exist. Set option createNonExistingDevice!`);
+                e['possibleIgnoreErrorNonExisting'] = true;
+                throw e;
               }
             }
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
@@ -239,7 +249,7 @@ export abstract class BaseProcessorInbound {
           );
           context.requests[predecessor].response = response;
         } catch (e) {
-          context.requests[predecessor].error = e;
+          context.requests[predecessor].error = e.message;
         }
       } else if (mapping.targetAPI != API.INVENTORY.name) {
         context.requests.push({
@@ -254,7 +264,7 @@ export abstract class BaseProcessorInbound {
           const response = await this.c8yClient.createMEAO(context);
           context.requests[predecessor].response = response;
         } catch (e) {
-          context.requests[predecessor].error = e;
+          context.requests[predecessor].error = e.message;
         }
       } else {
         console.warn(
@@ -269,9 +279,10 @@ export abstract class BaseProcessorInbound {
   }
   async createAttocDevice(identity: IExternalIdentity, context: ProcessingContext): Promise<string> {
     let sourceId: string;
+    let name = identity ? `device_${identity.type}_${identity.externalId}`: `device_${context.sourceId}`;
     const request = {
       c8y_IsDevice: {},
-      name: `device_${identity.type}_${identity.externalId}`,
+      name,
       d11r_device_generatedType: {},
       [MAPPING_TEST_DEVICE_FRAGMENT]: {},
       type: MAPPING_TEST_DEVICE_TYPE
@@ -281,7 +292,7 @@ export abstract class BaseProcessorInbound {
     context.requests.push({
       predecessor,
       method: context.mapping.updateExistingDevice ? 'POST' : 'PATCH',
-      externalIdType: identity.externalId,
+      externalIdType: identity?.externalId,
       request,
       targetAPI: API.INVENTORY.name,
       hidden: !context.mapping.createNonExistingDevice
@@ -296,7 +307,13 @@ export abstract class BaseProcessorInbound {
       context.requests[predecessor].sourceId = response.id;
       sourceId = response.id;
     } catch (e) {
-      context.requests[predecessor].error = e;
+      const {res,data} = e;
+      if (res?.status == HttpStatusCode.NotFound) {
+        e.message = `Device with ${context.sourceId} not found!`;
+        context.requests[predecessor].error = e.message;
+      } else {
+        context.requests[predecessor].error = res.statusText;
+      }
     }
     return sourceId;
   }

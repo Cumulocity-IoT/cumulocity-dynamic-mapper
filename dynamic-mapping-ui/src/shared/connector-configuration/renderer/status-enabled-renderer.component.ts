@@ -60,7 +60,7 @@ export class StatusEnabledRendererComponent {
     public sharedService: SharedService,
     private connectorConfigurationService: ConnectorConfigurationService
   ) {
-    console.log('Status', context, context.value);
+    // console.log('Status', context, context.value);
   }
 
   async onConfigurationToggle() {
