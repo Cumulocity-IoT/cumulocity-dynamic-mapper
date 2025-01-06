@@ -46,7 +46,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
-import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.StringUtils;
@@ -113,7 +113,7 @@ public class MQTTClient extends AConnectorClient {
 
 	public MQTTClient(ConfigurationRegistry configurationRegistry,
 			ConnectorConfiguration connectorConfiguration,
-			AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+			DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
 		this();
 		this.configurationRegistry = configurationRegistry;
 		this.mappingComponent = configurationRegistry.getMappingComponent();
@@ -495,7 +495,7 @@ public class MQTTClient extends AConnectorClient {
 		sendSubscriptionEvents(topic, "Unsubscribing");
 		Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
 		asyncMqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
-			log.info("Tenant {} - Successfully unsubscribed on topic: {} for connector {}", tenant, topic,
+			log.info("Tenant {} - Successfully unsubscribed from topic: {} for connector {}", tenant, topic,
 					connectorName);
 		}).exceptionally(throwable -> {
 			log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,

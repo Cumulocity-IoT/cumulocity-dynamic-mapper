@@ -27,7 +27,7 @@ import dynamic.mapping.model.ExtensionEntry;
 import dynamic.mapping.model.ExtensionStatus;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.processor.ProcessingException;
-import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
+import dynamic.mapping.processor.inbound.BaseProcessorInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -37,7 +37,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
+public class ExtensibleProcessor extends BaseProcessorInbound<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 
@@ -46,11 +46,9 @@ public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
     }
 
     @Override
-    public ProcessingContext<byte[]> deserializePayload(Mapping mapping, ConnectorMessage message)
+    public byte[] deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
-        ProcessingContext<byte[]> context = new ProcessingContext<byte[]>();
-        context.setPayload(message.getPayload());
-        return context;
+        return message.getPayload();
     }
 
     @Override
@@ -82,10 +80,9 @@ public class ExtensibleProcessor extends BasePayloadProcessorInbound<byte[]> {
     @Override
     public void substituteInTargetAndSend(ProcessingContext<byte[]> context) {
         ProcessorExtensionTarget extension = null;
-        String tenant = context.getTenant();
 
         extension = getProcessorExtensionTarget(context.getMapping().extension);
-        // the extenson is only meant to be used on the source side, extracting. From
+        // the extension is only meant to be used on the source side, extracting. From
         // now on we can use the standard substituteInTargetAndSend
         if (extension == null) {
             super.substituteInTargetAndSend(context);

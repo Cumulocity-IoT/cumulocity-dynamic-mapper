@@ -51,7 +51,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { DeploymentMapEntry, SharedService, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { C8YNotificationSubscription } from '../shared/mapping.model';
+import { C8YNotificationSubscription, Device } from '../shared/mapping.model';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
@@ -221,7 +221,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   async onCommitSubscriptions(deviceList: IIdentified[]) {
     this.subscription = {
       api: API.ALL.name,
-      devices: deviceList
+      devices: deviceList as Device[]
     };
     // console.log('Changed deviceList:', this.subscription.devices);
     try {

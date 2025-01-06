@@ -21,6 +21,7 @@
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
+  BootstrapComponent,
   CommonModule,
   CoreModule,
   DynamicFormsModule,
@@ -65,7 +66,6 @@ import { LandingModule } from './landing/landing.module';
     CommonModule,
     DynamicFormsModule,
     FormlyPresetModule,
-    SharedModule,
     RealtimeModule
   ],
   exports: [],
@@ -75,7 +75,7 @@ import { LandingModule } from './landing/landing.module';
     BsModalService,
     hookNavigator(MappingNavigationFactory),
     hookTab(MappingTabFactory),
-  ]
+  ],
 })
 export class DynamicMappingModule {
   constructor() {}

@@ -27,12 +27,10 @@ import {
   ConnectorConfiguration,
   ConnectorSpecification,
   ConnectorStatus,
-  Feature,
   LoggingEventType,
   LoggingEventTypeMap,
-  SharedService,
 } from '..';
-import { ConnectorStatusService } from '../service/connector-status.service';
+import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 
 @Component({
@@ -43,7 +41,6 @@ import { ConnectorConfigurationService } from '../service/connector-configuratio
 export class ConnectorStatusComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
   monitorings$: Observable<ConnectorStatus>;
-  specifications: ConnectorSpecification[] = [];
   configurations$: Observable<ConnectorConfiguration[]> = new Observable();
   statusLogs$: Observable<any[]> ;
   filterStatusLog = {
@@ -56,7 +53,7 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
 
   constructor(
     public bsModalService: BsModalService,
-    public connectorStatusService: ConnectorStatusService,
+    public connectorStatusService: ConnectorLogService,
     public connectorConfigurationService: ConnectorConfigurationService,
     public alertService: AlertService,
   ) {}

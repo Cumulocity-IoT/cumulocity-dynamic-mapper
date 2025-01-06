@@ -22,3 +22,9 @@
 .button-bottom-margin{
   margin-bottom: 8px;
 }
+
+.hide-bulk-actions {
+  div.table-data-grid-header-bulk-actions.animated.slideInDown.fast {
+    display: none !important;
+  }
+}

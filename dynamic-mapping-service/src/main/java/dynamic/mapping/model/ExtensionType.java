@@ -22,6 +22,6 @@
 package dynamic.mapping.model;
 
 public enum ExtensionType {
-  PROCESSOR_EXTENSION_SOURCE,
-  PROCESSOR_EXTENSION_SOURCE_TARGET
+  EXTENSION_SOURCE,
+  EXTENSION_SOURCE_TARGET
 }

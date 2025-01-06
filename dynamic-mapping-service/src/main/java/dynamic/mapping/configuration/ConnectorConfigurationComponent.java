@@ -155,8 +155,8 @@ public class ConnectorConfigurationComponent {
         }
     }
 
-    public ConnectorConfiguration enableConnection(String identfier, boolean enabled) {
-        final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(identfier));
+    public ConnectorConfiguration enableConnection(String identifier, boolean enabled) {
+        final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(identifier));
         String tenant = subscriptionsService.getTenant();
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
@@ -167,7 +167,7 @@ public class ConnectorConfigurationComponent {
             log.debug("Tenant {} - Setting connection: {}:", tenant, configuration.enabled);
             final String configurationJson = objectMapper.writeValueAsString(configuration);
             optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
-            optionRepresentation.setKey(getConnectorOptionKey(identfier));
+            optionRepresentation.setKey(getConnectorOptionKey(identifier));
             optionRepresentation.setValue(configurationJson);
             tenantOptionApi.save(optionRepresentation);
             return configuration;
@@ -177,7 +177,7 @@ public class ConnectorConfigurationComponent {
         } catch (Exception e) {
             String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
             String msg = String.format("Failed to convert configurator object %s. Error: %s",
-                    identfier,
+                    identifier,
                     exceptionMsg);
             log.warn(msg);
         }

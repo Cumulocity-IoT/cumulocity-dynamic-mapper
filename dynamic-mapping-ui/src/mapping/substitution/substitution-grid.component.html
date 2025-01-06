@@ -54,7 +54,7 @@
     </thead>
     <tbody>
       <tr
-        *ngFor="let sub of substitutions; let i = index"
+        *ngFor="let sub of mapping.substitutions; let i = index"
         id="{{ 'sub-' + id + '-' + i }}"
       >
         <td width="4%">
@@ -71,7 +71,7 @@
           <span *ngIf="!sub.registeredType" class="text-12"
             >{{
               '[ ' +
-                (definesDeviceIdentifier(targetAPI, externalIdType, direction, sub)
+                (definesDeviceIdentifier(mapping, sub)
                   ? '* '
                   : '') +
                 sub.pathSource +
@@ -85,7 +85,7 @@
           {{ sub.expandArray ? 'on' : 'off' }}
         </td>
         <td>
-          {{ sub.repairStrategy }}
+          {{ sub.repairStrategy  | formatStringAsWords }}
         </td>
         <td width="8%">
           <button

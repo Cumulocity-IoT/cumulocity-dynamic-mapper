@@ -4,7 +4,7 @@ import { Pipe, PipeTransform } from '@angular/core';
   name: 'formatStringAsWords'
 })
 export class FormatStringPipe implements PipeTransform {
-  transform(value: string): string {
+  transform(value: string, removeLastWords: number = 0): string {
     if (!value) return '';
 
     // First, replace underscores with spaces
@@ -13,8 +13,13 @@ export class FormatStringPipe implements PipeTransform {
     // Convert to lowercase and split into words
     const words = withSpaces.toLowerCase().split(' ');
 
+    // Remove last X words if specified
+    const trimmedWords = (removeLastWords > 0 && words.length > removeLastWords)
+      ? words.slice(0, -removeLastWords)
+      : words;
+
     // Capitalize the first letter of each word
-    const capitalizedWords = words.map(word => 
+    const capitalizedWords = trimmedWords.map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     );
 

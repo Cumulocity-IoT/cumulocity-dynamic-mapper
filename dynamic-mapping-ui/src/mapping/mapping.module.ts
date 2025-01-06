@@ -128,4 +128,4 @@ import { MappingSubscriptionComponent } from './subscription/subscription.compon
     }
   ]
 })
-export class MappingModule {}
+export class MappingModule { }

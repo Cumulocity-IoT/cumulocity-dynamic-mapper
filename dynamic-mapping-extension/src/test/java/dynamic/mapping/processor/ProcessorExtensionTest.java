@@ -27,6 +27,7 @@ import java.util.ArrayList;
 
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.junit.jupiter.api.Test;
 
@@ -50,19 +51,18 @@ public class ProcessorExtensionTest {
     .build();
 
     ProcessorExtensionCustomEvent extension = new ProcessorExtensionCustomEvent();
-    ProcessingContext<byte[]> context = new ProcessingContext<>();
-    context.setPayload(proto.toByteArray());
+    Object payload = proto.toByteArray();
     Mapping m1 = new Mapping();
     m1.setTargetAPI(API.EVENT);
-    context.setMapping(m1);
+    ProcessingContext context = ProcessingContext.builder().payload(payload).mapping(m1).build();
 
     extension.extractFromSource(context);
 
-    ArrayList<MappingSubstitution.SubstituteValue> extractedTypes = (ArrayList) context.getPostProcessingCache().get("type");
+    ArrayList<SubstituteValue> extractedTypes = (ArrayList) context.getProcessingCache().get("type");
     assertEquals( extractedTypes.size(), 1);
     MappingSubstitution.SubstituteValue extractedType = extractedTypes.get(0);
-    log.info("Extracted: {}", extractedType.typedValue());
-    assertEquals( (String)extractedType.typedValue(), "type_Dummy");
+    log.info("Extracted: {}, {} ", extractedType.value, extractedType.value.getClass().getName());
+    assertEquals( extractedType.value, "type_Dummy");
    // assertEquals( (JsonNode)extractedType.typedValue(), "Dummy Text");
 
   }

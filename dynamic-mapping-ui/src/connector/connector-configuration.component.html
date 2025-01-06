@@ -19,36 +19,38 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-title>Configuration</c8y-title>
+<c8y-title>Connectors</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button
-    class="btn btn-link"
-    title="{{ 'Add connector' | translate }}"
-    (click)="onConfigurationAdd()"
-  >
+  <button class="btn btn-link" title="{{ 'Add connector' | translate }}" (click)="onConfigurationAdd()">
     <i c8yIcon="connected"></i>
     {{ 'Add connector' | translate }}
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
-  <button
-    class="btn btn-link"
-    title="{{ 'Refresh' | translate }}"
-    (click)="refresh()"
-  >
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
 
-<div class="card card--fullpage">
-  <div class="col-lg-12">
-    <div class="card-block">
-      <d11r-mapping-connector-configuration
-        #connectorConfigurationBroker
-        [selectable]="false"
-      ></d11r-mapping-connector-configuration>
+<c8y-breadcrumb>
+  <c8y-breadcrumb-item
+    [icon]="'cog'"
+    [label]="'Configuration' | translate"
+    [path]="'sag-ps-pkg-dynamic-mapping/node3/serviceConfiguration'"
+  >
+  </c8y-breadcrumb-item>
+  <c8y-breadcrumb-item
+    [icon]="''"
+    [label]="'Connectors' | translate"
+  ></c8y-breadcrumb-item>
+</c8y-breadcrumb>
+
+<div class="card content-fullpage d-grid">
+  <div class="card card--grid card--grid__inner-scroll">
+    <div class="p-l-16 p-r-16">
+      <d11r-mapping-connector-configuration #connectorConfigurationBroker
+        [selectable]="false"></d11r-mapping-connector-configuration>
     </div>
   </div>
 </div>
-<d11r-mapping-connector-log></d11r-mapping-connector-log>

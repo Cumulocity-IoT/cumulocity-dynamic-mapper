@@ -22,6 +22,8 @@
 package dynamic.mapping.core;
 
 import static java.util.Map.entry;
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -51,7 +53,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.dashjoin.jsonata.json.Json;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -95,7 +97,8 @@ public class MappingComponent {
     // structure: <tenant, initialized>
     private Map<String, Boolean> initializedMappingStatus = new HashMap<>();
 
-    // structure: <tenant, < connectorIdentifier , <connectorProperty , connectorValue>>>
+    // structure: <tenant, < connectorIdentifier , <connectorProperty ,
+    // connectorValue>>>
     @Getter
     private Map<String, Map<String, Map<String, String>>> consolidatedConnectorStatus = new HashMap<>();
 
@@ -237,7 +240,7 @@ public class MappingComponent {
     // ic List<MappingStatus> getMappingLoadingError(String tenant) {
     // // log.info("Tenant {} - get MappingStatus: {
     // ", tenant, m.identifier);
-    // Map<String, MappingStatus> mappingLoadErro
+    // Map<String, MappingStatus> mappingLoadError
     // = tenantMappingLoadingError.get(tenant);
     // List<MappingStatus> mappingLoadErrorList =
     // mappingLoadError.values().stream().collect(Collectors.toList());
@@ -287,7 +290,7 @@ public class MappingComponent {
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             MappingRepresentation m = toMappingObject(mo);
-            if (m.getC8yMQTTMapping().isActive()) {
+            if (m.getC8yMQTTMapping().getActive()) {
                 throw new IllegalArgumentException(String.format(
                         "Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, id));
             }
@@ -343,7 +346,7 @@ public class MappingComponent {
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
             // when we do housekeeping tasks we need to update active mapping, e.g. add
             // snooped messages. This is an exception
-            if (!allowUpdateWhenActive && mapping.isActive()) {
+            if (!allowUpdateWhenActive && mapping.getActive()) {
                 throw new IllegalArgumentException(
                         String.format("Tenant %s - Mapping %s is still active, deactivate mapping before updating!",
                                 tenant, mapping.id));
@@ -459,25 +462,27 @@ public class MappingComponent {
         return updatedMappings;
     }
 
-    public List<Mapping> resolveMappingOutbound(String tenant, JsonNode message, API api) throws ResolveException {
+    public List<Mapping> resolveMappingOutbound(String tenant, String message, API api) throws ResolveException {
         // use mappingCacheOutbound and the key filterMapping to identify the matching
         // mappings.
         // the need to be returned in a list
         List<Mapping> result = new ArrayList<>();
         try {
+            Map messageAsMap = (Map) Json.parseJson(message);
             for (Mapping m : cacheMappingOutbound.get(tenant).values()) {
                 // test if message has property associated for this mapping, JsonPointer must
                 // begin with "/"
-                String key = "/" + m.getFilterMapping().replace('.', '/');
-                JsonNode testNode = message.at(key);
-                if (!testNode.isMissingNode() && m.targetAPI.equals(api)) {
-                    log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant, key,
-                            message.get("id"));
+                var expression = jsonata(m.getFilterMapping());
+                Object extractedContent = expression.evaluate(messageAsMap);
+                if (extractedContent != null && m.targetAPI.equals(api)) {
+                    log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant,
+                            m.getFilterMapping(),
+                            messageAsMap.get("id"));
                     result.add(m);
                 } else {
                     log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant,
-                            key,
-                            m.getFilterMapping(), message.get("id"), api, message.toPrettyString());
+                            m.getFilterMapping(),
+                            m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
                 }
             }
         } catch (IllegalArgumentException e) {
@@ -583,6 +588,32 @@ public class MappingComponent {
         return mapping;
     }
 
+    public void updateSourceTemplate(String tenant, String id, Integer index) throws Exception {
+        // step 1. update debug for mapping
+        Mapping mapping = getMapping(tenant, id);
+        String newSourceTemplate = mapping.snoopedTemplates.get(index);
+        log.info("Tenant {} - Setting sourceTemplate for mapping: {} to: {}", tenant, id, newSourceTemplate);
+        mapping.setSourceTemplate(newSourceTemplate);
+        if (Direction.INBOUND.equals(mapping.direction)) {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+        }
+        // step 3. update mapping in inventory
+        // don't validate mapping when setting active = false, this allows to remove
+        // mappings that are not working
+        updateMapping(tenant, mapping, true, true);
+        // step 4. delete mapping from update cache
+        removeDirtyMapping(tenant, mapping);
+        // step 5. update caches
+        if (Direction.OUTBOUND.equals(mapping.direction)) {
+            rebuildMappingOutboundCache(tenant);
+        } else {
+            deleteFromCacheMappingInbound(tenant, mapping);
+            addToCacheMappingInbound(tenant, mapping);
+            cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+        }
+    }
+
     public void setDebugMapping(String tenant, String id, Boolean debug) throws Exception {
         // step 1. update debug for mapping
         log.info("Tenant {} - Setting debug: {} got mapping: {}", tenant, id, debug);
@@ -665,10 +696,8 @@ public class MappingComponent {
     }
 
     public List<Mapping> resolveMappingInbound(String tenant, String topic) throws ResolveException {
-        List<MappingTreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
-                .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic), 0);
-        return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
-                .map(mn -> mn.getMapping()).collect(Collectors.toList());
+        List<Mapping> resolvedMappings = getResolverMappingInbound().get(tenant).resolveMapping(topic);
+        return resolvedMappings;
     }
 
     public void resetSnoop(String tenant, String id) throws Exception {

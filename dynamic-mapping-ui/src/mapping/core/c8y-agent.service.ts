@@ -26,13 +26,14 @@ import {
   IManagedObject,
   IResult,
   IExternalIdentity,
-  IOperation
+  IOperation,
+  IdReference
 } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
 import { API, MAPPING_TEST_DEVICE_FRAGMENT } from '../../shared';
 import { FacadeIdentityService } from './facade/facade-identity.service';
 import { FacadeInventoryService } from './facade/facade-inventory.service';
-import { ProcessingContext } from '../processor/processor.model';
+import { ProcessingContext } from './processor/processor.model';
 import { FacadeAlarmService } from './facade/facade-alarm.service';
 import { FacadeEventService } from './facade/facade-event.service';
 import { FacadeMeasurementService } from './facade/facade-measurement.service';
@@ -49,7 +50,7 @@ export class C8YAgent {
     private measurement: FacadeMeasurementService,
     private operation: FacadeOperationService,
     private alert: AlertService
-  ) {}
+  ) { }
 
   initializeCache(): void {
     this.inventory.initializeCache();
@@ -130,20 +131,24 @@ export class C8YAgent {
   }
 
   async upsertDevice(
-    identityx: IExternalIdentity,
-    context: ProcessingContext
+    identity: IExternalIdentity,
+    context: ProcessingContext,
   ): Promise<IManagedObject> {
-    let identity = identityx;
-    let deviceId: string;
+    let sourceId: string;
     try {
-      deviceId = await this.resolveExternalId2GlobalId(identity, context);
+      if (identity) { 
+        sourceId = await this.resolveExternalId2GlobalId(identity, context) 
+      } else {
+        const { data } = await this.detail(context.sourceId, context);
+        sourceId = data.id;
+      }
     } catch (e) {
       // console.log(
       //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
       // );
     }
 
-    const currentRequest = context.requests[context.requests.length-1];
+    const currentRequest = context.requests?.slice(-1)[0] ?? null;
     const device: Partial<IManagedObject> = {
       c8y_IsDevice: {},
       [MAPPING_TEST_DEVICE_FRAGMENT]: {},
@@ -152,8 +157,8 @@ export class C8YAgent {
     };
     // remove device identifier
 
-    if (deviceId) {
-      device.id = deviceId;
+    if (sourceId) {
+      device.id = sourceId;
       const response: IResult<IManagedObject> = await this.inventory.update(
         device,
         context
@@ -192,12 +197,23 @@ export class C8YAgent {
     identity: string,
     externalIdType: string,
     context: ProcessingContext
-  ): Promise<string> {
-    const data = await this.identity.resolveGlobalId2ExternalId(
+  ): Promise<IExternalIdentity> {
+    const externalId = await this.identity.resolveGlobalId2ExternalId(
       identity,
       externalIdType,
       context
     );
-    return data.managedObject.id as string;
+    return externalId;
+  }
+
+  async detail(
+    managedObjectOrId: IdReference,
+    context: ProcessingContext
+  ): Promise<IResult<IManagedObject>> {
+    const managedObject = await this.inventory.detail(
+      managedObjectOrId,
+      context
+    );
+    return managedObject;
   }
 }

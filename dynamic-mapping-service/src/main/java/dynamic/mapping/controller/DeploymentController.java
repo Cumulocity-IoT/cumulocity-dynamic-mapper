@@ -37,19 +37,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.model.DeploymentMapEntryDetailed;
+import dynamic.mapping.model.DeploymentMapEntry;
 
 @Slf4j
+@RequestMapping("/deployment")
 @RestController
 public class DeploymentController {
 
@@ -86,10 +88,10 @@ public class DeploymentController {
 	@Value("${APP.mappingCreateRole}")
 	private String mappingCreateRole;
 
-	@RequestMapping(value = "/deployment/effective", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, DeploymentMapEntryDetailed>> getMappingsDeployed() {
+	@GetMapping(value = "/effective",  consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Map<String, DeploymentMapEntry>> getMappingsDeployed() {
 		String tenant = contextService.getContext().getTenant();
-		Map<String, DeploymentMapEntryDetailed> mappingsDeployed = new HashMap<>();
+		Map<String, DeploymentMapEntry> mappingsDeployed = new HashMap<>();
 		try {
 			Map<String, AConnectorClient> connectorMap = connectorRegistry
 					.getClientsForTenant(tenant);
@@ -108,7 +110,7 @@ public class DeploymentController {
 
 	}
 
-	@RequestMapping(value = "/deployment/defined/{mappingIdent}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@PutMapping(value = "/defined/{mappingIdent}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdent,
 			@Valid @RequestBody List<String> deployment) {
 		String tenant = contextService.getContext().getTenant();
@@ -122,7 +124,7 @@ public class DeploymentController {
 		}
 	}
 
-	@RequestMapping(value = "/deployment/defined/{mappingIdent}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/defined/{mappingIdent}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<String>> getDeploymentMapEntry(@PathVariable String mappingIdent) {
 		String tenant = contextService.getContext().getTenant();
 		log.info("Tenant {} - Get deployment for mapping: {}", tenant, mappingIdent);
@@ -135,7 +137,7 @@ public class DeploymentController {
 		}
 	}
 
-	@RequestMapping(value = "/deployment/defined", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/defined", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, List<String>>> getDeploymentMap() {
 		String tenant = contextService.getContext().getTenant();
 		log.info("Tenant {} - Get complete deployment", tenant);

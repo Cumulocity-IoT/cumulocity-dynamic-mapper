@@ -36,7 +36,7 @@ import { EventService, IEvent, IResultList } from '@c8y/client';
   styleUrls: ['../../mapping/shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class MapppingServiceEventComponent implements OnInit, OnDestroy {
+export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
   baseFilter = {
     pageSize: 1000,

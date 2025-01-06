@@ -21,52 +21,90 @@
 
 package dynamic.mapping.processor.outbound;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
+import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+
+import java.io.IOException;
+import java.util.*;
+
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
 
-import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
+import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
-import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.json.JSONException;
-import org.springframework.web.bind.annotation.RequestMethod;
-
-import java.io.IOException;
-import java.util.*;
+import jakarta.validation.constraints.NotNull;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class BasePayloadProcessorOutbound<T> {
+public abstract class BaseProcessorOutbound<T> {
 
-    public BasePayloadProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
-        this.objectMapper = configurationRegistry.getObjectMapper();
+    public BaseProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.c8yAgent = configurationRegistry.getC8yAgent();
     }
 
     protected C8YAgent c8yAgent;
 
-    protected ObjectMapper objectMapper;
-
     protected AConnectorClient connectorClient;
 
-    public abstract ProcessingContext<T> deserializePayload(Mapping mapping, C8YMessage c8yMessage)
+    public abstract T deserializePayload(Mapping mapping, C8YMessage c8yMessage)
             throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
+
+    public void enrichPayload(ProcessingContext<T> context) {
+
+        /*
+         * step 0 patch payload with dummy property _IDENTITY_ in case the content
+         * is required in the payload for a substitution
+         */
+        String tenant = context.getTenant();
+        Object payloadObject = context.getPayload();
+        Mapping mapping = context.getMapping();
+        String payloadAsString = toPrettyJsonString(payloadObject);
+        var sourceId = extractContent(context, mapping, payloadObject, payloadAsString,
+                mapping.targetAPI.identifier);
+        context.setSourceId(sourceId.toString());
+        Map<String, String> identityFragment = new HashMap<>();
+        identityFragment.put("c8ySourceId", sourceId.toString());
+        identityFragment.put("externalIdType", mapping.externalIdType);
+        if (mapping.useExternalId && !("").equals(mapping.externalIdType)) {
+            ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
+                    new GId(sourceId.toString()), mapping.externalIdType,
+                    context);
+            if (externalId == null) {
+                if (context.isSendPayload()) {
+                    throw new RuntimeException(String.format("External id %s for type %s not found!",
+                            sourceId.toString(), mapping.externalIdType));
+                }
+            } else {
+                identityFragment.put("externalId", externalId.getExternalId());
+            }
+        }
+        if (payloadObject instanceof Map) {
+            ((Map) payloadObject).put(Mapping.IDENTITY, identityFragment);
+        } else {
+            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+                    tenant);
+        }
+    }
 
     public ProcessingContext<T> substituteInTargetAndSend(ProcessingContext<T> context) {
         /*
@@ -76,8 +114,8 @@ public abstract class BasePayloadProcessorOutbound<T> {
         String tenant = context.getTenant();
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
-        Set<String> pathTargets = postProcessingCache.keySet();
+        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        Set<String> pathTargets = processingCache.keySet();
 
         int predecessor = -1;
         DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
@@ -101,16 +139,16 @@ public abstract class BasePayloadProcessorOutbound<T> {
                     serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
-        String deviceSource = context.getSource();
+        String deviceSource = context.getSourceId();
 
         for (String pathTarget : pathTargets) {
-            MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
-                    new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+            MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
+                    "NOT_DEFINED", TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
-            if (postProcessingCache.get(pathTarget).size() > 0) {
-                substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+            if (processingCache.get(pathTarget).size() > 0) {
+                substitute = processingCache.get(pathTarget).get(0).clone();
             }
-            substituteValueInPayload(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+            substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to mqttBroker
@@ -169,7 +207,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
         } else {
             //FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
-                    postProcessingCache.size());
+                    processingCache.size());
         }
         log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
                 mapping.targetAPI,
@@ -177,28 +215,17 @@ public abstract class BasePayloadProcessorOutbound<T> {
         return context;
     }
 
-    public void substituteValueInPayload(MappingType type, MappingSubstitution.SubstituteValue sub,
-            DocumentContext jsonObject, String keys)
-            throws JSONException {
-        boolean subValueMissing = sub.value == null;
-        boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
+    protected Object extractContent(ProcessingContext<T> context, Mapping mapping, Object payloadJsonNode,
+            String payloadAsString, @NotNull String ps) {
+        Object extractedSourceContent = null;
         try {
-            if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                    (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
-                jsonObject.delete(keys);
-            } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                // boolean pathIsNested = keys.contains(".") || keys.contains("[");
-                // if (pathIsNested) {
-                // throw new JSONException("Can only create new nodes on the root level!");
-                // }
-                // jsonObject.put("$", keys, sub.typedValue());
-                jsonObject.set("$." + keys, sub.typedValue());
-            } else {
-                jsonObject.set(keys, sub.typedValue());
-            }
-        } catch (PathNotFoundException e) {
-            throw new PathNotFoundException(String.format("Path: %s not found!", keys));
+            var expr = jsonata(mapping.transformGenericPath2C8YPath(ps));
+            extractedSourceContent = expr.evaluate(payloadJsonNode);
+        } catch (Exception e) {
+            log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
+                    ps,
+                    payloadAsString, e);
         }
+        return extractedSourceContent;
     }
-
 }

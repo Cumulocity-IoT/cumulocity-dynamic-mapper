@@ -53,7 +53,7 @@ import {
 } from 'vanilla-jsoneditor';
 
 import type { JSONPath } from 'immutable-json-patch'
-import { IDENTITY } from '../../mapping/shared/util';
+import { IDENTITY } from '../mapping/mapping.model';
 
 @Component({
   selector: 'd11r-mapping-json-editor2',
@@ -245,7 +245,11 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async setSelectionToPath(pathString: string) {
-    if (pathString) {
+    const containsSpecialChars = (str: string): boolean => {
+      const regex = /[\$\(\)&]/;
+      return regex.test(str);
+    }
+    if (pathString && !containsSpecialChars(pathString)) {
       const path = parseJSONPath(pathString);
       // console.log('Set selection to path:', pathString, path);
       const selection: any = createMultiSelection(path, path);

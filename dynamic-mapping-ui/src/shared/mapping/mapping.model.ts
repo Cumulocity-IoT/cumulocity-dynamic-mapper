@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 
-import { EditorMode } from '../../mapping/shared/stepper-model';
+import { EditorMode } from '../../mapping/shared/stepper.model';
 import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 
 export interface MappingSubstitution {
@@ -89,8 +89,7 @@ export enum RepairStrategy {
   USE_FIRST_VALUE_OF_ARRAY = 'USE_FIRST_VALUE_OF_ARRAY',
   USE_LAST_VALUE_OF_ARRAY = 'USE_LAST_VALUE_OF_ARRAY',
   IGNORE = 'IGNORE',
-  REMOVE_IF_MISSING = 'REMOVE_IF_MISSING',
-  REMOVE_IF_NULL = 'REMOVE_IF_NULL',
+  REMOVE_IF_MISSING_OR_NULL = 'REMOVE_IF_MISSING_OR_NULL',
   CREATE_IF_MISSING = 'CREATE_IF_MISSING'
 }
 
@@ -116,8 +115,8 @@ export interface ExtensionEntry {
 }
 
 export enum ExtensionType {
-  PROCESSOR_EXTENSION_SOURCE = 'PROCESSOR_EXTENSION_SOURCE',
-  PROCESSOR_EXTENSION_SOURCE_TARGET = 'PROCESSOR_EXTENSION_SOURCE_TARGET',
+  EXTENSION_SOURCE = 'EXTENSION_SOURCE',
+  EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
 }
 
 export enum QOS {
@@ -144,10 +143,10 @@ export interface StepperConfiguration {
 export enum MappingType {
   JSON = 'JSON',
   FLAT_FILE = 'FLAT_FILE',
-  GENERIC_BINARY = 'GENERIC_BINARY',
-  PROTOBUF_STATIC = 'PROTOBUF_STATIC',
-  PROCESSOR_EXTENSION_SOURCE = 'PROCESSOR_EXTENSION_SOURCE',
-  PROCESSOR_EXTENSION_SOURCE_TARGET = 'PROCESSOR_EXTENSION_SOURCE_TARGET'
+  BINARY = 'BINARY',
+  PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
+  EXTENSION_SOURCE = 'EXTENSION_SOURCE',
+  EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET'
 }
 
 export interface MappingTypeProperties {
@@ -207,8 +206,8 @@ export const MappingTypeDescriptionMap: Record<
       allowTestSending: true
     }
   },
-  [MappingType.GENERIC_BINARY]: {
-    key: MappingType.GENERIC_BINARY,
+  [MappingType.BINARY]: {
+    key: MappingType.BINARY,
     description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x". 
 Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
     properties: {
@@ -225,8 +224,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       allowTestSending: true
     }
   },
-  [MappingType.PROTOBUF_STATIC]: {
-    key: MappingType.PROTOBUF_STATIC,
+  [MappingType.PROTOBUF_INTERNAL]: {
+    key: MappingType.PROTOBUF_INTERNAL,
     description: 'Mapping handles payloads in protobuf format.',
     properties: {
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
@@ -243,8 +242,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       allowTestSending: false
     }
   },
-  [MappingType.PROCESSOR_EXTENSION_SOURCE]: {
-    key: MappingType.PROCESSOR_EXTENSION_SOURCE,
+  [MappingType.EXTENSION_SOURCE]: {
+    key: MappingType.EXTENSION_SOURCE,
     description:
       'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
     properties: {
@@ -263,10 +262,10 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       advanceFromStepToEndStep: 2
     }
   },
-  [MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET]: {
-    key: MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET,
+  [MappingType.EXTENSION_SOURCE_TARGET]: {
+    key: MappingType.EXTENSION_SOURCE_TARGET,
     description:
-      'Mapping handles payloads in custom format. In contrast to the PROCESSOR_EXTENSION_SOURCE the completed processing of the payload: extract values from the incoming payload and then transform this to a Cumulocity API call. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
+      'Mapping handles payloads in custom format. In contrast to the EXTENSION_SOURCE the completed processing of the payload: extract values from the incoming payload and then transform this to a Cumulocity API call. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab.',
     properties: {
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
@@ -345,4 +344,89 @@ export interface Feature {
   externalExtensionsEnabled: boolean;
   userHasMappingCreateRole: boolean;
   userHasMappingAdminRole: boolean;
+}export function getDeviceIdentifiers(mapping: Mapping): MappingSubstitution[] {
+  const mp: MappingSubstitution[] = mapping.substitutions
+    .filter(sub => definesDeviceIdentifier(mapping, sub));
+  return mp;
 }
+
+export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
+  const pss = mapping.substitutions
+    .filter(sub => definesDeviceIdentifier(mapping, sub))
+    .map(sub => sub.pathTarget);
+  return pss;
+}
+
+export function transformGenericPath2C8YPath(mapping: Mapping, originalPath: string): string {
+  // "_IDENTITY_.externalId" => source.id
+  if (getGenericDeviceIdentifier(mapping) === originalPath) {
+    return API[mapping.targetAPI].identifier;
+  } else {
+    return originalPath;
+  }
+}
+
+export function transformC8YPath2GenericPath(mapping: Mapping, originalPath: string): string {
+  // source.id => "_IDENTITY_.externalId" source.id
+  if (API[mapping.targetAPI].identifier === originalPath) {
+    return getGenericDeviceIdentifier(mapping);
+  } else {
+    return originalPath;
+  }
+}
+export function cloneSubstitution(
+  sub: MappingSubstitution
+): MappingSubstitution {
+  return {
+    pathSource: sub.pathSource,
+    pathTarget: sub.pathTarget,
+    repairStrategy: sub.repairStrategy,
+    expandArray: sub.expandArray,
+  };
+}
+export function definesDeviceIdentifier(
+  mapping: Mapping,
+  sub: MappingSubstitution
+): boolean {
+  if (mapping.direction == Direction.INBOUND) {
+    if (mapping.externalIdType) {
+      return sub?.pathTarget == `${IDENTITY}.externalId`;
+    } else {
+      return sub?.pathTarget == `${IDENTITY}.c8ySourceId`;
+    }
+  } else {
+    if (mapping.externalIdType) {
+      return sub?.pathSource == `${IDENTITY}.externalId`;
+    } else {
+      return sub?.pathSource == `${IDENTITY}.c8ySourceId`;
+    }
+  }
+}
+export function isSubstitutionValid(mapping: Mapping): boolean {
+  const count = mapping.substitutions
+    .filter((sub) => definesDeviceIdentifier(mapping, sub)
+    )
+    .map(() => 1)
+    .reduce((previousValue: number, currentValue: number) => {
+      return previousValue + currentValue;
+    }, 0);
+  return (
+    (mapping.direction != Direction.OUTBOUND && count == 1) ||
+    mapping.direction == Direction.OUTBOUND
+  );
+}
+
+export function countDeviceIdentifiers(mapping: Mapping): number {
+  const n = mapping.substitutions.filter((sub) => definesDeviceIdentifier(mapping, sub)
+  ).length;
+  return n;
+}
+export const IDENTITY = '_IDENTITY_';
+export function getGenericDeviceIdentifier(mapping: Mapping): string {
+  if (mapping.useExternalId && mapping.externalIdType !== '') {
+    return `${IDENTITY}.externalId`;
+  } else {
+    return `${IDENTITY}.c8ySourceId`;
+  }
+}
+

@@ -21,32 +21,33 @@
 import { Injectable } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
-import { API, Mapping, MappingType, RepairStrategy } from '../../shared';
+import { API, Mapping, MappingType, RepairStrategy } from '../../../shared';
 import {
   TOKEN_TOPIC_LEVEL,
-  getTypedValue,
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator
-} from '../shared/util';
-import { C8YAgent } from '../core/c8y-agent.service';
+} from '../../shared/util';
+import { C8YAgent } from '../c8y-agent.service';
+import { MQTTClient } from '../mqtt-client.service';
 import {
   ProcessingContext,
   SubstituteValue,
-  SubstituteValueType
+  SubstituteValueType,
+  getTypedValue
 } from './processor.model';
-import { MQTTClient } from '../core/mqtt-client.service';
 
 @Injectable({ providedIn: 'root' })
-export abstract class PayloadProcessorOutbound {
+export abstract class BaseProcessorOutbound {
   constructor(
     private alert: AlertService,
     public c8yAgent: C8YAgent,
     private mqttClient: MQTTClient
-  ) {}
+  ) { }
 
   abstract deserializePayload(
-    context: ProcessingContext,
-    mapping: Mapping
+    mapping: Mapping,
+    message: any,
+    context: ProcessingContext
   ): ProcessingContext;
 
   abstract extractFromSource(context: ProcessingContext): void;
@@ -55,10 +56,8 @@ export abstract class PayloadProcessorOutbound {
 
   async substituteInTargetAndSend(context: ProcessingContext) {
     // step 3 replace target with extract content from o payload
-    const { mapping } = context;
-
-    const { postProcessingCache } = context;
-    const pathTargets = postProcessingCache.keys();
+    const { mapping, processingCache } = context;
+    const pathTargets = processingCache.keys();
 
     let predecessor: number = -1;
     let payloadTarget: JSON = null;
@@ -85,8 +84,8 @@ export abstract class PayloadProcessorOutbound {
         type: SubstituteValueType.TEXTUAL,
         repairStrategy: RepairStrategy.DEFAULT
       };
-      if (postProcessingCache.get(pathTarget).length > 0) {
-        substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
+      if (processingCache.get(pathTarget).length > 0) {
+        substituteValue = _.clone(processingCache.get(pathTarget)[0]);
       }
 
       this.substituteValueInPayload(
@@ -134,7 +133,7 @@ export abstract class PayloadProcessorOutbound {
       const newPredecessor = context.requests.push({
         predecessor: predecessor,
         method: 'POST',
-        source: deviceSource,
+        sourceId: deviceSource,
         externalIdType: mapping.externalIdType,
         request: payloadTarget,
         targetAPI: API[mapping.targetAPI].name
@@ -148,7 +147,7 @@ export abstract class PayloadProcessorOutbound {
       predecessor = context.requests.length;
     } else {
       console.warn(
-        'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}'
+        'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${processingCache.size}'
       );
     }
     //console.log(
@@ -162,8 +161,7 @@ export abstract class PayloadProcessorOutbound {
     jsonObject: JSON,
     keys: string
   ) {
-    const subValueMissing: boolean = sub.value == null;
-    const subValueNull: boolean =
+    const subValueMissingOrNull: boolean =
       sub.value == null || (sub.value != null && sub.value != undefined);
 
     if (keys == '$') {
@@ -171,11 +169,7 @@ export abstract class PayloadProcessorOutbound {
         jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
       });
     } else {
-      if (
-        (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
-          subValueMissing) ||
-        (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
-      ) {
+      if (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL && subValueMissingOrNull) {
         _.unset(jsonObject, keys);
       } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
         // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');

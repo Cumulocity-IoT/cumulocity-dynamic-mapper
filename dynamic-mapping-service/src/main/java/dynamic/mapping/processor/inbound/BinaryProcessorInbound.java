@@ -21,30 +21,28 @@
 
 package dynamic.mapping.processor.inbound;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import static java.util.Map.entry;
+
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.processor.model.PayloadWrapper;
-import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.codec.binary.Hex;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 //@Service
-public class GenericBinaryProcessorInbound extends JSONProcessorInbound {
+public class BinaryProcessorInbound extends JSONProcessorInbound {
 
-    public GenericBinaryProcessorInbound(ConfigurationRegistry configurationRegistry) {
+    public BinaryProcessorInbound(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(Mapping mapping, ConnectorMessage message)
+    public Object deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
-        JsonNode payloadJsonNode = objectMapper
-                .valueToTree(new PayloadWrapper("0x" + Hex.encodeHexString(message.getPayload())));
-        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
-        context.setPayload(payloadJsonNode);
-        return context;
+        Object payloadObjectNode = new HashMap<>(Map.ofEntries(entry("message", "0x" + Hex.encodeHexString(message.getPayload()))));
+        return payloadObjectNode;
     }
 }

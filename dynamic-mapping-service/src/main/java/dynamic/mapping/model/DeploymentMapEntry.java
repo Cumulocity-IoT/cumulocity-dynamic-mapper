@@ -24,6 +24,7 @@ package dynamic.mapping.model;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import dynamic.mapping.configuration.ConnectorConfiguration;
 
 import jakarta.validation.constraints.NotNull;
 
@@ -34,13 +35,13 @@ import java.util.ArrayList;
 @Setter
 @NoArgsConstructor
 public class DeploymentMapEntry implements Serializable {
-    public DeploymentMapEntry(String identifier) {
-        this.identifier = identifier;
-        this.connectors = new ArrayList<>();
-    }
+	public DeploymentMapEntry(String identifier) {
+		this.identifier = identifier;
+		this.connectors = new ArrayList<>();
+	}
 
-    @NotNull
-    public String identifier;
-    @NotNull
-    public ArrayList<String> connectors;
+	@NotNull
+	public String identifier;
+	@NotNull
+	public ArrayList<ConnectorConfiguration> connectors;
 }

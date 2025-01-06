@@ -23,38 +23,37 @@
   <h1 c8yIcon="c8y-data-explorer"></h1>
   <h4>Explore snooped templates</h4>
 </div>
-<c8y-modal
-  [labels]="labels"
-  (onClose)="onResetSnoop($event)"
-  (onDismiss)="onCancel($event)"
->
+<c8y-modal [customFooter]="true" [labels]="labels" #modal>
   <div class="p-b-24 p-l-24 p-r-24">
     <div class="form-group">
       <div class="c8y-select-wrapper" style="width: 50%">
-        <select
-          class="form-control"
-          (change)="onSelectSnoopedTemplate($event.target.value)"
-          [disabled]="mapping.snoopedTemplates?.length === 0"
-        >
-          <option
-            [value]="i"
-            *ngFor="
+        <select class="form-control" (change)="onSelectSnoopedTemplate($event.target.value)"
+          [disabled]="mapping.snoopedTemplates?.length === 0">
+          <option [value]="i" *ngFor="
               let t of [].constructor(mapping.snoopedTemplates?.length);
               let i = index
-            "
-          >
+            ">
             {{ 'Template - ' + (i + 1) }}
           </option>
         </select>
       </div>
       <div class="p-t-16">
         <label>Template</label>
-        <d11r-mapping-json-editor2
-          [options]="editorOptionsGeneral"
-          [class]="'jse-main-small'"
-          [data]="template" #editorGeneral
-        ></d11r-mapping-json-editor2>
+        <d11r-mapping-json-editor2 [options]="editorOptionsGeneral" [class]="'jse-main-small'" [data]="template"
+          #editorGeneral></d11r-mapping-json-editor2>
       </div>
     </div>
+  </div>
+  <div class="modal-footer" c8y-modal-footer-custom>
+    <button class="btn btn-default" (click)="onCancel()">
+      {{ 'Cancel' }}
+    </button>
+    <button class="btn btn-primary" (click)="onResetSnoop()"
+      [disabled]="mapping.snoopedTemplates?.length === 0 || pending" [ngClass]="{ 'btn-pending': pending }">
+      {{ 'Delete templates' }}
+    </button>
+    <button class="btn btn-primary" (click)="onUpdateSourceTemplate()" [ngClass]="{ 'btn-pending': pending }">
+      {{ 'Set as source template' }}
+    </button>
   </div>
 </c8y-modal>

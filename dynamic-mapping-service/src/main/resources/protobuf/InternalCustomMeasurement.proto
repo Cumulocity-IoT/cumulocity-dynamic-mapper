@@ -2,9 +2,9 @@ syntax = "proto3";
 package processor.protobuf;
 
 option java_package = "dynamic.mapping.processor.processor.fixed";
-option java_outer_classname = "StaticCustomMeasurementOuter";
+option java_outer_classname = "InternalCustomMeasurementOuter";
 
-message StaticCustomMeasurement {
+message InternalCustomMeasurement {
   int64 timestamp = 1;
   float value = 2;
   string unit = 3;

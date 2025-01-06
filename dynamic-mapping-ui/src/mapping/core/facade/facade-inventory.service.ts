@@ -19,8 +19,8 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import { IManagedObject, InventoryService, IResult } from '@c8y/client';
-import { ProcessingContext } from '../../processor/processor.model';
+import { IdReference, IManagedObject, InventoryService, IResult } from '@c8y/client';
+import { ProcessingContext } from '../processor/processor.model';
 import { MockInventoryService } from '../mock/mock-inventory.service';
 
 @Injectable({ providedIn: 'root' })
@@ -29,10 +29,21 @@ export class FacadeInventoryService {
   constructor(
     private mockInventory: MockInventoryService,
     private inventory: InventoryService
-  ) {}
+  ) { }
 
   initializeCache(): void {
     this.mockInventory.initializeCache();
+  }
+
+  detail(
+    managedObjectOrId: IdReference,
+    context: ProcessingContext
+  ): Promise<IResult<IManagedObject>> {
+    if (context.sendPayload) {
+      return this.inventory.detail(managedObjectOrId);
+    } else {
+      return this.mockInventory.detail(managedObjectOrId);
+    }
   }
 
   update(
@@ -53,6 +64,11 @@ export class FacadeInventoryService {
     if (context.sendPayload) {
       return this.inventory.create(managedObject);
     } else {
+      // We force the creation of a device with a given id. 
+      // This is required to keep the source.id and deviceId consistent, across request.
+      // E.g. an alarm with a c8ySourceId = '102030' is tested in the UI, then we need 
+      // to create a device with that given id = '102030'
+      managedObject.id = context.sourceId;
       return this.mockInventory.create(managedObject);
     }
   }

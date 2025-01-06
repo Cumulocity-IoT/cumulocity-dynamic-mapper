@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
+@RequestMapping("/subscription")
 @RestController
 public class DeviceSubscriptionController {
 
@@ -38,8 +39,9 @@ public class DeviceSubscriptionController {
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
 
-    @RequestMapping(value = "/subscription", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<C8YNotificationSubscription> subscriptionCreate(@Valid @RequestBody C8YNotificationSubscription subscription) {
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<C8YNotificationSubscription> subscriptionCreate(
+            @Valid @RequestBody C8YNotificationSubscription subscription) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         if (!serviceConfiguration.isOutboundMappingEnabled())
@@ -51,17 +53,21 @@ public class DeviceSubscriptionController {
                 ManagedObjectRepresentation mor = c8yAgent
                         .getManagedObjectForId(contextService.getContext().getTenant(), managedObject.getId());
                 if (mor != null) {
-                    allChildDevices = configurationRegistry.getNotificationSubscriber().findAllRelatedDevicesByMO(mor, allChildDevices, false);
+                    allChildDevices = configurationRegistry.getNotificationSubscriber().findAllRelatedDevicesByMO(mor,
+                            allChildDevices, false);
                 } else {
                     log.warn("Tenant {} - Could not subscribe device with id {}. Device does not exists!", tenant,
                             managedObject.getId());
                 }
             }
-            for (Device device : allChildDevices) {
-                ManagedObjectRepresentation childDeviceMor = c8yAgent
-                        .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
-                // Creates subscription for each connector
-                configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor, subscription.getApi());
+            if (allChildDevices != null) {
+                for (Device device : allChildDevices) {
+                    ManagedObjectRepresentation childDeviceMor = c8yAgent
+                            .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
+                    // Creates subscription for each connector
+                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor,
+                            subscription.getApi());
+                }
             }
             subscription.setDevices(allChildDevices);
         } catch (Exception e) {
@@ -70,8 +76,9 @@ public class DeviceSubscriptionController {
         return ResponseEntity.ok(subscription);
     }
 
-    @RequestMapping(value = "/subscription", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<C8YNotificationSubscription> subscriptionUpdate(@Valid @RequestBody C8YNotificationSubscription subscription) {
+    @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<C8YNotificationSubscription> subscriptionUpdate(
+            @Valid @RequestBody C8YNotificationSubscription subscription) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         if (!serviceConfiguration.isOutboundMappingEnabled())
@@ -103,7 +110,8 @@ public class DeviceSubscriptionController {
                 if (mor != null) {
                     try {
                         // Creates subscription for each connector
-                        allChildDevices = configurationRegistry.getNotificationSubscriber().findAllRelatedDevicesByMO(mor, allChildDevices, false);
+                        allChildDevices = configurationRegistry.getNotificationSubscriber()
+                                .findAllRelatedDevicesByMO(mor, allChildDevices, false);
                     } catch (Exception e) {
                         log.error("Tenant {} - Error creating subscriptions: ", tenant, e);
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -113,11 +121,13 @@ public class DeviceSubscriptionController {
                             device.getId());
                 }
             }
-            if(allChildDevices != null) {
+            if (allChildDevices != null) {
                 for (Device childDevice : allChildDevices) {
                     // Creates subscription for each connector
-                    ManagedObjectRepresentation childDeviceMor = c8yAgent.getManagedObjectForId(tenant, childDevice.getId());
-                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor, subscription.getApi());
+                    ManagedObjectRepresentation childDeviceMor = c8yAgent.getManagedObjectForId(tenant,
+                            childDevice.getId());
+                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor,
+                            subscription.getApi());
                 }
                 subscription.setDevices(allChildDevices);
             }
@@ -144,7 +154,7 @@ public class DeviceSubscriptionController {
         return ResponseEntity.ok(subscription);
     }
 
-    @RequestMapping(value = "/subscriptions", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<C8YNotificationSubscription> subscriptionsGet(@RequestParam(required = false) String deviceId,
             @RequestParam(required = false) String subscriptionName) {
         String tenant = contextService.getContext().getTenant();
@@ -160,7 +170,7 @@ public class DeviceSubscriptionController {
         }
     }
 
-    @RequestMapping(value = "/subscription/{deviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/{deviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionDelete(@PathVariable String deviceId) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);

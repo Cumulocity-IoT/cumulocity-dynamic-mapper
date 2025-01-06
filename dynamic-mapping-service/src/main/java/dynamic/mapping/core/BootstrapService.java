@@ -18,8 +18,8 @@ import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
-import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
-import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
+import dynamic.mapping.processor.inbound.DispatcherInbound;
+import dynamic.mapping.processor.outbound.DispatcherOutbound;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -220,7 +220,7 @@ public class BootstrapService {
 			}
 			connectorRegistry.registerClient(tenant, connectorClient);
 			// initialize AsynchronousDispatcherInbound
-			AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry,
+			DispatcherInbound dispatcherInbound = new DispatcherInbound(configurationRegistry,
 					connectorClient);
 			configurationRegistry.initializePayloadProcessorsInbound(tenant);
 			connectorClient.setDispatcher(dispatcherInbound);
@@ -236,7 +236,7 @@ public class BootstrapService {
 		if (serviceConfiguration.isOutboundMappingEnabled()) {
 			// initialize AsynchronousDispatcherOutbound
 			configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
-			AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(
+			DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
 					configurationRegistry, connectorClient);
 			// Only initialize Connectors which are enabled
 			if (connectorClient.getConnectorConfiguration().isEnabled())

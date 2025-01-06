@@ -19,10 +19,10 @@
  * @authors Christof Strack
  */
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { MappingTreeService } from './tree.service';
-import { JsonEditorComponent } from '../shared';
 import { ActivatedRoute } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
+import { JsonEditorComponent } from '../shared';
+import { MappingTreeService } from './tree.service';
 
 @Component({
   selector: 'd11r-mapping-tree-grid',

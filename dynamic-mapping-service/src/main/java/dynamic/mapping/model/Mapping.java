@@ -21,12 +21,15 @@
 
 package dynamic.mapping.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.Builder;
+import lombok.Builder.Default;
 import dynamic.mapping.processor.model.MappingType;
 
 import jakarta.validation.constraints.NotNull;
@@ -104,30 +107,30 @@ public class Mapping implements Serializable {
     public MappingSubstitution[] substitutions;
 
     @NotNull
-    public boolean active;
+    public Boolean active;
 
     @NotNull
-    public boolean debug;
+    public Boolean debug;
 
     @NotNull
-    public boolean tested;
+    public Boolean tested;
 
     @NotNull
-    public boolean supportsMessageContext;
+    public Boolean supportsMessageContext;
 
     @NotNull
-    public boolean createNonExistingDevice;
+    public Boolean createNonExistingDevice;
 
     @NotNull
-    public boolean updateExistingDevice;
+    public Boolean updateExistingDevice;
 
     @JsonSetter(nulls = Nulls.SKIP)
     public Boolean autoAckOperation;
 
     @NotNull
-    public boolean useExternalId;
 
-    @NotNull
+    public Boolean useExternalId = false;;
+
     public String externalIdType;
 
     @NotNull
@@ -158,6 +161,34 @@ public class Mapping implements Serializable {
         return (m instanceof Mapping) && id == ((Mapping) m).id;
     }
 
+    @JsonIgnore
+    public String getGenericDeviceIdentifier() {
+        if (useExternalId && !("").equals(externalIdType)) {
+            return (Mapping.IDENTITY + ".externalId");
+        } else {
+            return (Mapping.IDENTITY + ".c8ySourceId");
+        }
+    }
+
+    @JsonIgnore
+    public Boolean definesDeviceIdentifier(
+            MappingSubstitution sub) {
+        if (Direction.INBOUND.equals(direction)) {
+            if (useExternalId && !("").equals(externalIdType)) {
+                return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
+            } else {
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
+            }
+        } else {
+            if (useExternalId && !("").equals(externalIdType)) {
+                return (Mapping.IDENTITY + ".externalId").equals(sub.pathSource);
+            } else {
+                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathSource);
+            }
+        }
+    }
+
+    @JsonIgnore
     public void addSnoopedTemplate(String payloadMessage) {
         snoopedTemplates.add(payloadMessage);
         if (snoopedTemplates.size() > SNOOP_TEMPLATES_MAX) {
@@ -168,13 +199,48 @@ public class Mapping implements Serializable {
         }
     }
 
+    @JsonIgnore
     public void sortSubstitutions() {
         MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
-                (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI, externalIdType, direction, s1))
+                (s1, s2) -> -(Boolean.valueOf(definesDeviceIdentifier(s1))
                         .compareTo(
-                                Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI, externalIdType, direction, s2)))))
+                                Boolean.valueOf(definesDeviceIdentifier(s2)))))
                 .toArray(size -> new MappingSubstitution[size]);
         substitutions = sortedSubstitutions;
+    }
+
+    /*
+     * "_IDENTITY_.externalId" => source.id
+     */
+    @JsonIgnore
+    public String transformGenericPath2C8YPath(String originalPath) {
+        // "_IDENTITY_.externalId" => source.id
+        if (getGenericDeviceIdentifier().equals(originalPath)) {
+            return targetAPI.identifier;
+        } else {
+            return originalPath;
+        }
+    }
+
+    /*
+     * source.id => "_IDENTITY_.externalId"
+     */
+    @JsonIgnore
+    public String transformC8YPath2GenericPath(String originalPath) {
+        if (targetAPI.identifier.equals(originalPath)) {
+            return getGenericDeviceIdentifier();
+        } else {
+            return originalPath;
+        }
+    }
+
+    @JsonIgnore
+    public List<String> getPathTargetForDeviceIdentifiers() {
+        List<String> pss = Arrays.stream(substitutions)
+                .filter(sub -> definesDeviceIdentifier(sub))
+                .map(sub -> sub.pathTarget)
+                .toList();
+        return pss;
     }
 
     public static String[] splitTopicIncludingSeparatorAsArray(String topic) {
@@ -197,51 +263,19 @@ public class Mapping implements Serializable {
                 Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
     }
 
-    public String getGenericDeviceIdentifier() {
-        if (externalIdType != null && !("").equals(externalIdType)) {
-            return (Mapping.IDENTITY + ".externalId");
-        } else {
-            return (Mapping.IDENTITY + ".c8ySourceId");
-        }
-    }
-
-    /*
-    * "_IDENTITY_.externalId" => source.id
-    */
-    public String transformGenericPath2C8YPath(String originalPath) {
-        // "_IDENTITY_.externalId" => source.id
-        if (getGenericDeviceIdentifier().equals(originalPath)) {
-            return targetAPI.identifier;
-        } else {
-            return originalPath;
-        }
-    }
-
-    /*
-    * source.id => "_IDENTITY_.externalId" 
-    */
-    public String transformC8YPath2GenericPath(String originalPath) {
-        if (targetAPI.identifier.equals(originalPath)) {
-            return getGenericDeviceIdentifier();
-        } else {
-            return originalPath;
-        }
-    }
-
     /*
      * only one substitution can be marked with definesIdentifier == true
      */
     static public ArrayList<ValidationError> isSubstitutionValid(Mapping mapping) {
         ArrayList<ValidationError> result = new ArrayList<ValidationError>();
         long count = Arrays.asList(mapping.substitutions).stream()
-                .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction,
-                        sub))
+                .filter(sub -> mapping.definesDeviceIdentifier(sub))
                 .count();
 
         if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
-                && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE)
-                && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE_TARGET)
-                && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)
+                && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE)
+                && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE_TARGET)
+                && !mapping.mappingType.equals(MappingType.PROTOBUF_INTERNAL)
                 && !mapping.direction.equals(Direction.OUTBOUND)) {
             if (count > 1) {
                 result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
@@ -272,7 +306,7 @@ public class Mapping implements Serializable {
         return result;
     }
 
-    static public boolean isWildcardTopic(String topic) {
+    static public Boolean isWildcardTopic(String topic) {
         var result = topic.contains(TOPIC_WILDCARD_MULTI) || topic.contains(TOPIC_WILDCARD_SINGLE);
         return result;
     }
@@ -382,8 +416,8 @@ public class Mapping implements Serializable {
             result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
         }
 
-        if (!mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION_SOURCE)
-                && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)) {
+        if (!mapping.mappingType.equals(MappingType.EXTENSION_SOURCE)
+                && !mapping.mappingType.equals(MappingType.PROTOBUF_INTERNAL)) {
             try {
                 new JSONObject(mapping.targetTemplate);
             } catch (JSONException e) {
@@ -405,15 +439,11 @@ public class Mapping implements Serializable {
         return nt;
     }
 
-    static public MappingSubstitution findDeviceIdentifier(Mapping mapping) {
-        Object[] mp = Arrays.stream(mapping.substitutions)
-                .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.externalIdType, mapping.direction,
-                        sub))
-                .toArray();
-        if (mp.length > 0) {
-            return (MappingSubstitution) mp[0];
-        } else {
-            return null;
-        }
+    static public List<MappingSubstitution> getDeviceIdentifiers(Mapping mapping) {
+        List<MappingSubstitution> mp = Arrays.stream(mapping.substitutions)
+                .filter(sub -> mapping.definesDeviceIdentifier(sub))
+                .toList();
+        return mp;
     }
+
 }

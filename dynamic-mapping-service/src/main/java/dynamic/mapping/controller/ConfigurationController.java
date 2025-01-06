@@ -43,9 +43,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -57,6 +60,7 @@ import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Feature;
 
 @Slf4j
+@RequestMapping("/configuration")
 @RestController
 public class ConfigurationController {
 
@@ -99,7 +103,7 @@ public class ConfigurationController {
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
 
-    @RequestMapping(value = "/feature", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/feature",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -112,7 +116,7 @@ public class ConfigurationController {
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/configuration/connector/specifications", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/connector/specifications",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorSpecification>> getConnectorSpecifications() {
         String tenant = contextService.getContext().getTenant();
         List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
@@ -126,7 +130,7 @@ public class ConfigurationController {
         return ResponseEntity.ok(connectorConfigurations);
     }
 
-    @RequestMapping(value = "/configuration/connector/instance", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/connector/instance",  consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createConnectorConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
@@ -150,7 +154,7 @@ public class ConfigurationController {
         }
     }
 
-    @RequestMapping(value = "/configuration/connector/instances", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/connector/instance",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(@RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details", tenant);
@@ -181,7 +185,7 @@ public class ConfigurationController {
         }
     }
 
-    @RequestMapping(value = "/configuration/connector/instance/{identifier}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/connector/instance/{identifier}",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details: {}", tenant, identifier);
@@ -210,7 +214,7 @@ public class ConfigurationController {
         }
     }
 
-    @RequestMapping(value = "/configuration/connector/instance/{identifier}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @DeleteMapping(value = "/connector/instance/{identifier}",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Delete connection instance {}", tenant, identifier);
@@ -241,7 +245,7 @@ public class ConfigurationController {
         return ResponseEntity.status(HttpStatus.OK).body(identifier);
     }
 
-    @RequestMapping(value = "/configuration/connector/instance/{identifier}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(@PathVariable String identifier,
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
@@ -288,7 +292,7 @@ public class ConfigurationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
     }
 
-    @RequestMapping(value = "/configuration/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/service",produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Get connection details", tenant);
@@ -306,7 +310,7 @@ public class ConfigurationController {
         }
     }
 
-    @RequestMapping(value = "/configuration/service", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/service", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> configureConnectionToBroker(
             @Valid @RequestBody ServiceConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();

@@ -117,9 +117,9 @@
 				<version>4.1.112.Final</version>
 			</dependency>
 			<dependency>
-				<groupId>com.ibm.jsonata4java</groupId>
-				<artifactId>JSONata4Java</artifactId>
-				<version>2.5.1</version>
+				<groupId>com.dashjoin</groupId>
+				<artifactId>jsonata</artifactId>
+				<version>0.9.8</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.commons</groupId>
@@ -130,6 +130,19 @@
 				<groupId>org.junit.jupiter</groupId>
 				<artifactId>junit-jupiter</artifactId>
 				<version>5.11.0</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-core</artifactId>
+				<version>5.11.0</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-junit-jupiter</artifactId>
+				<version>5.11.0</version>
+				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.projectlombok</groupId>

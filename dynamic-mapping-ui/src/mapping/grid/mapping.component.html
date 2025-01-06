@@ -44,7 +44,7 @@
 </c8y-action-bar-item>
 <div class="card">
   <div class="card-block content-fullpage border-top border-bottom">
-    <c8y-data-grid #mappingGrid [title]="'Mappings' | translate" [selectable]="true" [columns]="columnsMappings"
+    <c8y-data-grid #mappingGrid [configureColumnsEnabled]="false" [title]="'Mappings' | translate" [selectable]="true" [columns]="columnsMappings"
       [bulkActionControls]="bulkActionControls" [rows]="mappingsEnriched$ | async" [pagination]="pagination"
       [actionControls]="actionControls">
       <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-rules'" [title]="'No mappings exist.' | translate" [subtitle]="

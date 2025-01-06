@@ -21,38 +21,40 @@
 
 <c8y-title translate>Monitoring</c8y-title>
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form hidden-xs">
-  <div class="form-group">
-    <label class="m-r-8" id="listLabel">
-      {{ 'Filter' | translate }}
-    </label>
-    <div class="c8y-select-wrapper">
-      <select class="form-control" style="width: 280px" [(ngModel)]="filterMappingServiceEvent.type"
-        (ngModelChange)="onFilterMappingServiceEventSelect($event)" name="type">
-        <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
-          <option [ngValue]="lt.key">
-            {{ lt.key | formatStringAsWords }}
-          </option>
-        </ng-container>
-      </select>
-      <span></span>
+  <c8y-form-group class="p-l-12">
+    <div class="d-flex">
+      <label class="m-r-8" id="listLabel">
+        {{ 'Filter' | translate }}
+      </label>
+      <div class="c8y-select-wrapper">
+        <select class="form-control" style="width: 280px" [(ngModel)]="filterMappingServiceEvent.type"
+          (ngModelChange)="onFilterMappingServiceEventSelect($event)" name="type">
+          <ng-container *ngFor="let lt of LoggingEventTypeMap | keyvalue">
+            <option [ngValue]="lt.key">
+              {{ lt.key | formatStringAsWords:1 }}
+            </option>
+          </ng-container>
+        </select>
+        <span></span>
+      </div>
     </div>
-  </div>
-  <div class="form-group datepicker">
-    <c8y-form-group>
+  </c8y-form-group>
+  <c8y-form-group>
+    <div class="d-flex">
       <label [for]="'fromPicker'" class="control-label">
         {{ 'From' | translate }}
       </label>
       <input [name]="'fromPicker'" [id]="'fromPicker'" [(ngModel)]="filterMappingServiceEvent.dateFrom"
         (ngModelChange)="onDateFromChange($event)" class="form-control" [attr.aria-label]="'Date from' | translate"
-        placeholder="{{ 'Date from' | translate }}" [bsConfig]="{ 
-          dateInputFormat: 'YYYY-MM-DD',
-          customTodayClass: 'today', 
-          adaptivePosition: true 
-        }" bsDatepicker />
-    </c8y-form-group>
-  </div>
-  <div class="form-group datepicker">
-    <c8y-form-group>
+        placeholder="{{ 'Date from' | translate }}" [bsConfig]="{
+            dateInputFormat: 'YYYY-MM-DD',
+            customTodayClass: 'today',
+            adaptivePosition: true
+          }" bsDatepicker />
+    </div>
+  </c8y-form-group>
+  <c8y-form-group>
+    <div class="d-flex">
       <label [for]="'toPicker'" class="control-label">
         {{ 'To' | translate }}
       </label>
@@ -63,10 +65,10 @@
           customTodayClass: 'today', 
           adaptivePosition: true 
         }" bsDatepicker />
-    </c8y-form-group>
-  </div>
+    </div>
+  </c8y-form-group>
 </c8y-action-bar-item>
-<!-- <div class="d-flex d-col bg-inherit content-fullpage bg-gray-white">
+<div class="elevation-sm p-24">
   <div class="card-header large-padding separator sticky-top">
     <span class="card-title" translate>
       Mapping service events
@@ -74,75 +76,49 @@
   </div>
   <div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
     <div class="d-flex">
-      <div class="c8y-list--timeline__item__date">
-        <p class="m-0 text-medium text-truncate" title="Date">
-          Date
-        </p>
+      <div class="c8y-list--timeline__item__date a-s-center">
+        <label>{{ 'Date' | translate }}</label>
       </div>
-
       <div class="c8y-list__item__block flex-grow">
         <div class="c8y-list__item__body">
-          <div class="d-flex">
+          <div class="d-flex m-r-48">
             <div class="col-md-2">Event type</div>
-            <div class="col-md-2">Connector</div>
-            <div class="col-md-8">Message</div>
+            <div class="col-md-3">Connector</div>
+            <div class="col-md-7">Message</div>
           </div>
         </div>
       </div>
     </div>
-
   </div>
-</div> -->
 
-<div class="card-header large-padding separator sticky-top">
-  <span class="card-title" translate>
-    Mapping service events
-  </span>
+  <c8y-list-group>
+    <c8y-li-timeline *c8yFor="let event of events$| async; loadMore: 'auto'; let i = index">
+      {{ event.time | c8yDate: 'MMM d, y, h:mm:ss a' }}
+      <c8y-li #li [collapsed]="true">
+        <c8y-li-body>
+          <div class="d-flex">
+            <div class="col-md-2">
+              <span class="text-10 label label-primary">
+                {{ event.type }}
+              </span>
+            </div>
+            <div class="col-md-3">
+              <span class="text-10 label label-primary">
+                {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : ''
+                }}
+              </span>
+            </div>
+            <div class="col-md-7">
+              <span>
+                {{ event.text }}
+              </span>
+            </div>
+          </div>
+        </c8y-li-body>
+        <c8y-li-collapse>
+          <small>{{event | filterJson:['self', 'source', 'creationTime', 'lastUpdated']:true | json}}</small>
+        </c8y-li-collapse>
+      </c8y-li>
+    </c8y-li-timeline>
+  </c8y-list-group>
 </div>
-<div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
-  <div class="d-flex">
-    <div class="c8y-list--timeline__item__date a-s-center">
-      <label>{{ 'Date' | translate }}</label>
-    </div>
-    <div class="c8y-list__item__block flex-grow">
-      <div class="c8y-list__item__body">
-        <div class="d-flex m-r-48">
-          <div class="col-md-2">Event type</div>
-          <div class="col-md-3">Connector</div>
-          <div class="col-md-7">Message</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<c8y-list-group>
-  <c8y-li-timeline *c8yFor="let event of events$| async; loadMore: 'auto'; let i = index">
-    {{ event.time | c8yDate: 'MMM d, y, h:mm:ss a' }}
-    <c8y-li #li [collapsed]="true">
-      <c8y-li-body>
-        <div class="d-flex">
-          <div class="col-md-2">
-            <span class="text-10 label label-primary">
-              {{ event.type }}
-            </span>
-          </div>
-          <div class="col-md-3">
-            <span class="text-10 label label-primary">
-              {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : ''
-              }}
-            </span>
-          </div>
-          <div class="col-md-7">
-            <span>
-              {{ event.text }}
-            </span>
-          </div>
-        </div>
-      </c8y-li-body>
-      <c8y-li-collapse>
-       <small>{{event | filterJson:['self', 'source', 'creationTime', 'lastUpdated']:true |  json}}</small> 
-      </c8y-li-collapse>
-    </c8y-li>
-  </c8y-li-timeline>
-</c8y-list-group>

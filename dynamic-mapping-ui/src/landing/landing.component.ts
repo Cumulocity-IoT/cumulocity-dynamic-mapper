@@ -22,11 +22,10 @@
 
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, JsonEditorComponent } from '../shared';
+import { Direction, JsonEditorComponent, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { NODE1, NODE3 } from '../shared/mapping/util';
 
 @Component({
   selector: 'd11r-landing',

@@ -19,27 +19,30 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { CoreModule } from '@c8y/ngx-components';
+import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { PaginationModule } from 'ngx-bootstrap/pagination';
+import { WrapperCustomFormField } from './component/formly/custom-form-field-wrapper.component';
+import { FieldInputCustom } from './component/formly/input-custom.type.component';
+import { FieldTextareaCustom } from './component/formly/textarea.type.component';
 import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
-import { CheckedRendererComponent } from './connector-configuration/renderer/checked-renderer.component';
 import { ConnectorGridComponent } from './connector-configuration/connector-grid.component';
-import { ConnectorStatusRendererComponent } from './connector-configuration/renderer/connector-status.renderer.component';
 import { ConnectorConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
+import { CheckedRendererComponent } from './connector-configuration/renderer/checked-renderer.component';
+import { ConnectorDetailCellRendererComponent } from './connector-configuration/renderer/connector-link.renderer.component';
+import { ConnectorStatusRendererComponent } from './connector-configuration/renderer/connector-status.renderer.component';
+import { StatusEnabledRendererComponent } from './connector-configuration/renderer/status-enabled-renderer.component';
+import { ConnectorDetailsComponent } from './connector-details/connector-details.component';
 import { ConnectorStatusComponent } from './connector-log/connector-log.component';
 import { JsonEditorComponent } from './editor/jsoneditor.component';
 import { CamelCasePipe } from './misc/camel-case.pipe';
 import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
 import { DisableDirective } from './misc/disable.directive';
-import { FormatStringPipe } from './misc/format-string.pipe';
-import { WrapperCustomFormField } from './component/formly/custom-form-field-wrapper.component';
-import { FieldTextareaCustom } from './component/formly/textarea.type.component';
-import { FieldInputCustom } from './component/formly/input-custom.type.component';
-import { FORMLY_CONFIG } from '@ngx-formly/core';
-import { StatusEnabledRendererComponent } from './connector-configuration/renderer/status-enabled-renderer.component';
 import { FilterJsonPipe } from './misc/filter-json.pipe';
+import { FormatStringPipe } from './misc/format-string.pipe';
 
 @NgModule({
   declarations: [
@@ -53,9 +56,11 @@ import { FilterJsonPipe } from './misc/filter-json.pipe';
     DisableDirective,
     ConnectorStatusComponent,
     ConnectorGridComponent,
+    ConnectorDetailsComponent,
     ConnectorConfigurationModalComponent,
     StatusEnabledRendererComponent,
     ConnectorStatusRendererComponent,
+    ConnectorDetailCellRendererComponent,
     WrapperCustomFormField,
     FieldTextareaCustom,
     FieldInputCustom,
@@ -64,6 +69,7 @@ import { FilterJsonPipe } from './misc/filter-json.pipe';
     CoreModule,
     BsDatepickerModule,
     PaginationModule,
+    RouterModule,
     BsDropdownModule.forRoot()
   ],
   exports: [
@@ -76,6 +82,7 @@ import { FilterJsonPipe } from './misc/filter-json.pipe';
     FormatStringPipe,
     ConnectorStatusComponent,
     ConnectorGridComponent,
+    ConnectorDetailsComponent,
     ConnectorConfigurationModalComponent,
     WrapperCustomFormField,
     FieldTextareaCustom,

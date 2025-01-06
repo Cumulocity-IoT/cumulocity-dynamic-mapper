@@ -34,11 +34,11 @@ import { AlertService } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
-import { EditorMode } from '../shared/stepper-model';
+import { EditorMode } from '../shared/stepper.model';
 import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic } from '../shared/util';
-import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus} from '../../shared';
+import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -71,7 +71,8 @@ export class MappingStepPropertiesComponent
     mappingService: MappingService,
     sharedService: SharedService,
     private alertService: AlertService,
-    private configService: FormlyConfig
+    private configService: FormlyConfig,
+    private formatStringPipe: FormatStringPipe
   ) { }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -236,6 +237,10 @@ export class MappingStepPropertiesComponent
           }
         ]
       },
+      {  
+        type: 'template',
+        template: '<div class="legend form-block col-xs-12">Properties</div>'
+      },
       {
         fieldGroupClassName: 'row',
         fieldGroup: [
@@ -249,7 +254,7 @@ export class MappingStepPropertiesComponent
               options: Object.keys(API)
                 .filter((key) => key != API.ALL.name)
                 .map((key) => {
-                  return { label: key, value: key };
+                  return { label: this.formatStringPipe.transform(key), value: key };
                 }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
@@ -346,7 +351,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'QOS',
               options: Object.values(QOS).map((key) => {
-                return { label: key, value: key };
+                return { label: this.formatStringPipe.transform(key), value: key };
               }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
@@ -408,7 +413,7 @@ export class MappingStepPropertiesComponent
             wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
               switchMode: true,
-              label: 'Supports key message context',
+              label: 'Use message context',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:

@@ -32,9 +32,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -43,85 +44,88 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Extension;
+import jakarta.validation.constraints.NotBlank;
 
 @Slf4j
+@RequestMapping("/extension")
 @RestController
 public class ExtensionController {
 
-	@Autowired
-	ConnectorRegistry connectorRegistry;
+    @Autowired
+    ConnectorRegistry connectorRegistry;
 
-	@Autowired
-	MappingComponent mappingComponent;
+    @Autowired
+    MappingComponent mappingComponent;
 
-	@Autowired
-	ConnectorConfigurationComponent connectorConfigurationComponent;
+    @Autowired
+    ConnectorConfigurationComponent connectorConfigurationComponent;
 
-	@Autowired
-	ServiceConfigurationComponent serviceConfigurationComponent;
+    @Autowired
+    ServiceConfigurationComponent serviceConfigurationComponent;
 
-	@Autowired
-	BootstrapService bootstrapService;
+    @Autowired
+    BootstrapService bootstrapService;
 
-	@Autowired
-	C8YAgent c8YAgent;
+    @Autowired
+    C8YAgent c8YAgent;
 
-	@Autowired
-	private RoleService roleService;
+    @Autowired
+    private RoleService roleService;
 
-	@Autowired
-	private ContextService<UserCredentials> contextService;
+    @Autowired
+    private ContextService<UserCredentials> contextService;
 
-	@Autowired
-	private ConfigurationRegistry configurationRegistry;
+    @Autowired
+    private ConfigurationRegistry configurationRegistry;
 
-	@Value("${APP.externalExtensionsEnabled}")
-	private boolean externalExtensionsEnabled;
+    @Value("${APP.externalExtensionsEnabled}")
+    private boolean externalExtensionsEnabled;
 
-	@Value("${APP.userRolesEnabled}")
-	private Boolean userRolesEnabled;
+    @Value("${APP.userRolesEnabled}")
+    private Boolean userRolesEnabled;
 
-	@Value("${APP.mappingAdminRole}")
-	private String mappingAdminRole;
+    @Value("${APP.mappingAdminRole}")
+    private String mappingAdminRole;
 
-	@Value("${APP.mappingCreateRole}")
-	private String mappingCreateRole;
+    @Value("${APP.mappingCreateRole}")
+    private String mappingCreateRole;
 
-	@RequestMapping(value = "/extension", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
-		String tenant = contextService.getContext().getTenant();
-		Map<String, Extension> result = configurationRegistry.getC8yAgent().getProcessorExtensions(tenant);
-		return ResponseEntity.status(HttpStatus.OK).body(result);
-	}
+    @GetMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
+        String tenant = contextService.getContext().getTenant();
+        Map<String, Extension> result = configurationRegistry.getC8yAgent().getProcessorExtensions(tenant);
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
 
-	@RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Extension> getProcessorExtension(@PathVariable String extensionName) {
-		String tenant = contextService.getContext().getTenant();
-		Extension result = configurationRegistry.getC8yAgent().getProcessorExtension(tenant, extensionName);
-		if (result == null)
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-					"Extension with id " + extensionName + " could not be found.");
-		return ResponseEntity.status(HttpStatus.OK).body(result);
-	}
+    @GetMapping(value = "/{extensionName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Extension> getProcessorExtension(
+            @PathVariable @NotBlank String extensionName) {
+        String tenant = contextService.getContext().getTenant();
+        Extension result = configurationRegistry.getC8yAgent().getProcessorExtension(tenant, extensionName);
+        if (result == null)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Extension with id " + extensionName + " could not be found.");
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
 
-	@RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
-		String tenant = contextService.getContext().getTenant();
-		if (!userHasMappingAdminRole()) {
-			log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
-					tenant);
-			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-					"Insufficient Permission, user does not have required permission to access this API");
-		}
-		Extension result = configurationRegistry.getC8yAgent().deleteProcessorExtension(tenant, extensionName);
-		if (result == null)
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-					"Extension with id " + extensionName + " could not be found.");
-		return ResponseEntity.status(HttpStatus.OK).body(result);
-	}
+    @DeleteMapping(value = "/{extensionName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
+        String tenant = contextService.getContext().getTenant();
+        if (!userHasMappingAdminRole()) {
+            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+                    tenant);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Insufficient Permission, user does not have required permission to access this API");
+        }
+        Extension result = configurationRegistry.getC8yAgent().deleteProcessorExtension(tenant, extensionName);
+        if (result == null)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Extension with id " + extensionName + " could not be found.");
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
 
-	private boolean userHasMappingAdminRole() {
-		return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mappingAdminRole));
-	}
+    private boolean userHasMappingAdminRole() {
+        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mappingAdminRole));
+    }
 
 }

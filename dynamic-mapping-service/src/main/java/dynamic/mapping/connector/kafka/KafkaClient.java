@@ -49,7 +49,7 @@ import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
-import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
@@ -130,7 +130,7 @@ public class KafkaClient extends AConnectorClient {
 
 	public KafkaClient(ConfigurationRegistry configurationRegistry,
 			ConnectorConfiguration connectorConfiguration,
-			AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
+			DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
 			throws FileNotFoundException, IOException {
 		this();
 		this.configurationRegistry = configurationRegistry;
@@ -377,7 +377,7 @@ public class KafkaClient extends AConnectorClient {
 	public void publishMEAO(ProcessingContext<?> context) {
 		C8YRequest currentRequest = context.getCurrentRequest();
 		String payload = currentRequest.getRequest();
-		String key = currentRequest.getSource();
+		String key = currentRequest.getSourceId();
 		if (context.isSupportsMessageContext() && context.getKey() != null) {
 			key = new String(context.getKey());
 		}

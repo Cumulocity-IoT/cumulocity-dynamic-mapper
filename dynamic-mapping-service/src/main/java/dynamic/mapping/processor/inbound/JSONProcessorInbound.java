@@ -21,22 +21,19 @@
 
 package dynamic.mapping.processor.inbound;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+import static dynamic.mapping.model.MappingSubstitution.isArray;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import org.joda.time.DateTime;
 
-import com.api.jsonata4java.expressions.EvaluateException;
-import com.api.jsonata4java.expressions.EvaluateRuntimeException;
-import com.api.jsonata4java.expressions.Expressions;
-import com.api.jsonata4java.expressions.ParseException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import com.dashjoin.jsonata.json.Json;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
@@ -44,58 +41,38 @@ import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> {
+public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
 
     public JSONProcessorInbound(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(
+    public Object deserializePayload(
             Mapping mapping, ConnectorMessage message) throws IOException {
-        JsonNode jsonNode = objectMapper.readTree(message.getPayload());
-        ProcessingContext<JsonNode> context = new ProcessingContext<JsonNode>();
-        context.setPayload(jsonNode);
-        return context;
+        Object jsonObject = Json.parseJson(new String(message.getPayload(), "UTF-8"));
+        return jsonObject;
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
-    public void extractFromSource(ProcessingContext<JsonNode> context)
+    public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        JsonNode payloadJsonNode = context.getPayload();
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        Object payloadObject = context.getPayload();
+        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
 
-        /*
-         * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
-         * is required in the payload for a substitution
-         */
-        ArrayNode topicLevels = objectMapper.createArrayNode();
-        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-        splitTopicAsList.forEach(s -> topicLevels.add(s));
-        if (payloadJsonNode instanceof ObjectNode) {
-            ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_TOPIC_LEVEL, topicLevels);
-            if (context.isSupportsMessageContext() && context.getKey() != null) {
-                ObjectNode contextData = objectMapper.createObjectNode();
-                String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
-                contextData.put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
-                ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_CONTEXT_DATA, contextData);
-            }
-        } else {
-            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
-                    tenant);
-        }
-
-        String payload = payloadJsonNode.toPrettyString();
+        String payload = toPrettyJsonString(payloadObject);
         if (serviceConfiguration.logPayload || mapping.debug) {
             log.debug("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
                     mapping.debug, serviceConfiguration.logPayload || mapping.debug);
@@ -103,19 +80,13 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
 
         boolean substitutionTimeExists = false;
         for (MappingSubstitution substitution : mapping.substitutions) {
-            JsonNode extractedSourceContent = null;
+            Object extractedSourceContent = null;
             /*
              * step 1 extract content from inbound payload
              */
             try {
-                Expressions expr = Expressions.parse(substitution.pathSource);
-                extractedSourceContent = expr.evaluate(payloadJsonNode);
-            } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
-                        payload, e);
-            } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", tenant, substitution.pathSource,
-                        payload, e);
+                var expr = jsonata(substitution.pathSource);
+                extractedSourceContent = expr.evaluate(payloadObject);
             } catch (Exception e) {
                 log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
                         payload, e);
@@ -123,87 +94,28 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
             /*
              * step 2 analyse extracted content: textual, array
              */
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
+            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     substitution.pathTarget,
-                    new ArrayList<MappingSubstitution.SubstituteValue>());
-            if (extractedSourceContent == null) {
-                log.warn("Tenant {} - Substitution {} not in message payload. Check your mapping {}", tenant,
-                        substitution.pathSource, mapping.getMappingTopic());
-                postProcessingCacheEntry
-                        .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
-                postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
+                    new ArrayList<>());
+
+            if (extractedSourceContent != null && isArray(extractedSourceContent) && substitution.expandArray) {
+                // extracted result from sourcePayload is an array, so we potentially have to
+                // iterate over the result, e.g. creating multiple devices
+                for (Object jn : (Collection) extractedSourceContent) {
+                    MappingSubstitution.processSubstitute(tenant, processingCacheEntry, jn,
+                            substitution, mapping);
+                }
             } else {
-                if (extractedSourceContent.isArray()) {
-                    if (substitution.expandArray) {
-                        // extracted result from sourcePayload is an array, so we potentially have to
-                        // iterate over the result, e.g. creating multiple devices
-                        for (JsonNode jn : extractedSourceContent) {
-                            if (jn.isTextual()) {
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                substitution.repairStrategy));
-                            } else if (jn.isNumber()) {
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.NUMBER,
-                                                substitution.repairStrategy));
-                            } else if (jn.isArray()) {
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.ARRAY,
-                                                substitution.repairStrategy));
-                            } else {
-                                // log.warn("Tenant {} - Since result is not textual or number it is ignored:
-                                // {}", tenant
-                                // jn.asText());
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.OBJECT,
-                                                substitution.repairStrategy));
-                            }
-                        }
-                        context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
-                        postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                    } else {
-                        // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE
-                        // substitution
-                        context.addCardinality(substitution.pathTarget, 1);
-                        postProcessingCacheEntry
-                                .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                        MappingSubstitution.SubstituteValue.TYPE.ARRAY,
-                                        substitution.repairStrategy));
-                        postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                    }
-                } else if (extractedSourceContent.isTextual()) {
-                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
-                    postProcessingCacheEntry.add(
-                            new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                    MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
-                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                } else if (extractedSourceContent.isNumber()) {
-                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
-                    postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                    MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
-                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                } else {
-                    if (serviceConfiguration.logSubstitution || mapping.debug) {
-                        log.debug("Tenant {} - This substitution, involves an objects for: {}, {}", tenant,
-                                substitution.pathSource, extractedSourceContent.toString());
-                    }
-                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
-                    postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                    MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
-                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                }
-                if (serviceConfiguration.logSubstitution || mapping.debug) {
-                    log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
-                            tenant,
-                            substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
-                }
+                MappingSubstitution.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
+                        substitution, mapping);
+            }
+            processingCache.put(substitution.pathTarget, processingCacheEntry);
+            if (serviceConfiguration.logSubstitution || mapping.debug) {
+                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                        tenant,
+                        substitution.pathSource,
+                        extractedSourceContent == null ? null : extractedSourceContent.toString(),
+                        substitution.pathTarget);
             }
 
             if (substitution.pathTarget.equals(Mapping.TIME)) {
@@ -213,33 +125,27 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
 
         // no substitution for the time property exists, then use the system time
         if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
+            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     Mapping.TIME,
-                    new ArrayList<MappingSubstitution.SubstituteValue>());
-            postProcessingCacheEntry.add(
-                    new MappingSubstitution.SubstituteValue(new TextNode(new DateTime().toString()),
-                            MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT));
-            postProcessingCache.put(Mapping.TIME, postProcessingCacheEntry);
+                    new ArrayList<>());
+            processingCacheEntry.add(
+                    new MappingSubstitution.SubstituteValue(new DateTime().toString(),
+                            TYPE.TEXTUAL, RepairStrategy.DEFAULT));
+            processingCache.put(Mapping.TIME, processingCacheEntry);
         }
     }
 
     @Override
-    public void applyFilter(ProcessingContext<JsonNode> context) {
+    public void applyFilter(ProcessingContext<Object> context) {
         String tenant = context.getTenant();
         String mappingFilter = context.getMapping().getFilterMapping();
         if (mappingFilter != null && !("").equals(mappingFilter)) {
-            JsonNode payloadJsonNode = context.getPayload();
-            String payload = payloadJsonNode.toPrettyString();
+            Object payloadObjectNode = context.getPayload();
+            String payload = toPrettyJsonString(payloadObjectNode);
             try {
-                Expressions expr = Expressions.parse(mappingFilter);
-                JsonNode extractedSourceContent = expr.evaluate(payloadJsonNode);
+                var expr = jsonata(mappingFilter);
+                Object extractedSourceContent = expr.evaluate(payloadObjectNode);
                 context.setIgnoreFurtherProcessing(!isNodeTrue(extractedSourceContent));
-            } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
-                        payload, e);
-            } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", tenant, mappingFilter,
-                        payload, e);
             } catch (Exception e) {
                 log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
                         payload, e);
@@ -247,15 +153,15 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
         }
     }
 
-    private boolean isNodeTrue(JsonNode node) {
+    private boolean isNodeTrue(Object node) {
         // Case 1: Direct boolean value check
-        if (node.isBoolean()) {
-            return node.booleanValue();
+        if (node instanceof Boolean) {
+            return (Boolean) node;
         }
 
         // Case 2: String value that can be converted to boolean
-        if (node.isTextual()) {
-            String text = node.textValue().trim().toLowerCase();
+        if (node instanceof String) {
+            String text = ((String) node).trim().toLowerCase();
             return "true".equals(text) || "1".equals(text) || "yes".equals(text);
             // Add more string variations if needed
         }

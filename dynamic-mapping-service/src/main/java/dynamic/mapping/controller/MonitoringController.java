@@ -44,9 +44,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
@@ -55,6 +55,7 @@ import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.MappingStatus;
 
 @Slf4j
+@RequestMapping("/monitoring")
 @RestController
 public class MonitoringController {
 
@@ -91,7 +92,7 @@ public class MonitoringController {
 	@Value("${APP.mappingCreateRole}")
 	private String mappingCreateRole;
 
-	@RequestMapping(value = "/monitoring/status/connector/{connectorIdentifier}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/status/connector/{connectorIdentifier}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ConnectorStatusEvent> getConnectorStatus(@PathVariable @NotNull String connectorIdentifier) {
 		try {
 			String tenant = contextService.getContext().getTenant();
@@ -105,7 +106,7 @@ public class MonitoringController {
 		}
 	}
 
-	@RequestMapping(value = "/monitoring/status/connectors", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/status/connectors", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, ConnectorStatusEvent>> getConnectorsStatus() {
 		Map<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
 		String tenant = contextService.getContext().getTenant();
@@ -133,7 +134,7 @@ public class MonitoringController {
 		}
 	}
 
-	@RequestMapping(value = "/monitoring/status/mapping/statistic", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/status/mapping/statistic", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<MappingStatus>> getMappingStatus() {
 		String tenant = contextService.getContext().getTenant();
 		List<MappingStatus> ms = mappingComponent.getMappingStatus(tenant);
@@ -141,7 +142,7 @@ public class MonitoringController {
 		return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	}
 
-    // @RequestMapping(value = "/monitoring/status/mapping/error", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    // @RequestMapping(value = "/status/mapping/error", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	// public ResponseEntity<List<MappingStatus>> getMappingLoadingError() {
 	// 	String tenant = contextService.getContext().getTenant();
 	// 	List<MappingStatus> ms = mappingComponent.getMappingLoadingError(tenant);
@@ -149,7 +150,7 @@ public class MonitoringController {
 	// 	return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	// }
 
-	@RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/tree", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
 		String tenant = contextService.getContext().getTenant();
 		MappingTreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
@@ -157,7 +158,7 @@ public class MonitoringController {
 		return ResponseEntity.status(HttpStatus.OK).body(result);
 	}
 
-	@RequestMapping(value = "/monitoring/subscription/{connectorIdentifier}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/subscription/{connectorIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(@PathVariable @NotNull String connectorIdentifier) {
 		String tenant = contextService.getContext().getTenant();
 		AConnectorClient client = null;

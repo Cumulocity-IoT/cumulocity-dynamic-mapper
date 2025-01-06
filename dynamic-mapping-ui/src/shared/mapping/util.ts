@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { API, Direction, Mapping, MappingType } from './shared.model';
+import { API, Direction, Mapping, MappingType } from './mapping.model';
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -34,8 +34,8 @@ export const SAMPLE_TEMPLATES_C8Y = {
     "severity": "MAJOR",
     "status": "ACTIVE",
     "text": "This is a new test alarm!",
-    "time": "2022-08-05T00:14:49.389+02:00"
-    "type": "c8y_TestAlarm",
+    "time": "2022-08-05T00:14:49.389+02:00",
+    "type": "c8y_TestAlarm"
   }`,
   EVENT: `{ 
     "text": "This is a new test event.",
@@ -88,7 +88,7 @@ export const SAMPLE_TEMPLATES_EXTERNAL = {
   }`,
   FLAT_FILE:
     '{"message":"165, 14.5, \\"2022-08-06T00:14:50.000+02:00\\",\\"c8y_FuelMeasurement\\""}',
-  GENERIC_BINARY:
+  BINARY:
     '{"message":"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 "}'
 };
 
@@ -327,12 +327,12 @@ export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
 export const PATH_MAPPING_TREE_ENDPOINT = 'monitoring/tree';
 export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = 'monitoring/tree';
 export const PATH_STATUS_CONNECTORS_ENDPOINT = 'monitoring/status/connectors';
-export const PATH_FEATURE_ENDPOINT = 'feature';
+export const PATH_FEATURE_ENDPOINT = 'configuration/feature';
 export const PATH_EXTENSION_ENDPOINT = 'extension';
 export const PATH_SUBSCRIPTION_ENDPOINT = 'subscription';
 export const PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT = 'deployment/effective';
 export const PATH_DEPLOYMENT_DEFINED_ENDPOINT = 'deployment/defined';
-export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscriptions';
+export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscription';
 export const PATH_MAPPING_ENDPOINT = 'mapping';
 
 export const AGENT_ID = 'd11r_mappingService';
@@ -341,7 +341,7 @@ export const COLOR_HIGHLIGHTED: string = 'lightgrey';
 export function getExternalTemplate(mapping: Mapping): any {
   if (
     mapping.mappingType == MappingType.FLAT_FILE ||
-    mapping.mappingType == MappingType.GENERIC_BINARY
+    mapping.mappingType == MappingType.BINARY
   ) {
     return SAMPLE_TEMPLATES_EXTERNAL[mapping.mappingType];
   } else {
@@ -366,33 +366,12 @@ export function getSchema(
       return SCHEMA_MEASUREMENT;
     } else if (targetAPI == API.INVENTORY.name) {
       if (isTarget) return SCHEMA_C8Y_INVENTORY;
-       else return SCHEMA_INVENTORY
+      else return SCHEMA_INVENTORY
     } else {
       return SCHEMA_OPERATION;
     }
   } else {
     return SCHEMA_PAYLOAD;
-  }
-}
-
-export function whatIsIt(object) {
-  const stringConstructor = 'test'.constructor;
-  const arrayConstructor = [].constructor;
-  const objectConstructor = {}.constructor;
-  if (object === null) {
-    return 'null';
-  } else if (object === undefined) {
-    return 'undefined';
-  } else if (object.constructor === stringConstructor) {
-    return 'String';
-  } else if (object.constructor === arrayConstructor) {
-    return 'Array';
-  } else if (object.constructor === objectConstructor) {
-    return 'Object';
-  } else if (typeof object === 'number') {
-    return 'number';
-  } else {
-    return "don't know";
   }
 }
 

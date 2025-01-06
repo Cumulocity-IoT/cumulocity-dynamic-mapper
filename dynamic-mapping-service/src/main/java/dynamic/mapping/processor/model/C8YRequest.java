@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 public class C8YRequest {
     private int predecessor = -1;;
     private RequestMethod method;
-    private String source;
+    private String sourceId;
     private String externalIdType;
     private String request;
     private String response;
