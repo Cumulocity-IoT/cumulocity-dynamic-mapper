@@ -141,8 +141,8 @@ public abstract class AConnectorClient {
 
     protected ConfigurationRegistry configurationRegistry;
 
-    @Getter
-    protected ExecutorService cachedThreadPool;
+	@Getter
+	protected ExecutorService virtThreadPool;
 
     private Future<?> connectTask;
     private ScheduledExecutorService housekeepingExecutor = Executors
@@ -254,7 +254,7 @@ public abstract class AConnectorClient {
     public void submitInitialize() {
         if (initializeTask == null || initializeTask.isDone()) {
             log.debug("Tenant {} - Initializing...", tenant);
-            initializeTask = cachedThreadPool.submit(this::initialize);
+            initializeTask = virtThreadPool.submit(this::initialize);
         }
     }
 
@@ -262,7 +262,7 @@ public abstract class AConnectorClient {
         loadConfiguration();
         if (connectTask == null || connectTask.isDone()) {
             log.debug("Tenant {} - Connecting...", tenant);
-            connectTask = cachedThreadPool.submit(this::connect);
+            connectTask = virtThreadPool.submit(this::connect);
         }
     }
 
@@ -270,7 +270,7 @@ public abstract class AConnectorClient {
         loadConfiguration();
         if (connectTask == null || connectTask.isDone()) {
             log.debug("Tenant {} - Disconnecting...", tenant);
-            connectTask = cachedThreadPool.submit(this::disconnect);
+            connectTask = virtThreadPool.submit(this::disconnect);
         }
     }
 
@@ -769,7 +769,7 @@ public abstract class AConnectorClient {
         if (cacheMappings == null) {
             return Optional.empty();
         }
-        
+
         return cacheMappings.values().stream()
                 .filter(m -> m.id.equals(mapping.id))
                 .findFirst();
@@ -910,7 +910,7 @@ public abstract class AConnectorClient {
      */
     protected <T> Optional<T> executeWithTimeout(Callable<T> operation, long timeout, TimeUnit unit) {
         try {
-            Future<T> future = cachedThreadPool.submit(operation);
+            Future<T> future = virtThreadPool.submit(operation);
             return Optional.ofNullable(future.get(timeout, unit));
         } catch (Exception e) {
             log.warn("Operation timed out or failed: {}", e.getMessage());

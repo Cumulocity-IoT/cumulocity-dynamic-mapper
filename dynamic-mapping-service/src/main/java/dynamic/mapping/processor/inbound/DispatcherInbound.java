@@ -74,16 +74,18 @@ public class DispatcherInbound implements GenericMessageCallback {
 
     private AConnectorClient connectorClient;
 
-    private ExecutorService cachedThreadPool;
+    private ExecutorService virtThreadPool;
 
     private MappingComponent mappingComponent;
 
     private ConfigurationRegistry configurationRegistry;
 
+    private Counter inboundMessageCounter;
+
     public DispatcherInbound(ConfigurationRegistry configurationRegistry,
             AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
-        this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+        this.virtThreadPool = configurationRegistry.getVirtThreadPool();
         this.mappingComponent = configurationRegistry.getMappingComponent();
         this.configurationRegistry = configurationRegistry;
     }
@@ -99,6 +101,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         Timer inboundProcessingTimer;
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
+        ExecutorService virtThreadPool;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message, AConnectorClient connectorClient) {
@@ -118,6 +121,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
+            this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 
         }
 
@@ -238,7 +242,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             return futureProcessingResult;
         }
 
-        futureProcessingResult = cachedThreadPool.submit(
+        futureProcessingResult = virtThreadPool.submit(
                 new MappingInboundTask(configurationRegistry, resolvedMappings,
                         message, connectorClient));
 

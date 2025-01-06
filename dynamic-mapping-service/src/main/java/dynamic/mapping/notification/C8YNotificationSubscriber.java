@@ -88,8 +88,8 @@ public class C8YNotificationSubscriber {
 	}
 
 	@Autowired
-	@Qualifier("cachedThreadPool")
-	private ExecutorService cachedThreadPool;
+	@Qualifier("virtThreadPool")
+	private ExecutorService virtThreadPool;
 
 	// structure: <tenant, <connectorIdentifier, asynchronousDispatcherOutbound>>
 	@Getter
@@ -285,20 +285,21 @@ public class C8YNotificationSubscriber {
 		return notificationSubscriptionRepresentation;
 	}
 
-	public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
-			ManagedObjectRepresentation mor,
-			API api) throws ExecutionException, InterruptedException {
-		/* Connect to all devices */
-		String tenant = subscriptionsService.getTenant();
-		String deviceName = mor.getName();
-		CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
-		subscriptionsService.runForTenant(tenant, () -> {
-			Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
-			NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
-			notificationFut.complete(notification);
-			if (deviceWSStatusCode.get(tenant) == null
-					|| (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) != 200)) {
-				log.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
+    public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
+            ManagedObjectRepresentation mor,
+            API api) throws ExecutionException, InterruptedException {
+        /* Connect to all devices */
+        String tenant = subscriptionsService.getTenant();
+        String deviceName = mor.getName();
+        log.info("Tenant {} - Creating new Subscription for Device {} with ID {}", tenant, deviceName,
+                mor.getId().getValue());
+
+        Callable<NotificationSubscriptionRepresentation> callableTask = () -> subscriptionsService.callForTenant(tenant, () -> {
+            Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
+            NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
+            if (deviceWSStatusCode.get(tenant) == null
+                    || (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) != 200)) {
+                log.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
 
 				try {
 					// Add Dispatcher for each Connector
@@ -331,12 +332,13 @@ public class C8YNotificationSubscriber {
 			ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant,
 					mor.getId(), null, null);
 			if (extId != null)
-				activatePushConnectivityStatus(tenant, extId.getExternalId());
-		});
-		return notificationFut;
+            activatePushConnectivityStatus(tenant, extId.getExternalId());
+            return notification;
+        });
+        return virtThreadPool.submit(callableTask);
 	}
 
-	public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDevices(
+	public Future<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDevices(
 			String deviceId,
 			String deviceSubscription) {
 		NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
@@ -352,9 +354,8 @@ public class C8YNotificationSubscriber {
 		}
 		filter = filter.byContext("mo");
 		NotificationSubscriptionFilter finalFilter = filter;
-		CompletableFuture<List<NotificationSubscriptionRepresentation>> deviceSubListFut = new CompletableFuture<>();
-		subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-			String tenant = subscriptionsService.getTenant();
+		String tenant = subscriptionsService.getTenant();
+        Callable<List<NotificationSubscriptionRepresentation>> callableTask = () -> subscriptionsService.callForTenant(tenant, () -> {
 			List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
 			Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
 					.getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
@@ -367,10 +368,9 @@ public class C8YNotificationSubscriber {
 					deviceSubList.add(notificationSubscriptionRepresentation);
 				}
 			}
-			deviceSubListFut.complete(deviceSubList);
-		});
-
-		return deviceSubListFut;
+			return deviceSubList;
+        });
+        return virtThreadPool.submit(callableTask);
 	}
 
 	public C8YNotificationSubscription getDeviceSubscriptions(String tenant, String deviceId,
@@ -622,9 +622,7 @@ public class C8YNotificationSubscriber {
 								if (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) == 401
 										|| deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
 									log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
-									subscriptionsService.runForTenant(tenant, () -> {
-										initDeviceClient();
-									});
+									initDeviceClient();
 								} else if (deviceClient.getReadyState().equals(ReadyState.CLOSING)
 										|| deviceClient.getReadyState().equals(ReadyState.CLOSED)) {
 									log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
