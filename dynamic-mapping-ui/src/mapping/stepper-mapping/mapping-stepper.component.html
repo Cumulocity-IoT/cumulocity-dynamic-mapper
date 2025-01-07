@@ -217,14 +217,11 @@
                         <div class="d-flex">
                           <label>Target Template - {{ targetSystem }}</label>
                           <span class="hidden-xs hidden-sm m-l-4">
-                            <ng-template #poptargetTemplate>The template contains the dummy field
+                            <button type="button" placement="right"
+                              popover='The template contains the dummy field
                               "_TOPIC_LEVEL_"(outbound) to map device
-                              identifiers.</ng-template>
-                            <button class="btn-clean text-primary" [popover]="poptargetTemplate"
-                              popoverTitle='Use dummy field "_TOPIC_LEVEL_"' placement="right" triggers="focus"
-                              type="button">
-                              <i c8yIcon="question-circle-o"></i>
-                            </button>
+                              identifiers.'
+                              triggers="focus" class="btn-help" aria-label="Help content"></button>
                           </span>
                         </div>
                       </div>

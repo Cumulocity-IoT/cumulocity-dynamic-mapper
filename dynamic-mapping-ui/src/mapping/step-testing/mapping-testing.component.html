@@ -105,9 +105,12 @@
     [attr.disabled]="!stepperConfiguration.allowTestTransformation || isDisabled(testingModel.results.length == 0)">
     Reset Transform
   </button>
-  <button type="button" class="btn btn-default btn-sm"
-    [attr.disabled]="!stepperConfiguration.allowTestSending || isDisabled(testingModel.results.length == 0)"
-    (click)="onSendTest()">
-    Send Test Message
-  </button>
+  <div class= "m-l-8" style="display: inline-block">
+    <button type="button" class="btn btn-default btn-sm"
+      [disabled]="disableTestSending()"
+      (click)="onSendTest()">
+      Send Test Message
+    </button>
+    <button type="button" placement="right" popover="Send Test Message is only supported for mappings that use an external id!" triggers="focus" class="btn-help" aria-label="Help content"></button>
+  </div>
 </div>

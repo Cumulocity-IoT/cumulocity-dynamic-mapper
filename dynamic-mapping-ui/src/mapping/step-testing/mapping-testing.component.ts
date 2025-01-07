@@ -350,4 +350,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.alertService.success('Testing transformation was successful.');
     }
   }
+
+  disableTestSending() : boolean {
+    return !this.stepperConfiguration.allowTestSending || this.testingModel.results.length == 0 || !this.testMapping.useExternalId;
+  }
 }
