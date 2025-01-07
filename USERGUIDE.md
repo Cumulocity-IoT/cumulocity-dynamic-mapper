@@ -119,8 +119,8 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 
 1. `JSON`: if your payload is in JSON format
 1. `FLAT_FILE`: if your payload is in a CSV format
-1. `GENERIC_BINARY`: if your payload is in HEX format
-1. `PROTOBUF_STATIC`: if your payload is a serialized protobuf message
+1. `BINARY`: if your payload is in HEX format
+1. `PROTOBUF_INTERNAL`: if your payload is a serialized protobuf message
 1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension
 
 <p align="center">
@@ -134,14 +134,14 @@ The wizard to define a mapping consists of the steps:
 
 - `JSON`
 - `FLAT_FILE`
-- `GENERIC_BINARY`
-- `PROTOBUF_STATIC`
+- `BINARY`
+- `PROTOBUF_INTERNAL`
 - `PROCESSOR_EXTENSION`
 
 ---
 
 **NOTE:**
-Payload for `FLAT_FILE` and `GENERIC_BINARY` are wrapped.
+Payload for `FLAT_FILE` and `BINARY` are wrapped.
 For example for a flat file messages:
 
 ```
@@ -204,7 +204,7 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 
 For outbound mappings the properties are slightly different. Most important are the properties:
 
-1. `filterOutbound`: The Filter Outbound can contain one fragment name to associate a
+1. `filterMapping`: The Filter Outbound can contain one fragment name to associate a
    mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is
    applied.
 2. `publishTopic`: MQTT topic to publish outbound messages to.
@@ -216,7 +216,7 @@ For outbound mappings the properties are slightly different. Most important are 
 
 For an outbound mapping to be applied two conditions have to be fulfilled:
 
-1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterOutbound`
+1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterMapping`
 2. for the device a Notification 2.0 subscription has to be created. This is done using the following dialog:
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png"  style="width: 70%;" />
@@ -298,7 +298,7 @@ In order to define a substitution (a substitution substitutes values in the targ
 3. Delete an existing substitution, by pressing the button with the red minus
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Detail_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode_Annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -313,15 +313,18 @@ To define a new substitution the following steps have to be performed:
    > required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code>. This can result in API calls that are rejected by the Cumulocity backend!
 
 1. Press the button "Add substitution". In the next modal dialog the following details can be specified: 1. Select option `Expand Array` if the result of the source expression is an array and you want to generate any of the following substitutions:
-_ `multi-device-single-value`
-_ `multi-device-multi-value`
-_ `single-device-multi-value`\
- Otherwise an extracted array is treated as a single value, see [Different type of substitutions](#different-type-of-substitutions). 1. Select option `Resolve to externalId` if you want to resolve system Cumulocity Id to externalId using externalIdType. This can only be used for OUTBOUND mappings. 1. Select a `Reapir Strategy` that determines how the mapping is applied:
-_ `DEFAULT`: Map the extracted values to the attribute addressed on right side
-_ `USE_FIRST_VALUE_OF_ARRAY`: When the left side of the mapping returns an array, only use the 1. item in the array and map this to the right side
-_ `USE_LAST_VALUE_OF_ARRAY`: When the left side of the mapping returns an array, only use the last item in the array and map this to the right side
-_ `REMOVE_IF_MISSING`: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. `airsensor: undefined`
-_ `REMOVE_IF_NULL`: When the left side of the mapping returns `null`, then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. `airsensor: undefined`
+    * `multi-device-single-value`
+    * `multi-device-multi-value`
+    * `single-device-multi-value`\
+\
+Otherwise an extracted array is treated as a single value, see [Different type of substitutions](#different-type-of-substitutions). 
+4. Select option `Resolve to externalId` if you want to resolve system Cumulocity Id to externalId using externalIdType. This can only be used for OUTBOUND mappings. 
+5. Select a `Repair Strategy` that determines how the mapping is applied:
+    * `DEFAULT`: Map the extracted values to the attribute addressed on right side
+    * `USE_FIRST_VALUE_OF_ARRAY`: When the left side of the mapping returns an array, only use the 1. item in the array and map this to the right side
+    * `USE_LAST_VALUE_OF_ARRAY`: When the left side of the mapping returns an array, only use the last item in the array and map this to the right side
+    * `REMOVE_IF_MISSING_OR_NULL`: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.g. `airsensor: undefined`
+
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Edit_Modal.png"  style="width: 70%;" />
 </p>
@@ -446,7 +449,7 @@ In order to use a previously snooped payload click the button
 `Snooped templates`. Multiples activation of this button iterates over all the recorded templates.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -501,14 +504,14 @@ When you choose the mapping type `PROCESSOR_EXTENSION` the wizard for defining y
 Using the tab `Processor Extension` you can upload your own processor extension. After the upload the mircroservice load the extensions dynamically.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionInbound.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The following guide lays out the steps to create and use a processor extension:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionSource_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
 

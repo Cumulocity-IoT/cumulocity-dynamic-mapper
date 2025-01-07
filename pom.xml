@@ -20,29 +20,29 @@
   ~ @authors Christof Strack, Stefan Witschel
   -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.softwareag.c8y.mapping</groupId>
+	<groupId>com.cumulocity.mapping</groupId>
 	<artifactId>dynamic-mapping-solution</artifactId>
 	<version>${revision}</version>
 	<packaging>pom</packaging>
 	<modules>
-		<module>dynamic-mapping-service</module>
 		<module>dynamic-mapping-interface</module>
+		<module>dynamic-mapping-service</module>
 		<module>dynamic-mapping-extension</module>
 	</modules>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>4.6.1</revision>
-		<c8y.version>1020.127.0</c8y.version>
+		<revision>4.7.0</revision>
+		<c8y.version>1020.155.0</c8y.version>
 		<lombok.version>1.18.34</lombok.version>
 		<slf4j.version>1.7.36</slf4j.version>
-		<maven.compiler.source>11</maven.compiler.source>
-		<maven.compiler.target>11</maven.compiler.target>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
+		<java.version>21</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring-boot-dependencies.version>2.7.17</spring-boot-dependencies.version>
+		<spring-boot-dependencies.version>3.3.5</spring-boot-dependencies.version>
 	</properties>
 	<repositories>
 		<repository>
@@ -60,6 +60,20 @@
 	</pluginRepositories>
 	<dependencyManagement>
 		<dependencies>
+			<dependency>
+				<groupId>io.opentelemetry.instrumentation</groupId>
+				<artifactId>opentelemetry-instrumentation-bom</artifactId>
+				<version>2.10.0</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>io.opentelemetry</groupId>
+				<artifactId>opentelemetry-bom</artifactId>
+				<version>1.45.0</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 			<dependency>
 				<groupId>com.jayway.jsonpath</groupId>
 				<artifactId>json-path</artifactId>
@@ -103,17 +117,10 @@
 				<version>4.1.112.Final</version>
 			</dependency>
 			<dependency>
-				<groupId>com.ibm.jsonata4java</groupId>
-				<artifactId>JSONata4Java</artifactId>
-				<version>2.5.1</version>
+				<groupId>com.dashjoin</groupId>
+				<artifactId>jsonata</artifactId>
+				<version>0.9.8</version>
 			</dependency>
-			<dependency>
-				<groupId>org.apache.commons</groupId>
-				<artifactId>commons-text</artifactId>
-				<version>1.12.0</version>
-			</dependency><!-- commons-text 1.11.0 requires
-            commons-lang3 3.13.0, see
-			https://stackoverflow.com/questions/53459184/java-lang-noclassdeffounderror-could-not-initialize-class-org-apache-commons-te-->
 			<dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-lang3</artifactId>
@@ -123,6 +130,19 @@
 				<groupId>org.junit.jupiter</groupId>
 				<artifactId>junit-jupiter</artifactId>
 				<version>5.11.0</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-core</artifactId>
+				<version>5.11.0</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-junit-jupiter</artifactId>
+				<version>5.11.0</version>
+				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.projectlombok</groupId>
@@ -153,20 +173,6 @@
 				<groupId>org.springframework</groupId>
 				<artifactId>spring-aspects</artifactId>
 				<version>6.1.12</version>
-			</dependency>
-			<dependency>
-				<groupId>io.opentelemetry</groupId>
-				<artifactId>opentelemetry-bom</artifactId>
-				<version>1.40.0</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>io.opentelemetry.instrumentation</groupId>
-				<artifactId>opentelemetry-instrumentation-bom</artifactId>
-				<version>2.6.0</version>
-				<type>pom</type>
-				<scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>com.github.loki4j</groupId>

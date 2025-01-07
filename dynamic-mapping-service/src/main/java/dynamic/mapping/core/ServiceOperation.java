@@ -24,7 +24,7 @@ package dynamic.mapping.core;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -34,18 +34,20 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ServiceOperation {
+
     private String tenant;
+    
     @NotNull
     private Operation operation;
-    @NotNull
+
     private Map<String, String> parameter;
 
     public static ServiceOperation reloadMappings(String tenant) {
         return new ServiceOperation(tenant, Operation.RELOAD_MAPPINGS, null);
     }   
-    public static ServiceOperation connect(String tenant, String connectorIdent) {
+    public static ServiceOperation connect(String tenant, String connectorIdentifier) {
         HashMap<String, String> params = new HashMap<>();
-        params.put("connectorIdent", connectorIdent);
+        params.put("connectorIdentifier", connectorIdentifier);
         return new ServiceOperation(tenant, Operation.CONNECT, params);
     }
     public static ServiceOperation reloadExtensions(String tenant) {

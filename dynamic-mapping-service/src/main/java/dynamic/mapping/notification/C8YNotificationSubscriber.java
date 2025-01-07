@@ -23,7 +23,6 @@ package dynamic.mapping.notification;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
-import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation;
@@ -38,9 +37,7 @@ import com.cumulocity.sdk.client.messaging.notifications.Token;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
@@ -49,7 +46,7 @@ import dynamic.mapping.model.C8YNotificationSubscription;
 import dynamic.mapping.model.Device;
 import dynamic.mapping.notification.websocket.CustomWebSocketClient;
 import dynamic.mapping.notification.websocket.NotificationCallback;
-import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
+import dynamic.mapping.processor.outbound.DispatcherOutbound;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.ArrayStack;
@@ -58,7 +55,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -92,12 +88,12 @@ public class C8YNotificationSubscriber {
 	}
 
 	@Autowired
-	@Qualifier("cachedThreadPool")
-	private ExecutorService cachedThreadPool;
+	@Qualifier("virtThreadPool")
+	private ExecutorService virtThreadPool;
 
-	// structure: <tenant, <connectorIdent, asynchronousDispatcherOutbound>>
+	// structure: <tenant, <connectorIdentifier, asynchronousDispatcherOutbound>>
 	@Getter
-	private Map<String, Map<String, AsynchronousDispatcherOutbound>> dispatcherOutboundMaps = new HashMap<>();
+	private Map<String, Map<String, DispatcherOutbound>> dispatcherOutboundMaps = new HashMap<>();
 
 	@Value("${C8Y.baseURL}")
 	private String baseUrl;
@@ -113,17 +109,17 @@ public class C8YNotificationSubscriber {
 
 	private Map<String, Map<String, Mqtt3Client>> activePushConnections = new HashMap<>();
 
-	// structure: <tenant, <connectorIdent, tokenSeed>>
+	// structure: <tenant, <connectorIdentifier, tokenSeed>>
 	private Map<String, Map<String, String>> deviceTokenPerConnector = new HashMap<>();
 
-	public void addSubscriber(String tenant, String ident, AsynchronousDispatcherOutbound dispatcherOutbound) {
-		Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
+	public void addSubscriber(String tenant, String identifier, DispatcherOutbound dispatcherOutbound) {
+		Map<String, DispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
 		if (dispatcherOutboundMap == null) {
 			dispatcherOutboundMap = new HashMap<>();
-			dispatcherOutboundMap.put(ident, dispatcherOutbound);
+			dispatcherOutboundMap.put(identifier, dispatcherOutbound);
 			getDispatcherOutboundMaps().put(tenant, dispatcherOutboundMap);
 		} else {
-			dispatcherOutboundMap.put(ident, dispatcherOutbound);
+			dispatcherOutboundMap.put(identifier, dispatcherOutbound);
 		}
 
 	}
@@ -160,7 +156,7 @@ public class C8YNotificationSubscriber {
 			try {
 				// For each dispatcher/connector create a new connection
 				if (dispatcherOutboundMaps.get(tenant) != null) {
-					for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
+					for (DispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
 							.values()) {
 						//Only connect if connector is enabled
 						if(dispatcherOutbound.getConnectorClient().getConnectorConfiguration().isEnabled()){
@@ -229,7 +225,7 @@ public class C8YNotificationSubscriber {
 				.cleanSession(true)
 				.keepAlive(60)
 				.send().thenRun(() -> {
-					log.info("Tenant {} - Successfully connected to C8Y MQTT host {} for device {}", tenant, mqttHost,
+					log.info("Tenant {} - Connected to C8Y MQTT host {} for device {}", tenant, mqttHost,
 							deviceId);
 					client.toAsync().subscribeWith().topicFilter("s/ds").qos(MqttQos.AT_LEAST_ONCE)
 							.callback(publish -> {
@@ -289,20 +285,21 @@ public class C8YNotificationSubscriber {
 		return notificationSubscriptionRepresentation;
 	}
 
-	public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
-			ManagedObjectRepresentation mor,
-			API api) throws ExecutionException, InterruptedException {
-		/* Connect to all devices */
-		String tenant = subscriptionsService.getTenant();
-		String deviceName = mor.getName();
-		CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
-		subscriptionsService.runForTenant(tenant, () -> {
-			Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
-			NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
-			notificationFut.complete(notification);
-			if (deviceWSStatusCode.get(tenant) == null
-					|| (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) != 200)) {
-				log.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
+    public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
+            ManagedObjectRepresentation mor,
+            API api) throws ExecutionException, InterruptedException {
+        /* Connect to all devices */
+        String tenant = subscriptionsService.getTenant();
+        String deviceName = mor.getName();
+        log.info("Tenant {} - Creating new Subscription for Device {} with ID {}", tenant, deviceName,
+                mor.getId().getValue());
+
+        Callable<NotificationSubscriptionRepresentation> callableTask = () -> subscriptionsService.callForTenant(tenant, () -> {
+            Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
+            NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
+            if (deviceWSStatusCode.get(tenant) == null
+                    || (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) != 200)) {
+                log.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
 
 				try {
 					// Add Dispatcher for each Connector
@@ -311,7 +308,7 @@ public class C8YNotificationSubscriber {
 								"Tenant {} - No Outbound dispatcher for any connector is registered, add a connector first!",
 								tenant);
 
-					for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
+					for (DispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
 							.values()) {
 						String tokenSeed = DEVICE_SUBSCRIBER
 								+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
@@ -335,12 +332,13 @@ public class C8YNotificationSubscriber {
 			ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant,
 					mor.getId(), null, null);
 			if (extId != null)
-				activatePushConnectivityStatus(tenant, extId.getExternalId());
-		});
-		return notificationFut;
+            activatePushConnectivityStatus(tenant, extId.getExternalId());
+            return notification;
+        });
+        return virtThreadPool.submit(callableTask);
 	}
 
-	public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDevices(
+	public Future<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDevices(
 			String deviceId,
 			String deviceSubscription) {
 		NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
@@ -356,9 +354,8 @@ public class C8YNotificationSubscriber {
 		}
 		filter = filter.byContext("mo");
 		NotificationSubscriptionFilter finalFilter = filter;
-		CompletableFuture<List<NotificationSubscriptionRepresentation>> deviceSubListFut = new CompletableFuture<>();
-		subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-			String tenant = subscriptionsService.getTenant();
+		String tenant = subscriptionsService.getTenant();
+        Callable<List<NotificationSubscriptionRepresentation>> callableTask = () -> subscriptionsService.callForTenant(tenant, () -> {
 			List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
 			Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
 					.getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
@@ -371,10 +368,9 @@ public class C8YNotificationSubscriber {
 					deviceSubList.add(notificationSubscriptionRepresentation);
 				}
 			}
-			deviceSubListFut.complete(deviceSubList);
-		});
-
-		return deviceSubListFut;
+			return deviceSubList;
+        });
+        return virtThreadPool.submit(callableTask);
 	}
 
 	public C8YNotificationSubscription getDeviceSubscriptions(String tenant, String deviceId,
@@ -462,15 +458,15 @@ public class C8YNotificationSubscriber {
 
 	}
 
-	public void unsubscribeDeviceSubscriberByConnector(String tenant, String connectorIdent) {
+	public void unsubscribeDeviceSubscriberByConnector(String tenant, String connectorIdentifier) {
 		if (deviceTokenPerConnector.get(tenant) != null) {
-			if (deviceTokenPerConnector.get(tenant).get(connectorIdent) != null) {
+			if (deviceTokenPerConnector.get(tenant).get(connectorIdentifier) != null) {
 				try {
-					tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdent)));
-					log.info("Tenant {} - Subscriber for Connector {} successfully unsubscribed for Notification 2.0!", tenant, connectorIdent);
-					deviceTokenPerConnector.get(tenant).remove(connectorIdent);
+					tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdentifier)));
+					log.info("Tenant {} - Subscriber for Connector {} successfully unsubscribed for Notification 2.0!", tenant, connectorIdentifier);
+					deviceTokenPerConnector.get(tenant).remove(connectorIdentifier);
 				} catch (SDKException e) {
-					log.error("Tenant {} - Could not unsubscribe subscriber for connector {}:", tenant, connectorIdent, e);
+					log.error("Tenant {} - Could not unsubscribe subscriber for connector {}:", tenant, connectorIdentifier, e);
 				}
 			}
 		}
@@ -501,17 +497,17 @@ public class C8YNotificationSubscriber {
 	// section 5: add, remove connectors
 	//
 
-	public void removeConnector(String tenant, String connectorIdent) {
+	public void removeConnector(String tenant, String connectorIdentifier) {
 		// Remove Dispatcher from list
 		if (this.dispatcherOutboundMaps.get(tenant) != null)
-			this.dispatcherOutboundMaps.get(tenant).remove(connectorIdent);
+			this.dispatcherOutboundMaps.get(tenant).remove(connectorIdentifier);
 		if (this.deviceClientMap.get(tenant) != null) {
 			// Test if connector was created at all and then close WS connection for
 			// connector
-			if (this.deviceClientMap.get(tenant).get(connectorIdent) != null) {
-				this.deviceClientMap.get(tenant).get(connectorIdent).close();
+			if (this.deviceClientMap.get(tenant).get(connectorIdentifier) != null) {
+				this.deviceClientMap.get(tenant).get(connectorIdentifier).close();
 				// Remove client from client Map
-				this.deviceClientMap.get(tenant).remove(connectorIdent);
+				this.deviceClientMap.get(tenant).remove(connectorIdentifier);
 			}
 		}
 		if (this.dispatcherOutboundMaps.get(tenant) != null && dispatcherOutboundMaps.get(tenant).keySet().isEmpty()) {
@@ -519,8 +515,8 @@ public class C8YNotificationSubscriber {
 		}
 	}
 
-	public void addConnector(String tenant, String connectorIdent, AsynchronousDispatcherOutbound dispatcherOutbound) {
-		Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
+	public void addConnector(String tenant, String connectorIdentifier, DispatcherOutbound dispatcherOutbound) {
+		Map<String, DispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
 		if (dispatcherOutboundMap == null) {
 			dispatcherOutboundMap = new HashMap<>();
 			getDispatcherOutboundMaps().put(tenant, dispatcherOutboundMap);
@@ -530,7 +526,7 @@ public class C8YNotificationSubscriber {
 			deviceTokens = new HashMap<>();
 			deviceTokenPerConnector.put(tenant, deviceTokens);
 		}
-		dispatcherOutboundMap.put(connectorIdent, dispatcherOutbound);
+		dispatcherOutboundMap.put(connectorIdentifier, dispatcherOutbound);
 	}
 
 	//
@@ -626,9 +622,7 @@ public class C8YNotificationSubscriber {
 								if (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) == 401
 										|| deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
 									log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
-									subscriptionsService.runForTenant(tenant, () -> {
-										initDeviceClient();
-									});
+									initDeviceClient();
 								} else if (deviceClient.getReadyState().equals(ReadyState.CLOSING)
 										|| deviceClient.getReadyState().equals(ReadyState.CLOSED)) {
 									log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);

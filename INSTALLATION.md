@@ -17,6 +17,9 @@ You need to install two components to your Cumulocity IoT Tenant:
 Both are provided as binaries in [releases](https://github.com/SoftwareAG/cumulocity-dynamic-mapper/releases).
 Download the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
 
+> **_NOTE:_**
+> The screenshots show the dynamic mapper installed as a plugin in the Cumulocity Administration app. The dynamic mapper can also be installed in other Cumulocity apps, including Cockpit or Device Management, or as a standalone application.
+
 ## Permissions
 
 The solution defines one role:`ROLE_MAPPING_ADMIN` that must be assigned to the user accessing the Dynamic Mapping app.
@@ -61,7 +64,7 @@ Now select the cloned Administration App and go to the "Plugin" Tab. Click on "I
 After successfully adding the plugin you need to refresh the Administration App by pressing F5 and you should see a new navigation entry "Dynamic Mapping"
 
 <p align="center">
- <img src="resources/image/Dynamic_Mapper_WebAppPlugin.png" style="width: 60%;" />
+ <img src="resources/image/Dynamic_Mapper_WebAppPlugin.png" style="width: 40%;" />
 </p>
 
 ##### Blueprint
@@ -77,7 +80,7 @@ Enter an application key and path and click on "Deploy".
 After successful deployment you can find the Dynamic-mapping App in the Application Switcher
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_BlueprintApp.png" style="width: 60%;" />
+<img src="resources/image/Dynamic_Mapper_BlueprintApp.png" style="width: 40%;" />
 </p>
 #### Manual
 

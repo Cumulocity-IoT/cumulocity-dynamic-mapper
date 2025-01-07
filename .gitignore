@@ -52,3 +52,4 @@ JSONata4Java/dependency-reduced-pom.xml
 dynamic-mapping-ui/node_modules_tmp/
 .vscode/launch.json
 .env
+setEnv.sh

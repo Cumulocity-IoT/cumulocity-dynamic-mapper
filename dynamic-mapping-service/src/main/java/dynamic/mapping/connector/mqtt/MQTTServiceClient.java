@@ -25,14 +25,13 @@ import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
-import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -76,19 +75,13 @@ public class MQTTServiceClient extends MQTTClient {
 		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false);
 	}
 
-	private static Random random = new Random();
-
-	private static String nextId() {
-		return "CUMULOCITY_MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
+	private static String getClientId(String identifier, String suffix) {
+		return "CUMULOCITY_MQTT_SERVICE" + identifier + suffix;
 	}
-	private static String getClientId(String ident, String suffix) {
-		return "CUMULOCITY_MQTT_SERVICE" + ident + suffix;
-	}
-	// return random.nextInt(max - min) + min;
 
 	public MQTTServiceClient(ConfigurationRegistry configurationRegistry,
 			ConnectorConfiguration connectorConfiguration,
-			AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+			DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
 		this();
 		this.configurationRegistry = configurationRegistry;
 		this.mappingComponent = configurationRegistry.getMappingComponent();
@@ -96,11 +89,11 @@ public class MQTTServiceClient extends MQTTClient {
 		this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
 		this.connectorConfiguration = connectorConfiguration;
 		// ensure the client knows its identity even if configuration is set to null
-		this.connectorIdent = connectorConfiguration.ident;
+		this.connectorIdentifier = connectorConfiguration.identifier;
 		this.connectorName = connectorConfiguration.name;
-		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
+		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.identifier);
 		this.c8yAgent = configurationRegistry.getC8yAgent();
-		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+		this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();
 		this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 		this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
@@ -115,7 +108,7 @@ public class MQTTServiceClient extends MQTTClient {
 				new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
 						msc.getPassword(), null));
 		getConnectorSpecification().getProperties().put("clientId", new ConnectorProperty(true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
-				getClientId(this.connectorIdent, this.additionalSubscriptionIdTest), null));
+				getClientId(this.connectorIdentifier, this.additionalSubscriptionIdTest), null));
 		this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE);
 	}
 

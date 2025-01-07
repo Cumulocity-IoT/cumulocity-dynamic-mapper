@@ -39,8 +39,6 @@ import {
 } from 'rxjs';
 import {
   BASE_URL,
-  MAPPING_FRAGMENT,
-  MAPPING_TYPE,
   PATH_MAPPING_ENDPOINT,
   PATH_SUBSCRIPTIONS_ENDPOINT,
   PATH_SUBSCRIPTION_ENDPOINT,
@@ -50,27 +48,26 @@ import {
   DeploymentMapEntryDetailed,
   PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT,
   MappingEnriched,
-  MAPPING_TYPE_DESCRIPTION,
-  Operation,
-  StatusEventTypes,
+  MappingTypeDescriptionMap,
   DeploymentMapEntry,
   DeploymentMap,
-  PATH_DEPLOYMENT_DEFINED_ENDPOINT
+  PATH_DEPLOYMENT_DEFINED_ENDPOINT,
+  Operation,
+  LoggingEventTypeMap,
+  LoggingEventType
 } from '../../shared';
-import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
-import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
+import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
+import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
 import {
   ProcessingContext,
   ProcessingType,
   SubstituteValue
-} from '../processor/processor.model';
+} from './processor/processor.model';
 import { C8YNotificationSubscription } from '../shared/mapping.model';
 import {
-  AlertService,
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
-import { ConnectorConfigurationService } from '../../connector';
 
 @Injectable({
   providedIn: 'root'
@@ -78,12 +75,10 @@ import { ConnectorConfigurationService } from '../../connector';
 export class MappingService {
   constructor(
     private inventory: InventoryService,
-    private brokerConnectorService: ConnectorConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
     private sharedService: SharedService,
     private client: FetchClient,
-    private alertService: AlertService
   ) {
     this.eventRealtimeService = new EventRealtimeService(
       inject(RealtimeSubjectService)
@@ -111,8 +106,10 @@ export class MappingService {
 
   async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.ACTIVATE_MAPPING,
-      parameter
+      {
+        operation: Operation.ACTIVATE_MAPPING,
+        parameter
+      }
     );
   }
 
@@ -125,22 +122,37 @@ export class MappingService {
 
   async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.DEBUG_MAPPING,
-      parameter
+      {
+        operation: Operation.DEBUG_MAPPING,
+        parameter
+      }
     );
   }
 
   async changeSnoopStatusMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.SNOOP_MAPPING,
-      parameter
+      {
+        operation: Operation.SNOOP_MAPPING,
+        parameter
+      }
     );
   }
 
   async resetSnoop(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
-      Operation.SNOOP_RESET,
-      parameter
+      {
+        operation: Operation.SNOOP_RESET,
+        parameter
+      }
+    );
+  }
+
+  async updateTemplate(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
+      {
+        operation: Operation.UPDATE_TEMPLATE,
+        parameter
+      }
     );
   }
 
@@ -181,7 +193,7 @@ export class MappingService {
     if (!data.ok) throw new Error(data.statusText)!;
     const mapEntry: string[] = await data.json();
     const result: DeploymentMapEntry = {
-      ident: mappingIdent,
+      identifier: mappingIdent,
       connectors: mapEntry
     };
     return result;
@@ -207,7 +219,7 @@ export class MappingService {
     entry: DeploymentMapEntry
   ): Promise<any> {
     const response = this.client.fetch(
-      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${entry.ident}`,
+      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${entry.identifier}`,
       {
         headers: {
           'content-type': 'application/json'
@@ -237,10 +249,10 @@ export class MappingService {
             id: m.id,
             mapping: m,
             snoopSupported:
-              MAPPING_TYPE_DESCRIPTION[m.mappingType].properties[
+              MappingTypeDescriptionMap[m.mappingType].properties[
                 Direction.INBOUND
               ].snoopSupported,
-            connectors: mappingsDeployed[m.ident]
+            connectors: mappingsDeployed[m.identifier]
           });
         });
         return mappingsEnriched;
@@ -256,11 +268,11 @@ export class MappingService {
       ),
       map(([mappings, mappingsDeployed]) => {
         const mappingsEnriched = [];
-        mappings.forEach((m) => {
+        mappings?.forEach((m) => {
           mappingsEnriched.push({
             id: m.id,
             mapping: m,
-            connectors: mappingsDeployed[m.ident]
+            connectors: mappingsDeployed[m.identifier]
           });
         });
         return mappingsEnriched;
@@ -290,33 +302,17 @@ export class MappingService {
   }
 
   async getMappings(direction: Direction): Promise<Mapping[]> {
-    const result: Mapping[] = [];
-    const filter: object = {
-      pageSize: 200,
-      withTotalPages: true
-    };
-    const query: any = {
-      __and: [{ 'd11r_mapping.direction': direction }, { type: MAPPING_TYPE }]
-    };
 
-    //   if (direction == Direction.INBOUND) {
-    //     query = this.queriesUtil.addOrFilter(query, {
-    //       __not: { __has: 'd11r_mapping.direction' }
-    //     });
-    //   }
-    //   query = this.queriesUtil.addAndFilter(query, {
-    //     type: { __has: 'd11r_mapping' }
-    //   });
-
-    const { data } = await this.inventory.listQuery(query, filter);
-
-    data.forEach((m) =>
-      result.push({
-        ...m[MAPPING_FRAGMENT],
-        id: m.id
-      })
+    const path = direction ? `${BASE_URL}/${PATH_MAPPING_ENDPOINT}?direction=${direction}` : `${BASE_URL}/${PATH_MAPPING_ENDPOINT}`;
+    const response = await this.client.fetch(path,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
     );
-
+    const result: Mapping[] = await response.json();
     return result;
   }
 
@@ -451,9 +447,8 @@ export class MappingService {
     return m;
   }
 
-  private initializeContext(
+  public initializeContext(
     mapping: Mapping,
-    sendPayload: boolean
   ): ProcessingContext {
     const ctx: ProcessingContext = {
       mapping: mapping,
@@ -462,27 +457,29 @@ export class MappingService {
           ? mapping.mappingTopicSample
           : mapping.publishTopicSample,
       processingType: ProcessingType.UNDEFINED,
-      cardinality: new Map<string, number>(),
       errors: [],
       mappingType: mapping.mappingType,
-      postProcessingCache: new Map<string, SubstituteValue[]>(),
-      sendPayload: sendPayload,
+      processingCache: new Map<string, SubstituteValue[]>(),
+      sendPayload: false,
       requests: []
     };
+    // since the Cumulocity identifiers are not included in the sourceTemplate, we add them for local testing
     return ctx;
   }
 
   async testResult(
-    mapping: Mapping,
-    sendPayload: boolean
+    context: ProcessingContext,
+    message: any
   ): Promise<ProcessingContext> {
-    const context = this.initializeContext(mapping, sendPayload);
+    const { mapping } = context;
     if (mapping.direction == Direction.INBOUND) {
-      this.jsonProcessorInbound.deserializePayload(context, mapping);
+      this.jsonProcessorInbound.deserializePayload(mapping, message, context);
+      this.jsonProcessorInbound.enrichPayload(context);
       await this.jsonProcessorInbound.extractFromSource(context);
+      this.jsonProcessorInbound.validateProcessingCache(context);
       await this.jsonProcessorInbound.substituteInTargetAndSend(context);
     } else {
-      this.jsonProcessorOutbound.deserializePayload(context, mapping);
+      this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
       await this.jsonProcessorOutbound.extractFromSource(context);
       await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
     }
@@ -531,7 +528,7 @@ export class MappingService {
         filter(
           (payload) =>
             payload['type'] ==
-            StatusEventTypes.STATUS_MAPPING_CHANGED_EVENT_TYPE
+            LoggingEventTypeMap[LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE].type
         )
       )
       .subscribe(() => {

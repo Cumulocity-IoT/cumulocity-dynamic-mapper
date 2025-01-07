@@ -20,8 +20,9 @@
  */
 import { Injectable } from '@angular/core';
 import { IEvent, IResult, EventService, IFetchResponse } from '@c8y/client';
-import { ProcessingContext } from '../../processor/processor.model';
+import { ProcessingContext } from '../processor/processor.model';
 import { HttpStatusCode } from '@angular/common/http';
+import { randomIdAsString } from '../../../mapping/shared/util';
 
 @Injectable({ providedIn: 'root' })
 export class FacadeEventService {
@@ -33,7 +34,7 @@ export class FacadeEventService {
     } else {
       const copyEvent = {
         ...event,
-        id: Math.floor(100000 + Math.random() * 900000).toString(),
+        id: randomIdAsString(),
         lastUpdated: new Date().toISOString()
       };
       const promise = Promise.resolve({

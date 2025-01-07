@@ -19,68 +19,100 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { CoreModule } from '@c8y/ngx-components';
-import { JsonEditor2Component } from './editor2/jsoneditor2.component';
+import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
-import { PaginationModule } from 'ngx-bootstrap/pagination';
-import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
-import { CamelCasePipe } from './camel-case.pipe';
-import { CapitalizeCasePipe } from './capitazilze-case.pipe';
-import { DisableDirective } from './disable.directive';
-import { ConnectorStatusComponent } from './connector-log/connector-status.component';
-import { ConnectorConfigurationComponent } from './connector-configuration/connector-grid.component';
-import { ConfigurationConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
-import { ConnectorStatusRendererComponent } from './connector-configuration/connector-status.renderer.component';
-import { CheckedRendererComponent } from './connector-configuration/checked-renderer.component';
+import { PaginationModule } from 'ngx-bootstrap/pagination';
+import { WrapperCustomFormField } from './component/formly/custom-form-field-wrapper.component';
+import { FieldInputCustom } from './component/formly/input-custom.type.component';
+import { FieldTextareaCustom } from './component/formly/textarea.type.component';
+import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
+import { ConnectorGridComponent } from './connector-configuration/connector-grid.component';
+import { ConnectorConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
+import { CheckedRendererComponent } from './connector-configuration/renderer/checked-renderer.component';
+import { ConnectorDetailCellRendererComponent } from './connector-configuration/renderer/connector-link.renderer.component';
+import { ConnectorStatusRendererComponent } from './connector-configuration/renderer/connector-status.renderer.component';
+import { StatusEnabledRendererComponent } from './connector-configuration/renderer/status-enabled-renderer.component';
+import { ConnectorDetailsComponent } from './connector-details/connector-details.component';
+import { ConnectorStatusComponent } from './connector-log/connector-log.component';
+import { JsonEditorComponent } from './editor/jsoneditor.component';
+import { CamelCasePipe } from './misc/camel-case.pipe';
+import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
+import { DisableDirective } from './misc/disable.directive';
+import { FilterJsonPipe } from './misc/filter-json.pipe';
+import { FormatStringPipe } from './misc/format-string.pipe';
 
 @NgModule({
   declarations: [
     CheckedRendererComponent,
-    JsonEditor2Component,
+    JsonEditorComponent,
     ConfirmationModalComponent,
     CamelCasePipe,
+    FilterJsonPipe,
     CapitalizeCasePipe,
+    FormatStringPipe,
     DisableDirective,
     ConnectorStatusComponent,
-    ConnectorConfigurationComponent,
-    ConfigurationConfigurationModalComponent,
+    ConnectorGridComponent,
+    ConnectorDetailsComponent,
+    ConnectorConfigurationModalComponent,
     StatusEnabledRendererComponent,
-    ConnectorStatusRendererComponent
+    ConnectorStatusRendererComponent,
+    ConnectorDetailCellRendererComponent,
+    WrapperCustomFormField,
+    FieldTextareaCustom,
+    FieldInputCustom,
   ],
   imports: [
     CoreModule,
     BsDatepickerModule,
     PaginationModule,
+    RouterModule,
     BsDropdownModule.forRoot()
   ],
   exports: [
-    JsonEditor2Component,
+    JsonEditorComponent,
     ConfirmationModalComponent,
     CamelCasePipe,
+    FilterJsonPipe,
     CapitalizeCasePipe,
     DisableDirective,
+    FormatStringPipe,
     ConnectorStatusComponent,
-    ConnectorConfigurationComponent,
-    ConfigurationConfigurationModalComponent
+    ConnectorGridComponent,
+    ConnectorDetailsComponent,
+    ConnectorConfigurationModalComponent,
+    WrapperCustomFormField,
+    FieldTextareaCustom,
+    FieldInputCustom,
+  ],
+  providers:[FormatStringPipe,
+    {
+      provide: FORMLY_CONFIG,
+      multi: true,
+      useValue: {
+        types: [
+          {
+            name: 'textarea-custom',
+            component: FieldTextareaCustom
+          },
+          {
+            name: 'input-custom',
+            component: FieldInputCustom
+          },
+          { name: 'enum', extends: 'select' },
+          { name: 'boolean', extends: 'checkbox' }
+        ],
+        wrappers: [
+          {
+            name: 'custom-form-field-wrapper',
+            component: WrapperCustomFormField
+          }
+        ],
+      }
+    }
   ]
 })
 export class SharedModule {}
-
-export enum Operation {
-  ACTIVATE_MAPPING = 'ACTIVATE_MAPPING',
-  CONNECT = 'CONNECT',
-  DISCONNECT = 'DISCONNECT',
-  REFRESH_STATUS_MAPPING = 'REFRESH_STATUS_MAPPING',
-  RELOAD_EXTENSIONS = 'RELOAD_EXTENSIONS',
-  RELOAD_MAPPINGS = 'RELOAD_MAPPINGS',
-  RESET_STATUS_MAPPING = 'RESET_STATUS_MAPPING',
-  REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS',
-  DEBUG_MAPPING = 'DEBUG_MAPPING',
-  SNOOP_MAPPING = 'SNOOP_MAPPING',
-  SNOOP_RESET = 'SNOOP_RESET',
-  RESET_DEPLOYMENT_MAP = 'RESET_DEPLOYMENT_MAP',
-  CLEAR_CACHE = 'CLEAR_CACHE',
-  APPLY_MAPPING_FILTER = 'APPLY_MAPPING_FILTER'
-}

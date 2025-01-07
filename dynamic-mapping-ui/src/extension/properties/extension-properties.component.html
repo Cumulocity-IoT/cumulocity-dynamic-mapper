@@ -31,7 +31,7 @@
   <c8y-breadcrumb-item [label]="extension['name']"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
 
-<div class="col-lg-8">
+<div class="col-lg-10">
   <div class="card">
     <div class="card-header p-l-32 separator j-c-between">
       <h4 class="card-title">
@@ -47,9 +47,9 @@
               #li
             >
               <c8y-li-icon [icon]="'plugin'"></c8y-li-icon>
-              <button class="btn-clean" (click)="li.collapsed = !li.collapsed">
-                <span>{{ entry.name }} </span>
-                <span class="label label-primary m-l-8">{{
+              <button class="btn-clean" style="width:100%" (click)="li.collapsed = !li.collapsed">
+                <span class="m-r-16">{{ entry.eventName }}</span>
+                <span class="label label-primary m-l-10">{{
                   extension['external'] ? 'External' : 'Internal'
                 }}</span>
               </button>
@@ -57,22 +57,26 @@
                 <table class="table table-condensed table-striped">
                   <thead>
                     <tr>
-                      <th>Property</th>
-                      <th>Value</th>
+                      <th style="width: 20%">Property</th>
+                      <th style="width: 80%">Value</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td>Event Name</td>
-                      <td>{{ entry.event }}</td>
+                      <td>{{ entry.eventName }}</td>
                     </tr>
                     <tr>
                       <td>Event Implementation</td>
-                      <td>{{ entry.name }}</td>
+                      <td>{{ entry.fqnClassName }}</td>
                     </tr>
                     <tr>
                       <td>Message</td>
                       <td>{{ entry.message }}</td>
+                    </tr>
+                    <tr>
+                      <td>Type</td>
+                      <td>{{ entry.extensionType | formatStringAsWords }}</td>
                     </tr>
                   </tbody>
                 </table>

@@ -28,43 +28,34 @@ import {
 } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { BrokerConfigurationModule } from '../configuration';
-import { SharedModule } from '../shared';
-import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
+import { ServiceConfigurationModule } from '../configuration';
+import { NODE1, LabelRendererComponent, SharedModule } from '../shared';
 import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import/import-modal.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
-import { APIRendererComponent } from './renderer/api.renderer.component';
+import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
 import { QOSRendererComponent } from './renderer/qos.renderer.component';
 import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.renderer.component';
 import { StatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from './renderer/status.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
-import { WrapperFormlyHorizontal } from './shared/formly/horizontal.wrapper.component';
-import { FieldInputCustom } from './shared/formly/input-custom.type.component';
-import { MessageField } from './shared/formly/message.type.component';
-import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
-import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
+import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
 import { MappingStepPropertiesComponent } from './step-property/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
-import { DeviceSelectorSubscriptionComponent } from './subscription-grid/device-selector/device-selector-subscription.component';
-import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
-import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
+import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
 import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
-import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
+import { DeviceSelectorSubscriptionComponent } from './subscription/device-selector/device-selector-subscription.component';
+import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
+import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
+
 import { FORMLY_CONFIG } from '@ngx-formly/core';
-import { FieldTextareaCustom } from './shared/formly/textarea.type.component';
-import {
-  checkTopicsOutboundAreValid,
-  checkTopicsInboundAreValid
-} from './shared/util';
-import { NODE1 } from '../shared/model/util';
-import { MappingSubscriptionComponent } from './subscription-grid/subscription.component';
-import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
-import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
-import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingFilterComponent } from './filter/mapping-filter.component';
+import { AdviceActionComponent } from './grid/advisor/advice-action.component';
+import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
+import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
+import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
+import { MappingSubscriptionComponent } from './subscription/subscription.component';
 
 @NgModule({
   declarations: [
@@ -83,13 +74,9 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
     StatusActivationRendererComponent,
-    APIRendererComponent,
+    LabelRendererComponent,
     NameRendererComponent,
     MappingTypeComponent,
-    MessageField,
-    WrapperFormlyHorizontal,
-    WrapperCustomFormField,
-    FieldInputCustom,
     MappingConnectorComponent,
     MappingSubscriptionComponent,
     DeviceSelectorSubscriptionComponent,
@@ -106,7 +93,7 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
     DynamicFormsModule,
     ModalModule,
     SharedModule,
-    BrokerConfigurationModule
+    ServiceConfigurationModule
   ],
   exports: [],
   providers: [
@@ -126,26 +113,6 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
       provide: FORMLY_CONFIG,
       multi: true,
       useValue: {
-        types: [
-          {
-            name: 'textarea-custom',
-            component: FieldTextareaCustom
-          },
-          {
-            name: 'input-custom',
-            component: FieldInputCustom
-          },
-          {
-            name: 'message-field',
-            component: MessageField
-          }
-        ],
-        wrappers: [
-          {
-            name: 'custom-form-wrapper',
-            component: WrapperCustomFormField
-          }
-        ],
         validators: [
           {
             name: 'checkTopicsInboundAreValid',
@@ -155,9 +122,10 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
             name: 'checkTopicsOutboundAreValid',
             validation: checkTopicsOutboundAreValid
           }
-        ]
+        ],
+
       }
     }
   ]
 })
-export class MappingModule {}
+export class MappingModule { }

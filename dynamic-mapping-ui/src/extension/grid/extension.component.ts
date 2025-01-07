@@ -21,13 +21,19 @@
 
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { IManagedObject } from '@c8y/client';
-import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { shareReplay, switchMap, tap } from 'rxjs/operators';
-import { ExtensionService } from '../extension.service';
-import { AddExtensionComponent } from '../add/add-extension-modal.component';
 import { AlertService } from '@c8y/ngx-components';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { catchError, retry, shareReplay, switchMap, takeUntil, tap, timeout } from 'rxjs/operators';
 import { Feature, Operation, SharedService } from '../../shared';
+import { AddExtensionComponent } from '../add/add-extension-modal.component';
+import { ExtensionService } from '../extension.service';
+
+interface ExtensionState {
+  reloading: boolean;
+  feature?: Feature;
+  externalExtensionEnabled: boolean;
+}
 
 @Component({
   selector: 'd11r-mapping-extension',
@@ -35,68 +41,140 @@ import { Feature, Operation, SharedService } from '../../shared';
   styleUrls: ['../share/extension.component.css']
 })
 export class ExtensionComponent implements OnInit, OnDestroy {
-  reloading: boolean = false;
-  reload$: BehaviorSubject<void> = new BehaviorSubject(null);
-  externalExtensionEnabled: boolean = true;
+  private readonly destroy$ = new Subject<void>();
+  private readonly reload$ = new BehaviorSubject<void>(null);
+  private readonly state = new BehaviorSubject<ExtensionState>({
+    reloading: false,
+    externalExtensionEnabled: true
+  });
 
+  
+  readonly state$ = this.state.asObservable();
   extensions$: Observable<IManagedObject[]>;
 
-  listClass: string;
-  feature: Feature;
+  get reloading(): boolean {
+    return this.state.value.reloading;
+  }
+
+  get feature(): Feature {
+    return this.state.value.feature;
+  }
+
+  get externalExtensionEnabled(): boolean {
+    return this.state.value.externalExtensionEnabled;
+  }
 
   constructor(
     private bsModalService: BsModalService,
     private extensionService: ExtensionService,
     private alertService: AlertService,
     private sharedService: SharedService
-  ) {}
+  ) { }
 
-  async ngOnInit() {
-    this.feature = await this.sharedService.getFeatures();
-    // if (!this.feature.userHasMappingAdminRole) {
-    //   this.alertService.warning(
-    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
-    //   );
-    // }
-    this.extensions$ = this.reload$.pipe(
-      tap(() => (this.reloading = true)),
-      switchMap(() => this.extensionService.getExtensionsEnriched(undefined)),
-      // tap(console.log),
-      tap(() => (this.reloading = false)),
-      shareReplay()
-    );
-    this.loadExtensions();
-    this.extensions$.subscribe();
-    this.externalExtensionEnabled = (
-      await this.sharedService.getServiceConfiguration()
-    ).externalExtensionEnabled;
-  }
-
-  loadExtensions() {
-    this.reload$.next();
-  }
-
-  async reloadExtensions() {
-    await this.sharedService.runOperation(
-      Operation.RELOAD_EXTENSIONS
-    );
-    this.alertService.success('Extensions reloaded');
-    this.reload$.next();
-  }
-
-  addExtension() {
-    const initialState = {};
-    const modalRef = this.bsModalService.show(AddExtensionComponent, {
-      initialState
-    });
-    modalRef.content.closeSubject.subscribe(() => {
-      this.reloadExtensions();
-      modalRef.hide();
-      this.reload$.next();
-    });
+  async ngOnInit(): Promise<void> {
+    try {
+      await this.initializeComponent();
+    } catch (error) {
+      this.alertService.warning('Failed to initialize component', error);
+    }
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.reload$.complete();
+    this.state.complete();
   }
+
+  async loadExtensions(): Promise<void> {
+    this.reload$.next();
+  }
+
+  async reloadExtensions(): Promise<void> {
+    try {
+      await this.sharedService.runOperation({ operation: Operation.RELOAD_EXTENSIONS });
+      this.alertService.success('Extensions reloaded');
+      await this.loadExtensions();
+    } catch (error) {
+      this.alertService.warning('Failed to reload extensions', error);
+    }
+  }
+
+  async addExtension(): Promise<void> {
+    try {
+      const modalRef = this.showAddExtensionModal();
+      this.handleModalClose(modalRef);
+    } catch (error) {
+      this.alertService.warning('Failed to add extension', error);
+    }
+  }
+
+  private async initializeComponent(): Promise<void> {
+    await this.initializeFeatures();
+    this.initializeExtensionsStream();
+    await this.loadExtensions();
+  }
+
+  private async initializeFeatures(): Promise<void> {
+    const [features, config] = await Promise.all([
+      this.sharedService.getFeatures(),
+      this.sharedService.getServiceConfiguration()
+    ]);
+
+    this.updateState({
+      feature: features,
+      externalExtensionEnabled: config.externalExtensionEnabled
+    });
+  }
+
+
+  private initializeExtensionsStream(): void {
+    this.extensions$ = this.reload$.pipe(
+      tap(() => this.updateState({ reloading: true })),
+      switchMap(() => this.loadExtensionsWithRetry()),
+      tap(() => this.updateState({ reloading: false })),
+      catchError(error => {
+        this.alertService.warning('Failed to load extensions', error);
+        return [];
+      }),
+      shareReplay(1),
+      takeUntil(this.destroy$)
+    );
+
+    // Initialize subscription
+    this.extensions$.subscribe();
+  }
+
+  private loadExtensionsWithRetry(): Observable<IManagedObject[]> {
+    return this.extensionService.getExtensionsEnriched(undefined).pipe(
+      retry(3),
+      timeout(10000)
+    );
+  }
+
+  private showAddExtensionModal(): BsModalRef {
+    return this.bsModalService.show(AddExtensionComponent, {
+      initialState: {}
+    });
+  }
+
+  private handleModalClose(modalRef: BsModalRef): void {
+    modalRef.content.closeSubject
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: async () => {
+          await this.reloadExtensions();
+          modalRef.hide();
+        },
+        error: error => this.alertService.warning('Modal close error', error)
+      });
+  }
+
+  private updateState(partialState: Partial<ExtensionState>): void {
+    this.state.next({
+      ...this.state.value,
+      ...partialState
+    });
+  }
+
 }

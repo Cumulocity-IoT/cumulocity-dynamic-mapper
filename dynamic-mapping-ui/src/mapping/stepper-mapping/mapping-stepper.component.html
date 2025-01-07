@@ -28,7 +28,7 @@
         'm-b-40',
         'p-0',
         'flex-no-shrink'
-      ]" linear>
+      ]" (onStepChange)="onStepChange($event)" linear #stepper>
     <ng-template c8yStepperIcon="final">
       <span [c8yIcon]="'hand-peace-o'"></span>
     </ng-template>
@@ -46,7 +46,7 @@
                       stepperConfiguration.editorMode === EditorMode.READ_ONLY
                     ">
                   Selected connectors
-                  <span class="label label-primary">{{ 'Read Only' }}</span>
+                  <span class="label label-primary text-12">{{ 'Read Only' }}</span>
                 </div>
               </div>
             </h4>
@@ -144,11 +144,13 @@
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource"
-                        [schemaUpdate]="schemaUpdateSource" [options]="editorOptionsSourceTemplate"
-                        [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()" (contentChanged)="onsourceTemplateChanged($event)" [data]="sourceTemplate"
+                        [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
+                        [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
+                        (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
-                      <ng-container *ngIf="!stepperConfiguration.showEditorSource">
-                        <ng-container *ngTemplateOutlet="extensionTemplate; context: { form: templateForm }">
+                      <ng-container
+                        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal">
+                        <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
                     </div>
@@ -160,9 +162,11 @@
                           <label>Target Template - {{ targetSystem }}</label>
                         </div>
                       </div>
-                      <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateTarget"
-                        [options]="editorOptionsTargetTemplate" [class]="'jse-main-medium'"
-                        (initialized)="onEditorTargetInitialized()"  (contentChanged)="ontargetTemplateChanged($event)" [data]="targetTemplate" #editorGeneral>
+                      <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorTarget"
+                        [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
+                        [class]="'jse-main-medium'" (initialized)="onEditorTargetInitialized()"
+                        (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
+                        #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>
                     </div>
                   </div>
@@ -185,65 +189,66 @@
               <div [formGroup]="templateForm">
                 <div class="row" #editorsTemplate>
                   <div class="col-lg-5 col-lg-offset-1 column-right-border" #leftTemplateTemplate>
-                    <div class="form-group">
+                    <div class="form-group m-b-0">
                       <div class="d-flex j-c-between">
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
                       <div *ngIf="stepperConfiguration.showEditorSource">
-                        <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateSource"
+                        <d11r-mapping-json-editor2 [updateEditor]="updateSourceEditor"
                           [options]="editorOptionsSourceSubstitution" [class]="'jse-main-small'"
                           (pathChanged)="onSelectedPathSourceChanged($event)"
                           (initialized)="onEditorSourceInitialized()" [data]="sourceTemplate"
-                          #editorSourceStepTemplate></d11r-mapping-json-editor2>
-                        <span class="text-warning text-12 p-l-8" *ngIf="
-                                substitutionModel.pathSource === ''
-                              ">Select source node to define substitution!</span>
-                        <span class="text-info text-12 p-l-8" *ngIf="
-                                substitutionModel.pathSource !== ''
-                              ">{{
-                          'Selected source node: ' +
-                          substitutionModel.pathSource
-                          }}</span>
+                          #editorSourceStepSubstitution></d11r-mapping-json-editor2>
                       </div>
-                      <ng-container *ngIf="!stepperConfiguration.showEditorSource">
-                        <ng-container *ngTemplateOutlet="extensionTemplate; context: { form: templateForm }">
+                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource">
+                        <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
+                        </ng-container>
+                      </ng-container>
+                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSourceTarget">
+                        <ng-container
+                          *ngTemplateOutlet="extensionTemplateSourceTarget; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
                     </div>
                   </div>
                   <div class="col-lg-5 column-left-border" #rightTemplateTemplate>
-                    <div class="form-group">
+                    <div class="form-group m-b-0">
                       <div class="d-flex j-c-between">
                         <div class="d-flex">
                           <label>Target Template - {{ targetSystem }}</label>
                           <span class="hidden-xs hidden-sm m-l-4">
-                            <ng-template #poptargetTemplate>The template contains the dummy field
+                            <button type="button" placement="right"
+                              popover='The template contains the dummy field
                               "_TOPIC_LEVEL_"(outbound) to map device
-                              identifiers.</ng-template>
-                            <button class="btn-clean text-primary" [popover]="poptargetTemplate"
-                              popoverTitle='Use dummy field "_TOPIC_LEVEL_"' placement="right" triggers="focus"
-                              type="button">
-                              <i c8yIcon="question-circle-o"></i>
-                            </button>
+                              identifiers.'
+                              triggers="focus" class="btn-help" aria-label="Help content"></button>
                           </span>
                         </div>
                       </div>
-                      <d11r-mapping-json-editor2 [schemaUpdate]="schemaUpdateTarget"
+                      <d11r-mapping-json-editor2 [updateEditor]="updateTargetEditor"
                         [options]="editorOptionsTargetSubstitution" [class]="'jse-main-small'"
                         (pathChanged)="onSelectedPathTargetChanged($event)" (initialized)="onEditorTargetInitialized()"
-                        [data]="targetTemplate" #editorTargetStepTemplate>
+                        [data]="targetTemplate" #editorTargetStepSubstitution>
                       </d11r-mapping-json-editor2>
-                      <span class="text-warning text-12 p-l-8" *ngIf="
-                            substitutionModel.pathTarget === '' &&
-                            stepperConfiguration.showEditorSource
-                          ">Select target node to define substitution!</span>
-                      <span class="text-info text-12 p-l-8" *ngIf="
-                            substitutionModel.pathTarget !== '' &&
-                            stepperConfiguration.showEditorSource
-                          ">{{
-                        'Selected target node: ' +
-                        substitutionModel.pathTarget
-                        }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row" #messages>
+                  <div class="col-lg-5 col-lg-offset-1" #leftTemplateTemplate>
+                    <div class="form-group m-b-8">
+                      <div *ngIf="stepperConfiguration.showEditorSource">
+                        <span class="text-info text-12 p-l-8">{{substitutionModel.pathSource === '' ?'Select source
+                          node to define substitution!':'Selected source node: ' +
+                          substitutionModel.pathSource }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-lg-5" #rightTemplateTemplate>
+                    <div class="form-group m-b-8">
+                      <span class="text-info text-12 p-l-8">{{substitutionModel.pathTarget === '' &&
+                        stepperConfiguration.showEditorSource ?'Select target
+                        node to define substitution!':'Selected target node: ' +
+                        substitutionModel.pathTarget }}</span>
                     </div>
                   </div>
                 </div>
@@ -324,20 +329,18 @@
                 <div class="row">
                   <div class="col-lg-10 col-lg-offset-1">
                     <div style="min-height: 32px">
-                      <d11r-mapping-substitution-grid [substitutions]="mapping.substitutions"
-                        [targetAPI]="mapping.targetAPI" [settings]="{
+                      <d11r-mapping-substitution-grid [mapping]="mapping" [settings]="{
                             color: COLOR_HIGHLIGHTED,
                             selectedSubstitutionIndex: selectedSubstitution,
                             editorMode: stepperConfiguration.editorMode
-                          }" [direction]="mapping.direction" (selectSub)="onSelectSubstitution($event)"
-                        (deleteSub)="onDeleteSubstitution($event)">
+                          }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)">
                       </d11r-mapping-substitution-grid>
                     </div>
                     <span class="text-warning text-12 p-l-8" *ngIf="
-                          (countDeviceIdentifiers$ | async) !== 1 &&
-                          !stepperConfiguration.allowNoDefinedIdentifier
-                        ">Exactly one substitution defining the DeviceIdentifier
-                      must be used</span>
+                          (isSubstitutionValid$ | async) != true
+                        ">One substitution for <code *ngIf="mapping.useExternalId"
+                        class="text-warning text-10">_IDENTITY_.externalId</code> <code *ngIf="!mapping.useExternalId"
+                        class="text-warning text-10">_IDENTITY_.c8ySourceId<</code> must exist.</span>
                   </div>
                 </div>
               </div>
@@ -352,8 +355,8 @@
 
     <cdk-step state="final" stepLabel="step3" label="Test mapping">
       <div class="col-xs-12 flex-grow no-gutter">
-        <d11r-mapping-testing [editorTestingPayloadTemplateEmitter]="
-              editorTestingPayloadTemplateEmitter
+        <d11r-mapping-testing [updateTestingTemplate]="
+              updateTestingTemplate
             " [mapping]="mapping" (testResult)="updateTestResult($event)"
           [stepperConfiguration]="stepperConfiguration"></d11r-mapping-testing>
       </div>
@@ -362,10 +365,11 @@
         [labels]="{ custom: 'Confirm' }">
       </c8y-stepper-buttons>
     </cdk-step>
-    <ng-template #extensionTemplate let-form="form">
-      <div *ngIf="stepperConfiguration.showProcessorExtensions">
-        <div class="form-group">
-          <label translate>Extensions for {{ mapping.mappingType }}</label>
+    <ng-template #extensionTemplateSource let-form="form">
+      <div
+        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
+        <div class="form-group p-b-8">
+          <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
             <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
               (change)="
@@ -374,9 +378,9 @@
               <option [ngValue]="null" disabled>
                 Select an extension
               </option>
-              <option *ngFor="let ex of extensions | keyvalue" [ngValue]="ex.key"
-                [selected]="ex.key === mapping.extension?.name">
-                {{ ex.key }}
+              <option *ngFor="let extension of extensions | keyvalue" [ngValue]="extension.key"
+                [selected]="extension.key === mapping.extension?.extensionName">
+                {{ extension.key }}
               </option>
             </select>
           </div>
@@ -384,26 +388,26 @@
         <div class="form-group">
           <label translate>Events for {{ mapping.extension.name }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-            <select class="form-control" [formControl]="templateForm.get('extensionEvent')" #extensionEventControl
-              (change)="
-                onSelectExtensionEvent(templateForm.value.extensionEvent)
+            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl (change)="
+                onSelectExtensionEvent(templateForm.value.eventName)
               " required>
               <option [ngValue]="null" disabled>
                 Select an event
               </option>
-              <option *ngFor="let ev of extensionEvents$ | async" [ngValue]="ev"
-                [selected]="ev === mapping.extension?.event">
-                {{ ev }}
+              <option *ngFor="let extensionEntry of (extensionEvents$ | async)" [ngValue]="extensionEntry.eventName"
+                [selected]="extensionEntry.eventName === mapping.extension?.eventName">
+                {{ extensionEntry.eventName }}
               </option>
             </select>
           </div>
         </div>
       </div>
-      <div class="p-t-48" *ngIf="!stepperConfiguration.showProcessorExtensions
+      <div class="p-t-48" *ngIf="stepperConfiguration.showProcessorExtensionsInternal
     ">
         <small class="text-muted">Template is described internally by the chosen
           mapping type</small>
       </div>
     </ng-template>
+
   </c8y-stepper>
 </div>

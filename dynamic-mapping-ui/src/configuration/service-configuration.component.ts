@@ -18,15 +18,15 @@
  *
  * @authors Christof Strack
  */
+import { HttpStatusCode } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import packageJson from '../../package.json';
+import { ConnectorConfigurationService } from '../connector';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
-import { ConnectorConfigurationService } from '../connector';
-import { HttpStatusCode } from '@angular/common/http';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -58,7 +58,7 @@ export class ServiceConfigurationComponent implements OnInit {
     private sharedService: SharedService,
     public connectorConfigurationService: ConnectorConfigurationService,
     private fb: FormBuilder
-  ) {}
+  ) { }
 
   ngOnInit() {
     // console.log('Running version', this.version);
@@ -101,7 +101,7 @@ export class ServiceConfigurationComponent implements OnInit {
 
   async clickedReconnect2NotificationEndpoint() {
     const response1 = await this.sharedService.runOperation(
-      Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS
+      { operation: Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS }
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === HttpStatusCode.Created) {
@@ -113,8 +113,10 @@ export class ServiceConfigurationComponent implements OnInit {
 
   async clickedClearInboundExternalIdCache() {
     const response1 = await this.sharedService.runOperation(
-      Operation.CLEAR_CACHE,
-      { cacheId: 'INBOUND_ID_CACHE' }
+      {
+        operation: Operation.CLEAR_CACHE,
+        parameter: { cacheId: 'INBOUND_ID_CACHE' }
+      }
     );
     if (response1.status === HttpStatusCode.Created) {
       this.alertService.success(gettext('Cache cleared.'));
@@ -125,7 +127,7 @@ export class ServiceConfigurationComponent implements OnInit {
 
   async clickedResetDeploymentMapEndpoint() {
     const response1 = await this.sharedService.runOperation(
-      Operation.RESET_DEPLOYMENT_MAP
+      { operation: Operation.RESET_DEPLOYMENT_MAP }
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === HttpStatusCode.Created) {

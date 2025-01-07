@@ -19,6 +19,10 @@
  * @authors Christof Strack
  */
 
+import { inject } from "@angular/core";
+import { ResolveFn } from "@angular/router";
+import { ConnectorConfigurationService } from "../service/connector-configuration.service";
+
 export enum ConnectorPropertyType {
   ID_STRING_PROPERTY = 'ID_STRING_PROPERTY',
   STRING_PROPERTY = 'STRING_PROPERTY',
@@ -44,7 +48,7 @@ export interface ConnectorProperty {
 }
 
 export interface ConnectorConfiguration {
-  ident: string;
+  identifier: string;
   connectorType: string;
   enabled: boolean;
   status?: any;
@@ -60,3 +64,9 @@ export interface ConnectorSpecification {
   supportsWildcardInTopic: boolean;
   properties: { [name: string]: ConnectorProperty };
 }
+
+export const connectorResolver: ResolveFn<ConnectorConfiguration> = (route) => {
+  const connectorConfigurationService = inject(ConnectorConfigurationService);
+  const identifier = route.paramMap.get('identifier');
+  return connectorConfigurationService.getConnectorConfiguration(identifier);
+};

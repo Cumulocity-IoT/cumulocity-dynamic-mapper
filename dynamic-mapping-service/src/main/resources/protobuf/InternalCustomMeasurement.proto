@@ -1,0 +1,14 @@
+syntax = "proto3";
+package processor.protobuf;
+
+option java_package = "dynamic.mapping.processor.processor.fixed";
+option java_outer_classname = "InternalCustomMeasurementOuter";
+
+message InternalCustomMeasurement {
+  int64 timestamp = 1;
+  float value = 2;
+  string unit = 3;
+  string externalIdType = 4;
+  string externalId = 5;
+  string measurementType = 6;
+}

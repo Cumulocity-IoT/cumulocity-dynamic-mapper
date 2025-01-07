@@ -19,15 +19,13 @@
   ~
   ~ @authors Christof Strack, Stefan Witschel
   -->
-<project
-	xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.softwareag.c8y.mapping</groupId>
+	<groupId>com.cumulocity.mapping</groupId>
 	<artifactId>dynamic-mapping-interface</artifactId>
 	<parent>
-		<groupId>com.softwareag.c8y.mapping</groupId>
+		<groupId>com.cumulocity.mapping</groupId>
 		<artifactId>dynamic-mapping-solution</artifactId>
 		<version>${revision}</version>
 	</parent>
@@ -53,8 +51,8 @@
 			<artifactId>hivemq-mqtt-client</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.ibm.jsonata4java</groupId>
-			<artifactId>JSONata4Java</artifactId>
+			<groupId>com.dashjoin</groupId>
+			<artifactId>jsonata</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -63,11 +61,6 @@
 		<dependency>
 			<groupId>org.java-websocket</groupId>
 			<artifactId>Java-WebSocket</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-joda</artifactId>
-			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.json</groupId>
@@ -119,7 +112,7 @@
 			</plugin>
 			<!--
 			<plugin><artifactId>maven-compiler-plugin</artifactId><version>3.11.0</version><configuration><includes><include>dynamic/mapping/model/*.java</include><include>dynamic/mapping/processor/model/*.java</include><include>dynamic/mapping/processor/model/ProcessingContext.java</include><include>
-                                    dynamic/mapping/processor/extension/ProcessorExtensionInbound.java</include><include>
+                                    dynamic/mapping/processor/extension/ProcessorExtension.java</include><include>
 			dynamic/mapping/processor/extension/ProcessorExtensionOutbound.java</include></includes></configuration></plugin> -->
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -129,7 +122,10 @@
 						<include>dynamic/mapping/model/*</include>
 						<include>dynamic/mapping/processor/model/*</include>
 						<include>dynamic/mapping/processor/model/ProcessingContext.*</include>
-						<include>dynamic/mapping/processor/extension/ProcessorExtensionInbound.*</include>
+						<include>dynamic/mapping/processor/extension/ProcessorExtensionSource.*</include>
+						<include>dynamic/mapping/processor/extension/ProcessorExtensionTarget.*</include>
+						<include>dynamic/mapping/processor/inbound/BasePayloadProcessorInbound.*</include>
+						<include>dynamic/mapping/core/C8YAgent.*</include>
 						<include>dynamic/mapping/processor/extension/ProcessorExtensionOutbound.*</include>
 						<include>dynamic/mapping/processor/ProcessingException.*</include>
 					</includes>

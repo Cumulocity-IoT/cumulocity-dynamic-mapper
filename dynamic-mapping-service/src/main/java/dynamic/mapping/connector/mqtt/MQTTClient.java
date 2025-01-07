@@ -46,7 +46,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
-import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.StringUtils;
@@ -113,7 +113,7 @@ public class MQTTClient extends AConnectorClient {
 
 	public MQTTClient(ConfigurationRegistry configurationRegistry,
 			ConnectorConfiguration connectorConfiguration,
-			AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+			DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
 		this();
 		this.configurationRegistry = configurationRegistry;
 		this.mappingComponent = configurationRegistry.getMappingComponent();
@@ -122,11 +122,11 @@ public class MQTTClient extends AConnectorClient {
 		this.connectorConfiguration = connectorConfiguration;
 		// ensure the client knows its identity even if configuration is set to null
 		this.connectorName = connectorConfiguration.name;
-		this.connectorIdent = connectorConfiguration.ident;
-		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
+		this.connectorIdentifier = connectorConfiguration.identifier;
+		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.identifier);
 		// this.connectorType = connectorConfiguration.connectorType;
 		this.c8yAgent = configurationRegistry.getC8yAgent();
-		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+		this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();
 		this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 		this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
@@ -332,7 +332,7 @@ public class MQTTClient extends AConnectorClient {
 					}
 
 					connectionState.setTrue();
-					log.info("Tenant {} - Successfully connected to broker {}", tenant,
+					log.info("Tenant {} - Connected to broker {}", tenant,
 							mqttClient.getConfig().getServerHost());
 					updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
 					List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
@@ -454,7 +454,7 @@ public class MQTTClient extends AConnectorClient {
 
 	@Override
 	public String getConnectorIdent() {
-		return connectorIdent;
+		return connectorIdentifier;
 	}
 
 	@Override
@@ -495,7 +495,7 @@ public class MQTTClient extends AConnectorClient {
 		sendSubscriptionEvents(topic, "Unsubscribing");
 		Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
 		asyncMqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
-			log.info("Tenant {} - Successfully unsubscribed on topic: {} for connector {}", tenant, topic,
+			log.info("Tenant {} - Successfully unsubscribed from topic: {} for connector {}", tenant, topic,
 					connectorName);
 		}).exceptionally(throwable -> {
 			log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,

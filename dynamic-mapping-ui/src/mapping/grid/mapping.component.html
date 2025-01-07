@@ -21,76 +21,49 @@
 
 <c8y-title translate>Mapping</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button
-    class="btn btn-link"
-    title="{{ 'Add mapping' | translate }}"
-    (click)="onAddMapping()"
-  >
+  <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="onAddMapping()">
     <i c8yIcon="plus-circle"></i>
     {{ 'Add mapping' | translate }}
   </button>
-  <button
-    class="btn btn-link"
-    title="{{ 'Reload mappings in service' | translate }}"
-    (click)="onReload()"
-  >
+  <button class="btn btn-link" title="{{ 'Reload mappings in service' | translate }}" (click)="onReload()">
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Reload mappings in service' | translate }}
   </button>
-  <button
-    class="btn btn-link"
-    title="{{ 'Export all mappings' | translate }}"
-    (click)="onExportAll()"
-  >
+  <button class="btn btn-link" title="{{ 'Export all mappings' | translate }}" (click)="onExportAll()">
     <i c8yIcon="download"></i>
     {{ 'Export all mappings' | translate }}
   </button>
-  <button
-    class="btn btn-link"
-    title="{{ 'Import mappings' | translate }}"
-    (click)="onImport()"
-  >
+  <button class="btn btn-link" title="{{ 'Import mappings' | translate }}" (click)="onImport()">
     <i c8yIcon="upload"></i>
     {{ 'Import mappings' | translate }}
   </button>
-  <button
-    class="btn btn-link"
-    title="{{ 'Refresh' | translate }}"
-    (click)="refreshMappings()"
-  >
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refreshMappings()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
 <div class="card">
   <div class="card-block content-fullpage border-top border-bottom">
-    <c8y-data-grid
-      #mappingGrid
-      [title]="'Mappings' | translate"
-      [selectable]="true"
-      [columns]="columnsMappings"
-      [bulkActionControls]="bulkActionControls"
-      [rows]="mappingsEnriched$ | async"
-      [pagination]="pagination"
-      [actionControls]="actionControls"
-    >
+    <c8y-data-grid #mappingGrid [configureColumnsEnabled]="false" [title]="'Mappings' | translate" [selectable]="true" [columns]="columnsMappings"
+      [bulkActionControls]="bulkActionControls" [rows]="mappingsEnriched$ | async" [pagination]="pagination"
+      [actionControls]="actionControls">
+      <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-rules'" [title]="'No mappings exist.' | translate" [subtitle]="
+      'Create your first mapping.' | translate
+    " [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Add mapping' | translate }}"
+          (click)="onAddMapping()">
+          <i c8yIcon="plus-circle"></i>
+          {{ 'Add mapping' | translate }}
+        </button>
+      </c8y-ui-empty-state>
     </c8y-data-grid>
   </div>
   <div class="card-block col-md-offset-5 bg-white">
-    <div
-      class="c8y-empty-state"
-      *ngIf="(mappingsEnriched$ | async)?.length === 0"
-    >
+    <div class="c8y-empty-state" *ngIf="(mappingsEnriched$ | async)?.length === 0">
       <h1 [c8yIcon]="'file-text'"></h1>
       <p>
         <strong>No mappings available.</strong><br />
         <small translate>Add a new mapping by clicking below.</small><br />
-        <button
-          class="btn btn-primary"
-          title="Add record"
-          (click)="onAddMapping()"
-          translate
-        >
+        <button class="btn btn-primary" title="Add record" (click)="onAddMapping()" translate>
           Add mapping
         </button>
       </p>
@@ -100,28 +73,18 @@
 
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
   <div class="bottom-drawer">
-    <d11r-mapping-stepper
-      *ngIf="showConfigMapping"
-      (cancel)="showConfigMapping = false"
-      (commit)="onCommitMapping($event)"
-      [mapping]="mappingToUpdate"
-      [stepperConfiguration]="stepperConfiguration"
-      [(deploymentMapEntry)]="deploymentMapEntry"
-    >
+    <d11r-mapping-stepper *ngIf="showConfigMapping" (cancel)="showConfigMapping = false"
+      (commit)="onCommitMapping($event)" [mapping]="mappingToUpdate" [stepperConfiguration]="stepperConfiguration"
+      [(deploymentMapEntry)]="deploymentMapEntry">
     </d11r-mapping-stepper>
   </div>
 </div>
 
 <div [ngClass]="{ drawerOpen: showSnoopingMapping }">
   <div class="bottom-drawer">
-    <d11r-snooping-stepper
-      *ngIf="showSnoopingMapping"
-      (cancel)="showSnoopingMapping = false"
-      (commit)="onCommitMapping($event)"
-      [mapping]="mappingToUpdate"
-      [stepperConfiguration]="stepperConfiguration"
-      [(deploymentMapEntry)]="deploymentMapEntry"
-    >
+    <d11r-snooping-stepper *ngIf="showSnoopingMapping" (cancel)="showSnoopingMapping = false"
+      (commit)="onCommitMapping($event)" [mapping]="mappingToUpdate" [stepperConfiguration]="stepperConfiguration"
+      [(deploymentMapEntry)]="deploymentMapEntry">
     </d11r-snooping-stepper>
   </div>
 </div>

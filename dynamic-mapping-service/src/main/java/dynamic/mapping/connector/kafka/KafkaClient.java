@@ -49,7 +49,7 @@ import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
-import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
@@ -130,7 +130,7 @@ public class KafkaClient extends AConnectorClient {
 
 	public KafkaClient(ConfigurationRegistry configurationRegistry,
 			ConnectorConfiguration connectorConfiguration,
-			AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
+			DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
 			throws FileNotFoundException, IOException {
 		this();
 		this.configurationRegistry = configurationRegistry;
@@ -140,10 +140,10 @@ public class KafkaClient extends AConnectorClient {
 		this.connectorConfiguration = connectorConfiguration;
 		// ensure the client knows its identity even if configuration is set to null
 		this.connectorName = connectorConfiguration.name;
-		this.connectorIdent = connectorConfiguration.ident;
-		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.ident);
+		this.connectorIdentifier = connectorConfiguration.identifier;
+		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.identifier);
 		this.c8yAgent = configurationRegistry.getC8yAgent();
-		this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+		this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();
 		this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 		this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
@@ -243,7 +243,7 @@ public class KafkaClient extends AConnectorClient {
 			log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
 					getConnectorName(),
 					shouldConnect(), bootstrapServers);
-			log.info("Tenant {} - Successfully connected to broker {}", tenant,
+			log.info("Tenant {} - Connected to broker {}", tenant,
 					bootstrapServers);
 			try {
 				// test if the mqtt connection is configured and enabled
@@ -313,7 +313,7 @@ public class KafkaClient extends AConnectorClient {
 
 	@Override
 	public String getConnectorIdent() {
-		return connectorIdent;
+		return connectorIdentifier;
 	}
 
 	@Override
@@ -343,16 +343,16 @@ public class KafkaClient extends AConnectorClient {
 			String mapIdent = it.next();
 			Mapping map = getMappingsDeployedInbound().get(mapIdent);
 			// test if topicConsumer was started successfully
-			if (consumerList.containsKey(map.subscriptionTopic)) {
-				TopicConsumer kafkaConsumer = consumerList.get(map.subscriptionTopic);
+			if (consumerList.containsKey(map.mappingTopic)) {
+				TopicConsumer kafkaConsumer = consumerList.get(map.mappingTopic);
 				if (kafkaConsumer.shouldStop()) {
 					try {
 						// kafkaConsumer.close();
 						unsubscribe(mapIdent);
-						getMappingsDeployedInbound().remove(map.ident);
+						getMappingsDeployedInbound().remove(map.identifier);
 						log.warn(
-								"Tenant {} - Failed to subscribe to subscriptionTopic {} for mapping {} in connector {}!",
-								tenant, map.subscriptionTopic, map, getConnectorName());
+								"Tenant {} - Failed to subscribe to mappingTopic {} for mapping {} in connector {}!",
+								tenant, map.mappingTopic, map, getConnectorName());
 					} catch (Exception e) {
 						// ignore interrupt
 					}
@@ -377,7 +377,7 @@ public class KafkaClient extends AConnectorClient {
 	public void publishMEAO(ProcessingContext<?> context) {
 		C8YRequest currentRequest = context.getCurrentRequest();
 		String payload = currentRequest.getRequest();
-		String key = currentRequest.getSource();
+		String key = currentRequest.getSourceId();
 		if (context.isSupportsMessageContext() && context.getKey() != null) {
 			key = new String(context.getKey());
 		}

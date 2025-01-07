@@ -1,14 +1,13 @@
 package dynamic.mapping.connector.core.callback;
 
-import javax.validation.constraints.NotNull;
-
+import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
 public class ConnectorMessage {
     private byte[] payload;
 
@@ -22,7 +21,7 @@ public class ConnectorMessage {
     private String topic;
 
     @NotNull
-    private String connectorIdent;
+    private String connectorIdentifier;
 
     private boolean sendPayload;
 

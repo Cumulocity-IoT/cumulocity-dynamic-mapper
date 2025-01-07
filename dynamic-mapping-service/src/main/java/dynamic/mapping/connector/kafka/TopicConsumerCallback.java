@@ -30,28 +30,29 @@ public class TopicConsumerCallback implements TopicConsumerListener {
     GenericMessageCallback genericMessageCallback;
     String tenant;
     String topic;
-    String connectorIdent;
+    String connectorIdentifier;
     boolean supportsMessageContext;
 
-    TopicConsumerCallback(GenericMessageCallback callback, String tenant, String connectorIdent, String topic,
+    TopicConsumerCallback(GenericMessageCallback callback, String tenant, String connectorIdentifier, String topic,
             boolean supportsMessageContext) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.topic = topic;
-        this.connectorIdent = connectorIdent;
+        this.connectorIdentifier = connectorIdentifier;
         this.supportsMessageContext = supportsMessageContext;
     }
 
     @Override
     public void onEvent(byte[] key, byte[] event) throws Exception {
-        ConnectorMessage connectorMessage = new ConnectorMessage();
-        connectorMessage.setPayload(event);
-        connectorMessage.setKey(key);
-        connectorMessage.setTenant(tenant);
-        connectorMessage.setSendPayload(true);
-        connectorMessage.setTopic(topic);
-        connectorMessage.setConnectorIdent(connectorIdent);
-        connectorMessage.setSupportsMessageContext(supportsMessageContext);
+        ConnectorMessage connectorMessage =  ConnectorMessage.builder()
+        .tenant(tenant)
+        .supportsMessageContext(supportsMessageContext)
+        .topic(topic)
+        .sendPayload(true)
+        .connectorIdentifier(connectorIdentifier)
+        .key(key)
+        .payload(event)
+        .build();
         genericMessageCallback.onMessage(connectorMessage);
     }
 

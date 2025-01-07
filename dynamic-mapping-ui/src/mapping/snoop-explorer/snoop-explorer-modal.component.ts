@@ -22,9 +22,8 @@
 import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { JsonEditor2Component, Mapping, MappingSubstitution } from '../../shared';
+import { JsonEditorComponent, Mapping, MappingSubstitution, MappingEnriched } from '../../shared';
 import { isDisabled } from '../shared/util';
-import { MappingEnriched } from '../../shared/model/shared.model';
 import { MappingService } from '../core/mapping.service';
 import { IFetchResponse } from '@c8y/client';
 import { HttpStatusCode } from '@angular/common/http';
@@ -43,13 +42,17 @@ export class SnoopExplorerComponent implements OnInit {
   @Input() enrichedMapping: MappingEnriched;
 
   @ViewChild('editorGeneral', { static: false })
-  editorGeneral: JsonEditor2Component;
-  
+  editorGeneral: JsonEditorComponent;
+
+  @ViewChild('modal', { static: false }) private modal;
+
+  pending: boolean = false;
   mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();
   labels: ModalLabels;
   isDisabled = isDisabled;
   template: any;
+  index: number;
 
   editorOptionsGeneral = {
     mode: 'tree',
@@ -63,6 +66,7 @@ export class SnoopExplorerComponent implements OnInit {
   ngOnInit(): void {
     this.mapping = this.enrichedMapping.mapping;
     this.onSelectSnoopedTemplate(0);
+    this.index = 0;
     this.labels = {
       ok: 'Delete templates',
       cancel: 'Close'
@@ -70,18 +74,21 @@ export class SnoopExplorerComponent implements OnInit {
   }
 
   onCancel() {
-    this.closeSubject.next(undefined);
+    this.modal._dismiss();
   }
 
   async onSelectSnoopedTemplate(index: any) {
+    this.index = index;
     this.template = JSON.parse(this.mapping.snoopedTemplates[index]);
   }
 
   async onResetSnoop() {
-    console.log('Clicked onResetSnoop!');
+    // console.log('Clicked onResetSnoop!');
+    this.pending = true;
     const result: IFetchResponse = await this.mappingService.resetSnoop({
       id: this.mapping.id
     });
+    this.pending = false;
     if (result.status == HttpStatusCode.Created) {
       this.alertService.success(
         `Reset snooping for mapping ${this.mapping.id}`
@@ -90,6 +97,29 @@ export class SnoopExplorerComponent implements OnInit {
       this.alertService.warning(
         `Failed to reset snooping for mapping ${this.mapping.id}`
       );
+      this.pending = false;
     }
+    this.modal._dismiss();
+  }
+
+
+  async onUpdateSourceTemplate() {
+    this.pending = true;
+    const result: IFetchResponse = await this.mappingService.updateTemplate({
+      id: this.mapping.id,
+      index: this.index
+    });
+    this.pending = false;
+    if (result.status == HttpStatusCode.Created) {
+      this.alertService.success(
+        `Update source template for mapping ${this.mapping.id}`
+      );
+    } else {
+      this.alertService.warning(
+        `Failed to update source template for mapping ${this.mapping.id}`
+      );
+      this.pending = false;
+    }
+    this.modal._dismiss();
   }
 }

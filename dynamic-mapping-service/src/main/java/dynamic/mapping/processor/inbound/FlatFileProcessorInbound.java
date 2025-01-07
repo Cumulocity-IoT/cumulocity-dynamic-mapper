@@ -21,31 +21,33 @@
 
 package dynamic.mapping.processor.inbound;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import static java.util.Map.entry;
+
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
-import dynamic.mapping.processor.model.PayloadWrapper;
-import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.model.Mapping;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 
 //@Service
 public class FlatFileProcessorInbound extends JSONProcessorInbound {
 
-
-    public FlatFileProcessorInbound(ConfigurationRegistry configurationRegistry){
+    public FlatFileProcessorInbound(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, ConnectorMessage message) throws IOException {
-        String payloadMessage  = (message.getPayload() != null
-                    ? new String(message.getPayload(), Charset.defaultCharset())
-                    : "");
-        JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));
-        context.setPayload(payloadJsonNode);
-        return context;
+    public Object deserializePayload(Mapping mapping, ConnectorMessage message)
+            throws IOException {
+        String payloadMessage = (message.getPayload() != null
+                ? new String(message.getPayload(), Charset.defaultCharset())
+                : "");
+        // Object payloadObjectNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));
+        Object payloadObjectNode = new HashMap<>(Map.ofEntries(
+            entry("message", payloadMessage)));
+        return payloadObjectNode;
     }
-
 }

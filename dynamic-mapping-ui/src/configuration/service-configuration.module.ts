@@ -40,4 +40,4 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
     })
   ]
 })
-export class BrokerConfigurationModule {}
+export class ServiceConfigurationModule {}

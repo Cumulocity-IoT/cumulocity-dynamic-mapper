@@ -24,9 +24,10 @@ package dynamic.mapping.model;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 
 @Getter
@@ -40,8 +41,8 @@ public class MappingStatus implements Serializable {
 
   static {
     UNSPECIFIED_MAPPING_STATUS = new MappingStatus(IDENT_UNSPECIFIED_MAPPING, IDENT_UNSPECIFIED_MAPPING,
-        IDENT_UNSPECIFIED_MAPPING, IDENT_UNSPECIFIED_MAPPING, "#", "#", 0, 0, 0,
-        0);
+        IDENT_UNSPECIFIED_MAPPING, null, "#", "#", 0, 0, 0,
+        0, null);
   }
 
   @NotNull
@@ -51,13 +52,13 @@ public class MappingStatus implements Serializable {
   public String name;
 
   @NotNull
-  public String ident;
+  public String identifier;
 
   @NotNull
-  public String direction;
+  public Direction direction;
 
   @NotNull
-  public String subscriptionTopic;
+  public String mappingTopic;
 
   @NotNull
   public String publishTopic;
@@ -74,6 +75,10 @@ public class MappingStatus implements Serializable {
   @NotNull
   public long snoopedTemplatesTotal;
 
+  @NotNull
+  @Setter
+  public String loadingError;
+
   @Override
   public boolean equals(Object m) {
     return (m instanceof MappingStatus) && id == ((MappingStatus) m).id;
@@ -82,6 +87,7 @@ public class MappingStatus implements Serializable {
   public void reset() {
     messagesReceived = 0;
     errors = 0;
+    loadingError = "";
     snoopedTemplatesActive = 0;
     snoopedTemplatesTotal = 0;
   }

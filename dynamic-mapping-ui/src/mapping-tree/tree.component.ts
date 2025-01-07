@@ -19,10 +19,10 @@
  * @authors Christof Strack
  */
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { MappingTreeService } from './tree.service';
-import { JsonEditor2Component } from '../shared';
 import { ActivatedRoute } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
+import { JsonEditorComponent } from '../shared';
+import { MappingTreeService } from './tree.service';
 
 @Component({
   selector: 'd11r-mapping-tree-grid',
@@ -36,7 +36,7 @@ export class MappingTreeComponent implements OnInit {
     private route: ActivatedRoute,
   ) { }
 
-  @ViewChild('editorTree', { static: false }) editorTree: JsonEditor2Component;
+  @ViewChild('editorTree', { static: false }) editorTree: JsonEditorComponent;
   mappingTree$: BehaviorSubject<any> = new BehaviorSubject([]);
   editorOptionsTree: any = {
     mode: 'tree',

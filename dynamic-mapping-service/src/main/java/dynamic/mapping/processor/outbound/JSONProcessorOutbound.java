@@ -21,173 +21,94 @@
 
 package dynamic.mapping.processor.outbound;
 
-import com.api.jsonata4java.expressions.EvaluateException;
-import com.api.jsonata4java.expressions.EvaluateRuntimeException;
-import com.api.jsonata4java.expressions.Expressions;
-import com.api.jsonata4java.expressions.ParseException;
-import com.cumulocity.model.idtype.GId;
-import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.TextNode;
-import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingRepresentation;
-import dynamic.mapping.model.MappingSubstitution;
-import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.configuration.ServiceConfiguration;
-import dynamic.mapping.connector.core.client.AConnectorClient;
-import dynamic.mapping.core.ConfigurationRegistry;
-import dynamic.mapping.processor.C8YMessage;
-import dynamic.mapping.processor.ProcessingException;
-import dynamic.mapping.processor.model.ProcessingContext;
+import static dynamic.mapping.model.MappingSubstitution.isArray;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import com.dashjoin.jsonata.json.Json;
+
+import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.core.ConfigurationRegistry;
+import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.processor.C8YMessage;
+import dynamic.mapping.processor.ProcessingException;
+import dynamic.mapping.processor.model.ProcessingContext;
+import lombok.extern.slf4j.Slf4j;
+
 @Slf4j
-public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode> {
+public class JSONProcessorOutbound extends BaseProcessorOutbound<Object> {
 
     public JSONProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         super(configurationRegistry, connectorClient);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context,
+    public Object deserializePayload(Mapping mapping,
             C8YMessage c8yMessage) throws IOException {
-        JsonNode jsonNode = objectMapper.readTree(c8yMessage.getPayload());
-        context.setPayload(jsonNode);
-        return context;
+        Object jsonNode = Json.parseJson(c8yMessage.getPayload());
+        return jsonNode;
     }
 
     @Override
-    public void extractFromSource(ProcessingContext<JsonNode> context)
+    public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        JsonNode payloadJsonNode = context.getPayload();
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        Object payloadObject = context.getPayload();
 
-        String payload = payloadJsonNode.toPrettyString();
+        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        String payloadAsString = toPrettyJsonString(payloadObject);
+
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.debug("Tenant {} - Incoming payload in extractFromSource(): {} {} {} {}", tenant, payload, serviceConfiguration.logPayload, mapping.debug,serviceConfiguration.logPayload || mapping.debug );
+            log.info("Tenant {} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
+                    payloadAsString,
+                    serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
         for (MappingSubstitution substitution : mapping.substitutions) {
-            JsonNode extractedSourceContent = null;
+            Object extractedSourceContent = null;
 
             /*
              * step 1 extract content from inbound payload
              */
-            var ps = substitution.pathSource;
-            try {
-                Expressions expr = Expressions.parse(ps);
-                extractedSourceContent = expr.evaluate(payloadJsonNode);
-            } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", context.getTenant(), substitution.pathSource,
-                        payload, e);
-            } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
-                        substitution.pathSource,
-                        payload, e);
-            }
+            extractedSourceContent = extractContent(context, mapping, payloadObject, payloadAsString,
+                    substitution.pathSource);
             /*
              * step 2 analyse extracted content: textual, array
              */
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
+            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     substitution.pathTarget,
-                    new ArrayList<MappingSubstitution.SubstituteValue>());
-            if (extractedSourceContent == null) {
-                log.error("Tenant {} - No substitution for: {}, {}", context.getTenant(), substitution.pathSource,
-                        payload);
-                postProcessingCacheEntry
-                        .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
-                postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
+                    new ArrayList<>());
+
+            if (isArray(extractedSourceContent) && substitution.expandArray) {
+                var extractedSourceContentCollection = (Collection) extractedSourceContent;
+                // extracted result from sourcePayload is an array, so we potentially have to
+                // iterate over the result, e.g. creating multiple devices
+                for (Object jn : extractedSourceContentCollection) {
+                    MappingSubstitution.processSubstitute(tenant, processingCacheEntry, jn,
+                            substitution, mapping);
+                }
             } else {
-                if (extractedSourceContent.isArray()) {
-                    if (substitution.expandArray) {
-                        // extracted result from sourcePayload is an array, so we potentially have to
-                        // iterate over the result, e.g. creating multiple devices
-                        for (JsonNode jn : extractedSourceContent) {
-                            if (jn.isTextual()) {
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
-                                                substitution.repairStrategy));
-                            } else if (jn.isNumber()) {
-                                postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn,
-                                                MappingSubstitution.SubstituteValue.TYPE.NUMBER,
-                                                substitution.repairStrategy));
-                            } else {
-                                log.warn("Tenant {} - Since result is not textual or number it is ignored: {}",
-                                        context.getTenant(),
-                                        jn.asText());
-                            }
-                        }
-                        context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
-                        postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                    } else {
-                        // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE
-                        // substitution
-                        context.addCardinality(substitution.pathTarget, 1);
-                        postProcessingCacheEntry
-                                .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                        MappingSubstitution.SubstituteValue.TYPE.ARRAY,
-                                        substitution.repairStrategy));
-                        postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                    }
-                } else if (extractedSourceContent.isTextual()) {
-                    if (ps.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathSource)
-                            && substitution.resolve2ExternalId) {
-                        log.debug("Tenant {} - Finding external Id: resolveGlobalId2ExternalId: {}, {}, {}",
-                                context.getTenant(), ps, extractedSourceContent.toPrettyString(),
-                                extractedSourceContent.asText());
-                        ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
-                                new GId(extractedSourceContent.asText()), mapping.externalIdType,
-                                context);
-                        if (externalId == null && context.isSendPayload()) {
-                            throw new RuntimeException(String.format("External id %s for type %s not found!",
-                                    extractedSourceContent.asText(), mapping.externalIdType));
-                        } else if (externalId == null) {
-                            extractedSourceContent = null;
-                        } else {
-                            extractedSourceContent = new TextNode(externalId.getExternalId());
-                        }
-                    }
-                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
-                    postProcessingCacheEntry.add(
-                            new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                    MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
-                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                    context.setSource(extractedSourceContent.asText());
-                } else if (extractedSourceContent.isNumber()) {
-                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
-                    postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                    MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
-                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                } else {
-                    log.debug("Tenant {} - This substitution, involves an objects for: {}, {}", context.getTenant(),
-                            substitution.pathSource, extractedSourceContent.toString());
-                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
-                    postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
-                                    MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
-                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
-                }
-                if (context.getServiceConfiguration().logSubstitution || mapping.debug) {
-                    log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
-                            context.getTenant(),
-                            substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
-                }
+                MappingSubstitution.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
+                        substitution, mapping);
             }
+            processingCache.put(substitution.pathTarget, processingCacheEntry);
 
+            if (context.getServiceConfiguration().logSubstitution || mapping.debug) {
+                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                        context.getTenant(),
+                        substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
+            }
         }
-
     }
 
 }

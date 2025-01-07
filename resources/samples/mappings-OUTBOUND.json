@@ -1,116 +1,232 @@
 [
   {
+    "id": "1925809",
+    "identifier": "f7jkg9",
+    "name": "Mapping - 51",
+    "publishTopic": "evt/outbound/#",
     "publishTopicSample": "evt/outbound/berlin_01",
-    "ident": "ek2kpo",
-    "tested": false,
-    "autoAckOperation": true,
-    "source": "{\"source\":{\"id\":\"38268445\"},\"type\":\"c8y_BusEvent\",\"text\":\"Bus was stopped\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"bus_event\":\"stop_event\"}",
-    "externalIdType": "c8y_Serial",
-    "qos": "AT_LEAST_ONCE",
+    "targetAPI": "EVENT",
+    "direction": "OUTBOUND",
+    "sourceTemplate": "{\"type\":\"c8y_BusEvent\",\"text\":\"Bus was stopped\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"bus_event\":\"stop_event\"}",
+    "targetTemplate": "{\"deviceId\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\",\"bus_event\":\"stop_event\"}",
+    "mappingType": "JSON",
     "substitutions": [
       {
-        "resolve2ExternalId": false,
-        "pathSource": "source.id",
+        "pathSource": "_IDENTITY_.c8ySourceId",
         "pathTarget": "_TOPIC_LEVEL_[2]",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "type",
         "pathTarget": "eventType",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
         "pathSource": "bus_event",
         "pathTarget": "bus_event",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": true,
-        "pathSource": "source.id",
+        "pathSource": "_IDENTITY_.externalId",
         "pathTarget": "deviceId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
-    "createNonExistingDevice": false,
-    "id": "7460930673",
-    "subscriptionTopic": "",
-    "direction": "OUTBOUND",
-    "snoopStatus": "NONE",
-    "mapDeviceIdentifier": true,
     "active": false,
-    "targetAPI": "EVENT",
-    "filterOutbound": "bus_event",
-    "publishTopic": "evt/outbound/#",
-    "target": "{\"deviceId\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\",\"bus_event\":\"stop_event\",\"_TOPIC_LEVEL_\":[\"evt\",\"outbound\",\"berlin_01\"]}",
-    "mappingTopic": "",
-    "updateExistingDevice": false,
-    "mappingType": "JSON",
-    "lastUpdate": 1709800167869,
     "debug": false,
-    "name": "Mapping - 51"
+    "tested": false,
+    "supportsMessageContext": false,
+    "createNonExistingDevice": false,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "snoopStatus": "NONE",
+    "snoopedTemplates": [],
+    "filterMapping": "bus_event",
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1735161611965,
+    "genericDeviceIdentifier": "_IDENTITY_.externalId"
   },
   {
-    "publishTopicSample": "opp/outbound/berlin_01",
-    "ident": "utnidm",
-    "tested": false,
-    "autoAckOperation": true,
-    "source": "{\"deviceId\":\"909090\",\"bus_opp\":\"New engine restart operation!\"}",
-    "externalIdType": "c8y_Serial",
-    "qos": "AT_LEAST_ONCE",
+    "id": "5325810",
+    "identifier": "1wo5jq",
+    "name": "Mapping - 54",
+    "publishTopic": "ednvcfnr-event",
+    "publishTopicSample": "ednvcfnr-event",
+    "targetAPI": "EVENT",
+    "direction": "OUTBOUND",
+    "sourceTemplate": "{\"type\":\"c8y_BusEvent\",\"text\":\"Bus was stopped\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"bus_event\":\"stop_event\"}",
+    "targetTemplate": "{\"deviceId\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\",\"bus_event\":\"stop_event\"}",
+    "mappingType": "JSON",
     "substitutions": [
       {
-        "resolve2ExternalId": true,
-        "pathSource": "deviceId",
-        "pathTarget": "_TOPIC_LEVEL_[2]",
+        "pathSource": "_IDENTITY_.c8ySourceId",
+        "pathTarget": "_CONTEXT_DATA_.key",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
+        "pathSource": "type",
+        "pathTarget": "eventType",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "bus_event",
+        "pathTarget": "bus_event",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "_IDENTITY_.externalId",
+        "pathTarget": "deviceId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "active": false,
+    "debug": false,
+    "tested": false,
+    "supportsMessageContext": true,
+    "createNonExistingDevice": false,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "snoopStatus": "NONE",
+    "snoopedTemplates": [],
+    "filterMapping": "bus_event",
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1735162010007,
+    "genericDeviceIdentifier": "_IDENTITY_.externalId"
+  },
+  {
+    "id": "6826997",
+    "identifier": "cxxlmh",
+    "name": "Mapping - 52",
+    "publishTopic": "evt/outbound/#",
+    "publishTopicSample": "evt/outbound/berlin_01",
+    "targetAPI": "OPERATION",
+    "direction": "OUTBOUND",
+    "sourceTemplate": "{\"bus_opp\":\"New engine restart operation!\"}",
+    "targetTemplate": "{\"c8y_Id\":\"909090\",\"decription\":\"dummy operation\",\"type\":\"bus_operation\"}",
+    "mappingType": "JSON",
+    "substitutions": [
+      {
+        "pathSource": "_IDENTITY_.c8ySourceId",
+        "pathTarget": "c8y_Id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
         "pathSource": "bus_opp",
         "pathTarget": "decription",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "resolve2ExternalId": false,
-        "pathSource": "deviceId",
-        "pathTarget": "c8y_Id",
+        "pathSource": "_IDENTITY_.externalId",
+        "pathTarget": "_TOPIC_LEVEL_[2]",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       }
     ],
-    "snoopedTemplates": [],
-    "createNonExistingDevice": false,
-    "id": "8560953664",
-    "subscriptionTopic": "",
-    "direction": "OUTBOUND",
-    "snoopStatus": "NONE",
-    "mapDeviceIdentifier": true,
     "active": false,
-    "targetAPI": "OPERATION",
-    "filterOutbound": "bus_opp",
-    "publishTopic": "opp/outbound/#",
-    "target": "{\"c8y_Id\":\"909090\",\"decription\":\"dummy operation\",\"type\":\"bus_operation\",\"_TOPIC_LEVEL_\":[\"opp\",\"outbound\",\"berlin_01\"]}",
-    "mappingTopic": "",
-    "updateExistingDevice": false,
-    "mappingType": "JSON",
-    "lastUpdate": 1709828472844,
     "debug": false,
-    "name": "Mapping - 52"
+    "tested": false,
+    "supportsMessageContext": false,
+    "createNonExistingDevice": false,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "snoopStatus": "NONE",
+    "snoopedTemplates": [],
+    "filterMapping": "bus_opp",
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1735162008771,
+    "genericDeviceIdentifier": "_IDENTITY_.externalId"
+  },
+  {
+    "id": "9127014",
+    "identifier": "46twov",
+    "name": "Mapping - 53",
+    "publishTopic": "evt/outDeviceId/#",
+    "publishTopicSample": "evt/outDeviceId/berlin_01",
+    "targetAPI": "EVENT",
+    "direction": "OUTBOUND",
+    "sourceTemplate": "{\"type\":\"c8y_BusEvent\",\"text\":\"Bus was stopped\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"bus_event\":\"stop_event\"}",
+    "targetTemplate": "{\"c8y_Id\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\",\"bus_event\":\"stop_event\"}",
+    "mappingType": "JSON",
+    "substitutions": [
+      {
+        "pathSource": "_IDENTITY_.c8ySourceId",
+        "pathTarget": "_TOPIC_LEVEL_[2]",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "type",
+        "pathTarget": "eventType",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "bus_event",
+        "pathTarget": "bus_event",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "_IDENTITY_.externalId",
+        "pathTarget": "c8y_Id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "text",
+        "pathTarget": "description",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "active": true,
+    "debug": false,
+    "tested": false,
+    "supportsMessageContext": false,
+    "createNonExistingDevice": false,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "snoopStatus": "NONE",
+    "snoopedTemplates": [],
+    "filterMapping": "bus_event",
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1735162151631,
+    "genericDeviceIdentifier": "_IDENTITY_.externalId"
   }
 ]

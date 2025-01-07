@@ -121,12 +121,12 @@ public final class InternalCustomAlarmOuter {
    * Protobuf type {@code processor.protobuf.InternalCustomAlarm}
    */
   public static final class InternalCustomAlarm extends
-      com.google.protobuf.GeneratedMessageV3 implements
+      com.google.protobuf.GeneratedMessage implements
       // @@protoc_insertion_point(message_implements:processor.protobuf.InternalCustomAlarm)
       InternalCustomAlarmOrBuilder {
   private static final long serialVersionUID = 0L;
     // Use InternalCustomAlarm.newBuilder() to construct.
-    private InternalCustomAlarm(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+    private InternalCustomAlarm(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
     }
     private InternalCustomAlarm() {
@@ -156,7 +156,7 @@ public final class InternalCustomAlarmOuter {
     }
 
     @java.lang.Override
-    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return InternalCustomAlarmOuter.internal_static_processor_protobuf_InternalCustomAlarm_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
@@ -419,23 +419,23 @@ public final class InternalCustomAlarmOuter {
       if (timestamp_ != 0L) {
         output.writeInt64(1, timestamp_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(txt_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, txt_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(txt_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 2, txt_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(unit_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, unit_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(unit_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 3, unit_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalIdType_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, externalIdType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalIdType_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 4, externalIdType_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 5, externalId_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalId_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 5, externalId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(alarmType_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 6, alarmType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(alarmType_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 6, alarmType_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(severity_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 7, severity_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(severity_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 7, severity_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -450,23 +450,23 @@ public final class InternalCustomAlarmOuter {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(1, timestamp_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(txt_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, txt_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(txt_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(2, txt_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(unit_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, unit_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(unit_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(3, unit_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalIdType_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, externalIdType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalIdType_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(4, externalIdType_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(externalId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, externalId_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalId_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(5, externalId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(alarmType_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(6, alarmType_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(alarmType_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(6, alarmType_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(severity_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(7, severity_);
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(severity_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(7, severity_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -562,39 +562,39 @@ public final class InternalCustomAlarmOuter {
     }
     public static InternalCustomAlarmOuter.InternalCustomAlarm parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input);
     }
     public static InternalCustomAlarmOuter.InternalCustomAlarm parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
     public static InternalCustomAlarmOuter.InternalCustomAlarm parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseDelimitedWithIOException(PARSER, input);
     }
     public static InternalCustomAlarmOuter.InternalCustomAlarm parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
     public static InternalCustomAlarmOuter.InternalCustomAlarm parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input);
     }
     public static InternalCustomAlarmOuter.InternalCustomAlarm parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return com.google.protobuf.GeneratedMessageV3
+      return com.google.protobuf.GeneratedMessage
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
@@ -614,7 +614,7 @@ public final class InternalCustomAlarmOuter {
 
     @java.lang.Override
     protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
@@ -622,7 +622,7 @@ public final class InternalCustomAlarmOuter {
      * Protobuf type {@code processor.protobuf.InternalCustomAlarm}
      */
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
         // @@protoc_insertion_point(builder_implements:processor.protobuf.InternalCustomAlarm)
         InternalCustomAlarmOuter.InternalCustomAlarmOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
@@ -631,7 +631,7 @@ public final class InternalCustomAlarmOuter {
       }
 
       @java.lang.Override
-      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
         return InternalCustomAlarmOuter.internal_static_processor_protobuf_InternalCustomAlarm_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
@@ -644,7 +644,7 @@ public final class InternalCustomAlarmOuter {
       }
 
       private Builder(
-          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
 
       }
@@ -1403,7 +1403,7 @@ public final class InternalCustomAlarmOuter {
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_processor_protobuf_InternalCustomAlarm_descriptor;
   private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_processor_protobuf_InternalCustomAlarm_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
@@ -1429,7 +1429,7 @@ public final class InternalCustomAlarmOuter {
     internal_static_processor_protobuf_InternalCustomAlarm_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_processor_protobuf_InternalCustomAlarm_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_processor_protobuf_InternalCustomAlarm_descriptor,
         new java.lang.String[] { "Timestamp", "Txt", "Unit", "ExternalIdType", "ExternalId", "AlarmType", "Severity", });
   }

@@ -18,6 +18,11 @@
  *
  * @authors Christof Strack
  */
+import { inject } from "@angular/core";
+import { ResolveFn } from "@angular/router";
+import { IManagedObject } from "@c8y/client";
+import { ExtensionService } from "../extension.service";
+
 export enum ERROR_TYPE {
   TYPE_VALIDATION = 'TYPE_VALIDATION',
   ALREADY_SUBSCRIBED = 'ALREADY_SUBSCRIBED',
@@ -26,3 +31,9 @@ export enum ERROR_TYPE {
   INVALID_PACKAGE = 'INVALID_PACKAGE',
   INVALID_APPLICATION = 'INVALID_APPLICATION'
 }
+
+export const extensionResolver: ResolveFn<IManagedObject[]> = (route) => {
+  const extensionService = inject(ExtensionService);
+  const id = route.paramMap.get('id');
+  return extensionService.getExtensionsEnriched(id);
+};

@@ -20,6 +20,7 @@
  */
 
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
 import { ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
@@ -28,10 +29,8 @@ import {
   MappingSubstitution,
   RepairStrategy
 } from '../../../shared';
-import { EditorMode } from '../../shared/stepper-model';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
-import { definesDeviceIdentifier } from '../../shared/util';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { definesDeviceIdentifier, StepperConfiguration } from '../../../shared/mapping/mapping.model';
+import { EditorMode } from '../../shared/stepper.model';
 
 @Component({
   selector: 'd11r-edit-substitution-modal',
@@ -68,7 +67,8 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
 
     this.editedSubstitution = this.substitution;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
-      .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
+      // .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
+      .filter((key) => key != 'IGNORE')
       .map((key) => {
         return {
           label: key,
@@ -83,9 +83,8 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       });
 
     const marksDeviceIdentifier = definesDeviceIdentifier(
-      this.mapping.targetAPI,
+      this.mapping,
       this.substitution,
-      this.stepperConfiguration.direction
     )
       ? '* '
       : '';
@@ -97,7 +96,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       pathSource: this.editedSubstitution.pathSource,
       pathTarget: this.editedSubstitution.pathTarget,
       expandArray: this.editedSubstitution.expandArray,
-      resolve2ExternalId: this.editedSubstitution.resolve2ExternalId,
       repairStrategy: this.editedSubstitution.repairStrategy
     });
     // console.log("Repair Options:", this.repairStrategyOptions);
@@ -109,7 +107,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       pathSource: [{ value: '', disabled: true }],
       pathTarget: [{ value: '', disabled: true }],
       expandArray: [{ value: false, disabled: this.isExpandToArrayDisabled() }],
-      resolve2ExternalId: [{ value: false, disabled: this.isResolve2ExternalIdDisabled() }],
       repairStrategy: ['']
     });
   }
@@ -148,14 +145,6 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     // );
     // const r = d0 || d1 || (!d1 && d2);
     const r = d0 || d1;
-    // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
-    return r;
-  }
-
-  isResolve2ExternalIdDisabled() {
-    const r =
-      this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-      this.stepperConfiguration.direction == Direction.INBOUND;
     // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }

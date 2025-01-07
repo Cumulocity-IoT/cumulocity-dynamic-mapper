@@ -21,7 +21,7 @@
 <div class="card pointer card--d-col">
   <div (click)="detail()" class="card-block text-center card-column-40">
     <div class="card-appicon">
-      <i c8yIcon="plugin"></i>
+      <i c8yIcon="extension"></i>
     </div>
     <p class="e2e-appCardName text-medium" title="{{ app['name'] }}">
       {{ app['name'] }}
@@ -76,6 +76,15 @@
           >
             <i c8yIcon="trash" class="m-r-4"></i>
             {{ 'Delete' | translate }}
+          </button>
+        </li>
+        <li>
+          <button
+            (click)="detail()"
+            title="{{ 'Details' }}"
+          >
+            <i c8yIcon="more-details" class="m-r-4"></i>
+            {{ 'Details' | translate }}
           </button>
         </li>
       </ul>

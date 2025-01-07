@@ -20,13 +20,13 @@
  */
 
 import { NgModule } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { SharedModule } from '../shared';
 import { MappingModule } from '../mapping/mapping.module';
+import { SharedModule } from '../shared';
 import { LandingComponent } from './landing.component';
-import { RouterModule } from '@angular/router';
 
 @NgModule({
   declarations: [LandingComponent],

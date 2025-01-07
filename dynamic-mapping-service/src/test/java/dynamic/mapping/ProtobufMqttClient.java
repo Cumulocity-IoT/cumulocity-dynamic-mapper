@@ -29,8 +29,8 @@ import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 
 import dynamic.mapping.processor.extension.internal.InternalCustomAlarmOuter;
 import dynamic.mapping.processor.extension.internal.InternalCustomAlarmOuter.InternalCustomAlarm;
-import dynamic.mapping.processor.processor.fixed.StaticCustomMeasurementOuter;
-import dynamic.mapping.processor.processor.fixed.StaticCustomMeasurementOuter.StaticCustomMeasurement;
+import dynamic.mapping.processor.processor.fixed.InternalCustomMeasurementOuter;
+import dynamic.mapping.processor.processor.fixed.InternalCustomMeasurementOuter.InternalCustomMeasurement;
 
 public class ProtobufMqttClient {
     Mqtt3BlockingClient testClient;
@@ -45,16 +45,26 @@ public class ProtobufMqttClient {
     }
 
     public static void main(String[] args) {
-
-        Mqtt3SimpleAuth simpleAuth = Mqtt3SimpleAuth.builder().username(broker_username)
-                .password(broker_password.getBytes()).build();
-        Mqtt3BlockingClient sampleClient = Mqtt3Client.builder()
-                .serverHost(broker_host)
-                .serverPort(broker_port)
-                .identifier(client_id)
-                .simpleAuth(simpleAuth)
-                .sslWithDefaultConfig()
-                .buildBlocking();
+        Mqtt3BlockingClient sampleClient;
+        if (broker_username == null || broker_username.isEmpty() ||
+                broker_password == null || broker_password.isEmpty()) {
+            sampleClient = Mqtt3Client.builder()
+                    .serverHost(broker_host)
+                    .serverPort(broker_port)
+                    .identifier(client_id)
+                    .sslWithDefaultConfig()
+                    .buildBlocking();
+        } else {
+            Mqtt3SimpleAuth simpleAuth = Mqtt3SimpleAuth.builder().username(broker_username)
+                    .password(broker_password.getBytes()).build();
+            sampleClient = Mqtt3Client.builder()
+                    .serverHost(broker_host)
+                    .serverPort(broker_port)
+                    .identifier(client_id)
+                    .simpleAuth(simpleAuth)
+                    .sslWithDefaultConfig()
+                    .buildBlocking();
+        }
         ProtobufMqttClient client = new ProtobufMqttClient(sampleClient);
         client.testSendMeasurement();
         client.testSendAlarm();
@@ -69,7 +79,7 @@ public class ProtobufMqttClient {
 
         System.out.println("Publishing message on topic" + topic);
 
-        StaticCustomMeasurementOuter.StaticCustomMeasurement proto = StaticCustomMeasurement.newBuilder()
+        InternalCustomMeasurementOuter.InternalCustomMeasurement proto = InternalCustomMeasurement.newBuilder()
                 .setExternalIdType("c8y_Serial")
                 .setExternalId("berlin_01")
                 .setUnit("C")

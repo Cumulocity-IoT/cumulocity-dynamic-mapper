@@ -1,7 +1,6 @@
 package dynamic.mapping.core.cache;
 
-import javax.validation.constraints.NotNull;
-import java.util.Objects;
+import jakarta.validation.constraints.NotNull;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

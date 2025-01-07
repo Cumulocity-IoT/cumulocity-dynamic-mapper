@@ -26,13 +26,14 @@ import {
   IManagedObject,
   IResult,
   IExternalIdentity,
-  IOperation
+  IOperation,
+  IdReference
 } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
-import { API } from '../../shared';
+import { API, MAPPING_TEST_DEVICE_FRAGMENT } from '../../shared';
 import { FacadeIdentityService } from './facade/facade-identity.service';
 import { FacadeInventoryService } from './facade/facade-inventory.service';
-import { ProcessingContext } from '../processor/processor.model';
+import { ProcessingContext } from './processor/processor.model';
 import { FacadeAlarmService } from './facade/facade-alarm.service';
 import { FacadeEventService } from './facade/facade-event.service';
 import { FacadeMeasurementService } from './facade/facade-measurement.service';
@@ -49,7 +50,7 @@ export class C8YAgent {
     private measurement: FacadeMeasurementService,
     private operation: FacadeOperationService,
     private alert: AlertService
-  ) {}
+  ) { }
 
   initializeCache(): void {
     this.inventory.initializeCache();
@@ -102,8 +103,11 @@ export class C8YAgent {
       }
     }
 
+
     if (error != '') {
-      this.alert.danger(`Failed to test mapping: ${error}`);
+      // throw new Error(error);
+      // this.alert.danger(`Failed to test mapping: ${error}`);
+      context.requests[context.requests.length - 1].error = error;
       return '';
     }
 
@@ -117,64 +121,80 @@ export class C8YAgent {
         return data;
       } else {
         const e = await res.text();
-        this.alert.danger(`Failed to test mapping: ${e}`);
+        //this.alert.danger(`Failed to test mapping: ${e}`);
         context.requests[context.requests.length - 1].error = e;
         return '';
       }
     } catch (e) {
       const { res } = await e;
-      this.alert.danger(`Failed to test mapping: ${res.statusText}`);
+      // this.alert.danger(`Failed to test mapping: ${res.statusText}`);
       context.requests[context.requests.length - 1].error = res.statusText;
       return '';
     }
   }
 
   async upsertDevice(
-    identityx: IExternalIdentity,
-    context: ProcessingContext
+    identity: IExternalIdentity,
+    context: ProcessingContext,
   ): Promise<IManagedObject> {
-    let identity = identityx;
-    let deviceId: string;
+    let sourceId: string;
     try {
-      deviceId = await this.resolveExternalId2GlobalId(identity, context);
+      if (identity) {
+        sourceId = await this.resolveExternalId2GlobalId(identity, context)
+      } else {
+        const { data } = await this.detail(context.sourceId, context);
+        sourceId = data?.id;
+      }
     } catch (e) {
+      const { res, data } = e;
+      // enrich error message
+      if (res?.status == HttpStatusCode.NotFound) {
+        e.message = `Device with ${context.sourceId} not found!`;
+      }
+      // throw e;
+      console.error(e);
       // console.log(
       //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
       // );
     }
 
-    const currentRequest =
-      context.requests[context.requests.length - 1].request;
-    const device: Partial<IManagedObject> = {
-      ...currentRequest,
-      c8y_IsDevice: {},
-      d11r_testDevice: {},
-      com_cumulocity_model_Agent: {}
-    };
-    // remove device identifier
-
-    if (deviceId) {
-      device.id = deviceId;
-      const response: IResult<IManagedObject> = await this.inventory.update(
-        device,
-        context
-      );
-      return response.data;
-    } else {
-      delete device[API.INVENTORY.identifier];
-      const response: IResult<IManagedObject> = await this.inventory.create(
-        device,
-        context
-      );
-      // create identity for mo
-      identity = {
-        ...identity,
-        managedObject: {
-          id: response.data.id
-        }
+    const currentRequest = context.requests?.slice(-1)[0] ?? null;
+    if (!currentRequest.hidden) {
+      const device: Partial<IManagedObject> = {
+        c8y_IsDevice: {},
+        [MAPPING_TEST_DEVICE_FRAGMENT]: {},
+        name: currentRequest.request['name'],
+        com_cumulocity_model_Agent: {}
       };
-      await this.identity.create(identity, context);
-      return response.data;
+      // remove device identifier
+
+      if (sourceId) {
+        device.id = sourceId;
+        const response: IResult<IManagedObject> = await this.inventory.update(
+          device,
+          context
+        );
+        return response.data;
+      } else {
+        delete device[API.INVENTORY.identifier];
+        const response: IResult<IManagedObject> = await this.inventory.create(
+          device,
+          context
+        );
+        // create identity for mo
+        if (identity) {
+          identity = {
+            ...identity,
+            managedObject: {
+              id: response.data.id
+            }
+          };
+          await this.identity.create(identity, context);
+        }
+        return response.data;
+      }
+    } else {
+      return { id: sourceId } as IManagedObject;
     }
   }
 
@@ -193,12 +213,23 @@ export class C8YAgent {
     identity: string,
     externalIdType: string,
     context: ProcessingContext
-  ): Promise<string> {
-    const data = await this.identity.resolveGlobalId2ExternalId(
+  ): Promise<IExternalIdentity> {
+    const externalId = await this.identity.resolveGlobalId2ExternalId(
       identity,
       externalIdType,
       context
     );
-    return data.managedObject.id as string;
+    return externalId;
+  }
+
+  async detail(
+    managedObjectOrId: IdReference,
+    context: ProcessingContext
+  ): Promise<IResult<IManagedObject>> {
+    const managedObject = await this.inventory.detail(
+      managedObjectOrId,
+      context
+    );
+    return managedObject;
   }
 }

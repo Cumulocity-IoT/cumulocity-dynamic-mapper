@@ -1,0 +1,56 @@
+<!--
+  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ @authors Christof Strack
+  -->
+
+<c8y-title>Connectors</c8y-title>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Add connector' | translate }}" (click)="onConfigurationAdd()">
+    <i c8yIcon="connected"></i>
+    {{ 'Add connector' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
+    <i c8yIcon="refresh"></i>
+    {{ 'Refresh' | translate }}
+  </button>
+</c8y-action-bar-item>
+
+<c8y-breadcrumb>
+  <c8y-breadcrumb-item
+    [icon]="'cog'"
+    [label]="'Configuration' | translate"
+    [path]="'sag-ps-pkg-dynamic-mapping/node3/serviceConfiguration'"
+  >
+  </c8y-breadcrumb-item>
+  <c8y-breadcrumb-item
+    [icon]="''"
+    [label]="'Connectors' | translate"
+  ></c8y-breadcrumb-item>
+</c8y-breadcrumb>
+
+<div class="card content-fullpage d-grid">
+  <div class="card card--grid card--grid__inner-scroll">
+    <div class="p-l-16 p-r-16">
+      <d11r-mapping-connector-configuration #connectorConfigurationBroker
+        [selectable]="false"></d11r-mapping-connector-configuration>
+    </div>
+  </div>
+</div>

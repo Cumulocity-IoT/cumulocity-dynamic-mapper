@@ -21,23 +21,27 @@
 
 package dynamic.mapping.processor.model;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
 import dynamic.mapping.model.QOS;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import dynamic.mapping.processor.ProcessingException;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
 /*
  * The class <code>ProcessingContext</code> collects all relevant information:
  * <code>mapping</code>, <code>topic</code>, <code>payload</code>,
@@ -54,37 +58,47 @@ public class ProcessingContext<O> {
 
     private String resolvedPublishTopic;
 
+    /**
+     * contains the deserialized payload
+     */
     private O payload;
 
     private byte[] payloadRaw;
 
+    @Builder.Default
     private List<C8YRequest> requests = new ArrayList<C8YRequest>();
 
-    private List<Exception> errors  = new ArrayList<Exception>();
+    @Builder.Default
+    private List<Exception> errors = new ArrayList<Exception>();
 
+    @Builder.Default
     private ProcessingType processingType = ProcessingType.UNDEFINED;
-
-    private Map<String, Integer> cardinality = new HashMap<String, Integer>();
 
     private MappingType mappingType;
 
-    private Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
-    
+    // <pathTarget, substituteValues>
+    @Builder.Default
+    private Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
+
+    @Builder.Default
     private boolean sendPayload = false;
 
+    @Builder.Default
     private boolean needsRepair = false;
 
     private String tenant;
 
     private ServiceConfiguration serviceConfiguration;
 
+    @Builder.Default
     private boolean supportsMessageContext = false;
 
+    @Builder.Default
     private boolean ignoreFurtherProcessing = false;
 
     private byte[] key;
 
-    private String source;
+    private String sourceId;
 
     public static final String SOURCE_ID = "source.id";
 
@@ -97,33 +111,60 @@ public class ProcessingContext<O> {
         return requests.size() - 1;
     }
 
-    /*
-     * Keep track of the extracted size of every extracted values for a
-     * <code>pathTarget</code>
-     * 
-     * @param pathTarget jsonPath of target in a substitution
-     * 
-     * @param card cardinality of this <code>pathTarget</code> found when extracting
-     * values from the payload
-     * 
-     * @return true if all added cardinalities are the same, false if at least two
-     * different cardinalities exist.
-     */
-    public void addCardinality(String pathTarget, Integer card) {
-        cardinality.put(pathTarget, card);
-        Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
-        Stream<Entry<String, Integer>> stream1 = entries.stream()
-                .filter(e -> !ProcessingContext.SOURCE_ID.equals(e.getKey()));
-        Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
-        needsRepair = (collect.size() != 1);
-    }
-
     public C8YRequest getCurrentRequest() {
-        return requests.get(requests.size()-1);
+        return requests.get(requests.size() - 1);
     }
 
     public void addError(ProcessingException processingException) {
         errors.add(processingException);
     }
 
+    public void addToProcessingCache(String key, Object value, MappingSubstitution.SubstituteValue.TYPE type,
+            RepairStrategy repairStrategy) {
+        processingCache.put(key,
+                new ArrayList<>(
+                        Arrays.asList(
+                                new MappingSubstitution.SubstituteValue(
+                                        value,
+                                        type,
+                                        repairStrategy))));
+    }
+
+    public List<MappingSubstitution.SubstituteValue> getDeviceEntries() {
+        List<String> pathsTargetForDeviceIdentifiers;
+        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())) {
+            pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
+        } else {
+            pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
+        }
+        String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
+                ? pathsTargetForDeviceIdentifiers.get(0)
+                : null;
+        List<MappingSubstitution.SubstituteValue> deviceEntries = processingCache
+                .get(firstPathTargetForDeviceIdentifiers);
+        return deviceEntries;
+    }
+
+    public List<String> getPathsTargetForDeviceIdentifiers() {
+        List<String> pathsTargetForDeviceIdentifiers;
+        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())) {
+            pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
+        } else {
+            pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
+        }
+        pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
+        return pathsTargetForDeviceIdentifiers;
+    }
+
+    public Set<String> getPathTargets() {
+        return processingCache.keySet();
+    }
+
+    public List<SubstituteValue> getFromProcessingCache(String pathTarget) {
+        return processingCache.get(pathTarget);
+    }
+
+    public Integer getProcessingCacheSize() {
+        return processingCache.size();
+    }
 }

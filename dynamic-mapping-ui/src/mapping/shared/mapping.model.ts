@@ -1,5 +1,3 @@
-import { IIdentified } from '@c8y/client';
-
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -21,15 +19,9 @@ import { IIdentified } from '@c8y/client';
  * @authors Christof Strack
  */
 
+
 export const SNOOP_TEMPLATES_MAX = 10;
 export const HOUSEKEEPING_INTERVAL_SECONDS = 30;
-
-export enum ExtensionStatus {
-  COMPLETE = 'COMPLETE',
-  PARTIALLY = 'PARTIALLY',
-  NOT_LOADED = 'NOT_LOADED',
-  UNKNOWN = 'UNKNOWN'
-}
 
 export interface PayloadWrapper {
   message: string;
@@ -41,7 +33,6 @@ export enum ValidationError {
   Multi_Level_Wildcard_Only_At_End,
   Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used,
   One_Substitution_Defining_Device_Identifier_Must_Be_Used,
-  MappingTopicSample_Must_Match_The_SubscriptionTopic,
   MappingTopic_Not_Unique,
   MappingTopic_Must_Not_Be_Substring_Of_Other_MappingTopic,
   Target_Template_Must_Be_Valid_JSON,
@@ -70,9 +61,6 @@ export const ValidationFormlyError = {
   },
   One_Substitution_Defining_Device_Identifier_Must_Be_Used: {
     message: 'Only one MultiLevel wildcard "#" is allowed.'
-  },
-  MappingTopicSample_Must_Match_The_SubscriptionTopic: {
-    message: 'The MappingTopicSample must match the SubscriptionTopic.'
   },
   MappingTopic_Not_Unique: {
     message: 'This MappingTopic must be unique across other MappingTopics.'
@@ -114,11 +102,15 @@ export const ValidationFormlyError = {
         'PublishTopic and PublishTopicSample do not have same structure in the Topic Name.'
     },
   FilterOutbound_Must_Be_Unique: {
-    message: 'FilterOutbound must be unique within all outbound mappings.'
+    message: 'filterMapping must be unique within all outbound mappings.'
   }
 };
 
 export class C8YNotificationSubscription {
   api: string;
-  devices: IIdentified[];
+  devices: Device[];
+}
+export class Device {
+  id: string;
+  name?: string;
 }
