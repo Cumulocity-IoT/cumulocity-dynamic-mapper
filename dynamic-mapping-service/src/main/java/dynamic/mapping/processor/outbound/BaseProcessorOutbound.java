@@ -219,7 +219,8 @@ public abstract class BaseProcessorOutbound<T> {
             String payloadAsString, @NotNull String ps) {
         Object extractedSourceContent = null;
         try {
-            var expr = jsonata(mapping.transformGenericPath2C8YPath(ps));
+            // var expr = jsonata(mapping.transformGenericPath2C8YPath(ps));
+            var expr = jsonata(ps);
             extractedSourceContent = expr.evaluate(payloadJsonNode);
         } catch (Exception e) {
             log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
