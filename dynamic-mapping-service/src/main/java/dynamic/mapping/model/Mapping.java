@@ -128,7 +128,6 @@ public class Mapping implements Serializable {
     public Boolean autoAckOperation;
 
     @NotNull
-
     public Boolean useExternalId = false;;
 
     public String externalIdType;
