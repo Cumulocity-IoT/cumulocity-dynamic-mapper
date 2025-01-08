@@ -28,7 +28,7 @@
   </c8y-breadcrumb-item>
   <c8y-breadcrumb-item [label]="configuration?.name"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
-<div class="d-grid grid__row--2-8 m-b-0">
+<div class="card card--fullpage content-fullpage m-b-0">
   <div class="elevation-sm p-l-24 p-r-24 p-t-24 p-b-24">
     <form class="form-horizontal">
       <div class="d-grid grid__col--6-6--md">
@@ -68,7 +68,7 @@
       </div>
     </form>
   </div>
-  <div class="elevation-sm _inner-scroll m-t-16 p-24">
+  <div class="elevation-sm inner-scroll m-t-16 p-24">
     <c8y-form-group>
       <form class="form-inline">
         <label class="control-label m-r-8" title="{{ 'Filter connector logs' | translate }}">Filter connector
@@ -106,7 +106,7 @@
           </div>
         </div>
       </div>
-      <c8y-list-group class="inner-scroll" style="height: 40% !important">
+      <c8y-list-group class="inner-scroll">
         <c8y-li-timeline *ngFor="let event of statusLogs$ | async">
           {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
           <c8y-li>

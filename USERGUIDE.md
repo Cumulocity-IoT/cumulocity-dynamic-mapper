@@ -117,11 +117,11 @@ Further example for JSONata expressions are:
 
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 
-1. `JSON`: if your payload is in JSON format
-1. `FLAT_FILE`: if your payload is in a CSV format
-1. `BINARY`: if your payload is in HEX format
-1. `PROTOBUF_INTERNAL`: if your payload is a serialized protobuf message
-1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension
+1. `Json`: if your payload is in JSON format
+1. `Flat File`: if your payload is in a CSV format
+1. `Binary`: if your payload is in HEX format
+1. `Protobuf Internal`: if your payload is a serialized protobuf message
+1. `Extension Source`: if you want to process the message yourself, by registering a processor extension
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png"  style="width: 70%;" />
@@ -132,16 +132,16 @@ The wizard to define a mapping consists of the steps:
 
 1. Select the type of mapping:
 
-- `JSON`
-- `FLAT_FILE`
-- `BINARY`
-- `PROTOBUF_INTERNAL`
-- `PROCESSOR_EXTENSION`
+- `Json`
+- `Flat File`
+- `Binary`
+- `Protobuf Internal`
+- `Extension Source`
 
 ---
 
 **NOTE:**
-Payload for `FLAT_FILE` and `BINARY` are wrapped.
+Payload for `Flat File` and `Binary` are wrapped.
 For example for a flat file messages:
 
 ```
@@ -494,7 +494,7 @@ The configuration of the microservice can be changed using the following UI:
 
 ### Processing Extensions
 
-When you choose the mapping type `PROCESSOR_EXTENSION` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
+When you choose the mapping type `Extension Source` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_ProtobufMessage_Annnotated.png"  style="width: 70%;" />
