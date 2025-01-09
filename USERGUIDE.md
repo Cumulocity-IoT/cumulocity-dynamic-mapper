@@ -66,7 +66,7 @@ The settings for the Kafka connector can be seen on the following screenshot:
 When you add or change a connection configuration it happens very often that the parameter are incorrect and the connection fails. In this case the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter you can follows the error messages in the connections logs on the same UI:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Monitoring.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Details.png"  style="width: 70%;" />
 </p>
 <br/>
 
