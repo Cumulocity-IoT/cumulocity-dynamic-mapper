@@ -37,10 +37,10 @@ interface ExtensionState {
 
 @Component({
   selector: 'd11r-mapping-extension',
-  templateUrl: './extension.component.html',
+  templateUrl: './extension-grid.component.html',
   styleUrls: ['../share/extension.component.css']
 })
-export class ExtensionComponent implements OnInit, OnDestroy {
+export class ExtensionGridComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly reload$ = new BehaviorSubject<void>(null);
   private readonly state = new BehaviorSubject<ExtensionState>({

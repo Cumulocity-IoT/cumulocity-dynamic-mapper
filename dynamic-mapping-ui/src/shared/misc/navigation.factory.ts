@@ -54,7 +54,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     configurationNode: new NavigatorNode({
       label: gettext('Configuration'),
       icon: 'cog',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+      // path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
       priority: 500,
       preventDuplicates: true
     }),
@@ -63,7 +63,23 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Connectors'),
       icon: 'c8y-device-management',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-      priority: 500,
+      priority: 480,
+      preventDuplicates: true
+    }),
+    serviceConfigurationNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Service configuration'),
+      icon: 'cog',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+      priority: 470,
+      preventDuplicates: true
+    }),
+    processorExtensionNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Processor extension'),
+      icon: 'extension',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/processorExtension`,
+      priority: 460,
       preventDuplicates: true
     }),
     mappingNode: new NavigatorNode({
@@ -91,11 +107,34 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     configurationNode: new NavigatorNode({
-      parent: gettext('Dynamic Data Mapper'),
       label: gettext('Configuration'),
       icon: 'cog',
+      // path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+      priority: 500,
+      preventDuplicates: true
+    }),
+    connectorNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Connectors'),
+      icon: 'c8y-device-management',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+      priority: 480,
+      preventDuplicates: true
+    }),
+    serviceConfigurationNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Service configuration'),
+      icon: 'cog',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
-      priority: 550,
+      priority: 470,
+      preventDuplicates: true
+    }),
+    processorExtensionNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Processor extension'),
+      icon: 'extension',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/processorExtension`,
+      priority: 460,
       preventDuplicates: true
     }),
     mappingNode: new NavigatorNode({
