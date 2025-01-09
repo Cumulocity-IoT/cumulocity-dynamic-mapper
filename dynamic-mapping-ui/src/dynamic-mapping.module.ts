@@ -39,9 +39,7 @@ import { FormlyPresetModule } from '@ngx-formly/core/preset';
 
 import {
   MappingNavigationFactory,
-  MappingTabFactory,
   OverviewGuard,
-  SharedModule,
 } from './shared';
 import { TestingModule } from './testing-device/testing.module';
 import './shared/styles/shared.css';
@@ -74,7 +72,6 @@ import { LandingModule } from './landing/landing.module';
     OverviewGuard,
     BsModalService,
     hookNavigator(MappingNavigationFactory),
-    hookTab(MappingTabFactory),
   ],
 })
 export class DynamicMappingModule {

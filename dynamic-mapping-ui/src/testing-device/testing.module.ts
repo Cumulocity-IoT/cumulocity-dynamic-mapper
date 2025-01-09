@@ -20,10 +20,10 @@
  */
 
 import { NgModule } from '@angular/core';
-import { CoreModule, hookRoute } from '@c8y/ngx-components';
+import { CoreModule, hookNavigator, hookRoute } from '@c8y/ngx-components';
+import { NODE2, SharedModule } from '../shared';
 import { TestingComponent } from './grid/testing.component';
-import { SharedModule } from '../shared';
-import { NODE2 } from '../shared/mapping/util';
+import { TestNavigationFactory } from './test-navigation.factory';
 
 @NgModule({
   declarations: [
@@ -35,7 +35,8 @@ import { NODE2 } from '../shared/mapping/util';
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE2}/testing`,
       component: TestingComponent
-    })
+    }),
+    hookNavigator(TestNavigationFactory),
   ]
 })
-export class TestingModule {}
+export class TestingModule { }

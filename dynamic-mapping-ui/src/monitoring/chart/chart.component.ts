@@ -137,7 +137,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
     this.echartOptions = {
       title: {
         show: false,
-        text: 'Messages processed by mappings',
+        text: 'Messages processed',
         textStyle: {
           color: this.textColor,
           fontFamily: this.fontFamily,

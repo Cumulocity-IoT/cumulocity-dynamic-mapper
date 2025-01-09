@@ -17,7 +17,6 @@ export * from './misc/camel-case.pipe';
 export * from './misc/capitalize-case.pipe';
 export * from './misc/filter-json.pipe';
 export * from './misc/format-string.pipe';
-export * from './misc/mapping-tab.factory';
 export * from './misc/navigation.factory';
 export * from './misc/overview.guard';
 export * from './service/shared.model';
