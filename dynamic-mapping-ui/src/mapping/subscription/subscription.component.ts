@@ -72,7 +72,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   stepperConfiguration: StepperConfiguration = {};
   titleMapping: string;
-  titleSubscription: string = 'Subscription on devices for mapping outbound';
+  titleSubscription: string = 'Subscription devices mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
 
   displayOptions: DisplayOptions = {

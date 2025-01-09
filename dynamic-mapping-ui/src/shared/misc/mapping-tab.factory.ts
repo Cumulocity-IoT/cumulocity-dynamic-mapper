@@ -44,22 +44,22 @@ export class MappingTabFactory implements TabFactory {
         orientation: 'horizontal'
       } as Tab);
 
-      if (feature?.outputMappingEnabled) {
-        tabs.push({
-          path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
-          priority: 920,
-          label: 'Outbound mapping',
-          icon: 'swipe-left',
-          orientation: 'horizontal'
-        } as Tab);
-        tabs.push({
-          path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outboundSubscription`,
-          priority: 915,
-          label: 'Subscription outbound mapping',
-          icon: 'mail',
-          orientation: 'horizontal'
-        } as Tab);
-      }
+      // if (feature?.outputMappingEnabled) {
+      //   tabs.push({
+      //     path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
+      //     priority: 920,
+      //     label: 'Outbound mapping',
+      //     icon: 'swipe-left',
+      //     orientation: 'horizontal'
+      //   } as Tab);
+      //   tabs.push({
+      //     path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/subscriptionOutbound`,
+      //     priority: 915,
+      //     label: 'Subscription outbound mapping',
+      //     icon: 'mail',
+      //     orientation: 'horizontal'
+      //   } as Tab);
+      // }
     } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node2/g)) {
       tabs.push({
         path: `sag-ps-pkg-dynamic-mapping/${NODE2}/testing`,

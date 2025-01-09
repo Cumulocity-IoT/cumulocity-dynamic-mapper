@@ -106,7 +106,7 @@ import { MappingSubscriptionComponent } from './subscription/subscription.compon
       component: MappingComponent
     }),
     hookRoute({
-      path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outboundSubscription`,
+      path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/subscriptionOutbound`,
       component: MappingSubscriptionComponent
     }),
     {

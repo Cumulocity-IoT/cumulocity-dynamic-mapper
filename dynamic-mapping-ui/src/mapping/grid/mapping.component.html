@@ -19,7 +19,7 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-title translate>Mapping</c8y-title>
+<c8y-title translate>{{'Mapping '}} {{ stepperConfiguration.direction| capitalCase}}</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="onAddMapping()">
     <i c8yIcon="plus-circle"></i>
@@ -44,9 +44,9 @@
 </c8y-action-bar-item>
 <div class="card">
   <div class="card-block content-fullpage border-top border-bottom">
-    <c8y-data-grid #mappingGrid [configureColumnsEnabled]="false" [title]="'Mappings' | translate" [selectable]="true" [columns]="columnsMappings"
-      [bulkActionControls]="bulkActionControls" [rows]="mappingsEnriched$ | async" [pagination]="pagination"
-      [actionControls]="actionControls">
+    <c8y-data-grid #mappingGrid [configureColumnsEnabled]="false" [title]="'Mappings' | translate" [selectable]="true"
+      [columns]="columnsMappings" [bulkActionControls]="bulkActionControls" [rows]="mappingsEnriched$ | async"
+      [pagination]="pagination" [actionControls]="actionControls">
       <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-rules'" [title]="'No mappings exist.' | translate" [subtitle]="
       'Create your first mapping.' | translate
     " [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Add mapping' | translate }}"
