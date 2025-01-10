@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
+import dynamic.mapping.connector.http.HTTPClient;
 import dynamic.mapping.core.ConnectorStatusEvent;
 
 import org.springframework.stereotype.Component;
@@ -146,5 +147,10 @@ public class ConnectorRegistry {
 		}
 
 	}
+
+    public HTTPClient getHttpConnectorForTenant(String tenant) throws ConnectorRegistryException{
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getHttpConnectorForTenant'");
+    }
 
 }

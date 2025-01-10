@@ -16,6 +16,7 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
+import dynamic.mapping.connector.http.HTTPClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
@@ -175,6 +176,7 @@ public class BootstrapService {
 			connectorRegistry.registerConnector(ConnectorType.CUMULOCITY_MQTT_SERVICE,
 					new MQTTServiceClient().getConnectorSpecification());
 			connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
+			connectorRegistry.registerConnector(ConnectorType.HTTP, new HTTPClient().getConnectorSpecification());
 			if (serviceConfiguration != null) {
 				List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
 						.getConnectorConfigurations(tenant);

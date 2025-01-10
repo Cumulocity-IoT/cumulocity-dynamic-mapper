@@ -36,7 +36,8 @@ export enum ConnectorPropertyType {
 export enum ConnectorType {
   MQTT = 'MQTT',
   CUMULOCITY_MQTT_SERVICE = 'CUMULOCITY_MQTT_SERVICE',
-  KAFKA = 'KAFKA'
+  KAFKA = 'KAFKA',
+  HTTP = 'HTTP',
 }
 export interface ConnectorProperty {
   required: boolean;

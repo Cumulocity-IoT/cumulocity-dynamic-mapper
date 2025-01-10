@@ -28,8 +28,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import lombok.Builder;
-import lombok.Builder.Default;
 import dynamic.mapping.processor.model.MappingType;
 
 import jakarta.validation.constraints.NotNull;
