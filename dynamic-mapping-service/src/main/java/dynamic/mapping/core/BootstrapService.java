@@ -176,7 +176,8 @@ public class BootstrapService {
             connectorRegistry.registerConnector(ConnectorType.CUMULOCITY_MQTT_SERVICE,
                     new MQTTServiceClient().getConnectorSpecification());
             connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
-            connectorRegistry.registerConnector(ConnectorType.HTTP, new HttpClient().getConnectorSpecification());
+            HttpClient initialHttpClient = new HttpClient();
+            connectorRegistry.registerConnector(ConnectorType.HTTP, initialHttpClient.getConnectorSpecification());
             if (serviceConfiguration != null) {
                 List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
                         .getConnectorConfigurations(tenant);
@@ -190,13 +191,17 @@ public class BootstrapService {
                     }
                 }
                 if (httpClientConfiguration == null) {
-                    httpClientConfiguration = new ConnectorConfiguration();
-                    httpClientConfiguration.connectorType = ConnectorType.HTTP;
-                    httpClientConfiguration.identifier = HttpClient.HTTP_CONNECTOR_IDENTIFIER;
-                    httpClientConfiguration.enabled = true;
-                    httpClientConfiguration.name = "Default Http Connector";
-                    connectorConfigurationComponent.saveConnectorConfiguration(httpClientConfiguration);
-                    initializeConnectorByConfiguration(httpClientConfiguration, serviceConfiguration,
+                    final ConnectorConfiguration httpClientConfigurationFinal = new ConnectorConfiguration();
+                    httpClientConfigurationFinal.connectorType = ConnectorType.HTTP;
+                    httpClientConfigurationFinal.identifier = HttpClient.HTTP_CONNECTOR_IDENTIFIER;
+                    httpClientConfigurationFinal.enabled = true;
+
+                    initialHttpClient.getConnectorSpecification().getProperties().forEach((key, prop) -> {
+                        httpClientConfigurationFinal.properties.put(key, prop.defaultValue.toString());
+                    });
+                    httpClientConfigurationFinal.name = "Default Http Connector";
+                    connectorConfigurationComponent.saveConnectorConfiguration(httpClientConfigurationFinal);
+                    initializeConnectorByConfiguration(httpClientConfigurationFinal, serviceConfiguration,
                             tenant);
                 }
             }

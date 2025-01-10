@@ -19,6 +19,7 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
+import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
@@ -149,6 +150,12 @@ public class ConfigurationRegistry {
 					null,
 					additionalSubscriptionIdTest, tenant);
 			log.info("Tenant {} - Initializing Kafka Connector with identifier {}", tenant,
+					connectorConfiguration.getIdentifier());
+		}else if (ConnectorType.HTTP.equals(connectorConfiguration.getConnectorType())) {
+			connectorClient = new HttpClient(this, connectorConfiguration,
+					null,
+					additionalSubscriptionIdTest, tenant);
+			log.info("Tenant {} - Initializing Http Connector with identifier {}", tenant,
 					connectorConfiguration.getIdentifier());
 		}
 		return connectorClient;
