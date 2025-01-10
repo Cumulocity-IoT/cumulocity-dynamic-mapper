@@ -12,6 +12,7 @@ import lombok.ToString;
 
 import jakarta.validation.constraints.NotNull;
 import java.io.*;
+import java.util.HashMap;
 import java.util.Map;
 
 @Data
@@ -42,7 +43,7 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
 
 	@NotNull
 	@JsonProperty("properties")
-	public Map<String, Object> properties;
+	public Map<String, Object> properties = new HashMap<>();
 
 	/*
 	 * @JsonAnySetter

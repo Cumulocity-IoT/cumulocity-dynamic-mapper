@@ -21,23 +21,17 @@
 
 package dynamic.mapping.controller;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.List;
-
 import jakarta.servlet.http.HttpServletRequest;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
-import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapping.connector.http.HTTPClient;
+import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.core.*;
-import dynamic.mapping.processor.model.ProcessingContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -94,8 +88,8 @@ public class HttpConnectorController {
     public ResponseEntity<?> processGenericMessage(HttpServletRequest request) {
         // Get the path
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
-        String subPath = fullPath.equals(HTTPClient.HTTP_CONNECTOR_ABSOLUTE_PATH) ? ""
-                : fullPath.substring(HTTPClient.HTTP_CONNECTOR_ABSOLUTE_PATH.length());
+        String subPath = fullPath.equals(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH) ? ""
+                : fullPath.substring(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH.length());
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Generic message : {}, {}, {}", tenant, subPath);
         try {
@@ -103,34 +97,32 @@ public class HttpConnectorController {
             byte[] payload = readBody(request);
             // build connectorMessage
             ConnectorMessage connectorMessage = ConnectorMessage.builder()
-            .tenant(tenant)
-            .supportsMessageContext(true)
-            .topic(subPath)
-            .sendPayload(true)
-            .connectorIdentifier("=====")
-            .payload(payload)
-            .build();
+                    .tenant(tenant)
+                    .supportsMessageContext(true)
+                    .topic(subPath)
+                    .sendPayload(true)
+                    .connectorIdentifier(HttpClient.HTTP_CONNECTOR_IDENTIFIER)
+                    .payload(payload)
+                    .build();
             try {
-                HTTPClient connectorClient = connectorRegistry
-                        .getHttpConnectorForTenant(tenant); 
+                HttpClient connectorClient = connectorRegistry
+                        .getHttpConnectorForTenant(tenant);
                 connectorClient.onMessage(connectorMessage);
-                
             } catch (ConnectorRegistryException e) {
                 throw new RuntimeException(e);
             }
             return ResponseEntity.ok()
-            .body("Processed request for path: " + subPath);
+                    .body("Processed request for path: " + subPath);
         } catch (Exception ex) {
             log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
         }
     }
 
-
     private byte[] readBody(HttpServletRequest request) throws IOException {
         try (InputStream inputStream = request.getInputStream();
-             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
             byte[] buffer = new byte[4096];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {

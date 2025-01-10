@@ -48,11 +48,12 @@ import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 
 @Slf4j
-public class HTTPClient extends AConnectorClient implements GenericMessageCallback {
+public class HttpClient extends AConnectorClient implements GenericMessageCallback {
     public static final String HTTP_CONNECTOR_PATH = "httpConnector";
+    public static final String HTTP_CONNECTOR_IDENTIFIER = "HTTP_CONNECTOR_IDENTIFIER";
     public static final String HTTP_CONNECTOR_ABSOLUTE_PATH = "/httpConnector";
 
-    public HTTPClient() {
+    public HttpClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         String httpPath = new StringBuilder().append("/service/dynamic-mapping-service/").append(HTTP_CONNECTOR_PATH)
                 .toString();
@@ -66,7 +67,7 @@ public class HTTPClient extends AConnectorClient implements GenericMessageCallba
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false);
     }
 
-    public HTTPClient(ConfigurationRegistry configurationRegistry,
+    public HttpClient(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
             DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
