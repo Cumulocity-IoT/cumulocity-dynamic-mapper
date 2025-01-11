@@ -29,7 +29,6 @@ import java.util.Map;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
-import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
@@ -48,7 +47,7 @@ import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 
 @Slf4j
-public class HttpClient extends AConnectorClient implements GenericMessageCallback {
+public class HttpClient extends AConnectorClient {
     public static final String HTTP_CONNECTOR_PATH = "httpConnector";
     public static final String HTTP_CONNECTOR_IDENTIFIER = "HTTP_CONNECTOR_IDENTIFIER";
     public static final String HTTP_CONNECTOR_ABSOLUTE_PATH = "/httpConnector";
@@ -62,8 +61,11 @@ public class HttpClient extends AConnectorClient implements GenericMessageCallba
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null));
         String name = "Generic Http Endpoint";
-        String description = "Generic Http Endpoint to receive custom payload in the body.";
-        connectorType = ConnectorType.MQTT;
+        String description = "Generic Http Endpoint to receive custom payload in the body.\n" 
+                + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n" 
+                + "will be resolved to a mapping with mapping topic: '/temp/berlin_01'.\n"
+                + "The mesaage must be send in a POST request.";
+        connectorType = ConnectorType.HTTP;
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false);
     }
 
@@ -216,24 +218,13 @@ public class HttpClient extends AConnectorClient implements GenericMessageCallba
         // nothing to do
     }
 
-    @Override
-    public void onClose(String closeMessage, Throwable closeException) {
-        // TODO Auto-generated method stub
-    }
-
-    @Override
     public void onMessage(ConnectorMessage message) {
-        // TODO Auto-generated method stub
-    }
-
-    @Override
-    public void onError(Throwable errorException) {
-        // TODO Auto-generated method stub
+        dispatcher.onMessage(message);
     }
 
     @Override
     public boolean supportsOutbound() {
-       return false;
+        return false;
     }
 
 }

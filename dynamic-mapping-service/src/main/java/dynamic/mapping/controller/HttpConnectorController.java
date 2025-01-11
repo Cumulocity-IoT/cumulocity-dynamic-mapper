@@ -111,8 +111,7 @@ public class HttpConnectorController {
             } catch (ConnectorRegistryException e) {
                 throw new RuntimeException(e);
             }
-            return ResponseEntity.ok()
-                    .body("Processed request for path: " + subPath);
+            return ResponseEntity.ok().build();
         } catch (Exception ex) {
             log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());

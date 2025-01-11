@@ -78,7 +78,7 @@
             </c8y-form-group>
           </div>
           <div>
-            <button *ngIf="configuration.connectorType != ConnectorType.HTTP"
+            <button *ngIf="configuration?.connectorType != ConnectorType.HTTP"
               class="btn btn-default"
               title="{{ 'Update connector' | translate }}"
               (click)="onConfigurationUpdate()"
@@ -91,7 +91,7 @@
               class="btn btn-default"
               title="{{ 'View connector' | translate }}"
               (click)="onConfigurationUpdate()"
-              [disabled]="!configuration?.enabled && configuration.connectorType != ConnectorType.HTTP"
+              [disabled]="!configuration?.enabled && configuration?.connectorType != ConnectorType.HTTP"
             >
               <i c8yIcon="eye"></i>
               {{ 'View connector' | translate }}

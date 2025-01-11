@@ -33,7 +33,7 @@
           {{ 'Description' | translate }}
         </span>
       </label>
-      <textarea rows="3" class="form-control" placeholder="choose connector ...">{{ description }}</textarea>
+      <textarea c8y-textarea-autoresize  style="white-space: pre-wrap;" class="form-control" placeholder="choose connector ...">{{ description }}</textarea>
     </c8y-form-group>
     <div [formGroup]="dynamicForm">
       <formly-form [form]="dynamicForm" [fields]="dynamicFormFields" [model]="configuration"></formly-form>

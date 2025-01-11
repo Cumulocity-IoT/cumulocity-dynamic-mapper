@@ -33,6 +33,7 @@ import {
   ConnectorConfiguration,
   ConnectorPropertyType,
   ConnectorSpecification,
+  ConnectorType,
   FormatStringPipe,
   nextIdAndPad
 } from '../..';
@@ -106,7 +107,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
     this.closeSubject.next(this.configuration);
   }
 
-  private async createDynamicForm(connectorType: string): Promise<void> {
+  private async createDynamicForm(connectorType: ConnectorType): Promise<void> {
     const dynamicFields: ConnectorSpecification = this.specifications.find(
       (c) => c.connectorType == connectorType
     );
