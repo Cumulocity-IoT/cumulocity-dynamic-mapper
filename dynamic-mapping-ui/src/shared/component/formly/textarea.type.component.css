@@ -19,11 +19,12 @@
  * @authors Christof Strack
  */
 
- textarea::-webkit-scrollbar {
+textarea::-webkit-scrollbar {
     width: 10px;
 }
-textarea {
-	padding: calc(var(--c8y-form-control-padding-base-vertical) * .75) calc(var(--c8y-form-control-padding-base-horizontal) * .75);
+
+/* textarea {
+    padding: calc(var(--c8y-form-control-padding-base-vertical) * .75) calc(var(--c8y-form-control-padding-base-horizontal) * .75);
     font-size: var(--c8y-font-size-small);
     line-height: var(--c8y-line-height-small);
-}
+} */

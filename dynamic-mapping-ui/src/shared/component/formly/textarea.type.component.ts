@@ -26,13 +26,15 @@ import { FieldType } from '@ngx-formly/core';
   selector: 'd11r-formly-field-textarea',
   template: `
     <textarea
-      [readonly]="readonly"
+       c8y-textarea-autoresize
       [class]="class"
-      [cols]="cols"
-      [rows]="rows"
-      [class.is-invalid]="showError"
-      [attr.aria-describedby]="id + '-formly-validation-error'"
-      [attr.aria-invalid]="showError"
+      [readonly]="props.readonly"
+      [required]="props.required"
+      [formControl]="formControl"
+      [cols]="props.cols"
+      [rows]="props.rows"
+      [formlyAttributes]="field"
+      [placeholder]="props.placeholder"
     >
  {{ formControl.value }}
 </textarea>
@@ -40,7 +42,7 @@ import { FieldType } from '@ngx-formly/core';
   styleUrls: ['./textarea.type.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FieldTextareaCustom extends FieldType{
+export class FieldTextareaCustom extends FieldType {
   get class() {
     return `form-control ${this.props['class']}`;
   }

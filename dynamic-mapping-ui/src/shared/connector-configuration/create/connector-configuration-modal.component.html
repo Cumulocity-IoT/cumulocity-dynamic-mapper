@@ -27,14 +27,6 @@
     <div [formGroup]="brokerForm" *ngIf="add">
       <formly-form [form]="brokerForm" [fields]="brokerFormFields" s></formly-form>
     </div>
-    <c8y-form-group style="margin-left: 12px; margin-right: 12px">
-      <label style="margin-left: 4px">
-        <span>
-          {{ 'Description' | translate }}
-        </span>
-      </label>
-      <textarea c8y-textarea-autoresize  style="white-space: pre-wrap;" class="form-control" placeholder="choose connector ...">{{ description }}</textarea>
-    </c8y-form-group>
     <div [formGroup]="dynamicForm">
       <formly-form [form]="dynamicForm" [fields]="dynamicFormFields" [model]="configuration"></formly-form>
     </div>

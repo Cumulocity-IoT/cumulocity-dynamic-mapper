@@ -57,7 +57,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
 
   constructor(private cd: ChangeDetectorRef,
     private formatStringPipe: FormatStringPipe
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.setConnectorDescription();
@@ -94,6 +94,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
     );
     if (desc) {
       this.description = desc.description;
+      this.configuration['description'] = desc.description;
     }
   }
 
@@ -128,9 +129,21 @@ export class ConnectorConfigurationModalComponent implements OnInit {
             label: 'Name',
             required: true
           }
+        },
+        {
+          className: 'col-lg-12',
+          type: 'textarea-custom',
+          key: 'description',
+          wrappers: ['c8y-form-field'],
+          templateOptions: {
+            label: 'Description',
+            readonly: true,
+            placeholder: 'choose connector ...',
+          },
         }
       ]
     });
+
     if (this.add) {
       const n = this.formatStringPipe.transform(connectorType);
       this.configuration.name = `${n} - ${nextIdAndPad(this.configurationsCount, 2)}`;
