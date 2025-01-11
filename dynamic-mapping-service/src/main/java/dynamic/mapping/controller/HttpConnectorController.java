@@ -44,6 +44,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
+import com.cumulocity.microservice.security.service.RoleService;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -69,10 +71,10 @@ public class HttpConnectorController {
     C8YAgent c8YAgent;
 
     @Autowired
-    private ContextService<UserCredentials> contextService;
+    private RoleService roleService;
 
-    @Value("${APP.externalExtensionsEnabled}")
-    private boolean externalExtensionsEnabled;
+    @Autowired
+    private ContextService<UserCredentials> contextService;
 
     @Value("${APP.userRolesEnabled}")
     private Boolean userRolesEnabled;
@@ -83,14 +85,23 @@ public class HttpConnectorController {
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
 
+    @Value("${APP.mappingHttpConnectorRole}")
+    private String mappingHttpConnectorRole;
+
     @RequestMapping(value = { "/httpConnector",
             "/httpConnector/**" }, method = { RequestMethod.POST, RequestMethod.PUT }, consumes = MediaType.ALL_VALUE)
     public ResponseEntity<?> processGenericMessage(HttpServletRequest request) {
+        String tenant = contextService.getContext().getTenant();
+        if (!userHasMappingHttpConnectorRole()) {
+            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+                    tenant);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Insufficient Permission, user does not have required permission to access this API");
+        }
         // Get the path
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
         String subPath = fullPath.equals(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH) ? ""
                 : fullPath.substring(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH.length());
-        String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Generic message : {}, {}, {}", tenant, subPath);
         try {
             // Read the body manually
@@ -129,5 +140,9 @@ public class HttpConnectorController {
             }
             return outputStream.toByteArray();
         }
+    }
+
+    private boolean userHasMappingHttpConnectorRole() {
+        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mappingHttpConnectorRole));
     }
 }

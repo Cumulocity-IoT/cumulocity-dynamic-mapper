@@ -76,9 +76,6 @@ public class DeploymentController {
 	@Autowired
 	private ContextService<UserCredentials> contextService;
 
-	@Value("${APP.externalExtensionsEnabled}")
-	private boolean externalExtensionsEnabled;
-
 	@Value("${APP.userRolesEnabled}")
 	private Boolean userRolesEnabled;
 

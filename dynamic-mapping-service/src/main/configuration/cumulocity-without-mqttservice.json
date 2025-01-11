@@ -33,6 +33,7 @@
   ],
   "roles":[
     "ROLE_MAPPING_ADMIN",
-    "ROLE_MAPPING_CREATE"
+    "ROLE_MAPPING_CREATE",
+    "ROLE_MAPPING_HTTP_CONNECTOR"
   ]
 }
