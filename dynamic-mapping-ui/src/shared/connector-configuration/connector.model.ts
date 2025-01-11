@@ -50,7 +50,7 @@ export interface ConnectorProperty {
 
 export interface ConnectorConfiguration {
   identifier: string;
-  connectorType: string;
+  connectorType: ConnectorType;
   enabled: boolean;
   status?: any;
   status$?: any;

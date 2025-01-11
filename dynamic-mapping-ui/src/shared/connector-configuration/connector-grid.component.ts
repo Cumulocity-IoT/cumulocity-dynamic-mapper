@@ -59,7 +59,8 @@ import { uuidCustom } from '../mapping/util';
 import { ConnectorConfigurationModalComponent } from './create/connector-configuration-modal.component';
 import {
   ConnectorConfiguration,
-  ConnectorSpecification
+  ConnectorSpecification,
+  ConnectorType
 } from './connector.model';
 import { StatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
 import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
@@ -119,25 +120,25 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
       {
         type: BuiltInActionType.Edit,
         callback: this.onConfigurationUpdate.bind(this),
-        showIf: (item) => !item['enabled'] && !this.readOnly
+        showIf: (item) => !item['enabled'] && !this.readOnly && item['connectorType'] != ConnectorType.HTTP
       },
       {
         type: 'VIEW',
         icon: 'eye',
         callback: this.onConfigurationUpdate.bind(this),
-        showIf: (item) => item['enabled']
+        showIf: (item) => item['enabled'] || item['connectorType'] == ConnectorType.HTTP
       },
       {
         text: 'Duplicate',
         type: 'duplicate',
         icon: 'duplicate',
         callback: this.onConfigurationCopy.bind(this),
-        showIf: (item) => !item['enabled'] && !this.readOnly
+        showIf: (item) => !item['enabled'] && !this.readOnly && item['connectorType'] != ConnectorType.HTTP
       },
       {
         type: BuiltInActionType.Delete,
         callback: this.onConfigurationDelete.bind(this),
-        showIf: (item) => !item['enabled'] && !this.readOnly
+        showIf: (item) => !item['enabled'] && !this.readOnly && item['connectorType'] != ConnectorType.HTTP
       }
     );
 
