@@ -386,4 +386,9 @@ public class KafkaClient extends AConnectorClient {
 		log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
 				context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
 	}
+
+    @Override
+    public boolean supportsOutbound() {
+       return true;
+    }
 }

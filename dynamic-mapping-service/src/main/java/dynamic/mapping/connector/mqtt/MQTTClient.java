@@ -532,4 +532,9 @@ public class MQTTClient extends AConnectorClient {
 		// nothing to do
 	}
 
+    @Override
+    public boolean supportsOutbound() {
+       return true;
+    }
+
 }

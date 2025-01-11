@@ -254,7 +254,7 @@ public class BootstrapService {
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
             AConnectorClient connectorClient) {
-        if (serviceConfiguration.isOutboundMappingEnabled()) {
+        if (serviceConfiguration.isOutboundMappingEnabled() && connectorClient.supportsOutbound() ) {
             // initialize AsynchronousDispatcherOutbound
             configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
             DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(

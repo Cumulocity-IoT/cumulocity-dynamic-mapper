@@ -131,6 +131,7 @@ public class HttpClient extends AConnectorClient implements GenericMessageCallba
                 updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                 List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
                 updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+                successful = true;
             } catch (Exception e) {
                 log.error("Tenant {} - Connected to http endpoint {}, {}, {}", tenant,
                         path, e.getMessage(), connectionState.booleanValue());
@@ -228,6 +229,11 @@ public class HttpClient extends AConnectorClient implements GenericMessageCallba
     @Override
     public void onError(Throwable errorException) {
         // TODO Auto-generated method stub
+    }
+
+    @Override
+    public boolean supportsOutbound() {
+       return false;
     }
 
 }

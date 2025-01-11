@@ -1071,4 +1071,6 @@ public abstract class AConnectorClient {
             return Optional.empty();
         }
     }
+
+	public abstract boolean supportsOutbound();
 }
