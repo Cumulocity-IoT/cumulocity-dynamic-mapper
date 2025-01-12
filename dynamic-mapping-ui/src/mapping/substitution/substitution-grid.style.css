@@ -32,7 +32,7 @@ div:has(>c8y-li-body ) {
   padding-bottom: 4px;
 }
 
-.fixTableHead {
+.table-head-fixed {
   overflow-y: auto;
   /* height: 110px;  */
 }
@@ -41,7 +41,7 @@ tbody tr td button i {
   position: unset !important;
 }
 
-.fixTableHead thead tr th {
+.table-head-fixed thead tr th {
   background-color: white;
   position: sticky;
   top: 0;
