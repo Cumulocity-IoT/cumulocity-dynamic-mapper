@@ -189,7 +189,8 @@ export class ConnectorConfigurationModalComponent implements OnInit {
                   props: {
                     type: 'number',
                     label: entry.key,
-                    required: property.required
+                    required: property.required,
+                    readonly: property.readonly
                   }
                 }
               ]
@@ -206,7 +207,8 @@ export class ConnectorConfigurationModalComponent implements OnInit {
                   wrappers: ['c8y-form-field'],
                   props: {
                     label: entry.key,
-                    required: property.required
+                    required: property.required,
+                    readonly: property.readonly
                   }
                 }
               ]
@@ -226,7 +228,8 @@ export class ConnectorConfigurationModalComponent implements OnInit {
                   props: {
                     type: 'password',
                     label: entry.key,
-                    required: property.required
+                    required: property.required,
+                    readonly: property.readonly
                   }
                 }
               ]
@@ -243,7 +246,8 @@ export class ConnectorConfigurationModalComponent implements OnInit {
                   wrappers: ['c8y-form-field'],
                   props: {
                     label: entry.key,
-                    required: property.required
+                    required: property.required,
+                    readonly: property.readonly
                   }
                 }
               ]
@@ -261,6 +265,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
                   props: {
                     label: entry.key,
                     required: property.required,
+                    readonly: property.readonly,
                     options: Object.values(property.options).map((key) => {
                       return { label: key, value: key };
                     })

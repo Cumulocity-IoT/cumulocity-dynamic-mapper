@@ -59,7 +59,7 @@ public class HttpClient extends AConnectorClient {
         configProps.put("path",
                 new ConnectorProperty(false, 0, ConnectorPropertyType.STRING_PROPERTY, true, false, httpPath, null));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null));
+                new ConnectorProperty(false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null));
         String name = "Generic Http Endpoint";
         String description = "Generic Http Endpoint to receive custom payload in the body.\n" 
                 + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n" 
