@@ -462,10 +462,6 @@ export function reduceTargetTemplate(
   return tt;
 }
 
-export function isDisabled(condition: boolean) {
-  return condition ? '' : null;
-}
-
 export function isTypeOf(object) {
   const stringConstructor = 'test'.constructor;
   const arrayConstructor = [].constructor;

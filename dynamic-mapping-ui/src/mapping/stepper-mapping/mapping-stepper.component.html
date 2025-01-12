@@ -217,11 +217,9 @@
                         <div class="d-flex">
                           <label>Target Template - {{ targetSystem }}</label>
                           <span class="hidden-xs hidden-sm m-l-4">
-                            <button type="button" placement="right"
-                              popover='The template contains the dummy field
+                            <button type="button" placement="right" popover='The template contains the dummy field
                               "_TOPIC_LEVEL_"(outbound) to map device
-                              identifiers.'
-                              triggers="focus" class="btn-help" aria-label="Help content"></button>
+                              identifiers.' triggers="focus" class="btn-help" aria-label="Help content"></button>
                           </span>
                         </div>
                       </div>
@@ -257,28 +255,15 @@
                 <div class="row p-t-8">
                   <div class="col-lg-3 col-lg-offset-1 p-l-48">
                     <button type="button" name="addSubstitution" class="btn btn-default btn-sm"
-                      (click)="onAddSubstitution()" translate title="Add substitution" [attr.disabled]="
-                          isDisabled(
-                            !stepperConfiguration.showEditorSource ||
-                              stepperConfiguration.editorMode ===
-                                EditorMode.READ_ONLY ||
-                              !isSubstitutionValid()
-                          )
-                        ">
+                      (click)="onAddSubstitution()" translate title="Add substitution"
+                      [disabled]="addSubstitutionDisabled()">
                       <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution
                     </button>
                   </div>
                   <div class="col-lg-3 col-lg-offset-1">
                     <button type="button" name="updateSubstitution" class="btn btn-default btn-sm"
-                      (click)="onUpdateSubstitution()" translate title="Update substitution" [attr.disabled]="
-                          isDisabled(
-                            !stepperConfiguration.showEditorSource ||
-                              stepperConfiguration.editorMode ===
-                                EditorMode.READ_ONLY ||
-                              selectedSubstitution === -1 ||
-                              !isSubstitutionValid()
-                          )
-                        ">
+                      (click)="onUpdateSubstitution()" translate title="Update substitution"
+                      [disabled]="updateSubstitutionDisabled()">
                       <i c8yIcon="pencil"></i><span id="updateButton">&nbsp;Update substitution</span>
                     </button>
                   </div>

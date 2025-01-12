@@ -23,7 +23,6 @@ import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular
 import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { JsonEditorComponent, Mapping, MappingSubstitution, MappingEnriched } from '../../shared';
-import { isDisabled } from '../shared/util';
 import { MappingService } from '../core/mapping.service';
 import { IFetchResponse } from '@c8y/client';
 import { HttpStatusCode } from '@angular/common/http';
@@ -50,7 +49,6 @@ export class SnoopExplorerComponent implements OnInit {
   mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();
   labels: ModalLabels;
-  isDisabled = isDisabled;
   template: any;
   index: number;
 

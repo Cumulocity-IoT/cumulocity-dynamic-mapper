@@ -42,7 +42,7 @@ import {
 import { MappingService } from '../core/mapping.service';
 import { C8YRequest, ProcessingContext } from '../core/processor/processor.model';
 import { StepperConfiguration } from '../../shared/mapping/mapping.model';
-import { isDisabled, patchC8YTemplateForTesting } from '../shared/util';
+import { patchC8YTemplateForTesting } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 
 interface TestingModel {
@@ -76,7 +76,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @ViewChild('editorTestingResponse') editorTestingResponse: JsonEditorComponent;
 
   readonly Direction = Direction;
-  readonly isDisabled = isDisabled;
 
   private subscription: Subscription;
   private readonly defaultEditorOptions = {

@@ -33,7 +33,6 @@ import {
   StepperConfiguration
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
-import { isDisabled } from '../shared/util';
 
 interface StepperLabels {
   next: string;
@@ -61,7 +60,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   Direction = Direction;
   EditorMode = EditorMode;
   SnoopStatus = SnoopStatus;
-  isDisabled = isDisabled;
 
   propertyFormly = new FormGroup({});
   isButtonDisabled$ = new BehaviorSubject<boolean>(true);

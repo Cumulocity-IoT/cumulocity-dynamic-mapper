@@ -97,12 +97,12 @@
     Transform Test Message
   </button>
   <button type="button" class="btn btn-default btn-sm" (click)="onNextTestResult()"
-    [attr.disabled]="!stepperConfiguration.allowTestTransformation || isDisabled(testingModel.results.length <= 1)">
+    [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
     Show Next Test Result&nbsp;<span *ngIf="testingModel.results.length > 0" class="badge badge-success">
       {{ testingModel.results.length }}</span>
   </button>
   <button type="button" class="btn btn-default btn-sm" (click)="onResetTransformation()"
-    [attr.disabled]="!stepperConfiguration.allowTestTransformation || isDisabled(testingModel.results.length == 0)">
+    [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
     Reset Transform
   </button>
   <div class= "m-l-8" style="display: inline-block">

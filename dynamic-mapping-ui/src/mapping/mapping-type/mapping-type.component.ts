@@ -31,7 +31,6 @@ import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { Direction, MappingType, MappingTypeDescriptionMap } from '../../shared';
-import { isDisabled } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-type',
@@ -45,7 +44,6 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<any>;
   labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
-  isDisabled = isDisabled;
   MappingTypeDescriptionMap = MappingTypeDescriptionMap;
   formGroupStep: FormGroup;
   snoop: boolean = false;

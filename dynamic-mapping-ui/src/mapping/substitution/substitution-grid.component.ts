@@ -34,7 +34,6 @@ import {
   MappingSubstitution
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
-import { isDisabled } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-substitution-grid',
@@ -54,7 +53,6 @@ export class SubstitutionRendererComponent  {
   
   id = Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
-  isDisabled = isDisabled;
   EditorMode = EditorMode;
   substitutions: MappingSubstitution[] = [];
 
