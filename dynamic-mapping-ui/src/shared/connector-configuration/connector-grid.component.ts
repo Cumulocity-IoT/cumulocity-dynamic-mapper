@@ -19,9 +19,9 @@
  * @authors Christof Strack
  */
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation } from '@angular/core';
-import { ActionControl, AlertService, BuiltInActionType, Column, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
+import { ActionControl, AlertService, Column, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, combineLatest, from, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, combineLatest, from, Observable,  } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
@@ -32,10 +32,6 @@ import { DeploymentMapEntry } from '../mapping/mapping.model';
 import { uuidCustom } from '../mapping/util';
 import { ConnectorConfigurationModalComponent } from './create/connector-configuration-modal.component';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
-import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
-import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
-import { StatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
-import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.renderer.component';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
 
