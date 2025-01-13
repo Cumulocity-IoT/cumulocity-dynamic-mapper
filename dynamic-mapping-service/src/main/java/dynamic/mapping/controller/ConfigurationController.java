@@ -137,6 +137,7 @@ public class ConfigurationController {
         if (configuration.connectorType.equals(ConnectorType.HTTP)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't create a HttpConnector!");
         }
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -222,6 +223,7 @@ public class ConfigurationController {
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Delete connection instance {}", tenant, identifier);
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -259,7 +261,7 @@ public class ConfigurationController {
         log.info("Tenant {} - Update connection instance {}", tenant, identifier);
         // make sure we are using the correct identifier
         configuration.identifier = identifier;
-
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -326,7 +328,7 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         // don't modify original copy
         log.info("Tenant {} - Post service configuration: {}", tenant, configuration.toString());
-
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
