@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -86,18 +87,13 @@ public class HttpConnectorController {
     private String mappingCreateRole;
 
     @Value("${APP.mappingHttpConnectorRole}")
-    private String mappingHttpConnectorRole;
+    public String mappingHttpConnectorRole;
 
     @RequestMapping(value = { "/httpConnector",
             "/httpConnector/**" }, method = { RequestMethod.POST, RequestMethod.PUT }, consumes = MediaType.ALL_VALUE)
+    @PreAuthorize("hasRole(@environment.getProperty('APP.mappingHttpConnectorRole'))")
     public ResponseEntity<?> processGenericMessage(HttpServletRequest request) {
         String tenant = contextService.getContext().getTenant();
-        if (!userHasMappingHttpConnectorRole()) {
-            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
-                    tenant);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Insufficient Permission, user does not have required permission to access this API");
-        }
         // Get the path
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
         String subPath = fullPath.equals(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH) ? ""
@@ -143,7 +139,4 @@ public class HttpConnectorController {
         }
     }
 
-    private boolean userHasMappingHttpConnectorRole() {
-        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mappingHttpConnectorRole));
-    }
 }
