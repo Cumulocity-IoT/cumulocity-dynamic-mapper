@@ -102,7 +102,10 @@ public class HttpConnectorController {
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
         String subPath = fullPath.equals(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH) ? ""
                 : fullPath.substring(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH.length());
-        log.debug("Tenant {} - Generic message : {}, {}, {}", tenant, subPath);
+        if(subPath.startsWith("/"))
+            subPath = subPath.substring(1);
+
+        log.info("Tenant {} - Generic HTTP message received. Topic: {}", tenant, subPath);
         try {
             // Read the body manually
             byte[] payload = readBody(request);
