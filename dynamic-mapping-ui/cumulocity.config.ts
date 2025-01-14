@@ -24,14 +24,14 @@ export default {
     noAppSwitcher: false,
     package: 'blueprint',
     isPackage: true,
-    exports: [
-      {
-        name: 'Dynamic Mapping Mapper Plugin',
-        module: 'DynamicMappingModule',
-        path: './src/dynamic-mapping.module.ts',
-        description: 'Adds a Dynamic Mapping Mapper Plugin'
-      }
-    ]
+    // exports: [
+    //   {
+    //     name: 'Dynamic Mapping Mapper Plugin',
+    //     module: 'DynamicMappingModule',
+    //     path: './src/dynamic-mapping.module.ts',
+    //     description: 'Adds a Dynamic Mapping Mapper Plugin'
+    //   }
+    // ]
   },
   buildTime: {
     copy: [

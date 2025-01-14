@@ -34,9 +34,25 @@ export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
 export const TIME = 'time';
 
+// export function splitTopicExcludingSeparator(topic: string): string[] {
+//   let topix = topic;
+//   topix = topix.trim().replace(/(\/{1,}$)|(^\/{1,})/g, '');
+//   return topix.split(/\//g);
+// }
+
 export function splitTopicExcludingSeparator(topic: string): string[] {
   let topix = topic;
-  topix = topix.trim().replace(/(\/{1,}$)|(^\/{1,})/g, '');
+  topix = topix.trim().replace(/(\/{1,}$)/g, ''); // Remove trailing slashes
+  if (topix.startsWith('//')) {                    // If there are multiple leading slashes
+    topix = '/' + topix.replace(/^\/+/, '');       // Replace with single slash
+  }
+  
+  // Special handling for the first slash
+  if (topix.startsWith('/')) {
+    const parts = topix.substring(1).split(/\//g);
+    return ['/'].concat(parts);
+  }
+  
   return topix.split(/\//g);
 }
 

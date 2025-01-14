@@ -33,35 +33,37 @@ Make sure that you subscribe the microservice to your tenant when prompted
 
 ### Web app
 
-The frontend can be used in two variants in your tenant:
+The frontend can be deployed in your tenant:
 
-1. As a **UI Plugin** to extend existing applications
-2. As a **Blueprint** standalone Application selectable from the App switcher
+1. As a **Blueprint** standalone Application selectable from the App switcher
+
+> **_NOTE:_** The option to deploy the dynamic mapper as plugin is deprecated.
 
 #### Community store (Preferred)
 
 The Web App is part of the community store and should be available directly in your tenant under
 "Administration" -> "Ecosystem" -> "Extensions" -> "Dynamic-mapping". Here you have the choice to install it as a plugin or as a blueprint app.
 
-##### Plugin
+> **_NOTE:_** The option to deploy the dynamic mapper as plugin is deprecated.
+##### ~~Plugin~~
 
-> **_NOTE:_** For a plugin we need to clone the Administration app to add the plugin to it
+> **_NOTE:_** ~~For a plugin we need to clone the Administration app to add the plugin to i~~
 
-Go to "All Applications" and click on "Add Application". Select "Duplicate existing application" and afterward "Administration".
+~~Go to "All Applications" and click on "Add Application". Select "Duplicate existing application" and afterward "Administration".~~
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_DuplicateApp.png" style="width: 40%;" />
 </p>
 <br/>
 
-Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "Dynamic Data Mapper Widget"
+~~Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "Dynamic Data Mapper Widget"~~
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Installation_Plugin.png" style="width: 50%;" />
 </p>
 <br/>
 
-After successfully adding the plugin you need to refresh the Administration App by pressing F5 and you should see a new navigation entry "Dynamic Mapping"
+~~After successfully adding the plugin you need to refresh the Administration App by pressing F5 and you should see a new navigation entry "Dynamic Mapping"~~
 
 <p align="center">
  <img src="resources/image/Dynamic_Mapper_WebAppPlugin.png" style="width: 40%;" />
