@@ -1,7 +1,7 @@
 # User Guide
 
 - [User Guide](#user-guide)
-  - [Connector configuration to broker](#connector-configuration-to-broker)
+  - [Connector configuration to broker and http endpoint](#connector-configuration-to-broker-and-http-endpoint)
   - [Definition and Activation of mappings](#definition-and-activation-of-mappings)
     - [Table of mappings](#table-of-mappings)
     - [Define mappings from source to target format (Cumulocity REST format)](#define-mappings-from-source-to-target-format--cumulocity-rest-format-)
@@ -28,7 +28,13 @@
   - [Monitoring](#monitoring)
     - [Mapping Tree Inbound](#mapping-tree-inbound)
 
-## Connector configuration to broker
+## Connector configuration to broker and http endpoint
+
+Connectors are the client to the different messaging servers: MQTT brokers, Kafka.
+The `Default Http Connector` is a special case of a connectore:
+1. It has not to be created as the connector will be created autommatically at startup of the backend for every tenant.
+1. The endpoint for the `Default Http Connector` can be accessed at the url `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/<MAPPING_TOPIC>`
+1. The sub path following `.../dynamic-mapping-service/httpConnector/` is used as `<MAPPING_TOPIC>`, e.g. a json payload send to `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01` will be resolved to a mapping with mapping topic: `/temp/berlin_01`
 
 The configurations of connectors are persisted as tenant options in the Cumulocity Tenant and can be managed using the following UI.\
 The table of configured connectors to different brokers can be:
@@ -60,6 +66,13 @@ The settings for the Kafka connector can be seen on the following screenshot:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Connector_Kafka.png"  style="width: 70%;" />
+</p>
+<br/>
+
+The settings for the Default Http Connector are as follows
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Connector_Http.png"  style="width: 70%;" />
 </p>
 <br/>
 

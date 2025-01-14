@@ -64,7 +64,6 @@ import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELE
 import {
   expandC8YTemplate,
   expandExternalTemplate,
-  isDisabled,
   isTypeOf,
   reduceSourceTemplate,
   splitTopicExcludingSeparator
@@ -90,7 +89,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   EditorMode = EditorMode;
   SnoopStatus = SnoopStatus;
-  isDisabled = isDisabled;
 
   updateTestingTemplate = new EventEmitter<any>();
   updateSourceEditor: EventEmitter<any> = new EventEmitter<any>();
@@ -978,6 +976,22 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel.pathTarget
       )
     ]);
+  }
+
+  addSubstitutionDisabled(): boolean {
+    return !this.stepperConfiguration.showEditorSource ||
+      this.stepperConfiguration.editorMode ===
+      EditorMode.READ_ONLY ||
+      !this.isSubstitutionValid()
+  }
+
+
+  updateSubstitutionDisabled(): boolean {
+    return  !this.stepperConfiguration.showEditorSource ||
+    this.stepperConfiguration.editorMode ===
+      EditorMode.READ_ONLY ||
+    this.selectedSubstitution === -1 ||
+    !this.isSubstitutionValid()
   }
 
 }

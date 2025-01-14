@@ -4,4 +4,5 @@ public enum ConnectorType {
     MQTT,
     CUMULOCITY_MQTT_SERVICE,
     KAFKA,
+    HTTP,
 }

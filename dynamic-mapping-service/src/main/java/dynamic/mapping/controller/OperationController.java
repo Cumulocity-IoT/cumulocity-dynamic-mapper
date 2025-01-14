@@ -29,7 +29,7 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
-
+import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
@@ -239,7 +239,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleConnect(String tenant, Map<String, String> parameters)
-            throws JsonProcessingException, ConnectorRegistryException {
+            throws JsonProcessingException, ConnectorRegistryException, ConnectorException {
         String connectorIdentifier = parameters.get("connectorIdentifier");
         ConnectorConfiguration configuration = connectorConfigurationComponent
                 .getConnectorConfiguration(connectorIdentifier, tenant);

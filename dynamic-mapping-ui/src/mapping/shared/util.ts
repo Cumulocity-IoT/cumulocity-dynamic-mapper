@@ -175,7 +175,8 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
 
   // count number of "#" in mappingTopic
   count_multi = (mappingTopic.value.match(/#/g) || []).length;
-  if (count_multi >= 1) {
+  // if (count_multi >= 1) {
+  if (count_multi > 1) {
     errors = {
       ...errors,
       No_Multi_Level_Wildcard_Allowed_In_MappingTopic: {
@@ -425,7 +426,7 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
   }
 }
 
-export function randomIdAsString(){
+export function randomIdAsString() {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
@@ -459,10 +460,6 @@ export function reduceTargetTemplate(
   }
   const tt = JSON.stringify(template);
   return tt;
-}
-
-export function isDisabled(condition: boolean) {
-  return condition ? '' : null;
 }
 
 export function isTypeOf(object) {

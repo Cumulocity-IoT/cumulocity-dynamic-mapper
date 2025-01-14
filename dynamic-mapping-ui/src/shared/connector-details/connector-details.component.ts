@@ -34,6 +34,7 @@ import {
   LoggingEventTypeMap,
   Operation,
   SharedService,
+  ConnectorType
 } from '..';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
@@ -57,6 +58,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   };
   LoggingEventTypeMap = LoggingEventTypeMap;
   LoggingEventType = LoggingEventType;
+  ConnectorType = ConnectorType;
   contextSubscription: Subscription;
   private destroy$ = new Subject<void>();
 

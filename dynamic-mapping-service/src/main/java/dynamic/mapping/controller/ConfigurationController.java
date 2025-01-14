@@ -103,7 +103,7 @@ public class ConfigurationController {
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
 
-    @GetMapping(value = "/feature",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/feature", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -116,7 +116,7 @@ public class ConfigurationController {
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
-    @GetMapping(value = "/connector/specifications",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/connector/specifications", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorSpecification>> getConnectorSpecifications() {
         String tenant = contextService.getContext().getTenant();
         List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
@@ -130,10 +130,14 @@ public class ConfigurationController {
         return ResponseEntity.ok(connectorConfigurations);
     }
 
-    @PostMapping(value = "/connector/instance",  consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/connector/instance", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createConnectorConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
+        if (configuration.connectorType.equals(ConnectorType.HTTP)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't create a HttpConnector!");
+        }
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -154,8 +158,9 @@ public class ConfigurationController {
         }
     }
 
-    @GetMapping(value = "/connector/instance",produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(@RequestParam(required = false) String name) {
+    @GetMapping(value = "/connector/instance", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(
+            @RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details", tenant);
 
@@ -185,7 +190,7 @@ public class ConfigurationController {
         }
     }
 
-    @GetMapping(value = "/connector/instance/{identifier}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details: {}", tenant, identifier);
@@ -214,10 +219,11 @@ public class ConfigurationController {
         }
     }
 
-    @DeleteMapping(value = "/connector/instance/{identifier}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @DeleteMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Delete connection instance {}", tenant, identifier);
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -230,6 +236,9 @@ public class ConfigurationController {
             if (configuration.enabled)
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Can't delete an enabled connector! Disable connector first.");
+            if (configuration.connectorType.equals(ConnectorType.HTTP)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't delete a HttpConnector!");
+            }
             // make sure the connector is disconnected before it is deleted.
             // if (connectorRegistry.getClientForTenant(tenant, identifier) != null &&
             // connectorRegistry.getClientForTenant(tenant, identifier).isConnected())
@@ -252,7 +261,7 @@ public class ConfigurationController {
         log.info("Tenant {} - Update connection instance {}", tenant, identifier);
         // make sure we are using the correct identifier
         configuration.identifier = identifier;
-
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -262,6 +271,9 @@ public class ConfigurationController {
         // Remove sensitive data before printing to log
         ConnectorSpecification connectorSpecification = connectorRegistry
                 .getConnectorSpecification(configuration.connectorType);
+        if (connectorSpecification.connectorType.equals(ConnectorType.HTTP)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't change a HttpConnector!");
+        }
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
@@ -292,7 +304,7 @@ public class ConfigurationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
     }
 
-    @GetMapping(value = "/service",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/service", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Get connection details", tenant);
@@ -316,7 +328,7 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         // don't modify original copy
         log.info("Tenant {} - Post service configuration: {}", tenant, configuration.toString());
-
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);

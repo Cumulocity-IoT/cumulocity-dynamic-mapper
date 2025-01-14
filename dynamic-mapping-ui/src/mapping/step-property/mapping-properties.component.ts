@@ -35,7 +35,6 @@ import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
 import { EditorMode } from '../shared/stepper.model';
-import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic } from '../shared/util';
 import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe } from '../../shared';
@@ -60,7 +59,6 @@ export class MappingStepPropertiesComponent
   ValidationError = ValidationError;
   Direction = Direction;
   EditorMode = EditorMode;
-  isDisabled = isDisabled;
 
   propertyFormlyFields: FormlyFieldConfig[] = [];
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);

@@ -18,13 +18,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  ChangeDetectorRef,
-  Component,
-  Input,
-  OnInit,
-  Output
-} from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnInit, Output } from '@angular/core';
 import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { FormlyFieldConfig } from '@ngx-formly/core';
@@ -33,9 +27,15 @@ import {
   ConnectorConfiguration,
   ConnectorPropertyType,
   ConnectorSpecification,
+  ConnectorType,
   FormatStringPipe,
   nextIdAndPad
 } from '../..';
+
+interface PropertyEntry {
+  key: string;
+  property: any;
+}
 
 @Component({
   selector: 'd11r-edit-connector-modal',
@@ -46,76 +46,133 @@ export class ConnectorConfigurationModalComponent implements OnInit {
   @Input() configuration: Partial<ConnectorConfiguration>;
   @Input() specifications: ConnectorSpecification[];
   @Input() configurationsCount: number;
-  @Output() closeSubject: Subject<any> = new Subject();
+  @Output() closeSubject = new Subject<any>();
+
   brokerFormFields: FormlyFieldConfig[] = [];
-  brokerForm: FormGroup = new FormGroup({});
+  brokerForm = new FormGroup({});
   dynamicFormFields: FormlyFieldConfig[] = [];
-  dynamicForm: FormGroup = new FormGroup({});
+  dynamicForm = new FormGroup({});
   labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
   description: string;
 
-  constructor(private cd: ChangeDetectorRef,
+  private readonly propertyTypeToFormConfig = new Map([
+    [ConnectorPropertyType.NUMERIC_PROPERTY, this.createNumericField.bind(this)],
+    [ConnectorPropertyType.STRING_PROPERTY, this.createStringField.bind(this)],
+    [ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, this.createSensitiveStringField.bind(this)],
+    [ConnectorPropertyType.BOOLEAN_PROPERTY, this.createBooleanField.bind(this)],
+    [ConnectorPropertyType.OPTION_PROPERTY, this.createOptionField.bind(this)],
+    [ConnectorPropertyType.STRING_LARGE_PROPERTY, this.createLargeStringField.bind(this)]
+  ]);
+
+  constructor(
+    private cd: ChangeDetectorRef,
     private formatStringPipe: FormatStringPipe
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.setConnectorDescription();
-    this.brokerFormFields = [
-      {
-        className: 'col-lg-12',
-        key: 'connectorType',
-        type: 'select',
-        id: 'connectorType',
-        wrappers: ['c8y-form-field'],
-        props: {
-          label: 'Connector type',
-          options: this.specifications.map((sp) => {
-            return {
-              label: sp.name,
-              value: sp.connectorType
-            };
-          }),
-          change: () => {
-            this.createDynamicForm(this.brokerForm.get('connectorType').value);
-          },
-          required: true
-        }
-      }
-    ];
+    this.initializeBrokerFormFields();
+    
     if (!this.add) {
       this.createDynamicForm(this.configuration.connectorType);
     }
   }
 
-  private setConnectorDescription() {
-    const desc = this.specifications.find(
-      (sp) => sp.connectorType == this.configuration.connectorType
-    );
-    if (desc) {
-      this.description = desc.description;
+  private initializeBrokerFormFields(): void {
+    this.brokerFormFields = [{
+      className: 'col-lg-12',
+      key: 'connectorType',
+      type: 'select',
+      id: 'connectorType',
+      wrappers: ['c8y-form-field'],
+      props: {
+        label: 'Connector type',
+        options: this.specifications.map(sp => ({
+          label: sp.name,
+          value: sp.connectorType
+        })),
+        change: () => this.createDynamicForm(this.brokerForm.get('connectorType').value),
+        required: true
+      }
+    }];
+  }
+
+  private setConnectorDescription(): void {
+    const spec = this.specifications.find(sp => sp.connectorType === this.configuration.connectorType);
+    if (spec) {
+      this.description = spec.description;
+      this.configuration['description'] = spec.description;
     }
   }
 
-  onDismiss() {
-    // console.log('Dismiss');
-    this.closeSubject.next(undefined);
+  private createBaseFormField(entry: PropertyEntry, type: string, additionalProps = {}): FormlyFieldConfig {
+    return {
+      fieldGroup: [{
+        className: 'col-lg-12',
+        key: `properties.${entry.key}`,
+        id: entry.key,
+        type,
+        wrappers: ['c8y-form-field'],
+        props: {
+          label: entry.key,
+          required: entry.property.required,
+          readonly: entry.property.readonly,
+          ...additionalProps
+        }
+      }]
+    };
   }
 
-  onSave() {
-    // console.log('Save', this.dynamicForm.valid);
-    this.closeSubject.next(this.configuration);
+  private createNumericField(entry: PropertyEntry): FormlyFieldConfig {
+    return this.createBaseFormField(entry, 'input', { type: 'number' });
   }
 
-  private async createDynamicForm(connectorType: string): Promise<void> {
-    const dynamicFields: ConnectorSpecification = this.specifications.find(
-      (c) => c.connectorType == connectorType
-    );
+  private createStringField(entry: PropertyEntry): FormlyFieldConfig {
+    return this.createBaseFormField(entry, 'input');
+  }
+
+  private createSensitiveStringField(entry: PropertyEntry): FormlyFieldConfig {
+    return this.createBaseFormField(entry, 'input', { type: 'password' });
+  }
+
+  private createBooleanField(entry: PropertyEntry): FormlyFieldConfig {
+    return this.createBaseFormField(entry, 'switch');
+  }
+
+  private createOptionField(entry: PropertyEntry): FormlyFieldConfig {
+    return this.createBaseFormField(entry, 'select', {
+      options: Object.values(entry.property.options).map(key => ({
+        label: key,
+        value: key
+      }))
+    });
+  }
+
+  private createLargeStringField(entry: PropertyEntry): FormlyFieldConfig {
+    return this.createBaseFormField(entry, 'textarea-custom', {
+      cols: 120,
+      rows: 6
+    });
+  }
+
+  private async createDynamicForm(connectorType: ConnectorType): Promise<void> {
+    const dynamicFields = this.specifications.find(c => c.connectorType === connectorType);
+    if (!dynamicFields) return;
 
     this.configuration.connectorType = connectorType;
     this.setConnectorDescription();
-    this.dynamicFormFields = [];
+    this.initializeBasicFormFields();
 
-    this.dynamicFormFields.push({
+    if (this.add) {
+      this.setDefaultConfiguration(connectorType);
+    }
+
+    this.createDynamicFormFields(dynamicFields);
+    this.cd.detectChanges();
+  }
+
+  private initializeBasicFormFields(): void {
+    this.dynamicFormFields = [{
       fieldGroup: [
         {
           className: 'col-lg-12',
@@ -127,160 +184,67 @@ export class ConnectorConfigurationModalComponent implements OnInit {
             label: 'Name',
             required: true
           }
+        },
+        {
+          className: 'col-lg-12',
+          type: 'textarea-custom',
+          key: 'description',
+          wrappers: ['c8y-form-field'],
+          templateOptions: {
+            label: 'Description',
+            readonly: true,
+            placeholder: 'choose connector ...',
+          },
         }
       ]
+    }];
+  }
+
+  private setDefaultConfiguration(connectorType: ConnectorType): void {
+    const formattedName = this.formatStringPipe.transform(connectorType);
+    this.configuration.name = `${formattedName} - ${nextIdAndPad(this.configurationsCount, 2)}`;
+    this.configuration.enabled = false;
+  }
+
+  private createDynamicFormFields(dynamicFields: ConnectorSpecification): void {
+    const sortedFields = this.getSortedFields(dynamicFields);
+    
+    sortedFields.forEach(entry => {
+      if (!entry) return;
+      
+      const formConfigFn = this.propertyTypeToFormConfig.get(entry.property.type);
+      if (formConfigFn) {
+        this.dynamicFormFields.push(formConfigFn(entry));
+      }
     });
-    if (this.add) {
-      const n = this.formatStringPipe.transform(connectorType);
-      this.configuration.name = `${n} - ${nextIdAndPad(this.configurationsCount, 2)}`;
-      this.configuration.enabled = false;
-    }
-    if (dynamicFields) {
-      const numberFields = Object.keys(dynamicFields.properties).length;
-      const sortedFields = new Array(numberFields);
-      for (const key in dynamicFields.properties) {
-        const property = dynamicFields.properties[key];
-        if (property.defaultValue && this.add) {
-          this.configuration.properties[key] = property.defaultValue;
-        }
-        // only display field when it is visible
-        if (
-          property.order < numberFields &&
-          property.order >= 0 &&
-          !property.hidden
-        ) {
-          if (!sortedFields[property.order]) {
-            sortedFields[property.order] = { key: key, property: property };
-          } else {
-            // append property to the end of the list
-            sortedFields.push({ key: key, property: property });
-          }
+  }
+
+  private getSortedFields(dynamicFields: ConnectorSpecification): PropertyEntry[] {
+    const numberFields = Object.keys(dynamicFields.properties).length;
+    const sortedFields = new Array(numberFields);
+
+    Object.entries(dynamicFields.properties).forEach(([key, property]) => {
+      if (property.defaultValue && this.add) {
+        this.configuration.properties[key] = property.defaultValue;
+      }
+
+      if (property.order < numberFields && property.order >= 0 && !property.hidden) {
+        if (!sortedFields[property.order]) {
+          sortedFields[property.order] = { key, property };
+        } else {
+          sortedFields.push({ key, property });
         }
       }
-      for (let index = 0; index < sortedFields.length; index++) {
-        const entry = sortedFields[index];
-        // test if the property is a valid entry, this happens when the list of properties is not numbered consecutively
-        if (entry) {
-          const { property } = entry;
-          if (property.type == ConnectorPropertyType.NUMERIC_PROPERTY) {
-            this.dynamicFormFields.push({
-              // fieldGroupClassName: "row",
-              fieldGroup: [
-                {
-                  className: 'col-lg-12',
-                  key: `properties.${entry.key}`,
-                  id: `${entry.key}`,
-                  type: 'input',
-                  wrappers: ['c8y-form-field'],
-                  props: {
-                    type: 'number',
-                    label: entry.key,
-                    required: property.required
-                  }
-                }
-              ]
-            });
-          } else if (property.type == ConnectorPropertyType.STRING_PROPERTY) {
-            this.dynamicFormFields.push({
-              // fieldGroupClassName: "row",
-              fieldGroup: [
-                {
-                  className: 'col-lg-12',
-                  key: `properties.${entry.key}`,
-                  id: `${entry.key}`,
-                  type: 'input',
-                  wrappers: ['c8y-form-field'],
-                  props: {
-                    label: entry.key,
-                    required: property.required
-                  }
-                }
-              ]
-            });
-          } else if (
-            property.type == ConnectorPropertyType.SENSITIVE_STRING_PROPERTY
-          ) {
-            this.dynamicFormFields.push({
-              // fieldGroupClassName: "row",
-              fieldGroup: [
-                {
-                  className: 'col-lg-12',
-                  key: `properties.${entry.key}`,
-                  id: `${entry.key}`,
-                  type: 'input',
-                  wrappers: ['c8y-form-field'],
-                  props: {
-                    type: 'password',
-                    label: entry.key,
-                    required: property.required
-                  }
-                }
-              ]
-            });
-          } else if (property.type == ConnectorPropertyType.BOOLEAN_PROPERTY) {
-            this.dynamicFormFields.push({
-              // fieldGroupClassName: "row",
-              fieldGroup: [
-                {
-                  className: 'col-lg-12',
-                  key: `properties.${entry.key}`,
-                  id: `${entry.key}`,
-                  type: 'switch',
-                  wrappers: ['c8y-form-field'],
-                  props: {
-                    label: entry.key,
-                    required: property.required
-                  }
-                }
-              ]
-            });
-          } else if (property.type == ConnectorPropertyType.OPTION_PROPERTY) {
-            this.dynamicFormFields.push({
-              // fieldGroupClassName: "row",
-              fieldGroup: [
-                {
-                  className: 'col-lg-12',
-                  key: `properties.${entry.key}`,
-                  id: `${entry.key}`,
-                  type: 'select',
-                  wrappers: ['c8y-form-field'],
-                  props: {
-                    label: entry.key,
-                    required: property.required,
-                    options: Object.values(property.options).map((key) => {
-                      return { label: key, value: key };
-                    })
-                  }
-                }
-              ]
-            });
-          } else if (
-            property.type == ConnectorPropertyType.STRING_LARGE_PROPERTY
-          ) {
-            this.dynamicFormFields.push({
-              // fieldGroupClassName: "row",
-              fieldGroup: [
-                {
-                  className: 'col-lg-12',
-                  key: `properties.${entry.key}`,
-                  id: `${entry.key}`,
-                  type: 'textarea-custom',
-                  wrappers: ['c8y-form-field'],
-                  props: {
-                    label: entry.key,
-                    readonly: property.readonly,
-                    cols: 120,
-                    rows: 6,
-                    required: property.required
-                  }
-                }
-              ]
-            });
-          }
-        }
-      }
-      this.dynamicFormFields = [...this.dynamicFormFields];
-      this.cd.detectChanges();
-    }
+    });
+
+    return sortedFields;
+  }
+
+  onDismiss(): void {
+    this.closeSubject.next(undefined);
+  }
+
+  onSave(): void {
+    this.closeSubject.next(this.configuration);
   }
 }
