@@ -31,8 +31,8 @@
 ## Connector configuration to broker and http endpoint
 
 Connectors are the client to the different messaging servers: MQTT brokers, Kafka.
-The `Default Http Connector` is a special case of a connectore:
-1. It has not to be created as the connector will be created autommatically at startup of the backend for every tenant.
+The `Default Http Connector` is a special case of a connector:
+1. It has not to be created as the connector will be created automatically at startup of the backend for every tenant.
 1. The endpoint for the `Default Http Connector` can be accessed at the url `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/<MAPPING_TOPIC>`
 1. The sub path following `.../dynamic-mapping-service/httpConnector/` is used as `<MAPPING_TOPIC>`, e.g. a json payload send to `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01` will be resolved to a mapping with mapping topic: `/temp/berlin_01`
 
