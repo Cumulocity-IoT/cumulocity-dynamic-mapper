@@ -30,7 +30,7 @@
 
 ## Connector configuration to broker and http endpoint
 
-Connectors are the client to the differen messaging servers: MQTT brokers, Kafka.
+Connectors are the client to the different messaging servers: MQTT brokers, Kafka.
 The `Default Http Connector` is a special case of a connectore:
 1. It has not to be created as the connector will be created autommatically at startup of the backend for every tenant.
 1. The endpoint for the `Default Http Connector` can be accessed at the url `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/<MAPPING_TOPIC>`
