@@ -255,9 +255,32 @@ public class Mapping implements Serializable {
         return topic.split("\\/");
     }
 
+    public static String[] splitTopicExcludingSeparatorIncludingLeagingSlashAsArray(String topic) {
+        String topix = topic.trim().replaceAll("\\/{1,}$", ""); // Remove trailing slashes only
+        if (topix.startsWith("//")) {                           // If multiple leading slashes
+            topix = "/" + topix.replaceAll("^/+", "");         // Replace with single slash
+        }
+        
+        // Special handling for the first slash
+        if (topix.startsWith("/")) {
+            String[] parts = topix.substring(1).split("\\/");
+            String[] result = new String[parts.length + 1];
+            result[0] = "/";
+            System.arraycopy(parts, 0, result, 1, parts.length);
+            return result;
+        }
+        
+        return topix.split("\\/");
+    }
+
     public static List<String> splitTopicExcludingSeparatorAsList(String topic) {
         return new ArrayList<String>(
                 Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
+    }
+
+    public static List<String> splitTopicExcludingSeparatorIncludingLeagingSlashAsList(String topic) {
+        return new ArrayList<String>(
+                Arrays.asList(Mapping.splitTopicExcludingSeparatorIncludingLeagingSlashAsArray(topic)));
     }
 
     /*

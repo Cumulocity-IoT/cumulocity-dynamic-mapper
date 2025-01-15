@@ -40,6 +40,22 @@ export function splitTopicExcludingSeparator(topic: string): string[] {
   return topix.split(/\//g);
 }
 
+export function splitTopicExcludingSeparatorIncludingLeagingSlash(topic: string): string[] {
+  let topix = topic;
+  topix = topix.trim().replace(/(\/{1,}$)/g, ''); // Remove trailing slashes
+  if (topix.startsWith('//')) {                    // If there are multiple leading slashes
+    topix = '/' + topix.replace(/^\/+/, '');       // Replace with single slash
+  }
+  
+  // Special handling for the first slash
+  if (topix.startsWith('/')) {
+    const parts = topix.substring(1).split(/\//g);
+    return ['/'].concat(parts);
+  }
+  
+  return topix.split(/\//g);
+}
+
 export function splitTopicIncludingSeparator(topic: string): string[] {
   const topix = topic;
   return topix.split(/(?<=\/)|(?=\/)/g);

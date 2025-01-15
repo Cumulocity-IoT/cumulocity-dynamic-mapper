@@ -12,13 +12,13 @@
     "mappingType": "JSON",
     "substitutions": [
       {
-        "pathSource": "_TOPIC_LEVEL_[0]&\"_\"&_TOPIC_LEVEL_[1]&\"_\"&$substringBefore(_TOPIC_LEVEL_[2],\"_\")",
+        "pathSource": "_TOPIC_LEVEL_[1]&\"_\"&_TOPIC_LEVEL_[2]&\"_\"&$substringBefore(_TOPIC_LEVEL_[3],\"_\")",
         "pathTarget": "_IDENTITY_.externalId",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
       {
-        "pathSource": "$substringAfter(_TOPIC_LEVEL_[2],\"_\")",
+        "pathSource": "$substringAfter(_TOPIC_LEVEL_[3],\"_\")",
         "pathTarget": "type",
         "repairStrategy": "DEFAULT",
         "expandArray": false

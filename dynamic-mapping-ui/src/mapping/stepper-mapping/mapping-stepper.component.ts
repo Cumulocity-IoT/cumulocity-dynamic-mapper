@@ -66,7 +66,7 @@ import {
   expandExternalTemplate,
   isTypeOf,
   reduceSourceTemplate,
-  splitTopicExcludingSeparator
+  splitTopicExcludingSeparatorIncludingLeagingSlash
 } from '../shared/util';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
@@ -566,7 +566,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.mapping
       );
     } else {
-      const levels: string[] = splitTopicExcludingSeparator(
+      const levels: string[] = splitTopicExcludingSeparatorIncludingLeagingSlash(
         this.mapping.mappingTopicSample
       );
       this.targetTemplate = expandExternalTemplate(
@@ -694,7 +694,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   private expandTemplates() {
-    const levels: string[] = splitTopicExcludingSeparator(
+    const levels: string[] = splitTopicExcludingSeparatorIncludingLeagingSlash(
       this.mapping.direction == Direction.INBOUND
         ? this.mapping.mappingTopicSample
         : this.mapping.publishTopicSample
@@ -772,7 +772,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
         this.mapping,
-        splitTopicExcludingSeparator(this.mapping.mappingTopicSample)
+        splitTopicExcludingSeparatorIncludingLeagingSlash(this.mapping.mappingTopicSample)
       );
     } else {
       this.sourceTemplate = expandC8YTemplate(
@@ -800,7 +800,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
         this.mapping,
-        splitTopicExcludingSeparator(this.mapping.mappingTopicSample)
+        splitTopicExcludingSeparatorIncludingLeagingSlash(this.mapping.mappingTopicSample)
       );
     } else {
       this.sourceTemplate = expandC8YTemplate(

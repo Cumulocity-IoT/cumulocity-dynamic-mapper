@@ -123,7 +123,7 @@ public abstract class BaseProcessorOutbound<T> {
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
          */
-        List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+        List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorIncludingLeagingSlashAsList(context.getTopic());
         payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         if (mapping.supportsMessageContext) {
             Map<String, String> cod = new HashMap<String, String>() {

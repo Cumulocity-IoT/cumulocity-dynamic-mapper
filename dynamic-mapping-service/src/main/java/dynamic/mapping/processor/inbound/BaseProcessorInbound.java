@@ -88,7 +88,7 @@ public abstract class BaseProcessorInbound<T> {
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
 
-        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorIncludingLeagingSlashAsList(context.getTopic());
         if (payloadObject instanceof Map) {
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
             if (context.isSupportsMessageContext() && context.getKey() != null) {

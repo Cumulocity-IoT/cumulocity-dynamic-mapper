@@ -24,7 +24,7 @@ import * as _ from 'lodash';
 import { API, Mapping, MappingType, RepairStrategy } from '../../../shared';
 import {
   TOKEN_TOPIC_LEVEL,
-  splitTopicExcludingSeparator,
+  splitTopicExcludingSeparatorIncludingLeagingSlash,
   splitTopicIncludingSeparator
 } from '../../shared/util';
 import { C8YAgent } from '../c8y-agent.service';
@@ -72,7 +72,7 @@ export abstract class BaseProcessorOutbound {
      * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
      * is required in the payload for a substitution
      */
-    const splitTopicExAsList: string[] = splitTopicExcludingSeparator(
+    const splitTopicExAsList: string[] = splitTopicExcludingSeparatorIncludingLeagingSlash(
       context.topic
     );
     payloadTarget[TOKEN_TOPIC_LEVEL] = splitTopicExAsList;
