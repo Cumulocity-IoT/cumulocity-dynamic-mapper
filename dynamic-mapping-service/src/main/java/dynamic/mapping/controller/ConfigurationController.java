@@ -271,9 +271,9 @@ public class ConfigurationController {
         // Remove sensitive data before printing to log
         ConnectorSpecification connectorSpecification = connectorRegistry
                 .getConnectorSpecification(configuration.connectorType);
-        if (connectorSpecification.connectorType.equals(ConnectorType.HTTP)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't change a HttpConnector!");
-        }
+        // if (connectorSpecification.connectorType.equals(ConnectorType.HTTP)) {
+        //     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't change a HttpConnector!");
+        // }
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {

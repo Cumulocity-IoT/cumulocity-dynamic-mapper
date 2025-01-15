@@ -102,13 +102,17 @@ public class HttpConnectorController {
     @PreAuthorize("hasRole(@environment.getProperty('APP.mappingHttpConnectorRole'))")
     public ResponseEntity<?> processGenericMessage(HttpServletRequest request) {
         String tenant = contextService.getContext().getTenant();
-        // Get the path
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
-        String subPath = fullPath.equals(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH) ? ""
-                : fullPath.substring(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH.length()+1);
 
-        log.debug("Tenant {} - Generic HTTP message received. Topic: {}", tenant, subPath);
+        log.debug("Tenant {} - Generic HTTP message received. Topic: {}", tenant, fullPath);
         try {
+            HttpClient connectorClient = connectorRegistry
+                    .getHttpConnectorForTenant(tenant);
+            Integer cutOffLength = Boolean.parseBoolean((String) connectorClient.getConnectorConfiguration()
+                    .getProperties().get(HttpClient.PROPERTY_CUTOFF_LEADING_SLASH)) ? 1 : 0;
+            // Get the path
+            String subPath = fullPath.equals(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH) ? ""
+                    : fullPath.substring(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH.length() + cutOffLength);
             // Read the body manually
             byte[] payload = readBody(request);
             // build connectorMessage
@@ -120,13 +124,9 @@ public class HttpConnectorController {
                     .connectorIdentifier(HttpClient.HTTP_CONNECTOR_IDENTIFIER)
                     .payload(payload)
                     .build();
-            try {
-                HttpClient connectorClient = connectorRegistry
-                        .getHttpConnectorForTenant(tenant);
-                connectorClient.onMessage(connectorMessage);
-            } catch (ConnectorRegistryException e) {
-                throw new RuntimeException(e);
-            }
+
+            connectorClient.onMessage(connectorMessage);
+
             return ResponseEntity.ok().build();
         } catch (Exception ex) {
             log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
@@ -134,15 +134,16 @@ public class HttpConnectorController {
         }
     }
 
-    @ExceptionHandler(value = {AccessDeniedException.class})
+    @ExceptionHandler(value = { AccessDeniedException.class })
     public void handleAccessDeniedException(HttpServletRequest request, HttpServletResponse response,
-                                            AccessDeniedException accessDeniedException) throws IOException {
+            AccessDeniedException accessDeniedException) throws IOException {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        SecurityUserDetails securityUserDetails = ((SecurityUserDetails)auth.getPrincipal());
+        SecurityUserDetails securityUserDetails = ((SecurityUserDetails) auth.getPrincipal());
 
         String tenant = securityUserDetails.getTenant();
         String user = securityUserDetails.getUsername();
-        log.warn("Tenant {} - User {} tried to access HTTPConnectorEndpoint but does not have the required '{}' role", tenant, user, this.mappingHttpConnectorRole);
+        log.warn("Tenant {} - User {} tried to access HTTPConnectorEndpoint but does not have the required '{}' role",
+                tenant, user, this.mappingHttpConnectorRole);
         response.sendError(403, "Authenticated user does not have the required role: " + this.mappingHttpConnectorRole);
     }
 

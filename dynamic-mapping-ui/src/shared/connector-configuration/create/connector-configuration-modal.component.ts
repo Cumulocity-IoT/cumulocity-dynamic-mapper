@@ -47,13 +47,14 @@ export class ConnectorConfigurationModalComponent implements OnInit {
   @Input() specifications: ConnectorSpecification[];
   @Input() configurationsCount: number;
   @Output() closeSubject = new Subject<any>();
-
+  
   brokerFormFields: FormlyFieldConfig[] = [];
   brokerForm = new FormGroup({});
   dynamicFormFields: FormlyFieldConfig[] = [];
   dynamicForm = new FormGroup({});
   labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
   description: string;
+  readOnly: boolean;
 
   private readonly propertyTypeToFormConfig = new Map([
     [ConnectorPropertyType.NUMERIC_PROPERTY, this.createNumericField.bind(this)],
@@ -72,6 +73,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
   ngOnInit(): void {
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
+    this.readOnly = this.configuration.enabled;
     
     if (!this.add) {
       this.createDynamicForm(this.configuration.connectorType);

@@ -51,6 +51,7 @@ public class HttpClient extends AConnectorClient {
     public static final String HTTP_CONNECTOR_PATH = "httpConnector";
     public static final String HTTP_CONNECTOR_IDENTIFIER = "HTTP_CONNECTOR_IDENTIFIER";
     public static final String HTTP_CONNECTOR_ABSOLUTE_PATH = "/httpConnector";
+    public static final String PROPERTY_CUTOFF_LEADING_SLASH = "cutOffLeadingSlash";
 
     public HttpClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
@@ -60,8 +61,8 @@ public class HttpClient extends AConnectorClient {
                 new ConnectorProperty(false, 0, ConnectorPropertyType.STRING_PROPERTY, true, false, httpPath, null));
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null));
-        configProps.put("cutOffLeadingSlash",
-                new ConnectorProperty(false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null));
+        configProps.put(PROPERTY_CUTOFF_LEADING_SLASH,
+                new ConnectorProperty(false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null));
         String name = "Generic Http Endpoint";
         String description = "Generic Http Endpoint to receive custom payload in the body.\n" 
                 + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n" 

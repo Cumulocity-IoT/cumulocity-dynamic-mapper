@@ -12,8 +12,7 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
     callbackName: 'onConfigurationUpdate',
     visibilityRules: [
       { type: 'enabled', value: false },
-      { type: 'readOnly', value: false },
-      { type: 'connectorType' }
+      { type: 'readOnly', value: false }
     ] as ActionVisibilityRule[]
   },
   {
@@ -22,6 +21,7 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
     callbackName: 'onConfigurationUpdate',
     visibilityRules: [
       { type: 'enabled', value: true },
+      { type: 'readOnly', value: false },
       { type: 'connectorType' }
     ] as ActionVisibilityRule[]
   },
