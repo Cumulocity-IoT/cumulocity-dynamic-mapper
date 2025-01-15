@@ -24,6 +24,9 @@ package dynamic.mapping.controller;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import com.cumulocity.microservice.context.credentials.Credentials;
+import com.cumulocity.microservice.security.service.SecurityUserDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
@@ -32,12 +35,17 @@ import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.core.*;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -87,7 +95,7 @@ public class HttpConnectorController {
     private String mappingCreateRole;
 
     @Value("${APP.mappingHttpConnectorRole}")
-    public String mappingHttpConnectorRole;
+    private String mappingHttpConnectorRole;
 
     @RequestMapping(value = { "/httpConnector",
             "/httpConnector/**" }, method = { RequestMethod.POST, RequestMethod.PUT }, consumes = MediaType.ALL_VALUE)
@@ -124,6 +132,18 @@ public class HttpConnectorController {
             log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
         }
+    }
+
+    @ExceptionHandler(value = {AccessDeniedException.class})
+    public void handleAccessDeniedException(HttpServletRequest request, HttpServletResponse response,
+                                            AccessDeniedException accessDeniedException) throws IOException {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        SecurityUserDetails securityUserDetails = ((SecurityUserDetails)auth.getPrincipal());
+
+        String tenant = securityUserDetails.getTenant();
+        String user = securityUserDetails.getUsername();
+        log.warn("Tenant {} - User {} tried to access HTTPConnectorEndpoint but does not have the required '{}' role", tenant, user, this.mappingHttpConnectorRole);
+        response.sendError(403, "Authenticated user does not have the required role: " + this.mappingHttpConnectorRole);
     }
 
     private byte[] readBody(HttpServletRequest request) throws IOException {
