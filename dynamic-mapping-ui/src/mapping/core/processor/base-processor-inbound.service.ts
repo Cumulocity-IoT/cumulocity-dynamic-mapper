@@ -31,7 +31,7 @@ import {
   RepairStrategy,
   getPathTargetForDeviceIdentifiers, transformGenericPath2C8YPath
 } from '../../../shared';
-import { splitTopicExcludingSeparatorIncludingLeagingSlash } from '../../shared/util';
+import { splitTopicExcludingSeparator } from '../../shared/util';
 import { C8YAgent } from '../c8y-agent.service';
 import {
   IDENTITY,
@@ -65,7 +65,7 @@ export abstract class BaseProcessorInbound {
 
   enrichPayload(context: ProcessingContext): void {
     const { payload } = context;
-    const topicLevels = splitTopicExcludingSeparatorIncludingLeagingSlash(context.topic);
+    const topicLevels = splitTopicExcludingSeparator(context.topic, false);
     payload[TOKEN_TOPIC_LEVEL] = topicLevels;
   }
 

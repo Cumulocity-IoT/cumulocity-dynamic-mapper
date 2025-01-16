@@ -34,26 +34,27 @@ export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
 export const TIME = 'time';
 
-export function splitTopicExcludingSeparator(topic: string): string[] {
-  let topix = topic;
-  topix = topix.trim().replace(/(\/{1,}$)|(^\/{1,})/g, '');
-  return topix.split(/\//g);
-}
-
-export function splitTopicExcludingSeparatorIncludingLeagingSlash(topic: string): string[] {
-  let topix = topic;
-  topix = topix.trim().replace(/(\/{1,}$)/g, ''); // Remove trailing slashes
-  if (topix.startsWith('//')) {                    // If there are multiple leading slashes
-    topix = '/' + topix.replace(/^\/+/, '');       // Replace with single slash
-  }
+export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
+  let topix = topic.trim();
   
-  // Special handling for the first slash
-  if (topix.startsWith('/')) {
-    const parts = topix.substring(1).split(/\//g);
-    return ['/'].concat(parts);
+  if (cutOffLeadingSlash) {
+      // Original behavior: remove both leading and trailing slashes
+      topix = topix.replace(/(\/{1,}$)|(^\/{1,})/g, '');
+      return topix.split(/\//g);
+  } else {
+      // New behavior: keep leading slash, remove only trailing slashes
+      topix = topix.replace(/\/{1,}$/g, '');
+      if (topix.startsWith('//')) {
+          topix = '/' + topix.replace(/^\/+/, '');
+      }
+      
+      if (topix.startsWith('/')) {
+          const parts = topix.substring(1).split(/\//g);
+          return ['/'].concat(parts);
+      }
+      
+      return topix.split(/\//g);
   }
-  
-  return topix.split(/\//g);
 }
 
 export function splitTopicIncludingSeparator(topic: string): string[] {
@@ -204,9 +205,9 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
     };
   }
 
-  const splitTT: string[] = splitTopicExcludingSeparator(mappingTopic.value);
+  const splitTT: string[] = splitTopicExcludingSeparator(mappingTopic.value, false);
   const splitTTS: string[] = splitTopicExcludingSeparator(
-    mappingTopicSample.value
+    mappingTopicSample.value, false
   );
   if (splitTT.length != splitTTS.length) {
     errors = {
@@ -322,9 +323,9 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
     };
   }
 
-  const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value);
+  const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value, false);
   const splitTTS: string[] = splitTopicExcludingSeparator(
-    publishTopicSample.value
+    publishTopicSample.value, false
   );
   if (splitPT.length != splitTTS.length) {
     errors = {

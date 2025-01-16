@@ -250,37 +250,35 @@ public class Mapping implements Serializable {
                 Arrays.asList(Mapping.splitTopicIncludingSeparatorAsArray(topic)));
     }
 
-    public static String[] splitTopicExcludingSeparatorAsArray(String topic) {
-        topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
-        return topic.split("\\/");
-    }
-
-    public static String[] splitTopicExcludingSeparatorIncludingLeagingSlashAsArray(String topic) {
-        String topix = topic.trim().replaceAll("\\/{1,}$", ""); // Remove trailing slashes only
-        if (topix.startsWith("//")) {                           // If multiple leading slashes
-            topix = "/" + topix.replaceAll("^/+", "");         // Replace with single slash
-        }
+    public static String[] splitTopicExcludingSeparatorAsArray(String topic, boolean cutOffLeadingSlash) {
+        String topix = topic.trim();
         
-        // Special handling for the first slash
-        if (topix.startsWith("/")) {
-            String[] parts = topix.substring(1).split("\\/");
-            String[] result = new String[parts.length + 1];
-            result[0] = "/";
-            System.arraycopy(parts, 0, result, 1, parts.length);
-            return result;
+        if (cutOffLeadingSlash) {
+            // Original behavior: remove both leading and trailing slashes
+            topix = topix.replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
+            return topix.split("\\/");
+        } else {
+            // New behavior: keep leading slash, remove only trailing slashes
+            topix = topix.replaceAll("\\/{1,}$", "");
+            if (topix.startsWith("//")) {
+                topix = "/" + topix.replaceAll("^/+", "");
+            }
+            
+            if (topix.startsWith("/")) {
+                String[] parts = topix.substring(1).split("\\/");
+                String[] result = new String[parts.length + 1];
+                result[0] = "/";
+                System.arraycopy(parts, 0, result, 1, parts.length);
+                return result;
+            }
+            
+            return topix.split("\\/");
         }
-        
-        return topix.split("\\/");
     }
 
-    public static List<String> splitTopicExcludingSeparatorAsList(String topic) {
+    public static List<String> splitTopicExcludingSeparatorAsList(String topic, boolean cutOffLeadingSlash) {
         return new ArrayList<String>(
-                Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
-    }
-
-    public static List<String> splitTopicExcludingSeparatorIncludingLeagingSlashAsList(String topic) {
-        return new ArrayList<String>(
-                Arrays.asList(Mapping.splitTopicExcludingSeparatorIncludingLeagingSlashAsArray(topic)));
+                Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic, cutOffLeadingSlash)));
     }
 
     /*
