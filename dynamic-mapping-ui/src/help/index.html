@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connectors Information</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="connector">Connectors</h1>
+    
+    <p>Connectors are the client to the different messaging servers: MQTT brokers, Kafka.</p>
+    
+    <p>The <code>Default Http Connector</code> is a special case of a connector:</p>
+    
+    <ol>
+        <li>It has not to be created as the connector will be created automatically at startup of the backend for every tenant.</li>
+        
+        <li>The endpoint for the <code>Default Http Connector</code> can be accessed at the url <code>https://&lt;YOUR_CUMULOCITY_TENANT&gt;/service/dynamic-mapping-service/httpConnector/&lt;MAPPING_TOPIC&gt;</code></li>
+        
+        <li>The sub path following <code>.../dynamic-mapping-service/httpConnector/</code> is used as <code>&lt;MAPPING_TOPIC&gt;</code>, e.g. a json payload send to <code>https://&lt;YOUR_CUMULOCITY_TENANT&gt;/service/dynamic-mapping-service/httpConnector/temp/berlin_01</code> will be resolved to a mapping with mapping topic: <code>temp/berlin_01</code></li>
+    </ol>
+</body>
+</html>

@@ -23,6 +23,7 @@ export default {
     tabsHorizontal: true,
     noAppSwitcher: false,
     package: 'blueprint',
+    contextHelp: true,
     isPackage: true,
     // exports: [
     //   {
@@ -86,7 +87,11 @@ export default {
       {
         from: '../LICENSE',
         to: 'LICENSE.txt'
-      }
+      },
+      {
+        from: './src/help',
+        to: 'help'
+      },
     ],
     federation: [
       '@angular/animations',
