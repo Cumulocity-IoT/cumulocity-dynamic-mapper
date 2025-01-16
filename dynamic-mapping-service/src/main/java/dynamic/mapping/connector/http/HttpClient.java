@@ -68,7 +68,7 @@ public class HttpClient extends AConnectorClient {
                 + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n" 
                 + "will be resolved to a mapping with mapping topic: 'temp/berlin_01'.\n"
                 + "The message must be send in a POST request.\n" 
-                + "NOTE: The leading '/' is cut off from the sub path.";
+                + "NOTE: The leading '/' is cut off from the sub path.This can be configured ";
         connectorType = ConnectorType.HTTP;
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false);
     }
@@ -87,7 +87,6 @@ public class HttpClient extends AConnectorClient {
         this.connectorIdentifier = connectorConfiguration.identifier;
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
-        // this.connectorType = connectorConfiguration.connectorType;
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.virtThreadPool = configurationRegistry.getVirtThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
@@ -130,7 +129,6 @@ public class HttpClient extends AConnectorClient {
         while (!successful) {
             loadConfiguration();
             try {
-
                 connectionState.setTrue();
                 log.info("Tenant {} - Connected to http endpoint {}", tenant,
                         path);
@@ -145,7 +143,6 @@ public class HttpClient extends AConnectorClient {
                 sendConnectorLifecycle();
             }
         }
-
     }
 
     @Override
