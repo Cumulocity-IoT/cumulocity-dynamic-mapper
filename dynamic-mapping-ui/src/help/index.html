@@ -21,6 +21,7 @@
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -33,6 +34,7 @@
             margin: 20px auto;
             padding: 0 20px;
         }
+
         code {
             background-color: #f4f4f4;
             padding: 2px 4px;
@@ -40,19 +42,73 @@
         }
     </style>
 </head>
+
 <body>
-    <h1 id="connector">Connectors</h1>
-    
-    <p>Connectors are the client to the different messaging servers: MQTT brokers, Kafka.</p>
-    
-    <p>The <code>Default Http Connector</code> is a special case of a connector:</p>
-    
-    <ol>
-        <li>It has not to be created as the connector will be created automatically at startup of the backend for every tenant.</li>
-        
-        <li>The endpoint for the <code>Default Http Connector</code> can be accessed at the url <code>https://&lt;YOUR_CUMULOCITY_TENANT&gt;/service/dynamic-mapping-service/httpConnector/&lt;MAPPING_TOPIC&gt;</code></li>
-        
-        <li>The sub path following <code>.../dynamic-mapping-service/httpConnector/</code> is used as <code>&lt;MAPPING_TOPIC&gt;</code>, e.g. a json payload send to <code>https://&lt;YOUR_CUMULOCITY_TENANT&gt;/service/dynamic-mapping-service/httpConnector/temp/berlin_01</code> will be resolved to a mapping with mapping topic: <code>temp/berlin_01</code></li>
+    <h2 id="connector" data-line="30" class="code-line" dir="auto"
+        id="connector-configuration-to-broker-and-http-endpoint" tabindex="-1">
+        Connector configuration to broker and http endpoint</h2>
+    <p data-line="32" class="code-line" dir="auto">Connectors are the client to the different messaging servers: MQTT
+        brokers, Kafka.
+        The <code>Default Http Connector</code> is a special case of a connector:</p>
+    <ol data-line="34" class="code-line" dir="auto">
+        <li data-line="34" class="code-line" dir="auto">It has not to be created as the connector will be created
+            automatically at startup of the backend for every tenant.</li>
+        <li data-line="35" class="code-line" dir="auto">The endpoint for the <code>Default Http Connector</code> can be
+            accessed at the url
+            <code>https://&lt;YOUR_CUMULOCITY_TENANT&gt;/service/dynamic-mapping-service/httpConnector/&lt;MAPPING_TOPIC&gt;</code>
+        </li>
+        <li data-line="36" class="code-line" dir="auto">The sub path following
+            <code>.../dynamic-mapping-service/httpConnector/</code> is used as <code>&lt;MAPPING_TOPIC&gt;</code>, e.g.
+            a
+            json payload send to
+            <code>https://&lt;YOUR_CUMULOCITY_TENANT&gt;/service/dynamic-mapping-service/httpConnector/temp/berlin_01</code>
+            will be resolved to a mapping with mapping topic: <code>temp/berlin_01</code>
+        </li>
     </ol>
+    <p data-line="38" class="code-line" dir="auto">The configurations of connectors are persisted as tenant options in
+        the
+        Cumulocity Tenant and can be managed using the following UI.<br>
+        The table of configured connectors to different brokers can be:</p>
+    <ul data-line="41" class="code-line" dir="auto">
+        <li data-line="41" class="code-line" dir="auto">deleted</li>
+        <li data-line="42" class="code-line" dir="auto">enabled / disabled</li>
+        <li data-line="43" class="code-line" dir="auto">updated / copied</li>
+    </ul>
+    <div data-line="45" class="code-line" dir="auto"></div>
+    <div data-line="49" class="code-line" dir="auto"></div>
+    <br>
+    <p data-line="51" class="code-line" dir="auto">Furthermore, new connectors can be added. The UI is shown on the
+        following screenshot. In the modal dialog you have to first select the type of connector. Currently we support
+        the
+        following connectors:</p>
+    <ul data-line="53" class="code-line" dir="auto">
+        <li data-line="53" class="code-line" dir="auto">MQTT: supports connections to MQTT version 3.1.1 over websocket
+            and
+            tcp</li>
+        <li data-line="54" class="code-line" dir="auto">MQTT Service: this connector is a special case of the MQTT
+            connector, to connect to the Cumulocity MQTT Service</li>
+        <li data-line="55" class="code-line" dir="auto">Kafka: is an initial implementation for connecting to Kafka
+            brokers.
+            It is expected that the implementation of the connector has to be adapted to the specific needs of your
+            project.
+            This applies to configuration for security, transactions, key and payload serialization (currently
+            StringSerializer)...</li>
+        <li data-line="56" class="code-line" dir="auto">Http Connector: he <code>Default Http Connector</code> is a http
+            endpoint where custom payload can be sent to the mapper over http</li>
+    </ul>
+    <p data-line="58" class="code-line" dir="auto">The configuration properties are dynamically adapted to the
+        configuration
+        parameter for the chosen connector type.</p>
+    <div data-line="60" class="code-line" dir="auto"></div>
+    <br>
+    <p data-line="79" class="code-line" dir="auto">When you add or change a connection configuration it happens very
+        often
+        that the parameter are incorrect and the connection fails. In this case the connection to the MQTT broker cannot
+        be
+        established and the reason is not known. To identify the incorrect parameter you can follows the error messages
+        in
+        the connections logs on the same UI</p>
+    <br>
 </body>
+
 </html>

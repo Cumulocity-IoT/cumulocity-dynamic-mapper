@@ -53,7 +53,8 @@ Furthermore, new connectors can be added. The UI is shown on the following scree
 
 - MQTT: supports connections to MQTT version 3.1.1 over websocket and tcp
 - MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
-- Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization ( currently StringSerializer)...
+- Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization (currently StringSerializer)...
+- Http Connector: he `Default Http Connector` is a http endpoint where custom payload can be sent to the mapper over http
 
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
