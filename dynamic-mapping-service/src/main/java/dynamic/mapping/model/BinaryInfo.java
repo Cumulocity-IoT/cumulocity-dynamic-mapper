@@ -19,11 +19,19 @@
  *
  */
 
-package dynamic.mapping.connector.core.client;
+package dynamic.mapping.model;
 
-public enum ConnectorType {
-    MQTT,
-    CUMULOCITY_MQTT_SERVICE,
-    KAFKA,
-    HTTP,
+import lombok.Data;
+
+@Data
+public class BinaryInfo {
+    /**
+     * Name of the binary object.
+     */
+    private String name;
+
+    /**
+     * Media type of the file.
+     */
+    private String type;
 }
