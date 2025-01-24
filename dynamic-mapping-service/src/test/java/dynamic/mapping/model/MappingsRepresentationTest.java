@@ -139,12 +139,12 @@ public class MappingsRepresentationTest {
     void testSplitTopic() {
 
         String t1 = "/d1/e1/f1/";
-        String[] r1 = Mapping.splitTopicExcludingSeparatorAsArray(t1);
+        String[] r1 = Mapping.splitTopicExcludingSeparatorAsArray(t1, false);
         log.info("My topicSplit: {}", Arrays.toString(r1));
         assertArrayEquals(new String[] { "d1", "e1", "f1" }, r1);
 
         String t2 = "///d1/e1/f1///";
-        String[] r2 = Mapping.splitTopicExcludingSeparatorAsArray(t2);
+        String[] r2 = Mapping.splitTopicExcludingSeparatorAsArray(t2, false);
         log.info("My topicSplit: {}, size: {}", Arrays.toString(r2), r2.length);
         assertArrayEquals(new String[] { "d1", "e1", "f1" }, r2);
 
