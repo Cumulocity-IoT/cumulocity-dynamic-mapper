@@ -19,7 +19,7 @@
   ~
   -->
 
-<div style="not_applied_height: 200px; overflow-y: auto; padding-top: 16px">
+<div style="overflow-y: auto; padding-top: 16px">
   <div class="h5 m-l-16 m-b-8">Substitutions</div>
   <table class="table table-condensed table-head-fixed">
     <thead>
@@ -30,7 +30,7 @@
             <span>Substitution [ pathSource &#8212;> pathTarget ]</span>
             <span class="hidden-xs hidden-sm m-l-4">
               <button type="button" placement="right" popover='Substitutions defining the device identifier are marked with an
-                "*". Before adding a substitution target and source property in
+                *. Before adding a substitution target and source property in
                 templates have to be selected.' triggers="focus" class="btn-help" aria-label="Help content"></button>
             </span>
           </div>
@@ -49,7 +49,7 @@
           </label>
         </td>
         <td>
-          <span *ngIf="!sub.registeredType" class="text-12">{{
+          <span *ngIf="!sub['registeredType']" class="text-12">{{
             '[ ' +
             (definesDeviceIdentifier(mapping, sub)
             ? '* '

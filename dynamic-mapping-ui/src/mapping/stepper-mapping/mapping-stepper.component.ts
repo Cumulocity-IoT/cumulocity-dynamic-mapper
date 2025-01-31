@@ -530,7 +530,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onSourceTemplateChanged(content: Content) {
     let contentAsJson;
     if (_.has(content, 'text') && content['text']) {
-      contentAsJson = JSON.parse(content['text']);
+      try {
+        contentAsJson = JSON.parse(content['text']);
+      } catch (error) {
+        // ignore parsing error
+      }
     } else {
       contentAsJson = content['json'];
     }
@@ -543,7 +547,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onTargetTemplateChanged(content: Content) {
     let contentAsJson;
     if (_.has(content, 'text') && content['text']) {
-      contentAsJson = JSON.parse(content['text']);
+      try {
+
+      } catch (error) {
+        // ignore parsing error
+      } contentAsJson = JSON.parse(content['text']);
     } else {
       contentAsJson = content['json'];
     }
@@ -986,11 +994,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
 
   updateSubstitutionDisabled(): boolean {
-    return  !this.stepperConfiguration.showEditorSource ||
-    this.stepperConfiguration.editorMode ===
+    return !this.stepperConfiguration.showEditorSource ||
+      this.stepperConfiguration.editorMode ===
       EditorMode.READ_ONLY ||
-    this.selectedSubstitution === -1 ||
-    !this.isSubstitutionValid()
+      this.selectedSubstitution === -1 ||
+      !this.isSubstitutionValid()
   }
 
 }
