@@ -76,9 +76,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.initializeSelection();
     this.initializeConfigurations();
     this.initializeSpecifications();
-    this.initializeSelection();
     this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
   }
 

@@ -178,7 +178,7 @@
     "substitutions": [
       {
         "pathSource": "_IDENTITY_.c8ySourceId",
-        "pathTarget": "_TOPIC_LEVEL_[2]",
+        "pathTarget": "c8y_Id",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
@@ -202,7 +202,7 @@
       },
       {
         "pathSource": "_IDENTITY_.externalId",
-        "pathTarget": "c8y_Id",
+        "pathTarget": "_TOPIC_LEVEL_[2]",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
@@ -226,7 +226,6 @@
     "snoopedTemplates": [],
     "filterMapping": "bus_event",
     "qos": "AT_LEAST_ONCE",
-    "lastUpdate": 1735162151631,
-    "genericDeviceIdentifier": "_IDENTITY_.externalId"
+    "lastUpdate": 1738945492067
   }
 ]

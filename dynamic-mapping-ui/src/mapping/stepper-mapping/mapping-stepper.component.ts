@@ -386,12 +386,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   deploymentMapEntryChange(e) {
-    this.isButtonDisabled$.next(
-      !this.deploymentMapEntry?.connectors ||
-      this.deploymentMapEntry?.connectors?.length == 0
-    );
+    const isDisabled = !this.deploymentMapEntry?.connectors ||
+      this.deploymentMapEntry?.connectors?.length == 0;
 
     setTimeout(() => {
+      this.isButtonDisabled$.next(isDisabled);
       this.supportsMessageContext =
         this.deploymentMapEntry.connectorsDetailed?.some(
           (con) => con.connectorType == ConnectorType.KAFKA

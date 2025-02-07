@@ -141,18 +141,23 @@ public class MappingsRepresentationTest {
         String t1 = "/d1/e1/f1/";
         String[] r1 = Mapping.splitTopicExcludingSeparatorAsArray(t1, false);
         log.info("My topicSplit: {}", Arrays.toString(r1));
-        assertArrayEquals(new String[] { "d1", "e1", "f1" }, r1);
+        assertArrayEquals(new String[] { "/", "d1", "e1", "f1" }, r1);
 
         String t2 = "///d1/e1/f1///";
         String[] r2 = Mapping.splitTopicExcludingSeparatorAsArray(t2, false);
         log.info("My topicSplit: {}, size: {}", Arrays.toString(r2), r2.length);
-        assertArrayEquals(new String[] { "d1", "e1", "f1" }, r2);
+        assertArrayEquals(new String[] { "/", "d1", "e1", "f1" }, r2);
 
         String t3 = "///d1/e1/f1///";
-        String[] r3 = Mapping.splitTopicIncludingSeparatorAsArray(t3);
-        log.info("My topicSplit: {}", Arrays.toString(r3));
+        String[] r3 = Mapping.splitTopicExcludingSeparatorAsArray(t3, true);
+        log.info("My topicSplit: {}, size: {}", Arrays.toString(r3), r3.length);
+        assertArrayEquals(new String[] { "d1", "e1", "f1" }, r3);
 
-        assertArrayEquals(new String[] { "/", "d1", "/", "e1", "/", "f1", "/" }, r3);
+        String t4 = "///d1/e1/f1///";
+        String[] r4 = Mapping.splitTopicIncludingSeparatorAsArray(t4);
+        log.info("My topicSplit: {}", Arrays.toString(r4));
+
+        assertArrayEquals(new String[] { "/", "d1", "/", "e1", "/", "f1", "/" }, r4);
 
     }
 
