@@ -72,7 +72,7 @@ public class HttpClient extends AConnectorClient {
                 + "The message must be send in a POST request.\n" 
                 + "NOTE: The leading '/' is cut off from the sub path.This can be configured ";
         connectorType = ConnectorType.HTTP;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false);
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,supportedDirections());
     }
 
     public HttpClient(ConfigurationRegistry configurationRegistry,

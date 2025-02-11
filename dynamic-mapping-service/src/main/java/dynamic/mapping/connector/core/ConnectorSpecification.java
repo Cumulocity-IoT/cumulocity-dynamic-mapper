@@ -25,12 +25,17 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
 import dynamic.mapping.connector.core.client.ConnectorType;
+import dynamic.mapping.model.Direction;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 import jakarta.validation.constraints.NotNull;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -58,6 +63,10 @@ public class ConnectorSpecification implements Cloneable {
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public boolean supportsMessageContext;
+
+	@NotNull
+	@JsonSetter(nulls = Nulls.SKIP)
+    public List<Direction> supportedDirections;
 
 	public boolean isPropertySensitive(String property) {
 		try {

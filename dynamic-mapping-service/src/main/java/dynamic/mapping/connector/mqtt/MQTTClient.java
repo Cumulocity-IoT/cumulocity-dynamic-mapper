@@ -110,7 +110,7 @@ public class MQTTClient extends AConnectorClient {
 		String name = "Generic MQTT Broker";
 		String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
 		connectorType = ConnectorType.MQTT;
-		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false);
+		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false, supportedDirections());
 	}
 
 	public MQTTClient(ConfigurationRegistry configurationRegistry,
