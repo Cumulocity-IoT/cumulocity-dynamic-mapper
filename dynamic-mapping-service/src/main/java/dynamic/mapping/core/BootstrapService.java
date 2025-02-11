@@ -253,7 +253,7 @@ public class BootstrapService {
         connectorRegistry.registerConnector(ConnectorType.CUMULOCITY_MQTT_SERVICE,
                 new MQTTServiceClient().getConnectorSpecification());
         connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
-        // register Web Hook
+        // TODO register Web Hook
         // connectorRegistry.registerConnector(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
 
         HttpClient initialHttpClient = new HttpClient();

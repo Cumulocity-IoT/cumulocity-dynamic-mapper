@@ -26,5 +26,5 @@ public enum ConnectorType {
     CUMULOCITY_MQTT_SERVICE,
     KAFKA,
     HTTP,
-    // WEB_HOOK,
+    //TODO WEB_HOOK,
 }
