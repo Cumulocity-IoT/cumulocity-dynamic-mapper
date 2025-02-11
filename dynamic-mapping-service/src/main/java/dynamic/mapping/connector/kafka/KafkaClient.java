@@ -22,6 +22,8 @@
 package dynamic.mapping.connector.kafka;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +49,7 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
+import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
@@ -392,7 +395,7 @@ public class KafkaClient extends AConnectorClient {
 	}
 
     @Override
-    public boolean supportsOutbound() {
-       return true;
+    public List<Direction>  supportedDirections() {
+        return new ArrayList<>( Arrays.asList(Direction.INBOUND, Direction.OUTBOUND));
     }
 }

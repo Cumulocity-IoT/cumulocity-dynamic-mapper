@@ -32,6 +32,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +45,7 @@ import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
+import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
@@ -533,8 +535,8 @@ public class MQTTClient extends AConnectorClient {
 	}
 
     @Override
-    public boolean supportsOutbound() {
-       return true;
+    public List<Direction>  supportedDirections() {
+        return new ArrayList<>( Arrays.asList(Direction.INBOUND, Direction.OUTBOUND));
     }
 
 }

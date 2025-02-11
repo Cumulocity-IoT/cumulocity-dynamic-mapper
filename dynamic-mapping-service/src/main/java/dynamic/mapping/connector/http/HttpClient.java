@@ -21,6 +21,7 @@
 
 package dynamic.mapping.connector.http;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +33,7 @@ import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
+import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
@@ -224,8 +226,8 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public boolean supportsOutbound() {
-        return false;
+    public List<Direction>  supportedDirections() {
+        return new ArrayList<>( Arrays.asList(Direction.INBOUND));
     }
 
 }

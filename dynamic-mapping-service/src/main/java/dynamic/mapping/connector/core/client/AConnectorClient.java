@@ -1073,5 +1073,5 @@ public abstract class AConnectorClient {
         }
     }
 
-	public abstract boolean supportsOutbound();
+	public abstract List<Direction> supportedDirections();
 }

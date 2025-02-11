@@ -21,7 +21,6 @@
 
 package dynamic.mapping.core;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -60,6 +59,7 @@ import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
+import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
@@ -253,6 +253,8 @@ public class BootstrapService {
         connectorRegistry.registerConnector(ConnectorType.CUMULOCITY_MQTT_SERVICE,
                 new MQTTServiceClient().getConnectorSpecification());
         connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
+        // register Web Hook
+        // connectorRegistry.registerConnector(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
 
         HttpClient initialHttpClient = new HttpClient();
         connectorRegistry.registerConnector(ConnectorType.HTTP, initialHttpClient.getConnectorSpecification());
@@ -371,7 +373,7 @@ public class BootstrapService {
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
             AConnectorClient connectorClient) {
-        if (serviceConfiguration.isOutboundMappingEnabled() && connectorClient.supportsOutbound()) {
+        if (serviceConfiguration.isOutboundMappingEnabled() && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
             // initialize AsynchronousDispatcherOutbound
             configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
             DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
