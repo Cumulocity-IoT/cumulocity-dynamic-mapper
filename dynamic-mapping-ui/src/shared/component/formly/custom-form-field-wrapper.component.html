@@ -20,8 +20,9 @@
   -->
 
 <ng-template #popTemplate
-  ><div [innerHtml]="props.description"></div
-></ng-template>
+  >
+  <div [innerHtml]="props.description"></div>
+</ng-template>
 <div [class]="classes" [class.has-error]="showError">
   <label
     *ngIf="props.label && props.hideLabel !== true"

@@ -57,12 +57,12 @@ export class MockIdentityService {
         return promise;
       } else {
         throw new Error(
-          `External id ${identity.externalId} for type ${identity.type} does not exist.`
+          `External id ${identity.externalId} for type ${identity.type} does not exist`
         );
       }
     } else {
       throw new Error(
-        `External id ${identity.externalId} for type ${identity.type} does not exist.`
+        `External id ${identity.externalId} for type ${identity.type} does not exist`
       );
     }
   }

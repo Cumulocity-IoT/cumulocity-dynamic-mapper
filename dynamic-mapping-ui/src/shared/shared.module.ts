@@ -42,6 +42,7 @@ import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
 import { DisableDirective } from './misc/disable.directive';
 import { FilterJsonPipe } from './misc/filter-json.pipe';
 import { FormatStringPipe } from './misc/format-string.pipe';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @NgModule({
   declarations: [
@@ -68,6 +69,7 @@ import { FormatStringPipe } from './misc/format-string.pipe';
     CoreModule,
     BsDatepickerModule,
     PaginationModule,
+    PopoverModule,
     RouterModule,
     BsDropdownModule.forRoot()
   ],

@@ -61,17 +61,17 @@
             {{ 'Expand as array' | translate }}
           </span>
         </label>
-        <button type="button" placement="right" popover='Current expression extracts an array. Consider to use the option
-              "Expand Array" if you want to create multiple
+        <button type="button" placement="right" [popover]="'Current expression extracts an array. Consider to use the option
+              Expand Array if you want to create multiple
               measurements, alarms, events or devices, i.e.
-              "multi-device" or "multi-value"' triggers="focus" class="btn-help" aria-label="Help content"></button>
+              multi-device or multi-value'" triggers="focus" class="btn-help" aria-label="Help content"></button>
       </c8y-form-group>
       <c8y-form-group>
         <label><span>Repair strategy</span>
           <span> &nbsp;</span>
-          <button type="button" placement="right" popover='Strategy defining what should happen when extracted arrays in
+          <button type="button" placement="right" [popover]="'Strategy defining what should happen when extracted arrays in
             different expressions do not have the same size. How are missing
-            values handled?' triggers="focus" class="btn-help" aria-label="Help content"></button>
+            values handled?'" triggers="focus" class="btn-help" aria-label="Help content"></button>
         </label>
         <div class="c8y-select-wrapper">
           <select class="form-control" formControlName="repairStrategy" name="repairStrategy">

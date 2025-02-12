@@ -164,6 +164,7 @@ export abstract class BaseProcessorInbound {
               if (mapping.createNonExistingDevice) {
                 sourceId.value = await this.createAttocDevice(identity, context);
               } else {
+                e['possibleIgnoreErrorNonExisting'] = true;
                 throw e;
               }
             }

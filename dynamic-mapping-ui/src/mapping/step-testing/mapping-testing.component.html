@@ -111,6 +111,6 @@
       (click)="onSendTest()">
       Send Test Message
     </button>
-    <button type="button" placement="right" popover="Send Test Message is only supported for mappings that use an external id!" triggers="focus" class="btn-help" aria-label="Help content"></button>
+    <button type="button" placement="right" [popover]="'Send Test Message is only supported for mappings that use an external id!'" triggers="focus" class="btn-help" aria-label="Help content"></button>
   </div>
 </div>
