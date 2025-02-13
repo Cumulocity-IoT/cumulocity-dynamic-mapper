@@ -68,7 +68,7 @@
           {{ sub.repairStrategy | formatStringAsWords }}
         </td>
         <td width="6%">
-          <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean" style="height: 24px"
+          <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover" style="height: 24px;padding-top: 0px !important;"
             (click)="onSubstitutionDelete(i)" [disabled]="
               settings.editorMode === EditorMode.READ_ONLY
             ">
