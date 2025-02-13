@@ -39,7 +39,7 @@
     "ngx-bootstrap": "^18.0.0",
     "ngx-echarts": "^18.0.0",
     "rxjs": "~7.8.1",
-    "vanilla-jsoneditor": "^2.3.2",
+    "vanilla-jsoneditor": "^2.4.0",
     "zone.js": "^0.14.10"
   },
   "devDependencies": {
