@@ -94,7 +94,17 @@ export const GRID_COLUMNS: Column[] = [
       sortOrder: 'ASC',
       visible: true,
       cellRendererComponent: LabelRendererComponent,
-      gridTrackSize: '25%'
+      gridTrackSize: '15%'
+    },
+    {
+      name: 'supportedDirections',
+      header: 'Directions',
+      path: 'supportedDirections',
+      filterable: false,
+      sortOrder: 'ASC',
+      visible: true,
+      cellRendererComponent: LabelRendererComponent,
+      gridTrackSize: '10%'
     },
     {
       name: 'status',

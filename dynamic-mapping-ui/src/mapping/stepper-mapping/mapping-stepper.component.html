@@ -54,7 +54,7 @@
         </div>
       </div>
       <div class="col-xs-12 flex-grow no-gutter">
-        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [deploymentMapEntry]="deploymentMapEntry"
+        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]" [deploymentMapEntry]="deploymentMapEntry"
           (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
       </div>
       <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"

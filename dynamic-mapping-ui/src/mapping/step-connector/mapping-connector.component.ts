@@ -49,6 +49,7 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
   @ViewChild(ConnectorGridComponent)
   connectorGrid!: ConnectorGridComponent;
   @Input() stepperConfiguration: StepperConfiguration;
+  @Input() directions : Direction[] = [Direction.INBOUND,Direction.OUTBOUND];
   private _deploymentMapEntry: DeploymentMapEntry;
   @Input()
   get deploymentMapEntry(): DeploymentMapEntry {

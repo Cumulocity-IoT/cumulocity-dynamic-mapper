@@ -21,13 +21,13 @@ import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewIni
 import { ActionControl, AlertService, Column, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, from, Observable,  } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { map, take } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
-import { DeploymentMapEntry } from '../mapping/mapping.model';
+import { DeploymentMapEntry, Direction } from '../mapping/mapping.model';
 import { uuidCustom } from '../mapping/util';
 import { ConnectorConfigurationModalComponent } from './create/connector-configuration-modal.component';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
@@ -42,6 +42,7 @@ import { ActionVisibilityRule } from './types';
 })
 export class ConnectorGridComponent implements OnInit, AfterViewInit {
   @Input() selectable = true;
+  @Input() directions : Direction[] = [Direction.INBOUND,Direction.OUTBOUND];
   @Input() readOnly = false;
   @Input() deploy: string[];
   @Input() deploymentMapEntry: DeploymentMapEntry;
@@ -107,7 +108,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   private initializeConfigurations(): void {
-    this.configurations$ = this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
+    this.configurations$ = this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus().pipe(
+      map(configs => configs.filter(config => 
+        config.supportedDirections?.some(dir => this.directions.includes(dir))
+      ))
+    )
     this.setupConfigurationsSubscription();
   }
 

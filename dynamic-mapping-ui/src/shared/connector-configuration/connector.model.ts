@@ -21,6 +21,7 @@
 import { inject } from "@angular/core";
 import { ResolveFn } from "@angular/router";
 import { ConnectorConfigurationService } from "../service/connector-configuration.service";
+import { Direction } from "../mapping/mapping.model";
 
 export enum ConnectorPropertyType {
   ID_STRING_PROPERTY = 'ID_STRING_PROPERTY',
@@ -53,6 +54,7 @@ export interface ConnectorConfiguration {
   enabled: boolean;
   status?: any;
   status$?: any;
+  supportedDirections?: Direction[];
   name: string;
   properties: { [name: string]: any };
 }
@@ -62,6 +64,8 @@ export interface ConnectorSpecification {
   description: string;
   connectorType: string;
   supportsWildcardInTopic: boolean;
+  supportsMessageContext?: boolean;
+  supportedDirections?: Direction[];
   properties: { [name: string]: ConnectorProperty };
 }
 

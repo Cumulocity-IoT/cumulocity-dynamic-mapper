@@ -23,14 +23,27 @@ import { CellRendererContext } from '@c8y/ngx-components';
 @Component({
   selector: 'd11r-mapping-renderer-api',
   template: `
-	<div >
-        <span class="text-10 label label-primary">{{ context.value}}</span
-        >
-    </div>
+<div>
+    <span *ngIf="!isArray(context.value)" class="text-10 label label-primary">
+        {{ context.value }}
+    </span>
+
+    <ng-container *ngIf="isArray(context.value)">
+        <div *ngFor="let item of context.value" >
+          <!-- <span class="text-10 label label-primary"> -->
+          <span class="text-12 tag tag--success">
+              {{ item }}
+          </span>
+        </div>
+    </ng-container>
+</div>
   `
 })
 export class LabelRendererComponent {
   constructor(public context: CellRendererContext) {
     // console.log("Context:", context.item, context)
   }
+  isArray(value: any): boolean {
+    return Array.isArray(value);
+}
 }
