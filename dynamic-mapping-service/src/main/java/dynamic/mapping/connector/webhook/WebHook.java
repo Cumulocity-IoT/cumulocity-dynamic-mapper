@@ -65,14 +65,14 @@ public class WebHook extends AConnectorClient {
         ConnectorPropertyCondition basicAuthenticationCondition = new ConnectorPropertyCondition("authentication",
                 new String[] { "Basic" });
         ConnectorPropertyCondition bearerAuthenticationCondition = new ConnectorPropertyCondition("authentication",
-                new String[] { "Bearer Token" });
+                new String[] { "Bearer" });
         configProps.put("baseUrl",
                 new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
         configProps.put("authentication",
-                new ConnectorProperty(true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, null,
+                new ConnectorProperty(false, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, null,
                         Map.ofEntries(
                                 new AbstractMap.SimpleEntry<String, String>("Basic", "Basic"),
-                                new AbstractMap.SimpleEntry<String, String>("Bearer Token", "Bearer Token")),
+                                new AbstractMap.SimpleEntry<String, String>("Bearer", "Bearer")),
                         null));
         configProps.put("user",
                 new ConnectorProperty(false, 2, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
@@ -81,7 +81,7 @@ public class WebHook extends AConnectorClient {
                 new ConnectorProperty(false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
                         null, basicAuthenticationCondition));
         configProps.put("token",
-                new ConnectorProperty(true, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         bearerAuthenticationCondition));
         configProps.put("headerAccept",
                 new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_PROPERTY, false, false,
@@ -160,7 +160,7 @@ public class WebHook extends AConnectorClient {
                 .defaultHeader("Accept", headerAccept);
 
         // Add authentication if specified
-        if ("Basic".equalsIgnoreCase(authentication) && user != null && password != null) {
+        if ("Basic".equalsIgnoreCase(authentication) && !StringUtils.isEmpty(user) && !StringUtils.isEmpty(password)) {
             String credentials = Base64.getEncoder()
                     .encodeToString((user + ":" + password).getBytes(StandardCharsets.UTF_8));
             builder.defaultHeader("Authorization", "Basic " + credentials);
@@ -170,11 +170,6 @@ public class WebHook extends AConnectorClient {
 
         // Build the client
         webhookClient = builder.build();
-
-        // Create RestClient builder
-        if (!StringUtils.isEmpty(baseUrlHealthEndpoint)) {
-
-        }
 
         // stay in the loop until successful
         boolean successful = false;
@@ -260,14 +255,24 @@ public class WebHook extends AConnectorClient {
     }
 
     @Override
-    public boolean isConfigValid(ConnectorConfiguration configuration) {
+    public boolean // The code appears to be a method or function named "isConfigValid" in Java. It
+                   // is
+            // likely used to check the validity of a configuration or settings. However,
+            // without the actual implementation of the method, it is not possible to
+            // determine
+            // the specific logic or criteria used to validate the configuration.
+            isConfigValid(ConnectorConfiguration configuration) {
         if (configuration == null)
             return false;
-        // if using self signed certificate additional properties have to be set
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
-        if (useSelfSignedCertificate && (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null
-                || configuration.getProperties().get("nameCertificate") == null)) {
+        // if using authentication additional properties have to be set
+        String authentication = (String) connectorConfiguration.getProperties().getOrDefault("authentication", null);
+        String user = (String) connectorConfiguration.getProperties().get("user");
+        String password = (String) connectorConfiguration.getProperties().get("password");
+        String token = (String) connectorConfiguration.getProperties().get("token");
+        if ("Basic".equalsIgnoreCase(authentication)
+                && (!StringUtils.isEmpty(user) || !StringUtils.isEmpty(password))) {
+            return false;
+        } else if (("Bearer".equalsIgnoreCase(authentication) && (!StringUtils.isEmpty(token)))) {
             return false;
         }
         // check if all required properties are set
@@ -320,30 +325,30 @@ public class WebHook extends AConnectorClient {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         String contextPath = context.getResolvedPublishTopic();
-    
+
         try {
             ResponseEntity<String> responseEntity = webhookClient.post()
-                .uri(contextPath)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(payload)
-                .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                    String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
-                    log.error("Tenant {} - {}", tenant, errorMessage);
-                    throw new RuntimeException(errorMessage);
-                })
-                .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                    String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
-                    log.error("Tenant {} - {}", tenant, errorMessage);
-                    throw new RuntimeException(errorMessage);
-                })
-                .toEntity(String.class);
-    
+                    .uri(contextPath)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                        log.error("Tenant {} - {}", tenant, errorMessage);
+                        throw new RuntimeException(errorMessage);
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                        log.error("Tenant {} - {}", tenant, errorMessage);
+                        throw new RuntimeException(errorMessage);
+                    })
+                    .toEntity(String.class);
+
             if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", 
-                    tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
+                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}",
+                        tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
             }
-    
+
         } catch (Exception e) {
             String errorMessage = "Failed to publish MEAO message";
             log.error("Tenant {} - {} - Error: {}", tenant, errorMessage, e.getMessage());
