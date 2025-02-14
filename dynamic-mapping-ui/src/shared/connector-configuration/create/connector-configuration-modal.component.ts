@@ -123,12 +123,24 @@ export class ConnectorConfigurationModalComponent implements OnInit {
         },
         hideExpression: (model) => {
           if (entry.property?.condition && entry.property?.condition.anyOf) {
-            // console.log("Evaluating:", entry.key, entry.property?.condition.key, entry.property?.condition.anyOf, model.properties[entry.property?.condition.key], model);
-            return !entry.property.condition.anyOf.includes(model.properties[entry.property?.condition.key])
+            const convertedAnyOf = this.convertBooleanStrings(entry.property.condition.anyOf);
+            console.log("Evaluating:", entry.key, entry.property?.condition.key, entry.property?.condition.anyOf, convertedAnyOf, convertedAnyOf, model.properties[entry.property?.condition.key], model);
+            return !convertedAnyOf.includes(model.properties[entry.property?.condition.key])
           } else { return false }
         }
       }]
     };
+  }
+
+  private convertBooleanStrings<T>(array: T[]): (T | boolean)[] {
+    return array.map(item => {
+      if (typeof item === 'string') {
+        const lowerCase = item.toLowerCase();
+        if (lowerCase === 'true') return true;
+        if (lowerCase === 'false') return false;
+      }
+      return item;
+    });
   }
 
   private createNumericField(entry: PropertyEntry): FormlyFieldConfig {

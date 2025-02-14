@@ -81,6 +81,8 @@ public class MQTTClient extends AConnectorClient {
 	public MQTTClient() {
 		Map<String, ConnectorProperty> configProps = new HashMap<>();
         ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol", new String[] {"mqtts://","wss://"});
+        ConnectorPropertyCondition useSelfSignedCertificateCondition = new ConnectorPropertyCondition("useSelfSignedCertificate", new String[] {"true"});
+        ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol", new String[] {"ws://","wss://"});
 		configProps.put("protocol",
 				new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
 						Map.ofEntries(
@@ -102,13 +104,13 @@ public class MQTTClient extends AConnectorClient {
 		configProps.put("useSelfSignedCertificate",
 				new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null, tlsCondition));
 		configProps.put("fingerprintSelfSignedCertificate",
-				new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, tlsCondition));
+				new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, useSelfSignedCertificateCondition));
 		configProps.put("nameCertificate",
-				new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, tlsCondition));
+				new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, useSelfSignedCertificateCondition));
 		configProps.put("supportsWildcardInTopic",
 				new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null, null));
 		configProps.put("serverPath",
-				new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+				new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, wsCondition));
 		String name = "Generic MQTT Broker";
 		String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
 		connectorType = ConnectorType.MQTT;
