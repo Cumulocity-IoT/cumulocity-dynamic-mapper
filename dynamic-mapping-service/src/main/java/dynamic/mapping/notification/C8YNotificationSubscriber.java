@@ -161,13 +161,13 @@ public class C8YNotificationSubscriber {
 						//Only connect if connector is enabled
 						if(dispatcherOutbound.getConnectorClient().getConnectorConfiguration().isEnabled()){
 							String tokenSeed = DEVICE_SUBSCRIBER
-									+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
+									+ dispatcherOutbound.getConnectorClient().getConnectorIdentifier()
 									+ additionalSubscriptionIdTest;
 							String token = createToken(DEVICE_SUBSCRIPTION,
 									tokenSeed);
-							deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
+							deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(), token);
 							CustomWebSocketClient client = connect(token, dispatcherOutbound);
-							deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
+							deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
 									client);
 
 						}
@@ -311,16 +311,16 @@ public class C8YNotificationSubscriber {
 					for (DispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
 							.values()) {
 						String tokenSeed = DEVICE_SUBSCRIBER
-								+ dispatcherOutbound.getConnectorClient().getConnectorIdent()
+								+ dispatcherOutbound.getConnectorClient().getConnectorIdentifier()
 								+ additionalSubscriptionIdTest;
 						String token = createToken(DEVICE_SUBSCRIPTION,
 								tokenSeed);
 						log.info("Tenant {} - Creating new Subscription for Device {} with ID {} for Connector {}",
 								tenant, deviceName,
 								mor.getId().getValue(), dispatcherOutbound.getConnectorClient().getConnectorName());
-						deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
+						deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(), token);
 						CustomWebSocketClient client = connect(token, dispatcherOutbound);
-						deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
+						deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
 								client);
 					}
 				} catch (URISyntaxException e) {

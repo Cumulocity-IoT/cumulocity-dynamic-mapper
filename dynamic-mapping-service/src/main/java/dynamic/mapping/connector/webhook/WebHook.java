@@ -50,7 +50,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
@@ -85,13 +84,13 @@ public class WebHook extends AConnectorClient {
                 new ConnectorProperty(true, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         bearerAuthenticationCondition));
         configProps.put("headerAccept",
-                new ConnectorProperty(false, 5, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
+                new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         "application/json", null,
                         null));
         configProps.put("baseUrlHealthEndpoint",
-                new ConnectorProperty(true, 6, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+                new ConnectorProperty(false, 6, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
         String name = "Webhook";
-        String description = "Webhook to send outbound messages to.";
+        String description = "Webhook to send outbound messages to Rest endpoint as POST in json format.";
         connectorType = ConnectorType.WEB_HOOK;
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
                 supportedDirections());
@@ -120,15 +119,11 @@ public class WebHook extends AConnectorClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
-        this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE, QOS.EXACTLY_ONCE);
     }
 
     protected RestClient webhookClient;
 
     protected String baseUrl;
-
-    @Getter
-    protected List<QOS> supportedQOS;
 
     public boolean initialize() {
         loadConfiguration();
@@ -149,8 +144,9 @@ public class WebHook extends AConnectorClient {
         if (shouldConnect())
             updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
         baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("baseUrl", null);
+        // if no baseUrlHealthEndpoint is defined use the baseUrl
         String baseUrlHealthEndpoint = (String) connectorConfiguration.getProperties()
-                .getOrDefault("baseUrlHealthEndpoint", null);
+                .getOrDefault("baseUrlHealthEndpoint", baseUrl);
         String authentication = (String) connectorConfiguration.getProperties().getOrDefault("authentication", false);
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
@@ -307,7 +303,7 @@ public class WebHook extends AConnectorClient {
     }
 
     @Override
-    public String getConnectorIdent() {
+    public String getConnectorIdentifier() {
         return connectorIdentifier;
     }
 

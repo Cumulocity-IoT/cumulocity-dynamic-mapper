@@ -269,7 +269,7 @@ public class OperationController {
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                 connectorIdentifier);
         // client.submitDisconnect();
-        bootstrapService.disableConnector(tenant, client.getConnectorIdent());
+        bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
         // We might need to Reconnect other Notification Clients for other connectors
         configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 

@@ -57,7 +57,6 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
 
@@ -319,7 +318,7 @@ public class KafkaClient extends AConnectorClient {
 	}
 
 	@Override
-	public String getConnectorIdent() {
+	public String getConnectorIdentifier() {
 		return connectorIdentifier;
 	}
 
@@ -335,7 +334,7 @@ public class KafkaClient extends AConnectorClient {
 						defaultPropertiesConsumer),
 				connectorStatus);
 		consumerList.put(topic, kafkaConsumer);
-		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
+		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdentifier(),
 				topic, true);
 		kafkaConsumer.start(topicConsumerCallback);
 	}

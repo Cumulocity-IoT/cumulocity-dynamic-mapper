@@ -59,6 +59,7 @@ import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
+import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
@@ -253,8 +254,7 @@ public class BootstrapService {
         connectorRegistry.registerConnector(ConnectorType.CUMULOCITY_MQTT_SERVICE,
                 new MQTTServiceClient().getConnectorSpecification());
         connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
-        // TODO register Web Hook
-        // connectorRegistry.registerConnector(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
+        connectorRegistry.registerConnector(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
 
         HttpClient initialHttpClient = new HttpClient();
         connectorRegistry.registerConnector(ConnectorType.HTTP, initialHttpClient.getConnectorSpecification());
@@ -381,7 +381,7 @@ public class BootstrapService {
             // Only initialize Connectors which are enabled
             if (connectorClient.getConnectorConfiguration().isEnabled())
                 configurationRegistry.getNotificationSubscriber().addConnector(tenant,
-                        connectorClient.getConnectorIdent(),
+                        connectorClient.getConnectorIdentifier(),
                         dispatcherOutbound);
             // Subscriber must be new initialized for the new added connector
             // configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);

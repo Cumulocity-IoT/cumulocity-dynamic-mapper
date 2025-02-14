@@ -187,7 +187,7 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public String getConnectorIdent() {
+    public String getConnectorIdentifier() {
         return connectorIdentifier;
     }
 

@@ -124,7 +124,7 @@ public class MonitoringController {
 			if (connectorRegistry.getClientsForTenant(tenant) != null) {
 				for (AConnectorClient client : connectorRegistry.getClientsForTenant(tenant).values()) {
 					ConnectorStatusEvent st = client.getConnectorStatus();
-					connectorsStatus.put(client.getConnectorIdent(), st);
+					connectorsStatus.put(client.getConnectorIdentifier(), st);
 				}
 			}
 			log.info("Tenant {} - Get status of connectors: {}", tenant, connectorsStatus);

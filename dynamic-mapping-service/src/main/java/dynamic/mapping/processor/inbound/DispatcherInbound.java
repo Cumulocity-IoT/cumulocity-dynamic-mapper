@@ -156,11 +156,11 @@ public class DispatcherInbound implements GenericMessageCallback {
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",
                                         tenant,
                                         context.getTopic(),
-                                        connectorClient.getConnectorIdent(),
+                                        connectorClient.getConnectorIdentifier(),
                                         context.getPayload().toString());
                             } else {
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}", tenant,
-                                        context.getTopic(), connectorClient.getConnectorIdent());
+                                        context.getTopic(), connectorClient.getConnectorIdentifier());
                             }
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED

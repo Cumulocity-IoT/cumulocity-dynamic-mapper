@@ -222,7 +222,7 @@ public abstract class AConnectorClient {
     /**
      * Returning the unique ID identifying the connector instance
      **/
-    public abstract String getConnectorIdent();
+    public abstract String getConnectorIdentifier();
 
     /**
      * Returning the name of the connector instance
@@ -286,7 +286,7 @@ public abstract class AConnectorClient {
 
     public void loadConfiguration() {
         connectorConfiguration = connectorConfigurationComponent
-                .getConnectorConfiguration(getConnectorIdent(), tenant);
+                .getConnectorConfiguration(getConnectorIdentifier(), tenant);
         connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
 
         serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -354,7 +354,7 @@ public abstract class AConnectorClient {
 
         List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
         boolean isDeployed = deploymentMapEntry != null &&
-                deploymentMapEntry.contains(getConnectorIdent());
+                deploymentMapEntry.contains(getConnectorIdentifier());
 
         // return validDeployment && mapping.getActive() && isDeployed;
         return validDeployment && isDeployed;
@@ -428,7 +428,7 @@ public abstract class AConnectorClient {
             } else {
                 List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
                 boolean isDeployed = deploymentMapEntry != null &&
-                        deploymentMapEntry.contains(getConnectorIdent());
+                        deploymentMapEntry.contains(getConnectorIdentifier());
                 if (isDeployed) {
                     log.warn("Tenant {} - Mapping {} contains unsupported wildcards",
                             tenant, mapping.getId());
@@ -571,7 +571,7 @@ public abstract class AConnectorClient {
                 entry("status", connectorStatus.getStatus().name()),
                 entry("message", connectorStatus.message),
                 entry("connectorName", getConnectorName()),
-                entry("connectorIdentifier", getConnectorIdent()),
+                entry("connectorIdentifier", getConnectorIdentifier()),
                 entry("date", date));
     }
 
@@ -611,7 +611,7 @@ public abstract class AConnectorClient {
         if (closeException != null) {
             log.error("Tenant {} - Connection lost to broker {}: {}",
                     tenant,
-                    getConnectorIdent(),
+                    getConnectorIdentifier(),
                     closeException.getMessage(),
                     closeException);
         }
@@ -720,7 +720,7 @@ public abstract class AConnectorClient {
                 .supportsMessageContext(getSupportsMessageContext())
                 .topic(topic)
                 .sendPayload(sendPayload)
-                .connectorIdentifier(getConnectorIdent())
+                .connectorIdentifier(getConnectorIdentifier())
                 .payload(payloadMessage.getBytes())
                 .build();
     }
@@ -792,7 +792,7 @@ public abstract class AConnectorClient {
 
     private boolean isDeployedInConnector(Mapping mapping) {
         List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
-        return deploymentMapEntry != null && deploymentMapEntry.contains(getConnectorIdent());
+        return deploymentMapEntry != null && deploymentMapEntry.contains(getConnectorIdentifier());
     }
 
     public void updateActiveSubscriptionsOutbound(List<Mapping> updatedMappings) {

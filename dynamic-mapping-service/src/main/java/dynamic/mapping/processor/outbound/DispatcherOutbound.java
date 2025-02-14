@@ -110,7 +110,7 @@ public class DispatcherOutbound implements NotificationCallback {
         // configurationRegistry.getPayloadProcessorsOutbound().get(connectorClient.getTenant()));
         this.payloadProcessorsOutbound = configurationRegistry.getPayloadProcessorsOutbound()
                 .get(connectorClient.getTenant())
-                .get(connectorClient.getConnectorIdent());
+                .get(connectorClient.getConnectorIdentifier());
         this.configurationRegistry = configurationRegistry;
         this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
 
@@ -186,11 +186,11 @@ public class DispatcherOutbound implements NotificationCallback {
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = configurationRegistry.getC8yAgent();
             this.outboundProcessingTimer = Timer.builder("dynmapper_outbound_processing_time")
-					.tag("tenant", connectorClient.getTenant()).tag("connector", connectorClient.getConnectorIdent())
+					.tag("tenant", connectorClient.getTenant()).tag("connector", connectorClient.getConnectorIdentifier())
 					.description("Processing time of outbound messages").register(Metrics.globalRegistry);
 			this.outboundProcessingCounter = Counter.builder("dynmapper_outbound_message_total")
 					.tag("tenant", connectorClient.getTenant()).description("Total number of outbound messages")
-					.tag("connector", connectorClient.getConnectorIdent()).register(Metrics.globalRegistry);
+					.tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
             this.c8yMessage = c8yMessage;
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(c8yMessage.getTenant());
@@ -229,12 +229,12 @@ public class DispatcherOutbound implements NotificationCallback {
                                         "Tenant {} - New message for topic: {}, for connector: {}, wrapped message: {}",
                                         tenant,
                                         context.getTopic(),
-                                        connectorClient.getConnectorIdent(),
+                                        connectorClient.getConnectorIdentifier(),
                                         context.getPayload().toString());
                             } else {
                                 log.info("Tenant {} - New message for topic: {}, for connector: {}, sendPayload: {}",
                                         tenant,
-                                        context.getTopic(), connectorClient.getConnectorIdent(), sendPayload);
+                                        context.getTopic(), connectorClient.getConnectorIdentifier(), sendPayload);
                             }
                             mappingStatus.messagesReceived++;
                             processor.enrichPayload(context);
@@ -243,11 +243,11 @@ public class DispatcherOutbound implements NotificationCallback {
                             Counter.builder("dynmapper_outbound_message_total")
                                     .tag("tenant", c8yMessage.getTenant())
                                     .description("Total number of outbound messages")
-                                    .tag("connector", processor.connectorClient.getConnectorIdent())
+                                    .tag("connector", processor.connectorClient.getConnectorIdentifier())
                                     .register(Metrics.globalRegistry).increment();
                             timer.stop(Timer.builder("dynmapper_outbound_processing_time")
                                     .tag("tenant", c8yMessage.getTenant())
-                                    .tag("connector", processor.connectorClient.getConnectorIdent())
+                                    .tag("connector", processor.connectorClient.getConnectorIdentifier())
                                     .description("Processing time of outbound messages")
                                     .register(Metrics.globalRegistry));
 
