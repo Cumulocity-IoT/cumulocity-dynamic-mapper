@@ -169,7 +169,7 @@ public class HttpClient extends AConnectorClient {
             log.info("Tenant {} - Disconnecting from http endpoint {}", tenant,
                     path);
 
-            activeSubscriptions.entrySet().forEach(entry -> {
+            activeSubscriptionsInbound.entrySet().forEach(entry -> {
                 // only unsubscribe if still active subscriptions exist
                 String topic = entry.getKey();
                 MutableInt activeSubs = entry.getValue();

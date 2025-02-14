@@ -153,7 +153,7 @@ public abstract class AConnectorClient {
 
     // keeps track how many active mappings use this topic as mappingTopic:
     // structure < mappingTopic, numberMappings >
-    public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
+    public Map<String, MutableInt> activeSubscriptionsInbound = new HashMap<>();
     // keeps track if a specific mapping is deployed in this connector:
     // a) is it active,
     // b) does it comply with the capabilities of the connector, i.e. supports
@@ -320,7 +320,7 @@ public abstract class AConnectorClient {
     public void updateActiveSubscriptionsInbound(List<Mapping> updatedMappings, boolean reset) {
         setMappingsDeployedInbound(new ConcurrentHashMap<>());
         if (reset) {
-            activeSubscriptions = new HashMap<>();
+            activeSubscriptionsInbound = new HashMap<>();
         }
 
         if (isConnected()) {
@@ -328,7 +328,7 @@ public abstract class AConnectorClient {
             processInboundMappings(updatedMappings, updatedSubscriptionCache);
             handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
 
-            activeSubscriptions = updatedSubscriptionCache;
+            activeSubscriptionsInbound = updatedSubscriptionCache;
             log.info("Tenant {} - Updating subscriptions successful. Active subscriptions: {}",
                     tenant, getActiveSubscriptionsView().size());
         }
@@ -475,7 +475,7 @@ public abstract class AConnectorClient {
                 log.info("Tenant {} - Unsubscribing from topic: {}",
                         tenant, mapping.mappingTopic);
                 unsubscribe(mapping.mappingTopic);
-                getActiveSubscriptions().remove(mapping.mappingTopic);
+                getActiveSubscriptionsInbound().remove(mapping.mappingTopic);
             } catch (Exception exp) {
                 log.error("Tenant {} - Error unsubscribing from topic: {}",
                         tenant, mapping.mappingTopic, exp);
@@ -841,33 +841,33 @@ public abstract class AConnectorClient {
     /**
      * Retrieves the active subscriptions
      */
-    public Map<String, MutableInt> getActiveSubscriptions() {
-        return activeSubscriptions;
+    public Map<String, MutableInt> getActiveSubscriptionsInbound() {
+        return activeSubscriptionsInbound;
     }
 
     /**
      * Gets a read-only view of active subscriptions (for external use)
      */
     public Map<String, MutableInt> getActiveSubscriptionsView() {
-        return Collections.unmodifiableMap(activeSubscriptions);
+        return Collections.unmodifiableMap(activeSubscriptionsInbound);
     }
 
         /**
      * Safely adds a subscription
      */
     protected void addActiveSubscription(String topic, MutableInt count) {
-        activeSubscriptions.put(topic, count);
+        activeSubscriptionsInbound.put(topic, count);
     }
 
     /**
      * Safely removes a subscription
      */
     protected void removeActiveSubscription(String topic) {
-        activeSubscriptions.remove(topic);
+        activeSubscriptionsInbound.remove(topic);
     }
 
     private void initializeSubscriptionIfNeeded(Mapping mapping) {
-        if (!activeSubscriptions.containsKey(mapping.mappingTopic)) {
+        if (!activeSubscriptionsInbound.containsKey(mapping.mappingTopic)) {
             addActiveSubscription(mapping.mappingTopic, new MutableInt(0));
         }
     }

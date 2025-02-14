@@ -21,17 +21,7 @@
 
 package dynamic.mapping.connector.webhook;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,7 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.TrustManagerFactory;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -55,18 +44,11 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import jakarta.ws.rs.NotSupportedException;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableInt;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-
-import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
-import com.hivemq.client.mqtt.datatypes.MqttQos;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
-import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
-import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
-import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCode;
-import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
-import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3Unsubscribe;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -141,10 +123,9 @@ public class WebHook extends AConnectorClient {
         this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE, QOS.EXACTLY_ONCE);
     }
 
-    protected WebhookCallback webhookCallback = null;
-
     protected RestClient webhookClient;
-    protected RestClient webhookClientHealth;
+
+    protected String baseUrl;
 
     @Getter
     protected List<QOS> supportedQOS;
@@ -167,9 +148,9 @@ public class WebHook extends AConnectorClient {
 
         if (shouldConnect())
             updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
-        String baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("baseUrl", false);
+        baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("baseUrl", null);
         String baseUrlHealthEndpoint = (String) connectorConfiguration.getProperties()
-                .getOrDefault("baseUrlHealthEndpoint", false);
+                .getOrDefault("baseUrlHealthEndpoint", null);
         String authentication = (String) connectorConfiguration.getProperties().getOrDefault("authentication", false);
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
@@ -195,49 +176,9 @@ public class WebHook extends AConnectorClient {
         webhookClient = builder.build();
 
         // Create RestClient builder
-        RestClient.Builder builderHealth = RestClient.builder()
-                .requestFactory(new HttpComponentsClientHttpRequestFactory())
-                .baseUrl(baseUrl)
-                .defaultHeader("Accept", headerAccept);
+        if (!StringUtils.isEmpty(baseUrlHealthEndpoint)) {
 
-        // Add authentication if specified
-        if ("Basic".equalsIgnoreCase(authentication) && !StringUtils.isEmpty(user) &&!StringUtils.isEmpty(password)) {
-            String credentials = Base64.getEncoder()
-                    .encodeToString((user + ":" + password).getBytes(StandardCharsets.UTF_8));
-            builderHealth.defaultHeader("Authorization", "Basic " + credentials);
-        } else if ("Bearer".equalsIgnoreCase(authentication) && password != null) {
-            builderHealth.defaultHeader("Authorization", "Bearer " + token);
         }
-
-        // Build the client
-        webhookClientHealth = builderHealth.build();
-
-
-
-
-        String configuredProtocol = "mqtt";
-        String configuredServerPath = "";
-        if (webhookClient.getConfig().getWebSocketConfig().isPresent()) {
-            if (webhookClient.getConfig().getSslConfig().isPresent()) {
-                configuredProtocol = "wss";
-            } else {
-                configuredProtocol = "ws";
-            }
-            configuredServerPath = "/" + webhookClient.getConfig().getWebSocketConfig().get().getServerPath();
-        } else {
-            if (webhookClient.getConfig().getSslConfig().isPresent()) {
-                configuredProtocol = "mqtts";
-            } else {
-                configuredProtocol = "mqtt";
-            }
-        }
-        String configuredUrl = String.format("%s://%s:%s%s", configuredProtocol,
-                webhookClient.getConfig().getServerHost(),
-                webhookClient.getConfig().getServerPort(), configuredServerPath);
-        // Registering Callback
-        Mqtt3AsyncClient mqtt3AsyncClient = webhookClient.toAsync();
-        webhookCallback = new WebhookCallback(dispatcher, tenant, getConnectorIdent(), false);
-        mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, webhookCallback);
 
         // stay in the loop until successful
         boolean successful = false;
@@ -247,7 +188,7 @@ public class WebHook extends AConnectorClient {
             while (!isConnected() && shouldConnect()) {
                 log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
                         getConnectorName(),
-                        shouldConnect(), configuredUrl);
+                        shouldConnect(), baseUrl);
                 if (!firstRun) {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
@@ -257,30 +198,20 @@ public class WebHook extends AConnectorClient {
                     }
                 }
                 try {
-                    Mqtt3ConnAck ack = webhookClient.connectWith()
-                            .cleanSession(true)
-                            .keepAlive(60)
-                            .send();
-                    if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
-
-                        throw new ConnectorException(
-                                String.format("Tenant %s - Error connecting to broker: %s. Errorcode: %s", tenant,
-                                        webhookClient.getConfig().getServerHost(), ack.getReturnCode().name()));
+                    if (!StringUtils.isEmpty(baseUrlHealthEndpoint)) {
+                        checkHealth(baseUrlHealthEndpoint);
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Connected to broker {}", tenant,
-                            webhookClient.getConfig().getServerHost());
+                    log.info("Tenant {} - Connected to webHook endpoint {}", tenant,
+                            baseUrl);
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-                    updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
                     List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
-                    log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
-                            webhookClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
-                            webhookClient.getState().isConnected());
+                    log.error("Tenant {} - Error connecting to webHook: {}, {}, {}", tenant,
+                            baseUrl, e.getMessage(), connectionState.booleanValue());
                     updateConnectorStatusToFailed(e);
                     sendConnectorLifecycle();
                 }
@@ -290,17 +221,6 @@ public class WebHook extends AConnectorClient {
             try {
                 // test if the mqtt connection is configured and enabled
                 if (shouldConnect()) {
-                    /*
-                     * try {
-                     * // is not working for broker.emqx.io
-                     * subscribe("$SYS/#", QOS.AT_LEAST_ONCE);
-                     * } catch (ConnectorException e) {
-                     * log.warn(
-                     * "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}"
-                     * ,
-                     * e.getMessage(), e);
-                     * }
-                     */
                     mappingComponent.rebuildMappingOutboundCache(tenant);
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
@@ -316,6 +236,26 @@ public class WebHook extends AConnectorClient {
                 }
                 successful = false;
             }
+        }
+    }
+
+    public ResponseEntity<String> checkHealth(String baseUrlHealthEndpoint) {
+        try {
+            return webhookClient.get()
+                    .uri(baseUrlHealthEndpoint) // Use the full health endpoint URL
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        throw new RuntimeException(
+                                "Health check failed with client error: " + response.getStatusCode());
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        throw new RuntimeException(
+                                "Health check failed with server error: " + response.getStatusCode());
+                    })
+                    .toEntity(String.class);
+        } catch (Exception e) {
+            log.error("Health check failed: ", e);
+            throw e;
         }
     }
 
@@ -347,45 +287,22 @@ public class WebHook extends AConnectorClient {
     @Override
     public boolean isConnected() {
         return connectionState.booleanValue();
-        // return mqttClient != null ? mqttClient.getState().isConnected() : false;
     }
 
     @Override
     public void disconnect() {
         if (isConnected()) {
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
-            log.info("Tenant {} - Disconnecting from broker: {}", tenant,
-                    (webhookClient == null ? (String) connectorConfiguration.getProperties().get("mqttHost")
-                            : webhookClient.getConfig().getServerHost()));
-            log.debug("Tenant {} - Disconnected from broker I: {}", tenant,
-                    webhookClient.getConfig().getServerHost());
-            activeSubscriptions.entrySet().forEach(entry -> {
-                // only unsubscribe if still active subscriptions exist
-                String topic = entry.getKey();
-                MutableInt activeSubs = entry.getValue();
-                if (activeSubs.intValue() > 0 && webhookClient.getState().isConnected()) {
-                    webhookClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
-                }
-            });
+            log.info("Tenant {} - Disconnecting from webHook endpoint {}", tenant, baseUrl);
 
-            // if (mqttClient.getState().isConnected()) {
-            // mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
-            // }
-
-            try {
-                if (webhookClient != null && webhookClient.getState().isConnected())
-                    webhookClient.disconnect();
-            } catch (Exception e) {
-                log.error("Tenant {} - Error disconnecting from MQTT broker:", tenant,
-                        e);
-            }
+            connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
             updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
             List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
             updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
-            log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
-                    webhookClient.getConfig().getServerHost());
+            log.info("Tenant {} - Disconnected from webHook endpoint II: {}", tenant,
+                    baseUrl);
         }
     }
 
@@ -396,35 +313,7 @@ public class WebHook extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, QOS qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
-        QOS usedQOS = qos;
-        sendSubscriptionEvents(topic, "Subscribing");
-        if (usedQOS.equals(null))
-            usedQOS = QOS.AT_LEAST_ONCE;
-        else if (!supportedQOS.contains(qos)) {
-            // determine maximum supported QOS
-            usedQOS = QOS.AT_LEAST_ONCE;
-            for (int i = 1; i < qos.ordinal(); i++) {
-                if (supportedQOS.contains(QOS.values()[i])) {
-                    usedQOS = QOS.values()[i];
-                }
-            }
-            if (usedQOS.ordinal() < qos.ordinal()) {
-                log.warn("Tenant {} - QOS {} is not supported. Using instead: {}", tenant, qos, usedQOS);
-            }
-        }
-
-        // We don't need to add a handler on subscribe using hive client
-        Mqtt3AsyncClient asyncMqttClient = webhookClient.toAsync();
-        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal())).send()
-                .thenRun(() -> {
-                    log.info("Tenant {} - Successfully subscribed on topic: {} for connector {}", tenant, topic,
-                            connectorName);
-                }).exceptionally(throwable -> {
-                    log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
-                            throwable.getMessage());
-                    return null;
-                });
+        throw new NotSupportedException("WebHook does not support inbound mappings");
     }
 
     public void unsubscribe(String topic) throws Exception {
@@ -434,13 +323,36 @@ public class WebHook extends AConnectorClient {
     public void publishMEAO(ProcessingContext<?> context) {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
-        MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
-        Mqtt3Publish mqttMessage = Mqtt3Publish.builder().topic(context.getResolvedPublishTopic()).qos(mqttQos)
-                .payload(payload.getBytes()).build();
-        webhookClient.publish(mqttMessage);
-
-        log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
-                context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
+        String contextPath = context.getResolvedPublishTopic();
+    
+        try {
+            ResponseEntity<String> responseEntity = webhookClient.post()
+                .uri(contextPath)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                    String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                    log.error("Tenant {} - {}", tenant, errorMessage);
+                    throw new RuntimeException(errorMessage);
+                })
+                .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                    String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                    log.error("Tenant {} - {}", tenant, errorMessage);
+                    throw new RuntimeException(errorMessage);
+                })
+                .toEntity(String.class);
+    
+            if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", 
+                    tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
+            }
+    
+        } catch (Exception e) {
+            String errorMessage = "Failed to publish MEAO message";
+            log.error("Tenant {} - {} - Error: {}", tenant, errorMessage, e.getMessage());
+            throw new RuntimeException(errorMessage, e);
+        }
     }
 
     @Override

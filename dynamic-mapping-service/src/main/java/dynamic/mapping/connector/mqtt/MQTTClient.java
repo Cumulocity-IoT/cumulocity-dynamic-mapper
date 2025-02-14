@@ -333,7 +333,7 @@ public class MQTTClient extends AConnectorClient {
 					if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
 
 						throw new ConnectorException(
-								String.format("Tenant %s - Error connecting to broker: %s. Errorcode: %s", tenant,
+								String.format("Tenant %s - Error connecting to broker: %s. Error code: %s", tenant,
 										mqttClient.getConfig().getServerHost(), ack.getReturnCode().name()));
 					}
 
@@ -428,7 +428,7 @@ public class MQTTClient extends AConnectorClient {
 							: mqttClient.getConfig().getServerHost()));
 			log.debug("Tenant {} - Disconnected from broker I: {}", tenant,
 					mqttClient.getConfig().getServerHost());
-			activeSubscriptions.entrySet().forEach(entry -> {
+			activeSubscriptionsInbound.entrySet().forEach(entry -> {
 				// only unsubscribe if still active subscriptions exist
 				String topic = entry.getKey();
 				MutableInt activeSubs = entry.getValue();

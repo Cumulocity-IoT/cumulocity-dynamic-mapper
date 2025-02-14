@@ -289,7 +289,7 @@ public class KafkaClient extends AConnectorClient {
 			updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
 			log.info("Tenant {} - Disconnecting  connector {} from broker: {}", tenant, getConnectorName(),
 					bootstrapServers);
-			activeSubscriptions.entrySet().forEach(entry -> {
+			activeSubscriptionsInbound.entrySet().forEach(entry -> {
 				// only unsubscribe if still active subscriptions exist
 				String topic = entry.getKey();
 				MutableInt activeSubs = entry.getValue();
