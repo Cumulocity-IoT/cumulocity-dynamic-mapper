@@ -39,6 +39,12 @@ export enum ConnectorType {
   KAFKA = 'KAFKA',
   HTTP = 'HTTP',
 }
+
+export interface ConnectorPropertyCondition {
+  // order: number;
+  key: string;
+  anyOf: string[];
+}
 export interface ConnectorProperty {
   required: boolean;
   order: number;
@@ -46,6 +52,7 @@ export interface ConnectorProperty {
   hidden: boolean;
   defaultValue?: any;
   type: ConnectorPropertyType;
+  condition?: ConnectorPropertyCondition
 }
 
 export interface ConnectorConfiguration {

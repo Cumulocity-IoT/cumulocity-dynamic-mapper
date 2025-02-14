@@ -24,6 +24,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
 import {
   ConnectorConfiguration,
+  ConnectorProperty,
   ConnectorPropertyType,
   ConnectorSpecification,
   ConnectorType,
@@ -33,7 +34,7 @@ import {
 
 interface PropertyEntry {
   key: string;
-  property: any;
+  property: ConnectorProperty;
 }
 
 @Component({
@@ -46,7 +47,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
   @Input() specifications: ConnectorSpecification[];
   @Input() configurationsCount: number;
   @Output() closeSubject = new Subject<any>();
-  
+
   brokerFormFields: FormlyFieldConfig[] = [];
   brokerForm = new FormGroup({});
   dynamicFormFields: FormlyFieldConfig[] = [];
@@ -73,7 +74,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
     this.readOnly = this.configuration.enabled;
-    
+
     if (!this.add) {
       this.createDynamicForm(this.configuration.connectorType);
     }
@@ -119,6 +120,12 @@ export class ConnectorConfigurationModalComponent implements OnInit {
           required: entry.property.required,
           readonly: entry.property.readonly,
           ...additionalProps
+        },
+        hideExpression: (model) => {
+          if (entry.property?.condition && entry.property?.condition.anyOf) {
+            // console.log("Evaluating:", entry.key, entry.property?.condition.key, entry.property?.condition.anyOf, model.properties[entry.property?.condition.key], model);
+            return !entry.property.condition.anyOf.includes(model.properties[entry.property?.condition.key])
+          } else { return false }
         }
       }]
     };
@@ -142,7 +149,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
 
   private createOptionField(entry: PropertyEntry): FormlyFieldConfig {
     return this.createBaseFormField(entry, 'select', {
-      options: Object.values(entry.property.options).map(key => ({
+      options: Object.values(entry.property['options']).map(key => ({
         label: key,
         value: key
       }))
@@ -209,10 +216,10 @@ export class ConnectorConfigurationModalComponent implements OnInit {
 
   private createDynamicFormFields(dynamicFields: ConnectorSpecification): void {
     const sortedFields = this.getSortedFields(dynamicFields);
-    
+
     sortedFields.forEach(entry => {
       if (!entry) return;
-      
+
       const formConfigFn = this.propertyTypeToFormConfig.get(entry.property.type);
       if (formConfigFn) {
         this.dynamicFormFields.push(formConfigFn(entry));

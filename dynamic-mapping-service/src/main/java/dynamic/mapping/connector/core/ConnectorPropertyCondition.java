@@ -27,46 +27,24 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;
 
-import java.util.Map;
-
 import jakarta.validation.constraints.NotNull;
 
 @Data
 @ToString()
 @AllArgsConstructor
-public class ConnectorProperty implements Cloneable {
+public class ConnectorPropertyCondition implements Cloneable {
+
+    // @NotNull
+    // @JsonSetter(nulls = Nulls.SKIP)
+    // public Integer order;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public Boolean required;
+    public String key;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public Integer order;
-
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public ConnectorPropertyType type;
-
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public Boolean readonly;
-
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public Boolean hidden;
-
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public Object defaultValue;
-
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public Map<String, String> options;
-
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public ConnectorPropertyCondition condition;
+    public String[] anyOf;
 
     public Object clone() {
         try {

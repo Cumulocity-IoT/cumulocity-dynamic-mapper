@@ -71,6 +71,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
+import dynamic.mapping.connector.core.ConnectorPropertyCondition;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
@@ -79,34 +80,35 @@ import dynamic.mapping.core.ConnectorStatusEvent;
 public class MQTTClient extends AConnectorClient {
 	public MQTTClient() {
 		Map<String, ConnectorProperty> configProps = new HashMap<>();
+        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol", new String[] {"mqtts://","wss://"});
 		configProps.put("protocol",
 				new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
 						Map.ofEntries(
 								new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
 								new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
 								new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-								new AbstractMap.SimpleEntry<String, String>("wss://", "wss://"))));
+								new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")), null));
 		configProps.put("mqttHost",
-				new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		configProps.put("mqttPort",
-				new ConnectorProperty(true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, false, false, null, null));
+				new ConnectorProperty(true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, false, false, null, null, null));
 		configProps.put("user",
-				new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		configProps.put("password",
 				new ConnectorProperty(false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
-						null));
+						null,null));
 		configProps.put("clientId",
-				new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		configProps.put("useSelfSignedCertificate",
-				new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null));
+				new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null, tlsCondition));
 		configProps.put("fingerprintSelfSignedCertificate",
-				new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, tlsCondition));
 		configProps.put("nameCertificate",
-				new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, tlsCondition));
 		configProps.put("supportsWildcardInTopic",
-				new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null));
+				new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null, null));
 		configProps.put("serverPath",
-				new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		String name = "Generic MQTT Broker";
 		String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
 		connectorType = ConnectorType.MQTT;
