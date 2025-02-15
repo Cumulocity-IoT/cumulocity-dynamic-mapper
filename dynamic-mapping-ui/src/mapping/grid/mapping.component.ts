@@ -211,7 +211,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'mic',
         callback: this.toggleSnoopStatusMapping.bind(this),
         showIf: (item) =>
-          item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
             item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
@@ -222,7 +221,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'mic',
         callback: this.toggleSnoopStatusMapping.bind(this),
         showIf: (item) =>
-          item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
           !(
             item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
@@ -235,7 +233,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'reset',
         callback: this.resetSnoop.bind(this),
         showIf: (item) =>
-          item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.STARTED ||
             item['mapping']['snoopStatus'] === SnoopStatus.ENABLED ||

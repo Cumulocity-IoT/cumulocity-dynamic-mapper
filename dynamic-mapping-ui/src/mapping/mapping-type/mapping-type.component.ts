@@ -102,7 +102,6 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   shouldShowSnoop(): boolean {
     // Replace these conditions with your specific requirements
     return (
-      this.direction === Direction.INBOUND &&
       MappingTypeDescriptionMap[this.mappingType].properties[this.direction]
         .snoopSupported
     );

@@ -169,7 +169,7 @@ export const MappingTypeDescriptionMap: Record<
     description: 'Mapping handles payloads in JSON format.',
     properties: {
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
-      [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: true }
+      [Direction.OUTBOUND]: { snoopSupported: true, directionSupported: true }
     },
     stepperConfiguration: {
       showEditorSource: true,
