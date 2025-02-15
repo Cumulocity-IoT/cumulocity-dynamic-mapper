@@ -405,19 +405,17 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellRendererComponent: StatusRendererComponent,
         gridTrackSize: '10%'
       },
-      this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-          // header: 'Test/Debug/Snoop',
-          header: 'Templates snooped',
-          name: 'snoopedTemplates',
-          path: 'mapping',
-          filterable: false,
-          sortable: false,
-          cellCSSClassName: 'text-align-center',
-          cellRendererComponent: SnoopedTemplateRendererComponent,
-          gridTrackSize: '8%'
-        }
-        : undefined,
+      {
+        // header: 'Test/Debug/Snoop',
+        header: 'Templates snooped',
+        name: 'snoopedTemplates',
+        path: 'mapping',
+        filterable: false,
+        sortable: false,
+        cellCSSClassName: 'text-align-center',
+        cellRendererComponent: SnoopedTemplateRendererComponent,
+        gridTrackSize: '8%'
+      },
       {
         header: 'Activate',
         name: 'active',
