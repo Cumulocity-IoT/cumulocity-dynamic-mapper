@@ -90,7 +90,7 @@ public class WebHook extends AConnectorClient {
         configProps.put("baseUrlHealthEndpoint",
                 new ConnectorProperty(false, 6, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
         String name = "Webhook";
-        String description = "Webhook to send outbound messages to Rest endpoint as POST in json format. The health endpoint is tested with a GET request.";
+        String description = "Webhook to send outbound messages to Rest endpoint as POST in json format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
                 supportedDirections());
@@ -124,6 +124,7 @@ public class WebHook extends AConnectorClient {
     protected RestClient webhookClient;
 
     protected String baseUrl;
+    protected Boolean baseUrlEndsWithSlash;
 
     public boolean initialize() {
         loadConfiguration();
@@ -144,6 +145,7 @@ public class WebHook extends AConnectorClient {
         if (shouldConnect())
             updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
         baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("baseUrl", null);
+        baseUrlEndsWithSlash = baseUrl.endsWith("/");
         // if no baseUrlHealthEndpoint is defined use the baseUrl
         String baseUrlHealthEndpoint = (String) connectorConfiguration.getProperties()
                 .getOrDefault("baseUrlHealthEndpoint", null);
@@ -325,8 +327,14 @@ public class WebHook extends AConnectorClient {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         String contextPath = context.getResolvedPublishTopic();
-        String path = (new StringBuffer (baseUrl)).append(contextPath).toString();
 
+        // The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added.
+        if (!baseUrlEndsWithSlash && !contextPath.startsWith("/")) {
+            contextPath = "/" + contextPath;
+        }
+        String path = (new StringBuffer (baseUrl)).append(contextPath).toString();
+        log.info("Tenant {} - Published path: {}",
+        tenant, path);
 
         try {
             ResponseEntity<String> responseEntity = webhookClient.post()
@@ -336,12 +344,12 @@ public class WebHook extends AConnectorClient {
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
                         String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
-                        log.error("Tenant {} - {}", tenant, errorMessage);
+                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
                         throw new RuntimeException(errorMessage);
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
                         String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
-                        log.error("Tenant {} - {}", tenant, errorMessage);
+                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
                         throw new RuntimeException(errorMessage);
                     })
                     .toEntity(String.class);
