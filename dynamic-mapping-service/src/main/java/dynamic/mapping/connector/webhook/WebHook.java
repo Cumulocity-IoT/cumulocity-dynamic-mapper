@@ -355,8 +355,8 @@ public class WebHook extends AConnectorClient {
                     .toEntity(String.class);
 
             if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}",
-                        tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
+                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}, {}",
+                        tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,  connectorName);
             }
 
         } catch (Exception e) {
