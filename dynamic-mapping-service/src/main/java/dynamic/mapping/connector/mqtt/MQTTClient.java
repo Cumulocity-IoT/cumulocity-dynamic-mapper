@@ -111,7 +111,7 @@ public class MQTTClient extends AConnectorClient {
 				new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null, null));
 		configProps.put("serverPath",
 				new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, wsCondition));
-		String name = "Generic MQTT Broker";
+		String name = "Generic MQTT";
 		String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
 		connectorType = ConnectorType.MQTT;
 		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false, supportedDirections());

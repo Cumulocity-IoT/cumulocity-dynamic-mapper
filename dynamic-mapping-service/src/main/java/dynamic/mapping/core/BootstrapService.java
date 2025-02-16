@@ -285,7 +285,7 @@ public class BootstrapService {
         httpConfig.connectorType = ConnectorType.HTTP;
         httpConfig.identifier = HttpClient.HTTP_CONNECTOR_IDENTIFIER;
         httpConfig.enabled = true;
-        httpConfig.name = "Default Http Connector";
+        httpConfig.name = "Default HTTP Connector";
 
         HttpClient initialHttpClient = new HttpClient();
         initialHttpClient.getConnectorSpecification().getProperties()

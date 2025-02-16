@@ -49,11 +49,11 @@
         Connector configuration to broker and http endpoint</h2>
     <p data-line="32" class="code-line" dir="auto">Connectors are the client to the different messaging servers: MQTT
         brokers, Kafka.
-        The <code>Default Http Connector</code> is a special case of a connector:</p>
+        The <code>Default HTTP Connector</code> is a special case of a connector:</p>
     <ol data-line="34" class="code-line" dir="auto">
         <li data-line="34" class="code-line" dir="auto">It has not to be created as the connector will be created
             automatically at startup of the backend for every tenant.</li>
-        <li data-line="35" class="code-line" dir="auto">The endpoint for the <code>Default Http Connector</code> can be
+        <li data-line="35" class="code-line" dir="auto">The endpoint for the <code>Default HTTP Connector</code> can be
             accessed at the url
             <code>https://&lt;YOUR_CUMULOCITY_TENANT&gt;/service/dynamic-mapping-service/httpConnector/&lt;MAPPING_TOPIC&gt;</code>
         </li>
@@ -93,7 +93,7 @@
             project.
             This applies to configuration for security, transactions, key and payload serialization (currently
             StringSerializer)...</li>
-        <li data-line="56" class="code-line" dir="auto">Http Connector: he <code>Default Http Connector</code> is a http
+        <li data-line="56" class="code-line" dir="auto">HTTP Connector: he <code>Default HTTP Connector</code> is a http
             endpoint where custom payload can be sent to the mapper over http</li>
     </ul>
     <p data-line="58" class="code-line" dir="auto">The configuration properties are dynamically adapted to the

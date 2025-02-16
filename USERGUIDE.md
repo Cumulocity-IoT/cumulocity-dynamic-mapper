@@ -31,9 +31,9 @@
 ## Connector configuration to broker and http endpoint
 
 Connectors are the client to the different messaging servers: MQTT brokers, Kafka.
-The `Default Http Connector` is a special case of a connector:
+The `Default HTTP Connector` is a special case of a connector:
 1. It has not to be created as the connector will be created automatically at startup of the backend for every tenant.
-1. The endpoint for the `Default Http Connector` can be accessed at the url `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/<MAPPING_TOPIC>`
+1. The endpoint for the `Default HTTP Connector` can be accessed at the url `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/<MAPPING_TOPIC>`
 1. The sub path following `.../dynamic-mapping-service/httpConnector/` is used as `<MAPPING_TOPIC>`, e.g. a json payload send to `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01` will be resolved to a mapping with mapping topic: `temp/berlin_01`
 
 The configurations of connectors are persisted as tenant options in the Cumulocity Tenant and can be managed using the following UI.\
@@ -54,7 +54,7 @@ Furthermore, new connectors can be added. The UI is shown on the following scree
 - MQTT: supports connections to MQTT version 3.1.1 over websocket and tcp
 - MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
 - Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization (currently StringSerializer)...
-- Http Connector: he `Default Http Connector` is a http endpoint where custom payload can be sent to the mapper over http
+- HTTP Connector: he `Default HTTP Connector` is a http endpoint where custom payload can be sent to the mapper over http
 
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
@@ -70,7 +70,7 @@ The settings for the Kafka connector can be seen on the following screenshot:
 </p>
 <br/>
 
-The settings for the Default Http Connector are as follows
+The settings for the Default HTTP Connector are as follows
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Connector_Http.png"  style="width: 70%;" />

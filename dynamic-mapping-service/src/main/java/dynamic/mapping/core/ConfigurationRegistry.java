@@ -178,7 +178,7 @@ public class ConfigurationRegistry {
             connectorClient = new HttpClient(this, connectorConfiguration,
                     null,
                     additionalSubscriptionIdTest, tenant);
-            log.info("Tenant {} - Initializing Http Connector with identifier {}", tenant,
+            log.info("Tenant {} - Initializing HTTP Connector with identifier {}", tenant,
                     connectorConfiguration.getIdentifier());
         } else if (ConnectorType.WEB_HOOK.equals(connectorConfiguration.getConnectorType())) {
             connectorClient = new WebHook(this, connectorConfiguration,
