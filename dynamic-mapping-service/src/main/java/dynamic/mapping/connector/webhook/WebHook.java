@@ -270,7 +270,7 @@ public class WebHook extends AConnectorClient {
         String password = (String) connectorConfiguration.getProperties().get("password");
         String token = (String) connectorConfiguration.getProperties().get("token");
         if ("Basic".equalsIgnoreCase(authentication)
-                && (!StringUtils.isEmpty(user) || !StringUtils.isEmpty(password))) {
+                && (StringUtils.isEmpty(user) || StringUtils.isEmpty(password))) {
             return false;
         } else if (("Bearer".equalsIgnoreCase(authentication) && (!StringUtils.isEmpty(token)))) {
             return false;
@@ -325,10 +325,12 @@ public class WebHook extends AConnectorClient {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         String contextPath = context.getResolvedPublishTopic();
+        String path = (new StringBuffer (baseUrl)).append(contextPath).toString();
+
 
         try {
             ResponseEntity<String> responseEntity = webhookClient.post()
-                    .uri(contextPath)
+                    .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(payload)
                     .retrieve()
