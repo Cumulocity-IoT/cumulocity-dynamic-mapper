@@ -131,7 +131,7 @@ Further example for JSONata expressions are:
 
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 
-1. `Json`: if your payload is in JSON format
+1. `JSON`: if your payload is in JSON format
 1. `Flat File`: if your payload is in a CSV format
 1. `Binary`: if your payload is in HEX format
 1. `Protobuf Internal`: if your payload is a serialized protobuf message
@@ -146,7 +146,7 @@ The wizard to define a mapping consists of the steps:
 
 1. Select the type of mapping:
 
-- `Json`
+- `JSON`
 - `Flat File`
 - `Binary`
 - `Protobuf Internal`
