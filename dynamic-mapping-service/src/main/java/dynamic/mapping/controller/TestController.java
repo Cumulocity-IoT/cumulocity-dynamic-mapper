@@ -24,6 +24,8 @@ package dynamic.mapping.controller;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
@@ -38,7 +40,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -54,62 +58,99 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 public class TestController {
 
-	@Autowired
-	ConnectorRegistry connectorRegistry;
+    @Autowired
+    ConnectorRegistry connectorRegistry;
 
-	@Autowired
-	MappingComponent mappingComponent;
+    @Autowired
+    MappingComponent mappingComponent;
 
-	@Autowired
-	ConnectorConfigurationComponent connectorConfigurationComponent;
+    @Autowired
+    ConnectorConfigurationComponent connectorConfigurationComponent;
 
-	@Autowired
-	ServiceConfigurationComponent serviceConfigurationComponent;
+    @Autowired
+    ServiceConfigurationComponent serviceConfigurationComponent;
 
-	@Autowired
-	BootstrapService bootstrapService;
+    @Autowired
+    BootstrapService bootstrapService;
 
-	@Autowired
-	C8YAgent c8YAgent;
+    @Autowired
+    C8YAgent c8YAgent;
 
-	@Autowired
-	private ContextService<UserCredentials> contextService;
+    @Autowired
+    private ContextService<UserCredentials> contextService;
 
-	@Value("${APP.externalExtensionsEnabled}")
-	private boolean externalExtensionsEnabled;
+    @Value("${APP.externalExtensionsEnabled}")
+    private boolean externalExtensionsEnabled;
 
-	@Value("${APP.userRolesEnabled}")
-	private Boolean userRolesEnabled;
+    @Value("${APP.userRolesEnabled}")
+    private Boolean userRolesEnabled;
 
-	@Value("${APP.mappingAdminRole}")
-	private String mappingAdminRole;
+    @Value("${APP.mappingAdminRole}")
+    private String mappingAdminRole;
 
-	@Value("${APP.mappingCreateRole}")
-	private String mappingCreateRole;
+    @Value("${APP.mappingCreateRole}")
+    private String mappingCreateRole;
 
-	@RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
-			@RequestParam URI topic, @RequestParam String connectorIdentifier,
-			@Valid @RequestBody Map<String, Object> payload) {
-		String path = topic.getPath();
-		List<ProcessingContext<?>> result = null;
-		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Test payload: {}, {}, {}", tenant, path, method,
-				payload);
-		try {
-			boolean send = ("send").equals(method);
-			try {
-				AConnectorClient connectorClient = connectorRegistry
-						.getClientForTenant(tenant, connectorIdentifier);
-				result = connectorClient.test(path, send, payload);
-			} catch (ConnectorRegistryException e) {
-				throw new RuntimeException(e);
-			}
-			return new ResponseEntity<List<ProcessingContext<?>>>(result, HttpStatus.OK);
-		} catch (Exception ex) {
-			log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
-		}
-	}
+    @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
+            @RequestParam URI topic, @RequestParam String connectorIdentifier,
+            @Valid @RequestBody Map<String, Object> payload) {
+        String path = topic.getPath();
+        List<ProcessingContext<?>> result = null;
+        String tenant = contextService.getContext().getTenant();
+        log.info("Tenant {} - Test payload: {}, {}, {}", tenant, path, method,
+                payload);
+        try {
+            boolean send = ("send").equals(method);
+            try {
+                AConnectorClient connectorClient = connectorRegistry
+                        .getClientForTenant(tenant, connectorIdentifier);
+                result = connectorClient.test(path, send, payload);
+            } catch (ConnectorRegistryException e) {
+                throw new RuntimeException(e);
+            }
+            return new ResponseEntity<List<ProcessingContext<?>>>(result, HttpStatus.OK);
+        } catch (Exception ex) {
+            log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
+        }
+    }
 
+    @PostMapping("/webhook/echo/**")
+    public String echoInput(HttpServletRequest request, @RequestBody String input) {
+        // Get the full URL path
+        String fullPath = request.getRequestURI();
+        
+        // Get query parameters if any
+        String queryString = request.getQueryString();
+        
+        // Log path and input
+        if (queryString != null) {
+            log.info("Received request at path: {} with query parameters: {}", fullPath, queryString);
+        } else {
+            log.info("Received request at path: {}", fullPath);
+        }
+        log.info("Received body: {}", input);
+        
+        return input;
+    }
+
+    @GetMapping("/webhook")
+    public ResponseEntity<String> echoHealth(HttpServletRequest request) {
+        // Get the full URL
+        String url = request.getRequestURL().toString();
+        
+        // Get query string
+        String queryString = request.getQueryString();
+        
+        // Log the full path with query parameters
+        if (queryString != null) {
+            log.info("Received request: {} with query parameters: {}", url, queryString);
+        } else {
+            log.info("Received request: {}", url);
+        }
+
+        // Return 200 OK with empty body
+        return ResponseEntity.ok().build();
+    }
 }

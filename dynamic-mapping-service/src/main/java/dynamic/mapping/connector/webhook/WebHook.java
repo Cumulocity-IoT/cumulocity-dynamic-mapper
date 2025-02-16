@@ -90,7 +90,7 @@ public class WebHook extends AConnectorClient {
         configProps.put("baseUrlHealthEndpoint",
                 new ConnectorProperty(false, 6, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
         String name = "Webhook";
-        String description = "Webhook to send outbound messages to Rest endpoint as POST in json format.";
+        String description = "Webhook to send outbound messages to Rest endpoint as POST in json format. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
                 supportedDirections());
@@ -146,7 +146,7 @@ public class WebHook extends AConnectorClient {
         baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("baseUrl", null);
         // if no baseUrlHealthEndpoint is defined use the baseUrl
         String baseUrlHealthEndpoint = (String) connectorConfiguration.getProperties()
-                .getOrDefault("baseUrlHealthEndpoint", baseUrl);
+                .getOrDefault("baseUrlHealthEndpoint", null);
         String authentication = (String) connectorConfiguration.getProperties().getOrDefault("authentication", false);
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
