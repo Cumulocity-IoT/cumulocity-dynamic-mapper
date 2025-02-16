@@ -65,8 +65,8 @@ public class HttpClient extends AConnectorClient {
                 new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null, null));
         configProps.put(PROPERTY_CUTOFF_LEADING_SLASH,
                 new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null, null));
-        String name = "Generic Http Endpoint";
-        String description = "Generic Http Endpoint to receive custom payload in the body.\n" 
+        String name = "Http Endpoint";
+        String description = "Http Endpoint to receive custom payload in the body.\n" 
                 + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n" 
                 + "will be resolved to a mapping with mapping topic: 'temp/berlin_01'.\n"
                 + "The message must be send in a POST request.\n" 
