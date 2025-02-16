@@ -47,6 +47,7 @@ export interface ConnectorPropertyCondition {
   anyOf: string[];
 }
 export interface ConnectorProperty {
+  description: string;
   required: boolean;
   order: number;
   readonly: boolean;

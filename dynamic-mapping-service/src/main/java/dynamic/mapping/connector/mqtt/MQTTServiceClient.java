@@ -34,7 +34,6 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
-import dynamic.mapping.connector.core.ConnectorPropertyCondition;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.model.QOS;
@@ -44,7 +43,7 @@ public class MQTTServiceClient extends MQTTClient {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
 
         configProps.put("protocol",
-                new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, true, "mqtt://",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, true, "mqtt://",
                         Map.ofEntries(
                                 new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
                                 new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
@@ -52,26 +51,26 @@ public class MQTTServiceClient extends MQTTClient {
                                 new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")),
                         null));
         configProps.put("mqttHost",
-                new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, true, true, "cumulocity",
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, true, true, "cumulocity",
                         null, null));
         configProps.put("mqttPort",
-                new ConnectorProperty(true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, true, true, 2883, null, null));
+                new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, true, true, 2883, null, null));
         configProps.put("user",
-                new ConnectorProperty(true, 3, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null, null));
+                new ConnectorProperty(null, true, 3, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null, null));
         configProps.put("password",
-                new ConnectorProperty(true, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true, null,
+                new ConnectorProperty(null, true, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true, null,
                         null, null));
         configProps.put("clientId",
-                new ConnectorProperty(true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
                         null, null, null));
         configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null, null));
+                new ConnectorProperty(null, false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null, null));
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null, null));
+                new ConnectorProperty(null, false, 7, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null, null));
         configProps.put("nameCertificate",
-                new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null, null));
+                new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null, null));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null, null));
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null, null));
         String name = "Cumulocity IoT MQTT Service";
         String description = "Specific connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QOS 'exactly once' is reduced to 'at least once'.";
         connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE;
@@ -108,12 +107,12 @@ public class MQTTServiceClient extends MQTTClient {
         MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
         String user = String.format("%s/%s", tenant, msc.getUsername());
         getConnectorSpecification().getProperties().put("user",
-                new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true, user, null, null));
+                new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true, user, null, null));
         getConnectorSpecification().getProperties().put("password",
-                new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
                         msc.getPassword(), null, null));
         getConnectorSpecification().getProperties().put("clientId",
-                new ConnectorProperty(true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
                         getClientId(this.connectorIdentifier, this.additionalSubscriptionIdTest), null, null));
         this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE);
     }

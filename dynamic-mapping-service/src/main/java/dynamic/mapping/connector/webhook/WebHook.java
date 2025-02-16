@@ -67,28 +67,28 @@ public class WebHook extends AConnectorClient {
         ConnectorPropertyCondition bearerAuthenticationCondition = new ConnectorPropertyCondition("authentication",
                 new String[] { "Bearer" });
         configProps.put("baseUrl",
-                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
         configProps.put("authentication",
-                new ConnectorProperty(false, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, null,
+                new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, null,
                         Map.ofEntries(
                                 new AbstractMap.SimpleEntry<String, String>("Basic", "Basic"),
                                 new AbstractMap.SimpleEntry<String, String>("Bearer", "Bearer")),
                         null));
         configProps.put("user",
-                new ConnectorProperty(false, 2, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                new ConnectorProperty(null, false, 2, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         basicAuthenticationCondition));
         configProps.put("password",
-                new ConnectorProperty(false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
+                new ConnectorProperty(null, false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
                         null, basicAuthenticationCondition));
         configProps.put("token",
-                new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         bearerAuthenticationCondition));
         configProps.put("headerAccept",
-                new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         "application/json", null,
                         null));
         configProps.put("baseUrlHealthEndpoint",
-                new ConnectorProperty(false, 6, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+                new ConnectorProperty("health endpoint for GET request", false, 6, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
         String name = "Webhook";
         String description = "Webhook to send outbound messages to Rest endpoint as POST in json format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;

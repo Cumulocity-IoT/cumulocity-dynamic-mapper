@@ -119,6 +119,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
           label: entry.key,
           required: entry.property.required,
           readonly: entry.property.readonly,
+          description: entry.property.description || undefined,
           ...additionalProps
         },
         hideExpression: (model) => {

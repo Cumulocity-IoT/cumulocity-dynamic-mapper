@@ -37,6 +37,10 @@ import jakarta.validation.constraints.NotNull;
 public class ConnectorProperty implements Cloneable {
 
     @NotNull
+	@JsonSetter(nulls = Nulls.SKIP)
+	public String description;
+    
+    @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public Boolean required;
 

@@ -84,33 +84,33 @@ public class MQTTClient extends AConnectorClient {
         ConnectorPropertyCondition useSelfSignedCertificateCondition = new ConnectorPropertyCondition("useSelfSignedCertificate", new String[] {"true"});
         ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol", new String[] {"ws://","wss://"});
 		configProps.put("protocol",
-				new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
+				new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
 						Map.ofEntries(
 								new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
 								new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
 								new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
 								new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")), null));
 		configProps.put("mqttHost",
-				new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+				new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		configProps.put("mqttPort",
-				new ConnectorProperty(true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, false, false, null, null, null));
+				new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, false, false, null, null, null));
 		configProps.put("user",
-				new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+				new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		configProps.put("password",
-				new ConnectorProperty(false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
+				new ConnectorProperty(null, false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
 						null,null));
 		configProps.put("clientId",
-				new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+				new ConnectorProperty(null, true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		configProps.put("useSelfSignedCertificate",
-				new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null, tlsCondition));
+				new ConnectorProperty(null, false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null, tlsCondition));
 		configProps.put("fingerprintSelfSignedCertificate",
-				new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, useSelfSignedCertificateCondition));
+				new ConnectorProperty(null, false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, useSelfSignedCertificateCondition));
 		configProps.put("nameCertificate",
-				new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, useSelfSignedCertificateCondition));
+				new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, useSelfSignedCertificateCondition));
 		configProps.put("supportsWildcardInTopic",
-				new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null, null));
+				new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null, null));
 		configProps.put("serverPath",
-				new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, wsCondition));
+				new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, wsCondition));
 		String name = "Generic MQTT Broker";
 		String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
 		connectorType = ConnectorType.MQTT;
