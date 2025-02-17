@@ -90,7 +90,7 @@ public class WebHook extends AConnectorClient {
         configProps.put("baseUrlHealthEndpoint",
                 new ConnectorProperty("health endpoint for GET request", false, 6, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
         String name = "Webhook";
-        String description = "Webhook to send outbound messages to Rest endpoint as POST in json format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
+        String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
                 supportedDirections());

@@ -49,38 +49,46 @@ The table of configured connectors to different brokers can be:
 
 <br/>
 
+The mapper supports the following connectors:
+
+<p align="center">
+<img src="resources/image/ConnectorMatrix.png"  style="width: 70%;" />
+</p>
+<br/>
+
 Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently we support the following connectors:
 
 - MQTT: supports connections to MQTT version 3.1.1 over websocket and tcp
 - MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
 - Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization (currently StringSerializer)...
-- HTTP Connector: he `Default HTTP Connector` is a http endpoint where custom payload can be sent to the mapper over http
+- HTTP Connector: the `HTTP Connector` is a HTTP endpoint where custom payload can be sent to the mapper over HTTP
+- Webhook: the `Webhook` sends outbound messages to the configured REST endpoints as POST in JSON format.
 
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Edit.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Edit.png"  style="width: 50%;" />
 </p>
 <br/>
 
 The settings for the Kafka connector can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Kafka.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Kafka.png"  style="width: 50%;" />
 </p>
 <br/>
 
 The settings for the Default HTTP Connector are as follows
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Http.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Http.png"  style="width: 50%;" />
 </p>
 <br/>
 
 When you add or change a connection configuration it happens very often that the parameter are incorrect and the connection fails. In this case the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter you can follows the error messages in the connections logs on the same UI:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Details.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Details.png"  style="width: 50%;" />
 </p>
 <br/>
 
@@ -138,7 +146,7 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 1. `Extension Source`: if you want to process the message yourself, by registering a processor extension
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png"  style="width: 50%;" />
 </p>
 <br/>
 
@@ -340,7 +348,7 @@ Otherwise an extracted array is treated as a single value, see [Different type o
     * `REMOVE_IF_MISSING_OR_NULL`: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.g. `airsensor: undefined`
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Edit_Modal.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Edit_Modal.png"  style="width: 50%;" />
 </p>
 <br/>
 
@@ -463,7 +471,7 @@ In order to use a previously snooped payload click the button
 `Snooped templates`. Multiples activation of this button iterates over all the recorded templates.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 50%;" />
 </p>
 <br/>
 
