@@ -67,7 +67,8 @@ public class WebHook extends AConnectorClient {
         ConnectorPropertyCondition bearerAuthenticationCondition = new ConnectorPropertyCondition("authentication",
                 new String[] { "Bearer" });
         configProps.put("baseUrl",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                        null));
         configProps.put("authentication",
                 new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, null,
                         Map.ofEntries(
@@ -78,7 +79,8 @@ public class WebHook extends AConnectorClient {
                 new ConnectorProperty(null, false, 2, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         basicAuthenticationCondition));
         configProps.put("password",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
+                new ConnectorProperty(null, false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false,
+                        null,
                         null, basicAuthenticationCondition));
         configProps.put("token",
                 new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
@@ -88,7 +90,8 @@ public class WebHook extends AConnectorClient {
                         "application/json", null,
                         null));
         configProps.put("baseUrlHealthEndpoint",
-                new ConnectorProperty("health endpoint for GET request", false, 6, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+                new ConnectorProperty("health endpoint for GET request", false, 6,
+                        ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
         String name = "Webhook";
         String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
@@ -149,11 +152,12 @@ public class WebHook extends AConnectorClient {
         // if no baseUrlHealthEndpoint is defined use the baseUrl
         String baseUrlHealthEndpoint = (String) connectorConfiguration.getProperties()
                 .getOrDefault("baseUrlHealthEndpoint", null);
-        String authentication = (String) connectorConfiguration.getProperties().getOrDefault("authentication", false);
+        String authentication = (String) connectorConfiguration.getProperties().get("authentication");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
         String token = (String) connectorConfiguration.getProperties().get("token");
-        String headerAccept = (String) connectorConfiguration.getProperties().getOrDefault("headerAccept","application/json");
+        String headerAccept = (String) connectorConfiguration.getProperties().getOrDefault("headerAccept",
+                "application/json");
 
         // Create RestClient builder
         RestClient.Builder builder = RestClient.builder()
@@ -328,13 +332,15 @@ public class WebHook extends AConnectorClient {
         String payload = currentRequest.getRequest();
         String contextPath = context.getResolvedPublishTopic();
 
-        // The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added.
+        // The publishTopic is appended to the Rest endpoint. In case the endpoint does
+        // not end with a trailing / and the publishTopic is not start with a / it is
+        // automatically added.
         if (!baseUrlEndsWithSlash && !contextPath.startsWith("/")) {
             contextPath = "/" + contextPath;
         }
-        String path = (new StringBuffer (baseUrl)).append(contextPath).toString();
+        String path = (new StringBuffer(baseUrl)).append(contextPath).toString();
         log.info("Tenant {} - Published path: {}",
-        tenant, path);
+                tenant, path);
 
         try {
             ResponseEntity<String> responseEntity = webhookClient.post()
@@ -356,7 +362,8 @@ public class WebHook extends AConnectorClient {
 
             if (responseEntity.getStatusCode().is2xxSuccessful()) {
                 log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}, {}",
-                        tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,  connectorName);
+                        tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,
+                        connectorName);
             }
 
         } catch (Exception e) {
