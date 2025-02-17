@@ -153,7 +153,7 @@ public class WebHook extends AConnectorClient {
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
         String token = (String) connectorConfiguration.getProperties().get("token");
-        String headerAccept = (String) connectorConfiguration.getProperties().get("headerAccept");
+        String headerAccept = (String) connectorConfiguration.getProperties().getOrDefault("headerAccept","application/json");
 
         // Create RestClient builder
         RestClient.Builder builder = RestClient.builder()
