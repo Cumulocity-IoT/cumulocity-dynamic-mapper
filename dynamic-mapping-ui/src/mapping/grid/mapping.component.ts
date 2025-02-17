@@ -211,7 +211,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'mic',
         callback: this.toggleSnoopStatusMapping.bind(this),
         showIf: (item) =>
-          item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
             item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
@@ -222,7 +221,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'mic',
         callback: this.toggleSnoopStatusMapping.bind(this),
         showIf: (item) =>
-          item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
           !(
             item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
@@ -235,7 +233,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'reset',
         callback: this.resetSnoop.bind(this),
         showIf: (item) =>
-          item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.STARTED ||
             item['mapping']['snoopStatus'] === SnoopStatus.ENABLED ||
@@ -408,19 +405,17 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellRendererComponent: StatusRendererComponent,
         gridTrackSize: '10%'
       },
-      this.stepperConfiguration.direction === Direction.INBOUND
-        ? {
-          // header: 'Test/Debug/Snoop',
-          header: 'Templates snooped',
-          name: 'snoopedTemplates',
-          path: 'mapping',
-          filterable: false,
-          sortable: false,
-          cellCSSClassName: 'text-align-center',
-          cellRendererComponent: SnoopedTemplateRendererComponent,
-          gridTrackSize: '8%'
-        }
-        : undefined,
+      {
+        // header: 'Test/Debug/Snoop',
+        header: 'Templates snooped',
+        name: 'snoopedTemplates',
+        path: 'mapping',
+        filterable: false,
+        sortable: false,
+        cellCSSClassName: 'text-align-center',
+        cellRendererComponent: SnoopedTemplateRendererComponent,
+        gridTrackSize: '8%'
+      },
       {
         header: 'Activate',
         name: 'active',

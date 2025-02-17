@@ -84,10 +84,10 @@ public class ProtobufMqttClient {
         if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
             // throw new ConnectorException("Tenant " + tenant + " - Error connecting to
             // broker:"
-            // + mqttClient.getConfig().getServerHost() + ". Errorcode: "
+            // + mqttClient.getConfig().getServerHost() + ". Error code: "
             // + ack.getReturnCode().name());
             System.out.println("Error connecting to broker:"
-                    + broker_host + ". Errorcode: "
+                    + broker_host + ". Error code: "
                     + ack.getReturnCode().name());
         }
 

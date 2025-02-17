@@ -124,7 +124,7 @@ public class MonitoringController {
 			if (connectorRegistry.getClientsForTenant(tenant) != null) {
 				for (AConnectorClient client : connectorRegistry.getClientsForTenant(tenant).values()) {
 					ConnectorStatusEvent st = client.getConnectorStatus();
-					connectorsStatus.put(client.getConnectorIdent(), st);
+					connectorsStatus.put(client.getConnectorIdentifier(), st);
 				}
 			}
 			log.info("Tenant {} - Get status of connectors: {}", tenant, connectorsStatus);
@@ -164,7 +164,7 @@ public class MonitoringController {
 		AConnectorClient client = null;
 		try {
 			client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-			Map<String, MutableInt> as = client.getActiveSubscriptions();
+			Map<String, MutableInt> as = client.getActiveSubscriptionsInbound();
 			Map<String, Integer> result = as.entrySet().stream()
 					.map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(),
 							entry.getValue().getValue()))

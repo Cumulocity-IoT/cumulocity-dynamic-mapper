@@ -100,6 +100,10 @@ export default {
         to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
       },
       {
+        from: '../resources/image/ConnectorMatrix.png',
+        to: 'image/ConnectorMatrix.png'
+      },
+      {
         from: '../resources/image/Test.svg',
         to: 'image/Test.svg'
       },

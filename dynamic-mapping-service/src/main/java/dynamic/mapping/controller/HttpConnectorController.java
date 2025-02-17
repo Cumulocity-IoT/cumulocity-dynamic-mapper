@@ -104,7 +104,7 @@ public class HttpConnectorController {
         String tenant = contextService.getContext().getTenant();
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
 
-        log.debug("Tenant {} - Generic HTTP message received. Topic: {}", tenant, fullPath);
+        log.debug("Tenant {} -  HTTPConnector message received. Topic: {}", tenant, fullPath);
         try {
             HttpClient connectorClient = connectorRegistry
                     .getHttpConnectorForTenant(tenant);

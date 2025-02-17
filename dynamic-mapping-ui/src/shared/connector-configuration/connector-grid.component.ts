@@ -29,7 +29,7 @@ import { ConnectorConfigurationService } from '../service/connector-configuratio
 import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
 import { DeploymentMapEntry, Direction } from '../mapping/mapping.model';
 import { uuidCustom } from '../mapping/util';
-import { ConnectorConfigurationModalComponent } from './create/connector-configuration-modal.component';
+import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';

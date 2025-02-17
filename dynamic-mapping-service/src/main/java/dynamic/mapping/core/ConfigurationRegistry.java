@@ -45,6 +45,7 @@ import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
+import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessor;
@@ -153,69 +154,74 @@ public class ConfigurationRegistry {
     }
 
     public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
-            String additionalSubscriptionIdTest, String tenant) throws ConnectorException   {
-		AConnectorClient connectorClient = null;
-		if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
-			connectorClient = new MQTTClient(this, connectorConfiguration,
-					null,
-					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing MQTT Connector with identifier {}", tenant,
-					connectorConfiguration.getIdentifier());
-		} else if (ConnectorType.CUMULOCITY_MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
-			connectorClient = new MQTTServiceClient(this, connectorConfiguration,
-					null,
-					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing MQTTService Connector with identifier {}", tenant,
-					connectorConfiguration.getIdentifier());
-		} else if (ConnectorType.KAFKA.equals(connectorConfiguration.getConnectorType())) {
-			connectorClient = new KafkaClient(this, connectorConfiguration,
-					null,
-					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing Kafka Connector with identifier {}", tenant,
-					connectorConfiguration.getIdentifier());
-		}else if (ConnectorType.HTTP.equals(connectorConfiguration.getConnectorType())) {
-			connectorClient = new HttpClient(this, connectorConfiguration,
-					null,
-					additionalSubscriptionIdTest, tenant);
-			log.info("Tenant {} - Initializing Http Connector with identifier {}", tenant,
-					connectorConfiguration.getIdentifier());
-		}
-		return connectorClient;
-	}
+            String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
+        AConnectorClient connectorClient = null;
+        if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new MQTTClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing MQTT Connector with identifier {}", tenant,
+                    connectorConfiguration.getIdentifier());
+        } else if (ConnectorType.CUMULOCITY_MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new MQTTServiceClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing MQTTService Connector with identifier {}", tenant,
+                    connectorConfiguration.getIdentifier());
+        } else if (ConnectorType.KAFKA.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new KafkaClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing Kafka Connector with identifier {}", tenant,
+                    connectorConfiguration.getIdentifier());
+        } else if (ConnectorType.HTTP.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new HttpClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing HTTP Connector with identifier {}", tenant,
+                    connectorConfiguration.getIdentifier());
+        } else if (ConnectorType.WEB_HOOK.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new WebHook(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing WebHook Connector with identifier {}", tenant,
+                    connectorConfiguration.getIdentifier());
+        }
+        return connectorClient;
+    }
 
-	public Map<MappingType, BaseProcessorOutbound<?>> createPayloadProcessorsOutbound(
-			AConnectorClient connectorClient) {
-		return Map.of(
-				MappingType.JSON, new JSONProcessorOutbound(this, connectorClient));
-	}
+    public Map<MappingType, BaseProcessorOutbound<?>> createPayloadProcessorsOutbound(
+            AConnectorClient connectorClient) {
+        return Map.of(
+                MappingType.JSON, new JSONProcessorOutbound(this, connectorClient));
+    }
 
-	public void initializePayloadProcessorsInbound(String tenant) {
-		if (!payloadProcessorsInbound.containsKey(tenant)) {
-			payloadProcessorsInbound.put(tenant, createPayloadProcessorsInbound(tenant));
-		}
-	}
+    public void initializePayloadProcessorsInbound(String tenant) {
+        if (!payloadProcessorsInbound.containsKey(tenant)) {
+            payloadProcessorsInbound.put(tenant, createPayloadProcessorsInbound(tenant));
+        }
+    }
 
-	public void initializePayloadProcessorsOutbound(AConnectorClient connectorClient) {
-		Map<String, Map<MappingType, BaseProcessorOutbound<?>>> processorPerTenant = payloadProcessorsOutbound
-				.get(connectorClient.getTenant());
-		if (processorPerTenant == null) {
-			// log.info("Tenant {} - HIER III {} {}", connectorClient.getTenant(),
-			// processorPerTenant);
-			processorPerTenant = new HashMap<>();
-			payloadProcessorsOutbound.put(connectorClient.getTenant(), processorPerTenant);
-		}
-		// if (!processorPerTenant.containsKey(connectorClient.getConnectorIdent())) {
-		// log.info("Tenant {} - HIER VI {} {}", connectorClient.getTenant(),
-		// processorPerTenant);
-		processorPerTenant.put(connectorClient.getConnectorIdent(),
-				createPayloadProcessorsOutbound(connectorClient));
-		// }
-	}
+    public void initializePayloadProcessorsOutbound(AConnectorClient connectorClient) {
+        Map<String, Map<MappingType, BaseProcessorOutbound<?>>> processorPerTenant = payloadProcessorsOutbound
+                .get(connectorClient.getTenant());
+        if (processorPerTenant == null) {
+            // log.info("Tenant {} - HIER III {} {}", connectorClient.getTenant(),
+            // processorPerTenant);
+            processorPerTenant = new HashMap<>();
+            payloadProcessorsOutbound.put(connectorClient.getTenant(), processorPerTenant);
+        }
+        // if (!processorPerTenant.containsKey(connectorClient.getConnectorIdent())) {
+        // log.info("Tenant {} - HIER VI {} {}", connectorClient.getTenant(),
+        // processorPerTenant);
+        processorPerTenant.put(connectorClient.getConnectorIdentifier(),
+                createPayloadProcessorsOutbound(connectorClient));
+        // }
+    }
 
-	public MicroserviceCredentials getMicroserviceCredential(String tenant) {
-		MicroserviceCredentials ms = microserviceCredentials.get(tenant);
-		return ms;
-	}
-
+    public MicroserviceCredentials getMicroserviceCredential(String tenant) {
+        MicroserviceCredentials ms = microserviceCredentials.get(tenant);
+        return ms;
+    }
 
 }

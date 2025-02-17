@@ -64,20 +64,20 @@ public class ConnectorRegistry {
     public void registerClient(String tenant, AConnectorClient client) throws ConnectorRegistryException {
         if (tenant == null)
             throw new ConnectorRegistryException("Tenant is missing!");
-        if (client.getConnectorIdent() == null)
+        if (client.getConnectorIdentifier() == null)
             throw new ConnectorRegistryException("Connector identifier is missing!");
         if (connectorTenantMap.get(tenant) == null) {
             Map<String, AConnectorClient> connectorMap = new HashMap<>();
-            connectorMap.put(client.getConnectorIdent(), client);
+            connectorMap.put(client.getConnectorIdentifier(), client);
             connectorTenantMap.put(tenant, connectorMap);
         } else {
             Map<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
-            if (connectorMap.get(client.getConnectorIdent()) == null) {
-                log.debug("Tenant {} - Adding new client with id {}...", tenant, client.getConnectorIdent());
-                connectorMap.put(client.getConnectorIdent(), client);
+            if (connectorMap.get(client.getConnectorIdentifier()) == null) {
+                log.debug("Tenant {} - Adding new client with id {}...", tenant, client.getConnectorIdentifier());
+                connectorMap.put(client.getConnectorIdentifier(), client);
                 connectorTenantMap.put(tenant, connectorMap);
             } else {
-                log.debug("Tenant {} - Client {} is already registered!", tenant, client.getConnectorIdent());
+                log.debug("Tenant {} - Client {} is already registered!", tenant, client.getConnectorIdentifier());
             }
         }
 

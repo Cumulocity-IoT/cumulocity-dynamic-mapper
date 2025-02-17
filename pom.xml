@@ -34,7 +34,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>4.7.1-SNAPSHOT</revision>
+		<revision>4.7.2-SNAPSHOT</revision>
 		<spring-boot-dependencies.version>3.3.5</spring-boot-dependencies.version>
 		<c8y.version>2025.8.0</c8y.version>
 		<lombok.version>1.18.34</lombok.version>
@@ -100,6 +100,11 @@
 				<groupId>com.nsn.cumulocity.model</groupId>
 				<artifactId>device-capability-model</artifactId>
 				<version>${c8y.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents.client5</groupId>
+				<artifactId>httpclient5</artifactId>
+				<version>5.2.1</version>				<!-- Use the latest version -->
 			</dependency>
 			<dependency>
 				<groupId>com.google.protobuf</groupId>

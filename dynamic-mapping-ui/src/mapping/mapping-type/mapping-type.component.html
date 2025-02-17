@@ -45,7 +45,7 @@
           </ng-container>
         </c8y-list-group>
         <div class="card-block separator-top">
-          <c8y-form-group *ngIf="direction === Direction.INBOUND && shouldShowSnoop()">
+          <c8y-form-group *ngIf="shouldShowSnoop()">
             <label class="c8y-checkbox">
               <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox" checked="checked"
                 name="snoop" formControlName="snoop" />

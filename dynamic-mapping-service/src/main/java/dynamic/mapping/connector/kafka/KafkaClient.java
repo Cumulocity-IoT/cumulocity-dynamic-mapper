@@ -57,7 +57,6 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
 
@@ -73,19 +72,19 @@ public class KafkaClient extends AConnectorClient {
 		try {
             Map<String, ConnectorProperty> configProps = new HashMap<>();
             configProps.put("bootstrapServers",
-            		new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+            		new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
             configProps.put("username",
-            		new ConnectorProperty(false, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+            		new ConnectorProperty(null, false, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
             configProps.put("password",
-            		new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
+            		new ConnectorProperty(null, false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
             				null, null));
             configProps.put("saslMechanism",
-            		new ConnectorProperty(false, 3, ConnectorPropertyType.OPTION_PROPERTY, false, false, "SCRAM-SHA-256",
+            		new ConnectorProperty(null, false, 3, ConnectorPropertyType.OPTION_PROPERTY, false, false, "SCRAM-SHA-256",
             				Map.ofEntries(
             						new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-256", "SCRAM-SHA-256"),
             						new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-512", "SCRAM-SHA-512")), null));
             configProps.put("groupId",
-            		new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+            		new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 
             Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
             defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
@@ -93,7 +92,7 @@ public class KafkaClient extends AConnectorClient {
             defaultPropertiesProducer.store(writerProducer,
             		"properties can only be edited in the property file: kafka-producer.properties");
             configProps.put("propertiesProducer",
-            		new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+            		new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
             				removeDateCommentLine(writerProducer.getBuffer().toString()), null, null));
 
             Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
@@ -102,7 +101,7 @@ public class KafkaClient extends AConnectorClient {
             defaultPropertiesConsumer.store(writerConsumer,
             		"properties can only be edited in the property file: kafka-consumer.properties");
             configProps.put("propertiesConsumer",
-            		new ConnectorProperty(false, 6, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+            		new ConnectorProperty(null, false, 6, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
             				removeDateCommentLine(writerConsumer.getBuffer().toString()), null, null));
 
             String name = "Kafka";
@@ -289,7 +288,7 @@ public class KafkaClient extends AConnectorClient {
 			updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
 			log.info("Tenant {} - Disconnecting  connector {} from broker: {}", tenant, getConnectorName(),
 					bootstrapServers);
-			activeSubscriptions.entrySet().forEach(entry -> {
+			activeSubscriptionsInbound.entrySet().forEach(entry -> {
 				// only unsubscribe if still active subscriptions exist
 				String topic = entry.getKey();
 				MutableInt activeSubs = entry.getValue();
@@ -319,7 +318,7 @@ public class KafkaClient extends AConnectorClient {
 	}
 
 	@Override
-	public String getConnectorIdent() {
+	public String getConnectorIdentifier() {
 		return connectorIdentifier;
 	}
 
@@ -335,7 +334,7 @@ public class KafkaClient extends AConnectorClient {
 						defaultPropertiesConsumer),
 				connectorStatus);
 		consumerList.put(topic, kafkaConsumer);
-		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
+		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdentifier(),
 				topic, true);
 		kafkaConsumer.start(topicConsumerCallback);
 	}

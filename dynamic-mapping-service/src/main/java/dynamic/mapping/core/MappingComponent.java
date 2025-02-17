@@ -543,6 +543,8 @@ public class MappingComponent {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(mappingId).getSnoopedTemplates());
+        } else {
+            mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(mappingId).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -597,6 +599,9 @@ public class MappingComponent {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+        } else {
+                        // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -622,6 +627,9 @@ public class MappingComponent {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+        } else {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -647,6 +655,9 @@ public class MappingComponent {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+        } else {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -706,7 +717,7 @@ public class MappingComponent {
         Mapping mapping = getMapping(tenant, id);
 
         // nothing to do for outbound mappings
-        if (Direction.INBOUND.equals(mapping.direction)) {
+        // if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(new ArrayList<>());
             // step 3. update mapping in inventory
@@ -727,7 +738,7 @@ public class MappingComponent {
                     LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
                     null);
-        }
+        //}
     }
 
     public void updateDeploymentMapEntry(String tenant, String mappingIdent, @Valid List<String> deployment) {
