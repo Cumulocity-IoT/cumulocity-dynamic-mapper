@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 package dynamic.mapping.controller;
@@ -124,7 +124,7 @@ public class MonitoringController {
 			if (connectorRegistry.getClientsForTenant(tenant) != null) {
 				for (AConnectorClient client : connectorRegistry.getClientsForTenant(tenant).values()) {
 					ConnectorStatusEvent st = client.getConnectorStatus();
-					connectorsStatus.put(client.getConnectorIdent(), st);
+					connectorsStatus.put(client.getConnectorIdentifier(), st);
 				}
 			}
 			log.info("Tenant {} - Get status of connectors: {}", tenant, connectorsStatus);
@@ -164,7 +164,7 @@ public class MonitoringController {
 		AConnectorClient client = null;
 		try {
 			client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-			Map<String, MutableInt> as = client.getActiveSubscriptions();
+			Map<String, MutableInt> as = client.getActiveSubscriptionsInbound();
 			Map<String, Integer> result = as.entrySet().stream()
 					.map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(),
 							entry.getValue().getValue()))

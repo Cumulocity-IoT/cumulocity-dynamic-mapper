@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 package dynamic.mapping.connector.mqtt;
@@ -32,6 +32,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +45,7 @@ import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
+import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
@@ -69,6 +71,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
+import dynamic.mapping.connector.core.ConnectorPropertyCondition;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
@@ -77,38 +80,41 @@ import dynamic.mapping.core.ConnectorStatusEvent;
 public class MQTTClient extends AConnectorClient {
 	public MQTTClient() {
 		Map<String, ConnectorProperty> configProps = new HashMap<>();
+        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol", new String[] {"mqtts://","wss://"});
+        ConnectorPropertyCondition useSelfSignedCertificateCondition = new ConnectorPropertyCondition("useSelfSignedCertificate", new String[] {"true"});
+        ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol", new String[] {"ws://","wss://"});
 		configProps.put("protocol",
-				new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
+				new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
 						Map.ofEntries(
 								new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
 								new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
 								new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-								new AbstractMap.SimpleEntry<String, String>("wss://", "wss://"))));
+								new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")), null));
 		configProps.put("mqttHost",
-				new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		configProps.put("mqttPort",
-				new ConnectorProperty(true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, false, false, null, null));
+				new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, false, false, null, null, null));
 		configProps.put("user",
-				new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		configProps.put("password",
-				new ConnectorProperty(false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
-						null));
+				new ConnectorProperty(null, false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
+						null,null));
 		configProps.put("clientId",
-				new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(null, true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 		configProps.put("useSelfSignedCertificate",
-				new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null));
+				new ConnectorProperty(null, false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null, tlsCondition));
 		configProps.put("fingerprintSelfSignedCertificate",
-				new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(null, false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, useSelfSignedCertificateCondition));
 		configProps.put("nameCertificate",
-				new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+				new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, useSelfSignedCertificateCondition));
 		configProps.put("supportsWildcardInTopic",
-				new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null));
+				new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null, null));
 		configProps.put("serverPath",
-				new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
-		String name = "Generic MQTT Broker";
+				new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, wsCondition));
+		String name = "Generic MQTT";
 		String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
 		connectorType = ConnectorType.MQTT;
-		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false);
+		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false, supportedDirections());
 	}
 
 	public MQTTClient(ConfigurationRegistry configurationRegistry,
@@ -299,7 +305,7 @@ public class MQTTClient extends AConnectorClient {
 				mqttClient.getConfig().getServerPort(), configuredServerPath);
 		// Registering Callback
 		Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-		mqttCallback = new MQTTCallback(dispatcher, tenant, getConnectorIdent(), false);
+		mqttCallback = new MQTTCallback(dispatcher, tenant, getConnectorIdentifier(), false);
 		mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
 		// stay in the loop until successful
@@ -327,7 +333,7 @@ public class MQTTClient extends AConnectorClient {
 					if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
 
 						throw new ConnectorException(
-								String.format("Tenant %s - Error connecting to broker: %s. Errorcode: %s", tenant,
+								String.format("Tenant %s - Error connecting to broker: %s. Error code: %s", tenant,
 										mqttClient.getConfig().getServerHost(), ack.getReturnCode().name()));
 					}
 
@@ -422,7 +428,7 @@ public class MQTTClient extends AConnectorClient {
 							: mqttClient.getConfig().getServerHost()));
 			log.debug("Tenant {} - Disconnected from broker I: {}", tenant,
 					mqttClient.getConfig().getServerHost());
-			activeSubscriptions.entrySet().forEach(entry -> {
+			activeSubscriptionsInbound.entrySet().forEach(entry -> {
 				// only unsubscribe if still active subscriptions exist
 				String topic = entry.getKey();
 				MutableInt activeSubs = entry.getValue();
@@ -453,7 +459,7 @@ public class MQTTClient extends AConnectorClient {
 	}
 
 	@Override
-	public String getConnectorIdent() {
+	public String getConnectorIdentifier() {
 		return connectorIdentifier;
 	}
 
@@ -531,5 +537,10 @@ public class MQTTClient extends AConnectorClient {
 	public void monitorSubscriptions() {
 		// nothing to do
 	}
+
+    @Override
+    public List<Direction>  supportedDirections() {
+        return new ArrayList<>( Arrays.asList(Direction.INBOUND, Direction.OUTBOUND));
+    }
 
 }

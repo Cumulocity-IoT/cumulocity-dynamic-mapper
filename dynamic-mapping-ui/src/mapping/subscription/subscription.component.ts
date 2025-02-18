@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -72,7 +71,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   stepperConfiguration: StepperConfiguration = {};
   titleMapping: string;
-  titleSubscription: string = 'Subscription on devices for mapping outbound';
+  titleSubscription: string = 'Subscription devices mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
 
   displayOptions: DisplayOptions = {

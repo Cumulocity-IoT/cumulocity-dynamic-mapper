@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,53 +17,22 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  EventEmitter,
-  Input,
-  OnInit,
-  Output,
-  ViewChild,
-  AfterViewInit,
-  ViewEncapsulation,
-} from '@angular/core';
-import {
-  ActionControl,
-  AlertService,
-  BuiltInActionType,
-  Column,
-  DataGridComponent,
-  gettext,
-  Pagination
-} from '@c8y/ngx-components';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation } from '@angular/core';
+import { ActionControl, AlertService, Column, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import {
-  BehaviorSubject,
-  combineLatest,
-  from,
-  Observable,
-  Subject,
-  take
-} from 'rxjs';
+import { BehaviorSubject, combineLatest, from, Observable,  } from 'rxjs';
+import { map, take } from 'rxjs/operators';
+import { cloneDeep } from 'lodash';
 
-import * as _ from 'lodash';
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
-import {
-  ConnectorStatus,
-  LoggingEventType
-} from '../connector-log/connector-log.model';
-import { DeploymentMapEntry } from '../mapping/mapping.model';
+import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
+import { DeploymentMapEntry, Direction } from '../mapping/mapping.model';
 import { uuidCustom } from '../mapping/util';
-import { ConnectorConfigurationModalComponent } from './create/connector-configuration-modal.component';
-import {
-  ConnectorConfiguration,
-  ConnectorSpecification
-} from './connector.model';
-import { StatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
-import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
-import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
-import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.renderer.component';
+import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
+import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
+import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
+import { ActionVisibilityRule } from './types';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
@@ -74,362 +42,272 @@ import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.
 })
 export class ConnectorGridComponent implements OnInit, AfterViewInit {
   @Input() selectable = true;
+  @Input() directions : Direction[] = [Direction.INBOUND,Direction.OUTBOUND];
   @Input() readOnly = false;
   @Input() deploy: string[];
   @Input() deploymentMapEntry: DeploymentMapEntry;
+  @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
 
-  @Output() deploymentMapEntryChange = new EventEmitter<any>();
+  @ViewChild('connectorGrid') connectorGrid: DataGridComponent;
+
   selected: string[] = [];
-  selected$: Subject<string[]>;
-  selectedAll: boolean = false;
+  selected$ = new BehaviorSubject<string[]>([]);
   monitoring$: Observable<ConnectorStatus>;
   specifications: ConnectorSpecification[] = [];
-  configurations: ConnectorConfiguration[];
-  customClasses: string;
+  configurations: ConnectorConfiguration[] = [];
   configurations$: Observable<ConnectorConfiguration[]>;
-  LoggingEventType = LoggingEventType;
-  pagination: Pagination = {
+  customClasses: string;
+
+  readonly LoggingEventType = LoggingEventType;
+  readonly pagination: Pagination = {
     pageSize: 30,
     currentPage: 1
   };
-  columns: Column[] = [];
-  actionControls: ActionControl[] = [];
 
-  @ViewChild('connectorGrid', { static: false })
-  connectorGrid: DataGridComponent;
+  columns: Column[];
+  actionControls: ActionControl[];
 
   constructor(
     private bsModalService: BsModalService,
     private connectorConfigurationService: ConnectorConfigurationService,
     private alertService: AlertService,
-  ) { }
-
-  ngAfterViewInit(): void {
-    setTimeout(async () => {
-      if (this.selectable) {
-        this.connectorGrid.setItemsSelected(this.selected, true);
-      }
-    }, 0);
+  ) {
+    this.initializeColumns();
+    this.initializeActionControls();
   }
 
-  ngOnInit() {
-    // console.log('connector-configuration', this._deploymentMapEntry, this.deploymentMapEntry);
+  ngOnInit(): void {
+    this.initializeSelection();
+    this.initializeConfigurations();
+    this.initializeSpecifications();
+    this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
+  }
 
-    this.actionControls.push(
-      {
-        type: BuiltInActionType.Edit,
-        callback: this.onConfigurationUpdate.bind(this),
-        showIf: (item) => !item['enabled'] && !this.readOnly
-      },
-      {
-        type: 'VIEW',
-        icon: 'eye',
-        callback: this.onConfigurationUpdate.bind(this),
-        showIf: (item) => item['enabled']
-      },
-      {
-        text: 'Duplicate',
-        type: 'duplicate',
-        icon: 'duplicate',
-        callback: this.onConfigurationCopy.bind(this),
-        showIf: (item) => !item['enabled'] && !this.readOnly
-      },
-      {
-        type: BuiltInActionType.Delete,
-        callback: this.onConfigurationDelete.bind(this),
-        showIf: (item) => !item['enabled'] && !this.readOnly
-      }
-    );
+  ngAfterViewInit(): void {
+    if (this.selectable) {
+      setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
+    }
+  }
+  private initializeActionControls(): void {
+    this.actionControls = ACTION_CONTROLS.map(control => ({
+      ...control,
+      callback: this[control.callbackName].bind(this),
+      showIf: (item: ConnectorConfiguration) =>
+        this.checkActionVisibility(item, control.visibilityRules)
+    }));
+  }
 
-    this.columns.push(
-      {
-        name: 'identifier',
-        header: 'Identifier',
-        path: 'identifier',
-        filterable: false,
-        sortOrder: 'asc',
-        visible: false,
-        gridTrackSize: '10%'
-      },
-      {
-        name: 'name',
-        header: 'Name',
-        path: 'name',
-        filterable: false,
-        sortOrder: 'asc',
-        visible: true,
-        cellRendererComponent: ConnectorDetailCellRendererComponent,
-        gridTrackSize: '30%'
-      },
-      {
-        name: 'connectorType',
-        header: 'Type',
-        path: 'connectorType',
-        filterable: false,
-        sortOrder: 'asc',
-        visible: true,
-        cellRendererComponent: LabelRendererComponent,
-        gridTrackSize: '25%'
-      },
-      {
-        header: 'Status',
-        name: 'status',
-        path: 'status',
-        filterable: false,
-        sortable: true,
-        cellRendererComponent: ConnectorStatusRendererComponent,
-        gridTrackSize: (this.selectable) ? '17%' : '21%'
-      },
-      {
-        header: 'Enabled',
-        name: 'enabled',
-        path: 'enabled',
-        filterable: false,
-        sortable: true,
-        cellRendererComponent: StatusEnabledRendererComponent,
-        gridTrackSize: (this.selectable) ? '16%' : '19%'
-      }
-    );
 
-    this.configurations$ =
-      this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
+  private initializeColumns(): void {
+    this.columns = GRID_COLUMNS.map(column => ({
+      ...column,
+      gridTrackSize: column.name === 'status' || column.name === 'enabled'
+        ? this.selectable ? column.gridTrackSize : `${parseInt(column.gridTrackSize) + 4}%`
+        : column.gridTrackSize
+    }));
+  }
 
-    this.selected = this.deploymentMapEntry?.connectors ?? [];
-    this.selected$ = new BehaviorSubject(this.selected);
+  private initializeConfigurations(): void {
+    this.configurations$ = this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus().pipe(
+      map(configs => configs.filter(config => 
+        config.supportedDirections?.some(dir => this.directions.includes(dir))
+      ))
+    )
+    this.setupConfigurationsSubscription();
+  }
 
-    combineLatest([this.selected$, this.configurations$]).subscribe(
-      ([se, conf]) => {
-        this.configurations = conf;
-        if (this.selectable) {
-          this.deploymentMapEntry.connectors = se;
-          this.deploymentMapEntry.connectorsDetailed = conf.filter((con) =>
-            se.includes(con.identifier)
-          );
-          this.deploymentMapEntryChange.emit(this.deploymentMapEntry);
-          if (this.readOnly)
-            this.configurations?.forEach(
-              (conf) => {conf['checked'] = this.selected.includes(conf.identifier);
-                conf['readOnly'] = this.readOnly;
-              }
-            );
-        }
-      }
-    );
-
+  private initializeSpecifications(): void {
     from(this.connectorConfigurationService.getConnectorSpecifications())
       .pipe(take(1))
-      .subscribe((specs) => {
-        this.specifications = specs;
-      });
+      .subscribe(specs => this.specifications = specs);
+  }
 
-    this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
+  private initializeSelection(): void {
+    this.selected = this.deploymentMapEntry?.connectors ?? [];
+    this.selected$.next(this.selected);
+  }
+
+  private setupConfigurationsSubscription(): void {
+    combineLatest([this.selected$, this.configurations$]).subscribe(([selected, configurations]) => {
+      this.configurations = configurations;
+      if (this.selectable) {
+        this.updateDeploymentMapEntry(selected, configurations);
+      }
+    });
+  }
+
+  private updateDeploymentMapEntry(selected: string[], configurations: ConnectorConfiguration[]): void {
+    if (!this.deploymentMapEntry) return;
+
+    this.deploymentMapEntry.connectors = selected;
+    this.deploymentMapEntry.connectorsDetailed = configurations.filter(con => selected.includes(con.identifier));
+    this.deploymentMapEntryChange.emit(this.deploymentMapEntry);
+
+    if (this.readOnly) {
+      this.updateReadOnlyConfigurations(selected);
+    }
+  }
+
+  private updateReadOnlyConfigurations(selected: string[]): void {
+    this.configurations?.forEach(conf => {
+      conf['checked'] = selected.includes(conf.identifier);
+      conf['readOnly'] = this.readOnly;
+    });
+  }
+
+  private async handleModalResponse(
+    response: any,
+    successMessage: string,
+    errorMessage: string,
+    action: (config: any) => Promise<any>
+  ): Promise<void> {
+    if (!response) return;
+
+    const clonedConfiguration = this.prepareConfiguration(response);
+    const apiResponse = await action(clonedConfiguration);
+
+    if (apiResponse.status < 300) {
+      this.alertService.success(gettext(successMessage));
+    } else {
+      this.alertService.danger(gettext(errorMessage));
+    }
+    this.refresh();
+  }
+
+  private prepareConfiguration(config: ConnectorConfiguration): Partial<ConnectorConfiguration> {
+    return {
+      identifier: config.identifier,
+      connectorType: config.connectorType,
+      enabled: config.enabled,
+      name: config.name,
+      properties: config.properties
+    };
+  }
+
+  // Public methods
+  onSelectionChanged(selected: string[]): void {
+    this.selected = selected;
+    this.selected$.next(selected);
+  }
+
+  refresh(): void {
+    this.connectorConfigurationService.updateConnectorConfigurations();
+  }
+
+  async onConfigurationUpdate(config: ConnectorConfiguration): Promise<void> {
+    const modalRef = this.showConfigurationModal(config, false);
+    modalRef.content.closeSubject.subscribe(async editedConfiguration => {
+      await this.handleModalResponse(
+        editedConfiguration,
+        'Updated successfully.',
+        'Failed to update connector configuration',
+        config => this.connectorConfigurationService.updateConnectorConfiguration(config)
+      );
+    });
+  }
+
+  async onConfigurationCopy(config: ConnectorConfiguration): Promise<void> {
+    const copiedConfig = this.prepareCopyConfiguration(config);
+    const modalRef = this.showConfigurationModal(copiedConfig, false);
+    modalRef.content.closeSubject.subscribe(async editedConfiguration => {
+      await this.handleModalResponse(
+        editedConfiguration,
+        'Created successfully.',
+        'Failed to create connector configuration',
+        config => this.connectorConfigurationService.createConnectorConfiguration(config)
+      );
+    });
+  }
+
+  async onConfigurationDelete(config: ConnectorConfiguration): Promise<void> {
+    const modalRef = this.showConfirmationModal();
+    modalRef.content.closeSubject.subscribe(async (result: boolean) => {
+      if (result) {
+        await this.handleModalResponse(
+          config,
+          'Deleted successfully.',
+          'Failed to delete connector configuration',
+          config => this.connectorConfigurationService.deleteConnectorConfiguration(config.identifier)
+        );
+      }
+      modalRef.hide();
+    });
+  }
+
+  async onConfigurationAdd(): Promise<void> {
+    const newConfig: Partial<ConnectorConfiguration> = {
+      properties: {},
+      identifier: uuidCustom()
+    };
+    const modalRef = this.showConfigurationModal(newConfig, true);
+    modalRef.content.closeSubject.subscribe(async addedConfiguration => {
+      await this.handleModalResponse(
+        addedConfiguration,
+        'Added successfully.',
+        'Failed to create connector configuration',
+        config => this.connectorConfigurationService.createConnectorConfiguration(config)
+      );
+    });
+  }
+
+  findNameByIdent(identifier: string): string {
+    return this.configurations?.find(conf => conf.identifier === identifier)?.name;
   }
 
   get shouldHideBulkActionsAndReadOnly(): boolean {
     return this.selectable && this.readOnly;
   }
 
-  public onSelectionChanged(selected: any) {
-    this.selected = selected;
-    this.selected$?.next(this.selected);
-  }
-
-  refresh() {
-    this.connectorConfigurationService.updateConnectorConfigurations();
-  }
-
-  reloadData(): void {
-    this.connectorConfigurationService.updateConnectorConfigurations();
-  }
-
-  async onConfigurationUpdate(config: ConnectorConfiguration) {
-    const index = this.configurations.findIndex(
-      (conf) => conf.identifier == config.identifier
-    );
-    const configuration = _.clone(this.configurations[index]);
-    const initialState = {
-      add: false,
-      configuration: configuration,
-      specifications: this.specifications,
-      readOnly: configuration.enabled
-    };
-    const modalRef = this.bsModalService.show(
-      ConnectorConfigurationModalComponent,
-      {
-        initialState
+  // Helper methods for showing modals
+  private showConfigurationModal(config: Partial<ConnectorConfiguration>, isAdd: boolean): BsModalRef {
+    return this.bsModalService.show(ConnectorConfigurationModalComponent, {
+      initialState: {
+        add: isAdd,
+        configuration: cloneDeep(config),
+        specifications: this.specifications,
+        configurationsCount: this.configurations?.length,
       }
-    );
-    modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
-      // console.log('Configuration after edit:', editedConfiguration);
-      if (editedConfiguration) {
-        this.configurations[index] = editedConfiguration;
-        // avoid to include status$
-        const clonedConfiguration = {
-          identifier: editedConfiguration.identifier,
-          connectorType: editedConfiguration.connectorType,
-          enabled: editedConfiguration.enabled,
-          name: editedConfiguration.name,
-          properties: editedConfiguration.properties
-        };
-        const response =
-          await this.connectorConfigurationService.updateConnectorConfiguration(
-            clonedConfiguration
-          );
-        if (response.status < 300) {
-          this.alertService.success(gettext('Updated successfully.'));
-        } else {
-          this.alertService.danger(
-            gettext('Failed to update connector configuration')
-          );
-        }
-      }
-      this.reloadData();
     });
   }
 
-  async onConfigurationCopy(config: ConnectorConfiguration) {
-    const index = this.configurations.findIndex(
-      (conf) => conf.identifier == config.identifier
-    );
-    const configuration = _.clone(this.configurations[index]);
-    // const configuration = _.clone(config);
-    configuration.identifier = uuidCustom();
-    configuration.name = `${configuration.name}_copy`;
+  private showConfirmationModal(): BsModalRef {
+    return this.bsModalService.show(ConfirmationModalComponent, {
+      initialState: {
+        title: 'Delete connector',
+        message: 'You are about to delete a connector. Do you want to proceed?',
+        labels: { ok: 'Delete', cancel: 'Cancel' }
+      }
+    });
+  }
+
+  // Missing methods for the component:
+  private prepareCopyConfiguration(config: ConnectorConfiguration): Partial<ConnectorConfiguration> {
+    const copiedConfig = cloneDeep(config);
+    copiedConfig.identifier = uuidCustom();
+    copiedConfig.name = `${copiedConfig.name}_copy`;
+
     this.alertService.warning(
-      gettext(
-        'Review properties, e.g. client_id must be different across different client connectors to the same broker.'
-      )
+      gettext('Review properties, e.g. client_id must be different across different client connectors to the same broker.')
     );
 
-    const initialState = {
-      add: false,
-      configuration: configuration,
-      specifications: this.specifications,
-      readOnly: configuration.enabled
-    };
-    const modalRef = this.bsModalService.show(
-      ConnectorConfigurationModalComponent,
-      {
-        initialState
+    return copiedConfig;
+  }
+
+  private checkActionVisibility(
+    item: ConnectorConfiguration,
+    rules: ActionVisibilityRule[]
+  ): boolean {
+    return rules.every(rule => {
+      switch (rule.type) {
+        case 'enabled':
+          return item.enabled === rule.value;
+        case 'readOnly':
+          return this.readOnly === rule.value;
+        case 'connectorType':
+          return item.connectorType !== ConnectorType.HTTP;
+        default:
+          return true;
       }
-    );
-    modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
-      // console.log('Configuration after edit:', editedConfiguration);
-      if (editedConfiguration) {
-        this.configurations[index] = editedConfiguration;
-        // avoid to include status$
-        const clonedConfiguration = {
-          identifier: editedConfiguration.identifier,
-          connectorType: editedConfiguration.connectorType,
-          enabled: editedConfiguration.enabled,
-          name: editedConfiguration.name,
-          properties: editedConfiguration.properties
-        };
-        const response =
-          await this.connectorConfigurationService.createConnectorConfiguration(
-            clonedConfiguration
-          );
-        if (response.status < 300) {
-          this.alertService.success(gettext('Updated successfully.'));
-        } else {
-          this.alertService.danger(
-            gettext('Failed to update connector configuration!')
-          );
-        }
-      }
-      this.reloadData();
     });
-  }
-
-  async onConfigurationDelete(config: ConnectorConfiguration) {
-    const index = this.configurations.findIndex(
-      (conf) => conf.identifier == config.identifier
-    );
-    const configuration = _.clone(this.configurations[index]);
-
-    const initialState = {
-      title: 'Delete connector',
-      message: 'You are about to delete a connector. Do you want to proceed?',
-      labels: {
-        ok: 'Delete',
-        cancel: 'Cancel'
-      }
-    };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-    confirmDeletionModalRef.content.closeSubject.subscribe(
-      async (result: boolean) => {
-        // console.log('Confirmation result:', result);
-        if (result) {
-          const response =
-            await this.connectorConfigurationService.deleteConnectorConfiguration(
-              configuration.identifier
-            );
-          if (response.status < 300) {
-            this.alertService.success(gettext('Deleted successfully.'));
-          } else {
-            this.alertService.danger(
-              gettext('Failed to delete connector configuration')
-            );
-          }
-          this.refresh();
-        }
-        confirmDeletionModalRef.hide();
-      }
-    );
-  }
-
-  async onConfigurationAdd() {
-    const configuration: Partial<ConnectorConfiguration> = {
-      properties: {},
-      identifier: uuidCustom()
-    };
-    const initialState = {
-      add: true,
-      configuration: configuration,
-      specifications: this.specifications,
-      configurationsCount: this.configurations?.length,
-      readOnly: configuration.enabled
-    };
-    const modalRef = this.bsModalService.show(
-      ConnectorConfigurationModalComponent,
-      {
-        initialState
-      }
-    );
-    modalRef.content.closeSubject.subscribe(async (addedConfiguration) => {
-      // console.log('Configuration after edit:', addedConfiguration);
-      if (addedConfiguration) {
-        this.configurations.push(addedConfiguration);
-        // avoid to include status$
-        const clonedConfiguration = {
-          identifier: addedConfiguration.identifier,
-          connectorType: addedConfiguration.connectorType,
-          enabled: addedConfiguration.enabled,
-          name: addedConfiguration.name,
-          properties: addedConfiguration.properties
-        };
-        const response =
-          await this.connectorConfigurationService.createConnectorConfiguration(
-            clonedConfiguration
-          );
-        if (response.status < 300) {
-          this.alertService.success(
-            gettext('Added successfully configuration')
-          );
-        } else {
-          this.alertService.danger(
-            gettext('Failed to update connector configuration')
-          );
-        }
-      }
-      this.refresh();
-    });
-  }
-
-  findNameByIdent(identifier: string): string {
-    return this.configurations?.find((conf) => conf.identifier == identifier)?.name;
   }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -10,8 +9,8 @@
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * distributed under the License is distributed on an "AS IS" BASIS,
  * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -64,7 +63,6 @@ import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELE
 import {
   expandC8YTemplate,
   expandExternalTemplate,
-  isDisabled,
   isTypeOf,
   reduceSourceTemplate,
   splitTopicExcludingSeparator
@@ -90,7 +88,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   EditorMode = EditorMode;
   SnoopStatus = SnoopStatus;
-  isDisabled = isDisabled;
 
   updateTestingTemplate = new EventEmitter<any>();
   updateSourceEditor: EventEmitter<any> = new EventEmitter<any>();
@@ -389,12 +386,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   deploymentMapEntryChange(e) {
-    this.isButtonDisabled$.next(
-      !this.deploymentMapEntry?.connectors ||
-      this.deploymentMapEntry?.connectors?.length == 0
-    );
+    const isDisabled = !this.deploymentMapEntry?.connectors ||
+      this.deploymentMapEntry?.connectors?.length == 0;
 
     setTimeout(() => {
+      this.isButtonDisabled$.next(isDisabled);
       this.supportsMessageContext =
         this.deploymentMapEntry.connectorsDetailed?.some(
           (con) => con.connectorType == ConnectorType.KAFKA
@@ -533,7 +529,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onSourceTemplateChanged(content: Content) {
     let contentAsJson;
     if (_.has(content, 'text') && content['text']) {
-      contentAsJson = JSON.parse(content['text']);
+      try {
+        contentAsJson = JSON.parse(content['text']);
+      } catch (error) {
+        // ignore parsing error
+      }
     } else {
       contentAsJson = content['json'];
     }
@@ -546,7 +546,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onTargetTemplateChanged(content: Content) {
     let contentAsJson;
     if (_.has(content, 'text') && content['text']) {
-      contentAsJson = JSON.parse(content['text']);
+      try {
+
+      } catch (error) {
+        // ignore parsing error
+      } contentAsJson = JSON.parse(content['text']);
     } else {
       contentAsJson = content['json'];
     }
@@ -569,7 +573,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       );
     } else {
       const levels: string[] = splitTopicExcludingSeparator(
-        this.mapping.mappingTopicSample
+        this.mapping.mappingTopicSample, false
       );
       this.targetTemplate = expandExternalTemplate(
         JSON.parse(getExternalTemplate(this.mapping)),
@@ -699,7 +703,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const levels: string[] = splitTopicExcludingSeparator(
       this.mapping.direction == Direction.INBOUND
         ? this.mapping.mappingTopicSample
-        : this.mapping.publishTopicSample
+        : this.mapping.publishTopicSample, false
     );
 
     if (
@@ -774,7 +778,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
         this.mapping,
-        splitTopicExcludingSeparator(this.mapping.mappingTopicSample)
+        splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
       );
     } else {
       this.sourceTemplate = expandC8YTemplate(
@@ -802,7 +806,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.sourceTemplate = expandExternalTemplate(
         this.sourceTemplate,
         this.mapping,
-        splitTopicExcludingSeparator(this.mapping.mappingTopicSample)
+        splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
       );
     } else {
       this.sourceTemplate = expandC8YTemplate(
@@ -978,6 +982,22 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel.pathTarget
       )
     ]);
+  }
+
+  addSubstitutionDisabled(): boolean {
+    return !this.stepperConfiguration.showEditorSource ||
+      this.stepperConfiguration.editorMode ===
+      EditorMode.READ_ONLY ||
+      !this.isSubstitutionValid()
+  }
+
+
+  updateSubstitutionDisabled(): boolean {
+    return !this.stepperConfiguration.showEditorSource ||
+      this.stepperConfiguration.editorMode ===
+      EditorMode.READ_ONLY ||
+      this.selectedSubstitution === -1 ||
+      !this.isSubstitutionValid()
   }
 
 }

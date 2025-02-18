@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 package dynamic.mapping.core;
@@ -543,6 +543,8 @@ public class MappingComponent {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(mappingId).getSnoopedTemplates());
+        } else {
+            mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(mappingId).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -597,6 +599,9 @@ public class MappingComponent {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+        } else {
+                        // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -622,6 +627,9 @@ public class MappingComponent {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+        } else {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -647,6 +655,9 @@ public class MappingComponent {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+        } else {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -706,7 +717,7 @@ public class MappingComponent {
         Mapping mapping = getMapping(tenant, id);
 
         // nothing to do for outbound mappings
-        if (Direction.INBOUND.equals(mapping.direction)) {
+        // if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(new ArrayList<>());
             // step 3. update mapping in inventory
@@ -727,7 +738,7 @@ public class MappingComponent {
                     LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
                     null);
-        }
+        //}
     }
 
     public void updateDeploymentMapEntry(String tenant, String mappingIdent, @Valid List<String> deployment) {

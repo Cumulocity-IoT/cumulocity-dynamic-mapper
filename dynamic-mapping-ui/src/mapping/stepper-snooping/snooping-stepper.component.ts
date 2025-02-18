@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -10,8 +9,8 @@
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * distributed under the License is distributed on an "AS IS" BASIS,
  * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -33,7 +32,6 @@ import {
   StepperConfiguration
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
-import { isDisabled } from '../shared/util';
 
 interface StepperLabels {
   next: string;
@@ -61,7 +59,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   Direction = Direction;
   EditorMode = EditorMode;
   SnoopStatus = SnoopStatus;
-  isDisabled = isDisabled;
 
   propertyFormly = new FormGroup({});
   isButtonDisabled$ = new BehaviorSubject<boolean>(true);

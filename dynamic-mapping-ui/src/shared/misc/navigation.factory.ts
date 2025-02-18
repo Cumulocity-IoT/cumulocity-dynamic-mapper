@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -54,7 +53,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     configurationNode: new NavigatorNode({
       label: gettext('Configuration'),
       icon: 'cog',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+      // path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
       priority: 500,
       preventDuplicates: true
     }),
@@ -63,14 +62,54 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Connectors'),
       icon: 'c8y-device-management',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-      priority: 500,
+      priority: 480,
+      preventDuplicates: true
+    }),
+    serviceConfigurationNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Service configuration'),
+      icon: 'cog',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+      priority: 470,
+      preventDuplicates: true
+    }),
+    processorExtensionNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Processor extension'),
+      icon: 'extension',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/processorExtension`,
+      priority: 460,
       preventDuplicates: true
     }),
     mappingNode: new NavigatorNode({
       label: gettext('Mapping'),
       icon: 'rules',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+      // path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
       priority: 400,
+      preventDuplicates: true
+    }),
+    mappingInboundNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Inbound'),
+      icon: 'swipe-right',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+      priority: 390,
+      preventDuplicates: true
+    }),
+    mappingOutboundNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Outbound'),
+      icon: 'swipe-left',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
+      priority: 380,
+      preventDuplicates: true
+    }),
+    subscriptionOutboundNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Subscription outbound'),
+      icon: 'mail',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/subscriptionOutbound`,
+      priority: 380,
       preventDuplicates: true
     }),
     monitoringNode: new NavigatorNode({
@@ -91,23 +130,68 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       preventDuplicates: true
     }),
     configurationNode: new NavigatorNode({
-      parent: gettext('Dynamic Data Mapper'),
       label: gettext('Configuration'),
       icon: 'cog',
+      // path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+      priority: 500,
+      preventDuplicates: true
+    }),
+    connectorNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Connectors'),
+      icon: 'c8y-device-management',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+      priority: 480,
+      preventDuplicates: true
+    }),
+    serviceConfigurationNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Service configuration'),
+      icon: 'cog',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
-      priority: 550,
+      priority: 470,
+      preventDuplicates: true
+    }),
+    processorExtensionNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Processor extension'),
+      icon: 'extension',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/processorExtension`,
+      priority: 460,
       preventDuplicates: true
     }),
     mappingNode: new NavigatorNode({
-      parent: gettext('Dynamic Data Mapper'),
       label: gettext('Mapping'),
       icon: 'rules',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+      // path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
       priority: 400,
       preventDuplicates: true
     }),
+    mappingInboundNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Inbound'),
+      icon: 'swipe-right',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+      priority: 390,
+      preventDuplicates: true
+    }),
+    mappingOutboundNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Outbound'),
+      icon: 'swipe-left',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
+      priority: 380,
+      preventDuplicates: true
+    }),
+    subscriptionOutboundNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Subscription outbound'),
+      icon: 'mail',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/subscriptionOutbound`,
+      priority: 380,
+      preventDuplicates: true
+    }),
     monitoringNode: new NavigatorNode({
-      parent: gettext('Dynamic Data Mapper'),
       label: gettext('Monitoring'),
       icon: 'pie-chart',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
@@ -173,11 +257,23 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
   async get() {
     const feature: any = await this.sharedService.getFeatures();
     let navs;
+    let copyStaticNodesPlugin;
     if (this.isStandaloneApp) {
-      navs = Object.values(this.staticNodesStandalone) as NavigatorNode[];
+      copyStaticNodesPlugin = _.clone(this.staticNodesStandalone);
+      if (!feature?.outputMappingEnabled) {
+        delete copyStaticNodesPlugin.mappingOutboundNode;
+        delete copyStaticNodesPlugin.subscriptionOutboundNode;
+      }
+      navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
     } else {
-      navs = Object.values(this.staticNodesPlugin) as NavigatorNode[];
+      copyStaticNodesPlugin = _.clone(this.staticNodesPlugin);
+      if (!feature?.outputMappingEnabled) {
+        delete copyStaticNodesPlugin.mappingOutboundNode;
+        delete copyStaticNodesPlugin.subscriptionOutboundNode;
+      }
     }
+    navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
+
     return this.applicationService
       .isAvailable(MappingNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)
       .then((data) => {

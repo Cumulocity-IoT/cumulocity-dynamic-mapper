@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2025 Cumulocity GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @authors Christof Strack
+ */
 import { ConfigurationOptions } from '@c8y/devkit';
 import { author, description, version, license } from './package.json';
 
@@ -23,16 +42,16 @@ export default {
     tabsHorizontal: true,
     noAppSwitcher: false,
     package: 'blueprint',
+    contextHelp: true,
     isPackage: true,
-    exports: [
-      {
-        name: 'Dynamic Mapping Mapper Plugin',
-        module: 'DynamicMappingModule',
-        path: './src/dynamic-mapping.module.ts',
-        description: 'Adds a Dynamic Mapping Mapper Plugin',
-        scope: 'self'
-      }
-    ]
+    // exports: [
+    //   {
+    //     name: 'Dynamic Mapping Mapper Plugin',
+    //     module: 'DynamicMappingModule',
+    //     path: './src/dynamic-mapping.module.ts',
+    //     description: 'Adds a Dynamic Mapping Mapper Plugin'
+    //   }
+    // ]
   },
   buildTime: {
     copy: [
@@ -81,13 +100,21 @@ export default {
         to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
       },
       {
+        from: '../resources/image/ConnectorMatrix.png',
+        to: 'image/ConnectorMatrix.png'
+      },
+      {
         from: '../resources/image/Test.svg',
         to: 'image/Test.svg'
       },
       {
         from: '../LICENSE',
         to: 'LICENSE.txt'
-      }
+      },
+      {
+        from: './src/help',
+        to: 'help'
+      },
     ],
     federation: [
       '@angular/animations',

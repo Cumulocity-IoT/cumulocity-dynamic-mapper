@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -34,10 +33,27 @@ export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
 export const TIME = 'time';
 
-export function splitTopicExcludingSeparator(topic: string): string[] {
-  let topix = topic;
-  topix = topix.trim().replace(/(\/{1,}$)|(^\/{1,})/g, '');
-  return topix.split(/\//g);
+export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
+  let topix = topic.trim();
+  
+  if (cutOffLeadingSlash) {
+      // Original behavior: remove both leading and trailing slashes
+      topix = topix.replace(/(\/{1,}$)|(^\/{1,})/g, '');
+      return topix.split(/\//g);
+  } else {
+      // New behavior: keep leading slash, remove only trailing slashes
+      topix = topix.replace(/\/{1,}$/g, '');
+      if (topix.startsWith('//')) {
+          topix = '/' + topix.replace(/^\/+/, '');
+      }
+      
+      if (topix.startsWith('/')) {
+          const parts = topix.substring(1).split(/\//g);
+          return ['/'].concat(parts);
+      }
+      
+      return topix.split(/\//g);
+  }
 }
 
 export function splitTopicIncludingSeparator(topic: string): string[] {
@@ -175,7 +191,8 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
 
   // count number of "#" in mappingTopic
   count_multi = (mappingTopic.value.match(/#/g) || []).length;
-  if (count_multi >= 1) {
+  // if (count_multi >= 1) {
+  if (count_multi > 1) {
     errors = {
       ...errors,
       No_Multi_Level_Wildcard_Allowed_In_MappingTopic: {
@@ -187,9 +204,9 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
     };
   }
 
-  const splitTT: string[] = splitTopicExcludingSeparator(mappingTopic.value);
+  const splitTT: string[] = splitTopicExcludingSeparator(mappingTopic.value, false);
   const splitTTS: string[] = splitTopicExcludingSeparator(
-    mappingTopicSample.value
+    mappingTopicSample.value, false
   );
   if (splitTT.length != splitTTS.length) {
     errors = {
@@ -305,9 +322,9 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
     };
   }
 
-  const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value);
+  const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value, false);
   const splitTTS: string[] = splitTopicExcludingSeparator(
-    publishTopicSample.value
+    publishTopicSample.value, false
   );
   if (splitPT.length != splitTTS.length) {
     errors = {
@@ -425,7 +442,7 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
   }
 }
 
-export function randomIdAsString(){
+export function randomIdAsString() {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
@@ -459,10 +476,6 @@ export function reduceTargetTemplate(
   }
   const tt = JSON.stringify(template);
   return tt;
-}
-
-export function isDisabled(condition: boolean) {
-  return condition ? '' : null;
 }
 
 export function isTypeOf(object) {

@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 package dynamic.mapping.controller;
@@ -29,7 +29,7 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
-
+import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
@@ -239,7 +239,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleConnect(String tenant, Map<String, String> parameters)
-            throws JsonProcessingException, ConnectorRegistryException {
+            throws JsonProcessingException, ConnectorRegistryException, ConnectorException {
         String connectorIdentifier = parameters.get("connectorIdentifier");
         ConnectorConfiguration configuration = connectorConfigurationComponent
                 .getConnectorConfiguration(connectorIdentifier, tenant);
@@ -269,7 +269,7 @@ public class OperationController {
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                 connectorIdentifier);
         // client.submitDisconnect();
-        bootstrapService.disableConnector(tenant, client.getConnectorIdent());
+        bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
         // We might need to Reconnect other Notification Clients for other connectors
         configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 

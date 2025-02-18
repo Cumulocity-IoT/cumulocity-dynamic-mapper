@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -34,6 +33,7 @@ import {
   LoggingEventTypeMap,
   Operation,
   SharedService,
+  ConnectorType
 } from '..';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
@@ -57,6 +57,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   };
   LoggingEventTypeMap = LoggingEventTypeMap;
   LoggingEventType = LoggingEventType;
+  ConnectorType = ConnectorType;
   contextSubscription: Subscription;
   private destroy$ = new Subject<void>();
 

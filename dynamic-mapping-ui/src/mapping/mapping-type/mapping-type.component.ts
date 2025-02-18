@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -31,7 +30,6 @@ import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { Direction, MappingType, MappingTypeDescriptionMap } from '../../shared';
-import { isDisabled } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-type',
@@ -45,7 +43,6 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<any>;
   labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
-  isDisabled = isDisabled;
   MappingTypeDescriptionMap = MappingTypeDescriptionMap;
   formGroupStep: FormGroup;
   snoop: boolean = false;
@@ -105,7 +102,6 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   shouldShowSnoop(): boolean {
     // Replace these conditions with your specific requirements
     return (
-      this.direction === Direction.INBOUND &&
       MappingTypeDescriptionMap[this.mappingType].properties[this.direction]
         .snoopSupported
     );

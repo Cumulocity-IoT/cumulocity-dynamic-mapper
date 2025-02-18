@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -246,7 +245,9 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async setSelectionToPath(pathString: string) {
     const containsSpecialChars = (str: string): boolean => {
-      const regex = /[\$\(\)&]/;
+      // IMPORTANT: here all special characters that are part of an expression must be listed, as they cause the editor to crash 
+      // when the path is used in a selection, e.g. 2 * c8yTemperature.T.value
+      const regex = /[\$\(\)&\s\+\-\/\*\=]/;
       return regex.test(str);
     }
     if (pathString && !containsSpecialChars(pathString)) {

@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 package dynamic.mapping.controller;
@@ -103,7 +103,7 @@ public class ConfigurationController {
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
 
-    @GetMapping(value = "/feature",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/feature", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -116,7 +116,7 @@ public class ConfigurationController {
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
-    @GetMapping(value = "/connector/specifications",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/connector/specifications", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorSpecification>> getConnectorSpecifications() {
         String tenant = contextService.getContext().getTenant();
         List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
@@ -130,10 +130,14 @@ public class ConfigurationController {
         return ResponseEntity.ok(connectorConfigurations);
     }
 
-    @PostMapping(value = "/connector/instance",  consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/connector/instance", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createConnectorConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
+        if (configuration.connectorType.equals(ConnectorType.HTTP)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't create a HttpConnector!");
+        }
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -154,26 +158,33 @@ public class ConfigurationController {
         }
     }
 
-    @GetMapping(value = "/connector/instance",produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(@RequestParam(required = false) String name) {
+    @GetMapping(value = "/connector/instance", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(
+            @RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details", tenant);
-
+    
         try {
-            // Create Pattern object for the regex only if name is provided
-            Pattern pattern = name != null ? Pattern.compile(name) : null;
-
+            // Convert wildcard pattern to regex pattern if name is provided
+            Pattern pattern = null;
+            if (name != null) {
+                // Escape all special regex characters except *
+                String escapedName = Pattern.quote(name).replace("*", ".*");
+                // Remove the quotes added by Pattern.quote() at the start and end
+                escapedName = escapedName.substring(2, escapedName.length() - 2);
+                pattern = Pattern.compile("^" + escapedName + "$");
+            }
+    
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
                     .getConnectorConfigurations(tenant);
             List<ConnectorConfiguration> modifiedConfigs = new ArrayList<>();
-
+    
             // Remove sensitive data before sending to UI
             for (ConnectorConfiguration config : configurations) {
                 ConnectorSpecification connectorSpecification = connectorRegistry
                         .getConnectorSpecification(config.connectorType);
                 ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
-                // Add configuration if no pattern (name) is provided or if name matches the
-                // pattern
+                
                 if (pattern == null || pattern.matcher(cleanedConfig.getName()).matches()) {
                     modifiedConfigs.add(cleanedConfig);
                 }
@@ -185,7 +196,7 @@ public class ConfigurationController {
         }
     }
 
-    @GetMapping(value = "/connector/instance/{identifier}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details: {}", tenant, identifier);
@@ -214,10 +225,11 @@ public class ConfigurationController {
         }
     }
 
-    @DeleteMapping(value = "/connector/instance/{identifier}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @DeleteMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Delete connection instance {}", tenant, identifier);
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -230,6 +242,9 @@ public class ConfigurationController {
             if (configuration.enabled)
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Can't delete an enabled connector! Disable connector first.");
+            if (configuration.connectorType.equals(ConnectorType.HTTP)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't delete a HttpConnector!");
+            }
             // make sure the connector is disconnected before it is deleted.
             // if (connectorRegistry.getClientForTenant(tenant, identifier) != null &&
             // connectorRegistry.getClientForTenant(tenant, identifier).isConnected())
@@ -252,7 +267,7 @@ public class ConfigurationController {
         log.info("Tenant {} - Update connection instance {}", tenant, identifier);
         // make sure we are using the correct identifier
         configuration.identifier = identifier;
-
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -262,6 +277,9 @@ public class ConfigurationController {
         // Remove sensitive data before printing to log
         ConnectorSpecification connectorSpecification = connectorRegistry
                 .getConnectorSpecification(configuration.connectorType);
+        // if (connectorSpecification.connectorType.equals(ConnectorType.HTTP)) {
+        //     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't change a HttpConnector!");
+        // }
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
@@ -292,7 +310,7 @@ public class ConfigurationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
     }
 
-    @GetMapping(value = "/service",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/service", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Get connection details", tenant);
@@ -316,7 +334,7 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         // don't modify original copy
         log.info("Tenant {} - Post service configuration: {}", tenant, configuration.toString());
-
+        //FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);

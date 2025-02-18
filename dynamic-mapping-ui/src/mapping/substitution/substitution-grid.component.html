@@ -1,73 +1,63 @@
 <!--
-  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
-  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
   ~
   ~ SPDX-License-Identifier: Apache-2.0
   ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
   ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~       http://www.apache.org/licenses/LICENSE-2.0
   ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
   ~
-  ~ @authors Christof Strack
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
   -->
 
-<div style="not_applied_height: 200px; overflow-y: auto; padding-top: 16px">
+<div style="overflow-y: auto; padding-top: 16px">
   <div class="h5 m-l-16 m-b-8">Substitutions</div>
-  <table class="table table-condensed table-striped fixTableHead">
+  <table class="table table-condensed table-head-fixed">
     <thead>
       <tr>
-        <th class="bg-level-1" style="width: 2.5%"></th>
-        <th class="bg-level-1" style="width: 47.5%">
+        <th class="bg-level-1"></th>
+        <th class="bg-level-1" style="width: 67%">
           <div>
             <span>Substitution [ pathSource &#8212;> pathTarget ]</span>
             <span class="hidden-xs hidden-sm m-l-4">
-              <button type="button" placement="right"
-              popover='Substitutions defining the device identifier are marked with an
-                "*". Before adding a substitution target and source property in
-                templates have to be selected.'
-              triggers="focus" class="btn-help" aria-label="Help content"></button>
+              <button type="button" placement="right" [popover]="'Substitutions defining the device identifier are marked with an
+                *. Before adding a substitution target and source property in
+                templates have to be selected.'" triggers="focus" class="btn-help" aria-label="Help content"></button>
             </span>
           </div>
         </th>
         <th class="bg-level-1" style="width: 12.5%">Expand as array</th>
         <th class="bg-level-1" style="width: 12.5%">Repair strategy</th>
-        <th class="bg-level-1" style="width: 7.5%"></th>
+        <th class="bg-level-1"></th>
       </tr>
     </thead>
     <tbody>
-      <tr
-        *ngFor="let sub of mapping.substitutions; let i = index"
-        id="{{ 'sub-' + id + '-' + i }}"
-      >
+      <tr *ngFor="let sub of mapping.substitutions; let i = index" id="{{ 'sub-' + id + '-' + i }}">
         <td width="4%">
           <label class="c8y-radio" title="Checkbox">
-            <input
-              type="radio"
-              (click)="onSubstitutionSelect(i)"
-              [checked]="settings.selectedSubstitutionIndex == i"
-            />
+            <input type="radio" (click)="onSubstitutionSelect(i)" [checked]="settings.selectedSubstitutionIndex == i" />
             <span></span>
           </label>
         </td>
         <td>
-          <span *ngIf="!sub.registeredType" class="text-12"
-            >{{
-              '[ ' +
-                (definesDeviceIdentifier(mapping, sub)
-                  ? '* '
-                  : '') +
-                sub.pathSource +
-                ' &#8212;> ' +
-                sub.pathTarget +
-                ' ]'
+          <span *ngIf="!sub['registeredType']" class="text-12">{{
+            '[ ' +
+            (definesDeviceIdentifier(mapping, sub)
+            ? '* '
+            : '') +
+            sub.pathSource +
+            ' &#8212;> ' +
+            sub.pathTarget +
+            ' ]'
             }}
           </span>
         </td>
@@ -75,18 +65,13 @@
           {{ sub.expandArray ? 'on' : 'off' }}
         </td>
         <td>
-          {{ sub.repairStrategy  | formatStringAsWords }}
+          {{ sub.repairStrategy | formatStringAsWords }}
         </td>
-        <td width="8%">
-          <button
-            title="{{ 'Remove' | translate }}"
-            class="btn btn-icon btn-clean"
-            style="height: 24px"
-            (click)="onSubstitutionDelete(i)"
-            [attr.disabled]="
-              isDisabled(settings.editorMode === EditorMode.READ_ONLY)
-            "
-          >
+        <td width="6%">
+          <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover" style="height: 24px;padding-top: 0px !important;"
+            (click)="onSubstitutionDelete(i)" [disabled]="
+              settings.editorMode === EditorMode.READ_ONLY
+            ">
             <i c8yIcon="delete"></i>
             <span class="sr-only" translate>Remove</span>
           </button>

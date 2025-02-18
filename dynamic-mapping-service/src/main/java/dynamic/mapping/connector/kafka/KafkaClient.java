@@ -1,27 +1,29 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 package dynamic.mapping.connector.kafka;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +49,7 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
+import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
@@ -54,7 +57,6 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringWriter;
 
@@ -66,46 +68,50 @@ import org.springframework.core.io.ClassPathResource;
 // https://stackoverflow.com/questions/66103052/how-do-i-stop-a-previous-thread-that-is-listening-to-kafka-topic
 
 public class KafkaClient extends AConnectorClient {
-	public KafkaClient() throws FileNotFoundException, IOException {
-		Map<String, ConnectorProperty> configProps = new HashMap<>();
-		configProps.put("bootstrapServers",
-				new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
-		configProps.put("username",
-				new ConnectorProperty(false, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
-		configProps.put("password",
-				new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
-						null));
-		configProps.put("saslMechanism",
-				new ConnectorProperty(false, 3, ConnectorPropertyType.OPTION_PROPERTY, false, false, "SCRAM-SHA-256",
-						Map.ofEntries(
-								new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-256", "SCRAM-SHA-256"),
-								new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-512", "SCRAM-SHA-512"))));
-		configProps.put("groupId",
-				new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+	public KafkaClient() throws ConnectorException {
+		try {
+            Map<String, ConnectorProperty> configProps = new HashMap<>();
+            configProps.put("bootstrapServers",
+            		new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+            configProps.put("username",
+            		new ConnectorProperty(null, false, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+            configProps.put("password",
+            		new ConnectorProperty(null, false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
+            				null, null));
+            configProps.put("saslMechanism",
+            		new ConnectorProperty(null, false, 3, ConnectorPropertyType.OPTION_PROPERTY, false, false, "SCRAM-SHA-256",
+            				Map.ofEntries(
+            						new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-256", "SCRAM-SHA-256"),
+            						new AbstractMap.SimpleEntry<String, String>("SCRAM-SHA-512", "SCRAM-SHA-512")), null));
+            configProps.put("groupId",
+            		new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
 
-		Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
-		defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
-		StringWriter writerProducer = new StringWriter();
-		defaultPropertiesProducer.store(writerProducer,
-				"properties can only be edited in the property file: kafka-producer.properties");
-		configProps.put("propertiesProducer",
-				new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
-						removeDateCommentLine(writerProducer.getBuffer().toString()), null));
+            Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
+            defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
+            StringWriter writerProducer = new StringWriter();
+            defaultPropertiesProducer.store(writerProducer,
+            		"properties can only be edited in the property file: kafka-producer.properties");
+            configProps.put("propertiesProducer",
+            		new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+            				removeDateCommentLine(writerProducer.getBuffer().toString()), null, null));
 
-		Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
-		defaultPropertiesConsumer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
-		StringWriter writerConsumer = new StringWriter();
-		defaultPropertiesConsumer.store(writerConsumer,
-				"properties can only be edited in the property file: kafka-consumer.properties");
-		configProps.put("propertiesConsumer",
-				new ConnectorProperty(false, 6, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
-						removeDateCommentLine(writerConsumer.getBuffer().toString()), null));
+            Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
+            defaultPropertiesConsumer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
+            StringWriter writerConsumer = new StringWriter();
+            defaultPropertiesConsumer.store(writerConsumer,
+            		"properties can only be edited in the property file: kafka-consumer.properties");
+            configProps.put("propertiesConsumer",
+            		new ConnectorProperty(null, false, 6, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+            				removeDateCommentLine(writerConsumer.getBuffer().toString()), null, null));
 
-		String name = "Kafka";
-		String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.\n The connector uses SASL_SSL as security protocol.";
-		connectorType = ConnectorType.KAFKA;
-		supportsMessageContext = true;
-		connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, true);
+            String name = "Kafka";
+            String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.\n The connector uses SASL_SSL as security protocol.";
+            connectorType = ConnectorType.KAFKA;
+            supportsMessageContext = true;
+            connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, true, supportedDirections());
+        } catch (IOException e) {
+            throw new ConnectorException(e.getMessage());
+        }
 	}
 
 	private static String removeDateCommentLine(String pt) {
@@ -131,7 +137,7 @@ public class KafkaClient extends AConnectorClient {
 	public KafkaClient(ConfigurationRegistry configurationRegistry,
 			ConnectorConfiguration connectorConfiguration,
 			DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
-			throws FileNotFoundException, IOException {
+			throws ConnectorException {
 		this();
 		this.configurationRegistry = configurationRegistry;
 		this.mappingComponent = configurationRegistry.getMappingComponent();
@@ -282,7 +288,7 @@ public class KafkaClient extends AConnectorClient {
 			updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
 			log.info("Tenant {} - Disconnecting  connector {} from broker: {}", tenant, getConnectorName(),
 					bootstrapServers);
-			activeSubscriptions.entrySet().forEach(entry -> {
+			activeSubscriptionsInbound.entrySet().forEach(entry -> {
 				// only unsubscribe if still active subscriptions exist
 				String topic = entry.getKey();
 				MutableInt activeSubs = entry.getValue();
@@ -312,7 +318,7 @@ public class KafkaClient extends AConnectorClient {
 	}
 
 	@Override
-	public String getConnectorIdent() {
+	public String getConnectorIdentifier() {
 		return connectorIdentifier;
 	}
 
@@ -328,7 +334,7 @@ public class KafkaClient extends AConnectorClient {
 						defaultPropertiesConsumer),
 				connectorStatus);
 		consumerList.put(topic, kafkaConsumer);
-		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
+		TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdentifier(),
 				topic, true);
 		kafkaConsumer.start(topicConsumerCallback);
 	}
@@ -386,4 +392,9 @@ public class KafkaClient extends AConnectorClient {
 		log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
 				context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
 	}
+
+    @Override
+    public List<Direction>  supportedDirections() {
+        return new ArrayList<>( Arrays.asList(Direction.INBOUND, Direction.OUTBOUND));
+    }
 }

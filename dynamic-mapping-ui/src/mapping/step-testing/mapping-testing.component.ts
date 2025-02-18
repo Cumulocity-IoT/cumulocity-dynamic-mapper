@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -42,7 +41,7 @@ import {
 import { MappingService } from '../core/mapping.service';
 import { C8YRequest, ProcessingContext } from '../core/processor/processor.model';
 import { StepperConfiguration } from '../../shared/mapping/mapping.model';
-import { isDisabled, patchC8YTemplateForTesting } from '../shared/util';
+import { patchC8YTemplateForTesting } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 
 interface TestingModel {
@@ -76,7 +75,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @ViewChild('editorTestingResponse') editorTestingResponse: JsonEditorComponent;
 
   readonly Direction = Direction;
-  readonly isDisabled = isDisabled;
 
   private subscription: Subscription;
   private readonly defaultEditorOptions = {
@@ -333,7 +331,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private handleTestFailure(errors: string[]): void {
-    // this.alertService.warning('Testing transformation was not successful!');
+    // this.alertService.warning('Test of mapping failed!');
     errors.forEach(error => {
       this.alertService.danger(error);
     });
@@ -343,11 +341,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (sendPayload) {
       const responseId = this.testContext.requests?.[0]?.response?.id;
       this.alertService.info(
-        `Sending transformation was successful: ${responseId}`
+        `Sending mapping result was successful: ${responseId}`
       );
       this.testResult.emit(true);
     } else {
-      this.alertService.success('Testing transformation was successful.');
+      this.alertService.success(`Test of mapping ${this.testMapping.name} was successful.`);
     }
   }
 

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -34,7 +33,6 @@ import {
   MappingSubstitution
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
-import { isDisabled } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-substitution-grid',
@@ -54,7 +52,6 @@ export class SubstitutionRendererComponent  {
   
   id = Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
-  isDisabled = isDisabled;
   EditorMode = EditorMode;
   substitutions: MappingSubstitution[] = [];
 

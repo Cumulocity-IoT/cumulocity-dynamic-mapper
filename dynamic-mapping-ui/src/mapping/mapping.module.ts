@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -106,7 +105,7 @@ import { MappingSubscriptionComponent } from './subscription/subscription.compon
       component: MappingComponent
     }),
     hookRoute({
-      path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outboundSubscription`,
+      path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/subscriptionOutbound`,
       component: MappingSubscriptionComponent
     }),
     {

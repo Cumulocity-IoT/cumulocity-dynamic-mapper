@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -37,10 +36,10 @@ interface ExtensionState {
 
 @Component({
   selector: 'd11r-mapping-extension',
-  templateUrl: './extension.component.html',
+  templateUrl: './extension-grid.component.html',
   styleUrls: ['../share/extension.component.css']
 })
-export class ExtensionComponent implements OnInit, OnDestroy {
+export class ExtensionGridComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly reload$ = new BehaviorSubject<void>(null);
   private readonly state = new BehaviorSubject<ExtensionState>({

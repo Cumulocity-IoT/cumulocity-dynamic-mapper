@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -170,7 +169,7 @@ export const MappingTypeDescriptionMap: Record<
     description: 'Mapping handles payloads in JSON format.',
     properties: {
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
-      [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: true }
+      [Direction.OUTBOUND]: { snoopSupported: true, directionSupported: true }
     },
     stepperConfiguration: {
       showEditorSource: true,

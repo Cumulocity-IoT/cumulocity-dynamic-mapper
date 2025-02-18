@@ -1,23 +1,23 @@
 <!--
-   ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
-   ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
-   ~
-   ~ SPDX-License-Identifier: Apache-2.0
-   ~
-   ~ Licensed under the Apache License, Version 2.0 (the "License");
-   ~ you may not use this file except in compliance with the License.
-   ~ You may obtain a copy of the License at
-   ~
-   ~      http://www.apache.org/licenses/LICENSE-2.0
-   ~
-   ~ Unless required by applicable law or agreed to in writing, software
-   ~ distributed under the License is distributed on an "AS IS" BASIS,
-   ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   ~ See the License for the specific language governing permissions and
-   ~ limitations under the License.
-   ~
-   ~ @authors Christof Strack
-   -->
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
 <c8y-title>{{ 'Getting started' | translate }}</c8y-title>
 <div class="card">
   <div class="card-header">
@@ -52,7 +52,7 @@
       The most important resources you work with in the Mapper are:
       <b>connectors</b> and <b>mappings</b>.
       <br />
-      If you want to receive messages from an Mqtt broker (Cumulocity Mqtt
+      If you want to receive messages from an MQTT broker (Cumulocity MQTT
       Service, Hive MQ, mosquitto, ...) you use an <b>inbound mapping</b>.
       <br />
       The rules of the mapping are applied and result in an transformed payload
@@ -82,6 +82,19 @@
       </li>
     </ul>
   </div>
+  <div class="card-header">
+    <h3>
+      {{ 'Which connectors are supported?' | translate }}
+    </h3>
+  </div>
+  <div class="card-block">
+    The mapper supports the following connectors and mappings:
+    <br />
+    <br />
+    <img width="60%" class="m-l-48 m-b-48" src="/apps/sag-ps-pkg-dynamic-mapping/image/ConnectorMatrix.png"
+      alt="Define substitutions" />
+  </div>
+
   <div class="card-header">
     <h3>
       {{ 'How to define a mapping?' | translate }}
@@ -214,6 +227,7 @@
         src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif"
         alt="Define mapping" />
     </div>
-    <p class="image-description"><b>Description:</b> This animation shows the steps for defining a mapping in snooping mode.</p>
+    <p class="image-description"><b>Description:</b> This animation shows the steps for defining a mapping in snooping
+      mode.</p>
   </div>
 </div>

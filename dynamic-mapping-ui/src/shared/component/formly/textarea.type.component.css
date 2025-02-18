@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,11 +18,12 @@
  * @authors Christof Strack
  */
 
- textarea::-webkit-scrollbar {
+textarea::-webkit-scrollbar {
     width: 10px;
 }
-textarea {
-	padding: calc(var(--c8y-form-control-padding-base-vertical) * .75) calc(var(--c8y-form-control-padding-base-horizontal) * .75);
+
+/* textarea {
+    padding: calc(var(--c8y-form-control-padding-base-vertical) * .75) calc(var(--c8y-form-control-padding-base-horizontal) * .75);
     font-size: var(--c8y-font-size-small);
     line-height: var(--c8y-line-height-small);
-}
+} */

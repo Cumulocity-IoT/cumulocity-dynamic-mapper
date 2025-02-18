@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,13 +25,13 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { NODE3, SharedModule } from '../shared';
 import { ExtensionCardComponent } from './card/extension-card.component';
 import { AddExtensionComponent } from './add/add-extension-modal.component';
-import { ExtensionComponent } from './grid/extension.component';
+import { ExtensionGridComponent } from './grid/extension-grid.component';
 import { ExtensionPropertiesComponent } from './properties/extension-properties.component';
 import { extensionResolver } from './share/extension.model';
 
 @NgModule({
   declarations: [
-    ExtensionComponent,
+    ExtensionGridComponent,
     ExtensionCardComponent,
     AddExtensionComponent,
     ExtensionCardComponent,
@@ -47,12 +46,12 @@ import { extensionResolver } from './share/extension.model';
   exports: [],
   providers: [
     hookRoute({
-      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/extension`,
+      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/processorExtension`,
       children: [
         {
           path: '',
           pathMatch: 'full',
-          component: ExtensionComponent
+          component: ExtensionGridComponent
         },
         {
           path: 'properties/:id',

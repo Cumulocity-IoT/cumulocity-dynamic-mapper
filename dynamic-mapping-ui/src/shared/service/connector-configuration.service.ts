@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -61,9 +60,10 @@ export class ConnectorConfigurationService {
         // console.log('Further up III');
         return combineLatest([
           from([configurations]),
-          from(this.getConnectorStatus())
+          from(this.getConnectorStatus()),
+          from(this.getConnectorSpecifications()),
         ]).pipe(
-          map(([configs, statusMap]) => {
+          map(([configs, statusMap, specs]) => {
             // console.log('Changes configs:', configs);
             // console.log('Changes statusMap:', statusMap);
             return configs.map((config) => ({
@@ -73,7 +73,10 @@ export class ConnectorConfigurationService {
                   observer.next(statusMap[config.identifier].status);
                 }
                 return () => {}; // Cleanup function
-              })
+              }),
+              supportedDirections: specs.find(
+                connector => connector.connectorType === config.connectorType
+              )?.supportedDirections
             }));
           })
         );

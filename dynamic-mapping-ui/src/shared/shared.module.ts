@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -30,7 +29,7 @@ import { FieldInputCustom } from './component/formly/input-custom.type.component
 import { FieldTextareaCustom } from './component/formly/textarea.type.component';
 import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
 import { ConnectorGridComponent } from './connector-configuration/connector-grid.component';
-import { ConnectorConfigurationModalComponent } from './connector-configuration/create/connector-configuration-modal.component';
+import { ConnectorConfigurationModalComponent } from './connector-configuration/edit/connector-configuration-modal.component';
 import { CheckedRendererComponent } from './connector-configuration/renderer/checked-renderer.component';
 import { ConnectorDetailCellRendererComponent } from './connector-configuration/renderer/connector-link.renderer.component';
 import { ConnectorStatusRendererComponent } from './connector-configuration/renderer/connector-status.renderer.component';
@@ -43,6 +42,7 @@ import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
 import { DisableDirective } from './misc/disable.directive';
 import { FilterJsonPipe } from './misc/filter-json.pipe';
 import { FormatStringPipe } from './misc/format-string.pipe';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @NgModule({
   declarations: [
@@ -69,6 +69,7 @@ import { FormatStringPipe } from './misc/format-string.pipe';
     CoreModule,
     BsDatepickerModule,
     PaginationModule,
+    PopoverModule,
     RouterModule,
     BsDropdownModule.forRoot()
   ],

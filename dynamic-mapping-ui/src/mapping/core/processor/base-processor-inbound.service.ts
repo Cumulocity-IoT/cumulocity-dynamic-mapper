@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -65,7 +64,7 @@ export abstract class BaseProcessorInbound {
 
   enrichPayload(context: ProcessingContext): void {
     const { payload } = context;
-    const topicLevels = splitTopicExcludingSeparator(context.topic);
+    const topicLevels = splitTopicExcludingSeparator(context.topic, false);
     payload[TOKEN_TOPIC_LEVEL] = topicLevels;
   }
 
@@ -165,6 +164,7 @@ export abstract class BaseProcessorInbound {
               if (mapping.createNonExistingDevice) {
                 sourceId.value = await this.createAttocDevice(identity, context);
               } else {
+                e['possibleIgnoreErrorNonExisting'] = true;
                 throw e;
               }
             }

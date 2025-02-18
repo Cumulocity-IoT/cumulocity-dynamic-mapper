@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -22,6 +21,7 @@
 import { inject } from "@angular/core";
 import { ResolveFn } from "@angular/router";
 import { ConnectorConfigurationService } from "../service/connector-configuration.service";
+import { Direction } from "../mapping/mapping.model";
 
 export enum ConnectorPropertyType {
   ID_STRING_PROPERTY = 'ID_STRING_PROPERTY',
@@ -36,23 +36,34 @@ export enum ConnectorPropertyType {
 export enum ConnectorType {
   MQTT = 'MQTT',
   CUMULOCITY_MQTT_SERVICE = 'CUMULOCITY_MQTT_SERVICE',
-  KAFKA = 'KAFKA'
+  KAFKA = 'KAFKA',
+  HTTP = 'HTTP',
+  WEB_HOOK = 'WEB_HOOK',
+}
+
+export interface ConnectorPropertyCondition {
+  // order: number;
+  key: string;
+  anyOf: string[];
 }
 export interface ConnectorProperty {
+  description: string;
   required: boolean;
   order: number;
   readonly: boolean;
   hidden: boolean;
   defaultValue?: any;
   type: ConnectorPropertyType;
+  condition?: ConnectorPropertyCondition
 }
 
 export interface ConnectorConfiguration {
   identifier: string;
-  connectorType: string;
+  connectorType: ConnectorType;
   enabled: boolean;
   status?: any;
   status$?: any;
+  supportedDirections?: Direction[];
   name: string;
   properties: { [name: string]: any };
 }
@@ -62,6 +73,8 @@ export interface ConnectorSpecification {
   description: string;
   connectorType: string;
   supportsWildcardInTopic: boolean;
+  supportsMessageContext?: boolean;
+  supportedDirections?: Direction[];
   properties: { [name: string]: ConnectorProperty };
 }
 

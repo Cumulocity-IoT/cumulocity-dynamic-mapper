@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 package dynamic.mapping.model;
@@ -28,8 +28,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import lombok.Builder;
-import lombok.Builder.Default;
 import dynamic.mapping.processor.model.MappingType;
 
 import jakarta.validation.constraints.NotNull;
@@ -243,8 +241,22 @@ public class Mapping implements Serializable {
     }
 
     public static String[] splitTopicIncludingSeparatorAsArray(String topic) {
-        topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "/");
-        return topic.split(SPLIT_TOPIC_REGEXP);
+        topic = topic.trim();
+        StringBuilder result = new StringBuilder();
+        boolean wasSlash = false;
+        
+        for (char c : topic.toCharArray()) {
+            if (c == '/') {
+                if (!wasSlash) {
+                    result.append(c);
+                }
+                wasSlash = true;
+            } else {
+                result.append(c);
+                wasSlash = false;
+            }
+        }
+        return result.toString().split(SPLIT_TOPIC_REGEXP);
     }
 
     public static List<String> splitTopicIncludingSeparatorAsList(String topic) {
@@ -252,14 +264,35 @@ public class Mapping implements Serializable {
                 Arrays.asList(Mapping.splitTopicIncludingSeparatorAsArray(topic)));
     }
 
-    public static String[] splitTopicExcludingSeparatorAsArray(String topic) {
-        topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
-        return topic.split("\\/");
+    public static String[] splitTopicExcludingSeparatorAsArray(String topic, boolean cutOffLeadingSlash) {
+        String topix = topic.trim();
+        
+        if (cutOffLeadingSlash) {
+            // Original behavior: remove both leading and trailing slashes
+            topix = topix.replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
+            return topix.split("\\/");
+        } else {
+            // New behavior: keep leading slash, remove only trailing slashes
+            topix = topix.replaceAll("\\/{1,}$", "");
+            if (topix.startsWith("//")) {
+                topix = "/" + topix.replaceAll("^/+", "");
+            }
+            
+            if (topix.startsWith("/")) {
+                String[] parts = topix.substring(1).split("\\/");
+                String[] result = new String[parts.length + 1];
+                result[0] = "/";
+                System.arraycopy(parts, 0, result, 1, parts.length);
+                return result;
+            }
+            
+            return topix.split("\\/");
+        }
     }
 
-    public static List<String> splitTopicExcludingSeparatorAsList(String topic) {
+    public static List<String> splitTopicExcludingSeparatorAsList(String topic, boolean cutOffLeadingSlash) {
         return new ArrayList<String>(
-                Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
+                Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic, cutOffLeadingSlash)));
     }
 
     /*

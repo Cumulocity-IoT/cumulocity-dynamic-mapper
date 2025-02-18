@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!--
-  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
-  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
   ~
   ~ SPDX-License-Identifier: Apache-2.0
   ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
   ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~       http://www.apache.org/licenses/LICENSE-2.0
   ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
   ~
-  ~ @authors Christof Strack, Stefan Witschel
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
   -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -34,15 +34,15 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>4.7.0</revision>
-		<c8y.version>1020.155.0</c8y.version>
+		<revision>4.8.0</revision>
+		<spring-boot-dependencies.version>3.3.5</spring-boot-dependencies.version>
+		<c8y.version>2025.8.0</c8y.version>
 		<lombok.version>1.18.34</lombok.version>
 		<slf4j.version>1.7.36</slf4j.version>
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.target>21</maven.compiler.target>
 		<java.version>21</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring-boot-dependencies.version>3.3.5</spring-boot-dependencies.version>
 	</properties>
 	<repositories>
 		<repository>
@@ -100,6 +100,11 @@
 				<groupId>com.nsn.cumulocity.model</groupId>
 				<artifactId>device-capability-model</artifactId>
 				<version>${c8y.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents.client5</groupId>
+				<artifactId>httpclient5</artifactId>
+				<version>5.2.1</version>				<!-- Use the latest version -->
 			</dependency>
 			<dependency>
 				<groupId>com.google.protobuf</groupId>

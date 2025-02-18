@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -50,6 +49,7 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
   @ViewChild(ConnectorGridComponent)
   connectorGrid!: ConnectorGridComponent;
   @Input() stepperConfiguration: StepperConfiguration;
+  @Input() directions : Direction[] = [Direction.INBOUND,Direction.OUTBOUND];
   private _deploymentMapEntry: DeploymentMapEntry;
   @Input()
   get deploymentMapEntry(): DeploymentMapEntry {

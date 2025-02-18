@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,11 +18,11 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
-import { CoreModule, hookRoute, hookTab } from '@c8y/ngx-components';
+import { CoreModule, hookNavigator, hookRoute } from '@c8y/ngx-components';
 import { MappingTreeComponent } from './tree.component';
 import { NODE2, SharedModule } from '../shared';
-import { TreeTabFactory } from './tree-tab.factory';
 import { treeResolver } from './utils';
+import { MappingTreeNavigationFactory } from './mapping-tree.factory';
 
 @NgModule({
   declarations: [MappingTreeComponent],
@@ -35,7 +34,7 @@ import { treeResolver } from './utils';
       component: MappingTreeComponent,
       resolve: { mappingTree: treeResolver }
     }),
-    hookTab(TreeTabFactory)
+    hookNavigator(MappingTreeNavigationFactory), 
   ]
 })
 export class MappingTreeModule {}

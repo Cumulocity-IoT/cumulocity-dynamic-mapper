@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 package dynamic.mapping.model;
@@ -139,20 +139,25 @@ public class MappingsRepresentationTest {
     void testSplitTopic() {
 
         String t1 = "/d1/e1/f1/";
-        String[] r1 = Mapping.splitTopicExcludingSeparatorAsArray(t1);
+        String[] r1 = Mapping.splitTopicExcludingSeparatorAsArray(t1, false);
         log.info("My topicSplit: {}", Arrays.toString(r1));
-        assertArrayEquals(new String[] { "d1", "e1", "f1" }, r1);
+        assertArrayEquals(new String[] { "/", "d1", "e1", "f1" }, r1);
 
         String t2 = "///d1/e1/f1///";
-        String[] r2 = Mapping.splitTopicExcludingSeparatorAsArray(t2);
+        String[] r2 = Mapping.splitTopicExcludingSeparatorAsArray(t2, false);
         log.info("My topicSplit: {}, size: {}", Arrays.toString(r2), r2.length);
-        assertArrayEquals(new String[] { "d1", "e1", "f1" }, r2);
+        assertArrayEquals(new String[] { "/", "d1", "e1", "f1" }, r2);
 
         String t3 = "///d1/e1/f1///";
-        String[] r3 = Mapping.splitTopicIncludingSeparatorAsArray(t3);
-        log.info("My topicSplit: {}", Arrays.toString(r3));
+        String[] r3 = Mapping.splitTopicExcludingSeparatorAsArray(t3, true);
+        log.info("My topicSplit: {}, size: {}", Arrays.toString(r3), r3.length);
+        assertArrayEquals(new String[] { "d1", "e1", "f1" }, r3);
 
-        assertArrayEquals(new String[] { "/", "d1", "/", "e1", "/", "f1", "/" }, r3);
+        String t4 = "///d1/e1/f1///";
+        String[] r4 = Mapping.splitTopicIncludingSeparatorAsArray(t4);
+        log.info("My topicSplit important: {}", Arrays.toString(r4));
+
+        assertArrayEquals(new String[] { "/", "d1", "/", "e1", "/", "f1", "/" }, r4);
 
     }
 

@@ -1,22 +1,22 @@
 <!--
-  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
-  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
   ~
   ~ SPDX-License-Identifier: Apache-2.0
   ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
   ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~       http://www.apache.org/licenses/LICENSE-2.0
   ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
   ~
-  ~ @authors Christof Strack
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
   -->
 
 <div class="fit-h">
@@ -54,7 +54,7 @@
         </div>
       </div>
       <div class="col-xs-12 flex-grow no-gutter">
-        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [deploymentMapEntry]="deploymentMapEntry"
+        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]" [deploymentMapEntry]="deploymentMapEntry"
           (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
       </div>
       <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
@@ -217,11 +217,9 @@
                         <div class="d-flex">
                           <label>Target Template - {{ targetSystem }}</label>
                           <span class="hidden-xs hidden-sm m-l-4">
-                            <button type="button" placement="right"
-                              popover='The template contains the dummy field
-                              "_TOPIC_LEVEL_"(outbound) to map device
-                              identifiers.'
-                              triggers="focus" class="btn-help" aria-label="Help content"></button>
+                            <button type="button" placement="right" [popover]="'The template contains the dummy field
+                              _TOPIC_LEVEL_ for outbound to map device
+                              identifiers.'" triggers="focus" class="btn-help" aria-label="Help content"></button>
                           </span>
                         </div>
                       </div>
@@ -257,28 +255,15 @@
                 <div class="row p-t-8">
                   <div class="col-lg-3 col-lg-offset-1 p-l-48">
                     <button type="button" name="addSubstitution" class="btn btn-default btn-sm"
-                      (click)="onAddSubstitution()" translate title="Add substitution" [attr.disabled]="
-                          isDisabled(
-                            !stepperConfiguration.showEditorSource ||
-                              stepperConfiguration.editorMode ===
-                                EditorMode.READ_ONLY ||
-                              !isSubstitutionValid()
-                          )
-                        ">
+                      (click)="onAddSubstitution()" translate title="Add substitution"
+                      [disabled]="addSubstitutionDisabled()">
                       <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution
                     </button>
                   </div>
                   <div class="col-lg-3 col-lg-offset-1">
                     <button type="button" name="updateSubstitution" class="btn btn-default btn-sm"
-                      (click)="onUpdateSubstitution()" translate title="Update substitution" [attr.disabled]="
-                          isDisabled(
-                            !stepperConfiguration.showEditorSource ||
-                              stepperConfiguration.editorMode ===
-                                EditorMode.READ_ONLY ||
-                              selectedSubstitution === -1 ||
-                              !isSubstitutionValid()
-                          )
-                        ">
+                      (click)="onUpdateSubstitution()" translate title="Update substitution"
+                      [disabled]="updateSubstitutionDisabled()">
                       <i c8yIcon="pencil"></i><span id="updateButton">&nbsp;Update substitution</span>
                     </button>
                   </div>
@@ -336,11 +321,13 @@
                           }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)">
                       </d11r-mapping-substitution-grid>
                     </div>
-                    <span class="text-warning text-12 p-l-8" *ngIf="
-                          (isSubstitutionValid$ | async) != true
-                        ">One substitution for <code *ngIf="mapping.useExternalId"
-                        class="text-warning text-10">_IDENTITY_.externalId</code> <code *ngIf="!mapping.useExternalId"
-                        class="text-warning text-10">_IDENTITY_.c8ySourceId<</code> must exist.</span>
+                    <ng-container *ngIf="isSubstitutionValid$ | async as isValid">
+                      <span class="text-warning text-12 p-l-8" *ngIf="isValid
+                          ">One substitution for <code *ngIf="mapping.useExternalId"
+                          class="text-warning text-10">_IDENTITY_.externalId</code> <code *ngIf="!mapping.useExternalId"
+                          class="text-warning text-10">_IDENTITY_.c8ySourceId<</code> must exist.</span>
+
+                    </ng-container>
                   </div>
                 </div>
               </div>
@@ -408,6 +395,48 @@
           mapping type</small>
       </div>
     </ng-template>
-
+    <ng-template #extensionTemplateSourceTarget let-form="form">
+      <div
+        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
+        <div class="form-group p-b-8">
+          <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
+          <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
+            <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
+              (change)="
+                  onSelectExtensionName(templateForm.value.extensionName)
+                " required>
+              <option [ngValue]="null" disabled>
+                Select an extension
+              </option>
+              <option *ngFor="let extension of extensions | keyvalue" [ngValue]="extension.key"
+                [selected]="extension.key === mapping.extension?.extensionName">
+                {{ extension.key }}
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label translate>Events for {{ mapping.extension['name'] }}</label>
+          <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
+            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl (change)="
+                onSelectExtensionEvent(templateForm.value.eventName)
+              " required>
+              <option [ngValue]="null" disabled>
+                Select an event
+              </option>
+              <option *ngFor="let extensionEntry of (extensionEvents$ | async)" [ngValue]="extensionEntry.eventName"
+                [selected]="extensionEntry.eventName === mapping.extension?.eventName">
+                {{ extensionEntry.eventName }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="p-t-48" *ngIf="stepperConfiguration.showProcessorExtensionsInternal
+    ">
+        <small class="text-muted">Template is described internally by the chosen
+          mapping type</small>
+      </div>
+    </ng-template>
   </c8y-stepper>
 </div>

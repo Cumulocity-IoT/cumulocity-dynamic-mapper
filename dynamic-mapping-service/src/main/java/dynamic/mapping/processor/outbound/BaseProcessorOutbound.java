@@ -1,22 +1,22 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *       http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ *  @authors Christof Strack, Stefan Witschel
+ *
  */
 
 package dynamic.mapping.processor.outbound;
@@ -123,7 +123,7 @@ public abstract class BaseProcessorOutbound<T> {
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
          */
-        List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+        List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
         payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         if (mapping.supportsMessageContext) {
             Map<String, String> cod = new HashMap<String, String>() {
@@ -159,14 +159,17 @@ public abstract class BaseProcessorOutbound<T> {
             if (topicLevels != null && topicLevels.size() > 0) {
                 // now merge the replaced topic levels
                 MutableInt c = new MutableInt(0);
+                MutableInt index = new MutableInt(0);
                 String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
+                log.info("Tenant {} - Resolving topic: context.getTopic() {}, splitTopicInAsList {}, topicLevels {}", tenant, context.getTopic(),splitTopicInAsList, topicLevels);
                 topicLevels.forEach(tl -> {
                     while (c.intValue() < splitTopicInAsList.length
-                            && ("/".equals(splitTopicInAsList[c.intValue()]))) {
+                            && ("/".equals(splitTopicInAsList[c.intValue()]) && index.intValue() > 0 )) {
                         c.increment();
                     }
                     splitTopicInAsList[c.intValue()] = tl;
-                    c.increment();
+                    index.increment();
+
                 });
 
                 StringBuffer resolvedPublishTopic = new StringBuffer();

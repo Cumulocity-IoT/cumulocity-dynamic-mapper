@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -73,7 +72,7 @@ export abstract class BaseProcessorOutbound {
      * is required in the payload for a substitution
      */
     const splitTopicExAsList: string[] = splitTopicExcludingSeparator(
-      context.topic
+      context.topic, false
     );
     payloadTarget[TOKEN_TOPIC_LEVEL] = splitTopicExAsList;
     const deviceSource: string = 'undefined';

@@ -15,17 +15,18 @@ The architecture of the components consists of the following components:
 <img src="resources/image/Dynamic_Mapper_Diagram_Architecture.png"  style="width: 100%;" />
 </p>
 <br/>
-The light blue components are part of this project which are:
+The main components of this project are:
 
-- three default connectors for..
+- four default connectors for..
   - **MQTT client** - using [hivemq-mqtt-client](https://github.com/hivemq/hivemq-mqtt-client) to connect and subscribe to MQTT brokers
   - **MQTT Service client** - using hivemq-mqtt-client to connect to MQTT Service
   - **Kafka connector** - to connect to Kafka brokers
+  - **HTTP/REST endpoint** - to receive data from HTTP/REST clients
 - **Data mapper** - handling of received messages via connector and mapping them to a target data format for Cumulocity IoT.
   Also includes an expression runtime [JSONata](https://jsonata.org) to execute expressions
 - **C8Y client** - implements part of the Cumulocity IoT REST API to integrate data
 - **REST endpoints** - custom endpoints which are used by the MQTT Frontend or can be used to add mappings programmatically
-- **Mapper frontend** - A plugin for Cumulocity IoT to provide an UI for MQTT Configuration & Data Mapping
+- **Mapper frontend** - A plugin for Cumulocity IoT to provide a UI for MQTT Configuration & Data Mapping
 
 > **Please Note:** When using MQTT or any other Message Broker beside MQTT Service you need to provide this broker available yourself to use the Dynamic Data Mapper.
 

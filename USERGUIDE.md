@@ -1,7 +1,7 @@
 # User Guide
 
 - [User Guide](#user-guide)
-  - [Connector configuration to broker](#connector-configuration-to-broker)
+  - [Connector configuration to broker and http endpoint](#connector-configuration-to-broker-and-http-endpoint)
   - [Definition and Activation of mappings](#definition-and-activation-of-mappings)
     - [Table of mappings](#table-of-mappings)
     - [Define mappings from source to target format (Cumulocity REST format)](#define-mappings-from-source-to-target-format--cumulocity-rest-format-)
@@ -28,7 +28,13 @@
   - [Monitoring](#monitoring)
     - [Mapping Tree Inbound](#mapping-tree-inbound)
 
-## Connector configuration to broker
+## Connector configuration to broker and http endpoint
+
+Connectors are the client to the different messaging servers: MQTT brokers, Kafka.
+The `Default HTTP Connector` is a special case of a connector:
+1. It has not to be created as the connector will be created automatically at startup of the backend for every tenant.
+1. The endpoint for the `Default HTTP Connector` can be accessed at the url `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/<MAPPING_TOPIC>`
+1. The sub path following `.../dynamic-mapping-service/httpConnector/` is used as `<MAPPING_TOPIC>`, e.g. a json payload send to `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01` will be resolved to a mapping with mapping topic: `temp/berlin_01`
 
 The configurations of connectors are persisted as tenant options in the Cumulocity Tenant and can be managed using the following UI.\
 The table of configured connectors to different brokers can be:
@@ -43,30 +49,46 @@ The table of configured connectors to different brokers can be:
 
 <br/>
 
+The mapper supports the following connectors:
+
+<p align="center">
+<img src="resources/image/ConnectorMatrix.png"  style="width: 70%;" />
+</p>
+<br/>
+
 Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently we support the following connectors:
 
 - MQTT: supports connections to MQTT version 3.1.1 over websocket and tcp
 - MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
-- Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization ( currently StringSerializer)...
+- Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization (currently StringSerializer)...
+- HTTP Connector: the `HTTP Connector` is a HTTP endpoint where custom payload can be sent to the mapper over HTTP
+- Webhook: the `Webhook` sends outbound messages to the configured REST endpoints as POST in JSON format.
 
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Edit.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Edit.png"  style="width: 50%;" />
 </p>
 <br/>
 
 The settings for the Kafka connector can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Kafka.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Kafka.png"  style="width: 50%;" />
+</p>
+<br/>
+
+The settings for the Default HTTP Connector are as follows
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Connector_Http.png"  style="width: 50%;" />
 </p>
 <br/>
 
 When you add or change a connection configuration it happens very often that the parameter are incorrect and the connection fails. In this case the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter you can follows the error messages in the connections logs on the same UI:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Monitoring.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Details.png"  style="width: 50%;" />
 </p>
 <br/>
 
@@ -118,13 +140,13 @@ Further example for JSONata expressions are:
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 
 1. `JSON`: if your payload is in JSON format
-1. `FLAT_FILE`: if your payload is in a CSV format
-1. `BINARY`: if your payload is in HEX format
-1. `PROTOBUF_INTERNAL`: if your payload is a serialized protobuf message
-1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension
+1. `Flat File`: if your payload is in a CSV format
+1. `Binary`: if your payload is in HEX format
+1. `Protobuf Internal`: if your payload is a serialized protobuf message
+1. `Extension Source`: if you want to process the message yourself, by registering a processor extension
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png"  style="width: 50%;" />
 </p>
 <br/>
 
@@ -133,15 +155,15 @@ The wizard to define a mapping consists of the steps:
 1. Select the type of mapping:
 
 - `JSON`
-- `FLAT_FILE`
-- `BINARY`
-- `PROTOBUF_INTERNAL`
-- `PROCESSOR_EXTENSION`
+- `Flat File`
+- `Binary`
+- `Protobuf Internal`
+- `Extension Source`
 
 ---
 
 **NOTE:**
-Payload for `FLAT_FILE` and `BINARY` are wrapped.
+Payload for `Flat File` and `Binary` are wrapped.
 For example for a flat file messages:
 
 ```
@@ -326,7 +348,7 @@ Otherwise an extracted array is treated as a single value, see [Different type o
     * `REMOVE_IF_MISSING_OR_NULL`: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.g. `airsensor: undefined`
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Edit_Modal.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Edit_Modal.png"  style="width: 50%;" />
 </p>
 <br/>
 
@@ -449,7 +471,7 @@ In order to use a previously snooped payload click the button
 `Snooped templates`. Multiples activation of this button iterates over all the recorded templates.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 50%;" />
 </p>
 <br/>
 
@@ -494,7 +516,7 @@ The configuration of the microservice can be changed using the following UI:
 
 ### Processing Extensions
 
-When you choose the mapping type `PROCESSOR_EXTENSION` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
+When you choose the mapping type `Extension Source` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_ProtobufMessage_Annnotated.png"  style="width: 70%;" />

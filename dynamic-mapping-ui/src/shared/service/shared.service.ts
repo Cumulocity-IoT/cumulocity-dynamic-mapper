@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
- * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ * Copyright (c) 2025 Cumulocity GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,12 +17,12 @@
  *
  * @authors Christof Strack
  */
-
 import { Injectable } from '@angular/core';
 import {
   IFetchResponse,
   IdentityService,
-  IExternalIdentity
+  IExternalIdentity,
+  ApplicationService
 } from '@c8y/client';
 import {
   AGENT_ID,
@@ -37,14 +36,23 @@ import {
 import { Subject, takeUntil, timer } from 'rxjs';
 import { FetchClient } from '@c8y/ngx-components/api';
 import { ServiceConfiguration } from '../../configuration';
-import { Operation, ServiceOperation } from './shared.model';
+import { ServiceOperation } from './shared.model';
+import { OptionsService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
   constructor(
     private client: FetchClient,
-    private identity: IdentityService
-  ) {}
+    private identity: IdentityService,
+    private option: OptionsService,
+    private application: ApplicationService,
+
+  ) {
+    // console.log('Option:', this.option, this.application, window.location);
+    const docBaseUrl = `${window.location.origin}/${window.location.pathname}`;
+    this.option.set("docsBaseUrl", docBaseUrl);
+  }
+
   private _agentId: string;
   private _featurePromise: Promise<Feature>;
   reloadInbound$: Subject<void> = new Subject<void>();
