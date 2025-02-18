@@ -241,8 +241,22 @@ public class Mapping implements Serializable {
     }
 
     public static String[] splitTopicIncludingSeparatorAsArray(String topic) {
-        topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "/");
-        return topic.split(SPLIT_TOPIC_REGEXP);
+        topic = topic.trim();
+        StringBuilder result = new StringBuilder();
+        boolean wasSlash = false;
+        
+        for (char c : topic.toCharArray()) {
+            if (c == '/') {
+                if (!wasSlash) {
+                    result.append(c);
+                }
+                wasSlash = true;
+            } else {
+                result.append(c);
+                wasSlash = false;
+            }
+        }
+        return result.toString().split(SPLIT_TOPIC_REGEXP);
     }
 
     public static List<String> splitTopicIncludingSeparatorAsList(String topic) {

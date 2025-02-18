@@ -163,22 +163,28 @@ public class ConfigurationController {
             @RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details", tenant);
-
+    
         try {
-            // Create Pattern object for the regex only if name is provided
-            Pattern pattern = name != null ? Pattern.compile(name) : null;
-
+            // Convert wildcard pattern to regex pattern if name is provided
+            Pattern pattern = null;
+            if (name != null) {
+                // Escape all special regex characters except *
+                String escapedName = Pattern.quote(name).replace("*", ".*");
+                // Remove the quotes added by Pattern.quote() at the start and end
+                escapedName = escapedName.substring(2, escapedName.length() - 2);
+                pattern = Pattern.compile("^" + escapedName + "$");
+            }
+    
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
                     .getConnectorConfigurations(tenant);
             List<ConnectorConfiguration> modifiedConfigs = new ArrayList<>();
-
+    
             // Remove sensitive data before sending to UI
             for (ConnectorConfiguration config : configurations) {
                 ConnectorSpecification connectorSpecification = connectorRegistry
                         .getConnectorSpecification(config.connectorType);
                 ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
-                // Add configuration if no pattern (name) is provided or if name matches the
-                // pattern
+                
                 if (pattern == null || pattern.matcher(cleanedConfig.getName()).matches()) {
                     modifiedConfigs.add(cleanedConfig);
                 }

@@ -155,7 +155,7 @@ public class MappingsRepresentationTest {
 
         String t4 = "///d1/e1/f1///";
         String[] r4 = Mapping.splitTopicIncludingSeparatorAsArray(t4);
-        log.info("My topicSplit: {}", Arrays.toString(r4));
+        log.info("My topicSplit important: {}", Arrays.toString(r4));
 
         assertArrayEquals(new String[] { "/", "d1", "/", "e1", "/", "f1", "/" }, r4);
 
