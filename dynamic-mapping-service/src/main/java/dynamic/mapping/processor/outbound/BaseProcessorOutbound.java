@@ -159,17 +159,16 @@ public abstract class BaseProcessorOutbound<T> {
             if (topicLevels != null && topicLevels.size() > 0) {
                 // now merge the replaced topic levels
                 MutableInt c = new MutableInt(0);
-                MutableInt index = new MutableInt(0);
+                //MutableInt index = new MutableInt(0);
                 String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
                 log.info("Tenant {} - Resolving topic: context.getTopic() {}, splitTopicInAsList {}, topicLevels {}", tenant, context.getTopic(),splitTopicInAsList, topicLevels);
                 topicLevels.forEach(tl -> {
                     while (c.intValue() < splitTopicInAsList.length
-                            && ("/".equals(splitTopicInAsList[c.intValue()]) && index.intValue() > 0 )) {
+                            && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0 )) {
                         c.increment();
                     }
                     splitTopicInAsList[c.intValue()] = tl;
-                    index.increment();
-
+                    c.increment();
                 });
 
                 StringBuffer resolvedPublishTopic = new StringBuffer();
