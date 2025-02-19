@@ -46,6 +46,15 @@ public class GraalsMeasurement implements ProcessorExtensionSource<byte[]> {
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
         try {
+            // TODO embed org.graalvm.polyglot.Context here:
+            // final Context ctx =
+            // Context.newBuilder("js")
+            //     // be careful with host access if you do not trust the source of your JS files
+            //     .allowAllAccess(true)
+            //     .option("js.strict", "true")
+            //     .build();
+            // ..
+        
             Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
 
             context.addToProcessingCache("time", new DateTime(
