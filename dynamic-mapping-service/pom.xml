@@ -122,10 +122,6 @@
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.graalvm.truffle</groupId>
-			<artifactId>truffle-api</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.graalvm.sdk</groupId>
 			<artifactId>graal-sdk</artifactId>
 		</dependency>

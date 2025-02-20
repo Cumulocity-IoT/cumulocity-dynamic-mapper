@@ -47,14 +47,27 @@ public class GraalsMeasurement implements ProcessorExtensionSource<byte[]> {
             throws ProcessingException {
         try {
             // TODO embed org.graalvm.polyglot.Context here:
-            // final Context ctx =
-            // Context.newBuilder("js")
-            //     // be careful with host access if you do not trust the source of your JS files
-            //     .allowAllAccess(true)
-            //     .option("js.strict", "true")
-            //     .build();
-            // ..
-        
+            final org.graalvm.polyglot.Context ctx =
+            Context.newBuilder("js")
+                    // be careful with host access if you do not trust the source of your JS files
+                    .allowAllAccess(true)
+                    .option("js.strict", "true")
+                    .build();
+            final Source js = Source.newBuilder("js", GraalsMeasurement.class.getClassLoader().getResource("test-substitution.js")).build();
+            // make the engine evaluate the javascript script
+            ctx.eval(js);
+            // get a reference to the map function
+            final Value mapFunc = ctx.getBindings("js").getMember("map");
+
+            // execute the function, with the provided context
+            final Value result = mapFunc.execute(new SubstitutionContext("Mauro", "value"));
+            // map the result to our type (whose object was created in the JS script)
+            final SubstitutionResult typedResult = result.as(new TypeLiteral<>() {
+            });
+
+            log.info("Tenant {} - Result from javascript substitution: {}", context.getTenant(),
+            typedResult);
+
             Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
 
             context.addToProcessingCache("time", new DateTime(
