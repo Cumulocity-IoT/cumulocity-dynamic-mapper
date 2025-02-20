@@ -43,9 +43,9 @@
 		<maven.compiler.target>21</maven.compiler.target>
 		<java.version>21</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<graalvm.version>24.1.2</graalvm.version>
-		<graalvm.js.version>23.0.6</graalvm.js.version>
-		<graalvm.js-language.version>23.1.6</graalvm.js-language.version>
+		<graalvm.version>23.0.7</graalvm.version>
+		<graalvm.js.version>23.0.7</graalvm.js.version>
+		<graalvm.js-language.version>23.0.7</graalvm.js-language.version>
 	</properties>
 	<repositories>
 		<repository>
@@ -208,11 +208,21 @@
 				<version>${graalvm.js.version}</version>
 				<scope>runtime</scope>
 			</dependency>
-			<dependency>
+			<!-- <dependency>
 				<groupId>org.graalvm.js</groupId>
 				<artifactId>js-language</artifactId>
 				<version>${graalvm.js-language.version}</version>
 				<scope>runtime</scope>
+			</dependency> -->
+			<!-- <dependency>
+				<groupId>org.graalvm.js</groupId>
+				<artifactId>js-scriptengine</artifactId>
+				<version>${graalvm.version}</version>
+			</dependency> -->
+			<dependency>
+				<groupId>org.graalvm.truffle</groupId>
+				<artifactId>truffle-api</artifactId>
+				<version>${graalvm.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
