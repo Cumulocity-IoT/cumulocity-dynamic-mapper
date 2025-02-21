@@ -21,8 +21,6 @@
 
 package dynamic.mapping.core;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -50,8 +48,8 @@ import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessor;
 import dynamic.mapping.processor.inbound.BaseProcessorInbound;
-import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.BinaryProcessorInbound;
+import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.JSONProcessorInbound;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.outbound.BaseProcessorOutbound;
@@ -60,10 +58,19 @@ import dynamic.mapping.processor.processor.fixed.InternalProtobufProcessor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.graalvm.polyglot.Context;
 
 @Slf4j
 @Component
 public class ConfigurationRegistry {
+
+    @Getter
+    private Context graalsContext;
+
+    @Autowired
+    public void setGraalsContext(Context ctx) {
+        this.graalsContext = ctx;
+    }
 
     @Getter
     private Map<String, MicroserviceCredentials> microserviceCredentials = new HashMap<>();
@@ -100,7 +107,7 @@ public class ConfigurationRegistry {
     private C8YNotificationSubscriber notificationSubscriber;
 
     @Autowired
-    public void setC8yAgent(C8YNotificationSubscriber notificationSubscriber) {
+    public void setNotificationSubscriber(C8YNotificationSubscriber notificationSubscriber) {
         this.notificationSubscriber = notificationSubscriber;
     }
 

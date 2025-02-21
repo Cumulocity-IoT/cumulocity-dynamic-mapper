@@ -1,19 +1,15 @@
 package dynamic.mapping.processor.extension.internal;
 
+import java.util.Map;
+
 public class SubstitutionContext {
-    private final String name;
-    private final String value;
-  
-    public SubstitutionContext(String name, String value) {
-      this.name = name;
-      this.value = value;
+    private final Map jsonObject;
+
+    public SubstitutionContext(Map jsonObject) {
+        this.jsonObject = jsonObject;
     }
-  
-    public String getName() {
-      return name;
+
+    public Map getJsonObject() {
+        return jsonObject;
     }
-  
-    public String getValue() {
-      return value;
-    }
-  }
+}

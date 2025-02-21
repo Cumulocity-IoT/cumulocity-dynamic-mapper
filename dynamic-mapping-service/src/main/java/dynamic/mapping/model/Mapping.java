@@ -150,6 +150,9 @@ public class Mapping implements Serializable {
     @NotNull
     public QOS qos;
 
+    // code for substitutions encoded in base64
+    public String code;
+
     @NotNull
     public long lastUpdate;
 

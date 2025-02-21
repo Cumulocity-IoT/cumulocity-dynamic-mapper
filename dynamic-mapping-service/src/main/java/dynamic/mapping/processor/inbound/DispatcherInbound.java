@@ -48,6 +48,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
+
 /**
  * AsynchronousDispatcherInbound
  * 
@@ -101,6 +105,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         Timer inboundProcessingTimer;
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
+        Context graalsContext;
         ExecutorService virtThreadPool;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
@@ -121,6 +126,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
+            this.graalsContext = configurationRegistry.getGraalsContext();
             this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 
         }
@@ -145,12 +151,26 @@ public class DispatcherInbound implements GenericMessageCallback {
                     BaseProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
                     try {
                         if (processor != null) {
+
+                            // prepare graals func
+                            Value extractFromSourceFunc = this.graalsContext.getBindings("js").getMember("extractFromSource");
+                            if (extractFromSourceFunc == null) {
+                                Source js = Source.newBuilder("js",
+                                        DispatcherInbound.class.getClassLoader().getResource("test-substitution.js"))
+                                        .build();
+                                // // make the engine evaluate the javascript script
+                                this.graalsContext.eval(js);
+                            }
                             inboundProcessingCounter.increment();
                             Object payload = processor.deserializePayload(mapping, connectorMessage);
                             ProcessingContext<?> context = ProcessingContext.builder().payload(payload).topic(topic)
                                     .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
                                     .tenant(tenant).supportsMessageContext(connectorMessage.isSupportsMessageContext()
-                                            && mapping.supportsMessageContext).key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
+                                            && mapping.supportsMessageContext)
+                                    .key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
+                                    // .graalsContext(mapping.code != null ? this.graalsContext : null)
+                                    // .graalsContext(this.graalsContext)
+                                    .extractFromSourceFunc(extractFromSourceFunc)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",

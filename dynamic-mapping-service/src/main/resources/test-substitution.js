@@ -1,7 +1,10 @@
 const SubstitutionResult = Java.type('dynamic.mapping.processor.extension.internal.SubstitutionResult');
-function map(ctx) {
+function extractFromSource(ctx) {
+    const jsonObject= ctx.getJsonObject();
+    for (var key in jsonObject) {
+        console.log(`key: ${key}, value: ${jsonObject.get(key)}`);
+    }
     return new SubstitutionResult({
-        myNameIs: ctx.getName(),
-        myValueIs: ctx.getValue()
+        temperature : jsonObject.get('temperature')
     });
 }

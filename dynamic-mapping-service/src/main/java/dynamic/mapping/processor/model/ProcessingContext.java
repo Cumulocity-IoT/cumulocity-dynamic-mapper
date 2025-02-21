@@ -38,6 +38,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Value;
+
 
 @Getter
 @Setter
@@ -99,6 +102,10 @@ public class ProcessingContext<O> {
     private byte[] key;
 
     private String sourceId;
+
+    private Context graalsContext;
+
+    private Value extractFromSourceFunc;
 
     public static final String SOURCE_ID = "source.id";
 

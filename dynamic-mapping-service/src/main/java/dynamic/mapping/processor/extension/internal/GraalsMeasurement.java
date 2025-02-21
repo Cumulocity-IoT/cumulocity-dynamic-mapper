@@ -28,7 +28,6 @@ import com.dashjoin.jsonata.json.Json;
 import java.util.Map;
 
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.TypeLiteral;
 import org.graalvm.polyglot.Value;
@@ -47,28 +46,34 @@ public class GraalsMeasurement implements ProcessorExtensionSource<byte[]> {
             throws ProcessingException {
         try {
             // TODO embed org.graalvm.polyglot.Context here:
-            final org.graalvm.polyglot.Context ctx =
-            Context.newBuilder("js")
-                    // be careful with host access if you do not trust the source of your JS files
-                    .allowAllAccess(true)
-                    .option("js.strict", "true")
-                    .build();
-            final Source js = Source.newBuilder("js", GraalsMeasurement.class.getClassLoader().getResource("test-substitution.js")).build();
-            // make the engine evaluate the javascript script
-            ctx.eval(js);
-            // get a reference to the map function
-            final Value mapFunc = ctx.getBindings("js").getMember("map");
+            // final org.graalvm.polyglot.Context ctx =
+            // Context.newBuilder("js")
+            // // be careful with host access if you do not trust the source of your JS
+            // files
+            // .allowAllAccess(true)
+            // .option("js.strict", "true")
+            // .build();
+            // Context ctx = context.getGraalsContext();
+            // final Source js = Source.newBuilder("js",
+            // GraalsMeasurement.class.getClassLoader().getResource("test-substitution.js")).build();
+            // // make the engine evaluate the javascript script
+            // ctx.eval(js);
+            // // get a reference to the map function
+            // ANALYSIS: if this is called multiple times an exception is thrown:
+            // SyntaxError: Variable "SubstitutionResult" has already been declared
+            // final Value mapFunc = ctx.getBindings("js").getMember("extractFromSource");
 
+            Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
+
+            final Value mapFunc = context.getExtractFromSourceFunc();
             // execute the function, with the provided context
-            final Value result = mapFunc.execute(new SubstitutionContext("Mauro", "value"));
+            final Value result = mapFunc.execute(new SubstitutionContext(jsonObject));
             // map the result to our type (whose object was created in the JS script)
             final SubstitutionResult typedResult = result.as(new TypeLiteral<>() {
             });
 
             log.info("Tenant {} - Result from javascript substitution: {}", context.getTenant(),
-            typedResult);
-
-            Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
+                    typedResult);
 
             context.addToProcessingCache("time", new DateTime(
                     jsonObject.get("time"))
