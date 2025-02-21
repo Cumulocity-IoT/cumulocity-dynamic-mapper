@@ -21,14 +21,14 @@
 
 package dynamic.mapping.processor.extension.internal;
 
+
 import org.joda.time.DateTime;
 
 import com.dashjoin.jsonata.json.Json;
 
+import java.util.Iterator;
 import java.util.Map;
 
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.TypeLiteral;
 import org.graalvm.polyglot.Value;
 
@@ -67,7 +67,7 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
 
             final Value mapFunc = context.getExtractFromSourceFunc();
             // execute the function, with the provided context
-            final Value result = mapFunc.execute(new SubstitutionContext(jsonObject));
+            final Value result = mapFunc.execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),jsonObject));
             // map the result to our type (whose object was created in the JS script)
             final SubstitutionResult typedResult = result.as(new TypeLiteral<>() {
             });
@@ -75,42 +75,31 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
             log.info("Tenant {} - Result from javascript substitution: {}", context.getTenant(),
                     typedResult);
 
-            context.addToProcessingCache("time", new DateTime(
-                    jsonObject.get("time"))
-                    .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
-
-            Map fragmentTemperatureSeries = Map.of("value", jsonObject.get("temperature"), "unit",
-                    jsonObject.get("unit"));
-            Map fragmentTemperature = Map.of("T", fragmentTemperatureSeries);
-
-            context.addToProcessingCache("c8y_Fragment_to_remove", null, TYPE.TEXTUAL,
-                    RepairStrategy.REMOVE_IF_MISSING_OR_NULL);
-            context.addToProcessingCache("c8y_Temperature",
-                    fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT);
-            context.addToProcessingCache("c8y_Temperature",
-                    fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT);
-            // as the mapping uses useExternalId we have to map the id to
-            // _IDENTITY_.externalId
-            context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
-                    jsonObject.get("externalId")
-                            .toString(),
-                    TYPE.TEXTUAL, RepairStrategy.DEFAULT);
-
-            Number unexpected = Float.NaN;
-            if (jsonObject.get("unexpected") != null) {
-                // it is important to use RepairStrategy.CREATE_IF_MISSING as the node
-                // "unexpected" does not yet exists in the target payload
-                Map fragmentUnexpectedSeries = Map.of("value", jsonObject.get("unexpected"), "unit", "unknown_unit");
-                Map fragmentUnexpected = Map.of("U", fragmentUnexpectedSeries);
-                context.addToProcessingCache("c8y_Unexpected",
-                        fragmentUnexpected, TYPE.OBJECT, RepairStrategy.CREATE_IF_MISSING);
-                unexpected = (Number) jsonObject.get("unexpected");
+            for (Substitution item : typedResult.substitutions) {
+                context.addToProcessingCache(item.key, item.value, TYPE.valueOf(item.type), RepairStrategy.valueOf(item.repairStrategy));
             }
+            // context.addToProcessingCache("time", new DateTime(
+            //         jsonObject.get("time"))
+            //         .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
 
-            log.info("Tenant {} - New measurement over json processor: {}, {}, {}, {}", context.getTenant(),
-                    jsonObject.get("time").toString(),
-                    jsonObject.get("unit").toString(), jsonObject.get("temperature"),
-                    unexpected);
+            // Map fragmentTemperatureSeries = Map.of("value", jsonObject.get("temperature"), "unit",
+            //         jsonObject.get("unit"));
+            // Map fragmentTemperature = Map.of("T", fragmentTemperatureSeries);
+
+            // context.addToProcessingCache("c8y_Fragment_to_remove", null, TYPE.TEXTUAL,
+            //         RepairStrategy.REMOVE_IF_MISSING_OR_NULL);
+            // context.addToProcessingCache("c8y_Temperature",
+            //         fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT);
+
+            // // as the mapping uses useExternalId we have to map the id to
+            // // _IDENTITY_.externalId
+            // context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
+            //         jsonObject.get("externalId")
+            //                 .toString(),
+            //         TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+
+            log.info("Tenant {} - New payload over GraalsCodeExtension: {}, {}, {}, {}", context.getTenant(),
+                    jsonObject);
         } catch (Exception e) {
             throw new ProcessingException(e.getMessage());
         }

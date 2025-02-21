@@ -171,6 +171,8 @@ public class DispatcherInbound implements GenericMessageCallback {
 
                                     // // make the engine evaluate the javascript script
                                     this.graalsContext.eval(source);
+                                    extractFromSourceFunc = this.graalsContext.getBindings("js").getMember(identifier);
+
                                 }
 
                             }

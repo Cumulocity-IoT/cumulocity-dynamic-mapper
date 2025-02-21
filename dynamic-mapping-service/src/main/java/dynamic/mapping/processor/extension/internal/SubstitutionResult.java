@@ -1,16 +1,18 @@
 package dynamic.mapping.processor.extension.internal;
 
-public class SubstitutionResult {
-    private final Object result;
+import java.util.List;
 
-    public SubstitutionResult(Object result) {
-      this.result = result;
+public class SubstitutionResult {
+    public final List<Substitution> substitutions;
+
+    public SubstitutionResult(List<Substitution> substitutions) {
+      this.substitutions = substitutions;
     }
 
     @Override
     public String toString() {
         return "SubstitutionResult{" +
-                "result=" + result +
+                "substitutions=" + substitutions +
                 '}';
     }
 }

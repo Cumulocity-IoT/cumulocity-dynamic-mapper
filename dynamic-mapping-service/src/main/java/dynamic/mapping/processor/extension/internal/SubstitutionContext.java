@@ -4,11 +4,17 @@ import java.util.Map;
 
 public class SubstitutionContext {
     private final Map jsonObject;
+    private final String genericDeviceIdentifier;
 
-    public SubstitutionContext(Map jsonObject) {
+    public SubstitutionContext(String genericDeviceIdentifier,Map jsonObject) {
         this.jsonObject = jsonObject;
+        this.genericDeviceIdentifier = genericDeviceIdentifier;
     }
 
+
+    public String getGenericDeviceIdentifier() {
+        return genericDeviceIdentifier;
+    }
     public Map getJsonObject() {
         return jsonObject;
     }
