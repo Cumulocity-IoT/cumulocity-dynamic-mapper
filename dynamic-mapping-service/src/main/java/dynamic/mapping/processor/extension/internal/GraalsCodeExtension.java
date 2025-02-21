@@ -21,12 +21,8 @@
 
 package dynamic.mapping.processor.extension.internal;
 
-
-import org.joda.time.DateTime;
-
 import com.dashjoin.jsonata.json.Json;
 
-import java.util.Iterator;
 import java.util.Map;
 
 import org.graalvm.polyglot.TypeLiteral;
@@ -45,30 +41,10 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
         try {
-            // TODO embed org.graalvm.polyglot.Context here:
-            // final org.graalvm.polyglot.Context ctx =
-            // Context.newBuilder("js")
-            // // be careful with host access if you do not trust the source of your JS
-            // files
-            // .allowAllAccess(true)
-            // .option("js.strict", "true")
-            // .build();
-            // Context ctx = context.getGraalsContext();
-            // final Source js = Source.newBuilder("js",
-            // GraalsMeasurement.class.getClassLoader().getResource("test-substitution.js")).build();
-            // // make the engine evaluate the javascript script
-            // ctx.eval(js);
-            // // get a reference to the map function
-            // ANALYSIS: if this is called multiple times an exception is thrown:
-            // SyntaxError: Variable "SubstitutionResult" has already been declared
-            // final Value mapFunc = ctx.getBindings("js").getMember("extractFromSource");
-
             Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
 
             final Value mapFunc = context.getExtractFromSourceFunc();
-            // execute the function, with the provided context
             final Value result = mapFunc.execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),jsonObject));
-            // map the result to our type (whose object was created in the JS script)
             final SubstitutionResult typedResult = result.as(new TypeLiteral<>() {
             });
 
@@ -78,26 +54,6 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
             for (Substitution item : typedResult.substitutions) {
                 context.addToProcessingCache(item.key, item.value, TYPE.valueOf(item.type), RepairStrategy.valueOf(item.repairStrategy));
             }
-            // context.addToProcessingCache("time", new DateTime(
-            //         jsonObject.get("time"))
-            //         .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
-
-            // Map fragmentTemperatureSeries = Map.of("value", jsonObject.get("temperature"), "unit",
-            //         jsonObject.get("unit"));
-            // Map fragmentTemperature = Map.of("T", fragmentTemperatureSeries);
-
-            // context.addToProcessingCache("c8y_Fragment_to_remove", null, TYPE.TEXTUAL,
-            //         RepairStrategy.REMOVE_IF_MISSING_OR_NULL);
-            // context.addToProcessingCache("c8y_Temperature",
-            //         fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT);
-
-            // // as the mapping uses useExternalId we have to map the id to
-            // // _IDENTITY_.externalId
-            // context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
-            //         jsonObject.get("externalId")
-            //                 .toString(),
-            //         TYPE.TEXTUAL, RepairStrategy.DEFAULT);
-
             log.info("Tenant {} - New payload over GraalsCodeExtension: {}, {}", context.getTenant(),
                     jsonObject);
         } catch (Exception e) {

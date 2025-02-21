@@ -206,6 +206,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         custom: 'Start snooping'
       };
     }
+    if (this.mapping.code)
+      this.mapping['_code'] = atob(this.mapping.code);
 
     this.targetSystem =
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
@@ -563,6 +565,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async onCommitButton() {
     this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
     this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
+    if (this.mapping.code || this.mapping['_code']) {
+      this.mapping.code = btoa(this.mapping['_code']);
+      delete this.mapping['_code'];
+    }
     this.commit.emit(this.mapping);
   }
 
