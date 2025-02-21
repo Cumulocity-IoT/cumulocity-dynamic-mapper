@@ -30,6 +30,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
+import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
@@ -69,6 +70,8 @@ import {
 } from '../shared/util';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
+
+let initializedMonaco = false;
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -168,6 +171,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   sourceCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
   targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
+
+  editorOptions: EditorComponent['editorOptions'] = {
+    minimap: { enabled: false },
+    renderValidationDecorations: "off",
+    language: 'javascript'
+  };
 
   @ViewChild('editorSourceStepTemplate', { static: false })
   editorSourceStepTemplate: JsonEditorComponent;
@@ -332,6 +341,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     ];
 
     this.setTemplateForm();
+  }
+
+  async ngAfterViewInit(): Promise<void> {
+    if (!initializedMonaco) {
+      const monaco = await loadMonacoEditor();
+      if (monaco) {
+        initializedMonaco = true;
+      }
+    }
   }
 
   ngOnDestroy() {

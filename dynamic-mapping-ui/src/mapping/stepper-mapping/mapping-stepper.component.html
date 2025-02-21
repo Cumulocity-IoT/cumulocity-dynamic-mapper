@@ -54,7 +54,8 @@
         </div>
       </div>
       <div class="col-xs-12 flex-grow no-gutter">
-        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]" [deploymentMapEntry]="deploymentMapEntry"
+        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
+          [deploymentMapEntry]="deploymentMapEntry"
           (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
       </div>
       <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
@@ -65,7 +66,7 @@
     <cdk-step label="General settings" [stepControl]="propertyFormly">
       <div class="col-xs-12 flex-grow no-gutter">
         <d11r-mapping-properties [mapping]="mapping" [supportsMessageContext]="supportsMessageContext"
-          [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly"  [codeFormly]="codeFormly"
+          [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly" [codeFormly]="codeFormly"
           (targetAPIChanged)="onTargetAPIChanged($event)">
         </d11r-mapping-properties>
       </div>
@@ -155,10 +156,11 @@
                       </ng-container>
 
                       <ng-container
-                      *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal) && mapping?.extension?.eventName == 'GraalsCodeExtension'">
-                      <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
+                        *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal) && mapping?.extension?.eventName == 'GraalsCodeExtension'">
+                        <ng-container
+                          *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
+                        </ng-container>
                       </ng-container>
-                    </ng-container>
 
                     </div>
                   </div>
@@ -207,7 +209,8 @@
                           (initialized)="onEditorSourceInitialized()" [data]="sourceTemplate"
                           #editorSourceStepSubstitution></d11r-mapping-json-editor2>
                       </div>
-                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource && mapping?.extension?.eventName != 'GraalsCodeExtension'">
+                      <ng-container
+                        *ngIf="stepperConfiguration.showProcessorExtensionsSource && mapping?.extension?.eventName != 'GraalsCodeExtension'">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
@@ -408,13 +411,14 @@
         *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
         <div class="form-group p-b-8">
           <label translate>javascript Code</label>
-          <div style="max-height: 300px; overflow: auto !important">
-            <textarea 
-            class="form-control" 
-            style="font-family:monospace" 
-            c8y-textarea-autoresize
-            [(ngModel)]="mapping['_code']">
-        </textarea>
+          <!-- <div style="max-height: 500px; overflow: auto !important"> -->
+          <div>
+            <!-- <textarea class="form-control" style="font-family:monospace" c8y-textarea-autoresize
+              [(ngModel)]="mapping['_code']">
+        </textarea> -->
+            <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="mapping['_code']"
+              style="display: block;height:450px !important">
+            </c8y-editor>
           </div>
         </div>
       </div>
