@@ -36,7 +36,7 @@ import { MappingService } from '../core/mapping.service';
 import { EditorMode } from '../shared/stepper.model';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic } from '../shared/util';
-import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe } from '../../shared';
+import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -51,6 +51,7 @@ export class MappingStepPropertiesComponent
 
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
+  @Input() codeFormly: FormGroup;
 
   @Output() targetAPIChanged = new EventEmitter<any>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
@@ -60,15 +61,13 @@ export class MappingStepPropertiesComponent
   EditorMode = EditorMode;
 
   propertyFormlyFields: FormlyFieldConfig[] = [];
+  codeFormlyFields: FormlyFieldConfig[] = [];
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
+  codeConfig: any = {};
 
   constructor(
-    mappingService: MappingService,
-    sharedService: SharedService,
-    private alertService: AlertService,
-    private configService: FormlyConfig,
     private formatStringPipe: FormatStringPipe
   ) { }
 
@@ -88,20 +87,9 @@ export class MappingStepPropertiesComponent
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    // console.log(
-    //  'Mapping to be updated:',
-    //  this.mapping,
-    //  this.stepperConfiguration
-    // );
-    // const numberSnooped = this.mapping.snoopedTemplates
-    //   ? this.mapping.snoopedTemplates.length
-    //   : 0;
-    // if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
-    //   this.alertService.success(
-    //     `Already ${numberSnooped} templates exist. To stop the snooping process click on Cancel, select the respective mapping in the list of all mappings and choose the action Toggle Snooping.`,
-    //     `The recording process is in state ${this.mapping.snoopStatus}.`
-    //   );
-    // }
+
+    this.codeConfig['substitutionsAsCode'] = !this.mapping.code;
+
     this.propertyFormlyFields = [
       {
         validators: {
@@ -234,7 +222,7 @@ export class MappingStepPropertiesComponent
           }
         ]
       },
-      {  
+      {
         type: 'template',
         template: '<div class="legend form-block col-xs-12">Properties</div>'
       },
@@ -418,6 +406,44 @@ export class MappingStepPropertiesComponent
               hideLabel: true
             },
             hideExpression: () => !this.supportsMessageContext
+          }
+        ]
+      }
+    ];
+    this.codeFormlyFields = [
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
+          {
+            className: 'col-lg-12',
+            key: 'substitutionsAsCode',
+            type: 'switch',
+            wrappers: ['custom-form-field-wrapper'],
+            templateOptions: {
+              switchMode: true,
+              label: 'Substitutions as code',
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.editorMode != EditorMode.CREATE,
+              description:
+                'Define substitutions in javascript code.',
+              hideLabel: true,
+              change: () => {
+                const substitutionsAsCode = 
+                  this.codeFormly.get('substitutionsAsCode').value;
+                if (substitutionsAsCode) {
+                  this.mapping.mappingType = MappingType.EXTENSION_SOURCE;
+                  this.mapping.extension = {
+                    eventName: "GraalsCodeExtension",
+                    extensionName: "dynamic-mapping-extension-internal",
+                    extensionType: ExtensionType.EXTENSION_SOURCE
+                  }
+                } else {
+                  this.mapping.mappingType = MappingType.JSON;
+                  delete this.mapping.extension;
+                }
+              },
+            },
+            hideExpression: () => ( this.stepperConfiguration.editorMode != EditorMode.CREATE && !!this.mapping.code) || this.mapping.mappingType != MappingType.JSON
           }
         ]
       }

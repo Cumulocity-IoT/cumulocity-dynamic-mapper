@@ -65,7 +65,7 @@
     <cdk-step label="General settings" [stepControl]="propertyFormly">
       <div class="col-xs-12 flex-grow no-gutter">
         <d11r-mapping-properties [mapping]="mapping" [supportsMessageContext]="supportsMessageContext"
-          [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly"
+          [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly"  [codeFormly]="codeFormly"
           (targetAPIChanged)="onTargetAPIChanged($event)">
         </d11r-mapping-properties>
       </div>
@@ -143,16 +143,24 @@
                       <div>
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
+                      {{ mapping?.extension?.eventName}}  {{ mapping?.code}}
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container
-                        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal">
+                        *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal) && mapping?.extension?.eventName != 'GraalsCodeExtension'">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
+
+                      <ng-container
+                      *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal) && mapping?.extension?.eventName == 'GraalsCodeExtension'">
+                      <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
+                      </ng-container>
+                    </ng-container>
+
                     </div>
                   </div>
                   <div class="col-lg-5 column-left-border" #rightTemplateStep2>
@@ -200,7 +208,7 @@
                           (initialized)="onEditorSourceInitialized()" [data]="sourceTemplate"
                           #editorSourceStepSubstitution></d11r-mapping-json-editor2>
                       </div>
-                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource">
+                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource && mapping?.extension?.eventName != 'GraalsCodeExtension'">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
@@ -386,6 +394,23 @@
                 {{ extensionEntry.eventName }}
               </option>
             </select>
+          </div>
+        </div>
+      </div>
+      <div class="p-t-48" *ngIf="stepperConfiguration.showProcessorExtensionsInternal
+    ">
+        <small class="text-muted">Template is described internally by the chosen
+          mapping type</small>
+      </div>
+    </ng-template>
+
+    <ng-template #extensionTemplateSourceGraals let-form="form">
+      <div
+        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
+        <div class="form-group p-b-8">
+          <label translate>Code</label>
+          <div style="max-height: 300px; overflow: auto !important">
+            <textarea class="form-control">{{this.mapping.code | base64decode }}</textarea>
           </div>
         </div>
       </div>

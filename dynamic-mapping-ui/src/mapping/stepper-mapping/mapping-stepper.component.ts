@@ -99,6 +99,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   substitutionFormlyFields: FormlyFieldConfig[];
   substitutionModel: any = {};
   propertyFormly: FormGroup = new FormGroup({});
+  codeFormly: FormGroup = new FormGroup({});
 
   sourceTemplate: any;
   targetTemplate: any;

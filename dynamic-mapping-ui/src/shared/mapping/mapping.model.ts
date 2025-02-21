@@ -68,6 +68,7 @@ export interface Mapping {
   snoopedTemplates?: string[];
   extension?: ExtensionEntry;
   qos: QOS;
+  code?: string;
   lastUpdate: number;
 }
 
