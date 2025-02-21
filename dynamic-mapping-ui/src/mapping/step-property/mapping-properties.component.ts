@@ -88,7 +88,7 @@ export class MappingStepPropertiesComponent
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
 
-    this.codeConfig['substitutionsAsCode'] = !this.mapping.code;
+    this.codeConfig['substitutionsAsCode'] = !!this.mapping.code;
 
     this.propertyFormlyFields = [
       {
@@ -443,7 +443,9 @@ export class MappingStepPropertiesComponent
                 }
               },
             },
-            hideExpression: () => ( this.stepperConfiguration.editorMode != EditorMode.CREATE && !!this.mapping.code) || this.mapping.mappingType != MappingType.JSON
+            hideExpression: () => (! 
+            (this.stepperConfiguration.editorMode === EditorMode.UPDATE && 
+             !!this.mapping.code))
           }
         ]
       }
