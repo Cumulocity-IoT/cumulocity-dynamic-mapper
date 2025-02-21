@@ -28,8 +28,8 @@ function extractFromSource(ctx) {
         'DEFAULT'
     ),
     new Substitution(
-        'externalId',
         ctx.getGenericDeviceIdentifier(),
+        jsonObject.get('externalId'),
         'TEXTUAL',
         'DEFAULT'
     )]);

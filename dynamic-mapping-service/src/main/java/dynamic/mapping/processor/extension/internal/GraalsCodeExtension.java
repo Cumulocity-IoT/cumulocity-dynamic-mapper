@@ -98,7 +98,7 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
             //                 .toString(),
             //         TYPE.TEXTUAL, RepairStrategy.DEFAULT);
 
-            log.info("Tenant {} - New payload over GraalsCodeExtension: {}, {}, {}, {}", context.getTenant(),
+            log.info("Tenant {} - New payload over GraalsCodeExtension: {}, {}", context.getTenant(),
                     jsonObject);
         } catch (Exception e) {
             throw new ProcessingException(e.getMessage());
