@@ -299,9 +299,15 @@ public class MappingComponent {
             deleteMappingStatus(tenant, id);
             return m.getC8yMQTTMapping();
         });
-        if (result != null)
+        if (result != null) {
             removeMappingFromDeploymentMap(tenant, result.identifier);
+            if (result.code !=  null) {
+                String globalIdentifier = "delete globalThis" + Mapping.EXTRACT_FROM_SOURCE + "_" + result.identifier;;
+                configurationRegistry.getGraalsContext().eval("js",globalIdentifier);
+            }
+        }
         // log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
+
         return result;
     }
 

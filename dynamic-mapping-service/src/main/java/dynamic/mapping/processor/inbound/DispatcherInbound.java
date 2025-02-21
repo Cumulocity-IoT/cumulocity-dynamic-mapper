@@ -42,6 +42,7 @@ import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -152,14 +153,26 @@ public class DispatcherInbound implements GenericMessageCallback {
                     try {
                         if (processor != null) {
 
-                            // prepare graals func
-                            Value extractFromSourceFunc = this.graalsContext.getBindings("js").getMember("extractFromSource");
-                            if (extractFromSourceFunc == null) {
-                                Source js = Source.newBuilder("js",
-                                        DispatcherInbound.class.getClassLoader().getResource("test-substitution.js"))
-                                        .build();
-                                // // make the engine evaluate the javascript script
-                                this.graalsContext.eval(js);
+                            // prepare graals func if required
+                            Value extractFromSourceFunc = null;
+                            if (mapping.code != null) {
+                                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                                extractFromSourceFunc = this.graalsContext.getBindings("js").getMember(identifier);
+                                if (extractFromSourceFunc == null) {
+                                    // Source js = Source.newBuilder("js",
+                                    // DispatcherInbound.class.getClassLoader().getResource("test-substitution.js"))
+                                    // .build();
+                                    byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                                    String decodedCode = new String(decodedBytes);
+                                    String decodedCodeAdapted = decodedCode.replaceFirst(Mapping.EXTRACT_FROM_SOURCE,
+                                            identifier);
+                                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                                            .buildLiteral();
+
+                                    // // make the engine evaluate the javascript script
+                                    this.graalsContext.eval(source);
+                                }
+
                             }
                             inboundProcessingCounter.increment();
                             Object payload = processor.deserializePayload(mapping, connectorMessage);

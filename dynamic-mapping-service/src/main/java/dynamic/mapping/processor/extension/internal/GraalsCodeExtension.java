@@ -40,7 +40,7 @@ import jakarta.ws.rs.ProcessingException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class GraalsMeasurement implements ProcessorExtensionSource<byte[]> {
+public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {

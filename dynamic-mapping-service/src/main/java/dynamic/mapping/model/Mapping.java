@@ -151,10 +151,12 @@ public class Mapping implements Serializable {
     public QOS qos;
 
     // code for substitutions encoded in base64
+    @NotNull
     public String code;
 
     @NotNull
     public long lastUpdate;
+    public static final String EXTRACT_FROM_SOURCE = "extractFromSource";
 
     @Override
     public boolean equals(Object m) {
