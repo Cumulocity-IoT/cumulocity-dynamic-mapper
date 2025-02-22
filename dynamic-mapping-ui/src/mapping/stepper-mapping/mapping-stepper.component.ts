@@ -175,7 +175,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: false },
     renderValidationDecorations: "off",
-    language: 'javascript'
+    language: 'javascript',
   };
 
   @ViewChild('editorSourceStepTemplate', { static: false })
@@ -195,6 +195,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   stepperForward: boolean = true;
   currentStepIndex: number;
+  showCodeEditor$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
   constructor(
     public bsModalService: BsModalService,
@@ -215,9 +216,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         custom: 'Start snooping'
       };
     }
-    if (this.mapping.code)
-      this.mapping['_code'] = atob(this.mapping.code);
-
     this.targetSystem =
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
@@ -648,8 +646,22 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           console.log("Selected events", Object.values(this.extensions[this.mapping.extension.extensionName].extensionEntries), this.mapping, this.extensions)
 
         }
+
       }
     } else if (index == STEP_SELECT_TEMPLATES) {
+      if (this.mapping?.extension?.eventName == 'GraalsCodeExtension' || this.mapping?.extension?.extensionName == 'dynamic-mapping-extension-internal'){
+        this.templateForm.patchValue({
+          extensionName: 'dynamic-mapping-extension-internal',
+          eventName: 'GraalsCodeExtension'
+        });
+        this.onSelectExtensionName('dynamic-mapping-extension-internal');
+        // this.onSelectExtensionEvent('GraalsCodeExtension');
+        // this.templateForm.updateValueAndValidity();
+  
+      }
+      this.showCodeEditor$.next(this.mapping?.extension?.eventName == 'GraalsCodeExtension');
+      if (this.mapping.code)
+        this.mapping['_code'] = atob(this.mapping.code);
       // this.step == 'Select templates'
       // console.log("Step index 1 - before", this.targetTemplate);
       if (this.stepperForward) {
@@ -683,6 +695,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     stepper: C8yStepper;
     step: CdkStep;
   }): void {
+
     this.stepperForward = true;
     if (this.stepperConfiguration.advanceFromStepToEndStep && this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
       this.goToLastStep();
