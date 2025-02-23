@@ -48,10 +48,13 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.logging.Handler;
 
+import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 /**
  * AsynchronousDispatcherInbound
@@ -76,6 +79,8 @@ import org.graalvm.polyglot.Value;
 
 @Slf4j
 public class DispatcherInbound implements GenericMessageCallback {
+
+    private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
 
     private AConnectorClient connectorClient;
 
@@ -106,7 +111,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         Timer inboundProcessingTimer;
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
-        Context graalsContext;
+        Engine graalsEngine;
         ExecutorService virtThreadPool;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
@@ -127,7 +132,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
-            this.graalsContext = configurationRegistry.getGraalsContext();
+            this.graalsEngine = configurationRegistry.getGraalsEngine();
             this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 
         }
@@ -153,29 +158,34 @@ public class DispatcherInbound implements GenericMessageCallback {
                     try {
                         if (processor != null) {
 
-                            // prepare graals func if required
-                            Value extractFromSourceFunc = null;
-                            if (mapping.code != null) {
-                                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-                                extractFromSourceFunc = this.graalsContext.getBindings("js").getMember(identifier);
-                                if (extractFromSourceFunc == null) {
-                                    // Source js = Source.newBuilder("js",
-                                    // DispatcherInbound.class.getClassLoader().getResource("test-substitution.js"))
-                                    // .build();
-                                    byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
-                                    String decodedCode = new String(decodedBytes);
-                                    String decodedCodeAdapted = decodedCode.replaceFirst(Mapping.EXTRACT_FROM_SOURCE,
-                                            identifier);
-                                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
-                                            .buildLiteral();
+                            // // prepare graals func if required
+                            // Value extractFromSourceFunc = null;
+                            // if (mapping.code != null) {
+                            //     try (Context context = Context.newBuilder("js")
+                            //             .engine(graalsEngine)
+                            //             .allowAllAccess(true)
+                            //             .option("js.strict", "true")
+                            //             .build()) {
+                            //         String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                            //         extractFromSourceFunc = context.getBindings("js").getMember(identifier);
+                            //         if (extractFromSourceFunc == null) {
+                            //             byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                            //             String decodedCode = new String(decodedBytes);
+                            //             String decodedCodeAdapted = decodedCode.replaceFirst(
+                            //                     Mapping.EXTRACT_FROM_SOURCE,
+                            //                     identifier);
+                            //             Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                            //                     .buildLiteral();
 
-                                    // // make the engine evaluate the javascript script
-                                    this.graalsContext.eval(source);
-                                    extractFromSourceFunc = this.graalsContext.getBindings("js").getMember(identifier);
+                            //             // // make the engine evaluate the javascript script
+                            //             context.eval(source);
+                            //             extractFromSourceFunc = context.getBindings("js")
+                            //                     .getMember(identifier);
 
-                                }
+                            //         }
+                            //     }
 
-                            }
+                            // }
                             inboundProcessingCounter.increment();
                             Object payload = processor.deserializePayload(mapping, connectorMessage);
                             ProcessingContext<?> context = ProcessingContext.builder().payload(payload).topic(topic)
@@ -185,7 +195,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                                     .key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
                                     // .graalsContext(mapping.code != null ? this.graalsContext : null)
                                     // .graalsContext(this.graalsContext)
-                                    .extractFromSourceFunc(extractFromSourceFunc)
+                                    .graalsEngine(this.graalsEngine)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",
@@ -240,7 +250,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     } catch (Exception e) {
                         log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
                                 e.getMessage());
-                        log.debug("Tenant {} - Message Stacktrace: ", tenant, e);
+                        log.warn("Tenant {} - Message Stacktrace: ", tenant, e);
                         mappingStatus.errors++;
                     }
                 }

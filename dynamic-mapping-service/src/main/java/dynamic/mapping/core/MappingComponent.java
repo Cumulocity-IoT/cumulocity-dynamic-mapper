@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.logging.Handler;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -43,7 +44,9 @@ import jakarta.validation.Valid;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.graalvm.polyglot.Context;
 import org.joda.time.DateTime;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -72,6 +75,8 @@ import dynamic.mapping.model.ValidationError;
 @Slf4j
 @Component
 public class MappingComponent {
+
+    private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
 
     // structure: <tenant, < mappingIdent , status>>
     private Map<String, Map<String, MappingStatus>> tenantMappingStatus = new HashMap<>();
@@ -303,7 +308,17 @@ public class MappingComponent {
             removeMappingFromDeploymentMap(tenant, result.identifier);
             if (result.code != null) {
                 String globalIdentifier = "delete globalThis" + Mapping.EXTRACT_FROM_SOURCE + "_" + result.identifier;
-                configurationRegistry.getGraalsContext().eval("js", globalIdentifier);
+                try (Context context = Context.newBuilder("js")
+                        .engine(configurationRegistry.getGraalsEngine())
+                        .logHandler(GRAALJS_LOG_HANDLER)
+                        .allowAllAccess(true)
+                        .option("js.strict", "true")
+                        .build()) {
+
+                    // Before closing the context, clean up the members
+                    context.getBindings("js").removeMember(globalIdentifier);
+                }
+
             }
         }
         // log.info("Tenant {} - Deleted Mapping: {}", tenant, id);

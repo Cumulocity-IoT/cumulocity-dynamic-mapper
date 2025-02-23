@@ -38,7 +38,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Value;
 
 
@@ -53,6 +53,7 @@ import org.graalvm.polyglot.Value;
  * when a <code>mapping</code> is applied to an inbound <code>payload</code>
  */
 public class ProcessingContext<O> {
+
     private Mapping mapping;
 
     private String topic;
@@ -103,7 +104,7 @@ public class ProcessingContext<O> {
 
     private String sourceId;
 
-    private Context graalsContext;
+    private Engine graalsEngine;
 
     private Value extractFromSourceFunc;
 

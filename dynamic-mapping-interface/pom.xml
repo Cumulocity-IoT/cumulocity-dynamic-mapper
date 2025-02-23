@@ -101,6 +101,10 @@
 			<artifactId>js-language</artifactId>
 			<scope>runtime</scope>
 		</dependency> -->
+		<!-- <dependency>
+			<groupId>org.graalvm.truffle</groupId>
+			<artifactId>truffle-api</artifactId>
+		</dependency> -->
 	</dependencies>
 	<build>
 		<sourceDirectory>../dynamic-mapping-service/src/main/java</sourceDirectory>

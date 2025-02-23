@@ -58,18 +58,18 @@ import dynamic.mapping.processor.processor.fixed.InternalProtobufProcessor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Engine;
 
 @Slf4j
 @Component
 public class ConfigurationRegistry {
 
     @Getter
-    private Context graalsContext;
+    private Engine graalsEngine;
 
     @Autowired
-    public void setGraalsContext(Context ctx) {
-        this.graalsContext = ctx;
+    public void setGraalsEngine(Engine eng) {
+        this.graalsEngine = eng;
     }
 
     @Getter
