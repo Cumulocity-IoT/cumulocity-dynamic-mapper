@@ -49,68 +49,54 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
     public void extractFromSource(ProcessingContext<byte[]> context) throws ProcessingException {
         try {
             Mapping mapping = context.getMapping();
-            Engine graalsEngine = context.getGraalsEngine();
-
             if (mapping.code != null) {
-                Context graalsContext = Context.newBuilder("js")
-                        .engine(graalsEngine)
-                        .allowAllAccess(true)
-                        .option("js.strict", "true")
-                        .build();
+                Context graalsContext = context.getGraalsContext();
 
-                try {
-                    String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-                    Value extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
+                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                Value extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
 
-                    if (extractFromSourceFunc == null) {
-                        byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
-                        String decodedCode = new String(decodedBytes);
-                        String decodedCodeAdapted = decodedCode.replaceFirst(
-                                Mapping.EXTRACT_FROM_SOURCE,
-                                identifier);
-                        Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
-                                .buildLiteral();
+                if (extractFromSourceFunc == null) {
+                    byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                    String decodedCode = new String(decodedBytes);
+                    String decodedCodeAdapted = decodedCode.replaceFirst(
+                            Mapping.EXTRACT_FROM_SOURCE,
+                            identifier);
+                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                            .buildLiteral();
 
-                        graalsContext.eval(source);
-                        extractFromSourceFunc = graalsContext.getBindings("js")
-                                .getMember(identifier);
-                    }
-
-                    Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
-
-                    final Value result = extractFromSourceFunc
-                            .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
-                                    jsonObject));
-
-                    // Convert the JavaScript result to Java objects before closing the context
-                    final SubstitutionResult typedResult = result.as(SubstitutionResult.class);
-
-                    // Now use the copied objects
-                    for (Substitution item : typedResult.substitutions) {
-                        Object convertedValue = (item.value instanceof Value) 
-                        ? convertPolyglotValue((Value)item.value) 
-                        : item.value;
-                        
-                        context.addToProcessingCache(item.key, convertedValue, TYPE.valueOf(item.type),
-                                RepairStrategy.valueOf(item.repairStrategy));
-                    }
-
-                    log.info("Tenant {} - New payload over GraalsCodeExtension: {}, {}", context.getTenant(),
-                            jsonObject);
-
-                } finally {
-                    // Clean up if needed
-                    // graalsContext.getBindings("js").removeMember(identifier);
-                    graalsContext.close();
+                    graalsContext.eval(source);
+                    extractFromSourceFunc = graalsContext.getBindings("js")
+                            .getMember(identifier);
                 }
+
+                Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
+
+                final Value result = extractFromSourceFunc
+                        .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
+                                jsonObject));
+
+                // Convert the JavaScript result to Java objects before closing the context
+                final SubstitutionResult typedResult = result.as(SubstitutionResult.class);
+
+                // Now use the copied objects
+                for (Substitution item : typedResult.substitutions) {
+                    Object convertedValue = (item.value instanceof Value)
+                            ? convertPolyglotValue((Value) item.value)
+                            : item.value;
+
+                    context.addToProcessingCache(item.key, convertedValue, TYPE.valueOf(item.type),
+                            RepairStrategy.valueOf(item.repairStrategy));
+                }
+
+                log.info("Tenant {} - New payload over GraalsCodeExtension: {}, {}", context.getTenant(),
+                        jsonObject);
+
             }
 
         } catch (Exception e) {
             throw new ProcessingException(e.getMessage());
         }
     }
-
-    
 
     // Convert PolyglotMap to Java Map
     private Object convertPolyglotValue(Value value) {

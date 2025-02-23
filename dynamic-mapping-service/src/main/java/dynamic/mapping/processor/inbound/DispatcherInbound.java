@@ -155,37 +155,38 @@ public class DispatcherInbound implements GenericMessageCallback {
                     MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
                     BaseProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
+                    Context graalsContext = null;
                     try {
                         if (processor != null) {
 
-                            // // prepare graals func if required
-                            // Value extractFromSourceFunc = null;
-                            // if (mapping.code != null) {
-                            //     try (Context context = Context.newBuilder("js")
-                            //             .engine(graalsEngine)
-                            //             .allowAllAccess(true)
-                            //             .option("js.strict", "true")
-                            //             .build()) {
-                            //         String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-                            //         extractFromSourceFunc = context.getBindings("js").getMember(identifier);
-                            //         if (extractFromSourceFunc == null) {
-                            //             byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
-                            //             String decodedCode = new String(decodedBytes);
-                            //             String decodedCodeAdapted = decodedCode.replaceFirst(
-                            //                     Mapping.EXTRACT_FROM_SOURCE,
-                            //                     identifier);
-                            //             Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
-                            //                     .buildLiteral();
+                            // prepare graals func if required
+                            Value extractFromSourceFunc = null;
+                            if (mapping.code != null) {
+                                graalsContext = Context.newBuilder("js")
+                                        .engine(graalsEngine)
+                                        .allowAllAccess(true)
+                                        .option("js.strict", "true")
+                                        .build();
 
-                            //             // // make the engine evaluate the javascript script
-                            //             context.eval(source);
-                            //             extractFromSourceFunc = context.getBindings("js")
-                            //                     .getMember(identifier);
+                                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                                extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
+                                if (extractFromSourceFunc == null) {
+                                    byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                                    String decodedCode = new String(decodedBytes);
+                                    String decodedCodeAdapted = decodedCode.replaceFirst(
+                                            Mapping.EXTRACT_FROM_SOURCE,
+                                            identifier);
+                                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                                            .buildLiteral();
 
-                            //         }
-                            //     }
+                                    // // make the engine evaluate the javascript script
+                                    graalsContext.eval(source);
+                                    extractFromSourceFunc = graalsContext.getBindings("js")
+                                            .getMember(identifier);
 
-                            // }
+                                }
+
+                            }
                             inboundProcessingCounter.increment();
                             Object payload = processor.deserializePayload(mapping, connectorMessage);
                             ProcessingContext<?> context = ProcessingContext.builder().payload(payload).topic(topic)
@@ -194,8 +195,8 @@ public class DispatcherInbound implements GenericMessageCallback {
                                             && mapping.supportsMessageContext)
                                     .key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
                                     // .graalsContext(mapping.code != null ? this.graalsContext : null)
-                                    // .graalsContext(this.graalsContext)
-                                    .graalsEngine(this.graalsEngine)
+                                    .graalsContext(graalsContext)
+                                    // .graalsEngine(this.graalsEngine)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",
@@ -252,6 +253,10 @@ public class DispatcherInbound implements GenericMessageCallback {
                                 e.getMessage());
                         log.warn("Tenant {} - Message Stacktrace: ", tenant, e);
                         mappingStatus.errors++;
+                    } finally {
+                        if (graalsContext != null) {
+                            graalsContext.close();
+                        }
                     }
                 }
             });
