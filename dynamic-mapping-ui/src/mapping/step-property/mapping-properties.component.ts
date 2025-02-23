@@ -61,11 +61,9 @@ export class MappingStepPropertiesComponent
   EditorMode = EditorMode;
 
   propertyFormlyFields: FormlyFieldConfig[] = [];
-  codeFormlyFields: FormlyFieldConfig[] = [];
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-  codeConfig: any = {};
 
   constructor(
     private formatStringPipe: FormatStringPipe
@@ -88,11 +86,6 @@ export class MappingStepPropertiesComponent
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-
-    this.codeConfig['substitutionsAsCode'] = !!this.mapping.code;
-    if (this.codeConfig['substitutionsAsCode']) {
-      delete this.stepperConfiguration.advanceFromStepToEndStep;
-    }
 
     this.propertyFormlyFields = [
       {
@@ -410,49 +403,6 @@ export class MappingStepPropertiesComponent
               hideLabel: true
             },
             hideExpression: () => !this.supportsMessageContext
-          }
-        ]
-      }
-    ];
-    this.codeFormlyFields = [
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-12',
-            key: 'substitutionsAsCode',
-            type: 'switch',
-            wrappers: ['custom-form-field-wrapper'],
-            templateOptions: {
-              switchMode: true,
-              label: 'Substitutions as code',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.editorMode !== EditorMode.CREATE,
-              description:
-                'Define substitutions in javascript code.',
-              hideLabel: true,
-              change: () => {
-                const substitutionsAsCode =
-                  this.codeFormly.get('substitutionsAsCode').value;
-                if (substitutionsAsCode) {
-                  this.mapping.mappingType = MappingType.EXTENSION_SOURCE;
-                  this.mapping.extension = {
-                    eventName: "GraalsCodeExtension",
-                    extensionName: "dynamic-mapping-extension-internal",
-                    extensionType: ExtensionType.EXTENSION_SOURCE
-                  }
-                  this.mapping.code = "Y29uc3QgU3Vic3RpdHV0aW9uUmVzdWx0ID0gSmF2YS50eXBlKCdkeW5hbWljLm1hcHBpbmcucHJvY2Vzc29yLmV4dGVuc2lvbi5pbnRlcm5hbC5TdWJzdGl0dXRpb25SZXN1bHQnKTsKY29uc3QgU3Vic3RpdHV0aW9uID0gSmF2YS50eXBlKCdkeW5hbWljLm1hcHBpbmcucHJvY2Vzc29yLmV4dGVuc2lvbi5pbnRlcm5hbC5TdWJzdGl0dXRpb24nKTsKZnVuY3Rpb24gZXh0cmFjdEZyb21Tb3VyY2UoY3R4KSB7CiAgICBjb25zdCBqc29uT2JqZWN0ID0gY3R4LmdldEpzb25PYmplY3QoKTsKICAgIGZvciAodmFyIGtleSBpbiBqc29uT2JqZWN0KSB7CiAgICAgICAgY29uc29sZS5sb2coYGtleTogJHtrZXl9LCB2YWx1ZTogJHtqc29uT2JqZWN0LmdldChrZXkpfWApOyAgCiAgICB9CgogICAgY29uc3QgZnJhZ21lbnRUZW1wZXJhdHVyZVNlcmllcyA9IHsKICAgICAgICB2YWx1ZToganNvbk9iamVjdC5nZXQoJ3RlbXBlcmF0dXJlJyksCiAgICAgICAgdW5pdDoganNvbk9iamVjdC5nZXQoJ3VuaXQnKQogICAgfTsKCiAgICBjb25zdCBmcmFnbWVudFRlbXBlcmF0dXJlID0gewogICAgICAgIFQ6IGZyYWdtZW50VGVtcGVyYXR1cmVTZXJpZXMKICAgIH07CiAgICAvLyBTdHJpbmcga2V5LCBPYmplY3QgdmFsdWUsIE1hcHBpbmdTdWJzdGl0dXRpb24uU3Vic3RpdHV0ZVZhbHVlLlRZUEUgdHlwZSwgUmVwYWlyU3RyYXRlZ3kgcmVwYWlyU3RyYXRlZ3kKICAgIHJldHVybiBuZXcgU3Vic3RpdHV0aW9uUmVzdWx0KFtuZXcgU3Vic3RpdHV0aW9uKAogICAgICAgICd0aW1lJywKICAgICAgICBqc29uT2JqZWN0LmdldCgndGltZScpLAogICAgICAgICdURVhUVUFMJywKICAgICAgICAnREVGQVVMVCcKICAgICksCiAgICBuZXcgU3Vic3RpdHV0aW9uKAogICAgICAgICdjOHlfVGVtcGVyYXR1cmUnLAogICAgICAgIGZyYWdtZW50VGVtcGVyYXR1cmUsCiAgICAgICAgJ09CSkVDVCcsCiAgICAgICAgJ0RFRkFVTFQnCiAgICApLAogICAgbmV3IFN1YnN0aXR1dGlvbigKICAgICAgICBjdHguZ2V0R2VuZXJpY0RldmljZUlkZW50aWZpZXIoKSwKICAgICAgICBqc29uT2JqZWN0LmdldCgnZXh0ZXJuYWxJZCcpLAogICAgICAgICdURVhUVUFMJywKICAgICAgICAnREVGQVVMVCcKICAgICldKTsKfQ=="
-                  // this.mapping['_code'] = "sample code"
-                  delete this.stepperConfiguration.advanceFromStepToEndStep;
-                } else {
-                  this.mapping.mappingType = MappingType.JSON;
-                  delete this.mapping.extension;
-                }
-              },
-            },
-            hideExpression: () => (
-              (this.stepperConfiguration.editorMode === EditorMode.UPDATE &&
-                this.mapping?.extension.eventName !== 'GraalsCodeExtension'))
           }
         ]
       }

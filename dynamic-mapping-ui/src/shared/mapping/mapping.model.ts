@@ -131,6 +131,7 @@ export interface StepperConfiguration {
   showProcessorExtensionsSource?: boolean;
   showProcessorExtensionsSourceTarget?: boolean;
   showProcessorExtensionsInternal?: boolean;
+  showCodeEditor?: boolean;
   editorMode?: EditorMode;
   allowNoDefinedIdentifier?: boolean;
   allowDefiningSubstitutions?: boolean;

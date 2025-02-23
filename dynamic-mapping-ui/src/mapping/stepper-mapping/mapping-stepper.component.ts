@@ -195,7 +195,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   stepperForward: boolean = true;
   currentStepIndex: number;
-  showCodeEditor$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
   constructor(
     public bsModalService: BsModalService,
@@ -649,17 +648,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
       }
     } else if (index == STEP_SELECT_TEMPLATES) {
-      if (this.mapping?.extension?.eventName == 'GraalsCodeExtension' || this.mapping?.extension?.extensionName == 'dynamic-mapping-extension-internal'){
-        this.templateForm.patchValue({
-          extensionName: 'dynamic-mapping-extension-internal',
-          eventName: 'GraalsCodeExtension'
-        });
-        this.onSelectExtensionName('dynamic-mapping-extension-internal');
-        // this.onSelectExtensionEvent('GraalsCodeExtension');
-        // this.templateForm.updateValueAndValidity();
-  
-      }
-      this.showCodeEditor$.next(this.mapping?.extension?.eventName == 'GraalsCodeExtension');
       if (this.mapping.code)
         this.mapping['_code'] = atob(this.mapping.code);
       // this.step == 'Select templates'
