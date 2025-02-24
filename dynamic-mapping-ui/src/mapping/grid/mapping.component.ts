@@ -482,7 +482,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType: this.mappingType,
+        mappingType: this.substitutionsAsCode? MappingType.EXTENSION_SOURCE: this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         extension: this.substitutionsAsCode ? {

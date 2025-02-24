@@ -361,7 +361,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
     // (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
     this.countDeviceIdentifiers$.next(ni);
-    this.isSubstitutionValid$.next((ni == 1 && this.mapping.direction == Direction.INBOUND) ||
+    this.isSubstitutionValid$.next(this.stepperConfiguration.showCodeEditor || (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
       (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier || this.currentStepIndex < 3);
   }
 

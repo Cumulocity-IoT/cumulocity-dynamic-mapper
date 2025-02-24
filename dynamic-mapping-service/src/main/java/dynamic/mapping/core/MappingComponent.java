@@ -378,8 +378,10 @@ public class MappingComponent {
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant, Direction.UNSPECIFIED);
             List<ValidationError> errors = Mapping.isMappingValid(mappings, mapping);
+            
             // remove potentially obsolete javascript code from engine cache
             removeCodeFromEngine(mapping);
+
             if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();
                 mapping.lastUpdate = System.currentTimeMillis();
