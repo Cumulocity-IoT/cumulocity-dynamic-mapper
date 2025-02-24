@@ -306,24 +306,27 @@ public class MappingComponent {
         });
         if (result != null) {
             removeMappingFromDeploymentMap(tenant, result.identifier);
-            if (result.code != null) {
-                String globalIdentifier = "delete globalThis" + Mapping.EXTRACT_FROM_SOURCE + "_" + result.identifier;
-                try (Context context = Context.newBuilder("js")
-                        .engine(configurationRegistry.getGraalsEngine())
-                        .logHandler(GRAALJS_LOG_HANDLER)
-                        .allowAllAccess(true)
-                        .option("js.strict", "true")
-                        .build()) {
-
-                    // Before closing the context, clean up the members
-                    context.getBindings("js").removeMember(globalIdentifier);
-                }
-
-            }
+            removeCodeFromEngine(result);
         }
         // log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
 
         return result;
+    }
+
+    private void removeCodeFromEngine(Mapping mapping) {
+        if (mapping.code != null) {
+            String globalIdentifier = "delete globalThis" + Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+            try (Context context = Context.newBuilder("js")
+                    .engine(configurationRegistry.getGraalsEngine())
+                    .logHandler(GRAALJS_LOG_HANDLER)
+                    .allowAllAccess(true)
+                    .option("js.strict", "true")
+                    .build()) {
+
+                // Before closing the context, clean up the members
+                context.getBindings("js").removeMember(globalIdentifier);
+            }
+        }
     }
 
     public List<Mapping> getMappings(String tenant, Direction direction) {
@@ -375,6 +378,8 @@ public class MappingComponent {
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant, Direction.UNSPECIFIED);
             List<ValidationError> errors = Mapping.isMappingValid(mappings, mapping);
+            // remove potentially obsolete javascript code from engine cache
+            removeCodeFromEngine(mapping);
             if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();
                 mapping.lastUpdate = System.currentTimeMillis();
