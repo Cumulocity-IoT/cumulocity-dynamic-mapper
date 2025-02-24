@@ -97,7 +97,7 @@
                   <div class="col-lg-5 col-lg-offset-1 column-right-border">
                     <div class="form-group">
                       <div class="c8y-select-wrapper" style="width: 50%">
-                        <select class="form-control" formControlName="snoopedTemplateIndex"  (change)="
+                        <select class="form-control" formControlName="snoopedTemplateIndex" (change)="
                         onSelectSnoopedSourceTemplate($event.target.value)
                       ">
                           <option [value]="-1" [disabled]="true">
@@ -144,7 +144,8 @@
                       <div>
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
-                      <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource && !(stepperConfiguration.showCodeEditor)"
+                      <d11r-mapping-json-editor2
+                        *ngIf="stepperConfiguration.showEditorSource && !(stepperConfiguration.showCodeEditor)"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
@@ -336,8 +337,7 @@
             </div>
 
             <div class="container">
-              <ng-container
-                *ngIf="(stepperConfiguration.showCodeEditor)">
+              <ng-container *ngIf="(stepperConfiguration.showCodeEditor)">
                 <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
                 </ng-container>
               </ng-container>
@@ -368,7 +368,7 @@
         <div class="form-group p-b-8">
           <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-            <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl 
+            <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
               (change)="
                   onSelectExtensionName(templateForm.value.extensionName)
                 " required>
@@ -376,7 +376,8 @@
                 Select an extension
               </option>
               <option *ngFor="let extension of extensions | keyvalue" [ngValue]="extension.key"
-                [selected]="extension.key === mapping.extension?.extensionName" [disabled]="stepperConfiguration.showCodeEditor">
+                [selected]="extension.key === mapping.extension?.extensionName"
+                [disabled]="stepperConfiguration.showCodeEditor">
                 {{ extension.key }}
               </option>
             </select>
@@ -392,7 +393,8 @@
                 Select an event
               </option>
               <option *ngFor="let extensionEntry of (extensionEvents$ | async)" [ngValue]="extensionEntry.eventName"
-                [selected]="extensionEntry.eventName === mapping.extension?.eventName" [disabled]="stepperConfiguration.showCodeEditor">
+                [selected]="extensionEntry.eventName === mapping.extension?.eventName"
+                [disabled]="stepperConfiguration.showCodeEditor">
                 {{ extensionEntry.eventName }}
               </option>
             </select>
@@ -409,14 +411,17 @@
     <ng-template #extensionTemplateSourceGraals let-form="form">
       <div>
         <div class="form-group p-b-8">
-          <label translate>javascript function for creating substitutions</label>
-          <!-- <div style="max-height: 500px; overflow: auto !important"> -->
+          <div class="d-flex">
+            <label translate>function for creating substitutions</label>
+            <span class="hidden-xs hidden-sm">
+              <button type="button" placement="right"
+                [popover]="'javascript function for creating substitutions. Please do not change the methods signature function extractFromSource(ctx)'"
+                triggers="focus" class="btn-help" aria-label="Help content"></button>
+            </span>
+          </div>
           <div>
-            <!-- <textarea class="form-control" style="font-family:monospace" c8y-textarea-autoresize
-              [(ngModel)]="mapping['_code']">
-        </textarea> -->
-            <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [(ngModel)]="mapping['_code']"
-              style="display: block;height:650px !important">
+            <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="mapping['_code']"
+              (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
             </c8y-editor>
           </div>
         </div>
@@ -433,8 +438,8 @@
         <div class="form-group p-b-8">
           <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-            <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl [disabled]="stepperConfiguration.showCodeEditor"
-              (change)="
+            <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
+              [disabled]="stepperConfiguration.showCodeEditor" (change)="
                   onSelectExtensionName(templateForm.value.extensionName)
                 " required>
               <option [ngValue]="null" disabled>
@@ -450,7 +455,8 @@
         <div class="form-group">
           <label translate>Events for {{ mapping.extension['name'] }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl [disabled]="stepperConfiguration.showCodeEditor" (change)="
+            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl
+              [disabled]="stepperConfiguration.showCodeEditor" (change)="
                 onSelectExtensionEvent(templateForm.value.eventName)
               " required>
               <option [ngValue]="null" disabled>

@@ -1026,4 +1026,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       !this.isSubstitutionValid()
   }
 
+  onValueCodeChange( value) {
+    console.log("code changed", value);
+    this.mapping['_code'] = value;
+  }
+
 }
