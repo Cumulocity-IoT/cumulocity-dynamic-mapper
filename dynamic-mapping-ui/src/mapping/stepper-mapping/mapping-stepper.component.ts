@@ -30,7 +30,6 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
-import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
@@ -71,8 +70,6 @@ import {
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 
-let initializedMonaco = false;
-
 @Component({
   selector: 'd11r-mapping-stepper',
   templateUrl: 'mapping-stepper.component.html',
@@ -102,7 +99,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   substitutionFormlyFields: FormlyFieldConfig[];
   substitutionModel: any = {};
   propertyFormly: FormGroup = new FormGroup({});
-  codeFormly: FormGroup = new FormGroup({});
 
   sourceTemplate: any;
   targetTemplate: any;
@@ -172,12 +168,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   sourceCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
   targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
 
-  editorOptions: EditorComponent['editorOptions'] = {
-    minimap: { enabled: false },
-    renderValidationDecorations: "off",
-    language: 'javascript',
-  };
-
   @ViewChild('editorSourceStepTemplate', { static: false })
   editorSourceStepTemplate: JsonEditorComponent;
   @ViewChild('editorTargetStepTemplate', { static: false })
@@ -215,6 +205,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         custom: 'Start snooping'
       };
     }
+
     this.targetSystem =
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
@@ -340,15 +331,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.setTemplateForm();
   }
 
-  async ngAfterViewInit(): Promise<void> {
-    if (!initializedMonaco) {
-      const monaco = await loadMonacoEditor();
-      if (monaco) {
-        initializedMonaco = true;
-      }
-    }
-  }
-
   ngOnDestroy() {
     this.countDeviceIdentifiers$.complete();
     this.isSubstitutionValid$.complete();
@@ -361,7 +343,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
     // (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
     this.countDeviceIdentifiers$.next(ni);
-    this.isSubstitutionValid$.next(this.stepperConfiguration.showCodeEditor || (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
+    this.isSubstitutionValid$.next((ni == 1 && this.mapping.direction == Direction.INBOUND) ||
       (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier || this.currentStepIndex < 3);
   }
 
@@ -580,10 +562,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async onCommitButton() {
     this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
     this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
-    if (this.mapping.code || this.mapping['_code']) {
-      this.mapping.code = btoa(this.mapping['_code']);
-      delete this.mapping['_code'];
-    }
     this.commit.emit(this.mapping);
   }
 
@@ -645,11 +623,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           console.log("Selected events", Object.values(this.extensions[this.mapping.extension.extensionName].extensionEntries), this.mapping, this.extensions)
 
         }
-
       }
     } else if (index == STEP_SELECT_TEMPLATES) {
-      if (this.mapping.code)
-        this.mapping['_code'] = atob(this.mapping.code);
       // this.step == 'Select templates'
       // console.log("Step index 1 - before", this.targetTemplate);
       if (this.stepperForward) {
@@ -683,7 +658,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     stepper: C8yStepper;
     step: CdkStep;
   }): void {
-
     this.stepperForward = true;
     if (this.stepperConfiguration.advanceFromStepToEndStep && this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
       this.goToLastStep();
@@ -1024,11 +998,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       EditorMode.READ_ONLY ||
       this.selectedSubstitution === -1 ||
       !this.isSubstitutionValid()
-  }
-
-  onValueCodeChange( value) {
-    console.log("code changed", value);
-    this.mapping['_code'] = value;
   }
 
 }

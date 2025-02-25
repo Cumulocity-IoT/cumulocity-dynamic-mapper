@@ -41,7 +41,6 @@ import {
   API,
   ConfirmationModalComponent,
   Direction,
-  ExtensionEntry,
   Mapping,
   MappingEnriched,
   MappingSubstitution,
@@ -75,7 +74,6 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
-import { map } from 'cypress/types/bluebird';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -97,7 +95,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   );
   mappingsCount: number = 0;
   mappingToUpdate: Mapping;
-  substitutionsAsCode: boolean;
   devices: IIdentified[] = [];
   snoopStatus: SnoopStatus = SnoopStatus.NONE;
   Direction = Direction;
@@ -446,7 +443,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         if (result.snoop) {
           this.snoopStatus = SnoopStatus.ENABLED;
         }
-        this.substitutionsAsCode =  result.substitutionsAsCode;
         this.mappingType = result.mappingType;
         this.addMapping();
       }
@@ -459,7 +455,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.setStepperConfiguration(
       this.mappingType,
       this.stepperConfiguration.direction,
-      EditorMode.CREATE, true
+      EditorMode.CREATE
     );
 
     const identifier = uuidCustom();
@@ -482,15 +478,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType: this.substitutionsAsCode? MappingType.EXTENSION_SOURCE: this.mappingType,
+        mappingType: this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        extension: this.substitutionsAsCode ? {
-            eventName: "GraalsCodeExtension",
-            extensionName: "dynamic-mapping-extension-internal",
-            extensionType: ExtensionType.EXTENSION_SOURCE
-          }: undefined,
-        code : this.substitutionsAsCode ?  "Y29uc3QgU3Vic3RpdHV0aW9uUmVzdWx0ID0gSmF2YS50eXBlKCdkeW5hbWljLm1hcHBpbmcucHJvY2Vzc29yLmV4dGVuc2lvbi5pbnRlcm5hbC5TdWJzdGl0dXRpb25SZXN1bHQnKTsKY29uc3QgU3Vic3RpdHV0aW9uID0gSmF2YS50eXBlKCdkeW5hbWljLm1hcHBpbmcucHJvY2Vzc29yLmV4dGVuc2lvbi5pbnRlcm5hbC5TdWJzdGl0dXRpb24nKTsKZnVuY3Rpb24gZXh0cmFjdEZyb21Tb3VyY2UoY3R4KSB7CiAgICBjb25zdCBqc29uT2JqZWN0ID0gY3R4LmdldEpzb25PYmplY3QoKTsKICAgIGZvciAodmFyIGtleSBpbiBqc29uT2JqZWN0KSB7CiAgICAgICAgY29uc29sZS5sb2coYGtleTogJHtrZXl9LCB2YWx1ZTogJHtqc29uT2JqZWN0LmdldChrZXkpfWApOyAgCiAgICB9CgogICAgY29uc3QgZnJhZ21lbnRUZW1wZXJhdHVyZVNlcmllcyA9IHsKICAgICAgICB2YWx1ZToganNvbk9iamVjdC5nZXQoJ3RlbXBlcmF0dXJlJyksCiAgICAgICAgdW5pdDoganNvbk9iamVjdC5nZXQoJ3VuaXQnKQogICAgfTsKCiAgICBjb25zdCBmcmFnbWVudFRlbXBlcmF0dXJlID0gewogICAgICAgIFQ6IGZyYWdtZW50VGVtcGVyYXR1cmVTZXJpZXMKICAgIH07CiAgICAvLyBTdHJpbmcga2V5LCBPYmplY3QgdmFsdWUsIE1hcHBpbmdTdWJzdGl0dXRpb24uU3Vic3RpdHV0ZVZhbHVlLlRZUEUgdHlwZSwgUmVwYWlyU3RyYXRlZ3kgcmVwYWlyU3RyYXRlZ3kKICAgIHJldHVybiBuZXcgU3Vic3RpdHV0aW9uUmVzdWx0KFtuZXcgU3Vic3RpdHV0aW9uKAogICAgICAgICd0aW1lJywKICAgICAgICBqc29uT2JqZWN0LmdldCgndGltZScpLAogICAgICAgICdURVhUVUFMJywKICAgICAgICAnREVGQVVMVCcKICAgICksCiAgICBuZXcgU3Vic3RpdHV0aW9uKAogICAgICAgICdjOHlfVGVtcGVyYXR1cmUnLAogICAgICAgIGZyYWdtZW50VGVtcGVyYXR1cmUsCiAgICAgICAgJ09CSkVDVCcsCiAgICAgICAgJ0RFRkFVTFQnCiAgICApLAogICAgbmV3IFN1YnN0aXR1dGlvbigKICAgICAgICBjdHguZ2V0R2VuZXJpY0RldmljZUlkZW50aWZpZXIoKSwKICAgICAgICBqc29uT2JqZWN0LmdldCgnZXh0ZXJuYWxJZCcpLAogICAgICAgICdURVhUVUFMJywKICAgICAgICAnREVGQVVMVCcKICAgICldKTsKfQ==" : undefined,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: false,
         snoopedTemplates: [],
@@ -610,15 +600,13 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.setStepperConfiguration(
           mapping.mappingType,
           this.stepperConfiguration.direction,
-          EditorMode.READ_ONLY,
-          mapping?.extension?.eventName == "GraalsCodeExtension"
+          EditorMode.READ_ONLY
         );
       } else {
         this.setStepperConfiguration(
           mapping.mappingType,
           this.stepperConfiguration.direction,
-          EditorMode.UPDATE,
-          mapping?.extension?.eventName == "GraalsCodeExtension"
+          EditorMode.UPDATE
         );
       }
       // create deep copy of existing mapping, in case user cancels changes
@@ -653,8 +641,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.setStepperConfiguration(
       mapping.mappingType,
       mapping.direction,
-      EditorMode.COPY,
-      mapping?.extension?.eventName == "GraalsCodeExtension"
+      EditorMode.COPY
     );
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
@@ -981,8 +968,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   setStepperConfiguration(
     mappingType: MappingType,
     direction: Direction,
-    editorMode: EditorMode,
-    substitutionsAsCode: boolean
+    editorMode: EditorMode
   ) {
     // console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
     // console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
@@ -992,11 +978,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.stepperConfiguration.editorMode = editorMode;
     if (direction == Direction.OUTBOUND)
       this.stepperConfiguration.allowTestSending = false;
-
-    if (substitutionsAsCode) {
-      delete this.stepperConfiguration.advanceFromStepToEndStep;
-      this.stepperConfiguration.showCodeEditor = true;
-    }
   }
 
   ngOnDestroy() {

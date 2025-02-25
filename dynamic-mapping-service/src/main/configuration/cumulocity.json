@@ -6,7 +6,7 @@
   },
   "buildSpec": {
     "targetBuildArchitectures": [
-      "linux/amd64", "linux/arm64"
+      "linux/amd64"
     ]
   },
   "isolation":"MULTI_TENANT",

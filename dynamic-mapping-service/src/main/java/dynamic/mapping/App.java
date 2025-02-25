@@ -24,7 +24,6 @@ package dynamic.mapping;
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 import java.io.IOException;
-import java.util.logging.Handler;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,7 +34,6 @@ import dynamic.mapping.model.MappingTreeNodeSerializer;
 import io.micrometer.core.instrument.MeterRegistry;
 
 import org.joda.time.DateTime;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -87,12 +85,6 @@ import lombok.SneakyThrows;
 @EnableAsync
 @EnableScheduling
 public class App {
-
-    /**
-     * Logging bridge so that console.logs will end up in SLF4J
-     */
-    private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
-
     @Bean
     MeterRegistryCustomizer<MeterRegistry> configurer(
             @Value("${application.name}") String applicationName) {
@@ -110,7 +102,7 @@ public class App {
 
     @Bean("virtThreadPool")
     public ExecutorService virtThreadPool() {
-        final ThreadFactory factory = Thread.ofVirtual().name("virtThread-", 0).factory();
+        final ThreadFactory factory = Thread.ofVirtual().name("virtThread-",0).factory();
         return Executors.newThreadPerTaskExecutor(factory);
     }
 
