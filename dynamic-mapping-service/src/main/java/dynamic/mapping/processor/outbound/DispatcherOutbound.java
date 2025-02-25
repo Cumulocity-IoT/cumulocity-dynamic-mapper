@@ -132,7 +132,10 @@ public class DispatcherOutbound implements NotificationCallback {
         if (!connectorClient.isConnected())
             log.warn("Tenant {} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
-        if ("CREATE".equals(notification.getNotificationHeaders().get(1)) && connectorClient.isConnected()) {
+        String oper = notification.getNotificationHeaders().get(1);
+        // log.info("Tenant {} - Notification message received {}",
+        //         tenant, oper);
+        if (("CREATE".equals(oper) || "UPDATE".equals(oper)) && connectorClient.isConnected()) {
             // log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
             // notification.getMessage(),
             // notification.getNotificationHeaders(),

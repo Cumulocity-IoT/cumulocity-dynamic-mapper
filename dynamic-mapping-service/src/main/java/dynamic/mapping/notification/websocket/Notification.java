@@ -67,7 +67,7 @@ public class Notification {
             case "measurements":
                 api = API.MEASUREMENT;
                 break;
-            case "managedObjects":
+            case "managedobjects":
                 api = API.INVENTORY;
                 break;
             case "operations":
