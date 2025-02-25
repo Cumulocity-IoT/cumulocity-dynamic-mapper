@@ -375,12 +375,13 @@ export class MappingComponent implements OnInit, OnDestroy {
           path: 'mapping.mappingTopic',
           filterable: true
         }
-        : {
-          header: 'Publish topic sample',
-          name: 'publishTopicSample',
-          path: 'mapping.publishTopicSample',
-          filterable: true
-        },
+        : undefined,
+        //  {
+        //   header: 'Publish topic sample',
+        //   name: 'publishTopicSample',
+        //   path: 'mapping.publishTopicSample',
+        //   filterable: true
+        // },
       {
         name: 'targetAPI',
         header: 'API',
@@ -409,7 +410,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '10%'
       },
       {
-        // header: 'Test/Debug/Snoop',
         header: 'Templates snooped',
         name: 'snoopedTemplates',
         path: 'mapping',
