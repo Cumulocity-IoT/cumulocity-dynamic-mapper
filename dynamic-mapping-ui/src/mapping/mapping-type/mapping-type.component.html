@@ -47,7 +47,7 @@
         <div class="card-block separator-top">
           <c8y-form-group *ngIf="shouldShowSnoop()">
             <label class="c8y-checkbox">
-              <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox" checked="checked"
+              <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox"
                 name="snoop" formControlName="snoop" />
               <span class="m-r-8"></span>
               Enable snooping
@@ -59,7 +59,14 @@
               Step 2 to defining a complete mapping, incl. substitutions you
               have to stop the snooping for the respective mapping.</small>
           </c8y-form-group>
-          <!-- <label>Mapping type description</label> -->
+          <c8y-form-group>
+            <label class="c8y-checkbox">
+              <input title="{{ 'Define substitutions as javascript instead of JSONata' | translate }}" type="checkbox"
+                name="substitutionsAsCode" formControlName="substitutionsAsCode" />
+              <span class="m-r-8"></span>
+              Define substitutions as javascript
+            </label>
+          </c8y-form-group>
           <c8y-form-group>
             <textarea readonly c8y-textarea-autoresize
               class="form-control fit-w">{{ mappingTypeDescription }}</textarea>

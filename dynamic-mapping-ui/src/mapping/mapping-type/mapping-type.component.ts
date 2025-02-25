@@ -66,7 +66,8 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     this.closeSubject = new Subject();
     // console.log('Subject:', this.closeSubject, this.labels);
     this.formGroupStep = this.fb.group({
-      snoop: [false]
+      snoop: [false],
+      substitutionsAsCode: [false]
     });
   }
 
@@ -83,7 +84,8 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
         MappingTypeDescriptionMap[this.mappingType].properties[this.direction];
       this.closeSubject.next({
         mappingType: this.mappingType,
-        snoop: formValue.snoop && snoopSupported
+        snoop: formValue.snoop && snoopSupported,
+        substitutionsAsCode: formValue.substitutionsAsCode
       });
       this.closeSubject.complete();
     }

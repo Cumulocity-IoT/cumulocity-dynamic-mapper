@@ -54,7 +54,8 @@
         </div>
       </div>
       <div class="col-xs-12 flex-grow no-gutter">
-        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]" [deploymentMapEntry]="deploymentMapEntry"
+        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
+          [deploymentMapEntry]="deploymentMapEntry"
           (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
       </div>
       <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
@@ -65,7 +66,7 @@
     <cdk-step label="General settings" [stepControl]="propertyFormly">
       <div class="col-xs-12 flex-grow no-gutter">
         <d11r-mapping-properties [mapping]="mapping" [supportsMessageContext]="supportsMessageContext"
-          [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly"
+          [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly" [codeFormly]="codeFormly"
           (targetAPIChanged)="onTargetAPIChanged($event)">
         </d11r-mapping-properties>
       </div>
@@ -143,13 +144,14 @@
                       <div>
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
-                      <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource"
+                      <d11r-mapping-json-editor2
+                        *ngIf="stepperConfiguration.showEditorSource && !(stepperConfiguration.showCodeEditor)"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container
-                        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal">
+                        *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal || (stepperConfiguration.showCodeEditor))">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
@@ -185,7 +187,7 @@
       <div class="col-lg-12 flex-grow no-gutter">
         <div class="card-inner-scroll fit-h">
           <div class="card-block p-b-0">
-            <div class="container">
+            <div class="container" *ngIf="!(stepperConfiguration.showCodeEditor)">
               <div [formGroup]="templateForm">
                 <div class="row" #editorsTemplate>
                   <div class="col-lg-5 col-lg-offset-1 column-right-border" #leftTemplateTemplate>
@@ -200,7 +202,8 @@
                           (initialized)="onEditorSourceInitialized()" [data]="sourceTemplate"
                           #editorSourceStepSubstitution></d11r-mapping-json-editor2>
                       </div>
-                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource">
+                      <ng-container
+                        *ngIf="stepperConfiguration.showProcessorExtensionsSource && !(stepperConfiguration.showCodeEditor)">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
@@ -332,6 +335,13 @@
                 </div>
               </div>
             </div>
+
+            <div class="container">
+              <ng-container *ngIf="(stepperConfiguration.showCodeEditor)">
+                <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
+                </ng-container>
+              </ng-container>
+            </div>
           </div>
         </div>
       </div>
@@ -354,7 +364,7 @@
     </cdk-step>
     <ng-template #extensionTemplateSource let-form="form">
       <div
-        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
+        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget|| (stepperConfiguration.showCodeEditor)">
         <div class="form-group p-b-8">
           <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
@@ -366,14 +376,15 @@
                 Select an extension
               </option>
               <option *ngFor="let extension of extensions | keyvalue" [ngValue]="extension.key"
-                [selected]="extension.key === mapping.extension?.extensionName">
+                [selected]="extension.key === mapping.extension?.extensionName"
+                [disabled]="stepperConfiguration.showCodeEditor">
                 {{ extension.key }}
               </option>
             </select>
           </div>
         </div>
         <div class="form-group">
-          <label translate>Events for {{ mapping.extension.name }}</label>
+          <label translate>Events for {{ mapping.extension.extensionName }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
             <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl (change)="
                 onSelectExtensionEvent(templateForm.value.eventName)
@@ -382,10 +393,36 @@
                 Select an event
               </option>
               <option *ngFor="let extensionEntry of (extensionEvents$ | async)" [ngValue]="extensionEntry.eventName"
-                [selected]="extensionEntry.eventName === mapping.extension?.eventName">
+                [selected]="extensionEntry.eventName === mapping.extension?.eventName"
+                [disabled]="stepperConfiguration.showCodeEditor">
                 {{ extensionEntry.eventName }}
               </option>
             </select>
+          </div>
+        </div>
+      </div>
+      <div class="p-t-48" *ngIf="stepperConfiguration.showProcessorExtensionsInternal
+    ">
+        <small class="text-muted">Template is described internally by the chosen
+          mapping type</small>
+      </div>
+    </ng-template>
+
+    <ng-template #extensionTemplateSourceGraals let-form="form">
+      <div>
+        <div class="form-group p-b-8">
+          <div class="d-flex">
+            <label translate>function for creating substitutions</label>
+            <span class="hidden-xs hidden-sm">
+              <button type="button" placement="right"
+                [popover]="'javascript function for creating substitutions. Please do not change the methods signature function extractFromSource(ctx)'"
+                triggers="focus" class="btn-help" aria-label="Help content"></button>
+            </span>
+          </div>
+          <div>
+            <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="mapping['_code']"
+              (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
+            </c8y-editor>
           </div>
         </div>
       </div>
@@ -402,7 +439,7 @@
           <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
             <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
-              (change)="
+              [disabled]="stepperConfiguration.showCodeEditor" (change)="
                   onSelectExtensionName(templateForm.value.extensionName)
                 " required>
               <option [ngValue]="null" disabled>
@@ -418,7 +455,8 @@
         <div class="form-group">
           <label translate>Events for {{ mapping.extension['name'] }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl (change)="
+            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl
+              [disabled]="stepperConfiguration.showCodeEditor" (change)="
                 onSelectExtensionEvent(templateForm.value.eventName)
               " required>
               <option [ngValue]="null" disabled>

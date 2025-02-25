@@ -36,7 +36,7 @@ import { MappingService } from '../core/mapping.service';
 import { EditorMode } from '../shared/stepper.model';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic } from '../shared/util';
-import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe } from '../../shared';
+import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -51,6 +51,7 @@ export class MappingStepPropertiesComponent
 
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
+  @Input() codeFormly: FormGroup;
 
   @Output() targetAPIChanged = new EventEmitter<any>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
@@ -65,10 +66,6 @@ export class MappingStepPropertiesComponent
   targetSystem: string;
 
   constructor(
-    mappingService: MappingService,
-    sharedService: SharedService,
-    private alertService: AlertService,
-    private configService: FormlyConfig,
     private formatStringPipe: FormatStringPipe
   ) { }
 
@@ -82,26 +79,14 @@ export class MappingStepPropertiesComponent
   }
 
   ngOnInit() {
+    // console.log('EditorMode', this.stepperConfiguration.editorMode, this.stepperConfiguration.editorMode !== EditorMode.CREATE);
     // set value for backward compatibility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    // console.log(
-    //  'Mapping to be updated:',
-    //  this.mapping,
-    //  this.stepperConfiguration
-    // );
-    // const numberSnooped = this.mapping.snoopedTemplates
-    //   ? this.mapping.snoopedTemplates.length
-    //   : 0;
-    // if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
-    //   this.alertService.success(
-    //     `Already ${numberSnooped} templates exist. To stop the snooping process click on Cancel, select the respective mapping in the list of all mappings and choose the action Toggle Snooping.`,
-    //     `The recording process is in state ${this.mapping.snoopStatus}.`
-    //   );
-    // }
+
     this.propertyFormlyFields = [
       {
         validators: {
@@ -234,7 +219,7 @@ export class MappingStepPropertiesComponent
           }
         ]
       },
-      {  
+      {
         type: 'template',
         template: '<div class="legend form-block col-xs-12">Properties</div>'
       },

@@ -68,6 +68,7 @@ export interface Mapping {
   snoopedTemplates?: string[];
   extension?: ExtensionEntry;
   qos: QOS;
+  code?: string;
   lastUpdate: number;
 }
 
@@ -130,6 +131,7 @@ export interface StepperConfiguration {
   showProcessorExtensionsSource?: boolean;
   showProcessorExtensionsSourceTarget?: boolean;
   showProcessorExtensionsInternal?: boolean;
+  showCodeEditor?: boolean;
   editorMode?: EditorMode;
   allowNoDefinedIdentifier?: boolean;
   allowDefiningSubstitutions?: boolean;

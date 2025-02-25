@@ -43,6 +43,7 @@ import { DisableDirective } from './misc/disable.directive';
 import { FilterJsonPipe } from './misc/filter-json.pipe';
 import { FormatStringPipe } from './misc/format-string.pipe';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { Base64DecodePipe } from './misc/base64-decode.pipe';
 
 @NgModule({
   declarations: [
@@ -51,6 +52,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
     ConfirmationModalComponent,
     CamelCasePipe,
     FilterJsonPipe,
+    Base64DecodePipe,
     CapitalizeCasePipe,
     FormatStringPipe,
     DisableDirective,
@@ -78,6 +80,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
     ConfirmationModalComponent,
     CamelCasePipe,
     FilterJsonPipe,
+    Base64DecodePipe,
     CapitalizeCasePipe,
     DisableDirective,
     FormatStringPipe,

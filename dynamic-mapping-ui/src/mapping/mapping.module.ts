@@ -25,6 +25,7 @@ import {
   hookRoute,
   ModalModule
 } from '@c8y/ngx-components';
+import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-components/editor';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ServiceConfigurationModule } from '../configuration';
@@ -82,7 +83,7 @@ import { MappingSubscriptionComponent } from './subscription/subscription.compon
     MappingIdCellRendererComponent,
     SnoopExplorerComponent,
     AdviceActionComponent,
-    MappingFilterComponent
+    MappingFilterComponent,
   ],
   imports: [
     CoreModule,
@@ -92,7 +93,9 @@ import { MappingSubscriptionComponent } from './subscription/subscription.compon
     DynamicFormsModule,
     ModalModule,
     SharedModule,
-    ServiceConfigurationModule
+    ServiceConfigurationModule,
+    EditorComponent,
+    MonacoEditorMarkerValidatorDirective
   ],
   exports: [],
   providers: [
