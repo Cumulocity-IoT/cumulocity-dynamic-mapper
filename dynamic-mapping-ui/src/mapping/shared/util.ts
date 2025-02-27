@@ -498,3 +498,30 @@ export function isTypeOf(object) {
     return "don't know";
   }
 }
+
+export function base64ToString(base64) {
+  const binString = atob(base64);
+  return new TextDecoder().decode(Uint8Array.from(binString, (m) => m.codePointAt(0)));
+}
+
+export function stringToBase64(code2Encode) {
+  const bytes = new TextEncoder().encode(code2Encode);
+  const binString = Array.from(bytes, (byte: any) =>
+    String.fromCodePoint(byte),
+  ).join("");
+  return btoa(binString);
+}
+
+export function base64ToBytes(base64) {
+  const binString = atob(base64);
+  return Uint8Array.from(binString, (m) => m.codePointAt(0));
+}
+
+export function bytesToBase64(bytes) {
+  const binString = Array.from(bytes, (byte: any) =>
+    String.fromCodePoint(byte),
+  ).join("");
+  return btoa(binString);
+}
+
+

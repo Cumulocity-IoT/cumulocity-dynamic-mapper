@@ -62,11 +62,13 @@ import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
+  base64ToString,
   expandC8YTemplate,
   expandExternalTemplate,
   isTypeOf,
   reduceSourceTemplate,
-  splitTopicExcludingSeparator
+  splitTopicExcludingSeparator,
+  stringToBase64
 } from '../shared/util';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
@@ -582,7 +584,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
     this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
     if (this.mapping.code || this.mapping['_code']) {
-      this.mapping.code = btoa(this.mapping['_code']);
+      // this.mapping.code = btoa(this.mapping['_code']);
+      this.mapping.code = stringToBase64(this.mapping['_code']);
       delete this.mapping['_code'];
     }
     this.commit.emit(this.mapping);
@@ -650,7 +653,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
     } else if (index == STEP_SELECT_TEMPLATES) {
       if (this.mapping.code)
-        this.mapping['_code'] = atob(this.mapping.code);
+        this.mapping['_code'] = base64ToString(this.mapping.code);
+      // this.mapping['_code'] = atob(this.mapping.code);
       // this.step == 'Select templates'
       // console.log("Step index 1 - before", this.targetTemplate);
       if (this.stepperForward) {
@@ -1028,7 +1032,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onValueCodeChange(value) {
-    console.log("code changed", value);
+    // console.log("code changed", value);
     this.mapping['_code'] = value;
   }
 
