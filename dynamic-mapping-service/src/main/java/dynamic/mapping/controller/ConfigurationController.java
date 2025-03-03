@@ -393,11 +393,9 @@ public class ConfigurationController {
             serviceConfiguration.setSharedCode(sharedCode);
             serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
             Engine graalsEngine = configurationRegistry.getGraalsEngine();
-            graalsEngine.
 
             // decode sharedCode (base64)
-            byte[] decodedBytes = Base64.getDecoder().decode(sharedCode);
-            String decodedCode = new String(decodedBytes);
+            String decodedCode = new String(Base64.getDecoder().decode(sharedCode));
             Source source = Source.newBuilder("js", decodedCode, "sharedCode" + ".js")
                     .buildLiteral();
 

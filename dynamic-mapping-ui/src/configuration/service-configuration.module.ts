@@ -25,6 +25,7 @@ import { ServiceConfigurationComponent } from './service-configuration.component
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { SharedCodeComponent } from './sharedCode/shared-code.component';
 import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-components/editor';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @NgModule({
   declarations: [ServiceConfigurationComponent, SharedCodeComponent],
@@ -32,6 +33,7 @@ import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-
     EditorComponent,
     MonacoEditorMarkerValidatorDirective,
     CoreModule,
+    PopoverModule,
     SharedModule,
     BsDropdownModule.forRoot()
   ],

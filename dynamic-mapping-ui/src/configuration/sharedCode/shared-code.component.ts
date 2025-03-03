@@ -43,7 +43,7 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     language: 'javascript',
   };
 
-  codeEditorHelp = 'javascript function for creating substitutions. Please do not change the methods signature <code>function extractFromSource(ctx)</code>. <br> Define substitutions: <code>Substitution(String key, Object value, String type, String repairStrategy)</code> <br> with <code>type</code>: <code>"ARRAY"</code>, <code>"IGNORE"</code>, <code>"NUMBER"</code>, <code>"OBJECT"</code>, <code>"TEXTUAL"</code> <br>and <code>repairStrategy</code>: <br><code>"DEFAULT"</code>, <code>"USE_FIRST_VALUE_OF_ARRAY"</code>, <code>"USE_LAST_VALUE_OF_ARRAY"</code>, <code>"IGNORE"</code>, <code>"REMOVE_IF_MISSING_OR_NULL"</code>,<code>"CREATE_IF_MISSING"</code>';
+  codeEditorHelp = 'Shared javascript code for creating substitutions.';
 
   constructor(
     public bsModalService: BsModalService,
@@ -51,8 +51,8 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
   ) { }
 
-  ngOnInit() {
-    const code = this.sharedService.getSharedCode();
+  async ngOnInit() {
+    const code = await this.sharedService.getSharedCode();
     this.code = base64ToString(code);
   }
 
@@ -70,10 +70,10 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
   }
 
 
-  async onCommitButton() {
+  async clickedSaveSharedCode() {
     if (this.code) {
       const encodeCode = stringToBase64(this.code);
-      this.sharedService.getSharedCode();
+      this.sharedService.updateSharedCode(encodeCode);
     }
   }
 

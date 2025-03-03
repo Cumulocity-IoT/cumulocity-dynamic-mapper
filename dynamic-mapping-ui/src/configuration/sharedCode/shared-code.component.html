@@ -24,8 +24,33 @@
 <div class="card">
   <!-- <div class="card-block" style="max-height: 400px; overflow: auto"> -->
   <div class="card-block">
-    <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="code"
-      (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
-    </c8y-editor>
+    <div class="form-group p-b-8">
+      <div class="d-flex">
+        <label translate>Shared code</label>
+        <span class="hidden-xs hidden-sm">
+          <ng-template #popTemplateCodeHelp>
+            <div [innerHtml]="codeEditorHelp"></div>
+          </ng-template>
+          <button type="button" placement="right" [popover]="popTemplateCodeHelp" triggers="focus" class="btn-help"
+            aria-label="Help content"></button>
+        </span>
+      </div>
+      <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="code"
+        (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
+      </c8y-editor>
+    </div>
+  </div>
+  <div class="card-footer">
+    <div class="form-group">
+      <button
+        type="button"
+        name="update"
+        class="btn btn-primary"
+        (click)="clickedSaveSharedCode()"
+        translate
+      >
+        Save
+      </button>
+    </div>
   </div>
 </div>
