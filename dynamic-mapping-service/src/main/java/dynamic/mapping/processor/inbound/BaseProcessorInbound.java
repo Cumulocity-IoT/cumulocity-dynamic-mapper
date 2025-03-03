@@ -97,7 +97,7 @@ public abstract class BaseProcessorInbound<T> {
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
         } else {
-            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+            log.info("Tenant {} - This message has not been parsed to JSON, no elements from the topic level can be used!",
                     tenant);
         }
     }

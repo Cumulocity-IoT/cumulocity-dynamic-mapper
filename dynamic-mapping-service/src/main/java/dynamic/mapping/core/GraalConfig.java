@@ -38,7 +38,9 @@ public class GraalConfig {
 
     @Bean
     public Engine graalEngine() {
-        return Engine.create();
+        return Engine.newBuilder()
+            .option("engine.WarnInterpreterOnly", "false")
+            .build();
     }
 
     @Bean

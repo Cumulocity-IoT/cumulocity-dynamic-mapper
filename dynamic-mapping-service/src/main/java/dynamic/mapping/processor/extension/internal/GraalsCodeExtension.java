@@ -23,6 +23,7 @@ package dynamic.mapping.processor.extension.internal;
 
 import com.dashjoin.jsonata.json.Json;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -70,6 +71,10 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
                 }
 
                 Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
+
+                // add topic levels as metadata
+                List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
+                ((Map) jsonObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
 
                 final Value result = extractFromSourceFunc
                         .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
