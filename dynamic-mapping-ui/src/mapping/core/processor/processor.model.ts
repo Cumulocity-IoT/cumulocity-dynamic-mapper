@@ -39,7 +39,6 @@ export interface ProcessingContext {
   topic: string;
   resolvedPublishTopic?: string;
   payload?: JSON;
-  payloadRaw?: any;
   requests?: C8YRequest[];
   errors?: string[];
   processingType?: ProcessingType;

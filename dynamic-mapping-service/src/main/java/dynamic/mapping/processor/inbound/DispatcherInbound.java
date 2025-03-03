@@ -41,6 +41,7 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -199,11 +200,21 @@ public class DispatcherInbound implements GenericMessageCallback {
                                     // .graalsEngine(this.graalsEngine)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
+                                Object pp = context.getPayload();
+                                String ppLog = null;
+
+                                if (payload instanceof byte[]) {
+                                    // Convert byte[] to String
+                                    ppLog = new String((byte[]) pp, StandardCharsets.UTF_8);
+                                } else if (payload != null) {
+                                    // For any other object, call toString()
+                                    ppLog = pp.toString();
+                                }
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",
                                         tenant,
                                         context.getTopic(),
                                         connectorClient.getConnectorIdentifier(),
-                                        context.getPayload().toString());
+                                        ppLog);
                             } else {
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}", tenant,
                                         context.getTopic(), connectorClient.getConnectorIdentifier());
