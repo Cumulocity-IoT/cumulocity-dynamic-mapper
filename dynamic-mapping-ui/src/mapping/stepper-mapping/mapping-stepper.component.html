@@ -414,10 +414,11 @@
           <div class="d-flex">
             <label translate>function for creating substitutions</label>
             <span class="hidden-xs hidden-sm">
-              <ng-template #popTemplateCodeHelp><div [innerHtml]="codeEditorHelp"></div></ng-template>
-              <button type="button" placement="right"
-                [popover]="popTemplateCodeHelp"
-                triggers="focus" class="btn-help" aria-label="Help content"></button>
+              <ng-template #popTemplateCodeHelp>
+                <div [innerHtml]="codeEditorHelp"></div>
+              </ng-template>
+              <button type="button" placement="right" [popover]="popTemplateCodeHelp" triggers="focus" class="btn-help"
+                aria-label="Help content"></button>
             </span>
           </div>
           <div>

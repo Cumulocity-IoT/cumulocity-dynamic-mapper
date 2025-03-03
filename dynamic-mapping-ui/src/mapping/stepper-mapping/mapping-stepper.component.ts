@@ -175,8 +175,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
 
   editorOptions: EditorComponent['editorOptions'] = {
-    minimap: { enabled: false },
-    renderValidationDecorations: "off",
+    minimap: { enabled: true },
+   //  renderValidationDecorations: "on",
     language: 'javascript',
   };
 

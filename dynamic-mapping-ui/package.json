@@ -36,6 +36,7 @@
     "@ngx-translate/core": "15.0.0",
     "echarts": "^5.5.1",
     "jsonata": "^2.0.3",
+    "monaco-editor": "^0.52.2",
     "ngx-bootstrap": "^18.0.0",
     "ngx-echarts": "^18.0.0",
     "rxjs": "~7.8.1",

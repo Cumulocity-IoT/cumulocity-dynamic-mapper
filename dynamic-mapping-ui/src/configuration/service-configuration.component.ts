@@ -23,7 +23,6 @@ import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import packageJson from '../../package.json';
-import { ConnectorConfigurationService } from '../connector';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 
@@ -55,7 +54,6 @@ export class ServiceConfigurationComponent implements OnInit {
     public bsModalService: BsModalService,
     public alertService: AlertService,
     private sharedService: SharedService,
-    public connectorConfigurationService: ConnectorConfigurationService,
     private fb: FormBuilder
   ) { }
 

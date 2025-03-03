@@ -30,6 +30,7 @@ import {
   Direction,
   Feature,
   PATH_CONFIGURATION_SERVICE_ENDPOINT,
+  PATH_CONFIGURATION_SHARE_CODE_ENDPOINT,
   PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT
 } from '..';
@@ -41,6 +42,7 @@ import { OptionsService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
+
   constructor(
     private client: FetchClient,
     private identity: IdentityService,
@@ -153,5 +155,32 @@ export class SharedService {
     }
 
     return this._serviceConfiguration;
+  }
+
+  async getSharedCode(): Promise<string> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_SHARE_CODE_ENDPOINT}`,
+      {
+        headers: {
+          accept: 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    return await response.text();
+  }
+
+  async updateSharedCode(sharedCode) {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_SHARE_CODE_ENDPOINT}`,
+      {
+        headers: {
+          'content-type': 'application/text'
+        },
+        body: sharedCode,
+        method: 'PUT'
+      }
+    );
+    return response;
   }
 }

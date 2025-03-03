@@ -48,7 +48,6 @@ import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.co
 import { DeviceSelectorSubscriptionComponent } from './subscription/device-selector/device-selector-subscription.component';
 import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
-
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { MappingFilterComponent } from './filter/mapping-filter.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
