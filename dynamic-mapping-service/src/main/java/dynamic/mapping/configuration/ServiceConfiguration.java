@@ -46,6 +46,7 @@ public class ServiceConfiguration implements Cloneable {
 		this.outboundMappingEnabled = true;
 		this.inboundExternalIdCacheSize = 0;
 		this.inboundExternalIdCacheRetention = 1;
+		this.sharedCode = null;
 	}
 
 	@NotNull
@@ -91,4 +92,7 @@ public class ServiceConfiguration implements Cloneable {
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public Integer inboundExternalIdCacheRetention;
+
+	@JsonSetter(nulls = Nulls.SKIP)
+	public String sharedCode;
 }
