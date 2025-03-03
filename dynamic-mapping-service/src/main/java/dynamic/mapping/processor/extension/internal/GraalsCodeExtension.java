@@ -62,16 +62,16 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
                     Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
                             .buildLiteral();
                     graalsContext.eval(source);
-
-                    if (context.getSharedCode() != null) {
-                        byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
-                        String decodedSharedCode = new String(decodedSharedCodeBytes);
-                        Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
-                                .buildLiteral();
-                        graalsContext.eval(sharedSource);
-                    }
                     extractFromSourceFunc = graalsContext.getBindings("js")
                             .getMember(identifier);
+                }
+
+                if (context.getSharedCode() != null) {
+                    byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
+                    String decodedSharedCode = new String(decodedSharedCodeBytes);
+                    Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
+                            .buildLiteral();
+                    graalsContext.eval(sharedSource);
                 }
 
                 Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));

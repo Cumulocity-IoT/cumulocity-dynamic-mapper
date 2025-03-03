@@ -392,20 +392,20 @@ public class ConfigurationController {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
             serviceConfiguration.setSharedCode(sharedCode);
             serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
-            Engine graalsEngine = configurationRegistry.getGraalsEngine();
+            // Engine graalsEngine = configurationRegistry.getGraalsEngine();
 
-            // decode sharedCode (base64)
-            String decodedCode = new String(Base64.getDecoder().decode(sharedCode));
-            Source source = Source.newBuilder("js", decodedCode, "sharedCode" + ".js")
-                    .buildLiteral();
+            // // decode sharedCode (base64)
+            // String decodedCode = new String(Base64.getDecoder().decode(sharedCode));
+            // Source source = Source.newBuilder("js", decodedCode, "sharedCode" + ".js")
+            //         .buildLiteral();
 
-            graalsContext = Context.newBuilder("js")
-                    .engine(graalsEngine)
-                    .allowAllAccess(true)
-                    .option("js.strict", "true")
-                    .build();
-                    cleanupNonServiceMembers(graalsContext);   
-            graalsContext.eval(source);
+            // graalsContext = Context.newBuilder("js")
+            //         .engine(graalsEngine)
+            //         .allowAllAccess(true)
+            //         .option("js.strict", "true")
+            //         .build();
+            //         cleanupNonServiceMembers(graalsContext);   
+            // graalsContext.eval(source);
 
             log.debug("Tenant {} - Get shared code", tenant);
         } catch (Exception ex) {
