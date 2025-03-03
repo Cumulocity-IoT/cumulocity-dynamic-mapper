@@ -23,7 +23,6 @@ package dynamic.mapping.processor.extension.internal;
 
 import com.dashjoin.jsonata.json.Json;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -31,9 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.TypeLiteral;
 import org.graalvm.polyglot.Value;
 
 import dynamic.mapping.model.Mapping;
@@ -64,8 +61,15 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
                             identifier);
                     Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
                             .buildLiteral();
-
                     graalsContext.eval(source);
+
+                    if (context.getSharedCode() != null) {
+                        byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
+                        String decodedSharedCode = new String(decodedSharedCodeBytes);
+                        Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
+                                .buildLiteral();
+                        graalsContext.eval(sharedSource);
+                    }
                     extractFromSourceFunc = graalsContext.getBindings("js")
                             .getMember(identifier);
                 }

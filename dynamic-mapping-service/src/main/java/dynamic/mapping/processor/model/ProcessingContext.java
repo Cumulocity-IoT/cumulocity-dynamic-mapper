@@ -107,6 +107,7 @@ public class ProcessingContext<O> {
 
     private Context graalsContext;
 
+    private String sharedCode;
 
     private Value extractFromSourceFunc;
 

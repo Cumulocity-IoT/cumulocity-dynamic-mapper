@@ -66,9 +66,7 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-
   }
-
 
   async clickedSaveSharedCode() {
     if (this.code) {
@@ -76,7 +74,6 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
       this.sharedService.updateSharedCode(encodeCode);
     }
   }
-
 
   onValueCodeChange(value) {
     // console.log("code changed", value);

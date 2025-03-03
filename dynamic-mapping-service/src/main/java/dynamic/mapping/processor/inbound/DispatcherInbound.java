@@ -157,6 +157,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     // identify the correct processor based on the mapping type
                     BaseProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
                     Context graalsContext = null;
+                    String sharedCode = null;
                     try {
                         if (processor != null) {
 
@@ -186,6 +187,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                                             .getMember(identifier);
 
                                 }
+                                sharedCode = serviceConfiguration.sharedCode;
 
                             }
                             inboundProcessingCounter.increment();
@@ -197,6 +199,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                                     .key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
                                     // .graalsContext(mapping.code != null ? this.graalsContext : null)
                                     .graalsContext(graalsContext)
+                                    .sharedCode(sharedCode)
                                     // .graalsEngine(this.graalsEngine)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
