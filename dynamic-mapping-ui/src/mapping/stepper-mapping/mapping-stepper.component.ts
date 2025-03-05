@@ -101,7 +101,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   templateForm: FormGroup;
   templateModel: any = {};
   substitutionFormly: FormGroup = new FormGroup({});
+  filterFormly: FormGroup = new FormGroup({});
   substitutionFormlyFields: FormlyFieldConfig[];
+  filterFormlyFields: FormlyFieldConfig[];
+  filterModel: any = {};
   substitutionModel: any = {};
   propertyFormly: FormGroup = new FormGroup({});
   codeFormly: FormGroup = new FormGroup({});
@@ -176,7 +179,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
-   //  renderValidationDecorations: "on",
+    //  renderValidationDecorations: "on",
     language: 'javascript',
   };
 
@@ -244,6 +247,73 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         valid: false,
       }
     };
+
+    this.filterModel = {
+      filterMapping: this.mapping.filterMapping,
+      filterExpression: {
+        result: '',
+        resultType: 'empty',
+        valid: false,
+      },
+    };
+
+
+    this.filterFormlyFields = [
+      {
+        fieldGroup: [
+          {
+            className: 'col-lg-5 col-lg-offset-1',
+            key: 'filterMapping',
+            type: 'input-custom',
+            wrappers: ['custom-form-field-wrapper'],
+            templateOptions: {
+              label: 'Filter mapping',
+              class: 'input-sm',
+              customWrapperClass: 'm-b-24',
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+                !this.stepperConfiguration.allowDefiningSubstitutions,
+              placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
+              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+              in your expressions:
+              <ol>
+                <li>to convert a UNIX timestamp to ISO date format use:
+                  <code>$fromMillis($number(deviceTimestamp))</code>
+                </li>
+                <li>to join substring starting at position 5 of property <code>txt</code> with
+                  device
+                  identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
+                <li>function chaining using <code>~</code> is not supported, instead use function
+                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+              </ol>`,
+              required: true,
+              customMessage: this.sourceCustomMessage$
+            },
+            expressionProperties: {
+              'templateOptions.class': (model) => {
+                if (
+                  model.pathSource == '' &&
+                  model.stepperConfiguration.allowDefiningSubstitutions
+                ) {
+                  return 'input-sm';
+                } else {
+                  return 'input-sm';
+                }
+              }
+            },
+            hooks: {
+              onInit: (field: FormlyFieldConfig) => {
+                field.formControl.valueChanges.subscribe(path => {
+                  this.updateFilterExpressionResult(path);
+                });
+              }
+            }
+          }
+        ]
+      }
+    ];
+
 
     this.substitutionFormlyFields = [
       {
@@ -464,6 +534,25 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionModel = { ...this.substitutionModel };
   }
 
+  async updateFilterExpressionResult(path) {
+    try {
+      const r: JSON = await this.mappingService.evaluateExpression(
+        this.editorSourceStepTemplate?.get(),
+        path
+      );
+      this.filterModel.filterExpression = {
+        resultType: isTypeOf(r),
+        result: JSON.stringify(r, null, 4),
+        valid: true
+      };
+    } catch (error) {
+      this.filterModel.sourceExpression.valid = false;
+      this.filterFormly
+        .get('filterMapping')
+        .setErrors({ validationError: { message: error.message } });
+    }
+    this.filterModel = { ...this.filterModel };
+  }
 
   async updateTargetExpressionResult(path) {
     try {
@@ -527,6 +616,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.alertService.info(`Please use the selected node ${gi} to map the identity from the source`);
     }
 
+  }
+
+  async onSelectedPathFilterMappingChanged(path: string) {
+    this.filterModel.filterMapping = path;
+    this.updateFilterExpressionResult(path);
   }
 
   async onSelectedPathTargetChanged(path: string) {

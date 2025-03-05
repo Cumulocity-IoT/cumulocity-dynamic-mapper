@@ -149,6 +149,7 @@
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
+                        (pathChanged)="onSelectedPathFilterMappingChanged($event)"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container
                         *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal || (stepperConfiguration.showCodeEditor))">
@@ -171,6 +172,24 @@
                         #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>
                     </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
+              </div>
+              <div class="row">
+                <div class="col-lg-5 col-lg-offset-1">
+                  <div class="form-group m-b-4" style="margin-left: 0px">
+                    <label translate style="padding-left: 6px">Source Result [{{
+                      filterModel.filterMapping?.resultType
+                      }}]</label>
+                    <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                            font-size: var(--c8y-font-size-small);
+                            line-height: var(--c8y-line-height-small);
+                          ">{{
+                            filterModel.filterExpression?.result
+                          }}</textarea>
                   </div>
                 </div>
               </div>
