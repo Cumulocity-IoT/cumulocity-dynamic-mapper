@@ -147,7 +147,7 @@
                       <d11r-mapping-json-editor2
                         *ngIf="stepperConfiguration.showEditorSource && !(stepperConfiguration.showCodeEditor)"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
-                        [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
+                        [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
                         (pathChanged)="onSelectedPathFilterMappingChanged($event)"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
@@ -167,7 +167,7 @@
                       </div>
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorTarget"
                         [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
-                        [class]="'jse-main-medium'" (initialized)="onEditorTargetInitialized()"
+                        [class]="'jse-main-small'" (initialized)="onEditorTargetInitialized()"
                         (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
                         #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>

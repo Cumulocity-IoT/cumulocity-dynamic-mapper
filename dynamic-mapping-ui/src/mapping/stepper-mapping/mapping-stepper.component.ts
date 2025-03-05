@@ -545,6 +545,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         result: JSON.stringify(r, null, 4),
         valid: true
       };
+      this.mapping.filterMapping = path;
     } catch (error) {
       this.filterModel.sourceExpression.valid = false;
       this.filterFormly
