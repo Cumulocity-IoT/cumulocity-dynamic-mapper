@@ -271,16 +271,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
-              placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
+              placeholder: '$exists(c8y_TemperatureMeasurement)',
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
               <ol>
-                <li>to convert a UNIX timestamp to ISO date format use:
-                  <code>$fromMillis($number(deviceTimestamp))</code>
+                <li>Check if a fragment exsits:
+                  <code>$exists(c8y_TemperatureMeasurement)</code>
                 </li>
-                <li>to join substring starting at position 5 of property <code>txt</code> with
-                  device
-                  identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
+                <li>Check if a value mets a condition:
+                   <code>c8y_TemperatureMeasurement.T.value > 15</code></li>
                 <li>function chaining using <code>~</code> is not supported, instead use function
                   notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
                   becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
@@ -535,7 +534,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async updateFilterExpressionResult(path) {
     try {
       const r: JSON = await this.mappingService.evaluateExpression(
-        this.editorSourceStepTemplate?.get(),
+        JSON.parse(this.mapping.sourceTemplate),
         path
       );
       this.filterModel.filterExpression = {
@@ -543,12 +542,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         result: JSON.stringify(r, null, 4),
         valid: true
       };
+      if (path && this.filterModel.filterExpression.result != 'true') throw Error('The filter expression must return true');
       this.mapping.filterMapping = path;
     } catch (error) {
-      this.filterModel.sourceExpression.valid = false;
+      this.filterModel.filterExpression.valid = false;
       this.filterFormly
         .get('filterMapping')
         .setErrors({ validationError: { message: error.message } });
+      this.filterFormly.get('filterMapping').markAsTouched();
     }
     this.filterModel = { ...this.filterModel };
   }
@@ -619,6 +620,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   async onSelectedPathFilterMappingChanged(path: string) {
     this.filterModel.filterMapping = path;
+    console.log("Select: "+path);
+
     this.updateFilterExpressionResult(path);
   }
 
@@ -744,8 +747,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         }
       }
       this.filterModel['filterMapping'] = this.mapping.filterMapping;
-      if (this.mapping.filterMapping)
+      if (this.mapping.filterMapping) {
         this.updateFilterExpressionResult(this.mapping.filterMapping);
+      }
     } else if (index == STEP_SELECT_TEMPLATES) {
 
       if (this.mapping.code)
