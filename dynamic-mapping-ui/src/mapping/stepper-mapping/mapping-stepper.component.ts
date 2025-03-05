@@ -249,14 +249,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     };
 
     this.filterModel = {
-      filterMapping: this.mapping.filterMapping,
       filterExpression: {
         result: '',
         resultType: 'empty',
         valid: false,
       },
     };
-
 
     this.filterFormlyFields = [
       {
@@ -287,7 +285,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                   notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
                   becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
               </ol>`,
-              required: true,
+              required: this.mapping.direction == Direction.OUTBOUND,
               customMessage: this.sourceCustomMessage$
             },
             expressionProperties: {
@@ -744,9 +742,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           console.log("Selected events", Object.values(this.extensions[this.mapping.extension.extensionName].extensionEntries), this.mapping, this.extensions)
 
         }
-
       }
+      this.filterModel['filterMapping'] = this.mapping.filterMapping;
+      if (this.mapping.filterMapping)
+        this.updateFilterExpressionResult(this.mapping.filterMapping);
     } else if (index == STEP_SELECT_TEMPLATES) {
+
       if (this.mapping.code)
         this.mapping['_code'] = base64ToString(this.mapping.code);
       // this.mapping['_code'] = atob(this.mapping.code);
