@@ -502,8 +502,9 @@ public class MappingComponent {
                 // begin with "/"
                 var expression = jsonata(m.getFilterMapping());
                 Object extractedContent = expression.evaluate(messageAsMap);
-                if (extractedContent != null && m.targetAPI.equals(api)) {
-                    log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant,
+                //Only add mappings where the filter is "true".
+                if(extractedContent != null  && !isNodeTrue(extractedContent) && m.targetAPI.equals(api)) {
+                    log.info("Tenant {} - Found valid mapping for filter {} in C8Y message {}", tenant,
                             m.getFilterMapping(),
                             messageAsMap.get("id"));
                     result.add(m);
@@ -517,6 +518,21 @@ public class MappingComponent {
             throw new ResolveException(e.getMessage());
         }
         return result;
+    }
+
+    private boolean isNodeTrue(Object node) {
+        // Case 1: Direct boolean value check
+        if (node instanceof Boolean) {
+            return (Boolean) node;
+        }
+
+        // Case 2: String value that can be converted to boolean
+        if (node instanceof String) {
+            String text = ((String) node).trim().toLowerCase();
+            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
+            // Add more string variations if needed
+        }
+        return false;
     }
 
     public Mapping deleteFromMappingCache(String tenant, Mapping mapping) {
