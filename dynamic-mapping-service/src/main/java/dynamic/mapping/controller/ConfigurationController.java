@@ -22,7 +22,6 @@
 package dynamic.mapping.controller;
 
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,8 +40,6 @@ import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.core.*;
 
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.Source;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;

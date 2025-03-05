@@ -37,6 +37,9 @@ import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.model.SnoopStatus;
+import dynamic.mapping.processor.extension.internal.Substitution;
+import dynamic.mapping.processor.extension.internal.SubstitutionContext;
+import dynamic.mapping.processor.extension.internal.SubstitutionResult;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -52,6 +55,7 @@ import java.util.concurrent.Future;
 import java.util.logging.Handler;
 
 import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
@@ -165,10 +169,32 @@ public class DispatcherInbound implements GenericMessageCallback {
                             Value extractFromSourceFunc = null;
                             if (mapping.code != null) {
                                 graalsContext = Context.newBuilder("js")
-                                        .engine(graalsEngine)
-                                        .allowAllAccess(true)
-                                        .option("js.strict", "true")
+                                        .option("engine.WarnInterpreterOnly", "false")
+                                        .allowHostClassLookup(className -> className.equals(
+                                                "dynamic.mapping.processor.extension.internal.SubstitutionResult") ||
+                                                className.equals(
+                                                        "dynamic.mapping.processor.extension.internal.Substitution"))
+                                        .allowHostAccess(HostAccess.newBuilder()
+                                                // Allow constructors
+                                                .allowAccess(SubstitutionResult.class.getConstructor(List.class))
+                                                .allowAccess(Substitution.class.getConstructor(String.class,
+                                                        Object.class, String.class, String.class))
+                                                // Allow methods needed by ctx object
+                                                .allowAccess(SubstitutionContext.class.getMethod("getJsonObject"))
+                                                .allowAccess(SubstitutionContext.class
+                                                        .getMethod("getGenericDeviceIdentifier"))
+                                                // Allow array/collection access if needed
+                                                .allowArrayAccess(true)
+                                                .allowListAccess(true)
+                                                .allowMapAccess(true)
+                                                .build())
                                         .build();
+
+                                // Context.newBuilder("js")
+                                // .engine(graalsEngine)
+                                // .allowAllAccess(true)
+                                // .option("js.strict", "true")
+                                // .build();
 
                                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
                                 extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);

@@ -27,29 +27,18 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.graalvm.polyglot.Engine;
 import org.slf4j.bridge.SLF4JBridgeHandler;
-import org.graalvm.polyglot.Context;
 
 @Configuration
 public class GraalConfig {
     /**
      * Logging bridge so that console.logs will end up in SLF4J
      */
-    private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
+    // private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
 
     @Bean
     public Engine graalEngine() {
         return Engine.newBuilder()
             .option("engine.WarnInterpreterOnly", "false")
             .build();
-    }
-
-    @Bean
-    public Context createContext(Engine engine) {
-        return Context.newBuilder("js")
-                .engine(engine)
-                .logHandler(GRAALJS_LOG_HANDLER)
-                .allowAllAccess(true)
-                .option("js.strict", "true")
-                .build();
     }
 }

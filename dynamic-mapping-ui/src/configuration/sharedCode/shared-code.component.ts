@@ -43,7 +43,7 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     language: 'javascript',
   };
 
-  codeEditorHelp = 'Shared javascript code for creating substitutions.';
+  codeEditorHelp = 'Shared javascript code for creating substitutions. These functions can be referenced by all mappings that  code based substitutions.';
 
   constructor(
     public bsModalService: BsModalService,
