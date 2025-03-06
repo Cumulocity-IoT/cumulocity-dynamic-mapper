@@ -459,7 +459,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.setStepperConfiguration(
       this.mappingType,
       this.stepperConfiguration.direction,
-      EditorMode.CREATE, true
+      EditorMode.CREATE, this.substitutionsAsCode
     );
 
     const identifier = uuidCustom();

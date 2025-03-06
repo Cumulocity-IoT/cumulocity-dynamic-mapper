@@ -145,7 +145,7 @@
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
                       <d11r-mapping-json-editor2
-                        *ngIf="stepperConfiguration.showEditorSource && !(stepperConfiguration.showCodeEditor)"
+                        *ngIf="stepperConfiguration.showEditorSource && !stepperConfiguration.showCodeEditor"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
@@ -175,21 +175,23 @@
                   </div>
                 </div>
               </div>
-              <div class="row">
-                <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
-              </div>
-              <div class="row">
-                <div class="col-lg-5 col-lg-offset-1">
-                  <div class="form-group m-b-4" style="margin-left: 0px">
-                    <label translate style="padding-left: 6px">Filter Result [{{
-                      filterModel.filterExpression?.resultType
-                      }}]</label>
-                    <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
-                            font-size: var(--c8y-font-size-small);
-                            line-height: var(--c8y-line-height-small);
-                          ">{{
-                            filterModel.filterExpression?.result
-                          }}</textarea>
+              <div *ngIf="!stepperConfiguration.showCodeEditor">
+                <div class="row">
+                  <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
+                </div>
+                <div class="row">
+                  <div class="col-lg-5 col-lg-offset-1">
+                    <div class="form-group m-b-4" style="margin-left: 0px">
+                      <label translate style="padding-left: 6px">Filter Result [{{
+                        filterModel.filterExpression?.resultType
+                        }}]</label>
+                      <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                              font-size: var(--c8y-font-size-small);
+                              line-height: var(--c8y-line-height-small);
+                            ">{{
+                              filterModel.filterExpression?.result
+                            }}</textarea>
+                    </div>
                   </div>
                 </div>
               </div>
