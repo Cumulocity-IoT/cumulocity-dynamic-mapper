@@ -620,7 +620,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   async onSelectedPathFilterMappingChanged(path: string) {
     this.filterModel.filterMapping = path;
-    console.log("Select: "+path);
+    //console.log("Select: "+path);
 
     this.updateFilterExpressionResult(path);
   }
@@ -715,7 +715,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.extensionEvents$.next(
       Object.values(this.extensions[extensionName].extensionEntries as Map<string, ExtensionEntry>).filter(entry => entry.extensionType == this.mapping.extension.extensionType)
     );
-    console.log("Selected events", Object.values(this.extensions[extensionName].extensionEntries))
+    //console.log("Selected events", Object.values(this.extensions[extensionName].extensionEntries))
   }
 
   onSelectExtensionEvent(extensionEvent) {
@@ -742,7 +742,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               this.extensions[this.mapping.extension.extensionName].extensionEntries
             )
           );
-          console.log("Selected events", Object.values(this.extensions[this.mapping.extension.extensionName].extensionEntries), this.mapping, this.extensions)
+          //console.log("Selected events", Object.values(this.extensions[this.mapping.extension.extensionName].extensionEntries), this.mapping, this.extensions)
 
         }
       }
