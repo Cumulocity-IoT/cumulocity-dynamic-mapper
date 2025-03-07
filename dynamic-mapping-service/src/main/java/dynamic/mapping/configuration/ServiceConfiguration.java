@@ -46,7 +46,7 @@ public class ServiceConfiguration implements Cloneable {
 		this.outboundMappingEnabled = true;
 		this.inboundExternalIdCacheSize = 0;
 		this.inboundExternalIdCacheRetention = 1;
-		this.sharedCode = null;
+		this.sharedCode = "Y29uc3QgU3Vic3RpdHV0aW9uUmVzdWx0ID0gSmF2YS50eXBlKCdkeW5hbWljLm1hcHBpbmcucHJvY2Vzc29yLmV4dGVuc2lvbi5pbnRlcm5hbC5TdWJzdGl0dXRpb25SZXN1bHQnKTsKY29uc3QgU3Vic3RpdHV0aW9uID0gSmF2YS50eXBlKCdkeW5hbWljLm1hcHBpbmcucHJvY2Vzc29yLmV4dGVuc2lvbi5pbnRlcm5hbC5TdWJzdGl0dXRpb24nKTsKCmZ1bmN0aW9uIGhlbGxvKHdvcmxkKSB7CiAgICBjb25zb2xlLmxvZygiSGVsbG8gIit3b3JsZCk7Cn0=";
 	}
 
 	@NotNull
