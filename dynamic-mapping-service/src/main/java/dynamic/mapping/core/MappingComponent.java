@@ -503,7 +503,7 @@ public class MappingComponent {
                 var expression = jsonata(m.getFilterMapping());
                 Object extractedContent = expression.evaluate(messageAsMap);
                 //Only add mappings where the filter is "true".
-                if(extractedContent != null  && !isNodeTrue(extractedContent) && m.targetAPI.equals(api)) {
+                if(extractedContent != null  && isNodeTrue(extractedContent) && m.targetAPI.equals(api)) {
                     log.info("Tenant {} - Found valid mapping for filter {} in C8Y message {}", tenant,
                             m.getFilterMapping(),
                             messageAsMap.get("id"));
