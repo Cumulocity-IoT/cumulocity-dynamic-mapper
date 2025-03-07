@@ -87,18 +87,23 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
                 // Convert the JavaScript result to Java objects before closing the context
                 final SubstitutionResult typedResult = result.as(SubstitutionResult.class);
 
-                // Now use the copied objects
-                for (Substitution item : typedResult.substitutions) {
-                    Object convertedValue = (item.value instanceof Value)
-                            ? convertPolyglotValue((Value) item.value)
-                            : item.value;
+                if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
+                    context.setIgnoreFurtherProcessing(true);
+                    log.info("Tenant {} - Ignoring payload over GraalsCodeExtension: {}, {}", context.getTenant(),
+                    jsonObject);
+                } else { // Now use the copied objects
+                    for (Substitution item : typedResult.substitutions) {
+                        Object convertedValue = (item.value instanceof Value)
+                                ? convertPolyglotValue((Value) item.value)
+                                : item.value;
 
-                    context.addToProcessingCache(item.key, convertedValue, TYPE.valueOf(item.type),
-                            RepairStrategy.valueOf(item.repairStrategy));
+                        context.addToProcessingCache(item.key, convertedValue, TYPE.valueOf(item.type),
+                                RepairStrategy.valueOf(item.repairStrategy));
+                    }
+
+                    log.info("Tenant {} - New payload over GraalsCodeExtension: {}, {}", context.getTenant(),
+                            jsonObject);
                 }
-
-                log.info("Tenant {} - New payload over GraalsCodeExtension: {}, {}", context.getTenant(),
-                        jsonObject);
 
             }
 
