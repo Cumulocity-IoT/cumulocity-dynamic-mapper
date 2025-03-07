@@ -59,7 +59,7 @@
               Step 2 to defining a complete mapping, incl. substitutions you
               have to stop the snooping for the respective mapping.</small>
           </c8y-form-group>
-          <c8y-form-group>
+          <c8y-form-group *ngIf="direction == Direction.INBOUND">
             <label class="c8y-checkbox">
               <input title="{{ 'Define substitutions as javascript instead of JSONata' | translate }}" type="checkbox"
                 name="substitutionsAsCode" formControlName="substitutionsAsCode" />
