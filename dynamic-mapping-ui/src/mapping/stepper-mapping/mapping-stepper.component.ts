@@ -534,7 +534,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async updateFilterExpressionResult(path) {
     try {
       const r: JSON = await this.mappingService.evaluateExpression(
-        JSON.parse(this.mapping.sourceTemplate),
+        this.editorSourceStepTemplate?.get(),
         path
       );
       this.filterModel.filterExpression = {
