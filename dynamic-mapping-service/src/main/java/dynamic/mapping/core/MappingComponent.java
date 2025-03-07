@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.logging.Handler;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -44,9 +43,7 @@ import jakarta.validation.Valid;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
-import org.graalvm.polyglot.Context;
 import org.joda.time.DateTime;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -75,8 +72,6 @@ import dynamic.mapping.model.ValidationError;
 @Slf4j
 @Component
 public class MappingComponent {
-
-    private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
 
     // structure: <tenant, < mappingIdent , status>>
     private Map<String, Map<String, MappingStatus>> tenantMappingStatus = new HashMap<>();
@@ -304,29 +299,10 @@ public class MappingComponent {
             deleteMappingStatus(tenant, id);
             return m.getC8yMQTTMapping();
         });
-        if (result != null) {
+        if (result != null)
             removeMappingFromDeploymentMap(tenant, result.identifier);
-            removeCodeFromEngine(result);
-        }
         // log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
-
         return result;
-    }
-
-    private void removeCodeFromEngine(Mapping mapping) {
-        if (mapping.code != null) {
-            String globalIdentifier = "delete globalThis" + Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-            try (Context context = Context.newBuilder("js")
-                    .engine(configurationRegistry.getGraalsEngine())
-                    .logHandler(GRAALJS_LOG_HANDLER)
-                    .allowAllAccess(true)
-                    .option("js.strict", "true")
-                    .build()) {
-
-                // Before closing the context, clean up the members
-                context.getBindings("js").removeMember(globalIdentifier);
-            }
-        }
     }
 
     public List<Mapping> getMappings(String tenant, Direction direction) {
@@ -378,10 +354,6 @@ public class MappingComponent {
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant, Direction.UNSPECIFIED);
             List<ValidationError> errors = Mapping.isMappingValid(mappings, mapping);
-            
-            // remove potentially obsolete javascript code from engine cache
-            removeCodeFromEngine(mapping);
-
             if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();
                 mapping.lastUpdate = System.currentTimeMillis();
@@ -644,7 +616,7 @@ public class MappingComponent {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
         } else {
-            // step 2. retrieve collected snoopedTemplates
+                        // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
@@ -762,27 +734,27 @@ public class MappingComponent {
 
         // nothing to do for outbound mappings
         // if (Direction.INBOUND.equals(mapping.direction)) {
-        // step 2. retrieve collected snoopedTemplates
-        mapping.setSnoopedTemplates(new ArrayList<>());
-        // step 3. update mapping in inventory
-        // don't validate mapping when setting active = false, this allows to remove
-        // mappings that are not working
-        updateMapping(tenant, mapping, true, true);
-        // step 4. delete mapping from update cache
-        removeDirtyMapping(tenant, mapping);
-        // step 5. update caches
-        if (Direction.OUTBOUND.equals(mapping.direction)) {
-            rebuildMappingOutboundCache(tenant);
-        } else {
-            deleteFromCacheMappingInbound(tenant, mapping);
-            addToCacheMappingInbound(tenant, mapping);
-            cacheMappingInbound.get(tenant).put(mapping.id, mapping);
-        }
-        configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
-                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
-                DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
-                null);
-        // }
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(new ArrayList<>());
+            // step 3. update mapping in inventory
+            // don't validate mapping when setting active = false, this allows to remove
+            // mappings that are not working
+            updateMapping(tenant, mapping, true, true);
+            // step 4. delete mapping from update cache
+            removeDirtyMapping(tenant, mapping);
+            // step 5. update caches
+            if (Direction.OUTBOUND.equals(mapping.direction)) {
+                rebuildMappingOutboundCache(tenant);
+            } else {
+                deleteFromCacheMappingInbound(tenant, mapping);
+                addToCacheMappingInbound(tenant, mapping);
+                cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+            }
+            configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
+                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                    DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+                    null);
+        //}
     }
 
     public void updateDeploymentMapEntry(String tenant, String mappingIdent, @Valid List<String> deployment) {

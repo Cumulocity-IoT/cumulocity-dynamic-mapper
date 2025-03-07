@@ -33,7 +33,6 @@ export * from './mapping/mapping.model';
 export * from './mapping/util';
 export * from './misc/admin.guard';
 export * from './misc/camel-case.pipe';
-export * from './misc/base64-decode.pipe';
 export * from './misc/capitalize-case.pipe';
 export * from './misc/filter-json.pipe';
 export * from './misc/format-string.pipe';
