@@ -105,6 +105,8 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
+                this.filterFormly.get('pathSource').setValue(this.mapping.filterMapping);
+                this.updateSourceExpressionResult();
                 field.formControl.valueChanges.subscribe(() => {
                   this.updateSourceExpressionResult();
                 });
@@ -114,6 +116,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
         ]
       }
     ];
+
     // console.log('Mapping in filter:', this.mapping, this.editorSourceFilter);
   }
 
@@ -147,6 +150,8 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
         resultType: isTypeOf(r),
         result: JSON.stringify(r, null, 4)
       };
+      if (this.filterModel.sourceExpression.result != 'true') throw Error('The filter expression must return true');
+
       this.valid = true;
 
     } catch (error) {
@@ -155,6 +160,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
         .setErrors({
           validationExpression: { message: error.message },
         });
+      this.filterFormly.get('pathSource').markAsTouched();
       this.customMessage$.next(undefined);
       this.valid = false;
     }
