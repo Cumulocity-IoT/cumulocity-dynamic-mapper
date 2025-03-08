@@ -253,6 +253,8 @@ public class DispatcherOutbound implements NotificationCallback {
                                                         Object.class, String.class, String.class))
                                                 // Allow methods needed by ctx object
                                                 .allowAccess(SubstitutionContext.class.getMethod("getJsonObject"))
+                                                .allowAccess(SubstitutionContext.class.getMethod("getExternalIdentifier"))
+                                                .allowAccess(SubstitutionContext.class.getMethod("getC8YIdentifier"))
                                                 .allowAccess(SubstitutionContext.class
                                                         .getMethod("getGenericDeviceIdentifier"))
                                                 // Allow array/collection access if needed
@@ -261,13 +263,6 @@ public class DispatcherOutbound implements NotificationCallback {
                                                 .allowMapAccess(true)
                                                 .build())
                                         .build();
-
-                                // Context.newBuilder("js")
-                                // .engine(graalsEngine)
-                                // .allowAllAccess(true)
-                                // .option("js.strict", "true")
-                                // .build();
-
                                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
                                 extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
                                 if (extractFromSourceFunc == null) {
