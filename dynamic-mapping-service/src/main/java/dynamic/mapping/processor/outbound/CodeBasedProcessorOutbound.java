@@ -99,11 +99,8 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                     graalsContext.eval(sharedSource);
                 }
 
-                Map jsonObject = (Map) Json.parseJson((String) context.getPayload());
-
-                // add topic levels as metadata
-                List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
-                ((Map) jsonObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
+               // Map jsonObject = (Map) Json.parseJson((String) context.getPayload());
+                Map jsonObject = (Map) context.getPayload();
 
                 final Value result = extractFromSourceFunc
                         .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
