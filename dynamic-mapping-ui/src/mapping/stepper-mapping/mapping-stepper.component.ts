@@ -35,7 +35,7 @@ import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, filter, Subject, take } from 'rxjs';
+import { BehaviorSubject, debounceTime, distinctUntilChanged, filter, Subject, take } from 'rxjs';
 import { Content, Mode } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
@@ -301,7 +301,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.subscribe(path => {
+                field.formControl.valueChanges.pipe(
+                  // Wait for 500ms pause in typing before processing
+                  debounceTime(500),
+                  
+                  // Only trigger if the value has actually changed
+                  distinctUntilChanged()
+                ).subscribe(path => {
                   this.updateFilterExpressionResult(path);
                 });
               }
@@ -358,7 +364,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.subscribe(path => {
+                field.formControl.valueChanges.pipe(
+                  // Wait for 500ms pause in typing before processing
+                  debounceTime(500),
+                  
+                  // Only trigger if the value has actually changed
+                  distinctUntilChanged()
+                ).subscribe(path => {
                   this.updateSourceExpressionResult(path);
                 });
               }
@@ -397,7 +409,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.subscribe(path => {
+                field.formControl.valueChanges.pipe(
+                  // Wait for 500ms pause in typing before processing
+                  debounceTime(500),
+                  
+                  // Only trigger if the value has actually changed
+                  distinctUntilChanged()
+                ).subscribe(path => {
                   this.updateTargetExpressionResult(path);
                 });
               }
@@ -533,16 +551,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   async updateFilterExpressionResult(path) {
     try {
-      const r: JSON = await this.mappingService.evaluateExpression(
-        JSON.parse(this.mapping.sourceTemplate),
+      // const resultExpression: JSON = await this.mappingService.evaluateExpression(
+      //   JSON.parse(this.mapping.sourceTemplate),
+      //   path
+      // );
+      // console.log("Content:", this.editorSourceStepTemplate?.get())
+      const resultExpression: JSON = await this.mappingService.evaluateExpression(
+        this.editorSourceStepTemplate?.get(),
         path
       );
       this.filterModel.filterExpression = {
-        resultType: isTypeOf(r),
-        result: JSON.stringify(r, null, 4),
+        resultType: isTypeOf(resultExpression),
+        result: JSON.stringify(resultExpression, null, 4),
         valid: true
       };
-      if (path && this.filterModel.filterExpression.result != 'true') throw Error('The filter expression must return true');
+      if (path && !resultExpression) throw Error('The filter expression must return true');
       this.mapping.filterMapping = path;
     } catch (error) {
       this.filterModel.filterExpression.valid = false;
@@ -746,13 +769,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
         }
       }
-      // setTimeout(() => {
-      //   this.filterModel['filterMapping'] = this.mapping.filterMapping;
-      //   if (this.mapping.filterMapping) {
-      //     this.updateFilterExpressionResult(this.mapping.filterMapping);
-      //   }
-      // }, 0)
-
     } else if (index == STEP_SELECT_TEMPLATES) {
       this.filterModel['filterMapping'] = this.mapping.filterMapping;
       if (this.mapping.filterMapping) {

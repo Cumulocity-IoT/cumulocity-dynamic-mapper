@@ -53,6 +53,7 @@ import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.JSONProcessorInbound;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.outbound.BaseProcessorOutbound;
+import dynamic.mapping.processor.outbound.CodeBasedProcessorOutbound;
 import dynamic.mapping.processor.outbound.JSONProcessorOutbound;
 import dynamic.mapping.processor.processor.fixed.InternalProtobufProcessor;
 import lombok.Getter;
@@ -201,7 +202,7 @@ public class ConfigurationRegistry {
             AConnectorClient connectorClient) {
         return Map.of(
                 MappingType.JSON, new JSONProcessorOutbound(this, connectorClient),
-                MappingType.CODE_BASED, new JSONProcessorOutbound(this, connectorClient));
+                MappingType.CODE_BASED, new CodeBasedProcessorOutbound(this, connectorClient));
     }
 
     public void initializePayloadProcessorsInbound(String tenant) {
