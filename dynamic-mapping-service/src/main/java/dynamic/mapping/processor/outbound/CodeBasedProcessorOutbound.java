@@ -21,13 +21,9 @@
 
 package dynamic.mapping.processor.outbound;
 
-import static dynamic.mapping.model.MappingSubstitution.isArray;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,11 +34,9 @@ import org.graalvm.polyglot.Value;
 
 import com.dashjoin.jsonata.json.Json;
 
-import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
@@ -100,7 +94,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                 }
 
                // Map jsonObject = (Map) Json.parseJson((String) context.getPayload());
-                Map jsonObject = (Map) context.getPayload();
+                Map jsonObject = (Map)context.getPayload();
 
                 final Value result = extractFromSourceFunc
                         .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
