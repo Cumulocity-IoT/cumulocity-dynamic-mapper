@@ -61,7 +61,7 @@ import dynamic.mapping.model.ExtensionType;
 import dynamic.mapping.model.LoggingEventType;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.ProcessingException;
-import dynamic.mapping.processor.extension.ExtensibleProcessor;
+import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.extension.ExtensionsComponent;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.extension.ProcessorExtensionTarget;
@@ -579,7 +579,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void registerExtensionInProcessor(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
             boolean external)
             throws IOException {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         extensibleProcessor.addExtension(tenant, new Extension(id, extensionName, external));
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
@@ -675,17 +675,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public Map<String, Extension> getProcessorExtensions(String tenant) {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         return extensibleProcessor.getExtensions();
     }
 
     public Extension getProcessorExtension(String tenant, String extension) {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         return extensibleProcessor.getExtension(extension);
     }
 
     public Extension deleteProcessorExtension(String tenant, String extensionName) {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
             if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
@@ -696,7 +696,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void reloadExtensions(String tenant) {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         extensibleProcessor.deleteExtensions();
         loadProcessorExtensions(tenant);
     }
@@ -770,7 +770,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void createExtensibleProcessor(String tenant) {
-        ExtensibleProcessor extensibleProcessor = new ExtensibleProcessor(configurationRegistry);
+        ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
         configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
         log.debug("Tenant {} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
 

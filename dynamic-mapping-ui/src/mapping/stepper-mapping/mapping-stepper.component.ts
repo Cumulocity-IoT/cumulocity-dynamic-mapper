@@ -746,12 +746,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
         }
       }
+      // setTimeout(() => {
+      //   this.filterModel['filterMapping'] = this.mapping.filterMapping;
+      //   if (this.mapping.filterMapping) {
+      //     this.updateFilterExpressionResult(this.mapping.filterMapping);
+      //   }
+      // }, 0)
+
+    } else if (index == STEP_SELECT_TEMPLATES) {
       this.filterModel['filterMapping'] = this.mapping.filterMapping;
       if (this.mapping.filterMapping) {
         this.updateFilterExpressionResult(this.mapping.filterMapping);
       }
-    } else if (index == STEP_SELECT_TEMPLATES) {
-
       if (this.mapping.code)
         this.mapping['_code'] = base64ToString(this.mapping.code);
       // this.mapping['_code'] = atob(this.mapping.code);

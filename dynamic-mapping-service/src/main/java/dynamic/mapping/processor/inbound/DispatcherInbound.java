@@ -216,6 +216,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                                 sharedCode = serviceConfiguration.sharedCode;
 
                             }
+                            
                             inboundProcessingCounter.increment();
                             Object payload = processor.deserializePayload(mapping, connectorMessage);
                             ProcessingContext<?> context = ProcessingContext.builder().payload(payload).topic(topic)
@@ -223,10 +224,8 @@ public class DispatcherInbound implements GenericMessageCallback {
                                     .tenant(tenant).supportsMessageContext(connectorMessage.isSupportsMessageContext()
                                             && mapping.supportsMessageContext)
                                     .key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
-                                    // .graalsContext(mapping.code != null ? this.graalsContext : null)
                                     .graalsContext(graalsContext)
                                     .sharedCode(sharedCode)
-                                    // .graalsEngine(this.graalsEngine)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 Object pp = context.getPayload();

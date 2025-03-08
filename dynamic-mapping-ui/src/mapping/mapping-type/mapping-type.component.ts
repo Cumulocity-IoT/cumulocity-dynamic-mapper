@@ -55,6 +55,9 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     MappingTypeDescriptionMap[MappingType.JSON].description;
   valid: boolean = false;
 
+    // New property - filtered mapping types
+  filteredMappingTypes : any;
+
   constructor(
     private fb: FormBuilder,
     private elementRef: ElementRef
@@ -69,6 +72,13 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
       snoop: [false],
       substitutionsAsCode: [false]
     });
+
+    this.filteredMappingTypes  = Object.entries(MappingType)
+    .filter(([key, value]) => (value !== MappingType.CODE_BASED))
+    .reduce((obj, [key, value]) => {
+      obj[key] = value;
+      return obj;
+    }, {});
   }
 
   onDismiss() {

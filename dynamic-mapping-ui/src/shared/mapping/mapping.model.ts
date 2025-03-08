@@ -147,7 +147,8 @@ export enum MappingType {
   BINARY = 'BINARY',
   PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
   EXTENSION_SOURCE = 'EXTENSION_SOURCE',
-  EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET'
+  EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
+  CODE_BASED = 'CODE_BASED'
 }
 
 export interface MappingTypeProperties {
@@ -281,6 +282,24 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       allowTestTransformation: false,
       allowTestSending: false,
       advanceFromStepToEndStep: 2
+    }
+  },
+  [MappingType.CODE_BASED]: {
+    key: MappingType.CODE_BASED,
+    description: 'Mapping handles payloads in JSON format and defines substitutions as code.',
+    properties: {
+      [Direction.INBOUND]: { snoopSupported: true, directionSupported: false },
+      [Direction.OUTBOUND]: { snoopSupported: true, directionSupported: true }
+    },
+    stepperConfiguration: {
+      showEditorSource: true,
+      showEditorTarget: true,
+      showCodeEditor: true,
+      allowNoDefinedIdentifier: false,
+      allowDefiningSubstitutions: true,
+      showProcessorExtensionsSource: false,
+      allowTestTransformation: false,
+      allowTestSending: false
     }
   }
 };

@@ -33,7 +33,7 @@
     <div class="p-t-24 p-b-24">
       <form [formGroup]="formGroupStep">
         <c8y-list-group class="separator-top">
-          <ng-container *ngFor="let q of MappingType | keyvalue">
+          <ng-container *ngFor="let q of filteredMappingTypes | keyvalue">
             <c8y-li *ngIf="
                 MappingTypeDescriptionMap[q.key].properties[direction]
                   .directionSupported

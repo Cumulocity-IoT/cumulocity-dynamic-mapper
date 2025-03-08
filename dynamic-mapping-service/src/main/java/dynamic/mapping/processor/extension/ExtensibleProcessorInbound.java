@@ -37,11 +37,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-public class ExtensibleProcessor extends BaseProcessorInbound<byte[]> {
+public class ExtensibleProcessorInbound extends BaseProcessorInbound<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 
-    public ExtensibleProcessor(ConfigurationRegistry configurationRegistry) {
+    public ExtensibleProcessorInbound(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 

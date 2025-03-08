@@ -145,7 +145,7 @@
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
                       <d11r-mapping-json-editor2
-                        *ngIf="stepperConfiguration.showEditorSource && !stepperConfiguration.showCodeEditor"
+                        *ngIf="stepperConfiguration.showEditorSource && !(stepperConfiguration.showCodeEditor && stepperConfiguration.direction == Direction.INBOUND)"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
@@ -175,7 +175,7 @@
                   </div>
                 </div>
               </div>
-              <div *ngIf="!stepperConfiguration.showCodeEditor">
+              <div *ngIf="!(stepperConfiguration.showCodeEditor && stepperConfiguration.direction == Direction.INBOUND)">
                 <div class="row">
                   <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
                 </div>
@@ -385,7 +385,7 @@
     </cdk-step>
     <ng-template #extensionTemplateSource let-form="form">
       <div
-        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget|| (stepperConfiguration.showCodeEditor)">
+        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget|| (stepperConfiguration.showCodeEditor  && stepperConfiguration.direction == Direction.INBOUND)">
         <div class="form-group p-b-8">
           <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">

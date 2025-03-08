@@ -46,7 +46,7 @@ import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
-import dynamic.mapping.processor.extension.ExtensibleProcessor;
+import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.inbound.BaseProcessorInbound;
 import dynamic.mapping.processor.inbound.BinaryProcessorInbound;
 import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
@@ -93,7 +93,7 @@ public class ConfigurationRegistry {
 
     // structure: <tenant, <extensibleProcessorSource>>
     @Getter
-    private Map<String, ExtensibleProcessor> extensibleProcessors = new HashMap<>();
+    private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
     @Getter
     private C8YAgent c8yAgent;
@@ -150,7 +150,7 @@ public class ConfigurationRegistry {
     private ExecutorService virtThreadPool;
 
     public Map<MappingType, BaseProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-        ExtensibleProcessor extensibleProcessor = getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
         return Map.of(
                 MappingType.JSON, new JSONProcessorInbound(this),
                 MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
@@ -200,7 +200,8 @@ public class ConfigurationRegistry {
     public Map<MappingType, BaseProcessorOutbound<?>> createPayloadProcessorsOutbound(
             AConnectorClient connectorClient) {
         return Map.of(
-                MappingType.JSON, new JSONProcessorOutbound(this, connectorClient));
+                MappingType.JSON, new JSONProcessorOutbound(this, connectorClient),
+                MappingType.CODE_BASED, new JSONProcessorOutbound(this, connectorClient));
     }
 
     public void initializePayloadProcessorsInbound(String tenant) {

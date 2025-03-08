@@ -19,12 +19,15 @@
  *
  */
 
-package dynamic.mapping.processor.extension.internal;
+package dynamic.mapping.processor.outbound;
 
-import com.dashjoin.jsonata.json.Json;
+import static dynamic.mapping.model.MappingSubstitution.isArray;
+import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,18 +36,40 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
+import com.dashjoin.jsonata.json.Json;
+
+import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import dynamic.mapping.processor.extension.ProcessorExtensionSource;
+import dynamic.mapping.processor.C8YMessage;
+import dynamic.mapping.processor.ProcessingException;
+import dynamic.mapping.processor.extension.internal.Substitution;
+import dynamic.mapping.processor.extension.internal.SubstitutionContext;
+import dynamic.mapping.processor.extension.internal.SubstitutionResult;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
-import jakarta.ws.rs.ProcessingException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
+public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
+
+    public CodeBasedProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
+        super(configurationRegistry, connectorClient);
+    }
+
     @Override
-    public void extractFromSource(ProcessingContext<byte[]> context) throws ProcessingException {
+    public Object deserializePayload(Mapping mapping,
+            C8YMessage c8yMessage) throws IOException {
+        Object jsonNode = Json.parseJson(c8yMessage.getPayload());
+        return jsonNode;
+    }
+
+    @Override
+    public void extractFromSource(ProcessingContext<Object> context)
+            throws ProcessingException {
         try {
             Mapping mapping = context.getMapping();
             if (mapping.code != null) {
@@ -74,7 +99,7 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
                     graalsContext.eval(sharedSource);
                 }
 
-                Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
+                Map jsonObject = (Map) Json.parseJson((String) context.getPayload());
 
                 // add topic levels as metadata
                 List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
@@ -97,7 +122,7 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
                                 ? convertPolyglotValue((Value) item.getValue())
                                 : item.getValue();
 
-                        context.addToProcessingCache(item.getKey(), convertedValue, TYPE.valueOf(item.getType()),
+                                context.addToProcessingCache(item.getKey(), convertedValue, TYPE.valueOf(item.getType()),
                                 RepairStrategy.valueOf(item.getRepairStrategy()));
                     }
 
@@ -112,7 +137,7 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
         }
     }
 
-    // Convert PolyglotMap to Java Map
+        // Convert PolyglotMap to Java Map
     private Object convertPolyglotValue(Value value) {
         if (value == null) {
             return null;
@@ -145,4 +170,5 @@ public class GraalsCodeExtension implements ProcessorExtensionSource<byte[]> {
         }
         return value.toString();
     }
+
 }
