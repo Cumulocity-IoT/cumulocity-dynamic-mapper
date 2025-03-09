@@ -996,6 +996,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     if (substitutionsAsCode) {
       delete this.stepperConfiguration.advanceFromStepToEndStep;
       this.stepperConfiguration.showCodeEditor = true;
+      this.stepperConfiguration.allowTestSending = false;
+      this.stepperConfiguration.allowTestTransformation = false;
     }
   }
 

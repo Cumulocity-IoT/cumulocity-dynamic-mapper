@@ -114,7 +114,7 @@
                         </select>
                       </div>
                       <div>
-                        <small class="text-muted">{{
+                        <small *ngIf="!stepperConfiguration.showCodeEditor" class="text-muted">{{
                           stepperConfiguration.showEditorSource
                           ? 'Use snooped templates in the source template.'
                           : 'Template is described internally by the chosen mapping
@@ -152,10 +152,14 @@
                         (pathChanged)="onSelectedPathFilterMappingChanged($event)"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container
-                        *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal || (stepperConfiguration.showCodeEditor))">
+                        *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal) && !stepperConfiguration.showCodeEditor">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
+                      <div *ngIf="stepperConfiguration.showCodeEditor">
+                        <small class="text-muted">The template is defined and referenced in the javascript
+                          editor..</small>
+                      </div>
                     </div>
                   </div>
                   <div class="col-lg-5 column-left-border" #rightTemplateStep2>
@@ -175,7 +179,8 @@
                   </div>
                 </div>
               </div>
-              <div *ngIf="!(stepperConfiguration.showCodeEditor && stepperConfiguration.direction == Direction.INBOUND)">
+              <div
+                *ngIf="!(stepperConfiguration.showCodeEditor && stepperConfiguration.direction == Direction.INBOUND)">
                 <div class="row">
                   <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
                 </div>
