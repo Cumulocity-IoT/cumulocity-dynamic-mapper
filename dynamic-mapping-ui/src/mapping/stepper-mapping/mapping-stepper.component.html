@@ -145,7 +145,7 @@
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
                       <d11r-mapping-json-editor2
-                        *ngIf="stepperConfiguration.showEditorSource && !(stepperConfiguration.showCodeEditor && stepperConfiguration.direction == Direction.INBOUND)"
+                        *ngIf="stepperConfiguration.showEditorSource && !(stepperConfiguration.showCodeEditor)"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
@@ -180,7 +180,7 @@
                 </div>
               </div>
               <div
-                *ngIf="!(stepperConfiguration.showCodeEditor && stepperConfiguration.direction == Direction.INBOUND)">
+                *ngIf="!(stepperConfiguration.showCodeEditor)">
                 <div class="row">
                   <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
                 </div>
@@ -363,7 +363,7 @@
             </div>
 
             <div class="container">
-              <ng-container *ngIf="(stepperConfiguration.showCodeEditor)">
+              <ng-container *ngIf="stepperConfiguration.showCodeEditor">
                 <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
                 </ng-container>
               </ng-container>
@@ -390,7 +390,7 @@
     </cdk-step>
     <ng-template #extensionTemplateSource let-form="form">
       <div
-        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget|| (stepperConfiguration.showCodeEditor  && stepperConfiguration.direction == Direction.INBOUND)">
+        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget|| (stepperConfiguration.showCodeEditor && stepperConfiguration.direction == Direction.INBOUND)">
         <div class="form-group p-b-8">
           <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">

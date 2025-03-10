@@ -74,7 +74,6 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
-import { map } from 'cypress/types/bluebird';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -481,14 +480,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType: this.substitutionsAsCode? MappingType.EXTENSION_SOURCE : this.mappingType,
+        mappingType:  this.substitutionsAsCode? MappingType.CODE_BASED : this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        extension: this.substitutionsAsCode ? {
-            eventName: "GraalsCodeExtension",
-            extensionName: "dynamic-mapping-extension-internal",
-            extensionType: ExtensionType.EXTENSION_SOURCE
-          }: undefined,
         code : this.substitutionsAsCode ? "ZnVuY3Rpb24gZXh0cmFjdEZyb21Tb3VyY2UoY3R4KSB7CgogICAgLy9UaGlzIGlzIHRoZSBzb3VyY2UgbWVzc2FnZSBhcyBqc29uCiAgICBjb25zdCBzb3VyY2VPYmplY3QgPSBjdHguZ2V0SnNvbk9iamVjdCgpOwogICAgZm9yICh2YXIga2V5IGluIHNvdXJjZU9iamVjdCkgewogICAgICAgIGNvbnNvbGUubG9nKGBrZXk6ICR7a2V5fSwgdmFsdWU6ICR7c291cmNlT2JqZWN0LmdldChrZXkpfWApOyAgCiAgICB9CgogICAgLy9EZWZpbmUgYSBuZXcgTWVhc3VyZW1lbnQgVmFsdWUgZm9yIFRlbXBlcmF0dXJlcyBieSBhc3NpZ25pbmcgZnJvbSBzb3VyY2UKICAgIGNvbnN0IGZyYWdtZW50VGVtcGVyYXR1cmVTZXJpZXMgPSB7CiAgICAgICAgdmFsdWU6IHNvdXJjZU9iamVjdC5nZXQoJ3RlbXBlcmF0dXJlJyksCiAgICAgICAgdW5pdDogc291cmNlT2JqZWN0LmdldCgndW5pdCcpCiAgICB9OwoKICAgIC8vQXNzaWduIFZhbHVlcyB0byBTZXJpZXMKICAgIGNvbnN0IGZyYWdtZW50VGVtcGVyYXR1cmUgPSB7CiAgICAgICAgVDogZnJhZ21lbnRUZW1wZXJhdHVyZVNlcmllcwogICAgfTsKICAgCiAgICAvLyBTdWJzdGl0dXRpb246IFN0cmluZyBrZXksIE9iamVjdCB2YWx1ZSwgTWFwcGluZ1N1YnN0aXR1dGlvbi5TdWJzdGl0dXRlVmFsdWUuVFlQRSB0eXBlLCBSZXBhaXJTdHJhdGVneSByZXBhaXJTdHJhdGVneQogICAgLy9EZWZpbmUgdGltZSBtYXBwaW5nIHRpbWUgLT4gdGltZQogICAgY29uc3QgdGltZSA9IG5ldyBTdWJzdGl0dXRpb24oJ3RpbWUnLCBzb3VyY2VPYmplY3QuZ2V0KCd0aW1lJyksICdURVhUVUFMJywgJ0RFRkFVTFQnKTsKICAgIAogICAgLy9EZWZpbmUgdGVtcGVyYXR1cmUgZnJhZ21lbnQgbWFwcGluZyB0ZW1wZXJhdHVyZSAtPiBjOHlfVGVtcGVyYXR1cmUuVC52YWx1ZS91bml0CiAgICBjb25zdCB0ZW1wZXJhdHVyZSA9IG5ldyBTdWJzdGl0dXRpb24oJ2M4eV9UZW1wZXJhdHVyZU1lYXN1cmVtZW50JywgZnJhZ21lbnRUZW1wZXJhdHVyZSwgJ09CSkVDVCcsICdERUZBVUxUJyk7CgogICAgLy9EZWZpbmUgRGV2aWNlIElkZW50aWZpZXIKICAgIGNvbnN0IGRldmljZUlkZW50aWZpZXIgPSBuZXcgU3Vic3RpdHV0aW9uKGN0eC5nZXRHZW5lcmljRGV2aWNlSWRlbnRpZmllcigpLCBzb3VyY2VPYmplY3QuZ2V0KCdfVE9QSUNfTEVWRUxfJylbMl0sICdURVhUVUFMJywgJ0RFRkFVTFQnKTsKCiAgICByZXR1cm4gbmV3IFN1YnN0aXR1dGlvblJlc3VsdChbZGV2aWNlSWRlbnRpZmllciwgdGltZSwgdGVtcGVyYXR1cmVdKTsKfQ==" : undefined,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: false,

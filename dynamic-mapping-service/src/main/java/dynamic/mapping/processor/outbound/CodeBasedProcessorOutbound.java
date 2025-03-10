@@ -93,7 +93,6 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                     graalsContext.eval(sharedSource);
                 }
 
-               // Map jsonObject = (Map) Json.parseJson((String) context.getPayload());
                 Map jsonObject = (Map)context.getPayload();
 
                 final Value result = extractFromSourceFunc

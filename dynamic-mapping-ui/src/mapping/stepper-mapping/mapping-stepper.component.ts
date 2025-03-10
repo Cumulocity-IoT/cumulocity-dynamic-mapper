@@ -776,8 +776,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
       if (this.mapping.code)
         this.mapping['_code'] = base64ToString(this.mapping.code);
-      // this.mapping['_code'] = atob(this.mapping.code);
-      // this.step == 'Select templates'
       // console.log("Step index 1 - before", this.targetTemplate);
       if (this.stepperForward) {
         this.expandTemplates();

@@ -49,6 +49,7 @@ import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.inbound.BaseProcessorInbound;
 import dynamic.mapping.processor.inbound.BinaryProcessorInbound;
+import dynamic.mapping.processor.inbound.CodeBasedProcessorInbound;
 import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.JSONProcessorInbound;
 import dynamic.mapping.processor.model.MappingType;
@@ -154,6 +155,7 @@ public class ConfigurationRegistry {
         ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
         return Map.of(
                 MappingType.JSON, new JSONProcessorInbound(this),
+                MappingType.CODE_BASED, new CodeBasedProcessorInbound(this),
                 MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
                 MappingType.BINARY, new BinaryProcessorInbound(this),
                 MappingType.PROTOBUF_INTERNAL, new InternalProtobufProcessor(this),
