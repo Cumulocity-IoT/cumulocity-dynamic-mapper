@@ -177,11 +177,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   sourceCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
   targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
 
-  editorOptions: EditorComponent['editorOptions'] = {
-    minimap: { enabled: true },
-    //  renderValidationDecorations: "on",
-    language: 'javascript',
-  };
+  editorOptions: EditorComponent['editorOptions'];
 
   @ViewChild('editorSourceStepTemplate', { static: false })
   editorSourceStepTemplate: JsonEditorComponent;
@@ -228,6 +224,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.templateModel = {
       stepperConfiguration: this.stepperConfiguration,
       mapping: this.mapping
+    };
+
+    this.editorOptions = {
+      minimap: { enabled: true },
+      //  renderValidationDecorations: "on",
+      language: 'javascript',
+      readOnly: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
     };
 
     this.substitutionModel = {
