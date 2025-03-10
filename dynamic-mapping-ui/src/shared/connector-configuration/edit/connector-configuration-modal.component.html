@@ -25,7 +25,7 @@
   </ng-container>
   <div class="p-24 modal-inner-scroll animated fadeIn">
     <div [formGroup]="brokerForm" *ngIf="add">
-      <formly-form [form]="brokerForm" [fields]="brokerFormFields" s></formly-form>
+      <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
     </div>
     <div [formGroup]="dynamicForm">
       <formly-form [form]="dynamicForm" [fields]="dynamicFormFields" [model]="configuration"></formly-form>
