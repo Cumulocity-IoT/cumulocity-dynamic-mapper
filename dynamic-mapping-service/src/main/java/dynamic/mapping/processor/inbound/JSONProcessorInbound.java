@@ -145,6 +145,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
             try {
                 var expr = jsonata(mappingFilter);
                 Object extractedSourceContent = expr.evaluate(payloadObjectNode);
+                log.info("Tenant {} - Payload will be ignored due to filter: {}, {}", tenant, extractedSourceContent, payload);
                 context.setIgnoreFurtherProcessing(!isNodeTrue(extractedSourceContent));
             } catch (Exception e) {
                 log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
