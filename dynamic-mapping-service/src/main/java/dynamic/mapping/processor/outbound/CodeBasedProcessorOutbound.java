@@ -104,7 +104,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
 
                 if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
                     context.setIgnoreFurtherProcessing(true);
-                    log.info("Tenant {} - Ignoring payload over GraalsCodeExtension: {}, {}", context.getTenant(),
+                    log.info("Tenant {} - Ignoring payload over CodeBasedProcessorOutbound: {}, {}", context.getTenant(),
                     jsonObject);
                 } else { // Now use the copied objects
                     for (Substitution item : typedResult.substitutions) {
@@ -116,7 +116,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                                 RepairStrategy.valueOf(item.getRepairStrategy()));
                     }
 
-                    log.info("Tenant {} - New payload over GraalsCodeExtension: {}, {}", context.getTenant(),
+                    log.info("Tenant {} - New payload over CodeBasedProcessorOutbound: {}, {}", context.getTenant(),
                             jsonObject);
                 }
 

@@ -605,14 +605,14 @@ export class MappingComponent implements OnInit, OnDestroy {
           mapping.mappingType,
           this.stepperConfiguration.direction,
           EditorMode.READ_ONLY,
-          mapping?.extension?.eventName == "GraalsCodeExtension"
+          mapping.targetAPI == MappingType.CODE_BASED
         );
       } else {
         this.setStepperConfiguration(
           mapping.mappingType,
           this.stepperConfiguration.direction,
           EditorMode.UPDATE,
-          mapping?.extension?.eventName == "GraalsCodeExtension"
+          mapping.targetAPI == MappingType.CODE_BASED
         );
       }
       // create deep copy of existing mapping, in case user cancels changes
