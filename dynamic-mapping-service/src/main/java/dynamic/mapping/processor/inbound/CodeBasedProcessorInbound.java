@@ -141,6 +141,9 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
                     context.addToProcessingCache(item.getKey(), convertedValue, TYPE.valueOf(item.getType()),
                             RepairStrategy.valueOf(item.getRepairStrategy()));
+                    if (item.getKey().equals(Mapping.TIME)) {
+                        substitutionTimeExists = true;
+                    }
                 }
 
                 log.info("Tenant {} - New payload over CodeBasedProcessorInbound: {}, {}", context.getTenant(),
