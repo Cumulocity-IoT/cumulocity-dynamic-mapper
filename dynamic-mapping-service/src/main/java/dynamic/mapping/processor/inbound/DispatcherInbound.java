@@ -40,13 +40,26 @@ import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.processor.model.Substitution;
+import dynamic.mapping.processor.model.SubstitutionContext;
+import dynamic.mapping.processor.model.SubstitutionResult;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.logging.Handler;
+
+import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 /**
  * AsynchronousDispatcherInbound
@@ -71,6 +84,8 @@ import java.util.concurrent.Future;
 
 @Slf4j
 public class DispatcherInbound implements GenericMessageCallback {
+
+    private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
 
     private AConnectorClient connectorClient;
 
@@ -101,6 +116,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         Timer inboundProcessingTimer;
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
+        Engine graalsEngine;
         ExecutorService virtThreadPool;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
@@ -121,6 +137,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
+            this.graalsEngine = configurationRegistry.getGraalsEngine();
             this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 
         }
@@ -143,21 +160,84 @@ public class DispatcherInbound implements GenericMessageCallback {
                     MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
                     BaseProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
+                    Context graalsContext = null;
+                    String sharedCode = null;
                     try {
                         if (processor != null) {
+
+                            // prepare graals func if required
+                            Value extractFromSourceFunc = null;
+                            if (mapping.code != null) {
+                                graalsContext = Context.newBuilder("js")
+                                        .option("engine.WarnInterpreterOnly", "false")
+                                        .allowHostClassLookup(className -> className.equals(
+                                                "dynamic.mapping.processor.model.SubstitutionResult") ||
+                                                className.equals(
+                                                        "dynamic.mapping.processor.model.Substitution"))
+                                        .allowHostAccess(HostAccess.newBuilder()
+                                                // Allow constructors
+                                                .allowAccess(SubstitutionResult.class.getConstructor(List.class))
+                                                .allowAccess(Substitution.class.getConstructor(String.class,
+                                                        Object.class, String.class, String.class))
+                                                // Allow methods needed by ctx object
+                                                .allowAccess(SubstitutionContext.class.getMethod("getJsonObject"))
+                                                .allowAccess(SubstitutionContext.class.getMethod("getExternalIdentifier"))
+                                                .allowAccess(SubstitutionContext.class.getMethod("getC8YIdentifier"))
+                                                .allowAccess(SubstitutionContext.class
+                                                        .getMethod("getGenericDeviceIdentifier"))
+                                                // Allow array/collection access if needed
+                                                .allowArrayAccess(true)
+                                                .allowListAccess(true)
+                                                .allowMapAccess(true)
+                                                .build())
+                                        .build();
+                                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                                extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
+                                if (extractFromSourceFunc == null) {
+                                    byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                                    String decodedCode = new String(decodedBytes);
+                                    String decodedCodeAdapted = decodedCode.replaceFirst(
+                                            Mapping.EXTRACT_FROM_SOURCE,
+                                            identifier);
+                                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                                            .buildLiteral();
+
+                                    // // make the engine evaluate the javascript script
+                                    graalsContext.eval(source);
+                                    extractFromSourceFunc = graalsContext.getBindings("js")
+                                            .getMember(identifier);
+
+                                }
+                                sharedCode = serviceConfiguration.sharedCode;
+
+                            }
+                            
                             inboundProcessingCounter.increment();
                             Object payload = processor.deserializePayload(mapping, connectorMessage);
                             ProcessingContext<?> context = ProcessingContext.builder().payload(payload).topic(topic)
                                     .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
                                     .tenant(tenant).supportsMessageContext(connectorMessage.isSupportsMessageContext()
-                                            && mapping.supportsMessageContext).key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
+                                            && mapping.supportsMessageContext)
+                                    .key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
+                                    .graalsContext(graalsContext)
+                                    .sharedCode(sharedCode)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
+                                Object pp = context.getPayload();
+                                String ppLog = null;
+
+                                if (payload instanceof byte[]) {
+                                    // Convert byte[] to String
+                                    ppLog = new String((byte[]) pp, StandardCharsets.UTF_8);
+                                } else if (payload != null) {
+                                    // For any other object, call toString()
+                                    ppLog = pp.toString();
+                                }
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",
                                         tenant,
                                         context.getTopic(),
                                         connectorClient.getConnectorIdentifier(),
-                                        context.getPayload().toString());
+                                        ppLog);
                             } else {
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}", tenant,
                                         context.getTopic(), connectorClient.getConnectorIdentifier());
@@ -205,8 +285,12 @@ public class DispatcherInbound implements GenericMessageCallback {
                     } catch (Exception e) {
                         log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
                                 e.getMessage());
-                        log.debug("Tenant {} - Message Stacktrace: ", tenant, e);
+                        log.warn("Tenant {} - Message Stacktrace: ", tenant, e);
                         mappingStatus.errors++;
+                    } finally {
+                        if (graalsContext != null) {
+                            graalsContext.close();
+                        }
                     }
                 }
             });

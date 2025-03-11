@@ -95,6 +95,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   );
   mappingsCount: number = 0;
   mappingToUpdate: Mapping;
+  substitutionsAsCode: boolean;
   devices: IIdentified[] = [];
   snoopStatus: SnoopStatus = SnoopStatus.NONE;
   Direction = Direction;
@@ -443,6 +444,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         if (result.snoop) {
           this.snoopStatus = SnoopStatus.ENABLED;
         }
+        this.substitutionsAsCode =  result.substitutionsAsCode;
         this.mappingType = result.mappingType;
         this.addMapping();
       }
@@ -455,7 +457,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.setStepperConfiguration(
       this.mappingType,
       this.stepperConfiguration.direction,
-      EditorMode.CREATE
+      EditorMode.CREATE, this.substitutionsAsCode
     );
 
     const identifier = uuidCustom();
@@ -478,9 +480,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType: this.mappingType,
+        mappingType:  this.substitutionsAsCode? MappingType.CODE_BASED : this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
+        code : this.substitutionsAsCode ? "ZnVuY3Rpb24gZXh0cmFjdEZyb21Tb3VyY2UoY3R4KSB7CgogICAgLy9UaGlzIGlzIHRoZSBzb3VyY2UgbWVzc2FnZSBhcyBqc29uCiAgICBjb25zdCBzb3VyY2VPYmplY3QgPSBjdHguZ2V0SnNvbk9iamVjdCgpOwogICAgZm9yICh2YXIga2V5IGluIHNvdXJjZU9iamVjdCkgewogICAgICAgIGNvbnNvbGUubG9nKGBrZXk6ICR7a2V5fSwgdmFsdWU6ICR7c291cmNlT2JqZWN0LmdldChrZXkpfWApOyAgCiAgICB9CgogICAgLy9EZWZpbmUgYSBuZXcgTWVhc3VyZW1lbnQgVmFsdWUgZm9yIFRlbXBlcmF0dXJlcyBieSBhc3NpZ25pbmcgZnJvbSBzb3VyY2UKICAgIGNvbnN0IGZyYWdtZW50VGVtcGVyYXR1cmVTZXJpZXMgPSB7CiAgICAgICAgdmFsdWU6IHNvdXJjZU9iamVjdC5nZXQoJ3RlbXBlcmF0dXJlJyksCiAgICAgICAgdW5pdDogc291cmNlT2JqZWN0LmdldCgndW5pdCcpCiAgICB9OwoKICAgIC8vQXNzaWduIFZhbHVlcyB0byBTZXJpZXMKICAgIGNvbnN0IGZyYWdtZW50VGVtcGVyYXR1cmUgPSB7CiAgICAgICAgVDogZnJhZ21lbnRUZW1wZXJhdHVyZVNlcmllcwogICAgfTsKICAgCiAgICAvLyBTdWJzdGl0dXRpb246IFN0cmluZyBrZXksIE9iamVjdCB2YWx1ZSwgTWFwcGluZ1N1YnN0aXR1dGlvbi5TdWJzdGl0dXRlVmFsdWUuVFlQRSB0eXBlLCBSZXBhaXJTdHJhdGVneSByZXBhaXJTdHJhdGVneQogICAgLy9EZWZpbmUgdGltZSBtYXBwaW5nIHRpbWUgLT4gdGltZQogICAgY29uc3QgdGltZSA9IG5ldyBTdWJzdGl0dXRpb24oJ3RpbWUnLCBzb3VyY2VPYmplY3QuZ2V0KCd0aW1lJyksICdURVhUVUFMJywgJ0RFRkFVTFQnKTsKICAgIAogICAgLy9EZWZpbmUgdGVtcGVyYXR1cmUgZnJhZ21lbnQgbWFwcGluZyB0ZW1wZXJhdHVyZSAtPiBjOHlfVGVtcGVyYXR1cmUuVC52YWx1ZS91bml0CiAgICBjb25zdCB0ZW1wZXJhdHVyZSA9IG5ldyBTdWJzdGl0dXRpb24oJ2M4eV9UZW1wZXJhdHVyZU1lYXN1cmVtZW50JywgZnJhZ21lbnRUZW1wZXJhdHVyZSwgJ09CSkVDVCcsICdERUZBVUxUJyk7CgogICAgLy9EZWZpbmUgRGV2aWNlIElkZW50aWZpZXIKICAgIGNvbnN0IGRldmljZUlkZW50aWZpZXIgPSBuZXcgU3Vic3RpdHV0aW9uKGN0eC5nZXRHZW5lcmljRGV2aWNlSWRlbnRpZmllcigpLCBzb3VyY2VPYmplY3QuZ2V0KCdfVE9QSUNfTEVWRUxfJylbMl0sICdURVhUVUFMJywgJ0RFRkFVTFQnKTsKCiAgICByZXR1cm4gbmV3IFN1YnN0aXR1dGlvblJlc3VsdChbZGV2aWNlSWRlbnRpZmllciwgdGltZSwgdGVtcGVyYXR1cmVdKTsKfQ==" : undefined,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: false,
         snoopedTemplates: [],
@@ -505,9 +508,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType: this.mappingType,
+        mappingType:  this.substitutionsAsCode? MappingType.CODE_BASED : this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
+        code : this.substitutionsAsCode ? "ZnVuY3Rpb24gZXh0cmFjdEZyb21Tb3VyY2UoY3R4KSB7CiAgICAvL1RoaXMgaXMgdGhlIHNvdXJjZSBtZXNzYWdlIGFzIGpzb24KICAgIGNvbnN0IHNvdXJjZU9iamVjdCA9IGN0eC5nZXRKc29uT2JqZWN0KCk7CgogICAgLy9Mb2cgYzh5IHNvdXJjZUlkCiAgICAvL2NvbnNvbGUubG9nKGBDOFkgc291cmNlSWQ6ICR7Y3R4LmdldEM4WUlkZW50aWZpZXIoKX1gKTsKICAgIC8vY29uc29sZS5sb2coYEM4WSBleHRlbmFsSWRlbnRpZmllcjogJHtjdHguZ2V0RXh0ZXJuYWxJZGVudGlmaWVyKCl9YCk7CgogICAgLy8gZm9yICh2YXIga2V5IGluIHNvdXJjZU9iamVjdCkgewogICAgLy8gICAgIGNvbnNvbGUubG9nKGBrZXk6ICR7a2V5fSwgdmFsdWU6ICR7c291cmNlT2JqZWN0LmdldChrZXkpfWApOyAgCiAgICAvLyB9CgogICAgLy9EZWZpbmUgYSBuZXcgTWVhc3VyZW1lbnQgVmFsdWUgZm9yIFRlbXBlcmF0dXJlcyBieSBhc3NpZ25pbmcgZnJvbSBzb3VyY2UKICAgIGNvbnN0IGZyYWdtZW50VGVtcGVyYXR1cmUgPSB7CiAgICAgICAgdmFsdWU6IHNvdXJjZU9iamVjdC5nZXQoJ2M4eV9UZW1wZXJhdHVyZU1lYXN1cmVtZW50JykuZ2V0KCdUJykuZ2V0KCd2YWx1ZScpLAogICAgICAgIHVuaXQ6IHNvdXJjZU9iamVjdC5nZXQoJ2M4eV9UZW1wZXJhdHVyZU1lYXN1cmVtZW50JykuZ2V0KCdUJykuZ2V0KCd1bml0JykKICAgIH07CgogICAgLy8gU3Vic3RpdHV0aW9uOiBTdHJpbmcga2V5LCBPYmplY3QgdmFsdWUsIE1hcHBpbmdTdWJzdGl0dXRpb24uU3Vic3RpdHV0ZVZhbHVlLlRZUEUgdHlwZSwgUmVwYWlyU3RyYXRlZ3kgcmVwYWlyU3RyYXRlZ3kKICAgIC8vRGVmaW5lIHRpbWUgbWFwcGluZyB0aW1lIC0+IHRpbWUKICAgIGNvbnN0IHRpbWUgPSBuZXcgU3Vic3RpdHV0aW9uKCd0aW1lJywgc291cmNlT2JqZWN0LmdldCgndGltZScpLCAnVEVYVFVBTCcsICdERUZBVUxUJyk7CiAgICAKICAgIC8vRGVmaW5lIHRlbXBlcmF0dXJlIGZyYWdtZW50IG1hcHBpbmcgdGVtcGVyYXR1cmUgLT4gYzh5X1RlbXBlcmF0dXJlLlQudmFsdWUvdW5pdAogICAgY29uc3QgdGVtcGVyYXR1cmUgPSBuZXcgU3Vic3RpdHV0aW9uKCdUZW1wZXJhdHVyZScsIGZyYWdtZW50VGVtcGVyYXR1cmUsICdPQkpFQ1QnLCAnREVGQVVMVCcpOwoKICAgIC8vRGVmaW5lIERldmljZSBJZGVudGlmaWVyCiAgICBjb25zdCBkZXZpY2VJZGVudGlmaWVyID0gbmV3IFN1YnN0aXR1dGlvbignX1RPUElDX0xFVkVMX1sxXScsIGN0eC5nZXRFeHRlcm5hbElkZW50aWZpZXIoKSwgJ1RFWFRVQUwnLCAnREVGQVVMVCcpOwoKICAgIC8vVXNlIEM4WSBzb3VyY2VJZAogICAgY29uc3QgZGV2aWNlSWQgPSBuZXcgU3Vic3RpdHV0aW9uKCdkZXZpY2VJZCcsIGN0eC5nZXRDOFlJZGVudGlmaWVyKCksICdURVhUVUFMJywgJ0RFRkFVTFQnKTsKCiAgICByZXR1cm4gbmV3IFN1YnN0aXR1dGlvblJlc3VsdChbZGV2aWNlSWRlbnRpZmllciwgdGltZSwgdGVtcGVyYXR1cmUsIGRldmljZUlkXSk7Cn0=" : undefined,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: false,
         snoopedTemplates: [],
@@ -600,13 +604,15 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.setStepperConfiguration(
           mapping.mappingType,
           this.stepperConfiguration.direction,
-          EditorMode.READ_ONLY
+          EditorMode.READ_ONLY,
+          mapping.targetAPI == MappingType.CODE_BASED
         );
       } else {
         this.setStepperConfiguration(
           mapping.mappingType,
           this.stepperConfiguration.direction,
-          EditorMode.UPDATE
+          EditorMode.UPDATE,
+          mapping.targetAPI == MappingType.CODE_BASED
         );
       }
       // create deep copy of existing mapping, in case user cancels changes
@@ -641,7 +647,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.setStepperConfiguration(
       mapping.mappingType,
       mapping.direction,
-      EditorMode.COPY
+      EditorMode.COPY,
+      mapping?.extension?.eventName == "GraalsCodeExtension"
     );
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
@@ -968,7 +975,8 @@ export class MappingComponent implements OnInit, OnDestroy {
   setStepperConfiguration(
     mappingType: MappingType,
     direction: Direction,
-    editorMode: EditorMode
+    editorMode: EditorMode,
+    substitutionsAsCode: boolean
   ) {
     // console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
     // console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
@@ -978,6 +986,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.stepperConfiguration.editorMode = editorMode;
     if (direction == Direction.OUTBOUND)
       this.stepperConfiguration.allowTestSending = false;
+
+    if (substitutionsAsCode) {
+      delete this.stepperConfiguration.advanceFromStepToEndStep;
+      this.stepperConfiguration.showCodeEditor = true;
+      this.stepperConfiguration.allowTestSending = false;
+      this.stepperConfiguration.allowTestTransformation = false;
+    }
   }
 
   ngOnDestroy() {

@@ -35,6 +35,9 @@ import dynamic.mapping.notification.websocket.NotificationCallback;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.processor.model.Substitution;
+import dynamic.mapping.processor.model.SubstitutionContext;
+import dynamic.mapping.processor.model.SubstitutionResult;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -48,8 +51,15 @@ import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.notification.websocket.Notification;
 import dynamic.mapping.processor.C8YMessage;
 
+import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
+
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -133,6 +143,7 @@ public class DispatcherOutbound implements NotificationCallback {
             log.warn("Tenant {} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
         String oper = notification.getNotificationHeaders().get(1);
+
         // log.info("Tenant {} - Notification message received {}",
         //         tenant, oper);
         if (("CREATE".equals(oper) || "UPDATE".equals(oper)) && connectorClient.isConnected()) {
@@ -179,6 +190,7 @@ public class DispatcherOutbound implements NotificationCallback {
         ObjectMapper objectMapper;
         ServiceConfiguration serviceConfiguration;
         AConnectorClient connectorClient;
+        Engine graalsEngine;
         Timer outboundProcessingTimer;
         Counter outboundProcessingCounter;
 
@@ -201,7 +213,7 @@ public class DispatcherOutbound implements NotificationCallback {
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(c8yMessage.getTenant());
             this.payloadProcessorsOutbound = payloadProcessorsOutbound;
-
+            this.graalsEngine = configurationRegistry.getGraalsEngine();
         }
 
         @Override
@@ -221,14 +233,65 @@ public class DispatcherOutbound implements NotificationCallback {
                     MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
                     BaseProcessorOutbound processor = payloadProcessorsOutbound.get(mapping.mappingType);
+                    Context graalsContext = null;
+                    String sharedCode = null;
                     try {
                         if (processor != null) {
+                                                        // prepare graals func if required
+                            Value extractFromSourceFunc = null;
+                            if (mapping.code != null) {
+                                graalsContext = Context.newBuilder("js")
+                                        .option("engine.WarnInterpreterOnly", "false")
+                                        .allowHostClassLookup(className -> className.equals(
+                                                "dynamic.mapping.processor.model.SubstitutionResult") ||
+                                                className.equals(
+                                                        "dynamic.mapping.processor.model.Substitution"))
+                                        .allowHostAccess(HostAccess.newBuilder()
+                                                // Allow constructors
+                                                .allowAccess(SubstitutionResult.class.getConstructor(List.class))
+                                                .allowAccess(Substitution.class.getConstructor(String.class,
+                                                        Object.class, String.class, String.class))
+                                                // Allow methods needed by ctx object
+                                                .allowAccess(SubstitutionContext.class.getMethod("getJsonObject"))
+                                                .allowAccess(SubstitutionContext.class.getMethod("getExternalIdentifier"))
+                                                .allowAccess(SubstitutionContext.class.getMethod("getC8YIdentifier"))
+                                                .allowAccess(SubstitutionContext.class
+                                                        .getMethod("getGenericDeviceIdentifier"))
+                                                // Allow array/collection access if needed
+                                                .allowArrayAccess(true)
+                                                .allowListAccess(true)
+                                                .allowMapAccess(true)
+                                                .build())
+                                        .build();
+                                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                                extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
+                                if (extractFromSourceFunc == null) {
+                                    byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                                    String decodedCode = new String(decodedBytes);
+                                    String decodedCodeAdapted = decodedCode.replaceFirst(
+                                            Mapping.EXTRACT_FROM_SOURCE,
+                                            identifier);
+                                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                                            .buildLiteral();
+
+                                    // // make the engine evaluate the javascript script
+                                    graalsContext.eval(source);
+                                    extractFromSourceFunc = graalsContext.getBindings("js")
+                                            .getMember(identifier);
+
+                                }
+                                sharedCode = serviceConfiguration.sharedCode;
+
+                            }
+                            
                             Object payload = processor.deserializePayload(mapping, c8yMessage);
                             ProcessingContext<?> context = ProcessingContext.builder().payload(payload)
                                     .topic(mapping.publishTopic)
                                     .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
                                     .tenant(tenant).supportsMessageContext(mapping.supportsMessageContext)
                                     .qos(mapping.qos).serviceConfiguration(serviceConfiguration)
+                                    .graalsContext(graalsContext)
+                                    .sharedCode(sharedCode)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info(
@@ -266,7 +329,13 @@ public class DispatcherOutbound implements NotificationCallback {
                             } else {
                                 processor.enrichPayload(context);
                                 processor.extractFromSource(context);
-                                processor.substituteInTargetAndSend(context);
+                                if (!context.isIgnoreFurtherProcessing()) {
+                                    processor.substituteInTargetAndSend(context);
+                                    List<C8YRequest> resultRequests = context.getRequests();
+                                    if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
+                                        mappingStatus.errors++;
+                                    }
+                                }
                                 Counter.builder("dynmapper_outbound_message_total")
                                         .tag("tenant", c8yMessage.getTenant())
                                         .description("Total number of outbound messages")

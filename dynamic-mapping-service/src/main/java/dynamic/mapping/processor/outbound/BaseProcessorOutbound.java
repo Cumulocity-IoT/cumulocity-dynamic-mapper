@@ -100,6 +100,8 @@ public abstract class BaseProcessorOutbound<T> {
         }
         if (payloadObject instanceof Map) {
             ((Map) payloadObject).put(Mapping.IDENTITY, identityFragment);
+            List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
+            ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         } else {
             log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                     tenant);

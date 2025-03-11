@@ -118,7 +118,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
         props: {
           label: entry.key,
           required: entry.property.required,
-          readonly: entry.property.readonly,
+          disabled: entry.property.readonly,
           description: entry.property.description || undefined,
           ...additionalProps
         },

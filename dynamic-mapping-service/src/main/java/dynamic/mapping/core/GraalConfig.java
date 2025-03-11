@@ -19,24 +19,26 @@
  *
  */
 
-package dynamic.mapping.processor.model;
+package dynamic.mapping.core;
 
-public enum MappingType {
-    JSON("JSON"),
-    FLAT_FILE("FLAT_FILE"),
-    BINARY("BINARY"),
-    PROTOBUF_INTERNAL("PROTOBUF_INTERNAL"),
-    EXTENSION_SOURCE("EXTENSION_SOURCE"),
-    EXTENSION_SOURCE_TARGET("EXTENSION_SOURCE_TARGET"),
-    CODE_BASED("CODE_BASED"), ;
+import java.util.logging.Handler;
 
-    public final String name;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.graalvm.polyglot.Engine;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
-    private MappingType(String name) {
-        this.name = name;
-    }
+@Configuration
+public class GraalConfig {
+    /**
+     * Logging bridge so that console.logs will end up in SLF4J
+     */
+    // private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
 
-    public String getName() {
-        return this.name;
+    @Bean
+    public Engine graalEngine() {
+        return Engine.newBuilder()
+            .option("engine.WarnInterpreterOnly", "false")
+            .build();
     }
 }

@@ -38,6 +38,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.Value;
 
 @Getter
 @Setter
@@ -50,6 +53,7 @@ import lombok.Setter;
  * when a <code>mapping</code> is applied to an inbound <code>payload</code>
  */
 public class ProcessingContext<O> {
+
     private Mapping mapping;
 
     private String topic;
@@ -62,8 +66,6 @@ public class ProcessingContext<O> {
      * contains the deserialized payload
      */
     private O payload;
-
-    private byte[] payloadRaw;
 
     @Builder.Default
     private List<C8YRequest> requests = new ArrayList<C8YRequest>();
@@ -100,6 +102,14 @@ public class ProcessingContext<O> {
 
     private String sourceId;
 
+    private Engine graalsEngine;
+
+    private Context graalsContext;
+
+    private String sharedCode;
+
+    private Value extractFromSourceFunc;
+
     public static final String SOURCE_ID = "source.id";
 
     public boolean hasError() {
@@ -132,7 +142,8 @@ public class ProcessingContext<O> {
 
     public List<MappingSubstitution.SubstituteValue> getDeviceEntries() {
         List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())) {
+        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
+                || MappingType.CODE_BASED.equals(mapping.getMappingType())) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
@@ -147,7 +158,8 @@ public class ProcessingContext<O> {
 
     public List<String> getPathsTargetForDeviceIdentifiers() {
         List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())) {
+        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
+                || MappingType.CODE_BASED.equals(mapping.getMappingType())) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();

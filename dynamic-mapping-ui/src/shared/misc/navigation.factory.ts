@@ -73,12 +73,21 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       priority: 470,
       preventDuplicates: true
     }),
+
+    sharedCodeNode: new NavigatorNode({
+      parent: gettext('Configuration'),
+      label: gettext('Shared code'),
+      icon: 'source-code',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/sharedCode`,
+      priority: 460,
+      preventDuplicates: true
+    }),
     processorExtensionNode: new NavigatorNode({
       parent: gettext('Configuration'),
       label: gettext('Processor extension'),
       icon: 'extension',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/processorExtension`,
-      priority: 460,
+      priority: 450,
       preventDuplicates: true
     }),
     mappingNode: new NavigatorNode({

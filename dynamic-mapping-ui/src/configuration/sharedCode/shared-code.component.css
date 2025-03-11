@@ -1,0 +1,10 @@
+.wide-popover {
+    max-width: 600px !important; /* Adjust as needed */
+    width: 590px !important; /* Or set a fixed width */
+  }
+  
+  /* If needed, you can also adjust arrow position */
+  .wide-popover .popover-arrow {
+    left: 50% !important;
+    margin-left: -8px !important;
+  }

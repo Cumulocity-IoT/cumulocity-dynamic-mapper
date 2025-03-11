@@ -22,14 +22,18 @@
 package dynamic.mapping.processor.inbound;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
-import static dynamic.mapping.model.MappingSubstitution.isArray;
 import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
 
 import org.joda.time.DateTime;
 
@@ -45,12 +49,15 @@ import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
+import dynamic.mapping.processor.model.Substitution;
+import dynamic.mapping.processor.model.SubstitutionContext;
+import dynamic.mapping.processor.model.SubstitutionResult;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
+public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
-    public JSONProcessorInbound(ConfigurationRegistry configurationRegistry) {
+    public CodeBasedProcessorInbound(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 
@@ -79,48 +86,68 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
         }
 
         boolean substitutionTimeExists = false;
-        for (MappingSubstitution substitution : mapping.substitutions) {
-            Object extractedSourceContent = null;
-            /*
-             * step 1 extract content from inbound payload
-             */
-            try {
-                var expr = jsonata(substitution.pathSource);
-                extractedSourceContent = expr.evaluate(payloadObject);
-            } catch (Exception e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
-                        payload, e);
-            }
-            /*
-             * step 2 analyse extracted content: textual, array
-             */
-            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                    substitution.pathTarget,
-                    new ArrayList<>());
 
-            if (extractedSourceContent != null && isArray(extractedSourceContent) && substitution.expandArray) {
-                // extracted result from sourcePayload is an array, so we potentially have to
-                // iterate over the result, e.g. creating multiple devices
-                for (Object jn : (Collection) extractedSourceContent) {
-                    MappingSubstitution.processSubstitute(tenant, processingCacheEntry, jn,
-                            substitution, mapping);
+        if (mapping.code != null) {
+            Context graalsContext = context.getGraalsContext();
+
+            String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+            Value extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
+
+            if (extractFromSourceFunc == null) {
+                byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                String decodedCode = new String(decodedBytes);
+                String decodedCodeAdapted = decodedCode.replaceFirst(
+                        Mapping.EXTRACT_FROM_SOURCE,
+                        identifier);
+                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                        .buildLiteral();
+                graalsContext.eval(source);
+                extractFromSourceFunc = graalsContext.getBindings("js")
+                        .getMember(identifier);
+            }
+
+            if (context.getSharedCode() != null) {
+                byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
+                String decodedSharedCode = new String(decodedSharedCodeBytes);
+                Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
+                        .buildLiteral();
+                graalsContext.eval(sharedSource);
+            }
+
+            Map jsonObject = (Map) context.getPayload();
+
+            // add topic levels as metadata
+            List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
+            ((Map) jsonObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
+
+            final Value result = extractFromSourceFunc
+                    .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
+                            jsonObject));
+
+            // Convert the JavaScript result to Java objects before closing the context
+            final SubstitutionResult typedResult = result.as(SubstitutionResult.class);
+
+            if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
+                context.setIgnoreFurtherProcessing(true);
+                log.info("Tenant {} - Ignoring payload over CodeBasedProcessorInbound: {}", context.getTenant(),
+                        jsonObject);
+            } else { // Now use the copied objects
+                for (Substitution item : typedResult.substitutions) {
+                    Object convertedValue = (item.getValue() instanceof Value)
+                            ? convertPolyglotValue((Value) item.getValue())
+                            : item.getValue();
+
+                    context.addToProcessingCache(item.getKey(), convertedValue, TYPE.valueOf(item.getType()),
+                            RepairStrategy.valueOf(item.getRepairStrategy()));
+                    if (item.getKey().equals(Mapping.TIME)) {
+                        substitutionTimeExists = true;
+                    }
                 }
-            } else {
-                MappingSubstitution.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
-                        substitution, mapping);
-            }
-            processingCache.put(substitution.pathTarget, processingCacheEntry);
-            if (serviceConfiguration.logSubstitution || mapping.debug) {
-                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
-                        tenant,
-                        substitution.pathSource,
-                        extractedSourceContent == null ? null : extractedSourceContent.toString(),
-                        substitution.pathTarget);
+
+                log.info("Tenant {} - New payload over CodeBasedProcessorInbound: {}", context.getTenant(),
+                        jsonObject);
             }
 
-            if (substitution.pathTarget.equals(Mapping.TIME)) {
-                substitutionTimeExists = true;
-            }
         }
 
         // no substitution for the time property exists, then use the system time
@@ -168,6 +195,40 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
         }
 
         return false;
+    }
+
+    // Convert PolyglotMap to Java Map
+    private Object convertPolyglotValue(Value value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.isHostObject()) {
+            return value.asHostObject();
+        }
+        if (value.hasArrayElements()) {
+            List<Object> list = new ArrayList<>();
+            for (long i = 0; i < value.getArraySize(); i++) {
+                list.add(convertPolyglotValue(value.getArrayElement(i)));
+            }
+            return list;
+        }
+        if (value.hasMembers()) {
+            Map<String, Object> map = new HashMap<>();
+            for (String key : value.getMemberKeys()) {
+                map.put(key, convertPolyglotValue(value.getMember(key)));
+            }
+            return map;
+        }
+        if (value.isString()) {
+            return value.asString();
+        }
+        if (value.isNumber()) {
+            return value.asDouble();
+        }
+        if (value.isBoolean()) {
+            return value.asBoolean();
+        }
+        return value.toString();
     }
 
 }

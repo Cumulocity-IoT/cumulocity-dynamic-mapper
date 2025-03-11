@@ -46,7 +46,8 @@ public class ServiceConfiguration implements Cloneable {
 		this.outboundMappingEnabled = true;
 		this.inboundExternalIdCacheSize = 0;
 		this.inboundExternalIdCacheRetention = 1;
-	}
+		this.sharedCode = "Ly8gY29kZSBpbiB0aGlzIHNlY3Rpb24gaXMgc2hhcmVkIGJ5IGFsbCBjb2RlIGJhc2VkIG1hcHBpbmdzCi8vIGRvIG5vdCBkZWxldGUgdGhlIGZvbGxvd2luZyB0d28gbGluZXMKY29uc3QgU3Vic3RpdHV0aW9uUmVzdWx0ID0gSmF2YS50eXBlKCdkeW5hbWljLm1hcHBpbmcucHJvY2Vzc29yLm1vZGVsLlN1YnN0aXR1dGlvblJlc3VsdCcpOwpjb25zdCBTdWJzdGl0dXRpb24gPSBKYXZhLnR5cGUoJ2R5bmFtaWMubWFwcGluZy5wcm9jZXNzb3IubW9kZWwuU3Vic3RpdHV0aW9uJyk7CgpmdW5jdGlvbiBzaGFyZWRDYWx1YXRpb24obnVtKSB7CiAgICBjb25zb2xlLmxvZygiU2hhcmVkVmFsdWUgIisgbnVtKTsKfQ==";
+    }
 
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
@@ -91,4 +92,7 @@ public class ServiceConfiguration implements Cloneable {
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public Integer inboundExternalIdCacheRetention;
+
+	@JsonSetter(nulls = Nulls.SKIP)
+	public String sharedCode;
 }

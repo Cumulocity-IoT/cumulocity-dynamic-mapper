@@ -24,6 +24,7 @@ package dynamic.mapping.controller;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import jakarta.validation.Valid;
@@ -37,6 +38,8 @@ import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.core.*;
+
+import org.graalvm.polyglot.Context;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -58,6 +61,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Feature;
+import dynamic.mapping.model.Mapping;
 
 @Slf4j
 @RequestMapping("/configuration")
@@ -137,7 +141,7 @@ public class ConfigurationController {
         if (configuration.connectorType.equals(ConnectorType.HTTP)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't create a HttpConnector!");
         }
-        //FIXME This isn't working - use @PreAuthorize instead
+        // FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -163,7 +167,7 @@ public class ConfigurationController {
             @RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connection details", tenant);
-    
+
         try {
             // Convert wildcard pattern to regex pattern if name is provided
             Pattern pattern = null;
@@ -174,17 +178,17 @@ public class ConfigurationController {
                 escapedName = escapedName.substring(2, escapedName.length() - 2);
                 pattern = Pattern.compile("^" + escapedName + "$");
             }
-    
+
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
                     .getConnectorConfigurations(tenant);
             List<ConnectorConfiguration> modifiedConfigs = new ArrayList<>();
-    
+
             // Remove sensitive data before sending to UI
             for (ConnectorConfiguration config : configurations) {
                 ConnectorSpecification connectorSpecification = connectorRegistry
                         .getConnectorSpecification(config.connectorType);
                 ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
-                
+
                 if (pattern == null || pattern.matcher(cleanedConfig.getName()).matches()) {
                     modifiedConfigs.add(cleanedConfig);
                 }
@@ -229,7 +233,7 @@ public class ConfigurationController {
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Delete connection instance {}", tenant, identifier);
-        //FIXME This isn't working - use @PreAuthorize instead
+        // FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -267,7 +271,7 @@ public class ConfigurationController {
         log.info("Tenant {} - Update connection instance {}", tenant, identifier);
         // make sure we are using the correct identifier
         configuration.identifier = identifier;
-        //FIXME This isn't working - use @PreAuthorize instead
+        // FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -278,7 +282,8 @@ public class ConfigurationController {
         ConnectorSpecification connectorSpecification = connectorRegistry
                 .getConnectorSpecification(configuration.connectorType);
         // if (connectorSpecification.connectorType.equals(ConnectorType.HTTP)) {
-        //     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't change a HttpConnector!");
+        // throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't change a
+        // HttpConnector!");
         // }
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
@@ -334,7 +339,7 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         // don't modify original copy
         log.info("Tenant {} - Post service configuration: {}", tenant, configuration.toString());
-        //FIXME This isn't working - use @PreAuthorize instead
+        // FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -365,6 +370,50 @@ public class ConfigurationController {
             log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
+    }
+
+    @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> getSharedCode() {
+        String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        log.debug("Tenant {} - Get shared code", tenant);
+        return new ResponseEntity<String>(serviceConfiguration.sharedCode, HttpStatus.OK);
+    }
+
+    @PutMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HttpStatus> defineSharedCode(
+            @Valid @RequestBody String sharedCode) {
+        String tenant = contextService.getContext().getTenant();
+        Context graalsContext = null;
+        try {
+            ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+            serviceConfiguration.setSharedCode(sharedCode);
+            serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+            log.debug("Tenant {} - Get shared code", tenant);
+        } catch (Exception ex) {
+            log.error("Tenant {} - Error updating sharedCode {}", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        } finally {
+            if (graalsContext != null) {
+                graalsContext.close();
+            }
+        }
+        return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
+    }
+
+    public void cleanupNonServiceMembers(Context context) {
+        org.graalvm.polyglot.Value bindings = context.getBindings("js");
+
+        // Get all member keys
+        Set<String> members = bindings.getMemberKeys();
+
+        // Remove members that don't start with "service"
+        members.stream()
+                .filter(member -> !member.startsWith(Mapping.EXTRACT_FROM_SOURCE))
+                .forEach(member -> {
+                    log.debug("Removing member: {}", member);
+                    bindings.removeMember(member);
+                });
     }
 
     private boolean userHasMappingAdminRole() {

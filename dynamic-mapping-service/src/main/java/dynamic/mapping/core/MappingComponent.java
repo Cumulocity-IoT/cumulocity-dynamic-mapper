@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.logging.Handler;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -43,7 +44,9 @@ import jakarta.validation.Valid;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.graalvm.polyglot.Context;
 import org.joda.time.DateTime;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -72,6 +75,8 @@ import dynamic.mapping.model.ValidationError;
 @Slf4j
 @Component
 public class MappingComponent {
+
+    private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
 
     // structure: <tenant, < mappingIdent , status>>
     private Map<String, Map<String, MappingStatus>> tenantMappingStatus = new HashMap<>();
@@ -299,10 +304,29 @@ public class MappingComponent {
             deleteMappingStatus(tenant, id);
             return m.getC8yMQTTMapping();
         });
-        if (result != null)
+        if (result != null) {
             removeMappingFromDeploymentMap(tenant, result.identifier);
+            removeCodeFromEngine(result);
+        }
         // log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
+
         return result;
+    }
+
+    private void removeCodeFromEngine(Mapping mapping) {
+        if (mapping.code != null) {
+            String globalIdentifier = "delete globalThis" + Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+            try (Context context = Context.newBuilder("js")
+                    .engine(configurationRegistry.getGraalsEngine())
+                    .logHandler(GRAALJS_LOG_HANDLER)
+                    .allowAllAccess(true)
+                    .option("js.strict", "true")
+                    .build()) {
+
+                // Before closing the context, clean up the members
+                context.getBindings("js").removeMember(globalIdentifier);
+            }
+        }
     }
 
     public List<Mapping> getMappings(String tenant, Direction direction) {
@@ -354,6 +378,10 @@ public class MappingComponent {
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant, Direction.UNSPECIFIED);
             List<ValidationError> errors = Mapping.isMappingValid(mappings, mapping);
+            
+            // remove potentially obsolete javascript code from engine cache
+            removeCodeFromEngine(mapping);
+
             if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();
                 mapping.lastUpdate = System.currentTimeMillis();
@@ -470,25 +498,43 @@ public class MappingComponent {
         try {
             Map messageAsMap = (Map) Json.parseJson(message);
             for (Mapping m : cacheMappingOutbound.get(tenant).values()) {
-                // test if message has property associated for this mapping, JsonPointer must
-                // begin with "/"
-                var expression = jsonata(m.getFilterMapping());
-                Object extractedContent = expression.evaluate(messageAsMap);
-                if (extractedContent != null && m.targetAPI.equals(api)) {
-                    log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant,
-                            m.getFilterMapping(),
-                            messageAsMap.get("id"));
-                    result.add(m);
-                } else {
-                    log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant,
-                            m.getFilterMapping(),
-                            m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
+                if (m.active){
+                    // test if message has property associated for this mapping, JsonPointer must
+                    // begin with "/"
+                    var expression = jsonata(m.getFilterMapping());
+                    Object extractedContent = expression.evaluate(messageAsMap);
+                    //Only add mappings where the filter is "true".
+                    if(extractedContent != null  && isNodeTrue(extractedContent) && m.targetAPI.equals(api)) {
+                        log.info("Tenant {} - Found valid mapping for filter {} in C8Y message {}", tenant,
+                                m.getFilterMapping(),
+                                messageAsMap.get("id"));
+                        result.add(m);
+                    } else {
+                        log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant,
+                                m.getFilterMapping(),
+                                m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
+                    }
                 }
             }
         } catch (IllegalArgumentException e) {
             throw new ResolveException(e.getMessage());
         }
         return result;
+    }
+
+    private boolean isNodeTrue(Object node) {
+        // Case 1: Direct boolean value check
+        if (node instanceof Boolean) {
+            return (Boolean) node;
+        }
+
+        // Case 2: String value that can be converted to boolean
+        if (node instanceof String) {
+            String text = ((String) node).trim().toLowerCase();
+            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
+            // Add more string variations if needed
+        }
+        return false;
     }
 
     public Mapping deleteFromMappingCache(String tenant, Mapping mapping) {
@@ -600,7 +646,7 @@ public class MappingComponent {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
         } else {
-                        // step 2. retrieve collected snoopedTemplates
+            // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingOutbound.get(tenant).get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
@@ -718,27 +764,27 @@ public class MappingComponent {
 
         // nothing to do for outbound mappings
         // if (Direction.INBOUND.equals(mapping.direction)) {
-            // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(new ArrayList<>());
-            // step 3. update mapping in inventory
-            // don't validate mapping when setting active = false, this allows to remove
-            // mappings that are not working
-            updateMapping(tenant, mapping, true, true);
-            // step 4. delete mapping from update cache
-            removeDirtyMapping(tenant, mapping);
-            // step 5. update caches
-            if (Direction.OUTBOUND.equals(mapping.direction)) {
-                rebuildMappingOutboundCache(tenant);
-            } else {
-                deleteFromCacheMappingInbound(tenant, mapping);
-                addToCacheMappingInbound(tenant, mapping);
-                cacheMappingInbound.get(tenant).put(mapping.id, mapping);
-            }
-            configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
-                    LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
-                    DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
-                    null);
-        //}
+        // step 2. retrieve collected snoopedTemplates
+        mapping.setSnoopedTemplates(new ArrayList<>());
+        // step 3. update mapping in inventory
+        // don't validate mapping when setting active = false, this allows to remove
+        // mappings that are not working
+        updateMapping(tenant, mapping, true, true);
+        // step 4. delete mapping from update cache
+        removeDirtyMapping(tenant, mapping);
+        // step 5. update caches
+        if (Direction.OUTBOUND.equals(mapping.direction)) {
+            rebuildMappingOutboundCache(tenant);
+        } else {
+            deleteFromCacheMappingInbound(tenant, mapping);
+            addToCacheMappingInbound(tenant, mapping);
+            cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+        }
+        configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
+                LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+                DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+                null);
+        // }
     }
 
     public void updateDeploymentMapEntry(String tenant, String mappingIdent, @Valid List<String> deployment) {

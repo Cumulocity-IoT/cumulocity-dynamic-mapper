@@ -23,11 +23,17 @@ import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { NODE3, SharedModule } from '../shared';
 import { ServiceConfigurationComponent } from './service-configuration.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
+import { SharedCodeComponent } from './sharedCode/shared-code.component';
+import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-components/editor';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @NgModule({
-  declarations: [ServiceConfigurationComponent],
+  declarations: [ServiceConfigurationComponent, SharedCodeComponent],
   imports: [
+    EditorComponent,
+    MonacoEditorMarkerValidatorDirective,
     CoreModule,
+    PopoverModule,
     SharedModule,
     BsDropdownModule.forRoot()
   ],
@@ -36,7 +42,11 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
       component: ServiceConfigurationComponent,
+    }),
+    hookRoute({
+      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/sharedCode`,
+      component: SharedCodeComponent,
     })
   ]
 })
-export class ServiceConfigurationModule {}
+export class ServiceConfigurationModule { }

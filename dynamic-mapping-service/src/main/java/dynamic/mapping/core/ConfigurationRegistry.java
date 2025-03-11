@@ -21,8 +21,6 @@
 
 package dynamic.mapping.core;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -48,22 +46,33 @@ import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
-import dynamic.mapping.processor.extension.ExtensibleProcessor;
+import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.inbound.BaseProcessorInbound;
-import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.BinaryProcessorInbound;
+import dynamic.mapping.processor.inbound.CodeBasedProcessorInbound;
+import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.JSONProcessorInbound;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.outbound.BaseProcessorOutbound;
+import dynamic.mapping.processor.outbound.CodeBasedProcessorOutbound;
 import dynamic.mapping.processor.outbound.JSONProcessorOutbound;
 import dynamic.mapping.processor.processor.fixed.InternalProtobufProcessor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.graalvm.polyglot.Engine;
 
 @Slf4j
 @Component
 public class ConfigurationRegistry {
+
+    @Getter
+    private Engine graalsEngine;
+
+    @Autowired
+    public void setGraalsEngine(Engine eng) {
+        this.graalsEngine = eng;
+    }
 
     @Getter
     private Map<String, MicroserviceCredentials> microserviceCredentials = new HashMap<>();
@@ -86,7 +95,7 @@ public class ConfigurationRegistry {
 
     // structure: <tenant, <extensibleProcessorSource>>
     @Getter
-    private Map<String, ExtensibleProcessor> extensibleProcessors = new HashMap<>();
+    private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
     @Getter
     private C8YAgent c8yAgent;
@@ -100,7 +109,7 @@ public class ConfigurationRegistry {
     private C8YNotificationSubscriber notificationSubscriber;
 
     @Autowired
-    public void setC8yAgent(C8YNotificationSubscriber notificationSubscriber) {
+    public void setNotificationSubscriber(C8YNotificationSubscriber notificationSubscriber) {
         this.notificationSubscriber = notificationSubscriber;
     }
 
@@ -143,9 +152,10 @@ public class ConfigurationRegistry {
     private ExecutorService virtThreadPool;
 
     public Map<MappingType, BaseProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-        ExtensibleProcessor extensibleProcessor = getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
         return Map.of(
                 MappingType.JSON, new JSONProcessorInbound(this),
+                MappingType.CODE_BASED, new CodeBasedProcessorInbound(this),
                 MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
                 MappingType.BINARY, new BinaryProcessorInbound(this),
                 MappingType.PROTOBUF_INTERNAL, new InternalProtobufProcessor(this),
@@ -193,7 +203,8 @@ public class ConfigurationRegistry {
     public Map<MappingType, BaseProcessorOutbound<?>> createPayloadProcessorsOutbound(
             AConnectorClient connectorClient) {
         return Map.of(
-                MappingType.JSON, new JSONProcessorOutbound(this, connectorClient));
+                MappingType.JSON, new JSONProcessorOutbound(this, connectorClient),
+                MappingType.CODE_BASED, new CodeBasedProcessorOutbound(this, connectorClient));
     }
 
     public void initializePayloadProcessorsInbound(String tenant) {

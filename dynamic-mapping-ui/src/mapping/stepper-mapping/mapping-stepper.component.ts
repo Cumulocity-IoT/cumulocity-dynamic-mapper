@@ -30,11 +30,12 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
+import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, filter, Subject, take } from 'rxjs';
+import { BehaviorSubject, debounceTime, distinctUntilChanged, filter, Subject, take } from 'rxjs';
 import { Content, Mode } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
@@ -61,14 +62,18 @@ import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
+  base64ToString,
   expandC8YTemplate,
   expandExternalTemplate,
   isTypeOf,
   reduceSourceTemplate,
-  splitTopicExcludingSeparator
+  splitTopicExcludingSeparator,
+  stringToBase64
 } from '../shared/util';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
+
+let initializedMonaco = false;
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -96,9 +101,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   templateForm: FormGroup;
   templateModel: any = {};
   substitutionFormly: FormGroup = new FormGroup({});
+  filterFormly: FormGroup = new FormGroup({});
   substitutionFormlyFields: FormlyFieldConfig[];
+  filterFormlyFields: FormlyFieldConfig[];
+  filterModel: any = {};
   substitutionModel: any = {};
   propertyFormly: FormGroup = new FormGroup({});
+  codeFormly: FormGroup = new FormGroup({});
 
   sourceTemplate: any;
   targetTemplate: any;
@@ -168,6 +177,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   sourceCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
   targetCustomMessage$: Subject<string> = new BehaviorSubject(undefined);
 
+  editorOptions: EditorComponent['editorOptions'];
+
   @ViewChild('editorSourceStepTemplate', { static: false })
   editorSourceStepTemplate: JsonEditorComponent;
   @ViewChild('editorTargetStepTemplate', { static: false })
@@ -185,6 +196,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   stepperForward: boolean = true;
   currentStepIndex: number;
+  codeEditorHelp = 'javascript function for creating substitutions. Please do not change the methods signature <code>function extractFromSource(ctx)</code>. <br> Define substitutions: <code>Substitution(String key, Object value, String type, String repairStrategy)</code> <br> with <code>type</code>: <code>"ARRAY"</code>, <code>"IGNORE"</code>, <code>"NUMBER"</code>, <code>"OBJECT"</code>, <code>"TEXTUAL"</code> <br>and <code>repairStrategy</code>: <br><code>"DEFAULT"</code>, <code>"USE_FIRST_VALUE_OF_ARRAY"</code>, <code>"USE_LAST_VALUE_OF_ARRAY"</code>, <code>"IGNORE"</code>, <code>"REMOVE_IF_MISSING_OR_NULL"</code>,<code>"CREATE_IF_MISSING"</code>';
 
   constructor(
     public bsModalService: BsModalService,
@@ -205,7 +217,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         custom: 'Start snooping'
       };
     }
-
     this.targetSystem =
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
@@ -214,6 +225,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       stepperConfiguration: this.stepperConfiguration,
       mapping: this.mapping
     };
+
+    this.editorOptions = {
+      minimap: { enabled: true },
+      language: 'javascript',
+      renderWhitespace: 'none',
+      tabSize: 4,
+      readOnly: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+    };
+
 
     this.substitutionModel = {
       stepperConfiguration: this.stepperConfiguration,
@@ -232,6 +252,76 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         valid: false,
       }
     };
+
+    this.filterModel = {
+      filterExpression: {
+        result: '',
+        resultType: 'empty',
+        valid: false,
+      },
+    };
+
+    this.filterFormlyFields = [
+      {
+        fieldGroup: [
+          {
+            className: 'col-lg-5 col-lg-offset-1',
+            key: 'filterMapping',
+            type: 'input-custom',
+            wrappers: ['custom-form-field-wrapper'],
+            templateOptions: {
+              label: 'Filter mapping',
+              class: 'input-sm',
+              customWrapperClass: 'm-b-24',
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+                !this.stepperConfiguration.allowDefiningSubstitutions,
+              placeholder: '$exists(c8y_TemperatureMeasurement)',
+              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+              in your expressions:
+              <ol>
+                <li>Check if a fragment exsits:
+                  <code>$exists(c8y_TemperatureMeasurement)</code>
+                </li>
+                <li>Check if a value mets a condition:
+                   <code>c8y_TemperatureMeasurement.T.value > 15</code></li>
+                <li>function chaining using <code>~</code> is not supported, instead use function
+                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+              </ol>`,
+              required: this.mapping.direction == Direction.OUTBOUND,
+              customMessage: this.sourceCustomMessage$
+            },
+            expressionProperties: {
+              'templateOptions.class': (model) => {
+                if (
+                  model.pathSource == '' &&
+                  model.stepperConfiguration.allowDefiningSubstitutions
+                ) {
+                  return 'input-sm';
+                } else {
+                  return 'input-sm';
+                }
+              }
+            },
+            hooks: {
+              onInit: (field: FormlyFieldConfig) => {
+                field.formControl.valueChanges.pipe(
+                  // Wait for 500ms pause in typing before processing
+                  debounceTime(500),
+
+                  // Only trigger if the value has actually changed
+                  distinctUntilChanged()
+                ).subscribe(path => {
+                  this.updateFilterExpressionResult(path);
+                });
+              }
+            }
+          }
+        ]
+      }
+    ];
+
 
     this.substitutionFormlyFields = [
       {
@@ -279,7 +369,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.subscribe(path => {
+                field.formControl.valueChanges.pipe(
+                  // Wait for 500ms pause in typing before processing
+                  debounceTime(500),
+
+                  // Only trigger if the value has actually changed
+                  distinctUntilChanged()
+                ).subscribe(path => {
                   this.updateSourceExpressionResult(path);
                 });
               }
@@ -318,7 +414,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.subscribe(path => {
+                field.formControl.valueChanges.pipe(
+                  // Wait for 500ms pause in typing before processing
+                  debounceTime(500),
+
+                  // Only trigger if the value has actually changed
+                  distinctUntilChanged()
+                ).subscribe(path => {
                   this.updateTargetExpressionResult(path);
                 });
               }
@@ -329,6 +431,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     ];
 
     this.setTemplateForm();
+  }
+
+  async ngAfterViewInit(): Promise<void> {
+    if (!initializedMonaco) {
+      const monaco = await loadMonacoEditor();
+      if (monaco) {
+        initializedMonaco = true;
+      }
+    }
   }
 
   ngOnDestroy() {
@@ -343,7 +454,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
     // (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
     this.countDeviceIdentifiers$.next(ni);
-    this.isSubstitutionValid$.next((ni == 1 && this.mapping.direction == Direction.INBOUND) ||
+    this.isSubstitutionValid$.next(this.stepperConfiguration.showCodeEditor || (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
       (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier || this.currentStepIndex < 3);
   }
 
@@ -443,6 +554,33 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionModel = { ...this.substitutionModel };
   }
 
+  async updateFilterExpressionResult(path) {
+    try {
+      // const resultExpression: JSON = await this.mappingService.evaluateExpression(
+      //   JSON.parse(this.mapping.sourceTemplate),
+      //   path
+      // );
+      // console.log("Content:", this.editorSourceStepTemplate?.get())
+      const resultExpression: JSON = await this.mappingService.evaluateExpression(
+        this.editorSourceStepTemplate?.get(),
+        path
+      );
+      this.filterModel.filterExpression = {
+        resultType: isTypeOf(resultExpression),
+        result: JSON.stringify(resultExpression, null, 4),
+        valid: true
+      };
+      if (path && !resultExpression) throw Error('The filter expression must return true');
+      this.mapping.filterMapping = path;
+    } catch (error) {
+      this.filterModel.filterExpression.valid = false;
+      this.filterFormly
+        .get('filterMapping')
+        .setErrors({ validationError: { message: error.message } });
+      this.filterFormly.get('filterMapping').markAsTouched();
+    }
+    this.filterModel = { ...this.filterModel };
+  }
 
   async updateTargetExpressionResult(path) {
     try {
@@ -508,6 +646,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   }
 
+  async onSelectedPathFilterMappingChanged(path: string) {
+    this.filterModel.filterMapping = path;
+    //console.log("Select: "+path);
+
+    this.updateFilterExpressionResult(path);
+  }
+
   async onSelectedPathTargetChanged(path: string) {
     if (this.expertMode) {
       this.substitutionFormly.get('pathTarget').setValue(path);
@@ -562,6 +707,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async onCommitButton() {
     this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
     this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
+    if (this.mapping.code || this.mapping['_code']) {
+      // this.mapping.code = btoa(this.mapping['_code']);
+      this.mapping.code = stringToBase64(this.mapping['_code']);
+      delete this.mapping['_code'];
+    }
     this.commit.emit(this.mapping);
   }
 
@@ -593,7 +743,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.extensionEvents$.next(
       Object.values(this.extensions[extensionName].extensionEntries as Map<string, ExtensionEntry>).filter(entry => entry.extensionType == this.mapping.extension.extensionType)
     );
-    console.log("Selected events", Object.values(this.extensions[extensionName].extensionEntries))
+    //console.log("Selected events", Object.values(this.extensions[extensionName].extensionEntries))
   }
 
   onSelectExtensionEvent(extensionEvent) {
@@ -620,12 +770,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               this.extensions[this.mapping.extension.extensionName].extensionEntries
             )
           );
-          console.log("Selected events", Object.values(this.extensions[this.mapping.extension.extensionName].extensionEntries), this.mapping, this.extensions)
+          //console.log("Selected events", Object.values(this.extensions[this.mapping.extension.extensionName].extensionEntries), this.mapping, this.extensions)
 
         }
       }
     } else if (index == STEP_SELECT_TEMPLATES) {
-      // this.step == 'Select templates'
+      this.filterModel['filterMapping'] = this.mapping.filterMapping;
+      if (this.mapping.filterMapping) {
+        this.updateFilterExpressionResult(this.mapping.filterMapping);
+      }
+      if (this.mapping.code)
+        this.mapping['_code'] = base64ToString(this.mapping.code);
       // console.log("Step index 1 - before", this.targetTemplate);
       if (this.stepperForward) {
         this.expandTemplates();
@@ -658,6 +813,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     stepper: C8yStepper;
     step: CdkStep;
   }): void {
+
     this.stepperForward = true;
     if (this.stepperConfiguration.advanceFromStepToEndStep && this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
       this.goToLastStep();
@@ -998,6 +1154,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       EditorMode.READ_ONLY ||
       this.selectedSubstitution === -1 ||
       !this.isSubstitutionValid()
+  }
+
+  onValueCodeChange(value) {
+    // console.log("code changed", value);
+    this.mapping['_code'] = value;
   }
 
 }

@@ -150,8 +150,13 @@ public class Mapping implements Serializable {
     @NotNull
     public QOS qos;
 
+    // code for substitutions encoded in base64
+    // @NotNull
+    public String code;
+
     @NotNull
     public long lastUpdate;
+    public static final String EXTRACT_FROM_SOURCE = "extractFromSource";
 
     @Override
     public boolean equals(Object m) {
@@ -308,6 +313,7 @@ public class Mapping implements Serializable {
                 && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE)
                 && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE_TARGET)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_INTERNAL)
+                && !mapping.mappingType.equals(MappingType.CODE_BASED)
                 && !mapping.direction.equals(Direction.OUTBOUND)) {
             if (count > 1) {
                 result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);

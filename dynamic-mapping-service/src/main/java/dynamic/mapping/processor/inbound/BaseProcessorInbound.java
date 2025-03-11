@@ -97,7 +97,7 @@ public abstract class BaseProcessorInbound<T> {
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
         } else {
-            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+            log.info("Tenant {} - This message is not parsed by Base Inbound Processor, will be potentially parsed by extension due to custom format.",
                     tenant);
         }
     }
