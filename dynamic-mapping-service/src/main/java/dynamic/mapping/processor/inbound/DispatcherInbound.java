@@ -266,8 +266,12 @@ public class DispatcherInbound implements GenericMessageCallback {
                             } else {
                                 processor.enrichPayload(context);
                                 processor.extractFromSource(context);
-                                processor.validateProcessingCache(context);
-                                processor.applyFilter(context);
+                                //Ignored because code based mapping output is null
+                                if(!context.isIgnoreFurtherProcessing()) {
+                                    processor.validateProcessingCache(context);
+                                    processor.applyFilter(context);
+                                }
+                                //Ignored because filter applies
                                 if (!context.isIgnoreFurtherProcessing()) {
                                     processor.substituteInTargetAndSend(context);
                                     List<C8YRequest> resultRequests = context.getRequests();
