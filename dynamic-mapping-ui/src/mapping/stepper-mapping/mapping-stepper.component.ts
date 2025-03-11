@@ -228,10 +228,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
     this.editorOptions = {
       minimap: { enabled: true },
-      //  renderValidationDecorations: "on",
       language: 'javascript',
+      renderWhitespace: 'none',
+      tabSize: 4,
       readOnly: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
     };
+
 
     this.substitutionModel = {
       stepperConfiguration: this.stepperConfiguration,
@@ -307,7 +309,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                 field.formControl.valueChanges.pipe(
                   // Wait for 500ms pause in typing before processing
                   debounceTime(500),
-                  
+
                   // Only trigger if the value has actually changed
                   distinctUntilChanged()
                 ).subscribe(path => {
@@ -370,7 +372,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                 field.formControl.valueChanges.pipe(
                   // Wait for 500ms pause in typing before processing
                   debounceTime(500),
-                  
+
                   // Only trigger if the value has actually changed
                   distinctUntilChanged()
                 ).subscribe(path => {
@@ -415,7 +417,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                 field.formControl.valueChanges.pipe(
                   // Wait for 500ms pause in typing before processing
                   debounceTime(500),
-                  
+
                   // Only trigger if the value has actually changed
                   distinctUntilChanged()
                 ).subscribe(path => {
