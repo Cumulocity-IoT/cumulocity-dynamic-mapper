@@ -1,4 +1,4 @@
-package dynamic.mapping.processor.extension.internal;
+package dynamic.mapping.processor.model;
 
 import java.util.List;
 

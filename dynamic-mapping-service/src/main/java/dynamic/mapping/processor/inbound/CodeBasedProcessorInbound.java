@@ -22,13 +22,11 @@
 package dynamic.mapping.processor.inbound;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
-import static dynamic.mapping.model.MappingSubstitution.isArray;
 import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,11 +47,11 @@ import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.ProcessingException;
-import dynamic.mapping.processor.extension.internal.Substitution;
-import dynamic.mapping.processor.extension.internal.SubstitutionContext;
-import dynamic.mapping.processor.extension.internal.SubstitutionResult;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
+import dynamic.mapping.processor.model.Substitution;
+import dynamic.mapping.processor.model.SubstitutionContext;
+import dynamic.mapping.processor.model.SubstitutionResult;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

@@ -1,9 +1,10 @@
-package dynamic.mapping.processor.extension.internal;
+package dynamic.mapping.processor.model;
 
 import java.util.Map;
 
 import dynamic.mapping.model.Mapping;
 
+@SuppressWarnings("rawtypes")
 public class SubstitutionContext {
     private final Map jsonObject;
     private final String genericDeviceIdentifier;

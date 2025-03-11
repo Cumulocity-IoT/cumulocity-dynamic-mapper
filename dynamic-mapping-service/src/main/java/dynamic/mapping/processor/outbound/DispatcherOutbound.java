@@ -35,6 +35,9 @@ import dynamic.mapping.notification.websocket.NotificationCallback;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.processor.model.Substitution;
+import dynamic.mapping.processor.model.SubstitutionContext;
+import dynamic.mapping.processor.model.SubstitutionResult;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -47,9 +50,6 @@ import dynamic.mapping.model.API;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.notification.websocket.Notification;
 import dynamic.mapping.processor.C8YMessage;
-import dynamic.mapping.processor.extension.internal.Substitution;
-import dynamic.mapping.processor.extension.internal.SubstitutionContext;
-import dynamic.mapping.processor.extension.internal.SubstitutionResult;
 
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
@@ -243,9 +243,9 @@ public class DispatcherOutbound implements NotificationCallback {
                                 graalsContext = Context.newBuilder("js")
                                         .option("engine.WarnInterpreterOnly", "false")
                                         .allowHostClassLookup(className -> className.equals(
-                                                "dynamic.mapping.processor.extension.internal.SubstitutionResult") ||
+                                                "dynamic.mapping.processor.model.SubstitutionResult") ||
                                                 className.equals(
-                                                        "dynamic.mapping.processor.extension.internal.Substitution"))
+                                                        "dynamic.mapping.processor.model.Substitution"))
                                         .allowHostAccess(HostAccess.newBuilder()
                                                 // Allow constructors
                                                 .allowAccess(SubstitutionResult.class.getConstructor(List.class))

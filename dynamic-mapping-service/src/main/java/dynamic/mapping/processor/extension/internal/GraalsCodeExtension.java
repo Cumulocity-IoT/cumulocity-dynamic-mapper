@@ -38,6 +38,9 @@ import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
+import dynamic.mapping.processor.model.Substitution;
+import dynamic.mapping.processor.model.SubstitutionContext;
+import dynamic.mapping.processor.model.SubstitutionResult;
 import jakarta.ws.rs.ProcessingException;
 import lombok.extern.slf4j.Slf4j;
 
