@@ -15,6 +15,7 @@
       - [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
       - [Map Device Identifier](#map-device-identifier)
       - [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
+      - [Substitutions defined as code (javascript)](#substitutions-defined-as-code-javascript)
       - [Different type of substitutions](#different-type-of-substitutions)
     - [Apply a filter for a mapping](#apply-a-filter-for-a-mapping)
     - [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
@@ -78,10 +79,17 @@ The settings for the Kafka connector can be seen on the following screenshot:
 </p>
 <br/>
 
-The settings for the Default HTTP Connector are as follows
+The settings for the Default HTTP Connector (inbound) are as follows
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Connector_Http.png"  style="width: 50%;" />
+</p>
+<br/>
+
+The settings for the Webhook (outbound) are as follows
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Connector_WebHook.png"  style="width: 50%;" />
 </p>
 <br/>
 
@@ -365,6 +373,65 @@ In the sample below, e.g. a warning is shown since the required property `source
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SchemaValidation_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
+
+#### Substitutions defined as code (javascript)
+
+When you choose to define the substitutions in javascript code, see following screenshot, then the flow in the stepper is different.
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_CodeBasedSubstitution.png"  style="width: 50%;" />
+</p>
+<br/>
+
+In step 4 of the mapping stepper 
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_CodeBasedSubstitution.png"  style="width: 70%;" />
+</p>
+<br/>
+
+a javascript editor allows you to define your substitutions:
+
+```
+function extractFromSource(ctx) {
+
+    //This is the source message as json
+    const sourceObject = ctx.getJsonObject();
+    // for (var key in sourceObject) {
+    //     console.log(`key: ${key}, value: ${sourceObject.get(key)}`);  
+    // }
+
+    //Define a new Measurement Value for Temperatures by assigning from source
+    const fragmentTemperatureSeries = {
+        value: sourceObject.get('temperature'),
+        unit: sourceObject.get('unit')
+    };
+
+    //Assign Values to Series
+    const fragmentTemperature = {
+        T: fragmentTemperatureSeries
+    };
+   
+    // Substitution: String key, Object value, MappingSubstitution.SubstituteValue.TYPE type, RepairStrategy repairStrategy
+    //Define time mapping time -> time
+    
+    //Define temperature fragment mapping temperature -> c8y_Temperature.T.value/unit
+    const temperature = new Substitution('c8y_TemperatureMeasurement', fragmentTemperature, 'OBJECT', 'DEFAULT');
+
+    //Define Device Identifier
+    const deviceIdentifier = new Substitution(ctx.getGenericDeviceIdentifier(), sourceObject.get('_TOPIC_LEVEL_')[1], 'TEXTUAL', 'DEFAULT');
+    //Return undefined, if you want to skip the message and not process ist further
+    return new SubstitutionResult([deviceIdentifier, temperature]);
+}
+```
+
+The code that you enter in this editor is evaluated together with the shared code:
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Configuration_SharedCode.png"  style="width: 70%;" />
+</p>
+<br/>
+
 
 #### Different type of substitutions
 
