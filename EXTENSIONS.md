@@ -4,7 +4,7 @@
 
 Additional connectors supporting different message brokers can be added to the dynamic mapper.
 For that an abstract Class [AConnectorClient](./dynamic-mapping-service/src/main/java/dynamic/mapping/connector/core/client/AConnectorClient.java) must be implemented handling the basic methods of a message broker like  `connect`, `subscribe` and `disconnect`.
-In addition a Callback must be implemented handling the message broker typical messages and forwarding it to a [GenericMessageCallback](./dynamic-mapping-service/src/main/java/dynamic/mapping/connector/core/callback/GenericMessageCallback.java)
+In addition, a Callback must be implemented handling the message broker typical messages and forwarding it to a [GenericMessageCallback](./dynamic-mapping-service/src/main/java/dynamic/mapping/connector/core/callback/GenericMessageCallback.java)
 
 Check out the [MQTTCallback](./dynamic-mapping-service/src/main/java/dynamic/mapping/connector/mqtt/MQTTCallback.java) as an example implementation.
 

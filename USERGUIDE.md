@@ -31,7 +31,7 @@
 
 ## Connector configuration to broker and http endpoint
 
-Connectors are the client to the different messaging servers: MQTT brokers, Kafka.
+Connectors are clients to different messaging servers: MQTT brokers, Kafka.
 The `Default HTTP Connector` is a special case of a connector:
 1. It has not to be created as the connector will be created automatically at startup of the backend for every tenant.
 1. The endpoint for the `Default HTTP Connector` can be accessed at the url `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/<MAPPING_TOPIC>`
@@ -57,7 +57,7 @@ The mapper supports the following connectors:
 </p>
 <br/>
 
-Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently we support the following connectors:
+Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently, we support the following connectors:
 
 - MQTT: supports connections to MQTT version 3.1.1 over websocket and tcp
 - MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
@@ -234,10 +234,8 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 
 For outbound mappings the properties are slightly different. Most important are the properties:
 
-1. `filterMapping`: The Filter Outbound can contain one fragment name to associate a
-   mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is
-   applied.
-2. `publishTopic`: MQTT topic to publish outbound messages to.
+1. `publishTopic`: MQTT topic to publish outbound messages to.
+2. `filterMapping`: An expression that is applied on the incoming topic + payload and must be evaluated as `true` to apply the mapping.
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png"  style="width: 70%;" />
@@ -246,7 +244,11 @@ For outbound mappings the properties are slightly different. Most important are 
 
 For an outbound mapping to be applied two conditions have to be fulfilled:
 
-1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterMapping`
+1. the Cumulocity MEAO message must match the expression defined in the  `Filter Mapping` field. This can be a simple expression that checks if a fragment exists or a more complex one e.g. using regex to check if a key or value matches a specific condition.
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Filter_Outbound.png"  style="width: 70%;" />
+</p>
+
 2. for the device a Notification 2.0 subscription has to be created. This is done using the following dialog:
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png"  style="width: 70%;" />
