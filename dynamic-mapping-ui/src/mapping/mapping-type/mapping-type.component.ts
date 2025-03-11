@@ -54,7 +54,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   mappingType: MappingType = MappingType.JSON;
   mappingTypeDescription: string =
     MappingTypeDescriptionMap[MappingType.JSON].description;
-  valid: boolean = false;
+  valid: boolean = true;
 
   // New property - filtered mapping types
   filteredMappingTypes: any;
