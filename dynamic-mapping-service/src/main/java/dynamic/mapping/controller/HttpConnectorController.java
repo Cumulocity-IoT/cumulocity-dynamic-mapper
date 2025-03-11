@@ -108,8 +108,8 @@ public class HttpConnectorController {
         try {
             HttpClient connectorClient = connectorRegistry
                     .getHttpConnectorForTenant(tenant);
-            Integer cutOffLength = Boolean.parseBoolean((String) connectorClient.getConnectorConfiguration()
-                    .getProperties().get(HttpClient.PROPERTY_CUTOFF_LEADING_SLASH)) ? 1 : 0;
+            Integer cutOffLength = (Boolean) connectorClient.getConnectorConfiguration()
+                    .getProperties().get(HttpClient.PROPERTY_CUTOFF_LEADING_SLASH) ? 1 : 0;
             // Get the path
             String subPath = fullPath.equals(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH) ? ""
                     : fullPath.substring(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH.length() + cutOffLength);

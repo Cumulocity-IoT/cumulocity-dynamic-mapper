@@ -70,7 +70,7 @@ public class HttpClient extends AConnectorClient {
                 + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n" 
                 + "will be resolved to a mapping with mapping topic: 'temp/berlin_01'.\n"
                 + "The message must be send in a POST request.\n" 
-                + "NOTE: The leading '/' is cut off from the sub path.This can be configured ";
+                + "NOTE: The leading '/' is cut off from the sub path automatically. This can be configured ";
         connectorType = ConnectorType.HTTP;
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,supportedDirections());
     }
