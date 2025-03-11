@@ -190,7 +190,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: 'Apply filter',
         icon: 'filter',
         callback: this.editMessageFilter.bind(this),
-        showIf: (item) => item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND
+        showIf: (item) => (item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) || item['mapping']['direction'] == Direction.OUTBOUND
       },
       {
         type: 'ENABLE_DEBUG',
