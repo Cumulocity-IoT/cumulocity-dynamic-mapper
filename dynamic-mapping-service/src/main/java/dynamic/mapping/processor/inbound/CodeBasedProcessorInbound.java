@@ -129,7 +129,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
             if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
                 context.setIgnoreFurtherProcessing(true);
-                log.info("Tenant {} - Ignoring payload over CodeBasedProcessorInbound: {}, {}", context.getTenant(),
+                log.info("Tenant {} - Ignoring payload over CodeBasedProcessorInbound: {}", context.getTenant(),
                         jsonObject);
             } else { // Now use the copied objects
                 for (Substitution item : typedResult.substitutions) {
@@ -144,7 +144,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                     }
                 }
 
-                log.info("Tenant {} - New payload over CodeBasedProcessorInbound: {}, {}", context.getTenant(),
+                log.info("Tenant {} - New payload over CodeBasedProcessorInbound: {}", context.getTenant(),
                         jsonObject);
             }
 
