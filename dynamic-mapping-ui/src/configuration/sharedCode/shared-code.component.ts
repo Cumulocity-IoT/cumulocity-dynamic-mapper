@@ -32,6 +32,7 @@ let initializedMonaco = false;
 @Component({
   selector: 'd11r-shared-code',
   templateUrl: 'shared-code.component.html',
+  styleUrls: ['./shared-code.component.css'],
   encapsulation: ViewEncapsulation.None
 })
 export class SharedCodeComponent implements OnInit, OnDestroy {
@@ -43,7 +44,7 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     language: 'javascript',
   };
 
-  codeEditorHelp = 'Shared javascript code for creating substitutions. These functions can be referenced by all mappings that use code based substitutions.';
+  codeEditorHelp = `Shared javascript code for creating substitutions. These functions can be referenced by all mappings that use code based substitutions. The minimal code snippet is <br><code>const SubstitutionResult = Java.type('dynamic.mapping.processor.model.SubstitutionResult');</code><br><code>const Substitution = Java.type('dynamic.mapping.processor.model.Substitution');</code>`;
 
   constructor(
     public bsModalService: BsModalService,
