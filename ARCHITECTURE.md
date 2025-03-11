@@ -7,7 +7,7 @@ The solution is composed of two major components:
   [Cumulocity Microservice SDK](https://cumulocity.com/guides/microservice-sdk/introduction/) to connect to Cumulocity. It also supports multi tenancy.
 
 - A **frontend (plugin)** - uses the exposed endpoints of the microservice to configure a broker connection & to perform
-  graphical data mappings within the Cumumlocity IoT UI.
+  graphical or code-based data mappings within the Cumulocity IoT UI.
 
 The architecture of the components consists of the following components:
 
@@ -17,7 +17,7 @@ The architecture of the components consists of the following components:
 <br/>
 The main components of this project are:
 
-- four default connectors for..
+- Default connectors for..
   - **MQTT client** - using [hivemq-mqtt-client](https://github.com/hivemq/hivemq-mqtt-client) to connect and subscribe to MQTT brokers
   - **MQTT Service client** - using hivemq-mqtt-client to connect to MQTT Service
   - **Kafka connector** - to connect to Kafka brokers

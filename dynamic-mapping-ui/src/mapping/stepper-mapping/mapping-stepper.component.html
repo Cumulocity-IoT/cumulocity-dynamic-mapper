@@ -114,11 +114,9 @@
                         </select>
                       </div>
                       <div>
-                        <small *ngIf="!stepperConfiguration.showCodeEditor" class="text-muted">{{
-                          stepperConfiguration.showEditorSource
-                          ? 'Use snooped templates in the source template.'
-                          : 'Template is described internally by the chosen mapping
-                          type'
+                        <small  class="text-muted">{{stepperConfiguration.showProcessorExtensionsInternal ||stepperConfiguration.showProcessorExtensionsSource ||stepperConfiguration.showProcessorExtensionsSourceTarget ?
+                          'Template is described internally by the chosen mapping
+                          type.': 'Use sample templates for the source.'
                           }}</small>
                       </div>
                     </div>
@@ -145,21 +143,26 @@
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
                       <d11r-mapping-json-editor2
-                        *ngIf="stepperConfiguration.showEditorSource && !(stepperConfiguration.showCodeEditor)"
+                        *ngIf="stepperConfiguration.showEditorSource || stepperConfiguration.showCodeEditor"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
                         [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
                         (pathChanged)="onSelectedPathFilterMappingChanged($event)"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container
+                        *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal)">
+                        <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
+                        </ng-container>
+                      </ng-container>
+                      <!-- <ng-container
                         *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal) && !stepperConfiguration.showCodeEditor">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
                       <div *ngIf="stepperConfiguration.showCodeEditor">
                         <small class="text-muted">The template is defined and referenced in the javascript
-                          editor..</small>
-                      </div>
+                          editor.</small>
+                      </div> -->
                     </div>
                   </div>
                   <div class="col-lg-5 column-left-border" #rightTemplateStep2>
@@ -175,12 +178,17 @@
                         (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
                         #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>
+                      <div>
+                        <small  class="text-muted">{{
+                          'Template is described internally by the chosen mapping
+                          type.'
+                          }}</small>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <div
-                *ngIf="!(stepperConfiguration.showCodeEditor)">
+              <div *ngIf="!(stepperConfiguration.showCodeEditor)">
                 <div class="row">
                   <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
                 </div>
@@ -390,7 +398,7 @@
     </cdk-step>
     <ng-template #extensionTemplateSource let-form="form">
       <div
-        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget|| (stepperConfiguration.showCodeEditor && stepperConfiguration.direction == Direction.INBOUND)">
+        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
         <div class="form-group p-b-8">
           <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">

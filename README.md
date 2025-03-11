@@ -3,7 +3,7 @@
 ## Overview
 
 The Cumulocity Dynamic Data Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach.
-It can connect to multiple message brokers likes **MQTT**, **MQTT Service** , **Kafka** and others, subscribes to specific topics and maps the data in a graphical editor to the domain model of Cumulocity.
+It can connect to multiple message brokers likes **MQTT**, **MQTT Service**, **Kafka** and others, subscribes to specific topics and maps the data in a graphical or code-based editor to the domain model of Cumulocity.
 
 Per default the followings connectors are supported
 
@@ -13,14 +13,14 @@ Per default the followings connectors are supported
 - **HTTP/REST** - HTTP/REST Endpoint
 
 Using the Cumulocity Dynamic Data Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
-the Cumulocity IoT Domain Model in a graphical editor.
+the Cumulocity IoT Domain Model in a graphical or, if you prefer code, in a web code editor.
 
 Here are the **core features** summarized:
 
 - **Connect** to multiple message broker of your choice at the same time.
-- **Map** any data to/from the Cumulocity IoT Domain Model in a graphical way.
+- **Map** any data to/from the Cumulocity IoT Domain Model in a graphical or code-based (javaScript) way.
 - **Bidirectional mappings** are supported - so you can forward data to Cumulocity or subscribe on Cumulocity data and forward it to the broker
-- **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/)
+- **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/) or plain JavaScript.
 - **Multiple payload formats** are supported, starting with **JSON**, **Protobuf**, **Binary**, **CSV**.
 - **Extend** the mapper easily by using payload extensions or the provided connector interface
 - Full support of **multi-tenancy** - deploy it in your enterprise tenant and subscribe it to sub-tenants.

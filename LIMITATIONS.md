@@ -9,7 +9,7 @@ mappings to the following C8Y APIs are supported:
 - alarms
 - operations (outbound to devices)
 
-A mapping is defined of mapping properties and substitutions. The substitutions are mapping rules copying date from the incoming payload to the payload in the target system. These substitutions are defined using the standard JSONata as JSONata expressions. These JSONata expressions are evaluated in two different libraries:
+A mapping is defined of mapping properties and substitutions. The substitutions are mapping rules copying data from the incoming payload to the payload in the target system. These substitutions are defined using the standard JSONata as JSONata expressions. These JSONata expressions are evaluated in two different libraries:
 
 1. `dynamic-mapping`: (nodejs) [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
 2. `dynamic-mapping-service` (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
