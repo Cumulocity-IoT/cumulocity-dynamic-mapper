@@ -422,12 +422,12 @@ function extractFromSource(ctx) {
 
     //Define Device Identifier
     const deviceIdentifier = new Substitution(ctx.getGenericDeviceIdentifier(), sourceObject.get('_TOPIC_LEVEL_')[1], 'TEXTUAL', 'DEFAULT');
-    //Return undefined, if you want to skip the message and not process ist further
+    //Return undefined, if you want to skip the message and not process it further
     return new SubstitutionResult([deviceIdentifier, temperature]);
 }
 ```
 
-The code that you enter in this editor is evaluated together with the shared code:
+The code that you write in the web editor is evaluated together with the shared code:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Configuration_SharedCode.png"  style="width: 70%;" />

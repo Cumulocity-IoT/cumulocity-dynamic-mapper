@@ -280,7 +280,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
               <ol>
-                <li>Check if a fragment exsits:
+                <li>Check if a fragment exists:
                   <code>$exists(c8y_TemperatureMeasurement)</code>
                 </li>
                 <li>Check if a value mets a condition:
