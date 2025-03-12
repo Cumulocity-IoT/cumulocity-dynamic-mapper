@@ -40,7 +40,7 @@ import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
-import dynamic.mapping.processor.model.Substitution;
+import dynamic.mapping.processor.model.SubstitutionEvaluation;
 import dynamic.mapping.processor.model.SubstitutionContext;
 import dynamic.mapping.processor.model.SubstitutionResult;
 
@@ -177,7 +177,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                                         .allowHostAccess(HostAccess.newBuilder()
                                                 // Allow constructors
                                                 .allowAccess(SubstitutionResult.class.getConstructor(List.class))
-                                                .allowAccess(Substitution.class.getConstructor(String.class,
+                                                .allowAccess(SubstitutionEvaluation.class.getConstructor(String.class,
                                                         Object.class, String.class, String.class))
                                                 // Allow methods needed by ctx object
                                                 .allowAccess(SubstitutionContext.class.getMethod("getJsonObject"))

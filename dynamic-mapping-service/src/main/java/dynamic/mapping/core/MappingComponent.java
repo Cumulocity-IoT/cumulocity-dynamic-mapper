@@ -23,7 +23,7 @@ package dynamic.mapping.core;
 
 import static java.util.Map.entry;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;

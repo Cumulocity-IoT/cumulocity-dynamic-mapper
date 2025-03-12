@@ -22,14 +22,16 @@
 package dynamic.mapping.processor.inbound;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
@@ -44,13 +46,13 @@ import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
-import dynamic.mapping.processor.model.Substitution;
 import dynamic.mapping.processor.model.SubstitutionContext;
+import dynamic.mapping.processor.model.SubstitutionEvaluation;
 import dynamic.mapping.processor.model.SubstitutionResult;
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,7 +79,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
         Object payloadObject = context.getPayload();
-        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
         String payload = toPrettyJsonString(payloadObject);
         if (serviceConfiguration.logPayload || mapping.debug) {
@@ -132,14 +134,25 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                 log.info("Tenant {} - Ignoring payload over CodeBasedProcessorInbound: {}", context.getTenant(),
                         jsonObject);
             } else { // Now use the copied objects
-                for (Substitution item : typedResult.substitutions) {
-                    Object convertedValue = (item.getValue() instanceof Value)
-                            ? convertPolyglotValue((Value) item.getValue())
-                            : item.getValue();
+                Set<String> keySet = typedResult.getSubstitutions().keySet();
+                for (String key : keySet) {
+                    List<SubstituteValue> processingCacheEntry = 
+                        new ArrayList<>();
+                    List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
+                    if (values != null && values.size() >0 
+                            && values.get(0).expandArray) {
+                        // extracted result from sourcePayload is an array, so we potentially have to
+                        // iterate over the result, e.g. creating multiple devices
+                        for (SubstituteValue substitutionValue: values) {
+                            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, substitutionValue.value,
+                            substitutionValue, mapping);
+                        }
+                    } else if (values != null) {
+                        SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, values,
+                        values.getFirst(), mapping);
+                    }
 
-                    context.addToProcessingCache(item.getKey(), convertedValue, TYPE.valueOf(item.getType()),
-                            RepairStrategy.valueOf(item.getRepairStrategy()));
-                    if (item.getKey().equals(Mapping.TIME)) {
+                    if (key.equals(Mapping.TIME)) {
                         substitutionTimeExists = true;
                     }
                 }
@@ -152,12 +165,12 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
         // no substitution for the time property exists, then use the system time
         if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
-            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
+            List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     Mapping.TIME,
                     new ArrayList<>());
             processingCacheEntry.add(
-                    new MappingSubstitution.SubstituteValue(new DateTime().toString(),
-                            TYPE.TEXTUAL, RepairStrategy.DEFAULT));
+                    new SubstituteValue(new DateTime().toString(),
+                            TYPE.TEXTUAL, RepairStrategy.DEFAULT, false));
             processingCache.put(Mapping.TIME, processingCacheEntry);
         }
     }

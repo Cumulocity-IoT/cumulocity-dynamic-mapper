@@ -23,7 +23,7 @@ package dynamic.mapping.processor.extension.external;
 
 import com.dashjoin.jsonata.json.Json;
 
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstituteValue.TYPE;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
@@ -47,24 +47,24 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
 
             context.addToProcessingCache("time", new DateTime(
                     jsonObject.get("time"))
-                    .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+                    .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
 
             Map fragmentTemperatureSeries = Map.of("value", jsonObject.get("temperature"), "unit",
                     jsonObject.get("unit"));
             Map fragmentTemperature = Map.of("T", fragmentTemperatureSeries);
 
             context.addToProcessingCache("c8y_Fragment_to_remove", null, TYPE.TEXTUAL,
-                    RepairStrategy.REMOVE_IF_MISSING_OR_NULL);
+                    RepairStrategy.REMOVE_IF_MISSING_OR_NULL, false);
             context.addToProcessingCache("c8y_Temperature",
-                    fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT);
+                    fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT,false);
             context.addToProcessingCache("c8y_Temperature",
-                    fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT);
+                    fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT,false);
             // as the mapping uses useExternalId we have to map the id to
             // _IDENTITY_.externalId
             context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
                     jsonObject.get("externalId")
                             .toString(),
-                    TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+                    TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
 
             Number unexpected = Float.NaN;
             if (jsonObject.get("unexpected") != null) {
@@ -73,7 +73,7 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
                 Map fragmentUnexpectedSeries = Map.of("value", jsonObject.get("unexpected"), "unit", "unknown_unit");
                 Map fragmentUnexpected = Map.of("U", fragmentUnexpectedSeries);
                 context.addToProcessingCache("c8y_Unexpected",
-                        fragmentUnexpected, TYPE.OBJECT, RepairStrategy.CREATE_IF_MISSING);
+                        fragmentUnexpected, TYPE.OBJECT, RepairStrategy.CREATE_IF_MISSING, false);
                 unexpected = (Number) jsonObject.get("unexpected");
             }
 

@@ -30,8 +30,8 @@ import java.util.Set;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
+import dynamic.mapping.model.Substitution;
+import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.ProcessingException;
 import lombok.Builder;
@@ -80,7 +80,7 @@ public class ProcessingContext<O> {
 
     // <pathTarget, substituteValues>
     @Builder.Default
-    private Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
+    private Map<String, List<SubstituteValue>> processingCache = new HashMap<String, List<SubstituteValue>>();
 
     @Builder.Default
     private boolean sendPayload = false;
@@ -129,18 +129,18 @@ public class ProcessingContext<O> {
         errors.add(processingException);
     }
 
-    public void addToProcessingCache(String key, Object value, MappingSubstitution.SubstituteValue.TYPE type,
-            RepairStrategy repairStrategy) {
+    public void addToProcessingCache(String key, Object value, SubstituteValue.TYPE type,
+            RepairStrategy repairStrategy, boolean expandArray) {
         processingCache.put(key,
                 new ArrayList<>(
                         Arrays.asList(
-                                new MappingSubstitution.SubstituteValue(
+                                new SubstituteValue(
                                         value,
                                         type,
-                                        repairStrategy))));
+                                        repairStrategy, expandArray))));
     }
 
-    public List<MappingSubstitution.SubstituteValue> getDeviceEntries() {
+    public List<SubstituteValue> getDeviceEntries() {
         List<String> pathsTargetForDeviceIdentifiers;
         if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
                 || MappingType.CODE_BASED.equals(mapping.getMappingType())) {
@@ -151,7 +151,7 @@ public class ProcessingContext<O> {
         String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
                 ? pathsTargetForDeviceIdentifiers.get(0)
                 : null;
-        List<MappingSubstitution.SubstituteValue> deviceEntries = processingCache
+        List<SubstituteValue> deviceEntries = processingCache
                 .get(firstPathTargetForDeviceIdentifiers);
         return deviceEntries;
     }

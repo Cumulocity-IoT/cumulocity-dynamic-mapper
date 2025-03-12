@@ -27,6 +27,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
@@ -37,12 +38,13 @@ import com.dashjoin.jsonata.json.Json;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstituteValue.TYPE;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
-import dynamic.mapping.processor.model.Substitution;
+import dynamic.mapping.processor.model.SubstituteValue;
+import dynamic.mapping.processor.model.SubstitutionEvaluation;
 import dynamic.mapping.processor.model.SubstitutionContext;
 import dynamic.mapping.processor.model.SubstitutionResult;
 import lombok.extern.slf4j.Slf4j;
@@ -66,6 +68,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
             throws ProcessingException {
         try {
             Mapping mapping = context.getMapping();
+            String tenant = context.getTenant();
             if (mapping.code != null) {
                 Context graalsContext = context.getGraalsContext();
 
@@ -107,14 +110,24 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                     log.info("Tenant {} - Ignoring payload over CodeBasedProcessorOutbound: {}, {}", context.getTenant(),
                     jsonObject);
                 } else { // Now use the copied objects
-                    for (Substitution item : typedResult.substitutions) {
-                        Object convertedValue = (item.getValue() instanceof Value)
-                                ? convertPolyglotValue((Value) item.getValue())
-                                : item.getValue();
-
-                                context.addToProcessingCache(item.getKey(), convertedValue, TYPE.valueOf(item.getType()),
-                                RepairStrategy.valueOf(item.getRepairStrategy()));
+                Set<String> keySet = typedResult.getSubstitutions().keySet();
+                for (String key : keySet) {
+                    List<SubstituteValue> processingCacheEntry = 
+                        new ArrayList<>();
+                    List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
+                    if (values != null && values.size() >0 
+                            && values.get(0).expandArray) {
+                        // extracted result from sourcePayload is an array, so we potentially have to
+                        // iterate over the result, e.g. creating multiple devices
+                        for (SubstituteValue substitutionValue: values) {
+                            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, substitutionValue.value,
+                            substitutionValue, mapping);
+                        }
+                    } else if (values != null) {
+                        SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, values,
+                        values.getFirst(), mapping);
                     }
+                }
 
                     log.info("Tenant {} - New payload over CodeBasedProcessorOutbound: {}, {}", context.getTenant(),
                             jsonObject);

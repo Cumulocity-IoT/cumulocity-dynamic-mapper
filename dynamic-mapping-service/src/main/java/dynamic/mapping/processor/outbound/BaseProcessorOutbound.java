@@ -21,8 +21,7 @@
 
 package dynamic.mapping.processor.outbound;
 
-import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.io.IOException;
@@ -42,8 +41,8 @@ import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
@@ -116,7 +115,7 @@ public abstract class BaseProcessorOutbound<T> {
         String tenant = context.getTenant();
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
         Set<String> pathTargets = processingCache.keySet();
 
         int predecessor = -1;
@@ -144,13 +143,13 @@ public abstract class BaseProcessorOutbound<T> {
         String deviceSource = context.getSourceId();
 
         for (String pathTarget : pathTargets) {
-            MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
+            SubstituteValue substitute = new SubstituteValue(
                     "NOT_DEFINED", TYPE.TEXTUAL,
-                    RepairStrategy.DEFAULT);
+                    RepairStrategy.DEFAULT, false);
             if (processingCache.get(pathTarget).size() > 0) {
                 substitute = processingCache.get(pathTarget).get(0).clone();
             }
-            substituteValueInPayload(substitute, payloadTarget, pathTarget);
+            SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to mqttBroker

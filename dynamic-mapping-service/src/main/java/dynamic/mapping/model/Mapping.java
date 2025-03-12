@@ -102,7 +102,7 @@ public class Mapping implements Serializable {
     public MappingType mappingType;
 
     @NotNull
-    public MappingSubstitution[] substitutions;
+    public Substitution[] substitutions;
 
     @NotNull
     public Boolean active;
@@ -174,7 +174,7 @@ public class Mapping implements Serializable {
 
     @JsonIgnore
     public Boolean definesDeviceIdentifier(
-            MappingSubstitution sub) {
+            Substitution sub) {
         if (Direction.INBOUND.equals(direction)) {
             if (useExternalId && !("").equals(externalIdType)) {
                 return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
@@ -203,11 +203,11 @@ public class Mapping implements Serializable {
 
     @JsonIgnore
     public void sortSubstitutions() {
-        MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
+        Substitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
                 (s1, s2) -> -(Boolean.valueOf(definesDeviceIdentifier(s1))
                         .compareTo(
                                 Boolean.valueOf(definesDeviceIdentifier(s2)))))
-                .toArray(size -> new MappingSubstitution[size]);
+                .toArray(size -> new Substitution[size]);
         substitutions = sortedSubstitutions;
     }
 
@@ -477,8 +477,8 @@ public class Mapping implements Serializable {
         return nt;
     }
 
-    static public List<MappingSubstitution> getDeviceIdentifiers(Mapping mapping) {
-        List<MappingSubstitution> mp = Arrays.stream(mapping.substitutions)
+    static public List<Substitution> getDeviceIdentifiers(Mapping mapping) {
+        List<Substitution> mp = Arrays.stream(mapping.substitutions)
                 .filter(sub -> mapping.definesDeviceIdentifier(sub))
                 .toList();
         return mp;
