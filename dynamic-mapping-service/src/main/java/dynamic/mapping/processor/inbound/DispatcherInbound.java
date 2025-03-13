@@ -170,26 +170,10 @@ public class DispatcherInbound implements GenericMessageCallback {
                             if (mapping.code != null) {
                                 graalsContext = Context.newBuilder("js")
                                         .option("engine.WarnInterpreterOnly", "false")
-                                        .allowHostClassLookup(className -> className.equals(
-                                                "dynamic.mapping.processor.model.SubstitutionResult") ||
-                                                className.equals(
-                                                        "dynamic.mapping.processor.model.Substitution"))
-                                        .allowHostAccess(HostAccess.newBuilder()
-                                                // Allow constructors
-                                                .allowAccess(SubstitutionResult.class.getConstructor(List.class))
-                                                .allowAccess(SubstitutionEvaluation.class.getConstructor(String.class,
-                                                        Object.class, String.class, String.class))
-                                                // Allow methods needed by ctx object
-                                                .allowAccess(SubstitutionContext.class.getMethod("getJsonObject"))
-                                                .allowAccess(SubstitutionContext.class.getMethod("getExternalIdentifier"))
-                                                .allowAccess(SubstitutionContext.class.getMethod("getC8YIdentifier"))
-                                                .allowAccess(SubstitutionContext.class
-                                                        .getMethod("getGenericDeviceIdentifier"))
-                                                // Allow array/collection access if needed
-                                                .allowArrayAccess(true)
-                                                .allowListAccess(true)
-                                                .allowMapAccess(true)
-                                                .build())
+                                        .allowHostAccess(HostAccess.ALL)
+                                        .allowHostClassLookup(className -> 
+                                            className.startsWith("dynamic.mapping.processor.model") || 
+                                            className.startsWith("java.util"))
                                         .build();
                                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
                                 extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);

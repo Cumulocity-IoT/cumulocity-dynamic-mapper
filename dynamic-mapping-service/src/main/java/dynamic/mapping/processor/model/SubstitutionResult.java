@@ -1,5 +1,6 @@
 package dynamic.mapping.processor.model;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +14,10 @@ public class SubstitutionResult {
     public SubstitutionResult(Map<String, List<SubstituteValue>> substitutions) {
       this.substitutions = substitutions;
     }
+
+    public SubstitutionResult() {
+        this.substitutions = new HashMap<String,List<SubstituteValue>>();
+      }
 
     @Override
     public String toString() {
