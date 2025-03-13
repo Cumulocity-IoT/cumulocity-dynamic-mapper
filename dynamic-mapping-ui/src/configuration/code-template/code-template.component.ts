@@ -26,17 +26,19 @@ import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
+import { CodeTemplates } from '../shared/configuration.model';
 
 let initializedMonaco = false;
 
 @Component({
   selector: 'd11r-shared-code',
-  templateUrl: 'shared-code.component.html',
-  styleUrls: ['./shared-code.component.css'],
+  templateUrl: 'code-template.component.html',
+  styleUrls: ['./code-template.component.css'],
   encapsulation: ViewEncapsulation.None
 })
 export class SharedCodeComponent implements OnInit, OnDestroy {
-  code: string;
+  codeTemplate: string;
+  templateId: CodeTemplates;
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -53,8 +55,8 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
   ) { }
 
   async ngOnInit() {
-    const code = await this.sharedService.getSharedCode();
-    this.code = base64ToString(code);
+    const codeTemplate = await this.sharedService.getCodeTemplate(this.templateId);
+    this.codeTemplate = base64ToString(codeTemplate);
   }
 
   async ngAfterViewInit(): Promise<void> {
@@ -70,15 +72,15 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
   }
 
   async clickedSaveSharedCode() {
-    if (this.code) {
-      const encodeCode = stringToBase64(this.code);
-      this.sharedService.updateSharedCode(encodeCode);
+    if (this.codeTemplate) {
+      const encodeCode = stringToBase64(this.codeTemplate);
+      this.sharedService.updateSharedCode(this.templateId, encodeCode);
     }
   }
 
   onValueCodeChange(value) {
     // console.log("code changed", value);
-    this.code = value;
+    this.codeTemplate = value;
   }
 
 }

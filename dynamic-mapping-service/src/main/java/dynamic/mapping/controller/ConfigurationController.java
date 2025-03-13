@@ -372,22 +372,31 @@ public class ConfigurationController {
         }
     }
 
-    @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> getSharedCode() {
+    @GetMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> getCodeTemplate(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Get shared code", tenant);
-        return new ResponseEntity<String>(serviceConfiguration.sharedCode, HttpStatus.OK);
+        log.debug("Tenant {} - Get code template", tenant);
+        Map<String,String> codeTemplates = serviceConfiguration.getCodeTemplates();
+        String result = codeTemplates.get(id);
+        if (result == null) {
+            // Template not found - return 404 Not Found
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } else {
+            // Template exists - return it with 200 OK
+            return new ResponseEntity<>(result, HttpStatus.OK);
+        }
     }
 
-    @PutMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> defineSharedCode(
-            @Valid @RequestBody String sharedCode) {
+    @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HttpStatus> updateCodeTemplate(
+        @PathVariable String id, @Valid @RequestBody String codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         Context graalsContext = null;
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-            serviceConfiguration.setSharedCode(sharedCode);
+            Map<String,String> codeTemplates = serviceConfiguration.getCodeTemplates();
+            codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
             log.debug("Tenant {} - Get shared code", tenant);
         } catch (Exception ex) {

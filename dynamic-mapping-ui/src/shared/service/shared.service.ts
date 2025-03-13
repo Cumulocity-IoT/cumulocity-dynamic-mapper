@@ -30,7 +30,7 @@ import {
   Direction,
   Feature,
   PATH_CONFIGURATION_SERVICE_ENDPOINT,
-  PATH_CONFIGURATION_SHARE_CODE_ENDPOINT,
+  PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT,
   PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT
 } from '..';
@@ -157,9 +157,9 @@ export class SharedService {
     return this._serviceConfiguration;
   }
 
-  async getSharedCode(): Promise<string> {
+  async getCodeTemplate(id :string ): Promise<string> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_SHARE_CODE_ENDPOINT}`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
       {
         headers: {
           accept: 'application/json'
@@ -170,14 +170,14 @@ export class SharedService {
     return await response.text();
   }
 
-  async updateSharedCode(sharedCode) {
+  async updateSharedCode(id:string, codeTemplate:string) {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_SHARE_CODE_ENDPOINT}`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
       {
         headers: {
           'content-type': 'application/text'
         },
-        body: sharedCode,
+        body: codeTemplate,
         method: 'PUT'
       }
     );

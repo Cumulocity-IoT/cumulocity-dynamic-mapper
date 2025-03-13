@@ -20,13 +20,13 @@
   -->
 
 
-<c8y-title translate>Shared Code</c8y-title>
+<c8y-title translate>Code Templates</c8y-title>
 <div class="card">
   <!-- <div class="card-block" style="max-height: 400px; overflow: auto"> -->
   <div class="card-block">
     <div class="form-group p-b-8">
       <div class="d-flex">
-        <label translate>Shared code</label>
+        <label translate>Code Templates</label>
         <span class="hidden-xs hidden-sm">
           <ng-template #popTemplateCodeHelp>
             <div [innerHtml]="codeEditorHelp"></div>
@@ -35,7 +35,7 @@
             aria-label="Help content"></button>
         </span>
       </div>
-      <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="code"
+      <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplate"
         (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
       </c8y-editor>
     </div>

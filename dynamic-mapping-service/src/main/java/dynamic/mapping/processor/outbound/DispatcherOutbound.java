@@ -264,7 +264,7 @@ public class DispatcherOutbound implements NotificationCallback {
                                             .getMember(identifier);
 
                                 }
-                                sharedCode = serviceConfiguration.sharedCode;
+                                sharedCode = serviceConfiguration.getCodeTemplates().get(ServiceConfiguration.SHARED_CODE_TEMPLATE);
 
                             }
                             
