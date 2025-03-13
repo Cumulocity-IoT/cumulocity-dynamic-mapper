@@ -23,13 +23,13 @@ function extractFromSource(ctx) {
     //Define time mapping time -> time
     const time = new SubstitutionValue(sourceObject.get('time'), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     addToSubstitutionsMap(result, 'time', time);
-    
+
     //Define temperature fragment mapping temperature -> c8y_Temperature.T.value/unit
-    const temperature = new SubstitutionValue( fragmentTemperature, TYPE.OBJECT,RepairStrategy.DEFAULT, false);
+    const temperature = new SubstitutionValue(fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT, false);
     addToSubstitutionsMap(result, 'Temperature', temperature);
 
     //Define Device Identifier
-    const deviceIdentifier = new SubstitutionValue( ctx.getExternalIdentifier(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+    const deviceIdentifier = new SubstitutionValue(ctx.getExternalIdentifier(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     addToSubstitutionsMap(result, '_TOPIC_LEVEL_[1]', deviceIdentifier);
 
     //Use C8Y sourceId
