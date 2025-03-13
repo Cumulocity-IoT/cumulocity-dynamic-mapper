@@ -148,7 +148,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                             substitutionValue, mapping);
                         }
                     } else if (values != null) {
-                        SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, values,
+                        SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, values.getFirst().value,
                         values.getFirst(), mapping);
                     }
                     processingCache.put(key, processingCacheEntry);
