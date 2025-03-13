@@ -151,6 +151,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                         SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, values,
                         values.getFirst(), mapping);
                     }
+                    processingCache.put(key, processingCacheEntry);
 
                     if (key.equals(Mapping.TIME)) {
                         substitutionTimeExists = true;
@@ -209,39 +210,4 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
         return false;
     }
-
-    // Convert PolyglotMap to Java Map
-    private Object convertPolyglotValue(Value value) {
-        if (value == null) {
-            return null;
-        }
-        if (value.isHostObject()) {
-            return value.asHostObject();
-        }
-        if (value.hasArrayElements()) {
-            List<Object> list = new ArrayList<>();
-            for (long i = 0; i < value.getArraySize(); i++) {
-                list.add(convertPolyglotValue(value.getArrayElement(i)));
-            }
-            return list;
-        }
-        if (value.hasMembers()) {
-            Map<String, Object> map = new HashMap<>();
-            for (String key : value.getMemberKeys()) {
-                map.put(key, convertPolyglotValue(value.getMember(key)));
-            }
-            return map;
-        }
-        if (value.isString()) {
-            return value.asString();
-        }
-        if (value.isNumber()) {
-            return value.asDouble();
-        }
-        if (value.isBoolean()) {
-            return value.asBoolean();
-        }
-        return value.toString();
-    }
-
 }

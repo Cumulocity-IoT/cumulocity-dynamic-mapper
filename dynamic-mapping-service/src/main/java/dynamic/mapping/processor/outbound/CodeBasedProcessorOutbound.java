@@ -96,7 +96,8 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                     graalsContext.eval(sharedSource);
                 }
 
-                Map jsonObject = (Map)context.getPayload();
+                Map jsonObject = (Map) context.getPayload();
+                Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
                 final Value result = extractFromSourceFunc
                         .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
@@ -107,27 +108,29 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
 
                 if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
                     context.setIgnoreFurtherProcessing(true);
-                    log.info("Tenant {} - Ignoring payload over CodeBasedProcessorOutbound: {}, {}", context.getTenant(),
-                    jsonObject);
+                    log.info("Tenant {} - Ignoring payload over CodeBasedProcessorOutbound: {}, {}",
+                            context.getTenant(),
+                            jsonObject);
                 } else { // Now use the copied objects
-                Set<String> keySet = typedResult.getSubstitutions().keySet();
-                for (String key : keySet) {
-                    List<SubstituteValue> processingCacheEntry = 
-                        new ArrayList<>();
-                    List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
-                    if (values != null && values.size() >0 
-                            && values.get(0).expandArray) {
-                        // extracted result from sourcePayload is an array, so we potentially have to
-                        // iterate over the result, e.g. creating multiple devices
-                        for (SubstituteValue substitutionValue: values) {
-                            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, substitutionValue.value,
-                            substitutionValue, mapping);
+                    Set<String> keySet = typedResult.getSubstitutions().keySet();
+                    for (String key : keySet) {
+                        List<SubstituteValue> processingCacheEntry = 
+                            new ArrayList<>();
+                        List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
+                        if (values != null && values.size() >0 
+                                && values.get(0).expandArray) {
+                            // extracted result from sourcePayload is an array, so we potentially have to
+                            // iterate over the result, e.g. creating multiple devices
+                            for (SubstituteValue substitutionValue: values) {
+                                SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, substitutionValue.value,
+                                substitutionValue, mapping);
+                            }
+                        } else if (values != null) {
+                            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, values,
+                            values.getFirst(), mapping);
                         }
-                    } else if (values != null) {
-                        SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, values,
-                        values.getFirst(), mapping);
+                        processingCache.put(key, processingCacheEntry);
                     }
-                }
 
                     log.info("Tenant {} - New payload over CodeBasedProcessorOutbound: {}, {}", context.getTenant(),
                             jsonObject);
@@ -139,39 +142,4 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
             throw new ProcessingException(e.getMessage());
         }
     }
-
-        // Convert PolyglotMap to Java Map
-    private Object convertPolyglotValue(Value value) {
-        if (value == null) {
-            return null;
-        }
-        if (value.isHostObject()) {
-            return value.asHostObject();
-        }
-        if (value.hasArrayElements()) {
-            List<Object> list = new ArrayList<>();
-            for (long i = 0; i < value.getArraySize(); i++) {
-                list.add(convertPolyglotValue(value.getArrayElement(i)));
-            }
-            return list;
-        }
-        if (value.hasMembers()) {
-            Map<String, Object> map = new HashMap<>();
-            for (String key : value.getMemberKeys()) {
-                map.put(key, convertPolyglotValue(value.getMember(key)));
-            }
-            return map;
-        }
-        if (value.isString()) {
-            return value.asString();
-        }
-        if (value.isNumber()) {
-            return value.asDouble();
-        }
-        if (value.isBoolean()) {
-            return value.asBoolean();
-        }
-        return value.toString();
-    }
-
 }
