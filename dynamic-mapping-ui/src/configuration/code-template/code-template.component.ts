@@ -49,7 +49,7 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     language: 'javascript',
   };
 
-  codeEditorHelp = `Shared javascript code for creating substitutions. These functions can be referenced by all mappings that use code based substitutions. The minimal code snippet is <br><code>const SubstitutionResult = Java.type('dynamic.mapping.processor.model.SubstitutionResult');</code><br><code>const Substitution = Java.type('dynamic.mapping.processor.model.Substitution');</code>`;
+  codeEditorHelp = `Shared javascript code for creating substitutions. These functions can be referenced by all mappings that use code based substitutions.`;
 
   constructor(
     public bsModalService: BsModalService,
@@ -78,6 +78,7 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     if (this.codeTemplate) {
       const encodeCode = stringToBase64(this.codeTemplate);
       this.sharedService.updateSharedCode(this.templateId, encodeCode);
+      this.alertService.success("Saved code template");
     }
   }
 
@@ -87,7 +88,7 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
   }
 
   async onSelectTemplate(t) {
-    this.templateId = t;
+    this.templateId = t.target.value;
     const codeTemplate = await this.sharedService.getCodeTemplate(this.templateId);
     this.codeTemplate = base64ToString(codeTemplate);
   }

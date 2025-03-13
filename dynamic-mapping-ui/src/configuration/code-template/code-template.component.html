@@ -24,43 +24,36 @@
 <div class="card">
   <!-- <div class="card-block" style="max-height: 400px; overflow: auto"> -->
   <div class="card-block">
-    <form [formGroup]="formGroup">
-      <c8y-list-group class="separator-top">
-        <ng-container *ngFor="let q of CodeTemplates | keyvalue">
-          <c8y-li>
-            <c8y-li-radio #liRadioOption1 name="mapping_type_group" title="{{ q.value }}"
-              (click)="onSelectTemplate(q.value)" [selected]="templateId == q.value"></c8y-li-radio>
-            <span>{{ q.value | formatStringAsWords }}</span>
-          </c8y-li>
-        </ng-container>
-      </c8y-list-group>
-      </form>
-
-    <div class="form-group p-b-8">
+    <c8y-form-group>
+      <label translate>Code Templates</label>
+      <div class="c8y-select-wrapper" style="max-width: 300px; overflow: auto !important">
+        <select class="form-control" (change)="
+                      onSelectTemplate($event)" required>
+          <option *ngFor="let q of CodeTemplates | keyvalue" [ngValue]="q.value" [selected]="templateId == q.value">
+            {{ q.value }}
+          </option>
+        </select>
+      </div>
+    </c8y-form-group>
+    <c8y-form-group>
       <div class="d-flex">
-        <label translate>Code Templates</label>
+        <label translate>Code</label>
         <span class="hidden-xs hidden-sm">
           <ng-template #popTemplateCodeHelp>
             <div [innerHtml]="codeEditorHelp"></div>
           </ng-template>
-          <button type="button" placement="right" [popover]="popTemplateCodeHelp" triggers="click" class="btn-help" containerClass="wide-popover"
-            aria-label="Help content"></button>
+          <button type="button" placement="right" [popover]="popTemplateCodeHelp" triggers="click" class="btn-help"
+            containerClass="wide-popover" aria-label="Help content"></button>
         </span>
       </div>
       <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplate"
         (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
       </c8y-editor>
-    </div>
+    </c8y-form-group>
   </div>
   <div class="card-footer">
     <div class="form-group">
-      <button
-        type="button"
-        name="update"
-        class="btn btn-primary"
-        (click)="clickedSaveSharedCode()"
-        translate
-      >
+      <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveSharedCode()" translate>
         Save
       </button>
     </div>

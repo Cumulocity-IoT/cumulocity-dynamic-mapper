@@ -59,6 +59,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Feature;
 import dynamic.mapping.model.Mapping;
@@ -377,7 +379,18 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("Tenant {} - Get code template", tenant);
-        Map<String,String> codeTemplates = serviceConfiguration.getCodeTemplates();
+        Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
+        if (codeTemplates == null) {
+            codeTemplates = ServiceConfiguration.initCodeTemplates();
+            serviceConfiguration.codeTemplates = codeTemplates;
+            try {
+                serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+            } catch (JsonProcessingException ex) {
+                log.error("Tenant {} - Error retrieving code template {}", tenant, ex);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            }
+        }
+
         String result = codeTemplates.get(id);
         if (result == null) {
             // Template not found - return 404 Not Found
@@ -390,17 +403,17 @@ public class ConfigurationController {
 
     @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateCodeTemplate(
-        @PathVariable String id, @Valid @RequestBody String codeTemplate) {
+            @PathVariable String id, @Valid @RequestBody String codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         Context graalsContext = null;
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-            Map<String,String> codeTemplates = serviceConfiguration.getCodeTemplates();
+            Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
             log.debug("Tenant {} - Get shared code", tenant);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error updating sharedCode {}", tenant, ex);
+            log.error("Tenant {} - Error updating code template {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         } finally {
             if (graalsContext != null) {
