@@ -27,6 +27,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
 import { CodeTemplates } from '../shared/configuration.model';
+import { FormGroup } from '@angular/forms';
 
 let initializedMonaco = false;
 
@@ -38,7 +39,9 @@ let initializedMonaco = false;
 })
 export class SharedCodeComponent implements OnInit, OnDestroy {
   codeTemplate: string;
-  templateId: CodeTemplates;
+  templateId: CodeTemplates = CodeTemplates.SHARED_CODE_TEMPLATE;
+  formGroup: FormGroup;
+  CodeTemplates = CodeTemplates;
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -81,6 +84,12 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
   onValueCodeChange(value) {
     // console.log("code changed", value);
     this.codeTemplate = value;
+  }
+
+  async onSelectTemplate(t) {
+    this.templateId = t;
+    const codeTemplate = await this.sharedService.getCodeTemplate(this.templateId);
+    this.codeTemplate = base64ToString(codeTemplate);
   }
 
 }
