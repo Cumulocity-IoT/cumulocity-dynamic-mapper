@@ -1,3 +1,15 @@
+//
+// sample to generate one measurement
+//
+
+// payload
+// {
+//     "temperature": 139.0,
+//     "unit": "C",
+//     "externalId": "berlin_01"
+//  }
+// topic 'testGraalsSingle/berlin_01'
+
 function extractFromSource(ctx) {
     // This is the source message as json
     const sourceObject = ctx.getJsonObject();
