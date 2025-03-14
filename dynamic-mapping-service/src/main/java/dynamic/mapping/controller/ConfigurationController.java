@@ -383,7 +383,7 @@ public class ConfigurationController {
         Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
-            serviceConfiguration.initCodeTemplates();
+            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
             codeTemplates = serviceConfiguration.getCodeTemplates();
             
             try {
@@ -415,7 +415,7 @@ public class ConfigurationController {
         Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
-            serviceConfiguration.initCodeTemplates();
+            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
             codeTemplates = serviceConfiguration.getCodeTemplates();
             
             try {
