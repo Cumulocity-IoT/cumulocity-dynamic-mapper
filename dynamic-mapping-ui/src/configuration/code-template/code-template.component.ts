@@ -53,7 +53,7 @@ export class SharedCodeComponent implements OnInit {
     language: 'javascript',
   };
 
-  codeEditorHelp = `Shared javascript code for creating substitutions. These functions can be referenced by all mappings that use code based substitutions.`;
+  codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Define substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
 
   constructor(
     public bsModalService: BsModalService,
