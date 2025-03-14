@@ -19,7 +19,6 @@
   ~
   -->
 
-
 <c8y-title translate>Code Templates</c8y-title>
 <div class="card">
   <!-- <div class="card-block" style="max-height: 400px; overflow: auto"> -->
@@ -28,9 +27,10 @@
       <label translate>Code Templates</label>
       <div class="c8y-select-wrapper" style="max-width: 300px; overflow: auto !important">
         <select class="form-control" (change)="
-                      onSelectTemplate($event)" required>
-          <option *ngFor="let q of CodeTemplates | keyvalue" [ngValue]="q.value" [selected]="templateId == q.value">
-            {{ q.value }}
+        onSelectTemplate()" [(ngModel)]="templateId" name="templateSelect" required>
+          <option [ngValue]="null" disabled>Select a template...</option>
+          <option *ngFor="let key of getTemplateKeys()" [ngValue]="key">
+            {{ key  | capitalCase}}
           </option>
         </select>
       </div>

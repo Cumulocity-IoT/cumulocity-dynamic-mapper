@@ -74,7 +74,7 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
-import { CodeTemplates } from '../../configuration';
+import { CODE_TEMPLATES } from '../../configuration';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -165,8 +165,6 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     // console.log('ngOnInit');
-    this.codeTemplateInbound = await this.shareService.getCodeTemplate(CodeTemplates.INBOUND_CODE_TEMPLATE);
-    this.codeTemplateOutbound = await this.shareService.getCodeTemplate(CodeTemplates.OUTBOUND_CODE_TEMPLATE);
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
@@ -300,6 +298,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         console.log('Triggered updating mapping', m);
         this.updateMapping(m);
       });
+    this.codeTemplateInbound = await this.shareService.getCodeTemplate(CODE_TEMPLATES.INBOUND_CODE_TEMPLATE);
+    this.codeTemplateOutbound = await this.shareService.getCodeTemplate(CODE_TEMPLATES.OUTBOUND_CODE_TEMPLATE);
   }
 
   async editMessageFilter(m: MappingEnriched) {
@@ -379,12 +379,12 @@ export class MappingComponent implements OnInit, OnDestroy {
           filterable: true
         }
         : undefined,
-        //  {
-        //   header: 'Publish topic sample',
-        //   name: 'publishTopicSample',
-        //   path: 'mapping.publishTopicSample',
-        //   filterable: true
-        // },
+      //  {
+      //   header: 'Publish topic sample',
+      //   name: 'publishTopicSample',
+      //   path: 'mapping.publishTopicSample',
+      //   filterable: true
+      // },
       {
         name: 'targetAPI',
         header: 'API',
@@ -449,7 +449,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         if (result.snoop) {
           this.snoopStatus = SnoopStatus.ENABLED;
         }
-        this.substitutionsAsCode =  result.substitutionsAsCode;
+        this.substitutionsAsCode = result.substitutionsAsCode;
         this.mappingType = result.mappingType;
         this.addMapping();
       }
@@ -485,10 +485,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType:  this.substitutionsAsCode? MappingType.CODE_BASED : this.mappingType,
+        mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        code : this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
+        code: this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: false,
         snoopedTemplates: [],
@@ -513,10 +513,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType:  this.substitutionsAsCode? MappingType.CODE_BASED : this.mappingType,
+        mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        code : this.substitutionsAsCode ? this.codeTemplateOutbound: undefined,
+        code: this.substitutionsAsCode ? this.codeTemplateOutbound : undefined,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: false,
         snoopedTemplates: [],

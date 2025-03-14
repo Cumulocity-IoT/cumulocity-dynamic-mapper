@@ -37,7 +37,7 @@ import {
 import { Subject, takeUntil, timer } from 'rxjs';
 import { FetchClient } from '@c8y/ngx-components/api';
 import { ServiceConfiguration } from '../../configuration';
-import { ServiceOperation } from './shared.model';
+import { CodeTemplates, ServiceOperation } from './shared.model';
 import { OptionsService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
@@ -168,6 +168,19 @@ export class SharedService {
       }
     );
     return await response.text();
+  }
+
+  async getCodeTemplates(): Promise<CodeTemplates> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}`,
+      {
+        headers: {
+          accept: 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    return await response.json();
   }
 
   async updateSharedCode(id:string, codeTemplate:string) {

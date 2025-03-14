@@ -26,8 +26,9 @@ import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
-import { CodeTemplates } from '../shared/configuration.model';
+import { CODE_TEMPLATES } from '../shared/configuration.model';
 import { FormGroup } from '@angular/forms';
+import { CodeTemplates } from '../../shared';
 
 let initializedMonaco = false;
 
@@ -37,11 +38,14 @@ let initializedMonaco = false;
   styleUrls: ['./code-template.component.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class SharedCodeComponent implements OnInit, OnDestroy {
+export class SharedCodeComponent implements OnInit {
   codeTemplate: string;
-  templateId: CodeTemplates = CodeTemplates.SHARED_CODE_TEMPLATE;
+  templateId: CODE_TEMPLATES = CODE_TEMPLATES.SHARED_CODE_TEMPLATE;
   formGroup: FormGroup;
-  CodeTemplates = CodeTemplates;
+  CodeTemplates = CODE_TEMPLATES;
+  codeTemplates: CodeTemplates = {};
+  isLoading = true;
+  errorMessage = '';
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -57,9 +61,17 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
   ) { }
 
-  async ngOnInit() {
-    const codeTemplate = await this.sharedService.getCodeTemplate(this.templateId);
-    this.codeTemplate = base64ToString(codeTemplate);
+  async ngOnInit(): Promise<void> {
+    this.codeTemplates = await this.sharedService.getCodeTemplates();
+
+    // Set default if available
+    const keys = Object.keys(this.codeTemplates);
+    this.templateId = keys[0] as CODE_TEMPLATES;
+    this.codeTemplate = base64ToString(this.codeTemplates[this.templateId]);
+  }
+
+  isValidTemplateKey(key: string): boolean {
+    return Object.values(CODE_TEMPLATES).includes(key as any);
   }
 
   async ngAfterViewInit(): Promise<void> {
@@ -71,14 +83,12 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy() {
-  }
-
   async clickedSaveSharedCode() {
     if (this.codeTemplate) {
       const encodeCode = stringToBase64(this.codeTemplate);
       this.sharedService.updateSharedCode(this.templateId, encodeCode);
       this.alertService.success("Saved code template");
+      this.codeTemplates = await this.sharedService.getCodeTemplates();
     }
   }
 
@@ -87,10 +97,11 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     this.codeTemplate = value;
   }
 
-  async onSelectTemplate(t) {
-    this.templateId = t.target.value;
-    const codeTemplate = await this.sharedService.getCodeTemplate(this.templateId);
-    this.codeTemplate = base64ToString(codeTemplate);
+  onSelectTemplate(): void {
+    this.codeTemplate = base64ToString(this.codeTemplates[this.templateId]);
   }
 
+  getTemplateKeys(): string[] {
+    return Object.keys(this.codeTemplates);
+  }
 }

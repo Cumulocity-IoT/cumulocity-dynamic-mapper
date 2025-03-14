@@ -379,26 +379,54 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("Tenant {} - Get code template", tenant);
+        
         Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
-        if (codeTemplates == null) {
-            codeTemplates = ServiceConfiguration.initCodeTemplates();
-            serviceConfiguration.codeTemplates = codeTemplates;
+        if (codeTemplates == null || codeTemplates.isEmpty()) {
+            // Initialize code templates from properties if not already set
+            serviceConfiguration.initCodeTemplates();
+            codeTemplates = serviceConfiguration.getCodeTemplates();
+            
             try {
                 serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
-                log.error("Tenant {} - Error retrieving code template {}", tenant, ex);
+                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
             }
         }
-
+    
         String result = codeTemplates.get(id);
         if (result == null) {
             // Template not found - return 404 Not Found
+            log.warn("Tenant {} - Code template with ID '{}' not found", tenant, id);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
             // Template exists - return it with 200 OK
             return new ResponseEntity<>(result, HttpStatus.OK);
         }
+    }
+
+    @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String,String>> getCodeTemplates() {
+        String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        log.debug("Tenant {} - Get code templates", tenant);
+        
+        Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
+        if (codeTemplates == null || codeTemplates.isEmpty()) {
+            // Initialize code templates from properties if not already set
+            serviceConfiguration.initCodeTemplates();
+            codeTemplates = serviceConfiguration.getCodeTemplates();
+            
+            try {
+                serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            } catch (JsonProcessingException ex) {
+                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            }
+        }
+        return new ResponseEntity<>(codeTemplates, HttpStatus.OK);
     }
 
     @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -411,6 +439,7 @@ public class ConfigurationController {
             Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             log.debug("Tenant {} - Get shared code", tenant);
         } catch (Exception ex) {
             log.error("Tenant {} - Error updating code template {}", tenant, ex);
