@@ -74,7 +74,7 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
-import { CodeTemplates } from 'src/configuration';
+import { CodeTemplates } from '../../configuration';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
