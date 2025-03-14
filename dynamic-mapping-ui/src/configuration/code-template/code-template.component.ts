@@ -66,7 +66,6 @@ export class SharedCodeComponent implements OnInit {
 
     // Set default if available
     const keys = Object.keys(this.codeTemplates);
-    this.templateId = keys[0] as CODE_TEMPLATES;
     this.codeTemplate = base64ToString(this.codeTemplates[this.templateId]);
   }
 
