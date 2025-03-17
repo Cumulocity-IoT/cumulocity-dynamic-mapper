@@ -144,7 +144,7 @@ export interface StepperConfiguration {
 export enum MappingType {
   JSON = 'JSON',
   FLAT_FILE = 'FLAT_FILE',
-  BINARY = 'BINARY',
+  HEX = 'HEX',
   PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
   EXTENSION_SOURCE = 'EXTENSION_SOURCE',
   EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
@@ -208,8 +208,8 @@ export const MappingTypeDescriptionMap: Record<
       allowTestSending: true
     }
   },
-  [MappingType.BINARY]: {
-    key: MappingType.BINARY,
+  [MappingType.HEX]: {
+    key: MappingType.HEX,
     description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x". 
 Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
     properties: {

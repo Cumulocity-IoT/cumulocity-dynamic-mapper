@@ -248,7 +248,7 @@ export class MappingService {
             id: m.id,
             mapping: m,
             snoopSupported:
-              MappingTypeDescriptionMap[m.mappingType].properties[
+              MappingTypeDescriptionMap[m.mappingType]?.properties[
                 Direction.INBOUND
               ].snoopSupported,
             connectors: mappingsDeployed[m.identifier]

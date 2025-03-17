@@ -148,7 +148,7 @@ Further example for JSONata expressions are:
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 
 1. `JSON`: if your payload is in JSON format
-1. `Binary`: if your payload is in HEX format
+1. `Hex`: if your payload is in HEX format
 1. `Protobuf Internal`: if your payload is a serialized protobuf message
 1. `Extension Source`: if you want to process the message yourself, by registering a processor extension
 
@@ -162,15 +162,15 @@ The wizard to define a mapping consists of the steps:
 1. Select the type of mapping:
 
 - `JSON`
-- `Binary`
+- `Hex`
 - `Protobuf Internal`
 - `Extension Source`
 
 ---
 
 **NOTE:**
-Payload for `Binary` is wrapped.
-For example for a binary the payload is like:
+Payload for `Hex` is wrapped.
+For example for a hexadecimal the payload is like:
 
 ```
 {
@@ -186,7 +186,7 @@ $split(message,",")[1]
 
 splits the payload and return the second field: `100`.
 
-And for the binary payload is encoded as hex string:
+And for the hexadecimal payload is encoded as hex string:
 
 ```
 {
