@@ -164,23 +164,23 @@ export class MappingStepPropertiesComponent
             hideExpression:
               this.stepperConfiguration.direction != Direction.OUTBOUND
           },
-          // {
-          //   className: 'col-lg-6',
-          //   key: 'filterMapping',
-          //   type: 'input',
-          //   templateOptions: {
-          //     label: 'Filter Mapping',
-          //     placeholder: 'e.g. custom_OperationFragment',
-          //     disabled:
-          //       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-          //     description:
-          //       'The Filter Mapping can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value',
-          //     required:
-          //       this.stepperConfiguration.direction == Direction.OUTBOUND
-          //   },
-          //   hideExpression:
-          //     this.stepperConfiguration.direction != Direction.OUTBOUND
-          // },
+          {
+            className: 'col-lg-6',
+            key: 'filterMapping',
+            type: 'input',
+            templateOptions: {
+              label: 'Filter Mapping',
+              placeholder: 'e.g. custom_OperationFragment',
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description:
+                'The Filter Mapping, has to be defined as type = "YOUR_TYPE"',
+              required:
+                this.stepperConfiguration.direction == Direction.OUTBOUND
+            },
+            hideExpression:
+              this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && (this.mapping.snoopStatus == SnoopStatus.NONE || this.mapping.snoopStatus == SnoopStatus.STOPPED))
+          },
           {
             className: 'col-lg-6',
             key: 'mappingTopicSample',
