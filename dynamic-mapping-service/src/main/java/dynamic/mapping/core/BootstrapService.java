@@ -189,7 +189,7 @@ public class BootstrapService {
 
         if (requiresSave) {
             try {
-                serviceConfigurationComponent.saveServiceConfiguration(serviceConfig);
+                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfig);
             } catch (JsonProcessingException e) {
                 log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
             }
@@ -339,7 +339,7 @@ public class BootstrapService {
     private void disableOutboundMapping(String tenant, ServiceConfiguration serviceConfig) {
         try {
             serviceConfig.setOutboundMappingEnabled(false);
-            serviceConfigurationComponent.saveServiceConfiguration(serviceConfig);
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfig);
         } catch (JsonProcessingException e) {
             log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
         }

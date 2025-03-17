@@ -84,10 +84,11 @@ public class ServiceConfigurationComponent {
         configuration.setCodeTemplates(codeTemplates);
     }
 
-    public void saveServiceConfiguration(final ServiceConfiguration configuration) throws JsonProcessingException {
+    public void saveServiceConfiguration(String tenant, final ServiceConfiguration configuration) throws JsonProcessingException {
         if (configuration == null) {
             return;
         }
+        
         final String configurationJson = objectMapper.writeValueAsString(configuration);
         final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(
                 OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION, configurationJson);
@@ -132,7 +133,7 @@ public class ServiceConfigurationComponent {
     public ServiceConfiguration initialize(String tenant) {
         ServiceConfiguration configuration = new ServiceConfiguration();
         try {
-            saveServiceConfiguration(configuration);
+            saveServiceConfiguration(tenant, configuration);
         } catch (JsonProcessingException e) {
             log.warn("Tenant {} - failed to initializes ServiceConfiguration!", tenant);
             e.printStackTrace();

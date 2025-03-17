@@ -350,7 +350,7 @@ public class ConfigurationController {
         }
 
         try {
-            serviceConfigurationComponent.saveServiceConfiguration(configuration);
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, configuration);
             if (!configuration.isOutboundMappingEnabled()
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
                 configurationRegistry.getNotificationSubscriber().disconnect(tenant);
@@ -387,7 +387,7 @@ public class ConfigurationController {
             codeTemplates = serviceConfiguration.getCodeTemplates();
             
             try {
-                serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
@@ -419,7 +419,7 @@ public class ConfigurationController {
             codeTemplates = serviceConfiguration.getCodeTemplates();
             
             try {
-                serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
@@ -438,7 +438,7 @@ public class ConfigurationController {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
             Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
             codeTemplates.put(id, codeTemplate);
-            serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             log.debug("Tenant {} - Get shared code", tenant);
         } catch (Exception ex) {
