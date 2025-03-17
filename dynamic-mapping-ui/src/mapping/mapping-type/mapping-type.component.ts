@@ -44,7 +44,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
   MappingTypeDescriptionMap = MappingTypeDescriptionMap;
-  formGroupStep: FormGroup;
+  formGroup: FormGroup;
   snoop: boolean = false;
   canOpenInBrowser: boolean = false;
   substitutionsAsCodeSupported$: BehaviorSubject<boolean> = new BehaviorSubject(false);
@@ -69,13 +69,13 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.closeSubject = new Subject();
     // console.log('Subject:', this.closeSubject, this.labels);
-    this.formGroupStep = this.fb.group({
+    this.formGroup = this.fb.group({
       snoop: [false],
       substitutionsAsCode: [false]
     });
 
     this.filteredMappingTypes = Object.entries(MappingType)
-      .filter(([key, value]) => (value !== MappingType.CODE_BASED))
+      .filter(([key, value]) => (value !== MappingType.CODE_BASED && value !== MappingType.FLAT_FILE ))
       .reduce((obj, [key, value]) => {
         obj[key] = value;
         return obj;
@@ -88,8 +88,8 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
-    if (this.formGroupStep.valid) {
-      const formValue = this.formGroupStep.value;
+    if (this.formGroup.valid) {
+      const formValue = this.formGroup.value;
       // Your existing save logic
       const { snoopSupported } =
         MappingTypeDescriptionMap[this.mappingType].properties[this.direction];
@@ -107,16 +107,17 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     this.mappingType = t;
     this.mappingTypeDescription = MappingTypeDescriptionMap[t].description;
     if (this.shouldShowSnoop()) {
-      this.formGroupStep.addControl('snoop', new FormControl(false));
+      this.formGroup.addControl('snoop', new FormControl(false));
     } else {
-      this.formGroupStep.removeControl('snoop');
+      this.formGroup.removeControl('snoop');
     }
     if (this.shouldShowSubstitutionsAsCode()) {
-      this.formGroupStep.addControl('substitutionsAsCode', new FormControl(false));
+      this.formGroup.addControl('substitutionsAsCode', new FormControl(false));
     } else {
-      this.formGroupStep.removeControl('substitutionsAsCode');
+      this.formGroup.removeControl('substitutionsAsCode');
     }
   }
+
   shouldShowSnoop(): boolean {
     // Replace these conditions with your specific requirements
     return (

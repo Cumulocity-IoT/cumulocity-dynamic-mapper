@@ -92,16 +92,16 @@ public class MappingsRepresentationTest {
 
         Mapping m1 = new Mapping();
         m1.targetAPI = API.EVENT;
-        MappingSubstitution s1 = new MappingSubstitution();
+        Substitution s1 = new Substitution();
         s1.pathSource = "p1s";
         s1.pathTarget = "p1t";
-        MappingSubstitution s2 = new MappingSubstitution();
+        Substitution s2 = new Substitution();
         s2.pathSource = "p2s";
         s2.pathTarget = "source.id";
-        MappingSubstitution s3 = new MappingSubstitution();
+        Substitution s3 = new Substitution();
         s3.pathSource = "p3s";
         s3.pathTarget = "p3t";
-        m1.substitutions = new MappingSubstitution[] { s1, s2, s3 };
+        m1.substitutions = new Substitution[] { s1, s2, s3 };
 
         assertEquals("p1s", m1.substitutions[0].pathSource);
         m1.sortSubstitutions();

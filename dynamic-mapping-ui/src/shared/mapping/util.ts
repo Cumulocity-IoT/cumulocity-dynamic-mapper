@@ -87,7 +87,7 @@ export const SAMPLE_TEMPLATES_EXTERNAL = {
   }`,
   FLAT_FILE:
     '{"message":"165, 14.5, \\"2022-08-06T00:14:50.000+02:00\\",\\"c8y_FuelMeasurement\\""}',
-  BINARY:
+  HEX:
     '{"message":"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 "}'
 };
 
@@ -323,7 +323,7 @@ export const BASE_URL = 'service/dynamic-mapping-service';
 export const PATH_OPERATION_ENDPOINT = 'operation';
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connector';
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
-export const PATH_CONFIGURATION_SHARE_CODE_ENDPOINT = 'configuration/code';
+export const PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT = 'configuration/code';
 export const PATH_MAPPING_TREE_ENDPOINT = 'monitoring/tree';
 export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = 'monitoring/tree';
 export const PATH_STATUS_CONNECTORS_ENDPOINT = 'monitoring/status/connectors';
@@ -341,7 +341,7 @@ export const COLOR_HIGHLIGHTED: string = 'lightgrey';
 export function getExternalTemplate(mapping: Mapping): any {
   if (
     mapping.mappingType == MappingType.FLAT_FILE ||
-    mapping.mappingType == MappingType.BINARY
+    mapping.mappingType == MappingType.HEX
   ) {
     return SAMPLE_TEMPLATES_EXTERNAL[mapping.mappingType];
   } else {

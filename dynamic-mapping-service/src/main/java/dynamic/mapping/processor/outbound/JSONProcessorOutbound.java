@@ -21,8 +21,7 @@
 
 package dynamic.mapping.processor.outbound;
 
-import static dynamic.mapping.model.MappingSubstitution.isArray;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,10 +35,11 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.Substitution;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.processor.model.SubstituteValue;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -65,7 +65,7 @@ public class JSONProcessorOutbound extends BaseProcessorOutbound<Object> {
 
         Object payloadObject = context.getPayload();
 
-        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
         String payloadAsString = toPrettyJsonString(payloadObject);
 
         if (serviceConfiguration.logPayload || mapping.debug) {
@@ -74,7 +74,7 @@ public class JSONProcessorOutbound extends BaseProcessorOutbound<Object> {
                     serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
-        for (MappingSubstitution substitution : mapping.substitutions) {
+        for (Substitution substitution : mapping.substitutions) {
             Object extractedSourceContent = null;
 
             /*
@@ -85,20 +85,20 @@ public class JSONProcessorOutbound extends BaseProcessorOutbound<Object> {
             /*
              * step 2 analyse extracted content: textual, array
              */
-            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
+            List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     substitution.pathTarget,
                     new ArrayList<>());
 
-            if (isArray(extractedSourceContent) && substitution.expandArray) {
+            if (dynamic.mapping.processor.model.SubstitutionEvaluation.isArray(extractedSourceContent) && substitution.expandArray) {
                 var extractedSourceContentCollection = (Collection) extractedSourceContent;
                 // extracted result from sourcePayload is an array, so we potentially have to
                 // iterate over the result, e.g. creating multiple devices
                 for (Object jn : extractedSourceContentCollection) {
-                    MappingSubstitution.processSubstitute(tenant, processingCacheEntry, jn,
+                    dynamic.mapping.processor.model.SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, jn,
                             substitution, mapping);
                 }
             } else {
-                MappingSubstitution.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
+                dynamic.mapping.processor.model.SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
                         substitution, mapping);
             }
             processingCache.put(substitution.pathTarget, processingCacheEntry);

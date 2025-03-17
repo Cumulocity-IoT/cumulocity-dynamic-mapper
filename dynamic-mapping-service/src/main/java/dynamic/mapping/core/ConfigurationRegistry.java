@@ -48,7 +48,7 @@ import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.inbound.BaseProcessorInbound;
-import dynamic.mapping.processor.inbound.BinaryProcessorInbound;
+import dynamic.mapping.processor.inbound.HexProcessorInbound;
 import dynamic.mapping.processor.inbound.CodeBasedProcessorInbound;
 import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapping.processor.inbound.JSONProcessorInbound;
@@ -157,7 +157,7 @@ public class ConfigurationRegistry {
                 MappingType.JSON, new JSONProcessorInbound(this),
                 MappingType.CODE_BASED, new CodeBasedProcessorInbound(this),
                 MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
-                MappingType.BINARY, new BinaryProcessorInbound(this),
+                MappingType.HEX, new HexProcessorInbound(this),
                 MappingType.PROTOBUF_INTERNAL, new InternalProtobufProcessor(this),
                 MappingType.EXTENSION_SOURCE, extensibleProcessor,
                 MappingType.EXTENSION_SOURCE_TARGET, extensibleProcessor);

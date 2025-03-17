@@ -76,9 +76,9 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
 
     sharedCodeNode: new NavigatorNode({
       parent: gettext('Configuration'),
-      label: gettext('Shared code'),
+      label: gettext('Code template'),
       icon: 'source-code',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/sharedCode`,
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate`,
       priority: 460,
       preventDuplicates: true
     }),

@@ -59,6 +59,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Feature;
 import dynamic.mapping.model.Mapping;
@@ -348,7 +350,7 @@ public class ConfigurationController {
         }
 
         try {
-            serviceConfigurationComponent.saveServiceConfiguration(configuration);
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, configuration);
             if (!configuration.isOutboundMappingEnabled()
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
                 configurationRegistry.getNotificationSubscriber().disconnect(tenant);
@@ -372,26 +374,75 @@ public class ConfigurationController {
         }
     }
 
-    @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> getSharedCode() {
+    @GetMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> getCodeTemplate(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Get shared code", tenant);
-        return new ResponseEntity<String>(serviceConfiguration.sharedCode, HttpStatus.OK);
+        log.debug("Tenant {} - Get code template", tenant);
+        
+        Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
+        if (codeTemplates == null || codeTemplates.isEmpty()) {
+            // Initialize code templates from properties if not already set
+            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
+            codeTemplates = serviceConfiguration.getCodeTemplates();
+            
+            try {
+                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            } catch (JsonProcessingException ex) {
+                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            }
+        }
+    
+        String result = codeTemplates.get(id);
+        if (result == null) {
+            // Template not found - return 404 Not Found
+            log.warn("Tenant {} - Code template with ID '{}' not found", tenant, id);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } else {
+            // Template exists - return it with 200 OK
+            return new ResponseEntity<>(result, HttpStatus.OK);
+        }
     }
 
-    @PutMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> defineSharedCode(
-            @Valid @RequestBody String sharedCode) {
+    @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String,String>> getCodeTemplates() {
+        String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        log.debug("Tenant {} - Get code templates", tenant);
+        
+        Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
+        if (codeTemplates == null || codeTemplates.isEmpty()) {
+            // Initialize code templates from properties if not already set
+            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
+            codeTemplates = serviceConfiguration.getCodeTemplates();
+            
+            try {
+                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            } catch (JsonProcessingException ex) {
+                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            }
+        }
+        return new ResponseEntity<>(codeTemplates, HttpStatus.OK);
+    }
+
+    @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HttpStatus> updateCodeTemplate(
+            @PathVariable String id, @Valid @RequestBody String codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         Context graalsContext = null;
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-            serviceConfiguration.setSharedCode(sharedCode);
-            serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+            Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
+            codeTemplates.put(id, codeTemplate);
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             log.debug("Tenant {} - Get shared code", tenant);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error updating sharedCode {}", tenant, ex);
+            log.error("Tenant {} - Error updating code template {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         } finally {
             if (graalsContext != null) {

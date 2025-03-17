@@ -30,6 +30,7 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -40,9 +41,6 @@ import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
-import dynamic.mapping.processor.model.Substitution;
-import dynamic.mapping.processor.model.SubstitutionContext;
-import dynamic.mapping.processor.model.SubstitutionResult;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -170,26 +168,10 @@ public class DispatcherInbound implements GenericMessageCallback {
                             if (mapping.code != null) {
                                 graalsContext = Context.newBuilder("js")
                                         .option("engine.WarnInterpreterOnly", "false")
-                                        .allowHostClassLookup(className -> className.equals(
-                                                "dynamic.mapping.processor.model.SubstitutionResult") ||
-                                                className.equals(
-                                                        "dynamic.mapping.processor.model.Substitution"))
-                                        .allowHostAccess(HostAccess.newBuilder()
-                                                // Allow constructors
-                                                .allowAccess(SubstitutionResult.class.getConstructor(List.class))
-                                                .allowAccess(Substitution.class.getConstructor(String.class,
-                                                        Object.class, String.class, String.class))
-                                                // Allow methods needed by ctx object
-                                                .allowAccess(SubstitutionContext.class.getMethod("getJsonObject"))
-                                                .allowAccess(SubstitutionContext.class.getMethod("getExternalIdentifier"))
-                                                .allowAccess(SubstitutionContext.class.getMethod("getC8YIdentifier"))
-                                                .allowAccess(SubstitutionContext.class
-                                                        .getMethod("getGenericDeviceIdentifier"))
-                                                // Allow array/collection access if needed
-                                                .allowArrayAccess(true)
-                                                .allowListAccess(true)
-                                                .allowMapAccess(true)
-                                                .build())
+                                        .allowHostAccess(HostAccess.ALL)
+                                        .allowHostClassLookup(className -> 
+                                            className.startsWith("dynamic.mapping.processor.model") || 
+                                            className.startsWith("java.util"))
                                         .build();
                                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
                                 extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
@@ -208,7 +190,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                                             .getMember(identifier);
 
                                 }
-                                sharedCode = serviceConfiguration.sharedCode;
+                                sharedCode = serviceConfiguration.getCodeTemplates().get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE);
 
                             }
                             

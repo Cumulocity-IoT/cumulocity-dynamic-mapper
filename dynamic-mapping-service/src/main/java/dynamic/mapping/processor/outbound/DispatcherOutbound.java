@@ -27,6 +27,7 @@ import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
@@ -35,7 +36,7 @@ import dynamic.mapping.notification.websocket.NotificationCallback;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
-import dynamic.mapping.processor.model.Substitution;
+import dynamic.mapping.processor.model.SubstitutionEvaluation;
 import dynamic.mapping.processor.model.SubstitutionContext;
 import dynamic.mapping.processor.model.SubstitutionResult;
 import io.micrometer.core.instrument.Counter;
@@ -242,26 +243,10 @@ public class DispatcherOutbound implements NotificationCallback {
                             if (mapping.code != null) {
                                 graalsContext = Context.newBuilder("js")
                                         .option("engine.WarnInterpreterOnly", "false")
-                                        .allowHostClassLookup(className -> className.equals(
-                                                "dynamic.mapping.processor.model.SubstitutionResult") ||
-                                                className.equals(
-                                                        "dynamic.mapping.processor.model.Substitution"))
-                                        .allowHostAccess(HostAccess.newBuilder()
-                                                // Allow constructors
-                                                .allowAccess(SubstitutionResult.class.getConstructor(List.class))
-                                                .allowAccess(Substitution.class.getConstructor(String.class,
-                                                        Object.class, String.class, String.class))
-                                                // Allow methods needed by ctx object
-                                                .allowAccess(SubstitutionContext.class.getMethod("getJsonObject"))
-                                                .allowAccess(SubstitutionContext.class.getMethod("getExternalIdentifier"))
-                                                .allowAccess(SubstitutionContext.class.getMethod("getC8YIdentifier"))
-                                                .allowAccess(SubstitutionContext.class
-                                                        .getMethod("getGenericDeviceIdentifier"))
-                                                // Allow array/collection access if needed
-                                                .allowArrayAccess(true)
-                                                .allowListAccess(true)
-                                                .allowMapAccess(true)
-                                                .build())
+                                        .allowHostAccess(HostAccess.ALL)
+                                        .allowHostClassLookup(className -> 
+                                            className.startsWith("dynamic.mapping.processor.model") || 
+                                            className.startsWith("java.util"))
                                         .build();
                                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
                                 extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
@@ -280,7 +265,7 @@ public class DispatcherOutbound implements NotificationCallback {
                                             .getMember(identifier);
 
                                 }
-                                sharedCode = serviceConfiguration.sharedCode;
+                                sharedCode = serviceConfiguration.getCodeTemplates().get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE);
 
                             }
                             

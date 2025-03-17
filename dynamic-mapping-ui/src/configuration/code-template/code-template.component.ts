@@ -26,17 +26,26 @@ import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
+import { CODE_TEMPLATES } from '../shared/configuration.model';
+import { FormGroup } from '@angular/forms';
+import { CodeTemplates } from '../../shared';
 
 let initializedMonaco = false;
 
 @Component({
   selector: 'd11r-shared-code',
-  templateUrl: 'shared-code.component.html',
-  styleUrls: ['./shared-code.component.css'],
+  templateUrl: 'code-template.component.html',
+  styleUrls: ['./code-template.component.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class SharedCodeComponent implements OnInit, OnDestroy {
-  code: string;
+export class SharedCodeComponent implements OnInit {
+  codeTemplate: string;
+  templateId: CODE_TEMPLATES = CODE_TEMPLATES.SHARED_CODE_TEMPLATE;
+  formGroup: FormGroup;
+  CodeTemplates = CODE_TEMPLATES;
+  codeTemplates: CodeTemplates = {};
+  isLoading = true;
+  errorMessage = '';
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -44,7 +53,7 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     language: 'javascript',
   };
 
-  codeEditorHelp = `Shared javascript code for creating substitutions. These functions can be referenced by all mappings that use code based substitutions. The minimal code snippet is <br><code>const SubstitutionResult = Java.type('dynamic.mapping.processor.model.SubstitutionResult');</code><br><code>const Substitution = Java.type('dynamic.mapping.processor.model.Substitution');</code>`;
+  codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Define substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
 
   constructor(
     public bsModalService: BsModalService,
@@ -52,9 +61,16 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
   ) { }
 
-  async ngOnInit() {
-    const code = await this.sharedService.getSharedCode();
-    this.code = base64ToString(code);
+  async ngOnInit(): Promise<void> {
+    this.codeTemplates = await this.sharedService.getCodeTemplates();
+
+    // Set default if available
+    const keys = Object.keys(this.codeTemplates);
+    this.codeTemplate = base64ToString(this.codeTemplates[this.templateId]);
+  }
+
+  isValidTemplateKey(key: string): boolean {
+    return Object.values(CODE_TEMPLATES).includes(key as any);
   }
 
   async ngAfterViewInit(): Promise<void> {
@@ -66,19 +82,25 @@ export class SharedCodeComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy() {
-  }
-
   async clickedSaveSharedCode() {
-    if (this.code) {
-      const encodeCode = stringToBase64(this.code);
-      this.sharedService.updateSharedCode(encodeCode);
+    if (this.codeTemplate) {
+      const encodeCode = stringToBase64(this.codeTemplate);
+      this.sharedService.updateSharedCode(this.templateId, encodeCode);
+      this.alertService.success("Saved code template");
+      this.codeTemplates = await this.sharedService.getCodeTemplates();
     }
   }
 
   onValueCodeChange(value) {
     // console.log("code changed", value);
-    this.code = value;
+    this.codeTemplate = value;
   }
 
+  onSelectTemplate(): void {
+    this.codeTemplate = base64ToString(this.codeTemplates[this.templateId]);
+  }
+
+  getTemplateKeys(): string[] {
+    return Object.keys(this.codeTemplates);
+  }
 }

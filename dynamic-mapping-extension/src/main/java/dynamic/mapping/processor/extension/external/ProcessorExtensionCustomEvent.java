@@ -23,7 +23,7 @@ package dynamic.mapping.processor.extension.external;
 
 import jakarta.ws.rs.ProcessingException;
 
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstituteValue.TYPE;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
@@ -57,18 +57,18 @@ public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<b
 
         context.addToProcessingCache("time", new DateTime(
                 payloadProtobuf.getTimestamp())
-                .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+                .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
         context.addToProcessingCache("text",
-                payloadProtobuf.getTxt(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+                payloadProtobuf.getTxt(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
         context.addToProcessingCache("type", 
-                payloadProtobuf.getEventType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+                payloadProtobuf.getEventType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
 
         // as the mapping uses useExternalId we have to map the id to
         // _IDENTITY_.externalId
         context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
                 payloadProtobuf.getExternalId()
                         .toString(),
-                TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+                TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
 
         log.info("Tenant {} - New event over protobuf: {}, {}, {}, {}", context.getTenant(),
                 payloadProtobuf.getTimestamp(),

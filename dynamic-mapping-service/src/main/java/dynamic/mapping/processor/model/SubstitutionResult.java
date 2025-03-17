@@ -1,13 +1,23 @@
 package dynamic.mapping.processor.model;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SubstitutionResult {
-    public final List<Substitution> substitutions;
+    public final Map<String, List<SubstituteValue>>substitutions;
 
-    public SubstitutionResult(List<Substitution> substitutions) {
+    public Map<String, List<SubstituteValue>> getSubstitutions() {
+        return substitutions;
+    }
+
+    public SubstitutionResult(Map<String, List<SubstituteValue>> substitutions) {
       this.substitutions = substitutions;
     }
+
+    public SubstitutionResult() {
+        this.substitutions = new HashMap<String,List<SubstituteValue>>();
+      }
 
     @Override
     public String toString() {

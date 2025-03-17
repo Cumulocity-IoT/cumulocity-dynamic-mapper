@@ -21,7 +21,7 @@ Here are the **core features** summarized:
 - **Map** any data to/from the Cumulocity IoT Domain Model in a graphical or code-based (javaScript) way.
 - **Bidirectional mappings** are supported - so you can forward data to Cumulocity or subscribe on Cumulocity data and forward it to the broker
 - **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/) or plain JavaScript.
-- **Multiple payload formats** are supported, starting with **JSON**, **Protobuf**, **Binary**, **CSV**.
+- **Multiple payload formats** are supported, starting with **JSON**, **Protobuf**, **Hex**.
 - **Extend** the mapper easily by using payload extensions or the provided connector interface
 - Full support of **multi-tenancy** - deploy it in your enterprise tenant and subscribe it to sub-tenants.
 

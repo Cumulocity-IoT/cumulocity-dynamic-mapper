@@ -41,3 +41,8 @@ export class ServiceOperation{
   operation:Operation;
   parameter?: any
 }
+
+
+export interface CodeTemplates {
+  [key: string]: string;
+}
