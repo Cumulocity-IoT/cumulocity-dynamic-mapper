@@ -349,9 +349,8 @@
                           }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)">
                       </d11r-mapping-substitution-grid>
                     </div>
-                    <ng-container *ngIf="isSubstitutionValid$ | async as isValid">
-                      <span class="text-warning text-12 p-l-8" *ngIf="isValid
-                          ">One substitution for <code *ngIf="mapping.useExternalId"
+                    <ng-container *ngIf="!(isSubstitutionValid$ | async)">
+                      <span class="text-warning text-12 p-l-8">One substitution for <code *ngIf="mapping.useExternalId"
                           class="text-warning text-10">_IDENTITY_.externalId</code> <code *ngIf="!mapping.useExternalId"
                           class="text-warning text-10">_IDENTITY_.c8ySourceId<</code> must exist.</span>
 

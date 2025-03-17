@@ -409,13 +409,13 @@ export function definesDeviceIdentifier(
   sub: MappingSubstitution
 ): boolean {
   if (mapping.direction == Direction.INBOUND) {
-    if (mapping.externalIdType) {
+    if (mapping.useExternalId) {
       return sub?.pathTarget == `${IDENTITY}.externalId`;
     } else {
       return sub?.pathTarget == `${IDENTITY}.c8ySourceId`;
     }
   } else {
-    if (mapping.externalIdType) {
+    if (mapping.useExternalId) {
       return sub?.pathSource == `${IDENTITY}.externalId`;
     } else {
       return sub?.pathSource == `${IDENTITY}.c8ySourceId`;

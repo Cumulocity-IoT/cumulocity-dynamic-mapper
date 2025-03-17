@@ -34,26 +34,28 @@ export const CONTEXT_DATA_KEY_NAME = 'key';
 export const TIME = 'time';
 
 export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
-  let topix = topic.trim();
-  
-  if (cutOffLeadingSlash) {
+  if (topic) {
+    let topix = topic.trim();
+
+    if (cutOffLeadingSlash) {
       // Original behavior: remove both leading and trailing slashes
       topix = topix.replace(/(\/{1,}$)|(^\/{1,})/g, '');
       return topix.split(/\//g);
-  } else {
+    } else {
       // New behavior: keep leading slash, remove only trailing slashes
       topix = topix.replace(/\/{1,}$/g, '');
       if (topix.startsWith('//')) {
-          topix = '/' + topix.replace(/^\/+/, '');
+        topix = '/' + topix.replace(/^\/+/, '');
       }
-      
+
       if (topix.startsWith('/')) {
-          const parts = topix.substring(1).split(/\//g);
-          return ['/'].concat(parts);
+        const parts = topix.substring(1).split(/\//g);
+        return ['/'].concat(parts);
       }
-      
+
       return topix.split(/\//g);
-  }
+    }
+  } else return undefined;
 }
 
 export function splitTopicIncludingSeparator(topic: string): string[] {
@@ -273,104 +275,73 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
 
 export function checkTopicsOutboundAreValid(control: AbstractControl) {
   let errors = {};
-
   const { publishTopic, publishTopicSample } = control['controls'];
-  publishTopic.setErrors(null);
-  publishTopicSample.setErrors(null);
+  if (publishTopic.valid && publishTopicSample.value) {
+    publishTopic.setErrors(null);
+    publishTopicSample.setErrors(null);
 
-  // avoid displaying the message error when values are empty
-  if (publishTopic.value == '' || publishTopicSample.value == '') {
-    return null;
-  }
+    // avoid displaying the message error when values are empty
+    if (publishTopic.value == '' || publishTopicSample.value == '') {
+      return null;
+    }
 
-  // count number of "#" in publishTopic
-  const count_multi = (publishTopic.value.match(/#/g) || []).length;
-  if (count_multi > 1) {
-    errors = {
-      ...errors,
-      Only_One_Multi_Level_Wildcard: {
-        ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
-        errorPath: 'publishTopic'
-      }
-    };
-  }
+    // count number of "#" in publishTopic
+    const count_multi = (publishTopic.value?.match(/#/g) || []).length;
+    if (count_multi > 1) {
+      errors = {
+        ...errors,
+        Only_One_Multi_Level_Wildcard: {
+          ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
+          errorPath: 'publishTopic'
+        }
+      };
+    }
 
-  // count number of "+" in publishTopic
-  const count_single = (publishTopic.value.match(/\+/g) || []).length;
-  if (count_single > 1) {
-    errors = {
-      ...errors,
-      Only_One_Single_Level_Wildcard: {
-        ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
-        errorPath: 'publishTopic'
-      }
-    };
-  }
+    // count number of "+" in publishTopic
+    const count_single = (publishTopic.value?.match(/\+/g) || []).length;
+    if (count_single > 1) {
+      errors = {
+        ...errors,
+        Only_One_Single_Level_Wildcard: {
+          ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
+          errorPath: 'publishTopic'
+        }
+      };
+    }
 
-  // wildcard "#" can only appear at the end in mappingTopic
-  if (
-    count_multi >= 1 &&
-    publishTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
-    publishTopic.value.length
-  ) {
-    errors = {
-      ...errors,
-      Multi_Level_Wildcard_Only_At_End: {
-        ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
-        errorPath: 'publishTopic'
-      }
-    };
-  }
+    // wildcard "#" can only appear at the end in mappingTopic
+    if (
+      count_multi >= 1 &&
+      publishTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
+      publishTopic.value.length
+    ) {
+      errors = {
+        ...errors,
+        Multi_Level_Wildcard_Only_At_End: {
+          ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
+          errorPath: 'publishTopic'
+        }
+      };
+    }
 
-  const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value, false);
-  const splitTTS: string[] = splitTopicExcludingSeparator(
-    publishTopicSample.value, false
-  );
-  if (splitPT.length != splitTTS.length) {
-    errors = {
-      ...errors,
-      PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
-      {
-        ...ValidationFormlyError[
-        'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
-        ],
-        errorPath: 'publishTopicSample'
-      }
-    };
-  } else {
-    for (let i = 0; i < splitPT.length; i++) {
-      if ('/' == splitPT[i] && !('/' == splitTTS[i])) {
-        errors = {
-          ...errors,
-          PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-          {
-            ...ValidationFormlyError[
-            'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-            ],
-            errorPath: 'publishTopicSample'
-          }
-        };
-        break;
-      }
-      if ('/' == splitTTS[i] && !('/' == splitPT[i])) {
-        errors = {
-          ...errors,
-          PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-          {
-            ...ValidationFormlyError[
-            'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-            ],
-            errorPath: 'publishTopicSample'
-          }
-        };
-        break;
-      }
-      if (
-        !('/' == splitPT[i]) &&
-        !('+' == splitPT[i]) &&
-        !('#' == splitPT[i])
-      ) {
-        if (splitPT[i] != splitTTS[i]) {
+    const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value, false);
+    const splitTTS: string[] = splitTopicExcludingSeparator(
+      publishTopicSample.value, false
+    );
+    if (splitPT.length != splitTTS.length) {
+      errors = {
+        ...errors,
+        PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+        {
+          ...ValidationFormlyError[
+          'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
+          ],
+          errorPath: 'publishTopicSample'
+        }
+      };
+    } else {
+      for (let i = 0; i < splitPT.length; i++) {
+        if ('/' == splitPT[i] && !('/' == splitTTS[i])) {
           errors = {
             ...errors,
             PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
@@ -383,9 +354,42 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
           };
           break;
         }
+        if ('/' == splitTTS[i] && !('/' == splitPT[i])) {
+          errors = {
+            ...errors,
+            PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+            {
+              ...ValidationFormlyError[
+              'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+              ],
+              errorPath: 'publishTopicSample'
+            }
+          };
+          break;
+        }
+        if (
+          !('/' == splitPT[i]) &&
+          !('+' == splitPT[i]) &&
+          !('#' == splitPT[i])
+        ) {
+          if (splitPT[i] != splitTTS[i]) {
+            errors = {
+              ...errors,
+              PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+              {
+                ...ValidationFormlyError[
+                'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+                ],
+                errorPath: 'publishTopicSample'
+              }
+            };
+            break;
+          }
+        }
       }
     }
   }
+
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
@@ -482,6 +486,7 @@ export function isTypeOf(object) {
   const stringConstructor = 'test'.constructor;
   const arrayConstructor = [].constructor;
   const objectConstructor = {}.constructor;
+  const booleanConstructor = true.constructor;
   if (object === null) {
     return 'null';
   } else if (object === undefined) {
@@ -492,6 +497,8 @@ export function isTypeOf(object) {
     return 'Array';
   } else if (object.constructor === objectConstructor) {
     return 'Object';
+  } else if (object.constructor === booleanConstructor) {
+    return 'Boolean';
   } else if (typeof object === 'number') {
     return 'Number';
   } else {

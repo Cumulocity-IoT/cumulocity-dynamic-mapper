@@ -99,6 +99,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   substitutionsAsCode: boolean;
   devices: IIdentified[] = [];
   snoopStatus: SnoopStatus = SnoopStatus.NONE;
+  snoopEnabled: boolean = false;
   Direction = Direction;
 
   stepperConfiguration: StepperConfiguration = {};
@@ -448,6 +449,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       if (result) {
         if (result.snoop) {
           this.snoopStatus = SnoopStatus.ENABLED;
+          this.snoopEnabled = true;
         }
         this.substitutionsAsCode = result.substitutionsAsCode;
         this.mappingType = result.mappingType;
@@ -502,14 +504,15 @@ export class MappingComponent implements OnInit, OnDestroy {
         name: `Mapping - ${identifier.substring(0, 7)}`,
         id: identifier,
         identifier: identifier,
-        publishTopic: '',
-        publishTopicSample: '',
+        // publishTopic: '',
+        // publishTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
         sourceTemplate: '{}',
         targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
         qos: QOS.AT_LEAST_ONCE,
+        filterMapping: this.snoopEnabled ? ' $exists(C8Y_FRAGMENT)' : undefined,
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,

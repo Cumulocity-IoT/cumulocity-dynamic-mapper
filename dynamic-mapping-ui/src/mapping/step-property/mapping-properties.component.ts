@@ -29,14 +29,13 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { AlertService } from '@c8y/ngx-components';
-import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
-import { BehaviorSubject } from 'rxjs';
-import { MappingService } from '../core/mapping.service';
+import { FormlyFieldConfig } from '@ngx-formly/core';
+import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { EditorMode } from '../shared/stepper.model';
 import { ValidationError } from '../shared/mapping.model';
-import { deriveSampleTopicFromTopic } from '../shared/util';
-import { SharedService, StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
+import { deriveSampleTopicFromTopic, isTypeOf } from '../shared/util';
+import { StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
+import { MappingService } from '../core/mapping.service';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -64,9 +63,12 @@ export class MappingStepPropertiesComponent
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
+  filterModel: any;
+
 
   constructor(
-    private formatStringPipe: FormatStringPipe
+    private formatStringPipe: FormatStringPipe,
+      public mappingService: MappingService,
   ) { }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -86,6 +88,14 @@ export class MappingStepPropertiesComponent
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+
+      this.filterModel = {
+        filterExpression: {
+          result: '',
+          resultType: 'empty',
+          valid: false,
+        },
+      };
 
     this.propertyFormlyFields = [
       {
@@ -159,10 +169,10 @@ export class MappingStepPropertiesComponent
                   .setValue(newDerivedTopic);
               },
               required:
-                this.stepperConfiguration.direction == Direction.OUTBOUND
+                true
             },
             hideExpression:
-              this.stepperConfiguration.direction != Direction.OUTBOUND
+              this.stepperConfiguration.direction == Direction.INBOUND
           },
           {
             className: 'col-lg-6',
@@ -174,12 +184,25 @@ export class MappingStepPropertiesComponent
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'The Filter Mapping, has to be defined as type = "YOUR_TYPE"',
+                'The Filter Mapping, has to be defined as boolean expression, e.g. "$exists(C8Y_FRAGMENT)"',
               required:
                 this.stepperConfiguration.direction == Direction.OUTBOUND
             },
             hideExpression:
-              this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && (this.mapping.snoopStatus == SnoopStatus.NONE || this.mapping.snoopStatus == SnoopStatus.STOPPED))
+              this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && (this.mapping.snoopStatus == SnoopStatus.NONE || this.mapping.snoopStatus == SnoopStatus.STOPPED)),
+            hooks: {
+              onInit: (field: FormlyFieldConfig) => {
+                field.formControl.valueChanges.pipe(
+                  // Wait for 500ms pause in typing before processing
+                  debounceTime(500),
+
+                  // Only trigger if the value has actually changed
+                  distinctUntilChanged()
+                ).subscribe(path => {
+                  this.updateFilterExpressionResult(path);
+                });
+              }
+            }
           },
           {
             className: 'col-lg-6',
@@ -408,6 +431,32 @@ export class MappingStepPropertiesComponent
       }
     ];
   }
+
+    async updateFilterExpressionResult(path) {
+      try {
+        const resultExpression: JSON = await this.mappingService.evaluateExpression(
+          JSON.parse('{}'),
+          path
+        );
+        this.filterModel.filterExpression = {
+          resultType: isTypeOf(resultExpression),
+          result: JSON.stringify(resultExpression, null, 4),
+          valid: true
+        };
+        if (path && this.filterModel.filterExpression.resultType != 'Boolean') throw Error('The filter expression must return of boolean type');
+        this.mapping.filterMapping = path;
+        // this.propertyFormly
+        // .get('filterMapping')
+        // .setErrors(null);
+      } catch (error) {
+        this.filterModel.filterExpression.valid = false;
+        this.propertyFormly
+          .get('filterMapping')
+          .setErrors({ validationError: { message: error.message } });
+        this.propertyFormly.get('filterMapping').markAsTouched();
+      }
+      this.filterModel = { ...this.filterModel };
+    }
 
   onTargetAPIChanged(targetAPI) {
     this.mapping.targetAPI = targetAPI;
