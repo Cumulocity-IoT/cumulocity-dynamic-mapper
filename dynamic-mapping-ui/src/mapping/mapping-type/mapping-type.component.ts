@@ -75,7 +75,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     });
 
     this.filteredMappingTypes = Object.entries(MappingType)
-      .filter(([key, value]) => (value !== MappingType.CODE_BASED))
+      .filter(([key, value]) => (value !== MappingType.CODE_BASED && value !== MappingType.FLAT_FILE ))
       .reduce((obj, [key, value]) => {
         obj[key] = value;
         return obj;
