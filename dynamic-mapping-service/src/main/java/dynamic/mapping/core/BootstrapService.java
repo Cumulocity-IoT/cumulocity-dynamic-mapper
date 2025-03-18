@@ -146,6 +146,7 @@ public class BootstrapService {
         mappingComponent.cleanMappingStatus(tenant);
         configurationRegistry.getPayloadProcessorsInbound().remove(tenant);
         configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
+        configurationRegistry.deleteGraalsEngine(tenant);
 
         c8YAgent.deleteInboundExternalIdCache(tenant);
     }
@@ -169,6 +170,7 @@ public class BootstrapService {
         initializeCache(tenant, serviceConfig);
         initializeTimeZoneAndMappings(tenant);
         initializeConnectors(tenant, serviceConfig);
+        initializeGraalsEngine(tenant);
 
         handleOutboundMapping(tenant, serviceConfig);
     }
@@ -223,6 +225,10 @@ public class BootstrapService {
         configurationRegistry.getMappingServiceRepresentations().put(tenant, mappingServiceRepresentation);
 
         initializeMappingComponents(tenant);
+    }
+
+    private void initializeGraalsEngine(String tenant) {
+        configurationRegistry.createGraalsEngine(tenant);
     }
 
     private void initializeMappingComponents(String tenant) {
@@ -373,7 +379,8 @@ public class BootstrapService {
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
             AConnectorClient connectorClient) {
-        if (serviceConfiguration.isOutboundMappingEnabled() && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
+        if (serviceConfiguration.isOutboundMappingEnabled()
+                && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
             // initialize AsynchronousDispatcherOutbound
             configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
             DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(

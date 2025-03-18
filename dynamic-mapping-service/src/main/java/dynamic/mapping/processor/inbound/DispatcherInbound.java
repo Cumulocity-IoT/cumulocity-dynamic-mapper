@@ -135,7 +135,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
-            this.graalsEngine = configurationRegistry.getGraalsEngine();
+            this.graalsEngine = configurationRegistry.getGraalsEngine(message.getTenant());
             this.virtThreadPool = configurationRegistry.getVirtThreadPool();
 
         }

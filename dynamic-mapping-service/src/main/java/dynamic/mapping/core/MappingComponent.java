@@ -306,18 +306,19 @@ public class MappingComponent {
         });
         if (result != null) {
             removeMappingFromDeploymentMap(tenant, result.identifier);
-            removeCodeFromEngine(result);
+            removeCodeFromEngine(result, tenant);
         }
         // log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
 
         return result;
     }
 
-    private void removeCodeFromEngine(Mapping mapping) {
+    private void removeCodeFromEngine(Mapping mapping, String tenant) {
+
         if (mapping.code != null) {
             String globalIdentifier = "delete globalThis" + Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
             try (Context context = Context.newBuilder("js")
-                    .engine(configurationRegistry.getGraalsEngine())
+                    .engine(configurationRegistry.getGraalsEngine(tenant))
                     .logHandler(GRAALJS_LOG_HANDLER)
                     .allowAllAccess(true)
                     .option("js.strict", "true")
@@ -380,7 +381,7 @@ public class MappingComponent {
             List<ValidationError> errors = Mapping.isMappingValid(mappings, mapping);
             
             // remove potentially obsolete javascript code from engine cache
-            removeCodeFromEngine(mapping);
+            removeCodeFromEngine(mapping, tenant);
 
             if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();

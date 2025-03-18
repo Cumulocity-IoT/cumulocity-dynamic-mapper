@@ -214,7 +214,7 @@ public class DispatcherOutbound implements NotificationCallback {
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(c8yMessage.getTenant());
             this.payloadProcessorsOutbound = payloadProcessorsOutbound;
-            this.graalsEngine = configurationRegistry.getGraalsEngine();
+            this.graalsEngine = configurationRegistry.getGraalsEngine(c8yMessage.getTenant());
         }
 
         @Override

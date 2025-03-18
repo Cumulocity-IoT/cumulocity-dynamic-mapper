@@ -67,12 +67,7 @@ import org.graalvm.polyglot.Engine;
 public class ConfigurationRegistry {
 
     @Getter
-    private Engine graalsEngine;
-
-    @Autowired
-    public void setGraalsEngine(Engine eng) {
-        this.graalsEngine = eng;
-    }
+    private Map<String, Engine> graalsEngines = new HashMap<>();
 
     @Getter
     private Map<String, MicroserviceCredentials> microserviceCredentials = new HashMap<>();
@@ -233,6 +228,24 @@ public class ConfigurationRegistry {
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {
         MicroserviceCredentials ms = microserviceCredentials.get(tenant);
         return ms;
+    }
+
+    public void createGraalsEngine(String tenant) {
+        // TODO Auto-generated method stub
+        Engine eng = Engine.newBuilder()
+                .option("engine.WarnInterpreterOnly", "false")
+                .build();
+        ;
+        this.getGraalsEngines().put(tenant, eng);
+    }
+
+    public Engine getGraalsEngine(String tenant) {
+        return this.getGraalsEngines().get(tenant);
+    }
+
+
+    public void deleteGraalsEngine(String tenant) {
+        this.getGraalsEngines().remove(tenant);
     }
 
 }
