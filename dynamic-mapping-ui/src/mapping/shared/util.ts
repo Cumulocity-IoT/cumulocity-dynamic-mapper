@@ -482,7 +482,7 @@ export function reduceTargetTemplate(
   return tt;
 }
 
-export function isTypeOf(object) {
+export function getTypeOf(object) {
   const stringConstructor = 'test'.constructor;
   const arrayConstructor = [].constructor;
   const objectConstructor = {}.constructor;

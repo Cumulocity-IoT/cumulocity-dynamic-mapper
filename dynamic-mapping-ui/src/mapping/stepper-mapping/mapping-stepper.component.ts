@@ -65,7 +65,7 @@ import {
   base64ToString,
   expandC8YTemplate,
   expandExternalTemplate,
-  isTypeOf,
+  getTypeOf,
   reduceSourceTemplate,
   splitTopicExcludingSeparator,
   stringToBase64
@@ -530,7 +530,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         path
       );
       this.substitutionModel.sourceExpression = {
-        resultType: isTypeOf(r),
+        resultType: getTypeOf(r),
         result: JSON.stringify(r, null, 4),
         valid: true
       };
@@ -567,7 +567,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         path
       );
       this.filterModel.filterExpression = {
-        resultType: isTypeOf(resultExpression),
+        resultType: getTypeOf(resultExpression),
         result: JSON.stringify(resultExpression, null, 4),
         valid: true
       };
@@ -590,7 +590,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         path
       );
       this.substitutionModel.targetExpression = {
-        resultType: isTypeOf(r),
+        resultType: getTypeOf(r),
         result: JSON.stringify(r, null, 4),
         valid: true
       };

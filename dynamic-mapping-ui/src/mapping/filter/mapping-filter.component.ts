@@ -32,7 +32,7 @@ import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { JsonEditorComponent, Mapping } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { isTypeOf } from '../shared/util';
+import { getTypeOf } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-filter',
@@ -147,7 +147,7 @@ export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit 
         this.filterFormly.get('pathSource').value
       );
       this.filterModel.sourceExpression = {
-        resultType: isTypeOf(r),
+        resultType: getTypeOf(r),
         result: JSON.stringify(r, null, 4)
       };
       if (this.filterModel.sourceExpression.result != 'true') throw Error('The filter expression must return true');

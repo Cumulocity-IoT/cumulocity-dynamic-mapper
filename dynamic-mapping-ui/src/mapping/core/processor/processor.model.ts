@@ -19,7 +19,7 @@
  */
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
-import { isTypeOf, randomIdAsString } from '../../../mapping/shared/util';
+import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
 import { API, Direction, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
 
 export interface C8YRequest {
@@ -83,7 +83,7 @@ export const isNumeric = (num: any) => (typeof num === 'number' || (typeof num =
 
 
 export function processSubstitute(processingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: MappingSubstitution) {
-  if (isTypeOf(extractedSourceContent) == 'null') {
+  if (getTypeOf(extractedSourceContent) == 'null') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.IGNORE,
@@ -93,25 +93,25 @@ export function processSubstitute(processingCacheEntry: SubstituteValue[], extra
       'No substitution for: ',
       substitution.pathSource
     );
-  } else if (isTypeOf(extractedSourceContent) == 'String') {
+  } else if (getTypeOf(extractedSourceContent) == 'String') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.TEXTUAL,
       repairStrategy: substitution.repairStrategy
     });
-  } else if (isTypeOf(extractedSourceContent) == 'Number') {
+  } else if (getTypeOf(extractedSourceContent) == 'Number') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.NUMBER,
       repairStrategy: substitution.repairStrategy
     });
-  } else if (isTypeOf(extractedSourceContent) == 'Array') {
+  } else if (getTypeOf(extractedSourceContent) == 'Array') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.ARRAY,
       repairStrategy: substitution.repairStrategy
     });
-  } else if (isTypeOf(extractedSourceContent) == 'Object') {
+  } else if (getTypeOf(extractedSourceContent) == 'Object') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.OBJECT,

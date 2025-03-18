@@ -33,7 +33,7 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { EditorMode } from '../shared/stepper.model';
 import { ValidationError } from '../shared/mapping.model';
-import { deriveSampleTopicFromTopic, isTypeOf } from '../shared/util';
+import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
 import { StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
@@ -184,7 +184,7 @@ export class MappingStepPropertiesComponent
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'The Filter Mapping, has to be defined as boolean expression, e.g. "$exists(C8Y_FRAGMENT)"',
+                'The Filter Mapping has to be defined as boolean expression (JSONata), e.g. "$exists(C8Y_FRAGMENT)"',
               required:
                 this.stepperConfiguration.direction == Direction.OUTBOUND
             },
@@ -439,7 +439,7 @@ export class MappingStepPropertiesComponent
           path
         );
         this.filterModel.filterExpression = {
-          resultType: isTypeOf(resultExpression),
+          resultType: getTypeOf(resultExpression),
           result: JSON.stringify(resultExpression, null, 4),
           valid: true
         };
