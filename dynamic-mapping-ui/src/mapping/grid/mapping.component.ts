@@ -74,7 +74,7 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
-import { CODE_TEMPLATES } from '../../configuration';
+import { TemplateType } from '../../configuration';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -299,8 +299,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         console.log('Triggered updating mapping', m);
         this.updateMapping(m);
       });
-    this.codeTemplateInbound = await this.shareService.getCodeTemplate(CODE_TEMPLATES.INBOUND_CODE_TEMPLATE);
-    this.codeTemplateOutbound = await this.shareService.getCodeTemplate(CODE_TEMPLATES.OUTBOUND_CODE_TEMPLATE);
+    this.codeTemplateInbound = (await this.shareService.getCodeTemplate(TemplateType.INBOUND.toString())).code;
+    this.codeTemplateOutbound = (await this.shareService.getCodeTemplate(TemplateType.OUTBOUND.toString())).code;
   }
 
   async editMessageFilter(m: MappingEnriched) {

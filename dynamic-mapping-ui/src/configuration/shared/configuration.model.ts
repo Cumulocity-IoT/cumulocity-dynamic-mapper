@@ -31,8 +31,17 @@ export interface ServiceConfiguration {
   inboundExternalIdCacheRetention: number;
 }
 
-export enum CODE_TEMPLATES{
-  INBOUND_CODE_TEMPLATE = "INBOUND",
-  OUTBOUND_CODE_TEMPLATE = "OUTBOUND",
-  SHARED_CODE_TEMPLATE = "SHARED"
-} 
+export enum TemplateType {
+  INBOUND = "INBOUND",
+  OUTBOUND = "OUTBOUND",
+  SHARED = "SHARED"
+}
+
+export interface CodeTemplate {
+  type: TemplateType;
+  code: string;
+}
+
+export interface CodeTemplateMap {
+  [key: string]: CodeTemplate;
+}

@@ -46,7 +46,7 @@
             containerClass="wide-popover" aria-label="Help content"></button>
         </span>
       </div>
-      <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplate"
+      <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="codeTemplateDecoded?.code"
         (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
       </c8y-editor>
     </c8y-form-group>

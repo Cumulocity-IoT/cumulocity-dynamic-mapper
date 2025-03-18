@@ -26,9 +26,8 @@ import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
-import { CODE_TEMPLATES } from '../shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { FormGroup } from '@angular/forms';
-import { CodeTemplates } from '../../shared';
 
 let initializedMonaco = false;
 
@@ -39,11 +38,11 @@ let initializedMonaco = false;
   encapsulation: ViewEncapsulation.None
 })
 export class SharedCodeComponent implements OnInit {
-  codeTemplate: string;
-  templateId: CODE_TEMPLATES = CODE_TEMPLATES.SHARED_CODE_TEMPLATE;
+  codeTemplateDecoded: CodeTemplate;
+  codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
+  templateId: TemplateType = TemplateType.SHARED;
   formGroup: FormGroup;
-  CodeTemplates = CODE_TEMPLATES;
-  codeTemplates: CodeTemplates = {};
+  codeTemplates: CodeTemplateMap;
   isLoading = true;
   errorMessage = '';
 
@@ -63,14 +62,16 @@ export class SharedCodeComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     this.codeTemplates = await this.sharedService.getCodeTemplates();
-
-    // Set default if available
-    const keys = Object.keys(this.codeTemplates);
-    this.codeTemplate = base64ToString(this.codeTemplates[this.templateId]);
-  }
-
-  isValidTemplateKey(key: string): boolean {
-    return Object.values(CODE_TEMPLATES).includes(key as any);
+    this.codeTemplatesDecoded = new Map<string, CodeTemplate>();
+    // Iterate and decode
+    Object.entries(this.codeTemplates).forEach(([key, template]) => {
+      const decodedCode = base64ToString(template.code);
+      this.codeTemplatesDecoded.set(key, {
+        type: template.type, code: decodedCode
+      });
+    });
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
+    console.log("Code",)
   }
 
   async ngAfterViewInit(): Promise<void> {
@@ -83,9 +84,11 @@ export class SharedCodeComponent implements OnInit {
   }
 
   async clickedSaveSharedCode() {
-    if (this.codeTemplate) {
-      const encodeCode = stringToBase64(this.codeTemplate);
-      this.sharedService.updateSharedCode(this.templateId, encodeCode);
+    if (this.codeTemplateDecoded) {
+      const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
+      this.sharedService.updateCodeTemplate(this.templateId, {
+        type: this.codeTemplateDecoded.type, code: encodeCode
+      });
       this.alertService.success("Saved code template");
       this.codeTemplates = await this.sharedService.getCodeTemplates();
     }
@@ -93,14 +96,16 @@ export class SharedCodeComponent implements OnInit {
 
   onValueCodeChange(value) {
     // console.log("code changed", value);
-    this.codeTemplate = value;
+    this.codeTemplateDecoded.code = value;
   }
 
   onSelectTemplate(): void {
-    this.codeTemplate = base64ToString(this.codeTemplates[this.templateId]);
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
   }
 
   getTemplateKeys(): string[] {
-    return Object.keys(this.codeTemplates);
+    if (this.codeTemplates)
+      return Object.keys(this.codeTemplates);
+    else return [];
   }
 }

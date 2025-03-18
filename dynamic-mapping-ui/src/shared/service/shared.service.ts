@@ -36,8 +36,8 @@ import {
 } from '..';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { FetchClient } from '@c8y/ngx-components/api';
-import { ServiceConfiguration } from '../../configuration';
-import { CodeTemplates, ServiceOperation } from './shared.model';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration } from '../../configuration';
+import { ServiceOperation } from './shared.model';
 import { OptionsService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
@@ -157,7 +157,7 @@ export class SharedService {
     return this._serviceConfiguration;
   }
 
-  async getCodeTemplate(id :string ): Promise<string> {
+  async getCodeTemplate(id: string): Promise<CodeTemplate> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
       {
@@ -167,10 +167,10 @@ export class SharedService {
         method: 'GET'
       }
     );
-    return await response.text();
+    return await response.json();
   }
 
-  async getCodeTemplates(): Promise<CodeTemplates> {
+  async getCodeTemplates(): Promise<CodeTemplateMap> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}`,
       {
@@ -183,14 +183,14 @@ export class SharedService {
     return await response.json();
   }
 
-  async updateSharedCode(id:string, codeTemplate:string) {
+  async updateCodeTemplate(id: string, codeTemplate: CodeTemplate) {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
       {
         headers: {
           'content-type': 'application/text'
         },
-        body: codeTemplate,
+        body: JSON.stringify(codeTemplate),
         method: 'PUT'
       }
     );

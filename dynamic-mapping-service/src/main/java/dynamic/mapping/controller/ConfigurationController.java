@@ -28,7 +28,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import jakarta.validation.Valid;
-
+import dynamic.mapping.configuration.CodeTemplate;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -375,12 +375,12 @@ public class ConfigurationController {
     }
 
     @GetMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> getCodeTemplate(@PathVariable String id) {
+    public ResponseEntity<CodeTemplate> getCodeTemplate(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("Tenant {} - Get code template", tenant);
         
-        Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
+        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
             serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
@@ -395,7 +395,7 @@ public class ConfigurationController {
             }
         }
     
-        String result = codeTemplates.get(id);
+        CodeTemplate result = codeTemplates.get(id);
         if (result == null) {
             // Template not found - return 404 Not Found
             log.warn("Tenant {} - Code template with ID '{}' not found", tenant, id);
@@ -407,12 +407,12 @@ public class ConfigurationController {
     }
 
     @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,String>> getCodeTemplates() {
+    public ResponseEntity<Map<String,CodeTemplate>> getCodeTemplates() {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("Tenant {} - Get code templates", tenant);
         
-        Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
+        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
             serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
@@ -431,12 +431,12 @@ public class ConfigurationController {
 
     @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateCodeTemplate(
-            @PathVariable String id, @Valid @RequestBody String codeTemplate) {
+            @PathVariable String id, @Valid @RequestBody CodeTemplate codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         Context graalsContext = null;
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-            Map<String, String> codeTemplates = serviceConfiguration.getCodeTemplates();
+            Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);

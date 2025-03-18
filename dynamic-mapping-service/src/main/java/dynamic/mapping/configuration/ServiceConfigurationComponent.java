@@ -77,10 +77,10 @@ public class ServiceConfigurationComponent {
     }
 
     public void initCodeTemplates(ServiceConfiguration configuration) {
-        Map<String, String> codeTemplates = new HashMap<>();
-        codeTemplates.put(INBOUND_CODE_TEMPLATE, inboundCodeTemplate);
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE, outboundCodeTemplate);
-        codeTemplates.put(SHARED_CODE_TEMPLATE, sharedCodeTemplate);
+        Map<String, CodeTemplate> codeTemplates = new HashMap<>();
+        codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(TemplateType.INBOUND, inboundCodeTemplate));
+        codeTemplates.put(OUTBOUND_CODE_TEMPLATE, new CodeTemplate(TemplateType.OUTBOUND,outboundCodeTemplate));
+        codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(TemplateType.SHARED,sharedCodeTemplate));
         configuration.setCodeTemplates(codeTemplates);
     }
 

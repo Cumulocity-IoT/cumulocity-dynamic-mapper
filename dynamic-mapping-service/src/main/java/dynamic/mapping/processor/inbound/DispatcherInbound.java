@@ -190,7 +190,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                                             .getMember(identifier);
 
                                 }
-                                sharedCode = serviceConfiguration.getCodeTemplates().get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE);
+                                sharedCode = serviceConfiguration.getCodeTemplates().get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE).getCode();
 
                             }
                             

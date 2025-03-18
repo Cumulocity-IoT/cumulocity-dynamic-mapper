@@ -98,5 +98,5 @@ public class ServiceConfiguration implements Cloneable {
     public Integer inboundExternalIdCacheRetention;
 
     @JsonProperty("codeTemplates")
-    public Map<String, String> codeTemplates;
+    public Map<String, CodeTemplate> codeTemplates;
 }
