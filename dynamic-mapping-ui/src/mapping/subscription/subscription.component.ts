@@ -224,10 +224,10 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     };
     // console.log('Changed deviceList:', this.subscription.devices);
     try {
-      this.subscription = await this.mappingService.updateSubscriptions(
+      await this.mappingService.updateSubscriptions(
         this.subscription
       );
-      this.subscriptionGrid.reload();
+      this.loadSubscriptions();
       this.alertService.success(gettext('Subscriptions updated successfully'));
     } catch (error) {
       this.alertService.danger(
