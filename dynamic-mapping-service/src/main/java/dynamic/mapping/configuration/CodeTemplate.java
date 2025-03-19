@@ -52,4 +52,8 @@ public class CodeTemplate implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public String code;
 
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean internal;
+
 }

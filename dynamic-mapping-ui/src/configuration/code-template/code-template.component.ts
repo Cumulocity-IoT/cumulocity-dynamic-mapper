@@ -68,7 +68,7 @@ export class SharedCodeComponent implements OnInit {
     Object.entries(this.codeTemplates).forEach(([key, template]) => {
       const decodedCode = base64ToString(template.code);
       this.codeTemplatesDecoded.set(key, { id: key, name: template.name,
-        type: template.type, code: decodedCode
+        type: template.type, code: decodedCode, internal: template.internal
       });
     });
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);

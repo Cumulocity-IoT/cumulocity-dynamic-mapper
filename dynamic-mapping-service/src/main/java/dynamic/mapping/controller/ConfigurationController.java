@@ -37,6 +37,7 @@ import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
+import dynamic.mapping.connector.mqtt.MQTTCallback;
 import dynamic.mapping.core.*;
 
 import org.graalvm.polyglot.Context;
@@ -69,6 +70,8 @@ import dynamic.mapping.model.Mapping;
 @RequestMapping("/configuration")
 @RestController
 public class ConfigurationController {
+
+    private final MQTTCallback MQTTCallback;
 
     @Autowired
     ConnectorRegistry connectorRegistry;
@@ -108,6 +111,10 @@ public class ConfigurationController {
 
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
+
+    ConfigurationController(MQTTCallback MQTTCallback) {
+        this.MQTTCallback = MQTTCallback;
+    }
 
     @GetMapping(value = "/feature", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
@@ -426,8 +433,14 @@ public class ConfigurationController {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
             }
         }
-        CodeTemplate result = codeTemplates.remove(id);
+        CodeTemplate result;
         try {
+            result = codeTemplates.get(id);
+            if (result.internal) {
+                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, "Deletion of internal templates not allowed");
+            }
+
+            result = codeTemplates.remove(id);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
         } catch (Exception ex) {
             log.error("Tenant {} - Error updating code template {}", tenant, ex);

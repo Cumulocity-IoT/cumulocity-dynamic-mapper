@@ -453,7 +453,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       const decodedCode = base64ToString(template.code);
       this.codeTemplatesDecoded.set(key, {
         id: key, name: template.name,
-        type: template.type, code: decodedCode
+        type: template.type, code: decodedCode, internal: template.internal
       });
     });
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
@@ -1219,7 +1219,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         const type = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
         const response = await this.sharedService.updateCodeTemplate(id, {
           name, id,
-          type, code
+          type, code, internal:false
         });
         this.alertService.success("Added new code template");
         this.codeTemplates = await this.sharedService.getCodeTemplates();

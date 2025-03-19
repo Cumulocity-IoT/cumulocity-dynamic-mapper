@@ -1,3 +1,5 @@
+import { internalApps } from "@c8y/ngx-components";
+
 /*
  * Copyright (c) 2025 Cumulocity GmbH
  *
@@ -42,6 +44,7 @@ export interface CodeTemplate {
   name: string;
   type: TemplateType;
   code: string;
+  internal: boolean;
 }
 
 export interface CodeTemplateMap {
