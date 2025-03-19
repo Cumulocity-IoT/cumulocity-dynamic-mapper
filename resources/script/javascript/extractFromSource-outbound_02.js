@@ -6,7 +6,7 @@ function extractFromSource(ctx) {
     //console.log(`C8Y sourceId: ${ctx.getC8YIdentifier()}`);
     //console.log(`C8Y externalIdentifier: ${ctx.getExternalIdentifier()}`);
 
-    // for (var key in sourceObject) {
+    //for (var key in sourceObject) {
     //     console.log(`key: ${key}, value: ${sourceObject.get(key)}`);  
     // }
 

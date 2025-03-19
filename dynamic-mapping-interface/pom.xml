@@ -146,6 +146,7 @@
 						<include>dynamic/mapping/core/C8YAgent.*</include>
 						<include>dynamic/mapping/processor/extension/ProcessorExtensionOutbound.*</include>
 						<include>dynamic/mapping/processor/ProcessingException.*</include>
+						<include>dynamic/mapping/configuration/ServiceConfiguration.*</include>
 					</includes>
 				</configuration>
 			</plugin>
