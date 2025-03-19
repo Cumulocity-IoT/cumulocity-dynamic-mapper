@@ -214,7 +214,7 @@ public abstract class BaseProcessorOutbound<T> {
                     processingCache.size());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
+            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget.jsonString(),
                     mapping.targetAPI,
                     1);
         }

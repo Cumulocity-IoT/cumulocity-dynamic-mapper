@@ -72,22 +72,22 @@ public class ProcessorExtensionCustomAlarm
 
             context.addToProcessingCache("time", new DateTime(
                     jsonObject.get("time"))
-                    .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
+                    .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
             context.addToProcessingCache("type",
                     jsonObject.get("type")
                             .toString(),
-                    TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
+                    TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
             Object se = jsonObject.get("alarmType");
-            context.addToProcessingCache("severity", se.toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
+            context.addToProcessingCache("severity", se.toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
             Object message = jsonObject.get("message");
-            context.addToProcessingCache("text", message.toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
+            context.addToProcessingCache("text", message.toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
 
             // as the mapping uses useExternalId we have to map the id to
             // _IDENTITY_.externalId
             context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
                     jsonObject.get("externalId")
                             .toString(),
-                    TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
+                    TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
 
             log.info("Tenant {} - New alarm over json processor: {}, {}", context.getTenant(),
                     jsonObject.get("time"), jsonObject.get("message"));
@@ -126,7 +126,7 @@ public class ProcessorExtensionCustomAlarm
         for (String pathTarget : pathTargets) {
             SubstituteValue substitute = new SubstituteValue(
                     "NOT_DEFINED", TYPE.TEXTUAL,
-                    RepairStrategy.DEFAULT,false);
+                    RepairStrategy.DEFAULT, false);
             List<SubstituteValue> pathTargetSubstitute = context.getFromProcessingCache(pathTarget);
             if (finalI < pathTargetSubstitute.size()) {
                 substitute = pathTargetSubstitute.get(finalI).clone();
@@ -199,9 +199,13 @@ public class ProcessorExtensionCustomAlarm
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     context.getProcessingCacheSize());
         }
-        log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
-                mapping.targetAPI,
-                size);
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant,
+                    payloadTarget.jsonString(),
+                    mapping.targetAPI,
+                    size);
+        }
+
         return context;
     }
 
@@ -222,15 +226,17 @@ public class ProcessorExtensionCustomAlarm
                 } else {
                     sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
                 }
-                SubstituteValue.substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+                SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
+                        mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.value.toString());
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             }
         } else if ((Mapping.IDENTITY + ".c8ySourceId").equals(pathTarget)) {
             SubstituteValue sourceId = new SubstituteValue(substitute.value,
-                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING,false);
+                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             // in this case the device needs to exists beforehand
-            SubstituteValue.substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+            SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
+                    mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.value.toString());
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
         } else {
@@ -238,7 +244,7 @@ public class ProcessorExtensionCustomAlarm
         }
     }
 
-    private String createAttocDevice(ID identity, ProcessingContext<byte[]> context, C8YAgent c8yAgent)  {
+    private String createAttocDevice(ID identity, ProcessingContext<byte[]> context, C8YAgent c8yAgent) {
         Map<String, Object> request = new HashMap<String, Object>();
         request.put("name",
                 "device_" + identity.getType() + "_" + identity.getValue());
