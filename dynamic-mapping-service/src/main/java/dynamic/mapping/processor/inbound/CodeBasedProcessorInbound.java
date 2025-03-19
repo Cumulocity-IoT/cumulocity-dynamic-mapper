@@ -27,8 +27,6 @@ import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -157,9 +155,10 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                         substitutionTimeExists = true;
                     }
                 }
-
-                log.info("Tenant {} - New payload over CodeBasedProcessorInbound: {}", context.getTenant(),
-                        jsonObject);
+                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                    log.info("Tenant {} - New payload over CodeBasedProcessorInbound: {}", context.getTenant(),
+                            jsonObject);
+                }
             }
 
         }

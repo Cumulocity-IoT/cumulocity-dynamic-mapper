@@ -90,7 +90,7 @@ public abstract class BaseProcessorInbound<T> {
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
 
-        List<String> splitTopicAsList =  Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
+        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
         if (payloadObject instanceof Map) {
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
             if (context.isSupportsMessageContext() && context.getKey() != null) {
@@ -99,7 +99,8 @@ public abstract class BaseProcessorInbound<T> {
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
         } else {
-            log.info("Tenant {} - This message is not parsed by Base Inbound Processor, will be potentially parsed by extension due to custom format.",
+            log.info(
+                    "Tenant {} - This message is not parsed by Base Inbound Processor, will be potentially parsed by extension due to custom format.",
                     tenant);
         }
     }
@@ -254,9 +255,11 @@ public abstract class BaseProcessorInbound<T> {
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     context.getProcessingCacheSize());
         }
-        log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
-                mapping.targetAPI,
-                size);
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
+                    mapping.targetAPI,
+                    size);
+        }
         return context;
     }
 
@@ -277,7 +280,8 @@ public abstract class BaseProcessorInbound<T> {
                 } else {
                     sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
                 }
-                SubstituteValue.substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+                SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
+                        mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.value.toString());
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             }
@@ -285,7 +289,8 @@ public abstract class BaseProcessorInbound<T> {
             SubstituteValue sourceId = new SubstituteValue(substitute.value,
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             // in this case the device needs to exists beforehand
-            SubstituteValue.substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+            SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
+                    mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.value.toString());
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
         } else {

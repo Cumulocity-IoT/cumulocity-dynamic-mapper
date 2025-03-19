@@ -114,26 +114,29 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                 } else { // Now use the copied objects
                     Set<String> keySet = typedResult.getSubstitutions().keySet();
                     for (String key : keySet) {
-                        List<SubstituteValue> processingCacheEntry = 
-                            new ArrayList<>();
+                        List<SubstituteValue> processingCacheEntry = new ArrayList<>();
                         List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
-                        if (values != null && values.size() >0 
+                        if (values != null && values.size() > 0
                                 && values.get(0).expandArray) {
                             // extracted result from sourcePayload is an array, so we potentially have to
                             // iterate over the result, e.g. creating multiple devices
-                            for (SubstituteValue substitutionValue: values) {
-                                SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, substitutionValue.value,
-                                substitutionValue, mapping);
+                            for (SubstituteValue substitutionValue : values) {
+                                SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry,
+                                        substitutionValue.value,
+                                        substitutionValue, mapping);
                             }
                         } else if (values != null) {
-                            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, values.getFirst().value,
-                            values.getFirst(), mapping);
+                            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry,
+                                    values.getFirst().value,
+                                    values.getFirst(), mapping);
                         }
                         processingCache.put(key, processingCacheEntry);
                     }
 
-                    log.info("Tenant {} - New payload over CodeBasedProcessorOutbound: {}, {}", context.getTenant(),
-                            jsonObject);
+                    if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                        log.info("Tenant {} - New payload over CodeBasedProcessorOutbound: {}, {}", context.getTenant(),
+                                jsonObject);
+                    }
                 }
 
             }

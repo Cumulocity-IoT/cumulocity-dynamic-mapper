@@ -154,18 +154,19 @@ public abstract class BaseProcessorOutbound<T> {
         /*
          * step 4 prepare target payload for sending to mqttBroker
          */
-        if(Arrays.stream(API.values()).anyMatch(v -> mapping.targetAPI.equals(v))) {
-        //if (!mapping.targetAPI.equals(API.INVENTORY)) {
+        if (Arrays.stream(API.values()).anyMatch(v -> mapping.targetAPI.equals(v))) {
+            // if (!mapping.targetAPI.equals(API.INVENTORY)) {
             List<String> topicLevels = payloadTarget.read(Mapping.TOKEN_TOPIC_LEVEL);
             if (topicLevels != null && topicLevels.size() > 0) {
                 // now merge the replaced topic levels
                 MutableInt c = new MutableInt(0);
-                //MutableInt index = new MutableInt(0);
+                // MutableInt index = new MutableInt(0);
                 String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
-                log.info("Tenant {} - Resolving topic: context.getTopic() {}, splitTopicInAsList {}, topicLevels {}", tenant, context.getTopic(),splitTopicInAsList, topicLevels);
+                log.info("Tenant {} - Resolving topic: context.getTopic() {}, splitTopicInAsList {}, topicLevels {}",
+                        tenant, context.getTopic(), splitTopicInAsList, topicLevels);
                 topicLevels.forEach(tl -> {
                     while (c.intValue() < splitTopicInAsList.length
-                            && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0 )) {
+                            && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0)) {
                         c.increment();
                     }
                     splitTopicInAsList[c.intValue()] = tl;
@@ -208,13 +209,15 @@ public abstract class BaseProcessorOutbound<T> {
             }
             predecessor = newPredecessor;
         } else {
-            //FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
+            // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     processingCache.size());
         }
-        log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
-                mapping.targetAPI,
-                1);
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
+                    mapping.targetAPI,
+                    1);
+        }
         return context;
     }
 
