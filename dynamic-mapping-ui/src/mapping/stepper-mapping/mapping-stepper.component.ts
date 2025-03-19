@@ -440,12 +440,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
     ];
 
-    this.initalizeCodeTemplates();
+    this.initializeCodeTemplates();
     this.setTemplateForm();
   }
 
 
-  async initalizeCodeTemplates() {
+  async initializeCodeTemplates() {
     this.codeTemplates = await this.sharedService.getCodeTemplates();
     this.codeTemplatesDecoded = new Map<string, CodeTemplate>();
     // Iterate and decode
