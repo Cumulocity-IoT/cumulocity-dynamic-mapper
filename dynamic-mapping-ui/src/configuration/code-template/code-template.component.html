@@ -53,7 +53,11 @@
   <div class="card-footer">
     <div class="form-group">
       <button type="button" name="update" class="btn btn-primary" (click)="onSaveCodeTemplate()" translate>
-        Save Code Template
+        Save code template
+      </button>
+
+      <button type="button" name="update" class="btn btn-primary" (click)="onDeleteCodeTemplate()"  [disabled]="codeTemplateDecoded?.type == TemplateType.SHARED" translate>
+        Delete code template
       </button>
     </div>
   </div>

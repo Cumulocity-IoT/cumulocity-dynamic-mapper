@@ -36,13 +36,12 @@ import {
 } from '..';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { FetchClient } from '@c8y/ngx-components/api';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration } from '../../configuration';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration';
 import { ServiceOperation } from './shared.model';
 import { OptionsService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
-
   constructor(
     private client: FetchClient,
     private identity: IdentityService,
@@ -178,6 +177,19 @@ export class SharedService {
           accept: 'application/json'
         },
         method: 'GET'
+      }
+    );
+    return await response.json();
+  }
+
+  async deleteCodeTemplate(templateId: string): Promise<any> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${templateId}`,
+      {
+        headers: {
+          accept: 'application/json'
+        },
+        method: 'DELETE'
       }
     );
     return await response.json();

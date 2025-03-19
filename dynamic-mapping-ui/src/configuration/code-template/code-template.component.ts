@@ -41,10 +41,11 @@ export class SharedCodeComponent implements OnInit {
   codeTemplateDecoded: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
   codeTemplates: CodeTemplateMap;
-  templateId: TemplateType = TemplateType.SHARED;
+  templateId: string = TemplateType.SHARED;
   formGroup: FormGroup;
   isLoading = true;
   errorMessage = '';
+  TemplateType = TemplateType;
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -94,6 +95,14 @@ export class SharedCodeComponent implements OnInit {
     }
   }
 
+
+  async onDeleteCodeTemplate() {
+    if (this.codeTemplateDecoded) {
+      this.sharedService.deleteCodeTemplate(this.templateId);
+      this.alertService.success("Deleted code template");
+      this.codeTemplates = await this.sharedService.getCodeTemplates();
+    }
+  }
   onValueCodeChange(value) {
     // console.log("code changed", value);
     this.codeTemplateDecoded.code = value;

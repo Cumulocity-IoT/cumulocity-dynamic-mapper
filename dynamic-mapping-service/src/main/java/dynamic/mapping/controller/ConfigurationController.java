@@ -379,13 +379,13 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("Tenant {} - Get code template", tenant);
-        
+
         Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
             serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
             codeTemplates = serviceConfiguration.getCodeTemplates();
-            
+
             try {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
@@ -394,7 +394,7 @@ public class ConfigurationController {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
             }
         }
-    
+
         CodeTemplate result = codeTemplates.get(id);
         if (result == null) {
             // Template not found - return 404 Not Found
@@ -406,18 +406,56 @@ public class ConfigurationController {
         }
     }
 
-    @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,CodeTemplate>> getCodeTemplates() {
+    @DeleteMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<CodeTemplate> deleteCodeTemplate(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Get code templates", tenant);
-        
+        log.debug("Tenant {} - Delete code template", tenant);
+
         Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
             serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
             codeTemplates = serviceConfiguration.getCodeTemplates();
-            
+
+            try {
+                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            } catch (JsonProcessingException ex) {
+                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            }
+        }
+        CodeTemplate result = codeTemplates.remove(id);
+        try {
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+        } catch (Exception ex) {
+            log.error("Tenant {} - Error updating code template {}", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+        configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+        if (result == null) {
+            // Template not found - return 404 Not Found
+            log.warn("Tenant {} - Code template with ID '{}' not found", tenant, id);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } else {
+            // Template exists - return it with 200 OK
+            return new ResponseEntity<>(result, HttpStatus.OK);
+        }
+    }
+
+    @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, CodeTemplate>> getCodeTemplates() {
+        String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        log.debug("Tenant {} - Get code templates", tenant);
+
+        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
+        if (codeTemplates == null || codeTemplates.isEmpty()) {
+            // Initialize code templates from properties if not already set
+            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
+            codeTemplates = serviceConfiguration.getCodeTemplates();
+
             try {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
