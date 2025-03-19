@@ -26,11 +26,10 @@
     <c8y-form-group>
       <label translate>Code Templates</label>
       <div class="c8y-select-wrapper" style="max-width: 300px; overflow: auto !important">
-        <select class="form-control" (change)="
-        onSelectTemplate()" [(ngModel)]="templateId" name="templateSelect" required>
-          <option [ngValue]="null" disabled>Select a template...</option>
-          <option *ngFor="let key of getTemplateKeys()" [ngValue]="key">
-            {{ key  | capitalCase}}
+        <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId" name="templateSelect" required>
+          <option [ngValue]="null" disabled>Select template...</option>
+          <option *ngFor="let item of getCodeTemplateEntries()" [ngValue]="item.key">
+            {{ item.name | capitalCase }} ({{ item.type }})
           </option>
         </select>
       </div>
@@ -53,8 +52,8 @@
   </div>
   <div class="card-footer">
     <div class="form-group">
-      <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveSharedCode()" translate>
-        Save
+      <button type="button" name="update" class="btn btn-primary" (click)="onSaveCodeTemplate()" translate>
+        Save Code Template
       </button>
     </div>
   </div>

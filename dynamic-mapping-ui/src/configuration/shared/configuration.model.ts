@@ -38,6 +38,8 @@ export enum TemplateType {
 }
 
 export interface CodeTemplate {
+  id: string;
+  name: string;
   type: TemplateType;
   code: string;
 }

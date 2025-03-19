@@ -40,9 +40,9 @@ let initializedMonaco = false;
 export class SharedCodeComponent implements OnInit {
   codeTemplateDecoded: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
+  codeTemplates: CodeTemplateMap;
   templateId: TemplateType = TemplateType.SHARED;
   formGroup: FormGroup;
-  codeTemplates: CodeTemplateMap;
   isLoading = true;
   errorMessage = '';
 
@@ -66,7 +66,7 @@ export class SharedCodeComponent implements OnInit {
     // Iterate and decode
     Object.entries(this.codeTemplates).forEach(([key, template]) => {
       const decodedCode = base64ToString(template.code);
-      this.codeTemplatesDecoded.set(key, {
+      this.codeTemplatesDecoded.set(key, { id: key, name: template.name,
         type: template.type, code: decodedCode
       });
     });
@@ -83,11 +83,11 @@ export class SharedCodeComponent implements OnInit {
     }
   }
 
-  async clickedSaveSharedCode() {
+  async onSaveCodeTemplate() {
     if (this.codeTemplateDecoded) {
       const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
-      this.sharedService.updateCodeTemplate(this.templateId, {
-        type: this.codeTemplateDecoded.type, code: encodeCode
+      const templateToUpdate = this.codeTemplateDecoded;
+      this.sharedService.updateCodeTemplate(this.templateId, { ...templateToUpdate, code: encodeCode
       });
       this.alertService.success("Saved code template");
       this.codeTemplates = await this.sharedService.getCodeTemplates();
@@ -99,13 +99,17 @@ export class SharedCodeComponent implements OnInit {
     this.codeTemplateDecoded.code = value;
   }
 
-  onSelectTemplate(): void {
+  onSelectCodeTemplate(): void {
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
   }
 
-  getTemplateKeys(): string[] {
-    if (this.codeTemplates)
-      return Object.keys(this.codeTemplates);
-    else return [];
+  getCodeTemplateEntries(): { key: string; name: string,type: TemplateType }[] {
+    if (!this.codeTemplates) return [];
+    const entries = Object.entries(this.codeTemplates).map(([key, template]) => ({
+      key,
+      name: template.name,
+      type: template.type
+    }));
+    return entries;
   }
 }

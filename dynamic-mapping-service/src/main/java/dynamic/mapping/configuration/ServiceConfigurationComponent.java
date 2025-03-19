@@ -21,8 +21,10 @@
 
 package dynamic.mapping.configuration;
 
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +43,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ServiceConfigurationComponent {
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final int UUID_LENGTH = 6;
 
     @Value("${APP.template.code.inbound}")
     private String inboundCodeTemplate;
@@ -78,17 +82,18 @@ public class ServiceConfigurationComponent {
 
     public void initCodeTemplates(ServiceConfiguration configuration) {
         Map<String, CodeTemplate> codeTemplates = new HashMap<>();
-        codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(TemplateType.INBOUND, inboundCodeTemplate));
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE, new CodeTemplate(TemplateType.OUTBOUND,outboundCodeTemplate));
-        codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(TemplateType.SHARED,sharedCodeTemplate));
+        codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(uuidCustom(),"Inbound Code Template",TemplateType.INBOUND, inboundCodeTemplate));
+        codeTemplates.put(OUTBOUND_CODE_TEMPLATE, new CodeTemplate(uuidCustom(),"Outbound Code Template", TemplateType.OUTBOUND, outboundCodeTemplate));
+        codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(uuidCustom(),"Shared Code Template", TemplateType.SHARED,sharedCodeTemplate));
         configuration.setCodeTemplates(codeTemplates);
     }
 
-    public void saveServiceConfiguration(String tenant, final ServiceConfiguration configuration) throws JsonProcessingException {
+    public void saveServiceConfiguration(String tenant, final ServiceConfiguration configuration)
+            throws JsonProcessingException {
         if (configuration == null) {
             return;
         }
-        
+
         final String configurationJson = objectMapper.writeValueAsString(configuration);
         final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(
                 OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION, configurationJson);
@@ -139,5 +144,11 @@ public class ServiceConfigurationComponent {
             e.printStackTrace();
         }
         return configuration;
+    }
+
+    private static String uuidCustom() {
+        return SECURE_RANDOM.ints(UUID_LENGTH, 0, 36)
+                .mapToObj(i -> Character.toString(i < 10 ? '0' + i : 'a' + i - 10))
+                .collect(Collectors.joining());
     }
 }

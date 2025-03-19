@@ -55,6 +55,7 @@ import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.c
 import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
 import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
 import { MappingSubscriptionComponent } from './subscription/subscription.component';
+import { CreateTemplateComponent } from './stepper-mapping/code-template/create-template.component';
 
 @NgModule({
   declarations: [
@@ -83,6 +84,7 @@ import { MappingSubscriptionComponent } from './subscription/subscription.compon
     SnoopExplorerComponent,
     AdviceActionComponent,
     MappingFilterComponent,
+    CreateTemplateComponent,
   ],
   imports: [
     CoreModule,

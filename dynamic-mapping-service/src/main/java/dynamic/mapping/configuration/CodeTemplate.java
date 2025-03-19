@@ -38,9 +38,18 @@ import lombok.ToString;
 public class CodeTemplate implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
+    public String id;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String name;
+    
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
     public TemplateType type;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public String code;
+
 }

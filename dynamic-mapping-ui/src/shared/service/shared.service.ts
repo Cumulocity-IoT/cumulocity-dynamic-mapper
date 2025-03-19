@@ -188,7 +188,7 @@ export class SharedService {
       `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
       {
         headers: {
-          'content-type': 'application/text'
+          'content-type': 'application/json'
         },
         body: JSON.stringify(codeTemplate),
         method: 'PUT'

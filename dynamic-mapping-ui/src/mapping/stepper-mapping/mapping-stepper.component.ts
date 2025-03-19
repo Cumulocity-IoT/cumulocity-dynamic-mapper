@@ -31,7 +31,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
-import { AlertService, C8yStepper } from '@c8y/ngx-components';
+import { AlertService, C8yStepper, gettext } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -55,8 +55,10 @@ import {
   MappingSubstitution,
   RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
+  SharedService,
   SnoopStatus,
-  StepperConfiguration
+  StepperConfiguration,
+  uuidCustom
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
@@ -72,6 +74,8 @@ import {
 } from '../shared/util';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
+import { CodeTemplate, CodeTemplateMap, TemplateType } from '../../configuration/shared/configuration.model';
+import { CreateTemplateComponent } from './code-template/create-template.component';
 
 let initializedMonaco = false;
 
@@ -108,6 +112,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   substitutionModel: any = {};
   propertyFormly: FormGroup = new FormGroup({});
   codeFormly: FormGroup = new FormGroup({});
+
+  codeTemplateDecoded: CodeTemplate;
+  codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
+  codeTemplates: CodeTemplateMap;
+  templateId: TemplateType = undefined;
 
   sourceTemplate: any;
   targetTemplate: any;
@@ -200,6 +209,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   constructor(
     public bsModalService: BsModalService,
+    public sharedService: SharedService,
     public mappingService: MappingService,
     public extensionService: ExtensionService,
     private alertService: AlertService,
@@ -430,7 +440,24 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
     ];
 
+    this.initalizeCodeTemplates();
     this.setTemplateForm();
+  }
+
+
+  async initalizeCodeTemplates() {
+    this.codeTemplates = await this.sharedService.getCodeTemplates();
+    this.codeTemplatesDecoded = new Map<string, CodeTemplate>();
+    // Iterate and decode
+    Object.entries(this.codeTemplates).forEach(([key, template]) => {
+      const decodedCode = base64ToString(template.code);
+      this.codeTemplatesDecoded.set(key, {
+        id: key, name: template.name,
+        type: template.type, code: decodedCode
+      });
+    });
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
+    console.log("Code",)
   }
 
   async ngAfterViewInit(): Promise<void> {
@@ -1162,4 +1189,48 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.mapping['_code'] = value;
   }
 
+  onSelectCodeTemplate(): void {
+    this.mapping['_code'] = this.codeTemplatesDecoded.get(this.templateId).code;
+  }
+
+  getCodeTemplateEntries(): { key: string; name: string,type: TemplateType }[] {
+    if (!this.codeTemplates) return [];
+    const entries = Object.entries(this.codeTemplates).filter(([key, template]) => (template.type.toString() == this.stepperConfiguration.direction.toString())).map(([key, template]) => ({
+      key,
+      name: template.name,
+      type: template.type
+    }));
+    return entries;
+  }
+
+  async onCreateCodeTemplate() {
+
+    // Prepare initial state
+    const initialState = {
+    };
+    // Show modal and handle response
+    const modalRef = this.bsModalService.show(CreateTemplateComponent, { initialState });
+
+    modalRef.content.closeSubject.subscribe(async (name) => {
+      // console.log('Configuration after edit:', editedConfiguration);
+      if (name) {
+        const code = stringToBase64(this.mapping['_code']);
+        const id = uuidCustom();
+        const type = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
+        const response = await this.sharedService.updateCodeTemplate(id, {
+          name, id,
+          type, code
+        });
+        this.alertService.success("Added new code template");
+        this.codeTemplates = await this.sharedService.getCodeTemplates();
+        if (response.status < 300) {
+          this.alertService.success(gettext('Updated successfully.'));
+        } else {
+          this.alertService.danger(
+            gettext('Failed to create new code template')
+          );
+        }
+      }
+    });
+  }
 }
