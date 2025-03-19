@@ -450,14 +450,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.codeTemplatesDecoded = new Map<string, CodeTemplate>();
     // Iterate and decode
     Object.entries(this.codeTemplates).forEach(([key, template]) => {
-      const decodedCode = base64ToString(template.code);
-      this.codeTemplatesDecoded.set(key, {
-        id: key, name: template.name,
-        type: template.type, code: decodedCode, internal: template.internal
-      });
+      try {
+        const decodedCode = base64ToString(template.code);
+        this.codeTemplatesDecoded.set(key, {
+          id: key, name: template.name,
+          type: template.type, code: decodedCode, internal: template.internal
+        });
+      } catch (error) {
+        this.codeTemplatesDecoded.set(key, {
+          id: key, name: template.name,
+          type: template.type, code: "// Code Template not valid!", internal: template.internal
+        });
+      }
     });
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
-    console.log("Code",)
+    // console.log("Code",)
   }
 
   async ngAfterViewInit(): Promise<void> {
