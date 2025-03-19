@@ -37,7 +37,6 @@ import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
-import dynamic.mapping.connector.mqtt.MQTTCallback;
 import dynamic.mapping.core.*;
 
 import org.graalvm.polyglot.Context;
@@ -70,8 +69,6 @@ import dynamic.mapping.model.Mapping;
 @RequestMapping("/configuration")
 @RestController
 public class ConfigurationController {
-
-    private final MQTTCallback MQTTCallback;
 
     @Autowired
     ConnectorRegistry connectorRegistry;
@@ -111,10 +108,6 @@ public class ConfigurationController {
 
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
-
-    ConfigurationController(MQTTCallback MQTTCallback) {
-        this.MQTTCallback = MQTTCallback;
-    }
 
     @GetMapping(value = "/feature", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
