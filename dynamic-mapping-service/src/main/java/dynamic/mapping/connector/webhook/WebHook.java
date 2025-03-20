@@ -48,6 +48,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.client.RestClient;
 
 import lombok.extern.slf4j.Slf4j;
@@ -95,7 +96,9 @@ public class WebHook extends AConnectorClient {
         String name = "Webhook";
         String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
+        supportsMessageContext = true;
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps,
+                supportsMessageContext,
                 supportedDirections());
     }
 
@@ -343,22 +346,58 @@ public class WebHook extends AConnectorClient {
                 tenant, path);
 
         try {
-            ResponseEntity<String> responseEntity = webhookClient.post()
-                    .uri(path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(payload)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
-                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                        throw new RuntimeException(errorMessage);
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                        String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
-                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                        throw new RuntimeException(errorMessage);
-                    })
-                    .toEntity(String.class);
+            RequestMethod method = currentRequest.getMethod();
+            ResponseEntity<String> responseEntity;
+            if (RequestMethod.PUT.equals(method)) {
+                responseEntity = webhookClient.put()
+                        .uri(path)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(payload)
+                        .retrieve()
+                        .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                            String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                            log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                            throw new RuntimeException(errorMessage);
+                        })
+                        .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                            String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                            log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                            throw new RuntimeException(errorMessage);
+                        })
+                        .toEntity(String.class);
+            } else if (RequestMethod.DELETE.equals(method)) {
+                responseEntity = webhookClient.delete()
+                        .uri(path)
+                        .retrieve()
+                        .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                            String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                            log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                            throw new RuntimeException(errorMessage);
+                        })
+                        .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                            String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                            log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                            throw new RuntimeException(errorMessage);
+                        })
+                        .toEntity(String.class);
+            } else {
+                responseEntity = webhookClient.post()
+                        .uri(path)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(payload)
+                        .retrieve()
+                        .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                            String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                            log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                            throw new RuntimeException(errorMessage);
+                        })
+                        .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                            String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                            log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                            throw new RuntimeException(errorMessage);
+                        })
+                        .toEntity(String.class);
+            }
 
             if (responseEntity.getStatusCode().is2xxSuccessful()) {
                 log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}, {}",

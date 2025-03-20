@@ -51,6 +51,7 @@ public class Mapping implements Serializable {
     public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
     public static final String TOKEN_CONTEXT_DATA = "_CONTEXT_DATA_";
     public static final String CONTEXT_DATA_KEY_NAME = "key";
+    public static final String CONTEXT_DATA_METHOD_NAME = "method";
     public static final String TIME = "time";
 
     public static int SNOOP_TEMPLATES_MAX = 10;

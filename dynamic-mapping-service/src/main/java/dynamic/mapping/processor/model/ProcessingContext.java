@@ -30,8 +30,6 @@ import java.util.Set;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.Substitution;
-import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.ProcessingException;
 import lombok.Builder;

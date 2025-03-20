@@ -31,6 +31,7 @@ import { ValidationFormlyError } from './mapping.model';
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
 export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
+export const CONTEXT_DATA_METHOD_NAME = 'method';
 export const TIME = 'time';
 
 export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
@@ -402,20 +403,23 @@ export function expandExternalTemplate(
     return template;
   } else {
     if (mapping.supportsMessageContext) {
-      const keys = [CONTEXT_DATA_KEY_NAME];
+      // Define the context data with specific values
+      const contextData = {
+        [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+        [CONTEXT_DATA_METHOD_NAME]: "POST" // Set to "POST" instead of a generated value
+      };
+      
       return {
         ...template,
         _TOPIC_LEVEL_: levels,
-        _CONTEXT_DATA_: keys.reduce((obj, key) => {
-          obj[key] = `${key}-sample`;
-          return obj;
-        }, {})
+        _CONTEXT_DATA_: contextData
       };
-    } else
+    } else {
       return {
         ...template,
         _TOPIC_LEVEL_: levels
       };
+    }
   }
 }
 

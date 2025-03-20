@@ -34,6 +34,7 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -130,6 +131,7 @@ public abstract class BaseProcessorOutbound<T> {
             Map<String, String> cod = new HashMap<String, String>() {
                 {
                     put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
+                    put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
                 }
             };
             payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
@@ -188,17 +190,27 @@ public abstract class BaseProcessorOutbound<T> {
             } else {
                 context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
             }
+
             // remove TOPIC_LEVEL
             payloadTarget.delete("$." + Mapping.TOKEN_TOPIC_LEVEL);
+            RequestMethod method = RequestMethod.POST;
             if (mapping.supportsMessageContext) {
                 String key = payloadTarget
                         .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
+                try {
+                    String methodString = payloadTarget
+                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA,
+                                    Mapping.CONTEXT_DATA_METHOD_NAME));
+                    method = RequestMethod.resolve(methodString.toUpperCase());
+                } catch (Exception e) {
+                    // method is not defined or unknown, so we assume "POST"
+                }
                 context.setKey(key.getBytes());
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
             var newPredecessor = context.addRequest(
-                    new C8YRequest(predecessor, RequestMethod.POST, deviceSource, mapping.externalIdType,
+                    new C8YRequest(predecessor, method, deviceSource, mapping.externalIdType,
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
