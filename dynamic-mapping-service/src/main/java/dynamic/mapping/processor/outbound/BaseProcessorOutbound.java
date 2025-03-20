@@ -162,8 +162,11 @@ public abstract class BaseProcessorOutbound<T> {
                 MutableInt c = new MutableInt(0);
                 // MutableInt index = new MutableInt(0);
                 String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
-                log.info("Tenant {} - Resolving topic: context.getTopic() {}, splitTopicInAsList {}, topicLevels {}",
-                        tenant, context.getTopic(), splitTopicInAsList, topicLevels);
+                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                    log.info(
+                            "Tenant {} - Resolving topic: context.getTopic():{}, splitTopicInAsList:{}, topicLevels:{}",
+                            tenant, context.getTopic(), splitTopicInAsList, topicLevels);
+                }
                 topicLevels.forEach(tl -> {
                     while (c.intValue() < splitTopicInAsList.length
                             && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0)) {
@@ -172,6 +175,10 @@ public abstract class BaseProcessorOutbound<T> {
                     splitTopicInAsList[c.intValue()] = tl;
                     c.increment();
                 });
+                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                    log.info("Tenant {} - Resolved topic: context.getTopic():{}, splitTopicInAsList:{}, topicLevels:{}",
+                            tenant, context.getTopic(), splitTopicInAsList, topicLevels);
+                }
 
                 StringBuffer resolvedPublishTopic = new StringBuffer();
                 for (int d = 0; d < splitTopicInAsList.length; d++) {
@@ -214,7 +221,8 @@ public abstract class BaseProcessorOutbound<T> {
                     processingCache.size());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget.jsonString(),
+            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant,
+                    payloadTarget.jsonString(),
                     mapping.targetAPI,
                     1);
         }

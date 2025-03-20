@@ -24,7 +24,7 @@ package dynamic.mapping.processor.outbound;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,11 +38,11 @@ import com.dashjoin.jsonata.json.Json;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.processor.model.SubstituteValue.TYPE;
+
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
-import dynamic.mapping.processor.model.RepairStrategy;
+
 import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.processor.model.SubstitutionEvaluation;
 import dynamic.mapping.processor.model.SubstitutionContext;

@@ -83,8 +83,6 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 @Slf4j
 public class DispatcherInbound implements GenericMessageCallback {
 
-    private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
-
     private AConnectorClient connectorClient;
 
     private ExecutorService virtThreadPool;
@@ -92,8 +90,6 @@ public class DispatcherInbound implements GenericMessageCallback {
     private MappingComponent mappingComponent;
 
     private ConfigurationRegistry configurationRegistry;
-
-    private Counter inboundMessageCounter;
 
     public DispatcherInbound(ConfigurationRegistry configurationRegistry,
             AConnectorClient connectorClient) {
