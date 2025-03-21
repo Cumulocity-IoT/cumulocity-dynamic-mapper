@@ -59,7 +59,6 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
-import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
@@ -100,7 +99,8 @@ public class InternalWebHook extends AConnectorClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
-        this.baseUrl = "http://cumulocity:8111";
+        // this.baseUrl = "http://cumulocity:8111";
+        this.baseUrl = "http://localhost:8111";
     }
 
     @Getter
@@ -136,14 +136,14 @@ public class InternalWebHook extends AConnectorClient {
         String headerAccept = (String) connectorConfiguration.getProperties().getOrDefault("headerAccept",
                 "application/json");
 
-        MicroserviceCredentials contextCredentials = C8YAgent
-                .removeAppKeyHeaderFromContext(contextService.getContext());
-
         // MicroserviceCredentials contextCredentials = C8YAgent
-        //        .removeAppKeyHeaderFromContext(c8yAgent.getContextService().getContext());
-        String tenant = (String) contextCredentials.getTenant();
-        String user = (String) contextCredentials.getUsername();
-        String password = (String) contextCredentials.getPassword();
+        //         .removeAppKeyHeaderFromContext(contextService.getContext());
+
+        // // MicroserviceCredentials contextCredentials = C8YAgent
+        // //        .removeAppKeyHeaderFromContext(c8yAgent.getContextService().getContext());
+        // String tenant = (String) contextCredentials.getTenant();
+        // String user = (String) contextCredentials.getUsername();
+        // String password = (String) contextCredentials.getPassword();
 
         // Create RestClient builder
         RestClient.Builder builder = RestClient.builder()
@@ -152,9 +152,9 @@ public class InternalWebHook extends AConnectorClient {
                 .defaultHeader("Accept", headerAccept);
 
         // Add authentication if specified
-        String credentials = Base64.getEncoder()
-                .encodeToString((tenant + "/" + user + ":" + password).getBytes(StandardCharsets.UTF_8));
-        builder.defaultHeader("Authorization", "Basic " + credentials);
+        // String credentials = Base64.getEncoder()
+        //         .encodeToString((tenant + "/" + user + ":" + password).getBytes(StandardCharsets.UTF_8));
+        // builder.defaultHeader("Authorization", "Basic " + credentials);
 
         // Build the client
         webhookClient = builder.build();
