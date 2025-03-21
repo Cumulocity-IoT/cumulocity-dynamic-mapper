@@ -18,7 +18,7 @@
   ~  @authors Christof Strack, Stefan Witschel
   ~
   -->
-<c8y-modal title="Select next step" (onClose)="onClose()" (onDismiss)="onDismiss()" [labels]="labels"
+<c8y-modal (onClose)="onClose()" (onDismiss)="onDismiss()" [labels]="labels"
  [headerClasses]="'modal-header dialog-header'">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'plus-circle'"></span>
@@ -26,7 +26,7 @@
   <div class="p-24 modal-inner-scroll animated fadeIn">
     <p class="text-center text-medium text-16 sticky-top bg-white">
       {{
-      'Create new code template'
+      title
       | translate
       }}
     </p>

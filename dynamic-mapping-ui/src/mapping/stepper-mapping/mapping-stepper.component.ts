@@ -75,7 +75,7 @@ import {
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../../configuration/shared/configuration.model';
-import { CreateTemplateComponent } from './code-template/create-template.component';
+import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 
 let initializedMonaco = false;
 
@@ -1211,12 +1211,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onCreateCodeTemplate() {
-
-    // Prepare initial state
     const initialState = {
+      action: 'CREATE'
     };
-    // Show modal and handle response
-    const modalRef = this.bsModalService.show(CreateTemplateComponent, { initialState });
+    const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
     modalRef.content.closeSubject.subscribe(async (name) => {
       // console.log('Configuration after edit:', editedConfiguration);

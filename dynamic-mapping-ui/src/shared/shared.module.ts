@@ -36,7 +36,7 @@ import { ConnectorStatusRendererComponent } from './connector-configuration/rend
 import { StatusEnabledRendererComponent } from './connector-configuration/renderer/status-enabled-renderer.component';
 import { ConnectorDetailsComponent } from './connector-details/connector-details.component';
 import { ConnectorStatusComponent } from './connector-log/connector-log.component';
-import { JsonEditorComponent } from './editor/jsoneditor.component';
+import { JsonEditorComponent } from './component/editor/jsoneditor.component';
 import { CamelCasePipe } from './misc/camel-case.pipe';
 import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
 import { DisableDirective } from './misc/disable.directive';

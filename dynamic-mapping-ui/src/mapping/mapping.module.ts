@@ -25,37 +25,36 @@ import {
   hookRoute,
   ModalModule
 } from '@c8y/ngx-components';
-import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-components/editor';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
+import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-components/editor';
+import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ServiceConfigurationModule } from '../configuration';
-import { NODE1, LabelRendererComponent, SharedModule } from '../shared';
+import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule } from '../shared';
+import { MappingFilterComponent } from './filter/mapping-filter.component';
+import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import/import-modal.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
 import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
+import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
 import { QOSRendererComponent } from './renderer/qos.renderer.component';
 import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.renderer.component';
 import { StatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from './renderer/status.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
+import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
+import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
 import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
 import { MappingStepPropertiesComponent } from './step-property/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
 import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
 import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
 import { DeviceSelectorSubscriptionComponent } from './subscription/device-selector/device-selector-subscription.component';
+import { MappingSubscriptionComponent } from './subscription/subscription.component';
 import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
-import { FORMLY_CONFIG } from '@ngx-formly/core';
-import { MappingFilterComponent } from './filter/mapping-filter.component';
-import { AdviceActionComponent } from './grid/advisor/advice-action.component';
-import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
-import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
-import { SnoopExplorerComponent } from './snoop-explorer/snoop-explorer-modal.component';
-import { MappingSubscriptionComponent } from './subscription/subscription.component';
-import { CreateTemplateComponent } from './stepper-mapping/code-template/create-template.component';
 
 @NgModule({
   declarations: [
@@ -84,7 +83,7 @@ import { CreateTemplateComponent } from './stepper-mapping/code-template/create-
     SnoopExplorerComponent,
     AdviceActionComponent,
     MappingFilterComponent,
-    CreateTemplateComponent,
+    ManageTemplateComponent,
   ],
   imports: [
     CoreModule,

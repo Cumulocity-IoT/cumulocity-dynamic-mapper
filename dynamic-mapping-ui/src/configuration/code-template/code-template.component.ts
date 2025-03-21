@@ -28,6 +28,7 @@ import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { FormGroup } from '@angular/forms';
+import { ManageTemplateComponent } from '../../shared';
 
 let initializedMonaco = false;
 
@@ -104,7 +105,6 @@ export class SharedCodeComponent implements OnInit {
     }
   }
 
-
   async onDeleteCodeTemplate() {
     if (this.codeTemplateDecoded) {
       this.sharedService.deleteCodeTemplate(this.templateId);
@@ -112,6 +112,30 @@ export class SharedCodeComponent implements OnInit {
       this.codeTemplates = await this.sharedService.getCodeTemplates();
     }
   }
+
+  async onRenameCodeTemplate() {
+    if (this.codeTemplateDecoded) {
+          const initialState = {
+            action: 'RENAME'
+          };
+          const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
+      
+          modalRef.content.closeSubject.subscribe(async (name) => {
+            // console.log('Configuration after edit:', editedConfiguration);
+            if (name) {
+              const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
+              const templateToUpdate = this.codeTemplateDecoded;
+              this.sharedService.updateCodeTemplate(this.templateId, {
+                ...templateToUpdate, code: encodeCode, name
+              });
+              this.alertService.success("Renamed code template");
+            }
+          });
+
+      this.codeTemplates = await this.sharedService.getCodeTemplates();
+    }
+  }
+
   onValueCodeChange(value) {
     // console.log("code changed", value);
     this.codeTemplateDecoded.code = value;

@@ -19,6 +19,7 @@
  */
 import {
   Component,
+  Input,
   OnDestroy,
   OnInit,
   ViewEncapsulation
@@ -27,20 +28,24 @@ import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 
 @Component({
-  selector: 'd11r-create-template',
-  templateUrl: './create-template.component.html',
+  selector: 'd11r-manage-template',
+  templateUrl: './manage-template.component.html',
   encapsulation: ViewEncapsulation.None
 })
-export class CreateTemplateComponent implements OnInit, OnDestroy {
+export class ManageTemplateComponent implements OnInit, OnDestroy {
+  @Input() action: string = 'CREATE';
+
   closeSubject: Subject<string> = new Subject();
-  labels: ModalLabels = { ok: 'Create', cancel: 'Cancel' };
+  labels: ModalLabels = { ok: 'Submit', cancel: 'Cancel' };
 
   name: string = '';
   valid: boolean = false;
+  title: string;
 
-  constructor() {}
+  constructor() { }
 
   ngOnInit(): void {
+    this.title = this.action == "CREATE" ? 'Create code template' : 'Rename code template'
     this.closeSubject = new Subject();
   }
 
