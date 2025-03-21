@@ -141,9 +141,6 @@ public class InternalWebHook extends AConnectorClient {
         String headerAccept = (String) connectorConfiguration.getProperties().getOrDefault("headerAccept",
                 "application/json");
 
-        // MicroserviceCredentials contextCredentials = C8YAgent
-        // .removeAppKeyHeaderFromContext(contextService.getContext());
-
         // // MicroserviceCredentials contextCredentials = C8YAgent
         // // .removeAppKeyHeaderFromContext(c8yAgent.getContextService().getContext());
         String user = (String) connectorConfiguration.getProperties().get("user");
@@ -160,6 +157,8 @@ public class InternalWebHook extends AConnectorClient {
         .encodeToString((tenant + "/" + user + ":" +
         password).getBytes(StandardCharsets.UTF_8));
         builder.defaultHeader("Authorization", "Basic " + credentials);
+        log.info("Tenant {} - CREDENTIALS REMOVE REMOVE {} ",
+        tenant, credentials);
 
         // Build the client
         webhookClient = builder.build();
