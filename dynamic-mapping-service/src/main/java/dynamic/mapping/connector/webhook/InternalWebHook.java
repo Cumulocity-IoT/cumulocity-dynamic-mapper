@@ -55,6 +55,7 @@ import org.springframework.web.client.RestClient;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
@@ -65,10 +66,6 @@ import dynamic.mapping.core.ConnectorStatusEvent;
 
 @Slf4j
 public class InternalWebHook extends AConnectorClient {
-
-    @Autowired
-    private ContextService<MicroserviceCredentials> contextService;
-
     public InternalWebHook() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         String name = "InternalWebhook";
@@ -106,6 +103,9 @@ public class InternalWebHook extends AConnectorClient {
         this.baseUrl = "http://cumulocity:8111";
     }
 
+    @Getter
+    private ContextService<MicroserviceCredentials> contextService;
+
     protected RestClient webhookClient;
 
     protected String baseUrl;
@@ -138,6 +138,9 @@ public class InternalWebHook extends AConnectorClient {
 
         MicroserviceCredentials contextCredentials = C8YAgent
                 .removeAppKeyHeaderFromContext(contextService.getContext());
+
+        // MicroserviceCredentials contextCredentials = C8YAgent
+        //        .removeAppKeyHeaderFromContext(c8yAgent.getContextService().getContext());
         String tenant = (String) contextCredentials.getTenant();
         String user = (String) contextCredentials.getUsername();
         String password = (String) contextCredentials.getPassword();
