@@ -28,7 +28,7 @@
       <div class="c8y-select-wrapper" style="max-width: 300px; overflow: auto !important">
         <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId" name="templateSelect" required>
           <option [ngValue]="null" disabled>Select template...</option>
-          <option *ngFor="let item of getCodeTemplateEntries()" [ngValue]="item.key">
+          <option *ngFor="let item of codeTemplateEntries$ | async" [ngValue]="item.key">
             {{ item.name | capitalCase }} ({{ item.type }})
           </option>
         </select>

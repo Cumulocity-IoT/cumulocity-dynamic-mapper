@@ -29,6 +29,7 @@ import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { FormGroup } from '@angular/forms';
 import { ManageTemplateComponent } from '../../shared';
+import { BehaviorSubject } from 'rxjs';
 
 let initializedMonaco = false;
 
@@ -47,6 +48,8 @@ export class SharedCodeComponent implements OnInit {
   isLoading = true;
   errorMessage = '';
   TemplateType = TemplateType;
+  codeTemplateEntries: { key: string; name: string, type: TemplateType }[] = [];
+  codeTemplateEntries$: BehaviorSubject<{ key: string; name: string, type: TemplateType }[]> = new BehaviorSubject<{ key: string; name: string, type: TemplateType }[]> ([]) ;
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -64,6 +67,8 @@ export class SharedCodeComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     this.codeTemplates = await this.sharedService.getCodeTemplates();
+    this.updateCodeTemplateEntries(); // Call this after setting codeTemplates
+
     this.codeTemplatesDecoded = new Map<string, CodeTemplate>();
     // Iterate and decode
     Object.entries(this.codeTemplates).forEach(([key, template]) => {
@@ -81,7 +86,7 @@ export class SharedCodeComponent implements OnInit {
       }
     });
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
-    console.log("Code",)
+    console.log("CodeTemplateEntries after init:", this.codeTemplateEntries);
   }
 
   async ngAfterViewInit(): Promise<void> {
@@ -93,6 +98,21 @@ export class SharedCodeComponent implements OnInit {
     }
   }
 
+  async updateCodeTemplateEntries(): Promise<void> {
+    if (!this.codeTemplates) {
+      this.codeTemplateEntries = [];
+      return;
+    }
+
+    this.codeTemplates = await this.sharedService.getCodeTemplates();
+    this.codeTemplateEntries = Object.entries(this.codeTemplates).map(([key, template]) => ({
+      key,
+      name: template.name,
+      type: template.type
+    }));
+    this.codeTemplateEntries$.next(this.codeTemplateEntries);
+  }
+
   async onSaveCodeTemplate() {
     if (this.codeTemplateDecoded) {
       const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
@@ -101,7 +121,7 @@ export class SharedCodeComponent implements OnInit {
         ...templateToUpdate, code: encodeCode
       });
       this.alertService.success("Saved code template");
-      this.codeTemplates = await this.sharedService.getCodeTemplates();
+      this.updateCodeTemplateEntries();
     }
   }
 
@@ -109,30 +129,33 @@ export class SharedCodeComponent implements OnInit {
     if (this.codeTemplateDecoded) {
       this.sharedService.deleteCodeTemplate(this.templateId);
       this.alertService.success("Deleted code template");
-      this.codeTemplates = await this.sharedService.getCodeTemplates();
+      this.updateCodeTemplateEntries();
     }
   }
 
   async onRenameCodeTemplate() {
     if (this.codeTemplateDecoded) {
-          const initialState = {
-            action: 'RENAME'
-          };
-          const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
-      
-          modalRef.content.closeSubject.subscribe(async (name) => {
-            // console.log('Configuration after edit:', editedConfiguration);
-            if (name) {
-              const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
-              const templateToUpdate = this.codeTemplateDecoded;
-              this.sharedService.updateCodeTemplate(this.templateId, {
-                ...templateToUpdate, code: encodeCode, name
-              });
-              this.alertService.success("Renamed code template");
-            }
-          });
+      const initialState = {
+        action: 'RENAME',
+        name: this.codeTemplateDecoded.name
+      };
+      const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
-      this.codeTemplates = await this.sharedService.getCodeTemplates();
+      modalRef.content.closeSubject.subscribe(async (name) => {
+        // console.log('Configuration after edit:', editedConfiguration);
+        if (name) {
+          this.codeTemplateDecoded.name = name;
+          const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
+          const templateToUpdate = this.codeTemplateDecoded;
+          this.sharedService.updateCodeTemplate(this.templateId, {
+            ...templateToUpdate, code:encodeCode
+          });
+          this.alertService.success("Renamed code template");
+        }
+        this.updateCodeTemplateEntries();
+        this.templateId = TemplateType.SHARED;
+      });
+
     }
   }
 
@@ -145,13 +168,4 @@ export class SharedCodeComponent implements OnInit {
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
   }
 
-  getCodeTemplateEntries(): { key: string; name: string, type: TemplateType }[] {
-    if (!this.codeTemplates) return [];
-    const entries = Object.entries(this.codeTemplates).map(([key, template]) => ({
-      key,
-      name: template.name,
-      type: template.type
-    }));
-    return entries;
-  }
 }

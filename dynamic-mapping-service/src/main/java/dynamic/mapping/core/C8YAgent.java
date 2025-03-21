@@ -814,7 +814,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    public MicroserviceCredentials removeAppKeyHeaderFromContext(MicroserviceCredentials context) {
+    public static MicroserviceCredentials removeAppKeyHeaderFromContext(MicroserviceCredentials context) {
         final MicroserviceCredentials clonedContext = new MicroserviceCredentials(
                 context.getTenant(),
                 context.getUsername(), context.getPassword(),

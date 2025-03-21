@@ -34,11 +34,11 @@ import { Subject } from 'rxjs';
 })
 export class ManageTemplateComponent implements OnInit, OnDestroy {
   @Input() action: string = 'CREATE';
+  @Input() name: string;
 
   closeSubject: Subject<string> = new Subject();
   labels: ModalLabels = { ok: 'Submit', cancel: 'Cancel' };
 
-  name: string = '';
   valid: boolean = false;
   title: string;
 
@@ -50,7 +50,7 @@ export class ManageTemplateComponent implements OnInit, OnDestroy {
   }
 
   onDismiss() {
-    this.closeSubject.next('CANCEL');
+    this.closeSubject.next(undefined);
     this.closeSubject.complete();
   }
 
