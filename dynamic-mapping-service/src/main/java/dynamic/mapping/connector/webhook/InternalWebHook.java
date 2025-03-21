@@ -99,8 +99,7 @@ public class InternalWebHook extends AConnectorClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
-        // this.baseUrl = "http://cumulocity:8111";
-        this.baseUrl = "http://localhost:8111";
+        this.baseUrl = "http://cumulocity:8111";
     }
 
     @Getter
