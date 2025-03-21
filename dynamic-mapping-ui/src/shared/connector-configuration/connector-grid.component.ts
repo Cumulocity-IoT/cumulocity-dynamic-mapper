@@ -258,7 +258,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   get shouldHideBulkActionsAndReadOnly(): boolean {
-    return this.selectable && this.readOnly;
+    //return this.selectable && this.readOnly;
+    return  this.readOnly;
   }
 
   // Helper methods for showing modals
