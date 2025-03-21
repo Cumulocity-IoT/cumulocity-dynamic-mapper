@@ -131,6 +131,7 @@ public class WebHook extends AConnectorClient {
         this.tenant = tenant;
 
         Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties().getOrDefault("cumulocityInternal", false);
+        log.info("Tenant {} - Connector {} - Cumulocity internal: {}", tenant, this.connectorName, cumulocityInternal);
         if(cumulocityInternal) {
             MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
             String user = String.format("%s/%s", tenant, msc.getUsername());
@@ -140,18 +141,18 @@ public class WebHook extends AConnectorClient {
                     new ConnectorProperty(null, true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
                             msc.getPassword(), null, null));
             getConnectorSpecification().getProperties().put("authentication",
-                    new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY, false, true, "Basic",
+                    new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true, "Basic",
                             null,null));
             getConnectorSpecification().getProperties().put("baseUrl",
-                    new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, false, true, "http://cumulocity:8111", null,
+                    new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true, "http://cumulocity:8111", null,
                             null));
             getConnectorSpecification().getProperties().put("headerAccept",
-                    new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY, false, true,
+                    new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY, true, true,
                             "application/json", null,
                             null));
             getConnectorSpecification().getProperties().put("baseUrlHealthEndpoint",
                     new ConnectorProperty("health endpoint for GET request", false, 6,
-                            ConnectorPropertyType.STRING_PROPERTY, false, true, "http://cumulocity:8111/application/currentApplication", null, null));
+                            ConnectorPropertyType.STRING_PROPERTY, true, true, "http://cumulocity:8111/application/currentApplication", null, null));
         }
     }
 
@@ -165,12 +166,6 @@ public class WebHook extends AConnectorClient {
         log.info("Tenant {} - Connector {} - Initialization of connector {} was successful!", tenant,
                 getConnectorType(),
                 getConnectorName());
-        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("cumulocityInternal", false);
-        if(cumulocityInternal) {
-            MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
-
-        }
         return true;
     }
 
