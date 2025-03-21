@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -93,6 +94,9 @@ public class WebHook extends AConnectorClient {
         configProps.put("baseUrlHealthEndpoint",
                 new ConnectorProperty("health endpoint for GET request", false, 6,
                         ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+        configProps.put("cumulocityInternal",
+                new ConnectorProperty(null, false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
+                        null));
         String name = "Webhook";
         String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
@@ -125,6 +129,30 @@ public class WebHook extends AConnectorClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
+
+        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties().getOrDefault("cumulocityInternal", false);
+        if(cumulocityInternal) {
+            MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
+            String user = String.format("%s/%s", tenant, msc.getUsername());
+            getConnectorSpecification().getProperties().put("user",
+                    new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true, user, null, null));
+            getConnectorSpecification().getProperties().put("password",
+                    new ConnectorProperty(null, true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
+                            msc.getPassword(), null, null));
+            getConnectorSpecification().getProperties().put("authentication",
+                    new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY, false, true, "Basic",
+                            null,null));
+            getConnectorSpecification().getProperties().put("baseUrl",
+                    new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, false, true, "http://cumulocity:8111", null,
+                            null));
+            getConnectorSpecification().getProperties().put("headerAccept",
+                    new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY, false, true,
+                            "application/json", null,
+                            null));
+            getConnectorSpecification().getProperties().put("baseUrlHealthEndpoint",
+                    new ConnectorProperty("health endpoint for GET request", false, 6,
+                            ConnectorPropertyType.STRING_PROPERTY, false, true, "http://cumulocity:8111/application/currentApplication", null, null));
+        }
     }
 
     protected RestClient webhookClient;
@@ -137,6 +165,12 @@ public class WebHook extends AConnectorClient {
         log.info("Tenant {} - Connector {} - Initialization of connector {} was successful!", tenant,
                 getConnectorType(),
                 getConnectorName());
+        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("cumulocityInternal", false);
+        if(cumulocityInternal) {
+            MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
+
+        }
         return true;
     }
 
@@ -264,15 +298,16 @@ public class WebHook extends AConnectorClient {
     }
 
     @Override
-    public boolean // The code appears to be a method or function named "isConfigValid" in Java. It
-                   // is
-            // likely used to check the validity of a configuration or settings. However,
-            // without the actual implementation of the method, it is not possible to
-            // determine
-            // the specific logic or criteria used to validate the configuration.
-            isConfigValid(ConnectorConfiguration configuration) {
+    public boolean isConfigValid(ConnectorConfiguration configuration) {
         if (configuration == null)
             return false;
+        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties().getOrDefault("cumulocityInternal", false);
+        if(cumulocityInternal) {
+            MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
+            if (msc == null || StringUtils.isEmpty(msc.getUsername()) || StringUtils.isEmpty(msc.getPassword())) {
+                return false;
+            }
+        }
         // if using authentication additional properties have to be set
         String authentication = (String) connectorConfiguration.getProperties().getOrDefault("authentication", null);
         String user = (String) connectorConfiguration.getProperties().get("user");
