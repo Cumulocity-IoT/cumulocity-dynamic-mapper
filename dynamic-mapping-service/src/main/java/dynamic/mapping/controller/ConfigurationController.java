@@ -37,6 +37,7 @@ import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
+import dynamic.mapping.connector.mqtt.MQTTCallback;
 import dynamic.mapping.core.*;
 
 import org.graalvm.polyglot.Context;
@@ -59,6 +60,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -69,6 +71,8 @@ import dynamic.mapping.model.Mapping;
 @RequestMapping("/configuration")
 @RestController
 public class ConfigurationController {
+
+    private final MQTTCallback MQTTCallback;
 
     @Autowired
     ConnectorRegistry connectorRegistry;
@@ -108,6 +112,10 @@ public class ConfigurationController {
 
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
+
+    ConfigurationController(MQTTCallback MQTTCallback) {
+        this.MQTTCallback = MQTTCallback;
+    }
 
     @GetMapping(value = "/feature", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
@@ -156,6 +164,13 @@ public class ConfigurationController {
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
+            if (configuration.connectorType.equals(ConnectorType.INTERNAL_WEB_HOOK)) {
+                UserCredentials contextCredentials = contextService.getContext();
+                String user = (String) contextCredentials.getUsername();
+                String password = (String) contextCredentials.getPassword();
+                configuration.getProperties().put("user", user);
+                configuration.getProperties().put("password", password);
+            }
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
@@ -430,7 +445,8 @@ public class ConfigurationController {
         try {
             result = codeTemplates.get(id);
             if (result.internal) {
-                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, "Deletion of internal templates not allowed");
+                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
+                        "Deletion of internal templates not allowed");
             }
 
             result = codeTemplates.remove(id);

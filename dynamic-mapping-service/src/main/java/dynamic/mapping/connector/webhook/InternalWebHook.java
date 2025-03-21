@@ -44,7 +44,6 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import jakarta.ws.rs.NotSupportedException;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -71,6 +70,13 @@ public class InternalWebHook extends AConnectorClient {
         String description = "InternalWebhook to send outbound messages to the Cumulocity APIs in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.INTERNAL_WEB_HOOK;
         supportsMessageContext = true;
+        configProps.put("user",
+                new ConnectorProperty(null, false, 2, ConnectorPropertyType.STRING_PROPERTY, false, true, null, null,
+                        null));
+        configProps.put("password",
+                new ConnectorProperty(null, false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, true,
+                        null,
+                        null, null));
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps,
                 supportsMessageContext,
                 supportedDirections());
@@ -136,13 +142,12 @@ public class InternalWebHook extends AConnectorClient {
                 "application/json");
 
         // MicroserviceCredentials contextCredentials = C8YAgent
-        //         .removeAppKeyHeaderFromContext(contextService.getContext());
+        // .removeAppKeyHeaderFromContext(contextService.getContext());
 
         // // MicroserviceCredentials contextCredentials = C8YAgent
-        // //        .removeAppKeyHeaderFromContext(c8yAgent.getContextService().getContext());
-        // String tenant = (String) contextCredentials.getTenant();
-        // String user = (String) contextCredentials.getUsername();
-        // String password = (String) contextCredentials.getPassword();
+        // // .removeAppKeyHeaderFromContext(c8yAgent.getContextService().getContext());
+        String user = (String) connectorConfiguration.getProperties().get("user");
+        String password = (String) connectorConfiguration.getProperties().get("password");
 
         // Create RestClient builder
         RestClient.Builder builder = RestClient.builder()
@@ -151,9 +156,10 @@ public class InternalWebHook extends AConnectorClient {
                 .defaultHeader("Accept", headerAccept);
 
         // Add authentication if specified
-        // String credentials = Base64.getEncoder()
-        //         .encodeToString((tenant + "/" + user + ":" + password).getBytes(StandardCharsets.UTF_8));
-        // builder.defaultHeader("Authorization", "Basic " + credentials);
+        String credentials = Base64.getEncoder()
+        .encodeToString((tenant + "/" + user + ":" +
+        password).getBytes(StandardCharsets.UTF_8));
+        builder.defaultHeader("Authorization", "Basic " + credentials);
 
         // Build the client
         webhookClient = builder.build();
