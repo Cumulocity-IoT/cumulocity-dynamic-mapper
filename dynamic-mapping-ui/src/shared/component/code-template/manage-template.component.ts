@@ -26,6 +26,7 @@ import {
 } from '@angular/core';
 import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
+import { CapitalizeCasePipe } from '../../../shared';
 
 @Component({
   selector: 'd11r-manage-template',
@@ -45,7 +46,9 @@ export class ManageTemplateComponent implements OnInit, OnDestroy {
   constructor() { }
 
   ngOnInit(): void {
-    this.title = this.action == "CREATE" ? 'Create code template' : 'Rename code template'
+    const capitalizePipe = new CapitalizeCasePipe();
+    const action = capitalizePipe.transform(this.action);
+    this.title = `${action} code template`;
     this.closeSubject = new Subject();
   }
 

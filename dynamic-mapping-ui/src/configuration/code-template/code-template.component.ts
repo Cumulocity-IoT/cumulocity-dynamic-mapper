@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import {
-  Component, OnDestroy,
+  Component,
   OnInit, ViewEncapsulation
 } from '@angular/core';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
@@ -28,7 +28,7 @@ import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { FormGroup } from '@angular/forms';
-import { ManageTemplateComponent } from '../../shared';
+import { ManageTemplateComponent, uuidCustom } from '../../shared';
 import { BehaviorSubject } from 'rxjs';
 
 let initializedMonaco = false;
@@ -152,6 +152,32 @@ export class SharedCodeComponent implements OnInit {
             ...templateToUpdate, code:encodeCode
           });
           this.alertService.success("Renamed code template");
+        }
+        this.updateCodeTemplateEntries();
+        this.templateId = TemplateType.SHARED;
+      });
+
+    }
+  }
+
+  async onCopyCodeTemplate() {
+    if (this.codeTemplateDecoded) {
+      const initialState = {
+        action: 'COPY',
+        name: this.codeTemplateDecoded.name
+      };
+      const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
+
+      modalRef.content.closeSubject.subscribe(async (name) => {
+        // console.log('Configuration after edit:', editedConfiguration);
+        if (name) {
+          this.codeTemplateDecoded.name = name;
+          const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
+          const templateToUpdate = this.codeTemplateDecoded;
+          this.sharedService.createCodeTemplate( {
+            ...templateToUpdate, code:encodeCode, id:  uuidCustom()
+          });
+          this.alertService.success("Copied code template");
         }
         this.updateCodeTemplateEntries();
         this.templateId = TemplateType.SHARED;

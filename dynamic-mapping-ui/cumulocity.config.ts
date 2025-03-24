@@ -33,7 +33,7 @@ export default {
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
-      class: 'c8y-dynamic-mapper'
+      class: 'c8y-icon-dynamic-mapper'
     },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
