@@ -21,11 +21,10 @@
 
 <c8y-title translate>Code Templates</c8y-title>
 <div class="card">
-  <!-- <div class="card-block" style="max-height: 400px; overflow: auto"> -->
   <div class="card-block">
     <c8y-form-group>
       <label translate>Code Templates</label>
-      <div class="c8y-select-wrapper" style="max-width: 300px; overflow: auto !important">
+      <div class="c8y-select-wrapper" style="max-width: 350px; overflow: auto !important">
         <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId" name="templateSelect" required>
           <option [ngValue]="null" disabled>Select template...</option>
           <option *ngFor="let item of codeTemplateEntries$ | async" [ngValue]="item.key">
