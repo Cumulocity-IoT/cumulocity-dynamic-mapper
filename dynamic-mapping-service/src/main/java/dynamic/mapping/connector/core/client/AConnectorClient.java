@@ -39,13 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -150,6 +144,7 @@ public abstract class AConnectorClient {
             .newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     private Future<?> initializeTask;
+    private Future<?> disconnectTask;
 
     // keeps track how many active mappings use this topic as mappingTopic:
     // structure < mappingTopic, numberMappings >
@@ -252,31 +247,34 @@ public abstract class AConnectorClient {
     public abstract void publishMEAO(ProcessingContext<?> context);
 
     // Core functionality methods
-    public void submitInitialize() {
+    public Future<?> submitInitialize() {
         if (initializeTask == null || initializeTask.isDone()) {
             log.debug("Tenant {} - Initializing...", tenant);
             initializeTask = virtThreadPool.submit(this::initialize);
         }
+        return initializeTask;
     }
 
-    public void submitConnect() {
+    public Future<?> submitConnect() {
         loadConfiguration();
         if (connectTask == null || connectTask.isDone()) {
             log.debug("Tenant {} - Connecting...", tenant);
             connectTask = virtThreadPool.submit(this::connect);
         }
+        return connectTask;
     }
 
-    public void submitDisconnect() {
+    public Future<?> submitDisconnect() {
         loadConfiguration();
-        if (connectTask == null || connectTask.isDone()) {
-            log.debug("Tenant {} - Disconnecting...", tenant);
-            connectTask = virtThreadPool.submit(this::disconnect);
-        } else {
+        if(connectTask != null && (!connectTask.isDone() || !connectTask.isCancelled())) {
             connectTask.cancel(true);
-            log.debug("Tenant {} - Disconnecting...", tenant);
-            connectTask = virtThreadPool.submit(this::disconnect);
         }
+
+        if (disconnectTask == null || disconnectTask.isDone()) {
+            log.debug("Tenant {} - Disconnecting...", tenant);
+            disconnectTask = virtThreadPool.submit(this::disconnect);
+        }
+        return disconnectTask;
     }
 
     public void submitHousekeeping() {
@@ -606,8 +604,9 @@ public abstract class AConnectorClient {
                 entry("date", date));
     }
 
-    public void connectionLost(String closeMessage, Throwable closeException) {
+    public void connectionLost(String closeMessage, Throwable closeException) throws InterruptedException {
         logConnectionLost(closeMessage, closeException);
+        Thread.sleep(WAIT_PERIOD_MS);
         reconnect();
     }
 
@@ -627,10 +626,17 @@ public abstract class AConnectorClient {
         }
     }
 
-    public void reconnect() {
-        disconnect();
-        submitInitialize();
-        submitConnect();
+    public Future<?> reconnect() {
+        try {
+            //Blocking to wait for disconnect
+            submitDisconnect().get();
+            //Blocking to wait for initialization
+            submitInitialize().get();
+            return submitConnect();
+        } catch (Exception e) {
+            log.error("Tenant {} - Error during reconnect: ", tenant, e);
+        }
+        return null;
     }
 
     /**

@@ -23,13 +23,11 @@ package dynamic.mapping.core;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -169,9 +167,20 @@ public class BootstrapService {
         ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
         initializeCache(tenant, serviceConfig);
         initializeTimeZoneAndMappings(tenant);
-        initializeConnectors(tenant, serviceConfig);
-        initializeGraalsEngine(tenant);
-
+        //Wait for ALL connectors are successfully connected before handling Outbound Mappings
+        List<Future<?>> connectorTasks = initializeConnectors(tenant, serviceConfig);
+        if(connectorTasks != null) {
+            connectorTasks.forEach(connectorTask -> {
+                try {
+                    connectorTask.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    log.error("Tenant {} - Error initializing connector: {}", tenant, e.getMessage());
+                }
+            });
+        }
+        virtThreadPool.submit(() -> {
+            initializeGraalsEngine(tenant);
+        });
         handleOutboundMapping(tenant, serviceConfig);
     }
 
@@ -239,14 +248,15 @@ public class BootstrapService {
         mappingComponent.rebuildMappingInboundCache(tenant);
     }
 
-    private void initializeConnectors(String tenant, ServiceConfiguration serviceConfig) {
+    private List<Future<?>> initializeConnectors(String tenant, ServiceConfiguration serviceConfig) {
         try {
             initializeConnectorRegistry(tenant);
             registerDefaultConnectors();
-            setupConnectorConfigurations(tenant, serviceConfig);
+            return setupConnectorConfigurations(tenant, serviceConfig);
         } catch (Exception e) {
             log.error("Tenant {} - Error initializing connectors: {}", tenant, e.getMessage());
         }
+        return null;
     }
 
     private void initializeConnectorRegistry(String tenant) {
@@ -266,15 +276,18 @@ public class BootstrapService {
         connectorRegistry.registerConnector(ConnectorType.HTTP, initialHttpClient.getConnectorSpecification());
     }
 
-    private void setupConnectorConfigurations(String tenant, ServiceConfiguration serviceConfig)
-            throws ConnectorRegistryException, ConnectorException {
+    private List<Future<?>> setupConnectorConfigurations(String tenant, ServiceConfiguration serviceConfig)
+            throws ConnectorRegistryException, ConnectorException, ExecutionException, InterruptedException {
         List<ConnectorConfiguration> connectorConfigs = connectorConfigurationComponent
                 .getConnectorConfigurations(tenant);
 
         ConnectorConfiguration httpConfig = null;
-
+        List<Future<?>> connectTasks = new ArrayList<>();
         for (ConnectorConfiguration config : connectorConfigs) {
-            initializeConnectorByConfiguration(config, serviceConfig, tenant);
+            Future<?> connectTask = initializeConnectorByConfiguration(config, serviceConfig, tenant);
+            if(connectTask != null)
+                connectTasks.add(connectTask);
+
             if (ConnectorType.HTTP.equals(config.connectorType)) {
                 httpConfig = config;
             }
@@ -283,6 +296,7 @@ public class BootstrapService {
         if (httpConfig == null) {
             createAndInitializeDefaultHttpConnector(tenant, serviceConfig);
         }
+        return connectTasks;
     }
 
     private void createAndInitializeDefaultHttpConnector(String tenant, ServiceConfiguration serviceConfig)
@@ -351,10 +365,11 @@ public class BootstrapService {
         }
     }
 
-    public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
-            ServiceConfiguration serviceConfiguration, String tenant)
+    public Future<?> initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
+                                                              ServiceConfiguration serviceConfiguration, String tenant)
             throws ConnectorRegistryException, ConnectorException {
         AConnectorClient connectorClient = null;
+        Future<?> future = null;
         if (connectorConfiguration.isEnabled()) {
             try {
                 connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
@@ -370,11 +385,12 @@ public class BootstrapService {
                     connectorClient);
             configurationRegistry.initializePayloadProcessorsInbound(tenant);
             connectorClient.setDispatcher(dispatcherInbound);
-            connectorClient.reconnect();
+            //Connection is done async, future is returned to wait for the connection if needed
+            future = connectorClient.reconnect();
             connectorClient.submitHousekeeping();
             initializeOutboundMapping(tenant, serviceConfiguration, connectorClient);
         }
-        return connectorClient;
+        return future;
     }
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,

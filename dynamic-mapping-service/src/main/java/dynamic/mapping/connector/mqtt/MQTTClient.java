@@ -292,9 +292,13 @@ public class MQTTClient extends AConnectorClient {
                     // test if we closed the connection deliberately, otherwise we have to try to
                     // reconnect
                     connectionState.setFalse();
-                    if (connectorConfiguration.enabled)
-                        connectionLost(
-                                "Disconnected from: " + context.getSource().toString(), context.getCause());
+                    if (connectorConfiguration.enabled) {
+                        try {
+                            connectionLost("Disconnected from "+ context.getSource().toString(), context.getCause());
+                        } catch (InterruptedException e) {
+                            return;
+                        }
+                    }
                 })
                 .addConnectedListener(connext -> {
                     connectionState.setTrue();
@@ -327,9 +331,13 @@ public class MQTTClient extends AConnectorClient {
         // stay in the loop until successful
         boolean successful = false;
         while (!successful) {
+            if (Thread.currentThread().isInterrupted())
+                return;
             loadConfiguration();
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
+                if (Thread.currentThread().isInterrupted())
+                    return;
                 log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
                         getConnectorName(),
                         shouldConnect(), configuredUrl);
@@ -337,8 +345,7 @@ public class MQTTClient extends AConnectorClient {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
                     } catch (InterruptedException e) {
-                        // ignore errorMessage
-                        // log.error("Tenant {} - Error on reconnect: {}", tenant, e.getMessage());
+                        return;
                     }
                 }
                 try {
@@ -363,6 +370,8 @@ public class MQTTClient extends AConnectorClient {
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
+                    if(e instanceof InterruptedException || e instanceof RuntimeException)
+                        return;
                     log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
                             mqttClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
                             mqttClient.getState().isConnected());

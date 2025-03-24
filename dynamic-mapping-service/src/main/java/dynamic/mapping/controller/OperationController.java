@@ -24,6 +24,9 @@ package dynamic.mapping.controller;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import jakarta.validation.Valid;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
@@ -249,11 +252,20 @@ public class OperationController {
 
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent
                 .getServiceConfiguration(tenant);
-        bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
-        configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 
-        AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-        client.submitConnect();
+        Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
+        AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+                connectorIdentifier);
+        //Wait until client is connected before subscribing - otherwise "old" notification messages will be ignored
+        if(client.supportedDirections().contains(Direction.OUTBOUND)) {
+            try {
+                connectTask.get(10, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                log.error("Tenant {} - Error waiting for client to connect: {}", tenant, e.getMessage());
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            }
+            configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

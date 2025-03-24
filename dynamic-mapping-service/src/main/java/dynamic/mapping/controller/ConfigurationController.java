@@ -370,7 +370,7 @@ public class ConfigurationController {
                 List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
                         .getConnectorConfigurations(tenant);
                 for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                    bootstrapService.initializeConnectorByConfiguration(connectorConfiguration, configuration, tenant);
+                    bootstrapService.initializeConnectorByConfiguration(connectorConfiguration, configuration, tenant).get();
                 }
                 configurationRegistry.getNotificationSubscriber().initDeviceClient();
             }
