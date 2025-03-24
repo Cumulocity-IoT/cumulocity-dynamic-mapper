@@ -27,5 +27,4 @@ public enum ConnectorType {
     KAFKA,
     HTTP,
     WEB_HOOK,
-    INTERNAL_WEB_HOOK,
 }

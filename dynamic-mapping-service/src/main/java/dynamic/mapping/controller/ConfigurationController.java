@@ -158,13 +158,13 @@ public class ConfigurationController {
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
-            if (configuration.connectorType.equals(ConnectorType.INTERNAL_WEB_HOOK)) {
-                UserCredentials contextCredentials = contextService.getContext();
-                String user = (String) contextCredentials.getUsername();
-                String password = (String) contextCredentials.getPassword();
-                configuration.getProperties().put("user", user);
-                configuration.getProperties().put("password", password);
-            }
+            // if (configuration.connectorType.equals(ConnectorType.INTERNAL_WEB_HOOK)) {
+            //     UserCredentials contextCredentials = contextService.getContext();
+            //     String user = (String) contextCredentials.getUsername();
+            //     String password = (String) contextCredentials.getPassword();
+            //     configuration.getProperties().put("user", user);
+            //     configuration.getProperties().put("password", password);
+            // }
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {

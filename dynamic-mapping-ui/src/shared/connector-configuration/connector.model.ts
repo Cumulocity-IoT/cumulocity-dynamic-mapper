@@ -39,7 +39,6 @@ export enum ConnectorType {
   KAFKA = 'KAFKA',
   HTTP = 'HTTP',
   WEB_HOOK = 'WEB_HOOK',
-  INTERNAL_WEB_HOOK = 'WEB_HOOINTERNAL_WEB_HOOKK',
 }
 
 export interface ConnectorPropertyCondition {

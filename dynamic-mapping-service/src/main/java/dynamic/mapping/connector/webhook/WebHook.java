@@ -68,15 +68,18 @@ public class WebHook extends AConnectorClient {
                 new String[] { "Basic" });
         ConnectorPropertyCondition bearerAuthenticationCondition = new ConnectorPropertyCondition("authentication",
                 new String[] { "Bearer" });
+        ConnectorPropertyCondition cumulocityInternal = new ConnectorPropertyCondition("cumulocityInternal",
+                new String[] { "false" });
+
         configProps.put("baseUrl",
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
-                        null));
+                        cumulocityInternal));
         configProps.put("authentication",
                 new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, null,
                         Map.ofEntries(
                                 new AbstractMap.SimpleEntry<String, String>("Basic", "Basic"),
                                 new AbstractMap.SimpleEntry<String, String>("Bearer", "Bearer")),
-                        null));
+                        cumulocityInternal));
         configProps.put("user",
                 new ConnectorProperty(null, false, 2, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         basicAuthenticationCondition));
@@ -90,10 +93,10 @@ public class WebHook extends AConnectorClient {
         configProps.put("headerAccept",
                 new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         "application/json", null,
-                        null));
+                        cumulocityInternal));
         configProps.put("baseUrlHealthEndpoint",
                 new ConnectorProperty("health endpoint for GET request", false, 6,
-                        ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, null));
+                        ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, cumulocityInternal));
         configProps.put("cumulocityInternal",
                 new ConnectorProperty(null, false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
                         null));
@@ -130,29 +133,38 @@ public class WebHook extends AConnectorClient {
         this.dispatcher = dispatcher;
         this.tenant = tenant;
 
-        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties().getOrDefault("cumulocityInternal", false);
+        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties().getOrDefault("cumulocityInternal",
+                false);
         log.info("Tenant {} - Connector {} - Cumulocity internal: {}", tenant, this.connectorName, cumulocityInternal);
-        if(cumulocityInternal) {
+        if (cumulocityInternal) {
             MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
             String user = String.format("%s/%s", tenant, msc.getUsername());
             getConnectorSpecification().getProperties().put("user",
-                    new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true, user, null, null));
+                    new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true, user, null,
+                            null));
             getConnectorSpecification().getProperties().put("password",
                     new ConnectorProperty(null, true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
                             msc.getPassword(), null, null));
             getConnectorSpecification().getProperties().put("authentication",
                     new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true, "Basic",
-                            null,null));
+                            null, null));
             getConnectorSpecification().getProperties().put("baseUrl",
-                    new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true, "http://cumulocity:8111", null,
+                    new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
+                            "http://cumulocity:8111", null,
                             null));
             getConnectorSpecification().getProperties().put("headerAccept",
                     new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY, true, true,
                             "application/json", null,
                             null));
+            // getConnectorSpecification().getProperties().put("baseUrlHealthEndpoint",
+            // new ConnectorProperty("health endpoint for GET request", false, 6,
+            // ConnectorPropertyType.STRING_PROPERTY, true, true,
+            // "http://cumulocity:8111/application/currentApplication", null, null));
+
             getConnectorSpecification().getProperties().put("baseUrlHealthEndpoint",
                     new ConnectorProperty("health endpoint for GET request", false, 6,
-                            ConnectorPropertyType.STRING_PROPERTY, true, true, "http://cumulocity:8111/application/currentApplication", null, null));
+                            ConnectorPropertyType.STRING_PROPERTY, true, true,
+                            null, null, null));
         }
     }
 
@@ -296,8 +308,9 @@ public class WebHook extends AConnectorClient {
     public boolean isConfigValid(ConnectorConfiguration configuration) {
         if (configuration == null)
             return false;
-        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties().getOrDefault("cumulocityInternal", false);
-        if(cumulocityInternal) {
+        Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties().getOrDefault("cumulocityInternal",
+                false);
+        if (cumulocityInternal) {
             MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
             if (msc == null || StringUtils.isEmpty(msc.getUsername()) || StringUtils.isEmpty(msc.getPassword())) {
                 return false;

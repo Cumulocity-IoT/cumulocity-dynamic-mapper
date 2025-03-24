@@ -43,7 +43,6 @@ import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
-import dynamic.mapping.connector.webhook.InternalWebHook;
 import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
@@ -192,12 +191,6 @@ public class ConfigurationRegistry {
                     additionalSubscriptionIdTest, tenant);
             log.info("Tenant {} - Initializing WebHook Connector with identifier {}", tenant,
                     connectorConfiguration.getIdentifier());
-        } else if (ConnectorType.INTERNAL_WEB_HOOK.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new InternalWebHook(this, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
-            log.info("Tenant {} - Initializing InternalWebHook Connector with identifier {}", tenant,
-                    connectorConfiguration.getIdentifier());
         }
         return connectorClient;
     }
@@ -249,7 +242,6 @@ public class ConfigurationRegistry {
     public Engine getGraalsEngine(String tenant) {
         return this.getGraalsEngines().get(tenant);
     }
-
 
     public void deleteGraalsEngine(String tenant) {
         this.getGraalsEngines().remove(tenant);

@@ -59,7 +59,6 @@ import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
-import dynamic.mapping.connector.webhook.InternalWebHook;
 import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.MappingServiceRepresentation;
@@ -262,7 +261,6 @@ public class BootstrapService {
                 new MQTTServiceClient().getConnectorSpecification());
         connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
         connectorRegistry.registerConnector(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
-        connectorRegistry.registerConnector(ConnectorType.INTERNAL_WEB_HOOK, new InternalWebHook().getConnectorSpecification());
 
         HttpClient initialHttpClient = new HttpClient();
         connectorRegistry.registerConnector(ConnectorType.HTTP, initialHttpClient.getConnectorSpecification());
