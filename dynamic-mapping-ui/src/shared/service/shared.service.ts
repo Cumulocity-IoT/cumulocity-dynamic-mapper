@@ -208,4 +208,18 @@ export class SharedService {
     );
     return response;
   }
+
+  async createCodeTemplate(codeTemplate: CodeTemplate) {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(codeTemplate),
+        method: 'POST'
+      }
+    );
+    return response;
+  }
 }

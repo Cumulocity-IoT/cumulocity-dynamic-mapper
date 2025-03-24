@@ -33,8 +33,11 @@ export default {
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
-      class: 'c8y-dynamic-mapper'
+      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_03.png)'
     },
+    // icon: {
+    //   class: 'c8y-icon-dynamic-mapper'
+    // },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
       "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
@@ -94,6 +97,10 @@ export default {
       {
         from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.svg',
         to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
+      },
+      {
+        from: '../resources/image/DM_App-Icon_03.png',
+        to: 'image/DM_App-Icon_03.png'
       },
       {
         from: '../resources/image/ConnectorMatrix.png',

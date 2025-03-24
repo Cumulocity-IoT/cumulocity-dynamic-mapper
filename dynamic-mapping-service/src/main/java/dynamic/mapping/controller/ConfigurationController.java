@@ -37,7 +37,6 @@ import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
-import dynamic.mapping.connector.mqtt.MQTTCallback;
 import dynamic.mapping.core.*;
 
 import org.graalvm.polyglot.Context;
@@ -60,7 +59,6 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
-import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -159,11 +157,11 @@ public class ConfigurationController {
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             // if (configuration.connectorType.equals(ConnectorType.INTERNAL_WEB_HOOK)) {
-            //     UserCredentials contextCredentials = contextService.getContext();
-            //     String user = (String) contextCredentials.getUsername();
-            //     String password = (String) contextCredentials.getPassword();
-            //     configuration.getProperties().put("user", user);
-            //     configuration.getProperties().put("password", password);
+            // UserCredentials contextCredentials = contextService.getContext();
+            // String user = (String) contextCredentials.getUsername();
+            // String password = (String) contextCredentials.getPassword();
+            // configuration.getProperties().put("user", user);
+            // configuration.getProperties().put("password", password);
             // }
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -494,10 +492,39 @@ public class ConfigurationController {
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
-            log.debug("Tenant {} - Get shared code", tenant);
+            log.debug("Tenant {} - Updated code template", tenant);
         } catch (Exception ex) {
             log.error("Tenant {} - Error updating code template {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        } finally {
+            if (graalsContext != null) {
+                graalsContext.close();
+            }
+        }
+        return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
+    }
+
+    @PostMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HttpStatus> createCodeTemplate(
+            @Valid @RequestBody CodeTemplate codeTemplate) {
+        String tenant = contextService.getContext().getTenant();
+        Context graalsContext = null;
+        try {
+            ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+            Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
+            if (codeTemplates.containsKey(codeTemplate.id)) {
+                throw new Exception(String.format("Template with id %s already exists", codeTemplate.id));
+            }
+            codeTemplates.put(codeTemplate.id, codeTemplate);
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            log.debug("Tenant {} - Create code template", tenant);
+        } catch (JsonProcessingException ex) {
+            log.error("Tenant {} - Error updating code template {}", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        } catch (Exception ex) {
+            log.error("Tenant {} - Error updating code template {}", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
         } finally {
             if (graalsContext != null) {
                 graalsContext.close();

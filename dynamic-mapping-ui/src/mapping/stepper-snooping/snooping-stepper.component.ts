@@ -89,12 +89,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   }
 
 
-  private cleanup(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.isButtonDisabled$.complete();
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   deploymentMapEntryChange(e) {
     this.isButtonDisabled$.next(
