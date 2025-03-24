@@ -48,8 +48,8 @@ export class SharedCodeComponent implements OnInit {
   isLoading = true;
   errorMessage = '';
   TemplateType = TemplateType;
-  codeTemplateEntries: { key: string; name: string, type: TemplateType }[] = [];
-  codeTemplateEntries$: BehaviorSubject<{ key: string; name: string, type: TemplateType }[]> = new BehaviorSubject<{ key: string; name: string, type: TemplateType }[]> ([]) ;
+  codeTemplateEntries: { key: string; name: string, type: TemplateType, internal: boolean }[] = [];
+  codeTemplateEntries$: BehaviorSubject<{ key: string; name: string, type: TemplateType,  internal: boolean }[]> = new BehaviorSubject<{ key: string; name: string, type: TemplateType, internal: boolean }[]> ([]) ;
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -108,7 +108,8 @@ export class SharedCodeComponent implements OnInit {
     this.codeTemplateEntries = Object.entries(this.codeTemplates).map(([key, template]) => ({
       key,
       name: template.name,
-      type: template.type
+      type: template.type,
+      internal: template.internal
     }));
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
   }
