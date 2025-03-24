@@ -272,6 +272,10 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             log.debug("Tenant {} - Disconnecting...", tenant);
             connectTask = virtThreadPool.submit(this::disconnect);
+        } else {
+            connectTask.cancel(true);
+            log.debug("Tenant {} - Disconnecting...", tenant);
+            connectTask = virtThreadPool.submit(this::disconnect);
         }
     }
 

@@ -164,7 +164,7 @@ public class WebHook extends AConnectorClient {
             getConnectorSpecification().getProperties().put("baseUrlHealthEndpoint",
                     new ConnectorProperty("health endpoint for GET request", false, 6,
                             ConnectorPropertyType.STRING_PROPERTY, true, true,
-                            null, null, null));
+                            "http://cumulocity:8111/notification2", null, null));
         }
     }
 
@@ -240,7 +240,7 @@ public class WebHook extends AConnectorClient {
                 }
                 try {
                     if (!StringUtils.isEmpty(baseUrlHealthEndpoint)) {
-                        checkHealth(baseUrlHealthEndpoint);
+                        checkHealth();
                     }
 
                     connectionState.setTrue();
@@ -280,8 +280,11 @@ public class WebHook extends AConnectorClient {
         }
     }
 
-    public ResponseEntity<String> checkHealth(String baseUrlHealthEndpoint) {
+    public ResponseEntity<String> checkHealth() {
         try {
+            String baseUrlHealthEndpoint = (String) connectorConfiguration.getProperties()
+                    .getOrDefault("baseUrlHealthEndpoint", null);
+            log.info("Tenant {} - Checking health of webHook endpoint {}", tenant, baseUrlHealthEndpoint);
             return webhookClient.get()
                     .uri(baseUrlHealthEndpoint) // Use the full health endpoint URL
                     .retrieve()
@@ -295,7 +298,7 @@ public class WebHook extends AConnectorClient {
                     })
                     .toEntity(String.class);
         } catch (Exception e) {
-            log.error("Health check failed: ", e);
+            log.error("Tenant {} - Health check failed: ", tenant, e);
             throw e;
         }
     }

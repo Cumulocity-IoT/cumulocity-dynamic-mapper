@@ -144,7 +144,8 @@ public class ConnectorRegistry {
                 AConnectorClient client = connectorMap.get(identifier);
                 // to avoid memory leaks
                 client.setDispatcher(null);
-                client.disconnect();
+                client.submitDisconnect();
+                //client.disconnect();
                 client.stopHousekeepingAndClose();
 
                 // store last connector status for monitoring
