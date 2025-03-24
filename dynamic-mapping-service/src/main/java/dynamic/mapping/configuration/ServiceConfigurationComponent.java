@@ -55,6 +55,10 @@ public class ServiceConfigurationComponent {
     @Value("${APP.template.code.outbound_01}")
     private String outboundCodeTemplate_01;
 
+
+    @Value("${APP.template.code.outbound_02}")
+    private String outboundCodeTemplate_02;
+
     @Value("${APP.template.code.shared}")
     private String sharedCodeTemplate;
 
@@ -88,6 +92,7 @@ public class ServiceConfigurationComponent {
         codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(INBOUND_CODE_TEMPLATE,"Default Inbound Template",TemplateType.INBOUND, inboundCodeTemplate_01, true));
         codeTemplates.put(INBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(uuidCustom(),"Inbound Template, multiple meas",TemplateType.INBOUND, inboundCodeTemplate_02, true));
         codeTemplates.put(OUTBOUND_CODE_TEMPLATE, new CodeTemplate(OUTBOUND_CODE_TEMPLATE,"Default Outbound Template", TemplateType.OUTBOUND, outboundCodeTemplate_01, true ));
+        codeTemplates.put(OUTBOUND_CODE_TEMPLATE+ "_02", new CodeTemplate(OUTBOUND_CODE_TEMPLATE,"Outbound Template, Cumulocity internal", TemplateType.OUTBOUND, outboundCodeTemplate_02, true ));
         codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(SHARED_CODE_TEMPLATE,"Shared Code", TemplateType.SHARED,sharedCodeTemplate, true));
         configuration.setCodeTemplates(codeTemplates);
     }
