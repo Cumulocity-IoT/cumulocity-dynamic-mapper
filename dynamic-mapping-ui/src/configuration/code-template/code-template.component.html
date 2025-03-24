@@ -57,16 +57,16 @@
   </div>
   <div class="card-footer">
     <div class="form-group">
-      <button type="button" name="update" class="btn btn-primary" (click)="onSaveCodeTemplate()" translate>
+      <button type="button" name="save" class="btn btn-primary" (click)="onSaveCodeTemplate()" translate>
         Save
       </button>
-      <button type="button" name="update" class="btn btn-primary" (click)="onCopyCodeTemplate()" translate>
-        Copy
+      <button type="button" name="add" class="btn btn-primary" (click)="onAddCodeTemplate()" translate>
+        Add
       </button>
-      <button type="button" name="update" class="btn btn-primary" (click)="onDeleteCodeTemplate()"  [disabled]="codeTemplateDecoded?.internal" translate>
+      <button type="button" name="delete" class="btn btn-primary" (click)="onDeleteCodeTemplate()"  [disabled]="codeTemplateDecoded?.internal" translate>
         Delete
       </button>
-      <button type="button" name="update" class="btn btn-primary" (click)="onRenameCodeTemplate()"  [disabled]="codeTemplateDecoded?.internal" translate>
+      <button type="button" name="rename" class="btn btn-primary" (click)="onRenameCodeTemplate()"  [disabled]="codeTemplateDecoded?.internal" translate>
         Rename
       </button>
     </div>

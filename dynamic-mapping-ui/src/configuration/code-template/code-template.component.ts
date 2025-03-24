@@ -165,7 +165,7 @@ export class SharedCodeComponent implements OnInit {
     }
   }
 
-  async onCopyCodeTemplate() {
+  async onAddCodeTemplate() {
     if (this.codeTemplateDecoded) {
       const initialState = {
         action: 'COPY',

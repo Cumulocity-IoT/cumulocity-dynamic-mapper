@@ -75,7 +75,7 @@
   <div class="bottom-drawer">
     <d11r-mapping-stepper *ngIf="showConfigMapping" (cancel)="showConfigMapping = false"
       (commit)="onCommitMapping($event)" [mapping]="mappingToUpdate" [stepperConfiguration]="stepperConfiguration"
-      [(deploymentMapEntry)]="deploymentMapEntry">
+      [deploymentMapEntry]="deploymentMapEntry">
     </d11r-mapping-stepper>
   </div>
 </div>
@@ -84,7 +84,7 @@
   <div class="bottom-drawer">
     <d11r-snooping-stepper *ngIf="showSnoopingMapping" (cancel)="showSnoopingMapping = false"
       (commit)="onCommitMapping($event)" [mapping]="mappingToUpdate" [stepperConfiguration]="stepperConfiguration"
-      [(deploymentMapEntry)]="deploymentMapEntry">
+      [deploymentMapEntry]="deploymentMapEntry">
     </d11r-snooping-stepper>
   </div>
 </div>
