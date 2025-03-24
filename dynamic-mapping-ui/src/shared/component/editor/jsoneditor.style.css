@@ -55,6 +55,10 @@ body .jse-main {
   overflow: auto;
 }
 
+.jse-json-node.jse-selected > .jse-contents-outer > .jse-contents {
+  background-color: #ffe391;
+}
+
 .jse-main-large {
   height: 600px;
   overflow: auto;
