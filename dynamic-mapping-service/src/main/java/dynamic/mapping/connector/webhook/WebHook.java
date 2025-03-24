@@ -98,7 +98,7 @@ public class WebHook extends AConnectorClient {
                 new ConnectorProperty("health endpoint for GET request", false, 6,
                         ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, cumulocityInternal));
         configProps.put("cumulocityInternal",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
+                new ConnectorProperty("When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.", false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
                         null));
         String name = "Webhook";
         String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
