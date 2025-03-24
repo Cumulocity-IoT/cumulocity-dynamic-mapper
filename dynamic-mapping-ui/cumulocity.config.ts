@@ -33,7 +33,7 @@ export default {
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
-      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_03.png)'
+      class: 'c8y-dynamic-mapper'
     },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
@@ -82,10 +82,6 @@ export default {
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif'
-      },
-      {
-        from: '../resources/image/DM_App-Icon_03.png',
-        to: 'image/DM_App-Icon_03.png'
       },
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Process.png',
