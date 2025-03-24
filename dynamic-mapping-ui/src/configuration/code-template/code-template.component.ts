@@ -89,6 +89,11 @@ export class SharedCodeComponent implements OnInit {
     console.log("CodeTemplateEntries after init:", this.codeTemplateEntries);
   }
 
+  refresh() {
+    this.updateCodeTemplateEntries(); // Call this after setting codeTemplates
+
+  }
+
   async ngAfterViewInit(): Promise<void> {
     if (!initializedMonaco) {
       const monaco = await loadMonacoEditor();
@@ -175,7 +180,7 @@ export class SharedCodeComponent implements OnInit {
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
           this.sharedService.createCodeTemplate( {
-            ...templateToUpdate, code:encodeCode, id:  uuidCustom()
+            ...templateToUpdate, code:encodeCode, id:  uuidCustom(), internal:false
           });
           this.alertService.success("Copied code template");
         }
