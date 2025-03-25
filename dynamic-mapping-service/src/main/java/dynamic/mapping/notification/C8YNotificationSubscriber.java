@@ -413,6 +413,7 @@ public class C8YNotificationSubscriber {
 						API api = API.fromString(
 								notificationSubscriptionRepresentation.getSubscriptionFilter().getApis().get(0));
 						c8yNotificationSubscription.setApi(api);
+                        c8yNotificationSubscription.setSubscriptionName(notificationSubscriptionRepresentation.getSubscription());
 					}
 				}
 			}

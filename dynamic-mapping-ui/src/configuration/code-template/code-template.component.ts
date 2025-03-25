@@ -49,7 +49,7 @@ export class SharedCodeComponent implements OnInit {
   errorMessage = '';
   TemplateType = TemplateType;
   codeTemplateEntries: { key: string; name: string, type: TemplateType, internal: boolean }[] = [];
-  codeTemplateEntries$: BehaviorSubject<{ key: string; name: string, type: TemplateType,  internal: boolean }[]> = new BehaviorSubject<{ key: string; name: string, type: TemplateType, internal: boolean }[]> ([]) ;
+  codeTemplateEntries$: BehaviorSubject<{ key: string; name: string, type: TemplateType, internal: boolean }[]> = new BehaviorSubject<{ key: string; name: string, type: TemplateType, internal: boolean }[]>([]);
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -66,25 +66,7 @@ export class SharedCodeComponent implements OnInit {
   ) { }
 
   async ngOnInit(): Promise<void> {
-    this.codeTemplates = await this.sharedService.getCodeTemplates();
-    this.updateCodeTemplateEntries(); // Call this after setting codeTemplates
-
-    this.codeTemplatesDecoded = new Map<string, CodeTemplate>();
-    // Iterate and decode
-    Object.entries(this.codeTemplates).forEach(([key, template]) => {
-      try {
-        const decodedCode = base64ToString(template.code);
-        this.codeTemplatesDecoded.set(key, {
-          id: key, name: template.name,
-          type: template.type, code: decodedCode, internal: template.internal
-        });
-      } catch (error) {
-        this.codeTemplatesDecoded.set(key, {
-          id: key, name: template.name,
-          type: template.type, code: "// Code Template not valid!", internal: template.internal
-        });
-      }
-    });
+    await this.updateCodeTemplateEntries(); // Call this after setting codeTemplates
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
     console.log("CodeTemplateEntries after init:", this.codeTemplateEntries);
   }
@@ -104,11 +86,6 @@ export class SharedCodeComponent implements OnInit {
   }
 
   async updateCodeTemplateEntries(): Promise<void> {
-    if (!this.codeTemplates) {
-      this.codeTemplateEntries = [];
-      return;
-    }
-
     this.codeTemplates = await this.sharedService.getCodeTemplates();
     this.codeTemplateEntries = Object.entries(this.codeTemplates).map(([key, template]) => ({
       key,
@@ -117,13 +94,28 @@ export class SharedCodeComponent implements OnInit {
       internal: template.internal
     }));
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
+    // Iterate and decode
+    Object.entries(this.codeTemplates).forEach(([key, template]) => {
+      try {
+        const decodedCode = base64ToString(template.code);
+        this.codeTemplatesDecoded.set(key, {
+          id: key, name: template.name,
+          type: template.type, code: decodedCode, internal: template.internal
+        });
+      } catch (error) {
+        this.codeTemplatesDecoded.set(key, {
+          id: key, name: template.name,
+          type: template.type, code: "// Code Template not valid!", internal: template.internal
+        });
+      }
+    });
   }
 
   async onSaveCodeTemplate() {
     if (this.codeTemplateDecoded) {
       const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
       const templateToUpdate = this.codeTemplateDecoded;
-      this.sharedService.updateCodeTemplate(this.templateId, {
+      await this.sharedService.updateCodeTemplate(this.templateId, {
         ...templateToUpdate, code: encodeCode
       });
       this.alertService.success("Saved code template");
@@ -136,6 +128,7 @@ export class SharedCodeComponent implements OnInit {
       this.sharedService.deleteCodeTemplate(this.templateId);
       this.alertService.success("Deleted code template");
       this.updateCodeTemplateEntries();
+      this.templateId = TemplateType.SHARED;
     }
   }
 
@@ -153,8 +146,8 @@ export class SharedCodeComponent implements OnInit {
           this.codeTemplateDecoded.name = name;
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
-          this.sharedService.updateCodeTemplate(this.templateId, {
-            ...templateToUpdate, code:encodeCode
+          await this.sharedService.updateCodeTemplate(this.templateId, {
+            ...templateToUpdate, code: encodeCode
           });
           this.alertService.success("Renamed code template");
         }
@@ -179,8 +172,8 @@ export class SharedCodeComponent implements OnInit {
           this.codeTemplateDecoded.name = name;
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
-          this.sharedService.createCodeTemplate( {
-            ...templateToUpdate, code:encodeCode, id:  uuidCustom(), internal:false
+          await this.sharedService.createCodeTemplate({
+            ...templateToUpdate, code: encodeCode, id: uuidCustom(), internal: false
           });
           this.alertService.success("Copied code template");
         }
