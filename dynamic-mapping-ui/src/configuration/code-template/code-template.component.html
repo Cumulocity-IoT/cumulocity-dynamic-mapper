@@ -21,12 +21,12 @@
 
 <c8y-title translate>Code Templates</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Rename' | translate }}" (click)="onRenameCodeTemplate()">
+  <button class="btn btn-link" title="{{ 'Rename' | translate }}" (click)="onRenameCodeTemplate()" [disabled]="codeTemplateDecoded?.internal">
     <i c8yIcon="rename"></i>
     {{ 'Rename' | translate }}
   </button>
 
-  <button class="btn btn-link" title="{{ 'Delete' | translate }}" (click)="onDeleteCodeTemplate()">
+  <button class="btn btn-link" title="{{ 'Delete' | translate }}" (click)="onDeleteCodeTemplate()" [disabled]="codeTemplateDecoded?.internal">
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
   </button>
@@ -39,7 +39,7 @@
     {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
-<div class="card">
+<div class="card content-fullpage d-grid">
   <div class="card-block">
     <c8y-form-group>
       <label translate>Code Templates</label>
