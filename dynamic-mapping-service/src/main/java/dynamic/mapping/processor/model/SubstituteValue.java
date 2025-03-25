@@ -7,7 +7,7 @@ import org.json.JSONException;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.PathNotFoundException;
 
-public class SubstituteValue{
+public class SubstituteValue implements Cloneable{
     public static enum TYPE {
         ARRAY,
         IGNORE,
@@ -26,6 +26,11 @@ public class SubstituteValue{
         this.value = value;
         this.repairStrategy = repair;
         this.expandArray = expandArray;
+    }
+
+    @Override
+    public SubstituteValue clone() {
+        return new SubstituteValue(this.value, this.type, this.repairStrategy, this.expandArray);
     }
 
     public static void substituteValueInPayload(SubstituteValue sub,

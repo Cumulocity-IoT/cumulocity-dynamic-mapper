@@ -96,6 +96,12 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       name: 'name',
       path: 'name',
       filterable: true
+    },
+    {
+      header: 'Subscription Name',
+      name: 'subscriptionName',
+      path: 'subscriptionName',
+      filterable: true
     }
   ];
 
@@ -131,6 +137,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   async loadSubscriptions() {
     this.subscription = await this.mappingService.getSubscriptions();
+    const subscriptionName = this.subscription.subscriptionName;
+    this.subscription?.devices.forEach (d => d['subscriptionName']= subscriptionName)
   }
 
   ngOnInit() {
