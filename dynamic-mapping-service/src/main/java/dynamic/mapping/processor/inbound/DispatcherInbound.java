@@ -307,7 +307,6 @@ public class DispatcherInbound implements GenericMessageCallback {
         } else {
             return futureProcessingResult;
         }
-
         futureProcessingResult = virtThreadPool.submit(
                 new MappingInboundTask(configurationRegistry, resolvedMappings,
                         message, connectorClient));
@@ -322,6 +321,7 @@ public class DispatcherInbound implements GenericMessageCallback {
 
     @Override
     public void onMessage(ConnectorMessage message) {
+        //TODO Return a future so it can be blocked for QoS 1 or 2
         processMessage(message);
     }
 

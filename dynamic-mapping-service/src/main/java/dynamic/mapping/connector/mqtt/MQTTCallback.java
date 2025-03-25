@@ -70,6 +70,8 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                 .build();
 
         connectorMessage.setSupportsMessageContext(supportsMessageContext);
+        //TODO Here we should block if QoS is 1 or 2 and if future is completed successfully, send an acknowledgement. If completed exceptionally, due to server error don't send one and get the message again.
+        //mqttMessage.acknowledge();
         genericMessageCallback.onMessage(connectorMessage);
     }
 
