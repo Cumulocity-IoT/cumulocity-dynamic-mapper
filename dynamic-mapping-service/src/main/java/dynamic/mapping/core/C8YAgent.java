@@ -51,6 +51,8 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapping.configuration.TrustedCertificateRepresentation;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.controller.DeploymentController;
+import dynamic.mapping.controller.DeviceSubscriptionController;
 import dynamic.mapping.core.cache.InboundExternalIdCache;
 import dynamic.mapping.core.cache.InventoryCache;
 import dynamic.mapping.core.facade.IdentityFacade;
@@ -73,6 +75,7 @@ import io.micrometer.core.instrument.Metrics;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.checkerframework.checker.units.qual.t;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -874,7 +877,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             return 0;
     }
 
-
     public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
         InventoryCache inventoryCache = inventoryCaches.get(tenant);
         if (inventoryCache != null) {
@@ -896,9 +898,33 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             return 0;
     }
 
-    public Map<String, String> getMOFromInventoryCache(String tenant, String sourceId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getMOFromInventoryCache'");
+    public Map<String, String> getMOFromInventoryCache(String tenant, String deviceId) {
+        Map<String, String> result = getInventoryCache(tenant).getMOBySource(deviceId);
+        if (result == null) {
+            final Map<String, String> newMO = new HashMap<String, String>();
+            getInventoryCache(tenant).putMOforSource(deviceId, newMO);
+            result = newMO;
+
+            ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+            ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
+            List<String> fragments = serviceConfiguration.getInventoryFragmentsToCache();
+            fragments.forEach(frag -> {
+                switch (frag) {
+                    case "id":
+                        newMO.put("id", deviceId);
+                        break;
+                    case "name":
+                        newMO.put("name", device.getName());
+                        break;
+                    case "owner":
+                        newMO.put("owner", device.getOwner());
+                        break;
+                    default:
+                        break;
+                }
+            });
+        }
+        return result;
     }
 
 }
