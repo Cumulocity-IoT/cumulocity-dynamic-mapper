@@ -897,67 +897,75 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         } else
             return 0;
     }
-
     public Map<String, Object> getMOFromInventoryCache(String tenant, String deviceId) {
-        Map<String,Object> result = getInventoryCache(tenant).getMOBySource(deviceId);
-        if (result == null) {
-            final Map<String,Object> newMO = new HashMap<String, Object>();
-            getInventoryCache(tenant).putMOforSource(deviceId, newMO);
-            result = newMO;
-    
-            ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
-            ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
-            Map<String, Object> attrs = device.getAttrs();
-            List<String> fragments = serviceConfiguration.getInventoryFragmentsToCache();
-            fragments.forEach(frag -> {
-                frag = frag.trim();
-                switch (frag) {
-                    case "id":
-                        newMO.put("id", deviceId);
-                        break;
-                    case "name":
-                        newMO.put("name", device.getName());
-                        break;
-                    case "owner":
-                        newMO.put("owner", device.getOwner());
-                        break;
-                    default:
-                        // split frag at the separator "." and then recurse into the map attrs
-                        // test if the returned value at every level is a map before going one level down
-                        // if the complete path "fra" with all levels resolve to a value
-                        // newMO.put(frag, resolvedValue); 
-                        // Split frag at the separator "." and then recurse into the map attrs
-                        String[] pathParts = frag.split("\\.");
-                        Object currentValue = attrs;
-                        boolean validPath = true;
-                        
-                        // Navigate through the nested maps
-                        for (String part : pathParts) {
-                            part = part.trim();
-                            if (currentValue instanceof Map) {
-                                Map<?, ?> currentMap = (Map<?, ?>) currentValue;
-                                if (currentMap.containsKey(part)) {
-                                    currentValue = currentMap.get(part);
-                                } else {
-                                    validPath = false;
-                                    break;
-                                }
-                            } else {
-                                validPath = false;
-                                break;
-                            }
-                        }
-                        
-                        // If we found a valid path, add the value to the result map
-                        if (validPath && currentValue != null) {
-                            // newMO.put(frag, String.valueOf(currentValue));
-                            newMO.put(frag, currentValue);
-                        }
-                        break;
-                }
-            });
+        Map<String, Object> result = getInventoryCache(tenant).getMOBySource(deviceId);
+        if (result != null) {
+            return result;
         }
-        return result;
+        
+        // Create new managed object cache entry
+        final Map<String, Object> newMO = new HashMap<>();
+        getInventoryCache(tenant).putMOforSource(deviceId, newMO);
+        
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
+        Map<String, Object> attrs = device.getAttrs();
+        
+        // Process each fragment
+        serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
+            frag = frag.trim();
+            
+            // Handle special cases
+            if ("id".equals(frag)) {
+                newMO.put(frag, deviceId);
+                return; // using return in forEach as continue
+            }
+            if ("name".equals(frag)) {
+                newMO.put(frag, device.getName());
+                return;
+            }
+            if ("owner".equals(frag)) {
+                newMO.put(frag, device.getOwner());
+                return;
+            }
+            
+            // Handle nested attributes
+            Object value = resolveNestedAttribute(attrs, frag);
+            if (value != null) {
+                newMO.put(frag, value);
+            }
+        });
+        
+        return newMO;
     }
-
+    
+    /**
+     * Resolves a nested attribute from a map using dot notation.
+     * @param attrs The source attributes map
+     * @param path The attribute path using dot notation (e.g., "a.b.c")
+     * @return The resolved value or null if path cannot be resolved
+     */
+    private Object resolveNestedAttribute(Map<String, Object> attrs, String path) {
+        if (path == null || attrs == null) {
+            return null;
+        }
+        
+        String[] pathParts = path.split("\\.");
+        Object current = attrs;
+        
+        for (String part : pathParts) {
+            if (!(current instanceof Map)) {
+                return null;
+            }
+            
+            Map<?, ?> currentMap = (Map<?, ?>) current;
+            if (!currentMap.containsKey(part)) {
+                return null;
+            }
+            
+            current = currentMap.get(part);
+        }
+        
+        return current;
+    }
 }
