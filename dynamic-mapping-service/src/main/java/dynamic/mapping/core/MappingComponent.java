@@ -525,9 +525,8 @@ public class MappingComponent {
                         Object sourceIdResult = expressionSourceId.evaluate(messageAsMap);
                         if (sourceIdResult instanceof String) {
                             String sourceId = (String) sourceIdResult;
-                            Object cachedInventoryContent = configurationRegistry.getC8yAgent()
-                                    .getInventoryCache(tenant)
-                                    .getMOBySource(sourceId);
+                            Map<String,String> cachedInventoryContent = configurationRegistry.getC8yAgent()
+                                    .getMOFromInventoryCache(tenant, sourceId);
                             var expressionFilterInventory = jsonata(m.getFilterInventory());
                             Object extractedContentFilterInventory = expressionFilterInventory
                                     .evaluate(cachedInventoryContent);

@@ -896,4 +896,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             return 0;
     }
 
+    public Map<String, String> getMOFromInventoryCache(String tenant, String sourceId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getMOFromInventoryCache'");
+    }
+
 }

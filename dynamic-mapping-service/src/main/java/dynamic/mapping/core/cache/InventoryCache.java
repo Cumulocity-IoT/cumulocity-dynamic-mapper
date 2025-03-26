@@ -32,7 +32,7 @@ import java.util.Map;
 public class InventoryCache {
 
 	//private final LRUMap<ID, ExternalIDRepresentation> cache;
-	private final Map<String, Map> cache;
+	private final Map<String, Map<String,String>> cache;
 
 	private Gauge cacheSizeGauge = null;
 
@@ -44,10 +44,10 @@ public class InventoryCache {
 	// Constructor with custom cache size
 	public InventoryCache(int cacheSize,  String tenant) {
 		//Making it thread-safe
-		this.cache = Collections.synchronizedMap(new LinkedHashMap<String, Map>() {
+		this.cache = Collections.synchronizedMap(new LinkedHashMap<String, Map<String,String>>() {
 			//Removing oldest entries
 			@Override
-			protected boolean removeEldestEntry(Map.Entry<String, Map> eldest) {
+			protected boolean removeEldestEntry(Map.Entry<String, Map<String,String>> eldest) {
 				return size() > cacheSize;
 			}
 		});
@@ -62,12 +62,12 @@ public class InventoryCache {
 	}
 
 	// Method to get mo by source id
-	public Map getMOBySource(String key) {
+	public Map<String,String> getMOBySource(String key) {
 		return cache.get(key);
 	}
 
 	// Method to put a new entry in the cache
-	public void putMOforSource(String sourceId, Map mo) {
+	public void putMOforSource(String sourceId, Map<String,String> mo) {
 		cache.put(sourceId, mo);
 	}
 
