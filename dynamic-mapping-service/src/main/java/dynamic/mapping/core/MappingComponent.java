@@ -341,6 +341,10 @@ public class MappingComponent {
                             MappingRepresentation mappingMO = toMappingObject(mo);
                             Mapping mapping = mappingMO.getC8yMQTTMapping();
                             mapping.setId(mappingMO.getId());
+                            if(Direction.INBOUND.equals(mapping.getDirection()) && mapping.getMappingTopic() == null) {
+                                log.warn("Tenant {} - Mapping {} has no mappingTopic, ignoring mapping", tenant, mapping);
+                                return Optional.<Mapping>empty();
+                            }
                             return Optional.of(mapping);
                         } catch (IllegalArgumentException e) {
                             String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
@@ -612,7 +616,7 @@ public class MappingComponent {
 
     public List<Mapping> rebuildMappingInboundCache(String tenant) {
         List<Mapping> updatedMappings = getMappings(tenant, Direction.INBOUND).stream()
-                .filter(m -> !Direction.OUTBOUND.equals(m.direction))
+                .filter(m -> !Direction.OUTBOUND.equals(m.direction) || m.mappingTopic == null)
                 .collect(Collectors.toList());
         return rebuildMappingInboundCache(tenant, updatedMappings);
     }
