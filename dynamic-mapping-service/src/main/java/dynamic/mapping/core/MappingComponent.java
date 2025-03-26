@@ -516,27 +516,41 @@ public class MappingComponent {
                                 tenant,
                                 m.getFilterMapping(),
                                 m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
-                                includeMapping = false;
+                        includeMapping = false;
                     }
 
-                    var expressionFilterInventory = jsonata(m.getFilterInventory());
-                    // TODO resolve cached content from inventoryCache by source.id
-                    String cachedInventoryContent = "";
-                    Object extractedContentFilterInventory = expressionFilterInventory.evaluate(cachedInventoryContent);
-                    // Only add mappings where the filter is "true".
-                    if (extractedContentFilterInventory != null && isNodeTrue(extractedContentFilterInventory)) {
-                        log.info("Tenant {} - Found valid inventory for filter {} in C8Y message {}", tenant,
-                                m.getFilterInventory(),
-                                messageAsMap.get("id"));
-                    } else {
-                        log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}",
-                                tenant,
-                                m.getFilterMapping(),
-                                m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
+                    if (m.getFilterInventory() != null) {
+                        var expressionSourceId = jsonata("source.id");
+                        // TODO resolve cached content from inventoryCache by source.id
+                        Object sourceIdResult = expressionSourceId.evaluate(messageAsMap);
+                        if (sourceIdResult instanceof String) {
+                            String sourceId = (String) sourceIdResult;
+                            Object cachedInventoryContent = configurationRegistry.getC8yAgent()
+                                    .getInventoryCache(tenant)
+                                    .getMOBySource(sourceId);
+                            var expressionFilterInventory = jsonata(m.getFilterInventory());
+                            Object extractedContentFilterInventory = expressionFilterInventory
+                                    .evaluate(cachedInventoryContent);
+                            // Only add mappings where the filter is "true".
+                            if (extractedContentFilterInventory != null
+                                    && isNodeTrue(extractedContentFilterInventory)) {
+                                log.info("Tenant {} - Found valid inventory for filter {} in C8Y message {}", tenant,
+                                        m.getFilterInventory(),
+                                        messageAsMap.get("id"));
+                            } else {
+                                log.debug(
+                                        "Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}",
+                                        tenant,
+                                        m.getFilterMapping(),
+                                        m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
                                 includeMapping = false;
+                            }
+
+                        }
                     }
 
-                    if (includeMapping) result.add(m);
+                    if (includeMapping)
+                        result.add(m);
                 }
             }
         } catch (IllegalArgumentException e) {
