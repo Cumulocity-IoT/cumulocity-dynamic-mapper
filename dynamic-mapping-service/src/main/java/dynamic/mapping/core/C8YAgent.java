@@ -898,15 +898,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             return 0;
     }
 
-    public Map<String, String> getMOFromInventoryCache(String tenant, String deviceId) {
-        Map<String, String> result = getInventoryCache(tenant).getMOBySource(deviceId);
+    public Map<String, Object> getMOFromInventoryCache(String tenant, String deviceId) {
+        Map<String,Object> result = getInventoryCache(tenant).getMOBySource(deviceId);
         if (result == null) {
-            final Map<String, String> newMO = new HashMap<String, String>();
+            final Map<String,Object> newMO = new HashMap<String, Object>();
             getInventoryCache(tenant).putMOforSource(deviceId, newMO);
             result = newMO;
-
+    
             ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
             ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
+            Map<String, Object> attrs = device.getAttrs();
             List<String> fragments = serviceConfiguration.getInventoryFragmentsToCache();
             fragments.forEach(frag -> {
                 switch (frag) {
@@ -920,6 +921,36 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         newMO.put("owner", device.getOwner());
                         break;
                     default:
+                        // split frag at the separator "." and then recurse into the map attrs
+                        // test if the returned value at every level is a map before going one level down
+                        // if the complete path "fra" with all levels resolve to a value
+                        // newMO.put(frag, resolvedValue); 
+                        // Split frag at the separator "." and then recurse into the map attrs
+                        String[] pathParts = frag.split("\\.");
+                        Object currentValue = attrs;
+                        boolean validPath = true;
+                        
+                        // Navigate through the nested maps
+                        for (String part : pathParts) {
+                            if (currentValue instanceof Map) {
+                                Map<?, ?> currentMap = (Map<?, ?>) currentValue;
+                                if (currentMap.containsKey(part)) {
+                                    currentValue = currentMap.get(part);
+                                } else {
+                                    validPath = false;
+                                    break;
+                                }
+                            } else {
+                                validPath = false;
+                                break;
+                            }
+                        }
+                        
+                        // If we found a valid path, add the value to the result map
+                        if (validPath && currentValue != null) {
+                            // Convert the final value to string representation
+                            newMO.put(frag, String.valueOf(currentValue));
+                        }
                         break;
                 }
             });
