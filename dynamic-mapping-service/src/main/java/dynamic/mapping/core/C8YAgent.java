@@ -910,6 +910,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             Map<String, Object> attrs = device.getAttrs();
             List<String> fragments = serviceConfiguration.getInventoryFragmentsToCache();
             fragments.forEach(frag -> {
+                frag = frag.trim();
                 switch (frag) {
                     case "id":
                         newMO.put("id", deviceId);
