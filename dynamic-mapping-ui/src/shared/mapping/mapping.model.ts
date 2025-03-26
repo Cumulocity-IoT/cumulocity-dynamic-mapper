@@ -55,6 +55,7 @@ export interface Mapping {
   mappingType: MappingType;
   substitutions?: MappingSubstitution[];
   filterMapping?: string;
+  filterInventory?: string;
   active: boolean;
   debug?: boolean;
   tested: boolean;

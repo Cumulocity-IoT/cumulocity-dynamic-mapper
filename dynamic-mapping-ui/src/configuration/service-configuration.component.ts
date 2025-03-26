@@ -46,7 +46,9 @@ export class ServiceConfigurationComponent implements OnInit {
     sendNotificationLifecycle: false,
     outboundMappingEnabled: true,
     inboundExternalIdCacheSize: 0,
-    inboundExternalIdCacheRetention: 0
+    inboundExternalIdCacheRetention: 0,
+    inventoryCacheSize: 0,
+    inventoryCacheRetention: 0,
   };
   editable2updated: boolean = false;
 
@@ -92,7 +94,13 @@ export class ServiceConfigurationComponent implements OnInit {
       inboundExternalIdCacheSize:
         this.serviceConfiguration.inboundExternalIdCacheSize,
       inboundExternalIdCacheRetention:
-        this.serviceConfiguration.inboundExternalIdCacheRetention
+        this.serviceConfiguration.inboundExternalIdCacheRetention,
+      inventoryCacheSize:
+        this.serviceConfiguration.inventoryCacheSize,
+      inventoryCacheRetention:
+        this.serviceConfiguration.inventoryCacheRetention,
+      inventoryFragmentsToCache:
+        this.serviceConfiguration.inventoryFragmentsToCache.join(",")
     });
   }
 
@@ -122,6 +130,20 @@ export class ServiceConfigurationComponent implements OnInit {
     }
   }
 
+  async clickedClearInventoryCache() {
+    const response1 = await this.sharedService.runOperation(
+      {
+        operation: Operation.CLEAR_CACHE,
+        parameter: { cacheId: 'INBOUND_CACHE' }
+      }
+    );
+    if (response1.status === HttpStatusCode.Created) {
+      this.alertService.success(gettext('Cache cleared.'));
+    } else {
+      this.alertService.danger(gettext('Failed to clear cache!'));
+    }
+  }
+
   async clickedResetDeploymentMapEndpoint() {
     const response1 = await this.sharedService.runOperation(
       { operation: Operation.RESET_DEPLOYMENT_MAP }
@@ -136,6 +158,7 @@ export class ServiceConfigurationComponent implements OnInit {
 
   async clickedSaveServiceConfiguration() {
     const conf = this.serviceForm.value;
+    conf.inventoryFragmentsToCache = this.serviceForm.value['inventoryFragmentsToCache'].split(",");
     const response = await this.sharedService.updateServiceConfiguration(conf);
     if (response.status < 300) {
       this.alertService.success(gettext('Update successful'));
