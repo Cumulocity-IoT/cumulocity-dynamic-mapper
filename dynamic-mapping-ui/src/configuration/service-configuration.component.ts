@@ -137,7 +137,7 @@ export class ServiceConfigurationComponent implements OnInit {
     const response1 = await this.sharedService.runOperation(
       {
         operation: Operation.CLEAR_CACHE,
-        parameter: { cacheId: 'INBOUND_CACHE' }
+        parameter: { cacheId: 'INVENTORY_CACHE' }
       }
     );
     if (response1.status === HttpStatusCode.Created) {

@@ -52,6 +52,7 @@ import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapping.configuration.TrustedCertificateRepresentation;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.cache.InboundExternalIdCache;
+import dynamic.mapping.core.cache.InventoryCache;
 import dynamic.mapping.core.facade.IdentityFacade;
 import dynamic.mapping.core.facade.InventoryFacade;
 import dynamic.mapping.model.API;
@@ -137,6 +138,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Getter
     private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new HashMap<>();
+
+    @Getter
+    private Map<String, InventoryCache> inventoryCaches = new HashMap<>();
 
     @Getter
     private ConfigurationRegistry configurationRegistry;
@@ -824,8 +828,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
-        log.info("Tenant {} - Initialize cache {}", tenant, inboundExternalIdCacheSize);
+        log.info("Tenant {} - Initialize inboundExternalIdCache {}", tenant, inboundExternalIdCacheSize);
         inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+    }
+
+    public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
+        log.info("Tenant {} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
+        inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
     }
 
     public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
@@ -834,6 +843,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public InboundExternalIdCache getInboundExternalIdCache(String tenant) {
         return inboundExternalIdCaches.get(tenant);
+    }
+
+    public InventoryCache deleteInventoryCache(String tenant) {
+        return inventoryCaches.remove(tenant);
+    }
+
+    public InventoryCache getInventoryCache(String tenant) {
+        return inventoryCaches.get(tenant);
     }
 
     public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
@@ -853,6 +870,28 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
         if (inboundExternalIdCache != null) {
             return inboundExternalIdCache.getCacheSize();
+        } else
+            return 0;
+    }
+
+
+    public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
+        InventoryCache inventoryCache = inventoryCaches.get(tenant);
+        if (inventoryCache != null) {
+            // FIXME Recreating the cache creates a new instance of InventoryCache
+            // which causes issues with Metering
+            if (recreate) {
+                inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
+            } else {
+                inventoryCache.clearCache();
+            }
+        }
+    }
+
+    public int getSizeInventoryCache(String tenant) {
+        InventoryCache inventoryCache = inventoryCaches.get(tenant);
+        if (inventoryCache != null) {
+            return inventoryCache.getCacheSize();
         } else
             return 0;
     }
