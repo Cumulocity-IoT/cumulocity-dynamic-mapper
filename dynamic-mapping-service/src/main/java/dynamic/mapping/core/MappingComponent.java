@@ -379,7 +379,7 @@ public class MappingComponent {
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant, Direction.UNSPECIFIED);
             List<ValidationError> errors = Mapping.isMappingValid(mappings, mapping);
-            
+
             // remove potentially obsolete javascript code from engine cache
             removeCodeFromEngine(mapping, tenant);
 
@@ -499,22 +499,44 @@ public class MappingComponent {
         try {
             Map messageAsMap = (Map) Json.parseJson(message);
             for (Mapping m : cacheMappingOutbound.get(tenant).values()) {
-                if (m.active){
+                if (m.active) {
                     // test if message has property associated for this mapping, JsonPointer must
                     // begin with "/"
-                    var expression = jsonata(m.getFilterMapping());
-                    Object extractedContent = expression.evaluate(messageAsMap);
-                    //Only add mappings where the filter is "true".
-                    if(extractedContent != null  && isNodeTrue(extractedContent) && m.targetAPI.equals(api)) {
+                    boolean includeMapping = true;
+                    var expressionFilterMapping = jsonata(m.getFilterMapping());
+                    Object extractedContentFilterMapping = expressionFilterMapping.evaluate(messageAsMap);
+                    // Only add mappings where the filter is "true".
+                    if (extractedContentFilterMapping != null && isNodeTrue(extractedContentFilterMapping)
+                            && m.targetAPI.equals(api)) {
                         log.info("Tenant {} - Found valid mapping for filter {} in C8Y message {}", tenant,
                                 m.getFilterMapping(),
                                 messageAsMap.get("id"));
-                        result.add(m);
                     } else {
-                        log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant,
+                        log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}",
+                                tenant,
                                 m.getFilterMapping(),
                                 m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
+                                includeMapping = false;
                     }
+
+                    var expressionFilterInventory = jsonata(m.getFilterInventory());
+                    // TODO resolve cached content from inventoryCache by source.id
+                    String cachedInventoryContent = "";
+                    Object extractedContentFilterInventory = expressionFilterInventory.evaluate(cachedInventoryContent);
+                    // Only add mappings where the filter is "true".
+                    if (extractedContentFilterInventory != null && isNodeTrue(extractedContentFilterInventory)) {
+                        log.info("Tenant {} - Found valid inventory for filter {} in C8Y message {}", tenant,
+                                m.getFilterInventory(),
+                                messageAsMap.get("id"));
+                    } else {
+                        log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}",
+                                tenant,
+                                m.getFilterMapping(),
+                                m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
+                                includeMapping = false;
+                    }
+
+                    if (includeMapping) result.add(m);
                 }
             }
         } catch (IllegalArgumentException e) {

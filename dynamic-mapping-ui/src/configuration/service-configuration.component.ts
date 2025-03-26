@@ -71,7 +71,10 @@ export class ServiceConfigurationComponent implements OnInit {
       sendNotificationLifecycle: new FormControl(''),
       outboundMappingEnabled: new FormControl(''),
       inboundExternalIdCacheSize: new FormControl(''),
-      inboundExternalIdCacheRetention: new FormControl('')
+      inboundExternalIdCacheRetention: new FormControl(''),
+      inventoryCacheRetention: new FormControl(''),
+      inventoryCacheSize: new FormControl(''),
+      inventoryFragmentsToCache: new FormControl('')
     });
 
     this.loadData();

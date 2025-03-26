@@ -36,9 +36,7 @@ import dynamic.mapping.notification.websocket.NotificationCallback;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
-import dynamic.mapping.processor.model.SubstitutionEvaluation;
-import dynamic.mapping.processor.model.SubstitutionContext;
-import dynamic.mapping.processor.model.SubstitutionResult;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;

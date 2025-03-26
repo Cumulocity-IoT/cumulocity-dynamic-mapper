@@ -188,7 +188,7 @@ export class MappingStepPropertiesComponent
             type: 'input',
             templateOptions: {
               label: 'Filter Mapping',
-              placeholder: 'e.g. custom_OperationFragment',
+              placeholder: 'custom_OperationFragment',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
@@ -218,11 +218,11 @@ export class MappingStepPropertiesComponent
             type: 'input',
             templateOptions: {
               label: 'Filter Inventory',
-              placeholder: `e.g. type = "lora_device_type`,
+              placeholder: `type = "lora_device_type`,
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. "$exists(C8Y_FRAGMENT)"',
+                'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. "type = "lora-device-type""',
               required:
                 this.stepperConfiguration.direction == Direction.OUTBOUND
             },
