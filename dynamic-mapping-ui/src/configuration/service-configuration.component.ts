@@ -161,7 +161,11 @@ export class ServiceConfigurationComponent implements OnInit {
 
   async clickedSaveServiceConfiguration() {
     const conf = this.serviceForm.value;
-    conf.inventoryFragmentsToCache = this.serviceForm.value['inventoryFragmentsToCache'].split(",");
+    // trim the separated fragments
+    conf.inventoryFragmentsToCache = this.serviceForm.value['inventoryFragmentsToCache']
+      .split(",")
+      .map(fragment => fragment.trim())
+      .filter(fragment => fragment.length > 0);
     const response = await this.sharedService.updateServiceConfiguration(conf);
     if (response.status < 300) {
       this.alertService.success(gettext('Update successful'));

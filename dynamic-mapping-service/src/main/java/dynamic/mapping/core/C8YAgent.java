@@ -932,6 +932,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         
                         // Navigate through the nested maps
                         for (String part : pathParts) {
+                            part = part.trim();
                             if (currentValue instanceof Map) {
                                 Map<?, ?> currentMap = (Map<?, ?>) currentValue;
                                 if (currentMap.containsKey(part)) {
@@ -948,8 +949,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         
                         // If we found a valid path, add the value to the result map
                         if (validPath && currentValue != null) {
-                            // Convert the final value to string representation
-                            newMO.put(frag, String.valueOf(currentValue));
+                            // newMO.put(frag, String.valueOf(currentValue));
+                            newMO.put(frag, currentValue);
                         }
                         break;
                 }
