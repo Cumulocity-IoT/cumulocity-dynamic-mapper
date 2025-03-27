@@ -613,14 +613,14 @@ export class MappingComponent implements OnInit, OnDestroy {
           mapping.mappingType,
           this.stepperConfiguration.direction,
           EditorMode.READ_ONLY,
-          mapping.targetAPI == MappingType.CODE_BASED
+          mapping.mappingType == MappingType.CODE_BASED
         );
       } else {
         this.setStepperConfiguration(
           mapping.mappingType,
           this.stepperConfiguration.direction,
           EditorMode.UPDATE,
-          mapping.targetAPI == MappingType.CODE_BASED
+          mapping.mappingType == MappingType.CODE_BASED
         );
       }
       // create deep copy of existing mapping, in case user cancels changes
