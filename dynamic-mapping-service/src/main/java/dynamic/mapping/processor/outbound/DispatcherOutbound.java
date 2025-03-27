@@ -282,7 +282,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
                             }
 
-                            Object payload = processor.deserializePayload(mapping, c8yMessage);
+                            Object payload = c8yMessage.getParsedPayload();
                             ProcessingContext<?> context = ProcessingContext.builder().payload(payload)
                                     .topic(mapping.publishTopic)
                                     .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)

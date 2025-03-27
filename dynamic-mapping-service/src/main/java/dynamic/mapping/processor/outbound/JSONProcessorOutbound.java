@@ -23,20 +23,16 @@ package dynamic.mapping.processor.outbound;
 
 import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
-import com.dashjoin.jsonata.json.Json;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.Substitution;
-import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.SubstituteValue;
@@ -47,12 +43,6 @@ public class JSONProcessorOutbound extends BaseProcessorOutbound<Object> {
 
     public JSONProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         super(configurationRegistry, connectorClient);
-    }
-
-    @Override
-    public Object deserializePayload(Mapping mapping,
-            C8YMessage c8yMessage) throws IOException {
-        return c8yMessage.getParsedPayload();
     }
 
     @Override
