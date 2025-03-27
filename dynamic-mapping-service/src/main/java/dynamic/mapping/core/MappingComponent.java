@@ -71,6 +71,7 @@ import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.model.ResolveException;
 import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.model.ValidationError;
+import dynamic.mapping.processor.C8YMessage;
 
 @Slf4j
 @Component
@@ -341,8 +342,9 @@ public class MappingComponent {
                             MappingRepresentation mappingMO = toMappingObject(mo);
                             Mapping mapping = mappingMO.getC8yMQTTMapping();
                             mapping.setId(mappingMO.getId());
-                            if(Direction.INBOUND.equals(mapping.getDirection()) && mapping.getMappingTopic() == null) {
-                                log.warn("Tenant {} - Mapping {} has no mappingTopic, ignoring mapping", tenant, mapping);
+                            if (Direction.INBOUND.equals(mapping.getDirection()) && mapping.getMappingTopic() == null) {
+                                log.warn("Tenant {} - Mapping {} has no mappingTopic, ignoring mapping", tenant,
+                                        mapping);
                                 return Optional.<Mapping>empty();
                             }
                             return Optional.of(mapping);
@@ -495,71 +497,90 @@ public class MappingComponent {
         return updatedMappings;
     }
 
-    public List<Mapping> resolveMappingOutbound(String tenant, String message, API api) throws ResolveException {
-        // use mappingCacheOutbound and the key filterMapping to identify the matching
-        // mappings.
-        // the need to be returned in a list
+    public List<Mapping> resolveMappingOutbound(String tenant, C8YMessage c8yMessage) throws ResolveException {
         List<Mapping> result = new ArrayList<>();
+        API api = c8yMessage.getApi();
+
         try {
-            Map messageAsMap = (Map) Json.parseJson(message);
-            for (Mapping m : cacheMappingOutbound.get(tenant).values()) {
-                if (m.active) {
-                    // test if message has property associated for this mapping, JsonPointer must
-                    // begin with "/"
-                    boolean includeMapping = true;
-                    var expressionFilterMapping = jsonata(m.getFilterMapping());
-                    Object extractedContentFilterMapping = expressionFilterMapping.evaluate(messageAsMap);
-                    // Only add mappings where the filter is "true".
-                    if (extractedContentFilterMapping != null && isNodeTrue(extractedContentFilterMapping)
-                            && m.targetAPI.equals(api)) {
-                        log.info("Tenant {} - Found valid mapping for filter {} in C8Y message {}", tenant,
-                                m.getFilterMapping(),
-                                messageAsMap.get("id"));
-                    } else {
-                        log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}",
-                                tenant,
-                                m.getFilterMapping(),
-                                m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
-                        includeMapping = false;
-                    }
 
-                    if (m.getFilterInventory() != null) {
-                        var expressionSourceId = jsonata("source.id");
-                        // TODO resolve cached content from inventoryCache by source.id
-                        Object sourceIdResult = expressionSourceId.evaluate(messageAsMap);
-                        if (sourceIdResult instanceof String) {
-                            String sourceId = (String) sourceIdResult;
-                            Map<String,Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
-                                    .getMOFromInventoryCache(tenant, sourceId);
-                            var expressionFilterInventory = jsonata(m.getFilterInventory());
-                            Object extractedContentFilterInventory = expressionFilterInventory
-                                    .evaluate(cachedInventoryContent);
-                            // Only add mappings where the filter is "true".
-                            if (extractedContentFilterInventory != null
-                                    && isNodeTrue(extractedContentFilterInventory)) {
-                                log.info("Tenant {} - Found valid inventory for filter {} in C8Y message {}", tenant,
-                                        m.getFilterInventory(),
-                                        messageAsMap.get("id"));
-                            } else {
-                                log.debug(
-                                        "Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}",
-                                        tenant,
-                                        m.getFilterMapping(),
-                                        m.getFilterMapping(), messageAsMap.get("id"), api, toPrettyJsonString(message));
-                                includeMapping = false;
-                            }
-
-                        }
-                    }
-
-                    if (includeMapping)
-                        result.add(m);
+            for (Mapping mapping : cacheMappingOutbound.get(tenant).values()) {
+                if (!mapping.active || !mapping.targetAPI.equals(api)) {
+                    continue;
                 }
+
+                // Check message filter condition
+                if (!evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage)) {
+                    continue;
+                }
+
+                // Check inventory filter condition if specified
+                if (mapping.getFilterInventory() != null) {
+                    if (c8yMessage.getSourceId() == null
+                            || !evaluateInventoryFilter(tenant, mapping.getFilterInventory(), c8yMessage)) {
+                        continue;
+                    }
+                }
+
+                // All conditions passed, add mapping to result
+                result.add(mapping);
             }
         } catch (IllegalArgumentException e) {
             throw new ResolveException(e.getMessage());
         }
+
         return result;
+    }
+
+    /**
+     * Evaluates a filter expression against the given data
+     */
+    private boolean evaluateFilter(String tenant, String filterExpression, C8YMessage message) {
+        try {
+            String messageId = String.valueOf(message.getParsedPayload().get("id"));
+            var expression = jsonata(filterExpression);
+            Object result = expression.evaluate(message.getPayload());
+
+            if (result != null && isNodeTrue(result)) {
+                log.info("Tenant {} - Found valid mapping for filter {} in C8Y message {}",
+                        tenant, filterExpression, messageId);
+                return true;
+            } else {
+                log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}",
+                        tenant, filterExpression, messageId, toPrettyJsonString(message.getPayload()));
+                return false;
+            }
+        } catch (Exception e) {
+            log.debug("Filter evaluation error for {}: {}", filterExpression, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Evaluates an inventory filter against cached inventory data
+     */
+    private boolean evaluateInventoryFilter(String tenant, String filterExpression, C8YMessage message) {
+        try {
+            String messageId = String.valueOf(message.getParsedPayload().get("id"));
+
+            Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
+                    .getMOFromInventoryCache(tenant, message.getSourceId());
+
+            var expression = jsonata(filterExpression);
+            Object result = expression.evaluate(cachedInventoryContent);
+
+            if (result != null && isNodeTrue(result)) {
+                log.info("Tenant {} - Found valid inventory for filter {} in C8Y message {}",
+                        tenant, filterExpression, messageId);
+                return true;
+            } else {
+                log.debug("Tenant {} - Not matching inventory filter {} for source {} in message {}",
+                        tenant, filterExpression, message.getSourceId(), messageId);
+                return false;
+            }
+        } catch (Exception e) {
+            log.debug("Inventory filter evaluation error for {}: {}", filterExpression, e.getMessage());
+            return false;
+        }
     }
 
     private boolean isNodeTrue(Object node) {

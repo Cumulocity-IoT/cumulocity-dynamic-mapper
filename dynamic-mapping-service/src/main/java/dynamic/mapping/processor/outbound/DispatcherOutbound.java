@@ -21,9 +21,12 @@
 
 package dynamic.mapping.processor.outbound;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+
 import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
+import com.dashjoin.jsonata.json.Json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -144,7 +147,7 @@ public class DispatcherOutbound implements NotificationCallback {
         String oper = notification.getNotificationHeaders().get(1);
 
         // log.info("Tenant {} - Notification message received {}",
-        //         tenant, oper);
+        // tenant, oper);
         if (("CREATE".equals(oper) || "UPDATE".equals(oper)) && connectorClient.isConnected()) {
             // log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
             // notification.getMessage(),
@@ -152,6 +155,17 @@ public class DispatcherOutbound implements NotificationCallback {
             // connectorClient.connectorConfiguration.name,
             // connectorClient.isConnected());
             C8YMessage c8yMessage = new C8YMessage();
+            try {
+                var expression = jsonata("source.id");
+                Object sourceIdResult = expression.evaluate(notification.getMessage());
+                String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
+                c8yMessage.setSourceId(sourceId);
+            } catch (Exception e) {
+                log.debug("Could not extract source.id: {}", e.getMessage());
+                
+            }
+            Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
+            c8yMessage.setParsedPayload(parsedPayload);
             c8yMessage.setPayload(notification.getMessage());
             c8yMessage.setApi(notification.getApi());
             c8yMessage.setTenant(tenant);
@@ -236,15 +250,15 @@ public class DispatcherOutbound implements NotificationCallback {
                     String sharedCode = null;
                     try {
                         if (processor != null) {
-                                                        // prepare graals func if required
+                            // prepare graals func if required
                             Value extractFromSourceFunc = null;
                             if (mapping.code != null) {
                                 graalsContext = Context.newBuilder("js")
                                         .option("engine.WarnInterpreterOnly", "false")
                                         .allowHostAccess(HostAccess.ALL)
-                                        .allowHostClassLookup(className -> 
-                                            className.startsWith("dynamic.mapping.processor.model") || 
-                                            className.startsWith("java.util"))
+                                        .allowHostClassLookup(
+                                                className -> className.startsWith("dynamic.mapping.processor.model") ||
+                                                        className.startsWith("java.util"))
                                         .build();
                                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
                                 extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
@@ -263,10 +277,11 @@ public class DispatcherOutbound implements NotificationCallback {
                                             .getMember(identifier);
 
                                 }
-                                sharedCode = serviceConfiguration.getCodeTemplates().get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE).getCode();
+                                sharedCode = serviceConfiguration.getCodeTemplates()
+                                        .get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE).getCode();
 
                             }
-                            
+
                             Object payload = processor.deserializePayload(mapping, c8yMessage);
                             ProcessingContext<?> context = ProcessingContext.builder().payload(payload)
                                     .topic(mapping.publishTopic)
@@ -370,8 +385,7 @@ public class DispatcherOutbound implements NotificationCallback {
         }
         if (c8yMessage.getPayload() != null) {
             try {
-                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage.getPayload(),
-                        c8yMessage.getApi());
+                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage);
                 if (resolvedMappings.size() > 0 && op != null)
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
             } catch (Exception e) {

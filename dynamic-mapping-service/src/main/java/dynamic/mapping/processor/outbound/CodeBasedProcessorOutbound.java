@@ -59,8 +59,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
     @Override
     public Object deserializePayload(Mapping mapping,
             C8YMessage c8yMessage) throws IOException {
-        Object jsonNode = Json.parseJson(c8yMessage.getPayload());
-        return jsonNode;
+        return c8yMessage.getParsedPayload();
     }
 
     @Override
