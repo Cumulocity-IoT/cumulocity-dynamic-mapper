@@ -928,6 +928,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 newMO.put(frag, device.getOwner());
                 return;
             }
+
+            if ("type".equals(frag)) {
+                newMO.put(frag, device.getType());
+                return;
+            }
             
             // Handle nested attributes
             Object value = resolveNestedAttribute(attrs, frag);
