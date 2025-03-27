@@ -155,17 +155,17 @@ public class DispatcherOutbound implements NotificationCallback {
             // connectorClient.connectorConfiguration.name,
             // connectorClient.isConnected());
             C8YMessage c8yMessage = new C8YMessage();
+            Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
+            c8yMessage.setParsedPayload(parsedPayload);
             try {
                 var expression = jsonata("source.id");
-                Object sourceIdResult = expression.evaluate(notification.getMessage());
+                Object sourceIdResult = expression.evaluate(parsedPayload);
                 String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
                 c8yMessage.setSourceId(sourceId);
             } catch (Exception e) {
                 log.debug("Could not extract source.id: {}", e.getMessage());
                 
             }
-            Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
-            c8yMessage.setParsedPayload(parsedPayload);
             c8yMessage.setPayload(notification.getMessage());
             c8yMessage.setApi(notification.getApi());
             c8yMessage.setTenant(tenant);

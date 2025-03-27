@@ -538,7 +538,7 @@ public class MappingComponent {
         try {
             String messageId = String.valueOf(message.getParsedPayload().get("id"));
             var expression = jsonata(filterExpression);
-            Object result = expression.evaluate(message.getPayload());
+            Object result = expression.evaluate(message.getParsedPayload());
 
             if (result != null && isNodeTrue(result)) {
                 log.info("Tenant {} - Found valid mapping for filter {} in C8Y message {}",
