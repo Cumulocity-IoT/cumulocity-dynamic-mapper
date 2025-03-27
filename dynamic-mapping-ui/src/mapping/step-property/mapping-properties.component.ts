@@ -224,7 +224,7 @@ export class MappingStepPropertiesComponent
               description:
                 'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. "type = "lora-device-type""',
               required:
-                this.stepperConfiguration.direction == Direction.OUTBOUND
+                false
             },
             hideExpression:
               this.stepperConfiguration.direction == Direction.INBOUND,

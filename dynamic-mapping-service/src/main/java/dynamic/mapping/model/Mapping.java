@@ -44,7 +44,7 @@ import org.json.JSONTokener;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = { "sourceTemplate", "targetTemplate", "snoopedTemplates" })
+@ToString(exclude = { "sourceTemplate", "targetTemplate", "snoopedTemplates", "code" })
 public class Mapping implements Serializable {
 
     public static final String IDENTITY = "_IDENTITY_";
