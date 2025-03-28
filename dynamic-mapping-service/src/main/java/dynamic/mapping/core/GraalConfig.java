@@ -21,12 +21,9 @@
 
 package dynamic.mapping.core;
 
-import java.util.logging.Handler;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.graalvm.polyglot.Engine;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 
 @Configuration
 public class GraalConfig {

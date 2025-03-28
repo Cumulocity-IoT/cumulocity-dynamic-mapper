@@ -144,7 +144,7 @@ public class ConfigurationRegistry {
     @Getter
     @Setter
     @Autowired
-    private ExecutorService virtThreadPool;
+    private ExecutorService virtualThreadPool;
 
     public Map<MappingType, BaseProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);

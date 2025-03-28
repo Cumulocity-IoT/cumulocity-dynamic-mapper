@@ -56,7 +56,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
-import com.dashjoin.jsonata.json.Json;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -903,7 +902,7 @@ public class MappingComponent {
             MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                     .getMappingServiceRepresentations().get(tenant);
             // avoid sending empty monitoring events
-            log.info("Tenant {} - Saving deploymentMap: number all deploments:{}", tenant,
+            log.info("Tenant {} - Saving deploymentMap: number all deployments:{}", tenant,
                     tenantDeploymentMap.get(tenant).size());
             Map<String, Object> map = new HashMap<String, Object>();
             Map<String, List<String>> deploymentMapPerTenant = tenantDeploymentMap.get(tenant);

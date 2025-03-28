@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.ArrayList;
 
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.Substitution;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.SubstituteValue;
 

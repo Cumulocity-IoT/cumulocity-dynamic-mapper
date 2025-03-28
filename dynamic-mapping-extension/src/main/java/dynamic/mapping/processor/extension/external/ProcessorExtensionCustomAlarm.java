@@ -34,7 +34,6 @@ import com.jayway.jsonpath.JsonPath;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
-import dynamic.mapping.model.Substitution;
 import dynamic.mapping.processor.model.SubstituteValue.TYPE;
 import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
@@ -147,7 +146,7 @@ public class ProcessorExtensionCustomAlarm
             }
 
             /*
-             * step 4 resolve externalIds to c8ySourceIds and create attroc devices
+             * step 4 resolve externalIds to c8ySourceIds and create implicit devices
              */
             // check if the targetPath == externalId and we need to resolve an external id
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute, c8yAgent);
@@ -168,17 +167,17 @@ public class ProcessorExtensionCustomAlarm
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                         identity, context);
                 context.setSourceId(sourceId.getManagedObject().getId().getValue());
-                ManagedObjectRepresentation attocDevice = c8yAgent.upsertDevice(tenant,
+                ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(tenant,
                         identity, context);
-                var response = objectMapper.writeValueAsString(attocDevice);
+                var response = objectMapper.writeValueAsString(implicitDevice);
                 context.getCurrentRequest().setResponse(response);
-                context.getCurrentRequest().setSourceId(attocDevice.getId().getValue());
+                context.getCurrentRequest().setSourceId(implicitDevice.getId().getValue());
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);
             }
             predecessor = newPredecessor;
         } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
-            AbstractExtensibleRepresentation attocRequest = null;
+            AbstractExtensibleRepresentation implicitRequest = null;
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor, RequestMethod.POST, device.value.toString(),
                             mapping.externalIdType,
@@ -187,7 +186,7 @@ public class ProcessorExtensionCustomAlarm
             try {
                 if (context.isSendPayload()) {
                     c8yAgent.createMEAO(context);
-                    String response = objectMapper.writeValueAsString(attocRequest);
+                    String response = objectMapper.writeValueAsString(implicitRequest);
                     context.getCurrentRequest().setResponse(response);
                 }
 
@@ -221,7 +220,7 @@ public class ProcessorExtensionCustomAlarm
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
                 if (resolvedSourceId == null) {
                     if (mapping.createNonExistingDevice) {
-                        sourceId.value = createAttocDevice(identity, context, c8yAgent);
+                        sourceId.value = createImplicitDevice(identity, context, c8yAgent);
                     }
                 } else {
                     sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
@@ -244,7 +243,7 @@ public class ProcessorExtensionCustomAlarm
         }
     }
 
-    private String createAttocDevice(ID identity, ProcessingContext<byte[]> context, C8YAgent c8yAgent) {
+    private String createImplicitDevice(ID identity, ProcessingContext<byte[]> context, C8YAgent c8yAgent) {
         Map<String, Object> request = new HashMap<String, Object>();
         request.put("name",
                 "device_" + identity.getType() + "_" + identity.getValue());
@@ -258,12 +257,12 @@ public class ProcessorExtensionCustomAlarm
                     new C8YRequest(predecessor,
                             context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH, null,
                             context.getMapping().externalIdType, requestString, null, API.INVENTORY, null));
-            ManagedObjectRepresentation attocDevice = c8yAgent.upsertDevice(context.getTenant(),
+            ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(context.getTenant(),
                     identity, context);
-            var response = objectMapper.writeValueAsString(attocDevice);
+            var response = objectMapper.writeValueAsString(implicitDevice);
             context.getCurrentRequest().setResponse(response);
-            context.getCurrentRequest().setSourceId(attocDevice.getId().getValue());
-            return attocDevice.getId().getValue();
+            context.getCurrentRequest().setSourceId(implicitDevice.getId().getValue());
+            return implicitDevice.getId().getValue();
         } catch (ProcessingException | JsonProcessingException e) {
             context.getCurrentRequest().setError(e);
         }

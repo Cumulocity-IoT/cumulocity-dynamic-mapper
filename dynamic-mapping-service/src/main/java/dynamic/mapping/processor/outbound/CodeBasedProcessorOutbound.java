@@ -21,7 +21,6 @@
 
 package dynamic.mapping.processor.outbound;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 

@@ -99,7 +99,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
     protected ObjectMapper objectMapper;
 
-    protected ExecutorService virtThreadPool;
+    protected ExecutorService virtualThreadPool;
 
     protected MappingComponent mappingComponent;
 
@@ -115,7 +115,7 @@ public class DispatcherOutbound implements NotificationCallback {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.mappingComponent = configurationRegistry.getMappingComponent();
-        this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.connectorClient = connectorClient;
         // log.info("Tenant {} - HIER I {} {}", connectorClient.getTenant(),
         // configurationRegistry.getPayloadProcessorsOutbound());
@@ -144,11 +144,11 @@ public class DispatcherOutbound implements NotificationCallback {
         if (!connectorClient.isConnected())
             log.warn("Tenant {} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
-        String oper = notification.getNotificationHeaders().get(1);
+        String operation = notification.getNotificationHeaders().get(1);
 
         // log.info("Tenant {} - Notification message received {}",
-        // tenant, oper);
-        if (("CREATE".equals(oper) || "UPDATE".equals(oper)) && connectorClient.isConnected()) {
+        // tenant, operation);
+        if (("CREATE".equals(operation) || "UPDATE".equals(operation)) && connectorClient.isConnected()) {
             // log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
             // notification.getMessage(),
             // notification.getNotificationHeaders(),
@@ -170,7 +170,7 @@ public class DispatcherOutbound implements NotificationCallback {
             c8yMessage.setApi(notification.getApi());
             c8yMessage.setTenant(tenant);
             c8yMessage.setSendPayload(true);
-            virtThreadPool.submit(() -> {
+            virtualThreadPool.submit(() -> {
                 processMessage(c8yMessage);
             });
         }
@@ -372,12 +372,19 @@ public class DispatcherOutbound implements NotificationCallback {
 
     public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage) {
         String tenant = c8yMessage.getTenant();
+
+                ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        if (serviceConfiguration.logPayload ) {
+            String payload = c8yMessage.getPayload();
+            log.info("Tenant {} - From API : {}, new outbound message: {}", tenant, c8yMessage.getApi(), payload);
+        }
+
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
 
         // Handle C8Y Operation Status
-        // TODO Add OperationAutoAck Status to activate/deactive
+        // TODO Add OperationAutoAck Status to activate/deactivate
         OperationRepresentation op = null;
         //
         if (c8yMessage.getApi().equals(API.OPERATION)) {
@@ -401,7 +408,7 @@ public class DispatcherOutbound implements NotificationCallback {
             return futureProcessingResult;
         }
 
-        futureProcessingResult = virtThreadPool.submit(
+        futureProcessingResult = virtualThreadPool.submit(
                 new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
                         payloadProcessorsOutbound, c8yMessage, connectorClient));
 

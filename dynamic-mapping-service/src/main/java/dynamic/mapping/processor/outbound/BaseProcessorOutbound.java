@@ -24,7 +24,6 @@ package dynamic.mapping.processor.outbound;
 import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
-import java.io.IOException;
 import java.util.*;
 
 import org.apache.commons.lang3.mutable.MutableInt;

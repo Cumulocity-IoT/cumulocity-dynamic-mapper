@@ -162,7 +162,7 @@ export abstract class BaseProcessorInbound {
                 context);
             } catch (e) {
               if (mapping.createNonExistingDevice) {
-                sourceId.value = await this.createAttocDevice(identity, context);
+                sourceId.value = await this.createImplicitDevice(identity, context);
               } else {
                 e['possibleIgnoreErrorNonExisting'] = true;
                 throw e;
@@ -186,12 +186,12 @@ export abstract class BaseProcessorInbound {
           context.sourceId = substitute.value;
 
           if (mapping.targetAPI != API.INVENTORY.name) {
-            // check if we need to create an attoc device
+            // check if we need to create an implicit device
             try {
               const { res } = await this.c8yClient.detail(substitute.value, context);
               if (res.status == HttpStatusCode.NotFound) {
                 if (mapping.createNonExistingDevice) {
-                  sourceId.value = await this.createAttocDevice(undefined, context);
+                  sourceId.value = await this.createImplicitDevice(undefined, context);
                 } else {
                   const e = new Error(`Device with id: ${substitute.value} does not exist. Set option createNonExistingDevice!`);
                   e['possibleIgnoreErrorNonExisting'] = true;
@@ -200,7 +200,7 @@ export abstract class BaseProcessorInbound {
               }
             } catch (error) {
               if (mapping.createNonExistingDevice) {
-                sourceId.value = await this.createAttocDevice(undefined, context);
+                sourceId.value = await this.createImplicitDevice(undefined, context);
               } else {
                 const e = new Error(`Device with id: ${substitute.value} does not exist. Set option createNonExistingDevice!`);
                 e['possibleIgnoreErrorNonExisting'] = true;
@@ -277,7 +277,7 @@ export abstract class BaseProcessorInbound {
       i++;
     }
   }
-  async createAttocDevice(identity: IExternalIdentity, context: ProcessingContext): Promise<string> {
+  async createImplicitDevice(identity: IExternalIdentity, context: ProcessingContext): Promise<string> {
     let sourceId: string;
     let name = identity ? `device_${identity.type}_${identity.externalId}`: `device_${context.sourceId}`;
     const request = {

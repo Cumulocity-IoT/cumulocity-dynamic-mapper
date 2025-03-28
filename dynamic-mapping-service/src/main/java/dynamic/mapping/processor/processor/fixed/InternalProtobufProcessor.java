@@ -25,7 +25,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.processor.model.SubstituteValue.TYPE;
-import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.processor.inbound.BaseProcessorInbound;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.ProcessingException;

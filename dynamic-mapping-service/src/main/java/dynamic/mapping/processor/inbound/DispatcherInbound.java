@@ -50,14 +50,12 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.logging.Handler;
 
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
-import org.slf4j.bridge.SLF4JBridgeHandler;
 
 /**
  * AsynchronousDispatcherInbound
@@ -85,7 +83,7 @@ public class DispatcherInbound implements GenericMessageCallback {
 
     private AConnectorClient connectorClient;
 
-    private ExecutorService virtThreadPool;
+    private ExecutorService virtualThreadPool;
 
     private MappingComponent mappingComponent;
 
@@ -94,7 +92,7 @@ public class DispatcherInbound implements GenericMessageCallback {
     public DispatcherInbound(ConfigurationRegistry configurationRegistry,
             AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
-        this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.mappingComponent = configurationRegistry.getMappingComponent();
         this.configurationRegistry = configurationRegistry;
     }
@@ -111,7 +109,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
         Engine graalsEngine;
-        ExecutorService virtThreadPool;
+        ExecutorService virtualThreadPool;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message, AConnectorClient connectorClient) {
@@ -132,7 +130,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
             this.graalsEngine = configurationRegistry.getGraalsEngine(message.getTenant());
-            this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+            this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
 
         }
 
@@ -285,6 +283,11 @@ public class DispatcherInbound implements GenericMessageCallback {
     public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) {
         String topic = message.getTopic();
         String tenant = message.getTenant();
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        if (serviceConfiguration.logPayload ) {
+            String payload = new String(message.getPayload(), StandardCharsets.UTF_8);
+            log.info("Tenant {} - On topic: {}, new inbound message: {}", tenant, topic, payload);
+        }
 
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
@@ -307,7 +310,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         } else {
             return futureProcessingResult;
         }
-        futureProcessingResult = virtThreadPool.submit(
+        futureProcessingResult = virtualThreadPool.submit(
                 new MappingInboundTask(configurationRegistry, resolvedMappings,
                         message, connectorClient));
 

@@ -65,7 +65,7 @@ public abstract class BaseProcessorInbound<T> {
     public BaseProcessorInbound(ConfigurationRegistry configurationRegistry) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+        this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
     }
 
     protected C8YAgent c8yAgent;
