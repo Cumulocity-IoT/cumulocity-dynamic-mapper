@@ -535,17 +535,16 @@ public class MappingComponent {
      */
     private boolean evaluateFilter(String tenant, String filterExpression, C8YMessage message) {
         try {
-            String messageId = String.valueOf(message.getParsedPayload().get("id"));
             var expression = jsonata(filterExpression);
             Object result = expression.evaluate(message.getParsedPayload());
 
             if (result != null && isNodeTrue(result)) {
                 log.info("Tenant {} - Found valid mapping for filter {} in C8Y message {}",
-                        tenant, filterExpression, messageId);
+                        tenant, filterExpression, message.getMessageId());
                 return true;
             } else {
                 log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}",
-                        tenant, filterExpression, messageId, toPrettyJsonString(message.getPayload()));
+                        tenant, filterExpression, message.getMessageId(), toPrettyJsonString(message.getPayload()));
                 return false;
             }
         } catch (Exception e) {
@@ -559,8 +558,6 @@ public class MappingComponent {
      */
     private boolean evaluateInventoryFilter(String tenant, String filterExpression, C8YMessage message) {
         try {
-            String messageId = String.valueOf(message.getParsedPayload().get("id"));
-
             Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
                     .getMOFromInventoryCache(tenant, message.getSourceId());
 
@@ -569,11 +566,11 @@ public class MappingComponent {
 
             if (result != null && isNodeTrue(result)) {
                 log.info("Tenant {} - Found valid inventory for filter {} in C8Y message {}",
-                        tenant, filterExpression, messageId);
+                        tenant, filterExpression, message.getMessageId());
                 return true;
             } else {
                 log.debug("Tenant {} - Not matching inventory filter {} for source {} in message {}",
-                        tenant, filterExpression, message.getSourceId(), messageId);
+                        tenant, filterExpression, message.getSourceId(), message.getMessageId());
                 return false;
             }
         } catch (Exception e) {

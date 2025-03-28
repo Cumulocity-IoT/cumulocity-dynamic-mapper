@@ -157,8 +157,12 @@ public class DispatcherOutbound implements NotificationCallback {
             C8YMessage c8yMessage = new C8YMessage();
             Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
             c8yMessage.setParsedPayload(parsedPayload);
+            c8yMessage.setApi(notification.getApi());
+            String messageId = String.valueOf(parsedPayload.get("id"));
+            c8yMessage.setMessageId(messageId);
             try {
-                var expression = jsonata("source.id");
+                String identifier = "source.id";
+                var expression = jsonata(identifier);
                 Object sourceIdResult = expression.evaluate(parsedPayload);
                 String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
                 c8yMessage.setSourceId(sourceId);
@@ -167,7 +171,6 @@ public class DispatcherOutbound implements NotificationCallback {
                 
             }
             c8yMessage.setPayload(notification.getMessage());
-            c8yMessage.setApi(notification.getApi());
             c8yMessage.setTenant(tenant);
             c8yMessage.setSendPayload(true);
             virtualThreadPool.submit(() -> {
@@ -376,7 +379,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         if (serviceConfiguration.logPayload ) {
             String payload = c8yMessage.getPayload();
-            log.info("Tenant {} - From API : {}, new outbound message: {}", tenant, c8yMessage.getApi(), payload);
+            log.info("Tenant {} - From API : {}, new outbound message: {} {}", tenant, c8yMessage.getApi(), payload, c8yMessage.getMessageId());
         }
 
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
