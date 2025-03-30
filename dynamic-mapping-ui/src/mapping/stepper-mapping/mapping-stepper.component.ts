@@ -206,6 +206,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   stepperForward: boolean = true;
   currentStepIndex: number;
   codeEditorHelp = 'JavaScript for creating substitutions. Please do not change the methods signature <code>function extractFromSource(ctx)</code>. <br> Define substitutions: <code>Substitution(String key, Object value, String type, String repairStrategy)</code> <br> with <code>type</code>: <code>"ARRAY"</code>, <code>"IGNORE"</code>, <code>"NUMBER"</code>, <code>"OBJECT"</code>, <code>"TEXTUAL"</code> <br>and <code>repairStrategy</code>: <br><code>"DEFAULT"</code>, <code>"USE_FIRST_VALUE_OF_ARRAY"</code>, <code>"USE_LAST_VALUE_OF_ARRAY"</code>, <code>"IGNORE"</code>, <code>"REMOVE_IF_MISSING_OR_NULL"</code>,<code>"CREATE_IF_MISSING"</code>';
+  targetTemplateHelp ='The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
 
   constructor(
     public bsModalService: BsModalService,

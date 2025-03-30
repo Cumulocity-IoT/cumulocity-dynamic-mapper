@@ -192,7 +192,7 @@ export class MappingStepPropertiesComponent
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'The filter has to be defined as boolean expression (JSONata), e.g. "$exists(C8Y_FRAGMENT)"',
+                'The filter has to be defined as boolean expression (JSONata), e.g. <code>$exists(<C8Y_FRAGMENT>)</code>',
               required:
                 this.stepperConfiguration.direction == Direction.OUTBOUND
             },
@@ -222,7 +222,7 @@ export class MappingStepPropertiesComponent
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. "type = "lora-device-type""',
+                'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>',
               required:
                 false
             },
@@ -252,9 +252,9 @@ export class MappingStepPropertiesComponent
               placeholder: 'e.g. device/110',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: `The MappingTopicSample name
+              description: `The Mapping Topic Sample name
               must have the same structure and number of
-              levels as the MappingTopic. Wildcards, i.e. "+" in the MappingTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
+              levels as the MappingTopic. Wildcards, i.e. <code>+</code> in the Mapping Topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
               required: true
             },
             hideExpression:
@@ -270,9 +270,9 @@ export class MappingStepPropertiesComponent
               placeholder: 'e.g. device/110',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: `The PublishTopicSample name
+              description: `The Publish Topic Sample name
               must have the same structure and number of
-              levels as the PublishTopic. Wildcards, i.e. "+" in the PublishTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
+              levels as the PublishTopic. Wildcards, i.e. <code>+</code> in the PublishTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
               required: true
             },
             hideExpression:
