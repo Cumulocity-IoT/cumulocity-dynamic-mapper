@@ -504,6 +504,7 @@ public class MappingComponent {
 
             for (Mapping mapping : cacheMappingOutbound.get(tenant).values()) {
                 if (!mapping.active || !mapping.targetAPI.equals(api)) {
+                // if (!mapping.active) {
                     continue;
                 }
 
