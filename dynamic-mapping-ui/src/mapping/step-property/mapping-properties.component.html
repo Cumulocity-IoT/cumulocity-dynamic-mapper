@@ -26,8 +26,11 @@
       <span *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY" class="label label-primary">{{ 'Read Only'
         }}</span>
       <span class="hidden-xs hidden-sm m-l-4">
+        <ng-template #popupReadOnlyHelp>
+          <div [innerHtml]="readOnlyHelp"></div>
+        </ng-template>
         <button *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY" type="button" placement="right"
-          popover='To edit this mapping deactivate the mapping first in mapping list.' triggers="focus" class="btn-help"
+          [popover]="popupReadOnlyHelp" triggers="focus" class="btn-help"
           aria-label="Help content"></button>
       </span>
     </div>

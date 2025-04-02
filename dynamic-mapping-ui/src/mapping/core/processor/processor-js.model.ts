@@ -166,6 +166,39 @@ export class JsonObject {
   }
 }
 
+export function objectToMapDeep(obj) {
+  // Handle null and undefined
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  // If obj is already a Map, recursively convert its values
+  if (obj instanceof Map) {
+    const newMap = new Map();
+    for (const [key, value] of obj.entries()) {
+      newMap.set(key, objectToMapDeep(value));
+    }
+    return newMap;
+  }
+  
+  // If it's an array, recursively convert each element
+  if (Array.isArray(obj)) {
+    return obj.map(item => objectToMapDeep(item));
+  }
+  
+  // If it's an object, convert it to a Map with recursively converted values
+  if (typeof obj === 'object') {
+    const map = new Map();
+    for (const [key, value] of Object.entries(obj)) {
+      map.set(key, objectToMapDeep(value));
+    }
+    return map;
+  }
+  
+  // For primitive values (string, number, boolean), return as is
+  return obj;
+}
+
 /**
  * JavaScript equivalent of the Java SubstitutionContext class
  */
@@ -184,7 +217,8 @@ export class SubstitutionContext {
    * @param {Object} jsonObject - The JSON object representing the data
    */
   constructor(genericDeviceIdentifier, payload) {
-    this.#jsonObject = new Map(Object.entries(payload || {}));;
+    this.#jsonObject = objectToMapDeep(payload || {});
+    //this.#jsonObject = payload;
     this.#genericDeviceIdentifier = genericDeviceIdentifier;
   }
 

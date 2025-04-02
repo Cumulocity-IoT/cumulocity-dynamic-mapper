@@ -65,6 +65,7 @@ export class MappingStepPropertiesComponent
   targetSystem: string;
   filterMappingModel: any;
   filterInventoryModel: any;
+  readOnlyHelp=' To edit this mapping deactivate the mapping first in mapping list.';
 
 
   constructor(
