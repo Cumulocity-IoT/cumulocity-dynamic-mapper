@@ -187,4 +187,3 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   _.set(template, API[mapping.targetAPI].identifier, identifier);
   _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
 }
-

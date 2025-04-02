@@ -54,8 +54,8 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
     const mappingCodeTemplateDecoded = enc.decode(base64ToBytes(mapping.code));
     // Modify codeToRun to use arg0 instead of ctx
     const codeToRun = `
-        ${sharedCodeTemplateDecoded};
         ${mappingCodeTemplateDecoded};
+        ${sharedCodeTemplateDecoded};
         // Use arg0 which is the ctx parameter passed to the function
         return extractFromSource(arg0);
         `;
