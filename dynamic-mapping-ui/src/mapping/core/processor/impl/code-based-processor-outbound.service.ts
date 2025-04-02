@@ -70,32 +70,34 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
       const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), context.payload);
       // const result = this.evaluateInCurrentScope(codeToRun);
       result = this.evaluateWithArgs(codeToRun, ctx);
+      const substitutions = result.getSubstitutions();
+      const keys = substitutions.keySet();
+      for (const key of keys) {
+        const values = substitutions.get(key);
+        // console.log(`Key: ${key}, Value: ${value}`);
+        const processingCacheEntry: SubstituteValue[] = _.get(
+          processingCache,
+          key,
+          []
+        );
+        if (values != null && !values.isEmpty()
+          && values.get(0).expandArray) {
+          // extracted result from sourcePayload is an array, so we potentially have to
+          // iterate over the result, e.g. creating multiple devices
+          values.forEach((substitution) => {
+            processSubstitute(processingCacheEntry, substitution.value, substitution);
+          });
+        } else {
+          processSubstitute(processingCacheEntry, values.get(0).value, values.get(0));
+        }
+        processingCache.set(key, processingCacheEntry);
+      }
+      context.sourceId = sourceId.toString();
     } catch (error) {
       console.error("Error during testing", error);
+      const loc = this.extractLineAndColumn(error.stack);
+      throw (new Error(`Evaluation failed: ${error.message}, at ${loc.line - 3 }: ${loc.column}`));
     }
-    const substitutions = result.getSubstitutions();
-    const keys = substitutions.keySet();
-    for (const key of keys) {
-      const values = substitutions.get(key);
-      // console.log(`Key: ${key}, Value: ${value}`);
-      const processingCacheEntry: SubstituteValue[] = _.get(
-        processingCache,
-        key,
-        []
-      );
-      if (values != null && !values.isEmpty()
-        && values.get(0).expandArray) {
-        // extracted result from sourcePayload is an array, so we potentially have to
-        // iterate over the result, e.g. creating multiple devices
-        values.forEach((substitution) => {
-          processSubstitute(processingCacheEntry, substitution.value, substitution);
-        });
-      } else {
-        processSubstitute(processingCacheEntry, values.get(0).value, values.get(0));
-      }
-      processingCache.set(key, processingCacheEntry);
-    }
-    context.sourceId = sourceId.toString();
 
     // iterate over substitutions END
   }
@@ -114,5 +116,25 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
   evaluateInCurrentScope(codeString) {
     // Create a function that has access to Java
     return Function('Java', `return (${codeString})`)(Java);
+  }
+
+  /**
+   * Extract line and column numbers from a stack trace line
+   * @param {string} stackTraceLine - The stack trace line to parse
+   * @returns {object|null} An object with line and column numbers, or null if not found
+   */
+  extractLineAndColumn(stackTraceLine) {
+    // This pattern looks for "<anonymous>:X:Y" where X is line and Y is column
+    const pattern = /<anonymous>:(\d+):(\d+)/;
+    const match = stackTraceLine.match(pattern);
+
+    if (match && match.length >= 3) {
+      return {
+        line: parseInt(match[1], 10),
+        column: parseInt(match[2], 10)
+      };
+    }
+
+    return null;
   }
 }

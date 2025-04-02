@@ -833,6 +833,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.updateTestingTemplate.emit(testMapping);
       // this.step == 'Select templates'
     } else if (index == STEP_TEST_MAPPING) {
+      if (this.mapping.code || this.mapping['_code']) {
+      const testMapping = _.clone(this.mapping);
+      testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
+      testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+        // this.mapping.code = btoa(this.mapping['_code']);
+        testMapping.code= stringToBase64(this.mapping['_code']);
+        this.updateTestingTemplate.emit(testMapping);
+      }
       // console.log("Step 4: onStepChange targetTemplate ", this.mapping.targetTemplate);
     }
 
