@@ -183,8 +183,8 @@ export class SubstitutionContext {
    * @param {string} genericDeviceIdentifier - The generic device identifier
    * @param {Object} jsonObject - The JSON object representing the data
    */
-  constructor(genericDeviceIdentifier, jsonObject) {
-    this.#jsonObject = jsonObject;
+  constructor(genericDeviceIdentifier, payload) {
+    this.#jsonObject = new Map(Object.entries(payload || {}));;
     this.#genericDeviceIdentifier = genericDeviceIdentifier;
   }
 

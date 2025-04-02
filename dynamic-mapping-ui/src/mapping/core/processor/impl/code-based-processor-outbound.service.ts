@@ -21,7 +21,9 @@ import * as _ from 'lodash';
 import { BaseProcessorOutbound } from '../base-processor-outbound.service';
 import { API, getGenericDeviceIdentifier, Mapping } from '../../../../shared';
 import {
-  ProcessingContext
+  ProcessingContext,
+  processSubstitute,
+  SubstituteValue
 } from '../processor.model';
 import { Injectable } from '@angular/core';
 import {
@@ -50,27 +52,63 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
     const sharedCodeTemplate = codeTemplates[TemplateType.SHARED];
     const sharedCodeTemplateDecoded = enc.decode(base64ToBytes(sharedCodeTemplate.code));
     const mappingCodeTemplateDecoded = enc.decode(base64ToBytes(mapping.code));
-    const codeToRun = sharedCodeTemplateDecoded + ";" + mappingCodeTemplateDecoded + "";
+    // Modify codeToRun to use arg0 instead of ctx
+    const codeToRun = `
+        ${sharedCodeTemplateDecoded};
+        ${mappingCodeTemplateDecoded};
+        // Use arg0 which is the ctx parameter passed to the function
+        return extractFromSource(arg0);
+        `;
 
     let sourceId: any = await this.evaluateExpression(
       payload,
       API[mapping.targetAPI].identifier
     );
 
-    const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), context.payload);
-    const result = this.evaluateInCurrentScope(codeToRun);
+    let result;
+    try {
+      const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), context.payload);
+      // const result = this.evaluateInCurrentScope(codeToRun);
+      result = this.evaluateWithArgs(codeToRun, ctx);
+    } catch (error) {
+      console.error("Error during testing", error);
+    }
+    const substitutions = result.getSubstitutions();
+    const keys = substitutions.keySet();
+    for (const key of keys) {
+      const values = substitutions.get(key);
+      // console.log(`Key: ${key}, Value: ${value}`);
+      const processingCacheEntry: SubstituteValue[] = _.get(
+        processingCache,
+        key,
+        []
+      );
+      if (values != null && !values.isEmpty()
+        && values.get(0).expandArray) {
+        // extracted result from sourcePayload is an array, so we potentially have to
+        // iterate over the result, e.g. creating multiple devices
+        values.forEach((substitution) => {
+          processSubstitute(processingCacheEntry, substitution.value, substitution);
+        });
+      } else {
+        processSubstitute(processingCacheEntry, values.get(0).value, values.get(0));
+      }
+      processingCache.set(key, processingCacheEntry);
+    }
     context.sourceId = sourceId.toString();
 
     // iterate over substitutions END
   }
 
   evaluateWithArgs(codeString, ...args) {
-    // Create parameter names for the function
-    const paramNames = args.map((_, i) => `arg${i}`).join(',');
-    // Create the function with those parameter names
+    // Add 'Java' as the first parameter
+    const paramNames = ['Java'].concat(args.map((_, i) => `arg${i}`)).join(',');
+
+    // Create the function with Java and your other parameters
     const fn = new Function(paramNames, codeString);
-    // Call the function with the provided arguments
-    return fn(...args);
+
+    // Call the function with Java as the first argument, followed by your other args
+    return fn(Java, ...args);
   }
 
   evaluateInCurrentScope(codeString) {
