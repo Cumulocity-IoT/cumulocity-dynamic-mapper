@@ -53,7 +53,8 @@ import {
   PATH_DEPLOYMENT_DEFINED_ENDPOINT,
   Operation,
   LoggingEventTypeMap,
-  LoggingEventType
+  LoggingEventType,
+  MappingType
 } from '../../shared';
 import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
@@ -67,6 +68,7 @@ import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
+import { CodeBasedProcessorOutbound } from './processor/impl/code-based-processor-outbound.service';
 
 @Injectable({
   providedIn: 'root'
@@ -76,6 +78,7 @@ export class MappingService {
     private inventory: InventoryService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
+    private codeBasedProcessorOutbound: CodeBasedProcessorOutbound,
     private sharedService: SharedService,
     private client: FetchClient,
   ) {
@@ -478,9 +481,15 @@ export class MappingService {
       this.jsonProcessorInbound.validateProcessingCache(context);
       await this.jsonProcessorInbound.substituteInTargetAndSend(context);
     } else {
-      this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
-      await this.jsonProcessorOutbound.extractFromSource(context);
-      await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
+      if (mapping.mappingType !== MappingType.CODE_BASED) {
+        this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
+        await this.jsonProcessorOutbound.extractFromSource(context);
+        await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
+      } else {
+        this.codeBasedProcessorOutbound.deserializePayload(mapping, message, context);
+        await this.codeBasedProcessorOutbound.extractFromSource(context);
+        await this.codeBasedProcessorOutbound.substituteInTargetAndSend(context);
+      }
     }
 
     // The producing code (this may take some time)

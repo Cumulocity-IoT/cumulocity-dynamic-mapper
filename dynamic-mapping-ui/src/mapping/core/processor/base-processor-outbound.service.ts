@@ -20,7 +20,7 @@
 import { Injectable } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
-import { API, Mapping, MappingType, RepairStrategy } from '../../../shared';
+import { API, Mapping, MappingType, RepairStrategy, SharedService } from '../../../shared';
 import {
   TOKEN_TOPIC_LEVEL,
   splitTopicExcludingSeparator,
@@ -40,7 +40,8 @@ export abstract class BaseProcessorOutbound {
   constructor(
     private alert: AlertService,
     public c8yAgent: C8YAgent,
-    private mqttClient: MQTTClient
+    private mqttClient: MQTTClient,
+    public sharedService: SharedService,
   ) { }
 
   abstract deserializePayload(

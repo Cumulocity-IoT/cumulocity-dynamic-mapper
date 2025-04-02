@@ -299,7 +299,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       allowNoDefinedIdentifier: false,
       allowDefiningSubstitutions: true,
       showProcessorExtensionsSource: false,
-      allowTestTransformation: false,
+      allowTestTransformation: true,
       allowTestSending: false
     }
   }

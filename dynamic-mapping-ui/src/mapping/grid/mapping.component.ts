@@ -999,7 +999,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       delete this.stepperConfiguration.advanceFromStepToEndStep;
       this.stepperConfiguration.showCodeEditor = true;
       this.stepperConfiguration.allowTestSending = false;
-      this.stepperConfiguration.allowTestTransformation = false;
+      if (direction == Direction.INBOUND) this.stepperConfiguration.allowTestTransformation = false;
     }
   }
 
