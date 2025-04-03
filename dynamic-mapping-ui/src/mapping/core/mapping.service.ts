@@ -53,7 +53,8 @@ import {
   PATH_DEPLOYMENT_DEFINED_ENDPOINT,
   Operation,
   LoggingEventTypeMap,
-  LoggingEventType
+  LoggingEventType,
+  MappingType
 } from '../../shared';
 import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
@@ -67,6 +68,8 @@ import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
+import { CodeBasedProcessorOutbound } from './processor/impl/code-based-processor-outbound.service';
+import { CodeBasedProcessorInbound } from './processor/impl/code-based-processor-inbound.service';
 
 @Injectable({
   providedIn: 'root'
@@ -76,6 +79,8 @@ export class MappingService {
     private inventory: InventoryService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
+    private codeBasedProcessorOutbound: CodeBasedProcessorOutbound,
+    private codeBasedProcessorInbound: CodeBasedProcessorInbound,
     private sharedService: SharedService,
     private client: FetchClient,
   ) {
@@ -472,15 +477,31 @@ export class MappingService {
   ): Promise<ProcessingContext> {
     const { mapping } = context;
     if (mapping.direction == Direction.INBOUND) {
-      this.jsonProcessorInbound.deserializePayload(mapping, message, context);
-      this.jsonProcessorInbound.enrichPayload(context);
-      await this.jsonProcessorInbound.extractFromSource(context);
-      this.jsonProcessorInbound.validateProcessingCache(context);
-      await this.jsonProcessorInbound.substituteInTargetAndSend(context);
+      if (mapping.mappingType !== MappingType.CODE_BASED) {
+        this.jsonProcessorInbound.deserializePayload(mapping, message, context);
+        this.jsonProcessorInbound.enrichPayload(context);
+        await this.jsonProcessorInbound.extractFromSource(context);
+        this.jsonProcessorInbound.validateProcessingCache(context);
+        await this.jsonProcessorInbound.substituteInTargetAndSend(context);
+      } else {
+        this.codeBasedProcessorInbound.deserializePayload(mapping, message, context);
+        this.codeBasedProcessorInbound.enrichPayload(context);
+        await this.codeBasedProcessorInbound.extractFromSource(context);
+        this.codeBasedProcessorInbound.validateProcessingCache(context);
+        await this.codeBasedProcessorInbound.substituteInTargetAndSend(context);
+      }
     } else {
-      this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
-      await this.jsonProcessorOutbound.extractFromSource(context);
-      await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
+      if (mapping.mappingType !== MappingType.CODE_BASED) {
+        this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
+        await this.jsonProcessorOutbound.extractFromSource(context);
+        await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
+      } /* The above code is written in TypeScript and it is an `else` block that contains three
+      asynchronous operations: */
+      else {
+        this.codeBasedProcessorOutbound.deserializePayload(mapping, message, context);
+        await this.codeBasedProcessorOutbound.extractFromSource(context);
+        await this.codeBasedProcessorOutbound.substituteInTargetAndSend(context);
+      }
     }
 
     // The producing code (this may take some time)

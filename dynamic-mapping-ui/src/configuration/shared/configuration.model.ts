@@ -31,6 +31,10 @@ export interface ServiceConfiguration {
   outboundMappingEnabled: boolean;
   inboundExternalIdCacheSize: number;
   inboundExternalIdCacheRetention: number;
+  inventoryCacheSize: number;
+  inventoryCacheRetention: number;
+  inventoryFragmentsToCache?: string[];
+  codeTemplates?: any;
 }
 
 export enum TemplateType {

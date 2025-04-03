@@ -54,6 +54,7 @@ export class SubstitutionRendererComponent  {
   definesDeviceIdentifier = definesDeviceIdentifier;
   EditorMode = EditorMode;
   substitutions: MappingSubstitution[] = [];
+  substitutionTemplateHelp = 'Substitutions defining the device identifier are marked with an <code>*</code>. Before adding a substitution target and source property in templates have to be selected.';
 
   constructor(
     private elementRef: ElementRef,

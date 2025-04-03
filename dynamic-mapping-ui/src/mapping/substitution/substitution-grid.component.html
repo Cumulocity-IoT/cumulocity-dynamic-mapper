@@ -29,9 +29,10 @@
           <div>
             <span>Substitution [ pathSource &#8212;> pathTarget ]</span>
             <span class="hidden-xs hidden-sm m-l-4">
-              <button type="button" placement="right" [popover]="'Substitutions defining the device identifier are marked with an
-                *. Before adding a substitution target and source property in
-                templates have to be selected.'" triggers="focus" class="btn-help" aria-label="Help content"></button>
+              <ng-template #popupSubstitutionTemplateHelp>
+                <div [innerHtml]="substitutionTemplateHelp"></div>
+              </ng-template>
+              <button type="button" placement="right" [popover]="popupSubstitutionTemplateHelp" triggers="focus" class="btn-help" aria-label="Help content"></button>
             </span>
           </div>
         </th>

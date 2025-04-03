@@ -52,6 +52,7 @@ import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapping.configuration.TrustedCertificateRepresentation;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.cache.InboundExternalIdCache;
+import dynamic.mapping.core.cache.InventoryCache;
 import dynamic.mapping.core.facade.IdentityFacade;
 import dynamic.mapping.core.facade.InventoryFacade;
 import dynamic.mapping.model.API;
@@ -137,6 +138,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Getter
     private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new HashMap<>();
+
+    @Getter
+    private Map<String, InventoryCache> inventoryCaches = new HashMap<>();
 
     @Getter
     private ConfigurationRegistry configurationRegistry;
@@ -824,8 +828,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
-        log.info("Tenant {} - Initialize cache {}", tenant, inboundExternalIdCacheSize);
+        log.info("Tenant {} - Initialize inboundExternalIdCache {}", tenant, inboundExternalIdCacheSize);
         inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+    }
+
+    public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
+        log.info("Tenant {} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
+        inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
     }
 
     public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
@@ -834,6 +843,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public InboundExternalIdCache getInboundExternalIdCache(String tenant) {
         return inboundExternalIdCaches.get(tenant);
+    }
+
+    public InventoryCache deleteInventoryCache(String tenant) {
+        return inventoryCaches.remove(tenant);
+    }
+
+    public InventoryCache getInventoryCache(String tenant) {
+        return inventoryCaches.get(tenant);
     }
 
     public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
@@ -857,4 +874,100 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             return 0;
     }
 
+    public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
+        InventoryCache inventoryCache = inventoryCaches.get(tenant);
+        if (inventoryCache != null) {
+            // FIXME Recreating the cache creates a new instance of InventoryCache
+            // which causes issues with Metering
+            if (recreate) {
+                inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
+            } else {
+                inventoryCache.clearCache();
+            }
+        }
+    }
+
+    public int getSizeInventoryCache(String tenant) {
+        InventoryCache inventoryCache = inventoryCaches.get(tenant);
+        if (inventoryCache != null) {
+            return inventoryCache.getCacheSize();
+        } else
+            return 0;
+    }
+    public Map<String, Object> getMOFromInventoryCache(String tenant, String deviceId) {
+        Map<String, Object> result = getInventoryCache(tenant).getMOBySource(deviceId);
+        if (result != null) {
+            return result;
+        }
+        
+        // Create new managed object cache entry
+        final Map<String, Object> newMO = new HashMap<>();
+        getInventoryCache(tenant).putMOforSource(deviceId, newMO);
+        
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
+        Map<String, Object> attrs = device.getAttrs();
+        
+        // Process each fragment
+        serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
+            frag = frag.trim();
+            
+            // Handle special cases
+            if ("id".equals(frag)) {
+                newMO.put(frag, deviceId);
+                return; // using return in forEach as continue
+            }
+            if ("name".equals(frag)) {
+                newMO.put(frag, device.getName());
+                return;
+            }
+            if ("owner".equals(frag)) {
+                newMO.put(frag, device.getOwner());
+                return;
+            }
+
+            if ("type".equals(frag)) {
+                newMO.put(frag, device.getType());
+                return;
+            }
+            
+            // Handle nested attributes
+            Object value = resolveNestedAttribute(attrs, frag);
+            if (value != null) {
+                newMO.put(frag, value);
+            }
+        });
+        
+        return newMO;
+    }
+    
+    /**
+     * Resolves a nested attribute from a map using dot notation.
+     * @param attrs The source attributes map
+     * @param path The attribute path using dot notation (e.g., "a.b.c")
+     * @return The resolved value or null if path cannot be resolved
+     */
+    private Object resolveNestedAttribute(Map<String, Object> attrs, String path) {
+        if (path == null || attrs == null) {
+            return null;
+        }
+        
+        String[] pathParts = path.split("\\.");
+        Object current = attrs;
+        
+        for (String part : pathParts) {
+            if (!(current instanceof Map)) {
+                return null;
+            }
+            
+            Map<?, ?> currentMap = (Map<?, ?>) current;
+            if (!currentMap.containsKey(part)) {
+                return null;
+            }
+            
+            current = currentMap.get(part);
+        }
+        
+        return current;
+    }
 }

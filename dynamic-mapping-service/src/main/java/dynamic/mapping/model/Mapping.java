@@ -44,7 +44,7 @@ import org.json.JSONTokener;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = { "sourceTemplate", "targetTemplate", "snoopedTemplates" })
+@ToString(exclude = { "sourceTemplate", "targetTemplate", "snoopedTemplates", "code" })
 public class Mapping implements Serializable {
 
     public static final String IDENTITY = "_IDENTITY_";
@@ -140,13 +140,11 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public ExtensionEntry extension;
 
-    // TODO filterMapping has to be removed and for ountbound mappings as well
-    // JSONata expressions
-    // this has to be changed in MappingComponent.deleteFromMappingCache &
-    // MappingComponent.rebuildMappingOutboundCache
-
     @JsonSetter(nulls = Nulls.SKIP)
     public String filterMapping;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String filterInventory;
 
     @NotNull
     public QOS qos;

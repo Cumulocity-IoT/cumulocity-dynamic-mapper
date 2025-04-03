@@ -287,7 +287,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       } else {
       }
     } else {
-      this.alertService.danger(`${message}: ${error.message}`);
+      const m  = message ||error.message;
+      this.alertService.danger(`${m}`);
     }
   }
 

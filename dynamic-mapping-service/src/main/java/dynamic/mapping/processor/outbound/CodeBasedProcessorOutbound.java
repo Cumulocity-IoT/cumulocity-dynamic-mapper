@@ -21,7 +21,6 @@
 
 package dynamic.mapping.processor.outbound;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 
@@ -33,13 +32,10 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
-import com.dashjoin.jsonata.json.Json;
-
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
 
-import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 
@@ -54,13 +50,6 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
 
     public CodeBasedProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         super(configurationRegistry, connectorClient);
-    }
-
-    @Override
-    public Object deserializePayload(Mapping mapping,
-            C8YMessage c8yMessage) throws IOException {
-        Object jsonNode = Json.parseJson(c8yMessage.getPayload());
-        return jsonNode;
     }
 
     @Override

@@ -91,7 +91,7 @@ export class JSONProcessorOutbound extends BaseProcessorOutbound {
           substitution.pathSource
         );
 
-        // step 2 analyse extracted content: textual, array
+        // step 2 analyze extracted content: textual, array
         const processingCacheEntry: SubstituteValue[] = _.get(
           processingCache,
           substitution.pathTarget,

@@ -248,9 +248,10 @@
                         <div class="d-flex">
                           <label>Target Template - {{ targetSystem }}</label>
                           <span class="hidden-xs hidden-sm m-l-4">
-                            <button type="button" placement="right" [popover]="'The template contains the dummy field
-                              _TOPIC_LEVEL_ for outbound to map device
-                              identifiers.'" triggers="focus" class="btn-help" aria-label="Help content"></button>
+                            <ng-template #popupTargetTemplateHelp>
+                              <div [innerHtml]="targetTemplateHelp"></div>
+                            </ng-template>
+                            <button type="button" placement="right" [popover]="popupTargetTemplateHelp" triggers="click" class="btn-help" aria-label="Help content"></button>
                           </span>
                         </div>
                       </div>
@@ -443,10 +444,10 @@
               <div class="d-flex">
                 <label translate style="margin-top:4px">JavaScript callback for creating substitutions</label>
                 <span class="hidden-xs hidden-sm">
-                  <ng-template #popTemplateCodeHelp>
+                  <ng-template #popupTemplateCodeHelp>
                     <div [innerHtml]="codeEditorHelp"></div>
                   </ng-template>
-                  <button type="button" placement="right" [popover]="popTemplateCodeHelp" triggers="focus"
+                  <button type="button" placement="right" [popover]="popupTemplateCodeHelp" triggers="focus"
                     class="btn-help" aria-label="Help content"></button>
                 </span>
               </div>

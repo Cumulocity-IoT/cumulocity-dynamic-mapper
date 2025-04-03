@@ -63,12 +63,14 @@ export class MappingStepPropertiesComponent
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-  filterModel: any;
+  filterMappingModel: any;
+  filterInventoryModel: any;
+  readOnlyHelp=' To edit this mapping deactivate the mapping first in mapping list.';
 
 
   constructor(
     private formatStringPipe: FormatStringPipe,
-      public mappingService: MappingService,
+    public mappingService: MappingService,
   ) { }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -89,13 +91,20 @@ export class MappingStepPropertiesComponent
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
 
-      this.filterModel = {
-        filterExpression: {
-          result: '',
-          resultType: 'empty',
-          valid: false,
-        },
-      };
+    this.filterMappingModel = {
+      filterExpression: {
+        result: '',
+        resultType: 'empty',
+        valid: false,
+      },
+    };
+    this.filterInventoryModel = {
+      filterExpression: {
+        result: '',
+        resultType: 'empty',
+        valid: false,
+      },
+    };
 
     this.propertyFormlyFields = [
       {
@@ -180,11 +189,11 @@ export class MappingStepPropertiesComponent
             type: 'input',
             templateOptions: {
               label: 'Filter Mapping',
-              placeholder: 'e.g. custom_OperationFragment',
+              placeholder: 'custom_OperationFragment',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'The Filter Mapping has to be defined as boolean expression (JSONata), e.g. "$exists(C8Y_FRAGMENT)"',
+                'The filter has to be defined as boolean expression (JSONata), e.g. <code>$exists(<C8Y_FRAGMENT>)</code>',
               required:
                 this.stepperConfiguration.direction == Direction.OUTBOUND
             },
@@ -199,7 +208,37 @@ export class MappingStepPropertiesComponent
                   // Only trigger if the value has actually changed
                   distinctUntilChanged()
                 ).subscribe(path => {
-                  this.updateFilterExpressionResult(path);
+                  this.updateFilterMappingExpressionResult(path);
+                });
+              }
+            }
+          },
+          {
+            className: 'col-lg-6',
+            key: 'filterInventory',
+            type: 'input',
+            templateOptions: {
+              label: 'Filter Inventory',
+              placeholder: `type = "lora_device_type`,
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description:
+                'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>',
+              required:
+                false
+            },
+            hideExpression:
+              this.stepperConfiguration.direction == Direction.INBOUND,
+            hooks: {
+              onInit: (field: FormlyFieldConfig) => {
+                field.formControl.valueChanges.pipe(
+                  // Wait for 500ms pause in typing before processing
+                  debounceTime(500),
+
+                  // Only trigger if the value has actually changed
+                  distinctUntilChanged()
+                ).subscribe(path => {
+                  this.updateFilterInventoryExpressionResult(path);
                 });
               }
             }
@@ -214,9 +253,9 @@ export class MappingStepPropertiesComponent
               placeholder: 'e.g. device/110',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: `The MappingTopicSample name
+              description: `The Mapping Topic Sample name
               must have the same structure and number of
-              levels as the MappingTopic. Wildcards, i.e. "+" in the MappingTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
+              levels as the MappingTopic. Wildcards, i.e. <code>+</code> in the Mapping Topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
               required: true
             },
             hideExpression:
@@ -232,9 +271,9 @@ export class MappingStepPropertiesComponent
               placeholder: 'e.g. device/110',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: `The PublishTopicSample name
+              description: `The Publish Topic Sample name
               must have the same structure and number of
-              levels as the PublishTopic. Wildcards, i.e. "+" in the PublishTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
+              levels as the PublishTopic. Wildcards, i.e. <code>+</code> in the PublishTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
               required: true
             },
             hideExpression:
@@ -432,31 +471,57 @@ export class MappingStepPropertiesComponent
     ];
   }
 
-    async updateFilterExpressionResult(path) {
-      try {
-        const resultExpression: JSON = await this.mappingService.evaluateExpression(
-          JSON.parse('{}'),
-          path
-        );
-        this.filterModel.filterExpression = {
-          resultType: getTypeOf(resultExpression),
-          result: JSON.stringify(resultExpression, null, 4),
-          valid: true
-        };
-        if (path && this.filterModel.filterExpression.resultType != 'Boolean') throw Error('The filter expression must return of boolean type');
-        this.mapping.filterMapping = path;
-        // this.propertyFormly
-        // .get('filterMapping')
-        // .setErrors(null);
-      } catch (error) {
-        this.filterModel.filterExpression.valid = false;
-        this.propertyFormly
-          .get('filterMapping')
-          .setErrors({ validationError: { message: error.message } });
-        this.propertyFormly.get('filterMapping').markAsTouched();
-      }
-      this.filterModel = { ...this.filterModel };
+  async updateFilterMappingExpressionResult(path) {
+    try {
+      const resultExpression: JSON = await this.mappingService.evaluateExpression(
+        JSON.parse('{}'),
+        path
+      );
+      this.filterMappingModel.filterExpression = {
+        resultType: getTypeOf(resultExpression),
+        result: JSON.stringify(resultExpression, null, 4),
+        valid: true
+      };
+      if (path && this.filterMappingModel.filterExpression.resultType != 'Boolean') throw Error('The filter expression must return of boolean type');
+      this.mapping.filterMapping = path;
+      // this.propertyFormly
+      // .get('filterMapping')
+      // .setErrors(null);
+    } catch (error) {
+      this.filterMappingModel.filterExpression.valid = false;
+      this.propertyFormly
+        .get('filterMapping')
+        .setErrors({ validationError: { message: error.message } });
+      this.propertyFormly.get('filterMapping').markAsTouched();
     }
+    this.filterMappingModel = { ...this.filterMappingModel };
+  }
+
+  async updateFilterInventoryExpressionResult(path) {
+    try {
+      const resultExpression: JSON = await this.mappingService.evaluateExpression(
+        JSON.parse('{}'),
+        path
+      );
+      this.filterInventoryModel.filterExpression = {
+        resultType: getTypeOf(resultExpression),
+        result: JSON.stringify(resultExpression, null, 4),
+        valid: true
+      };
+      if (path && this.filterInventoryModel.filterExpression.resultType != 'Boolean') throw Error('The filter expression must return of boolean type');
+      this.mapping.filterInventory = path;
+      // this.propertyFormly
+      // .get('filterInventory')
+      // .setErrors(null);
+    } catch (error) {
+      this.filterInventoryModel.filterExpression.valid = false;
+      this.propertyFormly
+        .get('filterInventory')
+        .setErrors({ validationError: { message: error.message } });
+      this.propertyFormly.get('filterInventory').markAsTouched();
+    }
+    this.filterInventoryModel = { ...this.filterInventoryModel };
+  }
 
   onTargetAPIChanged(targetAPI) {
     this.mapping.targetAPI = targetAPI;

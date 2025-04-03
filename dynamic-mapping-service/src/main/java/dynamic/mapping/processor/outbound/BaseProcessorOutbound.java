@@ -24,7 +24,6 @@ package dynamic.mapping.processor.outbound;
 import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
-import java.io.IOException;
 import java.util.*;
 
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -42,7 +41,6 @@ import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.processor.model.SubstituteValue.TYPE;
 import dynamic.mapping.processor.model.SubstituteValue;
-import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -61,9 +59,6 @@ public abstract class BaseProcessorOutbound<T> {
     protected C8YAgent c8yAgent;
 
     protected AConnectorClient connectorClient;
-
-    public abstract T deserializePayload(Mapping mapping, C8YMessage c8yMessage)
-            throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
 

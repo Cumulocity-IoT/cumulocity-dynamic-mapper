@@ -23,6 +23,8 @@ package dynamic.mapping.configuration;
 
 import jakarta.validation.constraints.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -51,6 +53,9 @@ public class ServiceConfiguration implements Cloneable {
         this.outboundMappingEnabled = true;
         this.inboundExternalIdCacheSize = 0;
         this.inboundExternalIdCacheRetention = 1;
+        this.inventoryCacheSize = 0;
+        this.inventoryCacheRetention = 1;
+        this.inventoryFragmentsToCache = new ArrayList<String>();
     }
 
     @NotNull
@@ -96,6 +101,18 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public Integer inboundExternalIdCacheRetention;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Integer inventoryCacheSize;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Integer inventoryCacheRetention;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public List<String> inventoryFragmentsToCache;
 
     @JsonProperty("codeTemplates")
     public Map<String, CodeTemplate> codeTemplates;

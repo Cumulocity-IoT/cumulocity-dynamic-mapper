@@ -253,11 +253,13 @@ public class OperationController {
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent
                 .getServiceConfiguration(tenant);
 
-        Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
+        Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
+                tenant);
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                 connectorIdentifier);
-        //Wait until client is connected before subscribing - otherwise "old" notification messages will be ignored
-        if(client.supportedDirections().contains(Direction.OUTBOUND)) {
+        // Wait until client is connected before subscribing - otherwise "old"
+        // notification messages will be ignored
+        if (client.supportedDirections().contains(Direction.OUTBOUND)) {
             try {
                 connectTask.get(10, TimeUnit.SECONDS);
             } catch (Exception e) {
@@ -296,6 +298,12 @@ public class OperationController {
             Integer cacheSize = serviceConfigurationComponent
                     .getServiceConfiguration(tenant).inboundExternalIdCacheSize;
             configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
+            log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } else if ("INVENTORY_CACHE".equals(cacheId)) {
+            Integer cacheSize = serviceConfigurationComponent
+                    .getServiceConfiguration(tenant).inventoryCacheSize;
+            configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
             log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         }

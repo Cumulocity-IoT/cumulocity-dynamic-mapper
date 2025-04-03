@@ -90,7 +90,7 @@ public class HttpClient extends AConnectorClient {
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+        this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
@@ -171,7 +171,7 @@ public class HttpClient extends AConnectorClient {
 
             activeSubscriptionsInbound.entrySet().forEach(entry -> {
                 // only unsubscribe if still active subscriptions exist
-                String topic = entry.getKey();
+                // String topic = entry.getKey();
                 MutableInt activeSubs = entry.getValue();
                 if (activeSubs.intValue() > 0 && isConnected()) {
                     // do we have to do anything here?

@@ -206,6 +206,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   stepperForward: boolean = true;
   currentStepIndex: number;
   codeEditorHelp = 'JavaScript for creating substitutions. Please do not change the methods signature <code>function extractFromSource(ctx)</code>. <br> Define substitutions: <code>Substitution(String key, Object value, String type, String repairStrategy)</code> <br> with <code>type</code>: <code>"ARRAY"</code>, <code>"IGNORE"</code>, <code>"NUMBER"</code>, <code>"OBJECT"</code>, <code>"TEXTUAL"</code> <br>and <code>repairStrategy</code>: <br><code>"DEFAULT"</code>, <code>"USE_FIRST_VALUE_OF_ARRAY"</code>, <code>"USE_LAST_VALUE_OF_ARRAY"</code>, <code>"IGNORE"</code>, <code>"REMOVE_IF_MISSING_OR_NULL"</code>,<code>"CREATE_IF_MISSING"</code>';
+  targetTemplateHelp ='The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
 
   constructor(
     public bsModalService: BsModalService,
@@ -488,7 +489,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log('Updated number identifiers', ni, (ni == 1 && this.mapping.direction == Direction.INBOUND) , ni >= 1 && this.mapping.direction == Direction.OUTBOUND, (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
     // (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier);
     this.countDeviceIdentifiers$.next(ni);
-    console.log(this.stepperConfiguration.showCodeEditor, ni == 1 && this.mapping.direction == Direction.INBOUND, ni >= 1 && this.mapping.direction == Direction.OUTBOUND, this.stepperConfiguration.allowNoDefinedIdentifier || this.currentStepIndex < 3);
+    // console.log(this.stepperConfiguration.showCodeEditor, ni == 1 && this.mapping.direction == Direction.INBOUND, ni >= 1 && this.mapping.direction == Direction.OUTBOUND, this.stepperConfiguration.allowNoDefinedIdentifier || this.currentStepIndex < 3);
     this.isSubstitutionValid$.next(this.stepperConfiguration.showCodeEditor || (ni == 1 && this.mapping.direction == Direction.INBOUND) ||
       (ni >= 1 && this.mapping.direction == Direction.OUTBOUND) || this.stepperConfiguration.allowNoDefinedIdentifier || this.currentStepIndex < 3);
   }
@@ -832,6 +833,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.updateTestingTemplate.emit(testMapping);
       // this.step == 'Select templates'
     } else if (index == STEP_TEST_MAPPING) {
+      if (this.mapping.code || this.mapping['_code']) {
+      const testMapping = _.clone(this.mapping);
+      testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
+      testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+        // this.mapping.code = btoa(this.mapping['_code']);
+        testMapping.code= stringToBase64(this.mapping['_code']);
+        this.updateTestingTemplate.emit(testMapping);
+      }
       // console.log("Step 4: onStepChange targetTemplate ", this.mapping.targetTemplate);
     }
 

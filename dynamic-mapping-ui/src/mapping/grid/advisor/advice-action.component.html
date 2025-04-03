@@ -47,6 +47,11 @@
             (click)="onSelection(AdvisorAction.EDIT)"></c8y-li-radio>
           <span>{{ 'Continue snooping and edit mapping ...' }}</span>
         </c8y-li>
+        <c8y-li>
+          <c8y-li-radio name="mapping_type_group" title="{{ 'Stop snooping' }}"
+            (click)="onSelection(AdvisorAction.VIEW)"></c8y-li-radio>
+          <span>{{ 'Continue snooping and view mapping ...' }}</span>
+        </c8y-li>
       </c8y-list-group>
     </div>
   </div>

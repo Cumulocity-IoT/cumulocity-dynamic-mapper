@@ -82,7 +82,6 @@ public class ServiceConfigurationComponent {
         this.objectMapper = objectMapper;
     }
 
-    @Autowired
     public ServiceConfigurationComponent(TenantOptionApi tenantOptionApi) {
         this.tenantOptionApi = tenantOptionApi;
     }

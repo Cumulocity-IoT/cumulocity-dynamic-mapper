@@ -134,20 +134,20 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             } else { // Now use the copied objects
                 Set<String> keySet = typedResult.getSubstitutions().keySet();
                 for (String key : keySet) {
-                    List<SubstituteValue> processingCacheEntry = 
-                        new ArrayList<>();
+                    List<SubstituteValue> processingCacheEntry = new ArrayList<>();
                     List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
-                    if (values != null && values.size() >0 
+                    if (values != null && values.size() > 0
                             && values.get(0).expandArray) {
                         // extracted result from sourcePayload is an array, so we potentially have to
                         // iterate over the result, e.g. creating multiple devices
-                        for (SubstituteValue substitutionValue: values) {
-                            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, substitutionValue.value,
-                            substitutionValue, mapping);
+                        for (SubstituteValue substitutionValue : values) {
+                            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry,
+                                    substitutionValue.value,
+                                    substitutionValue, mapping);
                         }
                     } else if (values != null) {
                         SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, values.getFirst().value,
-                        values.getFirst(), mapping);
+                                values.getFirst(), mapping);
                     }
                     processingCache.put(key, processingCacheEntry);
 
@@ -175,38 +175,4 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
         }
     }
 
-    @Override
-    public void applyFilter(ProcessingContext<Object> context) {
-        String tenant = context.getTenant();
-        String mappingFilter = context.getMapping().getFilterMapping();
-        if (mappingFilter != null && !("").equals(mappingFilter)) {
-            Object payloadObjectNode = context.getPayload();
-            String payload = toPrettyJsonString(payloadObjectNode);
-            try {
-                var expr = jsonata(mappingFilter);
-                Object extractedSourceContent = expr.evaluate(payloadObjectNode);
-                log.info("Tenant {} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter, payload);
-                context.setIgnoreFurtherProcessing(!isNodeTrue(extractedSourceContent));
-            } catch (Exception e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
-                        payload, e);
-            }
-        }
-    }
-
-    private boolean isNodeTrue(Object node) {
-        // Case 1: Direct boolean value check
-        if (node instanceof Boolean) {
-            return (Boolean) node;
-        }
-
-        // Case 2: String value that can be converted to boolean
-        if (node instanceof String) {
-            String text = ((String) node).trim().toLowerCase();
-            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
-            // Add more string variations if needed
-        }
-
-        return false;
-    }
 }
