@@ -27,6 +27,7 @@ import {
 import { BaseProcessorInbound } from '../base-processor-inbound.service';
 import {
   evaluateWithArgs,
+  extractLineAndColumn,
   ProcessingContext,
   processSubstitute,
   SubstituteValue,
@@ -103,6 +104,9 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
 
     } catch (error) {
       context.errors.push(error.message);
+      console.error("Error during testing", error);
+      const loc = extractLineAndColumn(error.stack);
+      throw (new Error(`Evaluation failed: ${error.message}, at ${loc.line - 3}:${loc.column}`));
     }
 
     // no substitution for the time property exists, then use the system time
