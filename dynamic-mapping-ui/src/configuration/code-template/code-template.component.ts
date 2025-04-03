@@ -100,12 +100,12 @@ export class SharedCodeComponent implements OnInit {
         const decodedCode = base64ToString(template.code);
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: decodedCode, internal: template.internal
+          type: template.type, code: decodedCode, internal: template.internal, readonly: template.readonly,
         });
       } catch (error) {
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: "// Code Template not valid!", internal: template.internal
+          type: template.type, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly,
         });
       }
     });

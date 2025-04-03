@@ -21,7 +21,6 @@
 
 package dynamic.mapping.processor.inbound;
 
-import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 
 import java.io.IOException;
@@ -112,6 +111,15 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                 Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
                         .buildLiteral();
                 graalsContext.eval(sharedSource);
+            }
+
+
+            if (context.getSystemCode() != null) {
+                byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
+                String decodedSystemCode = new String(decodedSystemCodeBytes);
+                Source systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
+                        .buildLiteral();
+                graalsContext.eval(systemSource);
             }
 
             Map jsonObject = (Map) context.getPayload();

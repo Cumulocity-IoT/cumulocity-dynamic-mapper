@@ -24,5 +24,6 @@ package dynamic.mapping.configuration;
 public enum TemplateType {
     INBOUND,
     OUTBOUND,
-    SHARED
+    SHARED,
+    SYSTEM
 }

@@ -48,19 +48,21 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
 
   async extractFromSource(context: ProcessingContext) {
     const { mapping, processingCache, payload } = context;
-
     const enc = new TextDecoder("utf-8");
     const codeTemplates: CodeTemplateMap = await this.sharedService.getCodeTemplates();
+    const mappingCodeTemplateDecoded = enc.decode(base64ToBytes(mapping.code));
     const sharedCodeTemplate = codeTemplates[TemplateType.SHARED];
     const sharedCodeTemplateDecoded = enc.decode(base64ToBytes(sharedCodeTemplate.code));
-    const mappingCodeTemplateDecoded = enc.decode(base64ToBytes(mapping.code));
+    const systemCodeTemplate = codeTemplates[TemplateType.SYSTEM];
+    const systemCodeTemplateDecoded = enc.decode(base64ToBytes(systemCodeTemplate.code));
     // Modify codeToRun to use arg0 instead of ctx
     const codeToRun = `
-        ${mappingCodeTemplateDecoded};
-        ${sharedCodeTemplateDecoded};
-        // Use arg0 which is the ctx parameter passed to the function
-        return extractFromSource(arg0);
-        `;
+            ${mappingCodeTemplateDecoded};
+            ${sharedCodeTemplateDecoded};
+            ${systemCodeTemplateDecoded};
+            // Use arg0 which is the ctx parameter passed to the function
+            return extractFromSource(arg0);
+            `;
 
     let sourceId: any = await this.evaluateExpression(
       payload,

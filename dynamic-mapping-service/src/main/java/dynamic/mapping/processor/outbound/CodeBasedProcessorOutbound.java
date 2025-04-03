@@ -85,6 +85,14 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                     graalsContext.eval(sharedSource);
                 }
 
+                if (context.getSystemCode() != null) {
+                    byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
+                    String decodedSystemCode = new String(decodedSystemCodeBytes);
+                    Source systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
+                            .buildLiteral();
+                    graalsContext.eval(systemSource);
+                }
+
                 Map jsonObject = (Map) context.getPayload();
                 Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 

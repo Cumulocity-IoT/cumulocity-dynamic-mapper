@@ -251,6 +251,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     BaseProcessorOutbound processor = payloadProcessorsOutbound.get(mapping.mappingType);
                     Context graalsContext = null;
                     String sharedCode = null;
+                    String systemCode = null;
                     try {
                         if (processor != null) {
                             // prepare graals func if required
@@ -283,6 +284,8 @@ public class DispatcherOutbound implements NotificationCallback {
                                 sharedCode = serviceConfiguration.getCodeTemplates()
                                         .get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE).getCode();
 
+                                systemCode = serviceConfiguration.getCodeTemplates()
+                                        .get(ServiceConfigurationComponent.SYSTEM_CODE_TEMPLATE).getCode();
                             }
 
                             Object payload = c8yMessage.getParsedPayload();
@@ -293,6 +296,7 @@ public class DispatcherOutbound implements NotificationCallback {
                                     .qos(mapping.qos).serviceConfiguration(serviceConfiguration)
                                     .graalsContext(graalsContext)
                                     .sharedCode(sharedCode)
+                                    .sharedCode(systemCode)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info(

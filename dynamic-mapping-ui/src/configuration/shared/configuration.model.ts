@@ -40,7 +40,8 @@ export interface ServiceConfiguration {
 export enum TemplateType {
   INBOUND = "INBOUND",
   OUTBOUND = "OUTBOUND",
-  SHARED = "SHARED"
+  SHARED = "SHARED",
+  SYSTEM = "SYSTEM"
 }
 
 export interface CodeTemplate {
@@ -49,6 +50,7 @@ export interface CodeTemplate {
   type: TemplateType;
   code: string;
   internal: boolean;
+  readonly: boolean;
 }
 
 export interface CodeTemplateMap {

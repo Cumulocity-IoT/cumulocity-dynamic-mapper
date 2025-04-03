@@ -154,6 +154,8 @@ public class DispatcherInbound implements GenericMessageCallback {
                     BaseProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
                     Context graalsContext = null;
                     String sharedCode = null;
+                    String systemCode = null;
+
                     try {
                         if (processor != null) {
 
@@ -184,7 +186,11 @@ public class DispatcherInbound implements GenericMessageCallback {
                                             .getMember(identifier);
 
                                 }
-                                sharedCode = serviceConfiguration.getCodeTemplates().get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE).getCode();
+                                sharedCode = serviceConfiguration.getCodeTemplates()
+                                        .get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE).getCode();
+
+                                systemCode = serviceConfiguration.getCodeTemplates()
+                                        .get(ServiceConfigurationComponent.SYSTEM_CODE_TEMPLATE).getCode();
 
                             }
                             
@@ -197,6 +203,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                                     .key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
                                     .graalsContext(graalsContext)
                                     .sharedCode(sharedCode)
+                                    .sharedCode(systemCode)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 Object pp = context.getPayload();

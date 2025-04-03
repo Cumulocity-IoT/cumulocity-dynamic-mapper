@@ -106,6 +106,8 @@ public class ProcessingContext<O> {
 
     private String sharedCode;
 
+    private String systemCode;
+
     private Value extractFromSourceFunc;
 
     public static final String SOURCE_ID = "source.id";

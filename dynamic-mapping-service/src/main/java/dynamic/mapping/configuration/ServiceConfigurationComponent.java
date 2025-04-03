@@ -59,6 +59,9 @@ public class ServiceConfigurationComponent {
     @Value("${APP.template.code.outbound_02}")
     private String outboundCodeTemplate_02;
 
+    @Value("${APP.template.code.system}")
+    private String systemCodeTemplate;
+
     @Value("${APP.template.code.shared}")
     private String sharedCodeTemplate;
 
@@ -68,6 +71,7 @@ public class ServiceConfigurationComponent {
 
     public static final String INBOUND_CODE_TEMPLATE = "INBOUND";
     public static final String OUTBOUND_CODE_TEMPLATE = "OUTBOUND";
+    public static final String SYSTEM_CODE_TEMPLATE = "SYSTEM";
     public static final String SHARED_CODE_TEMPLATE = "SHARED";
 
     private final TenantOptionApi tenantOptionApi;
@@ -88,11 +92,12 @@ public class ServiceConfigurationComponent {
 
     public void initCodeTemplates(ServiceConfiguration configuration) {
         Map<String, CodeTemplate> codeTemplates = new HashMap<>();
-        codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(INBOUND_CODE_TEMPLATE,"Default Inbound Template",TemplateType.INBOUND, inboundCodeTemplate_01, true));
-        codeTemplates.put(INBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(uuidCustom(),"Inbound Template, multiple meas",TemplateType.INBOUND, inboundCodeTemplate_02, true));
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE, new CodeTemplate(OUTBOUND_CODE_TEMPLATE,"Default Outbound Template", TemplateType.OUTBOUND, outboundCodeTemplate_01, true ));
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE+ "_02", new CodeTemplate(OUTBOUND_CODE_TEMPLATE,"Outbound Template, Cumulocity internal", TemplateType.OUTBOUND, outboundCodeTemplate_02, true ));
-        codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(SHARED_CODE_TEMPLATE,"Shared Code", TemplateType.SHARED,sharedCodeTemplate, true));
+        codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(INBOUND_CODE_TEMPLATE,"Default Inbound Template",TemplateType.INBOUND, inboundCodeTemplate_01, true, false));
+        codeTemplates.put(INBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(uuidCustom(),"Inbound Template, multiple meas",TemplateType.INBOUND, inboundCodeTemplate_02, true, false));
+        codeTemplates.put(OUTBOUND_CODE_TEMPLATE, new CodeTemplate(OUTBOUND_CODE_TEMPLATE,"Default Outbound Template", TemplateType.OUTBOUND, outboundCodeTemplate_01, true, false ));
+        codeTemplates.put(OUTBOUND_CODE_TEMPLATE+ "_02", new CodeTemplate(OUTBOUND_CODE_TEMPLATE,"Outbound Template, Cumulocity internal", TemplateType.OUTBOUND, outboundCodeTemplate_02, true, false ));
+        codeTemplates.put(SYSTEM_CODE_TEMPLATE, new CodeTemplate(SYSTEM_CODE_TEMPLATE,"System Code", TemplateType.SYSTEM,systemCodeTemplate, true, true));
+        codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(SHARED_CODE_TEMPLATE,"Shared Code", TemplateType.SHARED,sharedCodeTemplate, true, false));
         configuration.setCodeTemplates(codeTemplates);
     }
 
