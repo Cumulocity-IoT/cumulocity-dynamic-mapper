@@ -478,11 +478,11 @@ export class MappingService {
     const { mapping } = context;
     if (mapping.direction == Direction.INBOUND) {
       if (mapping.mappingType !== MappingType.CODE_BASED) {
-      this.jsonProcessorInbound.deserializePayload(mapping, message, context);
-      this.jsonProcessorInbound.enrichPayload(context);
-      await this.jsonProcessorInbound.extractFromSource(context);
-      this.jsonProcessorInbound.validateProcessingCache(context);
-      await this.jsonProcessorInbound.substituteInTargetAndSend(context);
+        this.jsonProcessorInbound.deserializePayload(mapping, message, context);
+        this.jsonProcessorInbound.enrichPayload(context);
+        await this.jsonProcessorInbound.extractFromSource(context);
+        this.jsonProcessorInbound.validateProcessingCache(context);
+        await this.jsonProcessorInbound.substituteInTargetAndSend(context);
       } else {
         this.codeBasedProcessorInbound.deserializePayload(mapping, message, context);
         this.codeBasedProcessorInbound.enrichPayload(context);

@@ -76,27 +76,27 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
       const substitutions = result.getSubstitutions();
       const keys = substitutions.keySet();
 
-            for (const key of keys) {
-              const values = substitutions.get(key);
-              // console.log(`Key: ${key}, Value: ${value}`);
-              const processingCacheEntry: SubstituteValue[] = _.get(
-                processingCache,
-                key,
-                []
-              );
-              if (values != null && !values.isEmpty()
-                && values.get(0).expandArray) {
-                // extracted result from sourcePayload is an array, so we potentially have to
-                // iterate over the result, e.g. creating multiple devices
-                values.forEach((substitution) => {
-                  processSubstitute(processingCacheEntry, substitution.value, substitution);
-                });
-              } else {
-                processSubstitute(processingCacheEntry, values.get(0).value, values.get(0));
-              }
-      
-              processingCache.set(key, processingCacheEntry);
-            }
+      for (const key of keys) {
+        const values = substitutions.get(key);
+        // console.log(`Key: ${key}, Value: ${value}`);
+        const processingCacheEntry: SubstituteValue[] = _.get(
+          processingCache,
+          key,
+          []
+        );
+        if (values != null && !values.isEmpty()
+          && values.get(0).expandArray) {
+          // extracted result from sourcePayload is an array, so we potentially have to
+          // iterate over the result, e.g. creating multiple devices
+          values.forEach((substitution) => {
+            processSubstitute(processingCacheEntry, substitution.value, substitution);
+          });
+        } else {
+          processSubstitute(processingCacheEntry, values.get(0).value, values.get(0));
+        }
+
+        processingCache.set(key, processingCacheEntry);
+      }
 
     } catch (error) {
       context.errors.push(error.message);

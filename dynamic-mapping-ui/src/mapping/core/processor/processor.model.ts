@@ -127,7 +127,7 @@ export function processSubstitute(processingCacheEntry: SubstituteValue[], extra
 
 export function getDeviceEntries(context: ProcessingContext): SubstituteValue[] {
   const { processingCache, mapping } = context;
-  const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(mapping);
+  const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(context);
   const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
     ? pathsTargetForDeviceIdentifiers[0]
     : null;

@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { ProcessingContext } from './../../mapping/core/processor/processor.model';
 import { EditorMode } from '../../mapping/shared/stepper.model';
 import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 
@@ -371,10 +372,16 @@ export interface Feature {
   return mp;
 }
 
-export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
-  const pss = mapping.substitutions
-    .filter(sub => definesDeviceIdentifier(mapping, sub))
-    .map(sub => sub.pathTarget);
+export function getPathTargetForDeviceIdentifiers(context: ProcessingContext): string[] {
+  const { mapping } = context;
+  let pss;
+  if (mapping.mappingType === MappingType.CODE_BASED) {
+     pss = [getGenericDeviceIdentifier(mapping)];
+  } else {
+    pss = mapping.substitutions
+      .filter(sub => definesDeviceIdentifier(mapping, sub))
+      .map(sub => sub.pathTarget);
+  }
   return pss;
 }
 

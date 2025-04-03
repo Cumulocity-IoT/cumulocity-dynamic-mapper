@@ -81,7 +81,7 @@ export abstract class BaseProcessorInbound {
           : max)[0];
     const countMaxEntries = processingCache.get(entryWithMaxSubstitutes).length;
 
-    const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(mapping);
+    const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(context);
     const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
       ? pathsTargetForDeviceIdentifiers[0]
       : null;
