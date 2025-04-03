@@ -28,7 +28,7 @@ jobs:
         with:
           java-version: 21
           distribution: zulu
-      - name: Build MQTT Service Backend
+      - name: Build MQTT Backend
         run: mvn -B package --file pom.xml
       - name: deploy
         uses: actions/setup-node@v2
