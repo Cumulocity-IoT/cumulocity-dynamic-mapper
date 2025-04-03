@@ -93,11 +93,6 @@ public class ExtensibleProcessorInbound extends BaseProcessorInbound<byte[]> {
         return;
     }
 
-    @Override
-    public void applyFilter(ProcessingContext<byte[]> context) {
-        // do nothing
-    }
-
     public ProcessorExtensionSource<?> getProcessorExtensionSource(ExtensionEntry extension) {
         String extensionName = extension.getExtensionName();
         String eventName = extension.getEventName();
