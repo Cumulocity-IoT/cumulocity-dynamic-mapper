@@ -348,6 +348,7 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         // don't modify original copy
         log.info("Tenant {} - Post service configuration: {}", tenant, configuration.toString());
+        // existing code templates
         ServiceConfiguration mergeServiceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         Map<String, CodeTemplate> codeTemplates = mergeServiceConfiguration.getCodeTemplates();
         // FIXME This isn't working - use @PreAuthorize instead
