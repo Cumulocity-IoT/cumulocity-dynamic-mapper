@@ -65,7 +65,7 @@ export class MappingStepPropertiesComponent
   targetSystem: string;
   filterMappingModel: any;
   filterInventoryModel: any;
-  readOnlyHelp=' To edit this mapping deactivate the mapping first in mapping list.';
+  readOnlyHelp = ' To edit this mapping deactivate the mapping first in mapping list.';
 
 
   constructor(
@@ -294,7 +294,7 @@ export class MappingStepPropertiesComponent
             type: 'select',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Target API',
+              label: this.stepperConfiguration.direction == Direction.INBOUND ? 'Target API' : 'Source API',
               options: Object.keys(API)
                 .filter((key) => key != API.ALL.name)
                 .map((key) => {
