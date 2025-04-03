@@ -136,39 +136,4 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
         }
     }
 
-    @Override
-    public void applyFilter(ProcessingContext<Object> context) {
-        String tenant = context.getTenant();
-        String mappingFilter = context.getMapping().getFilterMapping();
-        if (mappingFilter != null && !("").equals(mappingFilter)) {
-            Object payloadObjectNode = context.getPayload();
-            String payload = toPrettyJsonString(payloadObjectNode);
-            try {
-                var expr = jsonata(mappingFilter);
-                Object extractedSourceContent = expr.evaluate(payloadObjectNode);
-                log.info("Tenant {} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter, payload);
-                context.setIgnoreFurtherProcessing(!isNodeTrue(extractedSourceContent));
-            } catch (Exception e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
-                        payload, e);
-            }
-        }
-    }
-
-    private boolean isNodeTrue(Object node) {
-        // Case 1: Direct boolean value check
-        if (node instanceof Boolean) {
-            return (Boolean) node;
-        }
-
-        // Case 2: String value that can be converted to boolean
-        if (node instanceof String) {
-            String text = ((String) node).trim().toLowerCase();
-            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
-            // Add more string variations if needed
-        }
-
-        return false;
-    }
-
 }

@@ -21,6 +21,8 @@ import * as _ from 'lodash';
 import { BaseProcessorOutbound } from '../base-processor-outbound.service';
 import { API, getGenericDeviceIdentifier, Mapping } from '../../../../shared';
 import {
+  evaluateWithArgs,
+  extractLineAndColumn,
   ProcessingContext,
   processSubstitute,
   SubstituteValue
@@ -31,7 +33,7 @@ import {
 } from '../../../shared/util';
 import { CodeTemplateMap, TemplateType } from '../../../../configuration';
 import { SubstitutionContext } from '../processor-js.model';
-import { Java } from '../processor-js.model';
+
 
 @Injectable({ providedIn: 'root' })
 export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
@@ -66,12 +68,15 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
     );
 
     let result;
+
     try {
+
       const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), context.payload);
       // const result = this.evaluateInCurrentScope(codeToRun);
-      result = this.evaluateWithArgs(codeToRun, ctx);
+      result = evaluateWithArgs(codeToRun, ctx);
       const substitutions = result.getSubstitutions();
       const keys = substitutions.keySet();
+      
       for (const key of keys) {
         const values = substitutions.get(key);
         // console.log(`Key: ${key}, Value: ${value}`);
@@ -90,51 +95,20 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
         } else {
           processSubstitute(processingCacheEntry, values.get(0).value, values.get(0));
         }
+
         processingCache.set(key, processingCacheEntry);
       }
       context.sourceId = sourceId.toString();
+
     } catch (error) {
+
+      context.errors.push(error.message);
       console.error("Error during testing", error);
-      const loc = this.extractLineAndColumn(error.stack);
-      throw (new Error(`Evaluation failed: ${error.message}, at ${loc.line - 3 }: ${loc.column}`));
+      const loc = extractLineAndColumn(error.stack);
+      throw (new Error(`Evaluation failed: ${error.message}, at ${loc.line - 3}:${loc.column}`));
+
     }
 
-    // iterate over substitutions END
   }
 
-  evaluateWithArgs(codeString, ...args) {
-    // Add 'Java' as the first parameter
-    const paramNames = ['Java'].concat(args.map((_, i) => `arg${i}`)).join(',');
-
-    // Create the function with Java and your other parameters
-    const fn = new Function(paramNames, codeString);
-
-    // Call the function with Java as the first argument, followed by your other args
-    return fn(Java, ...args);
-  }
-
-  evaluateInCurrentScope(codeString) {
-    // Create a function that has access to Java
-    return Function('Java', `return (${codeString})`)(Java);
-  }
-
-  /**
-   * Extract line and column numbers from a stack trace line
-   * @param {string} stackTraceLine - The stack trace line to parse
-   * @returns {object|null} An object with line and column numbers, or null if not found
-   */
-  extractLineAndColumn(stackTraceLine) {
-    // This pattern looks for "<anonymous>:X:Y" where X is line and Y is column
-    const pattern = /<anonymous>:(\d+):(\d+)/;
-    const match = stackTraceLine.match(pattern);
-
-    if (match && match.length >= 3) {
-      return {
-        line: parseInt(match[1], 10),
-        column: parseInt(match[2], 10)
-      };
-    }
-
-    return null;
-  }
 }

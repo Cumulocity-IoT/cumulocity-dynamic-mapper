@@ -69,6 +69,7 @@ import {
   RealtimeSubjectService
 } from '@c8y/ngx-components';
 import { CodeBasedProcessorOutbound } from './processor/impl/code-based-processor-outbound.service';
+import { CodeBasedProcessorInbound } from './processor/impl/code-based-processor-inbound.service';
 
 @Injectable({
   providedIn: 'root'
@@ -79,6 +80,7 @@ export class MappingService {
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
     private codeBasedProcessorOutbound: CodeBasedProcessorOutbound,
+    private codeBasedProcessorInbound: CodeBasedProcessorInbound,
     private sharedService: SharedService,
     private client: FetchClient,
   ) {
@@ -475,17 +477,27 @@ export class MappingService {
   ): Promise<ProcessingContext> {
     const { mapping } = context;
     if (mapping.direction == Direction.INBOUND) {
+      if (mapping.mappingType !== MappingType.CODE_BASED) {
       this.jsonProcessorInbound.deserializePayload(mapping, message, context);
       this.jsonProcessorInbound.enrichPayload(context);
       await this.jsonProcessorInbound.extractFromSource(context);
       this.jsonProcessorInbound.validateProcessingCache(context);
       await this.jsonProcessorInbound.substituteInTargetAndSend(context);
+      } else {
+        this.codeBasedProcessorInbound.deserializePayload(mapping, message, context);
+        this.codeBasedProcessorInbound.enrichPayload(context);
+        await this.codeBasedProcessorInbound.extractFromSource(context);
+        this.codeBasedProcessorInbound.validateProcessingCache(context);
+        await this.codeBasedProcessorInbound.substituteInTargetAndSend(context);
+      }
     } else {
       if (mapping.mappingType !== MappingType.CODE_BASED) {
         this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
         await this.jsonProcessorOutbound.extractFromSource(context);
         await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
-      } else {
+      } /* The above code is written in TypeScript and it is an `else` block that contains three
+      asynchronous operations: */
+      else {
         this.codeBasedProcessorOutbound.deserializePayload(mapping, message, context);
         await this.codeBasedProcessorOutbound.extractFromSource(context);
         await this.codeBasedProcessorOutbound.substituteInTargetAndSend(context);

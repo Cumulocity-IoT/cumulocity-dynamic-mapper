@@ -318,5 +318,3 @@ function createDualAccessObject(initialData = {}) {
   
   return obj;
 }
-
-

@@ -20,7 +20,8 @@
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
-import { API, Direction, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
+import { API, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
+import { Java } from './processor-js.model';
 
 export interface C8YRequest {
   predecessor?: number;
@@ -186,4 +187,51 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
   _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
+}
+
+/**
+* Extract line and column numbers from a stack trace line
+* @param {string} stackTraceLine - The stack trace line to parse
+* @returns {object|null} An object with line and column numbers, or null if not found
+*/
+export function extractLineAndColumn(stackTraceLine) {
+  // This pattern looks for "<anonymous>:X:Y" where X is line and Y is column
+  const pattern = /<anonymous>:(\d+):(\d+)/;
+  const match = stackTraceLine.match(pattern);
+
+  if (match && match.length >= 3) {
+    return {
+      line: parseInt(match[1], 10),
+      column: parseInt(match[2], 10)
+    };
+  }
+
+  return null;
+}
+
+export function evaluateWithArgs(codeString, ...args) {
+  // Add 'Java' as the first parameter
+  const paramNames = ['Java'].concat(args.map((_, i) => `arg${i}`)).join(',');
+
+  // Create the function with Java and your other parameters
+  const fn = new Function(paramNames, codeString);
+
+  // Call the function with Java as the first argument, followed by your other args
+  return fn(Java, ...args);
+}
+
+export function evaluateInCurrentScope(codeString) {
+  // Create a function that has access to Java
+  return Function('Java', `return (${codeString})`)(Java);
+}
+
+export function removeJavaTypeLines(code) {
+  // Split the code into lines
+  const lines = code.split('\n');
+
+  // Filter out lines containing Java.type
+  const filteredLines = lines.filter(line => !line.includes('Java.type'));
+
+  // Join the lines back together
+  return filteredLines.join('\n');
 }

@@ -76,8 +76,4 @@ public class InternalProtobufProcessor extends BaseProcessorInbound<byte[]> {
         }
     }
 
-    @Override
-    public void applyFilter(ProcessingContext<byte[]> context) {
-        // do nothing
-    }
 }

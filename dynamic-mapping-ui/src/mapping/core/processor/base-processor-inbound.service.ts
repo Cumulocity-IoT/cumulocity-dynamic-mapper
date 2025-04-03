@@ -28,6 +28,7 @@ import {
   MAPPING_TEST_DEVICE_TYPE,
   Mapping,
   RepairStrategy,
+  SharedService,
   getPathTargetForDeviceIdentifiers, transformGenericPath2C8YPath
 } from '../../../shared';
 import { splitTopicExcludingSeparator } from '../../shared/util';
@@ -45,7 +46,8 @@ import {
 export abstract class BaseProcessorInbound {
   constructor(
     private alert: AlertService,
-    private c8yClient: C8YAgent
+    private c8yClient: C8YAgent,
+    public sharedService: SharedService,
   ) { }
 
   protected JSONATA = require('jsonata');
@@ -279,7 +281,7 @@ export abstract class BaseProcessorInbound {
   }
   async createImplicitDevice(identity: IExternalIdentity, context: ProcessingContext): Promise<string> {
     let sourceId: string;
-    let name = identity ? `device_${identity.type}_${identity.externalId}`: `device_${context.sourceId}`;
+    let name = identity ? `device_${identity.type}_${identity.externalId}` : `device_${context.sourceId}`;
     const request = {
       c8y_IsDevice: {},
       name,
@@ -307,7 +309,7 @@ export abstract class BaseProcessorInbound {
       context.requests[predecessor].sourceId = response.id;
       sourceId = response.id;
     } catch (e) {
-      const {res,data} = e;
+      const { res, data } = e;
       if (res?.status == HttpStatusCode.NotFound) {
         e.message = `Device with ${context.sourceId} not found!`;
         context.requests[predecessor].error = e.message;
