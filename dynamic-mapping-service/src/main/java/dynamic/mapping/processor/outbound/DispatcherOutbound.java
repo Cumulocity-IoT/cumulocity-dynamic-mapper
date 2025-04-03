@@ -303,12 +303,12 @@ public class DispatcherOutbound implements NotificationCallback {
                                         "Tenant {} - New message for topic: {}, for connector: {}, wrapped message: {}",
                                         tenant,
                                         context.getTopic(),
-                                        connectorClient.getConnectorIdentifier(),
+                                        connectorClient.getConnectorName(),
                                         context.getPayload().toString());
                             } else {
                                 log.info("Tenant {} - New message for topic: {}, for connector: {}, sendPayload: {}",
                                         tenant,
-                                        context.getTopic(), connectorClient.getConnectorIdentifier(), sendPayload);
+                                        context.getTopic(), connectorClient.getConnectorName(), sendPayload);
                             }
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
@@ -379,13 +379,11 @@ public class DispatcherOutbound implements NotificationCallback {
 
     public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage) {
         String tenant = c8yMessage.getTenant();
-
-                ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         if (serviceConfiguration.logPayload ) {
             String payload = c8yMessage.getPayload();
-            log.info("Tenant {} - From API : {}, new outbound message: {} {}", tenant, c8yMessage.getApi(), payload, c8yMessage.getMessageId());
+            log.info("Tenant {} - From API : {}, new outbound message for connector {}: {} {}", tenant, c8yMessage.getApi(), connectorClient.getConnectorName(), payload, c8yMessage.getMessageId());
         }
-
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
