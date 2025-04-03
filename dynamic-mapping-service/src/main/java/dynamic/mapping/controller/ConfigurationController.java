@@ -348,6 +348,8 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         // don't modify original copy
         log.info("Tenant {} - Post service configuration: {}", tenant, configuration.toString());
+        ServiceConfiguration mergeServiceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        Map<String, CodeTemplate> codeTemplates = mergeServiceConfiguration.getCodeTemplates();
         // FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
@@ -357,6 +359,7 @@ public class ConfigurationController {
         }
 
         try {
+            configuration.setCodeTemplates(codeTemplates);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, configuration);
             if (!configuration.isOutboundMappingEnabled()
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
