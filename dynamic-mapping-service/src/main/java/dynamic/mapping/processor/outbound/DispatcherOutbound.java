@@ -380,9 +380,12 @@ public class DispatcherOutbound implements NotificationCallback {
     public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage) {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+
         if (serviceConfiguration.logPayload ) {
             String payload = c8yMessage.getPayload();
-            log.info("Tenant {} - From API : {}, new outbound message for connector {}: {} {}", tenant, c8yMessage.getApi(), connectorClient.getConnectorName(), payload, c8yMessage.getMessageId());
+            log.info("Tenant {} - From API : {}, new outbound message for Device {} and connector {}: {} {}", tenant, c8yMessage.getApi(), c8yMessage.getSourceId(), connectorClient.getConnectorName(), payload, c8yMessage.getMessageId());
+        } else {
+            log.info("Tenant {} - From API : {}, new outbound message for Device {} and connector {}: {}", tenant, c8yMessage.getApi(), c8yMessage.getSourceId(), connectorClient.getConnectorName(), c8yMessage.getMessageId());
         }
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
