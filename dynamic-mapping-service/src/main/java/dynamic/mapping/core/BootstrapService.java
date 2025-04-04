@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import dynamic.mapping.configuration.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
@@ -44,10 +45,6 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import dynamic.mapping.configuration.ConnectorConfiguration;
-import dynamic.mapping.configuration.ConnectorConfigurationComponent;
-import dynamic.mapping.configuration.ServiceConfiguration;
-import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
@@ -211,8 +208,10 @@ public class BootstrapService {
             requiresSave = true;
         }
 
-        if (serviceConfig.inboundExternalIdCacheRetention == null) {
-            serviceConfig.inboundExternalIdCacheRetention = 1;
+        Map<String, CodeTemplate> codeTemplates = serviceConfig.getCodeTemplates();
+        if (codeTemplates == null || codeTemplates.isEmpty()) {
+            // Initialize code templates from properties if not already set
+            serviceConfigurationComponent.initCodeTemplates(serviceConfig);
             requiresSave = true;
         }
 
