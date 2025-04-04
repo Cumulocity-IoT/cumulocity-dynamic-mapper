@@ -932,7 +932,7 @@ function extractFromSource(ctx) {
 
     const input = sourceObject;
     for (var key in sourceObject) {
-         console.log(`key: ${key}, value: ${sourceObject.get(key)}`);  
+         console.log(`key: ${key}, value: ${sourceObject[key]}`);  
     }
     
     const decoded = decode(input);

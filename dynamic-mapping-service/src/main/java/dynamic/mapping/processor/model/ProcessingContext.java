@@ -65,6 +65,8 @@ public class ProcessingContext<O> {
      */
     private O payload;
 
+    private Object rawPayload;
+
     @Builder.Default
     private List<C8YRequest> requests = new ArrayList<C8YRequest>();
 

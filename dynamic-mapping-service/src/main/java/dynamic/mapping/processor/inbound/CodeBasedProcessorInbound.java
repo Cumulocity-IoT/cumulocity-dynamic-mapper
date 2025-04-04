@@ -24,6 +24,7 @@ package dynamic.mapping.processor.inbound;
 import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -36,6 +37,7 @@ import org.graalvm.polyglot.Value;
 
 import org.joda.time.DateTime;
 
+import com.dashjoin.jsonata.Functions;
 import com.dashjoin.jsonata.json.Json;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -113,7 +115,6 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                 graalsContext.eval(sharedSource);
             }
 
-
             if (context.getSystemCode() != null) {
                 byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
                 String decodedSystemCode = new String(decodedSystemCodeBytes);
@@ -123,6 +124,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             }
 
             Map jsonObject = (Map) context.getPayload();
+            String payloadAsString = Functions.string(context.getPayload(), false);
 
             // add topic levels as metadata
             List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
@@ -130,7 +132,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
             final Value result = extractFromSourceFunc
                     .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
-                            jsonObject));
+                            payloadAsString));
 
             // Convert the JavaScript result to Java objects before closing the context
             final SubstitutionResult typedResult = result.as(SubstitutionResult.class);

@@ -73,7 +73,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
 
     try {
 
-      const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), context.payload);
+      const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), JSON.stringify(context.payload));
       // const result = this.evaluateInCurrentScope(codeToRun);
       result = evaluateWithArgs(codeToRun, ctx);
       const substitutions = result.getSubstitutions();

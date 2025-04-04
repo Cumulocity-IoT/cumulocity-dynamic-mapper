@@ -171,7 +171,7 @@ export class JsonObject {
  */
 export class SubstitutionContext {
   IDENTITY = "_IDENTITY_";
-  #jsonObject;  // Using private class field (equivalent to private final in Java)
+  #payload;  // Using private class field (equivalent to private final in Java)
   #genericDeviceIdentifier;
 
   // Constants
@@ -181,11 +181,12 @@ export class SubstitutionContext {
   /**
    * Constructor for the SubstitutionContext class
    * @param {string} genericDeviceIdentifier - The generic device identifier
-   * @param {Object} jsonObject - The JSON object representing the data
+   * @param {string} payload - The JSON object representing the data
    */
   constructor(genericDeviceIdentifier, payload) {
-    this.#jsonObject = createDualAccessObject(payload || {});
-    //this.#jsonObject = payload;
+    // this.#payload = createDualAccessObject(payload || {});
+    this.#payload = (payload || {});
+    //this.#payload = payload;
     this.#genericDeviceIdentifier = genericDeviceIdentifier;
   }
 
@@ -203,12 +204,12 @@ export class SubstitutionContext {
    */
   getExternalIdentifier() {
     try {
-      // Check if jsonObject and the IDENTITY map exist
-      if (this.#jsonObject == null || this.#jsonObject[this.IDENTITY] == null) {
+      // Check if payload and the IDENTITY map exist
+      if (this.#payload == null || this.#payload[this.IDENTITY] == null) {
         return null;
       }
 
-      const identityMap = this.#jsonObject[this.IDENTITY];
+      const identityMap = this.#payload[this.IDENTITY];
       return identityMap["externalId"];
     } catch (e) {
       // Optionally log the exception
@@ -223,12 +224,12 @@ export class SubstitutionContext {
    */
   getC8YIdentifier() {
     try {
-      // Check if jsonObject and the IDENTITY map exist
-      if (this.#jsonObject == null || this.#jsonObject[this.IDENTITY] == null) {
+      // Check if payload and the IDENTITY map exist
+      if (this.#payload == null || this.#payload[this.IDENTITY] == null) {
         return null;
       }
 
-      const identityMap = this.#jsonObject[this.IDENTITY];
+      const identityMap = this.#payload[this.IDENTITY];
       return identityMap["c8ySourceId"];
     } catch (e) {
       // Optionally log the exception
@@ -241,8 +242,8 @@ export class SubstitutionContext {
    * Gets the JSON object
    * @returns {Object} The JSON object
    */
-  getJsonObject() {
-    return this.#jsonObject;
+  getPayload() {
+    return this.#payload;
   }
 }
 

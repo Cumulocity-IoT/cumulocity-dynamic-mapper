@@ -396,15 +396,15 @@ a javascript editor allows you to define your substitutions:
 function extractFromSource(ctx) {
 
     //This is the source message as json
-    const sourceObject = ctx.getJsonObject();
+    const sourceObject = JSON.parse(ctx.getPayload());
     // for (var key in sourceObject) {
-    //     console.log(`key: ${key}, value: ${sourceObject.get(key)}`);  
+    //     console.log(`key: ${key}, value: ${sourceObject[key]}`);  
     // }
 
     //Define a new Measurement Value for Temperatures by assigning from source
     const fragmentTemperatureSeries = {
-        value: sourceObject.get('temperature'),
-        unit: sourceObject.get('unit')
+        value: sourceObject['temperature'],
+        unit: sourceObject['unit']
     };
 
     //Assign Values to Series
@@ -419,7 +419,7 @@ function extractFromSource(ctx) {
     const temperature = new Substitution('c8y_TemperatureMeasurement', fragmentTemperature, 'OBJECT', 'DEFAULT');
 
     //Define Device Identifier
-    const deviceIdentifier = new Substitution(ctx.getGenericDeviceIdentifier(), sourceObject.get('_TOPIC_LEVEL_')[1], 'TEXTUAL', 'DEFAULT');
+    const deviceIdentifier = new Substitution(ctx.getGenericDeviceIdentifier(), sourceObject['_TOPIC_LEVEL_'][1], 'TEXTUAL', 'DEFAULT');
     //Return undefined, if you want to skip the message and not process it further
     return new SubstitutionResult([deviceIdentifier, temperature]);
 }

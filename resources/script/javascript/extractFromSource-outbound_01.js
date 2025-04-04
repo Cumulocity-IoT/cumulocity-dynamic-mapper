@@ -1,19 +1,19 @@
 function extractFromSource(ctx) {
     //This is the source message as json
-    const sourceObject = ctx.getJsonObject();
+    const sourceObject = JSON.parse(ctx.getPayload());
 
     //Log c8y sourceId
     //console.log(`C8Y sourceId: ${ctx.getC8YIdentifier()}`);
     //console.log(`C8Y externalIdentifier: ${ctx.getExternalIdentifier()}`);
 
     //for (var key in sourceObject) {
-    //     console.log(`key: ${key}, value: ${sourceObject.get(key)}`);  
+    //     console.log(`key: ${key}, value: ${sourceObject[key]}`);  
     // }
 
     //Define a new Measurement Value for Temperatures by assigning from source
     const fragmentTemperature = {
-        value: sourceObject.get('c8y_TemperatureMeasurement').get('T').get('value'),
-        unit: sourceObject.get('c8y_TemperatureMeasurement').get('T').get('unit')
+        value: sourceObject['c8y_TemperatureMeasurement']['T']['value'],
+        unit: sourceObject['c8y_TemperatureMeasurement']['T']['unit']
     };
 
     // Create a new SubstitutionResult with the HashMap
@@ -21,7 +21,7 @@ function extractFromSource(ctx) {
 
     // Substitution: String key, Object value, MappingSubstitution.SubstituteValue.TYPE type, RepairStrategy repairStrategy
     //Define time mapping time -> time
-    const time = new SubstitutionValue(sourceObject.get('time'), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+    const time = new SubstitutionValue(sourceObject['time'], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     addToSubstitutionsMap(result, 'time', time);
 
     //Define temperature fragment mapping temperature -> c8y_Temperature.T.value/unit

@@ -196,7 +196,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                             
                             inboundProcessingCounter.increment();
                             Object payload = processor.deserializePayload(mapping, connectorMessage);
-                            ProcessingContext<?> context = ProcessingContext.builder().payload(payload).topic(topic)
+                            ProcessingContext<?> context = ProcessingContext.builder().payload(payload).rawPayload(connectorMessage.getPayload()).topic(topic)
                                     .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
                                     .tenant(tenant).supportsMessageContext(connectorMessage.isSupportsMessageContext()
                                             && mapping.supportsMessageContext)

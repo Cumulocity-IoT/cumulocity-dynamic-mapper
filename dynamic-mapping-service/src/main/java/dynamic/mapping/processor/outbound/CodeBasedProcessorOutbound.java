@@ -21,6 +21,7 @@
 
 package dynamic.mapping.processor.outbound;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Base64;
 
@@ -31,6 +32,9 @@ import java.util.Set;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+
+import com.dashjoin.jsonata.Functions;
+import com.dashjoin.jsonata.json.Json;
 
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -94,11 +98,13 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                 }
 
                 Map jsonObject = (Map) context.getPayload();
+                String payloadAsString = Functions.string(context.getPayload(), false);
+
                 Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
                 final Value result = extractFromSourceFunc
                         .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
-                                jsonObject));
+                                payloadAsString));
 
                 // Convert the JavaScript result to Java objects before closing the context
                 final SubstitutionResult typedResult = result.as(SubstitutionResult.class);
