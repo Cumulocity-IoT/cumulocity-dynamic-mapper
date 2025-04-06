@@ -31,12 +31,12 @@
         <button type="button" placement="right" [popover]="popTemplateCodeHelp" triggers="click" class="btn-help"
           containerClass="wide-popover" aria-label="Help content"></button>
       </span> -->
-      <div class="c8y-select-wrapper" style="max-width: 400px">
+      <div class="c8y-select-wrapper" style="max-width: 500px">
         <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId" name="templateSelect"
           required>
           <option [ngValue]="null" disabled>Select template...</option>
           <option *ngFor="let item of codeTemplateEntries$ | async" [ngValue]="item.key">
-            {{ item.name }} ({{ item.type }}, {{ item.internal? 'system': 'user' }})
+            {{ item.name }} ({{ item.type }}, {{ item.internal? 'system': 'user' }} {{ item.readonly? ', readonly': '' }})
           </option>
         </select>
       </div>
