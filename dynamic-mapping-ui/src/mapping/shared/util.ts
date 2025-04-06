@@ -408,7 +408,7 @@ export function expandExternalTemplate(
         [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
         [CONTEXT_DATA_METHOD_NAME]: "POST" // Set to "POST" instead of a generated value
       };
-      
+
       return {
         ...template,
         _TOPIC_LEVEL_: levels,
@@ -535,4 +535,62 @@ export function bytesToBase64(bytes) {
   return btoa(binString);
 }
 
+export /**
+* Creates a new object with sorted keys, optionally placing specified keys at the end
+* @param {Object} obj - The original object
+* @param {Object} options - Configuration options
+* @param {boolean} [options.specialKeysAtEnd=false] - Whether to place special keys at the end
+* @param {string[]} [options.specialKeys=['_CONTEXT_DATA_', '_TOPIC_LEVEL_']] - Keys to place at the end
+* @param {Function} [options.sortFn=null] - Optional custom sort function for keys
+* @returns {Object} - New object with sorted keys
+*/
+  function sortObjectKeys(obj, options = {}) {
+  // Set default options
+  const defaultOptions = {
+    specialKeysAtEnd: true,
+    specialKeys: ['_CONTEXT_DATA_', '_TOPIC_LEVEL_'],
+    sortFn: null
+  };
+
+  const config = { ...defaultOptions, ...options };
+
+  // Get the keys of the object
+  let keys = Object.keys(obj);
+  let specialKeysPresent = [];
+
+  // If we need to place special keys at the end, remove them temporarily
+  if (config.specialKeysAtEnd) {
+    // Extract special keys that exist in the object
+    specialKeysPresent = keys.filter(key => config.specialKeys.includes(key));
+
+    // Remove special keys from the main keys array
+    keys = keys.filter(key => !config.specialKeys.includes(key));
+  }
+
+  // Sort the remaining keys
+  if (config.sortFn && typeof config.sortFn === 'function') {
+    keys.sort(config.sortFn);
+  } else {
+    keys.sort();
+  }
+
+  // Add special keys back at the end in their original order
+  if (config.specialKeysAtEnd) {
+    // Sort special keys according to their order in the specialKeys array
+    specialKeysPresent.sort((a, b) => {
+      return config.specialKeys.indexOf(a) - config.specialKeys.indexOf(b);
+    });
+
+    // Append special keys to the end
+    keys = [...keys, ...specialKeysPresent];
+  }
+
+  // Create a new object with the sorted keys
+  const sortedObj = {};
+  keys.forEach(key => {
+    sortedObj[key] = obj[key];
+  });
+
+  return sortedObj;
+}
 
