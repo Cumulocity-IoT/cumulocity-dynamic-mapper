@@ -137,6 +137,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
       if (testMapping.direction === Direction.OUTBOUND) {
         patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
+        sortObjectKeys(this.sourceTemplate);
       }
 
       await this.initializeTestContext(testMapping);
@@ -238,7 +239,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.testingModel.selectedResult = index;
     this.selectedResult$.next(index + 1);
 
-    const currentResult = this.testingModel.results[index];
+    const currentResult = sortObjectKeys(this.testingModel.results[index]);
     if (currentResult) {
       this.updateTestingModelFromResult(currentResult);
     } else {

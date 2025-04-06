@@ -48,8 +48,8 @@ export class SharedCodeComponent implements OnInit {
   isLoading = true;
   errorMessage = '';
   TemplateType = TemplateType;
-  codeTemplateEntries: { key: string; name: string, type: TemplateType, internal: boolean }[] = [];
-  codeTemplateEntries$: BehaviorSubject<{ key: string; name: string, type: TemplateType, internal: boolean }[]> = new BehaviorSubject<{ key: string; name: string, type: TemplateType, internal: boolean }[]>([]);
+  codeTemplateEntries: CodeTemplate[] = [];
+  codeTemplateEntries$: BehaviorSubject<CodeTemplate[]> = new BehaviorSubject<CodeTemplate[]>([]);
 
   editorOptions: EditorComponent['editorOptions'] = {
     minimap: { enabled: true },
@@ -89,9 +89,12 @@ export class SharedCodeComponent implements OnInit {
     this.codeTemplates = await this.sharedService.getCodeTemplates();
     this.codeTemplateEntries = Object.entries(this.codeTemplates).map(([key, template]) => ({
       key,
+      id: undefined,
+      code: undefined,
       name: template.name,
       type: template.type,
-      internal: template.internal
+      internal: template.internal,
+      readonly: template.readonly
     }));
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
     // Iterate and decode
