@@ -133,6 +133,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private async handleTestMappingUpdate(testMapping: any): Promise<void> {
     try {
       this.testMapping = testMapping;
+
       this.sourceTemplate = JSON.parse(testMapping.sourceTemplate);
 
       if (testMapping.direction === Direction.OUTBOUND) {
