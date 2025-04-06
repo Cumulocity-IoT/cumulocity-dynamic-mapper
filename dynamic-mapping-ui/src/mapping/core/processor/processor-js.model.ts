@@ -184,9 +184,7 @@ export class SubstitutionContext {
    * @param {string} payload - The JSON object representing the data
    */
   constructor(genericDeviceIdentifier, payload) {
-    // this.#payload = createDualAccessObject(payload || {});
     this.#payload = (payload || {});
-    //this.#payload = payload;
     this.#genericDeviceIdentifier = genericDeviceIdentifier;
   }
 
@@ -245,77 +243,4 @@ export class SubstitutionContext {
   getPayload() {
     return this.#payload;
   }
-}
-
-
-export function objectToMapDeep(obj) {
-  // Handle null and undefined
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
-  
-  // If obj is already a Map, recursively convert its values
-  if (obj instanceof Map) {
-    const newMap = new Map();
-    for (const [key, value] of obj.entries()) {
-      newMap.set(key, objectToMapDeep(value));
-    }
-    return newMap;
-  }
-  
-  // If it's an array, recursively convert each element
-  if (Array.isArray(obj)) {
-    return obj.map(item => objectToMapDeep(item));
-  }
-  
-  // If it's an object, convert it to a Map with recursively converted values
-  if (typeof obj === 'object') {
-    const map = new Map();
-    for (const [key, value] of Object.entries(obj)) {
-      map.set(key, objectToMapDeep(value));
-    }
-    return map;
-  }
-  
-  // For primitive values (string, number, boolean), return as is
-  return obj;
-}
-
-
-// Create enhanced object with dual access
-function createDualAccessObject(initialData = {}) {
-  const obj = { ...initialData };
-  
-  // Add Map-like methods
-  Object.defineProperties(obj, {
-    // Map-like get method
-    get: {
-      value: function(key) {
-        return this[key];
-      },
-      writable: false,
-      enumerable: false
-    },
-    
-    // Map-like set method
-    set: {
-      value: function(key, value) {
-        this[key] = value;
-        return this;
-      },
-      writable: false,
-      enumerable: false
-    },
-    
-    // Map-like has method
-    has: {
-      value: function(key) {
-        return key in this;
-      },
-      writable: false,
-      enumerable: false
-    }
-  });
-  
-  return obj;
 }

@@ -78,7 +78,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
       result = evaluateWithArgs(codeToRun, ctx);
       const substitutions = result.getSubstitutions();
       const keys = substitutions.keySet();
-      
+
       for (const key of keys) {
         const values = substitutions.get(key);
         // console.log(`Key: ${key}, Value: ${value}`);
@@ -87,13 +87,14 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
           key,
           []
         );
-        if (values != null && !values.isEmpty()
+        if (values != null && values.length > 0
           && values.get(0).expandArray) {
           // extracted result from sourcePayload is an array, so we potentially have to
           // iterate over the result, e.g. creating multiple devices
-          values.forEach((substitution) => {
+          for (let i = 0; i < values.length; i++) {
+            const substitution = values[i];
             processSubstitute(processingCacheEntry, substitution.value, substitution);
-          });
+          }
         } else {
           processSubstitute(processingCacheEntry, values.get(0).value, values.get(0));
         }
