@@ -196,7 +196,9 @@ function mappings_migrate() {
   cat ${ORIGINAL_MAPPINGS_NAME}.json | jq '[.[] | 
   . + {
     identifier: .ident,
-    useExternalId: .mapDeviceIdentifier, 
+    useExternalId: .mapDeviceIdentifier,
+    mappingTopic: .subscriptionTopic,
+    mappingTopicSample: .templateTopicSample
     sourceTemplate: .source,
     targetTemplate: .target,
     active: false,
@@ -210,7 +212,7 @@ function mappings_migrate() {
     } | del(.event, .name, .loaded)),
     "mappingType": "EXTENSION_SOURCE"
   } else {} end)
-  | del(.source, .target, .filterOutbound, .subscriptionTopic, .ident, .mapDeviceIdentifier)
+  | del(.source, .target, .filterOutbound, .subscriptionTopic, , .templateTopicSample, .templateTopic, .ident, .mapDeviceIdentifier)
 ]' >"${MIGRATED_MAPPINGS_name}-step1.json"
 
   # Step 2a transform substitutions for OUTBOUND to the new format

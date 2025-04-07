@@ -943,6 +943,10 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingGrid.setAllItemsSelected(false);
   }
 
+  async onAddSampleMappings() {
+    this.mappingService.addSampleMappings({direction:this.stepperConfiguration.direction})
+  }
+
   async onExportAll() {
     this.mappingsEnriched$.pipe(take(1)).subscribe((ms) => {
       const mappings2Export = ms.map((me) => me.mapping);

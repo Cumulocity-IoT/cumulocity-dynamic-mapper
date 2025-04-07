@@ -21,13 +21,17 @@
 
 package dynamic.mapping.configuration;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -55,7 +59,6 @@ public class ServiceConfigurationComponent {
     @Value("${APP.template.code.outbound_01}")
     private String outboundCodeTemplate_01;
 
-
     @Value("${APP.template.code.outbound_02}")
     private String outboundCodeTemplate_02;
 
@@ -64,6 +67,42 @@ public class ServiceConfigurationComponent {
 
     @Value("${APP.template.code.shared}")
     private String sharedCodeTemplate;
+
+    @Value("classpath:mappings-ui-INBOUND.json")
+    private Resource sampleMappingsInbound_01;
+
+    public String getSampleMappingsInbound_01() {
+        try {
+            return new String(sampleMappingsInbound_01.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            // Log the error
+            // logger.error("Failed to read mapping file", e);
+
+            // You can return a default value
+            return "{}"; // Empty JSON object
+
+            // Or rethrow as an unchecked exception
+            // throw new RuntimeException("Failed to read mapping file", e);
+        }
+    }
+
+    @Value("classpath:mappings-ui-OUTBOUND.json")
+    private Resource sampleMappingsOutbound_01;
+
+    public String getSampleMappingsOutbound_01() {
+        try {
+            return new String(sampleMappingsOutbound_01.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            // Log the error
+            // logger.error("Failed to read mapping file", e);
+
+            // You can return a default value
+            return "{}"; // Empty JSON object
+
+            // Or rethrow as an unchecked exception
+            // throw new RuntimeException("Failed to read mapping file", e);
+        }
+    }
 
     private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic.mapper.service";
 
@@ -92,12 +131,18 @@ public class ServiceConfigurationComponent {
 
     public void initCodeTemplates(ServiceConfiguration configuration) {
         Map<String, CodeTemplate> codeTemplates = new HashMap<>();
-        codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(INBOUND_CODE_TEMPLATE,"Default Inbound Template",TemplateType.INBOUND, inboundCodeTemplate_01, true, false));
-        codeTemplates.put(INBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(uuidCustom(),"Inbound Template, multiple meas",TemplateType.INBOUND, inboundCodeTemplate_02, true, false));
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE, new CodeTemplate(OUTBOUND_CODE_TEMPLATE,"Default Outbound Template", TemplateType.OUTBOUND, outboundCodeTemplate_01, true, false ));
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE+ "_02", new CodeTemplate(OUTBOUND_CODE_TEMPLATE,"Outbound Template, Cumulocity internal", TemplateType.OUTBOUND, outboundCodeTemplate_02, true, false ));
-        codeTemplates.put(SYSTEM_CODE_TEMPLATE, new CodeTemplate(SYSTEM_CODE_TEMPLATE,"System Code", TemplateType.SYSTEM,systemCodeTemplate, true, true));
-        codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(SHARED_CODE_TEMPLATE,"Shared Code", TemplateType.SHARED,sharedCodeTemplate, true, false));
+        codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(INBOUND_CODE_TEMPLATE, "Default Inbound Template",
+                TemplateType.INBOUND, inboundCodeTemplate_01, true, false));
+        codeTemplates.put(INBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(uuidCustom(),
+                "Inbound Template, multiple meas", TemplateType.INBOUND, inboundCodeTemplate_02, true, false));
+        codeTemplates.put(OUTBOUND_CODE_TEMPLATE, new CodeTemplate(OUTBOUND_CODE_TEMPLATE, "Default Outbound Template",
+                TemplateType.OUTBOUND, outboundCodeTemplate_01, true, false));
+        codeTemplates.put(OUTBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(OUTBOUND_CODE_TEMPLATE,
+                "Outbound Template, Cumulocity internal", TemplateType.OUTBOUND, outboundCodeTemplate_02, true, false));
+        codeTemplates.put(SYSTEM_CODE_TEMPLATE, new CodeTemplate(SYSTEM_CODE_TEMPLATE, "System Code",
+                TemplateType.SYSTEM, systemCodeTemplate, true, true));
+        codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(SHARED_CODE_TEMPLATE, "Shared Code",
+                TemplateType.SHARED, sharedCodeTemplate, true, false));
         configuration.setCodeTemplates(codeTemplates);
     }
 

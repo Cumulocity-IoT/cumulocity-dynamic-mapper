@@ -1,0 +1,100 @@
+[
+  {
+    "id": "6725655",
+    "identifier": "l19zjk",
+    "name": "Mapping - 100",
+    "mappingTopic": "/plant1/+/+",
+    "mappingTopicSample": "/plant1/line1/device1_measure1_Type",
+    "targetAPI": "MEASUREMENT",
+    "direction": "INBOUND",
+    "sourceTemplate": "{\"value\":100}",
+    "targetTemplate": "{\"measure1_Type\":{\"V\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
+    "mappingType": "JSON",
+    "substitutions": [
+      {
+        "pathSource": "_TOPIC_LEVEL_[1]&\"_\"&_TOPIC_LEVEL_[2]&\"_\"&$substringBefore(_TOPIC_LEVEL_[3],\"_\")",
+        "pathTarget": "_IDENTITY_.externalId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$substringAfter(_TOPIC_LEVEL_[3],\"_\")",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "value",
+        "pathTarget": "measure1_Type.V.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "active": false,
+    "debug": false,
+    "tested": false,
+    "supportsMessageContext": false,
+    "createNonExistingDevice": true,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "snoopStatus": "NONE",
+    "snoopedTemplates": [],
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1735103012385,
+    "genericDeviceIdentifier": "_IDENTITY_.externalId"
+  },
+  {
+    "id": "7326740",
+    "identifier": "jrr12x",
+    "name": "Mapping - 101",
+    "mappingTopic": "devices/+",
+    "mappingTopicSample": "devices/device_best_01",
+    "targetAPI": "MEASUREMENT",
+    "direction": "INBOUND",
+    "sourceTemplate": "{\"mea\":[{\"tid\":\"uuid_01\",\"psid\":\"Crest\",\"devicePath\":\"path01_80_X03_VVB001StatusB_Crest\",\"values\":[{\"value\":4.6,\"timestamp\":1648562285347}]},{\"tid\":\"uuid_02\",\"psid\":\"Crest\",\"devicePath\":\"path01_80_X03_VVB001StatusB_Crest\",\"values\":[{\"value\":5.6,\"timestamp\":1648563285347}]}]}",
+    "targetTemplate": "{\"c8y_ProcessLoadMeasurement\":{\"L\":{\"value\":110,\"unit\":\"%\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_ProcessLoadMeasurement\"}",
+    "mappingType": "JSON",
+    "substitutions": [
+      {
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "_IDENTITY_.externalId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "mea.values[0].value",
+        "pathTarget": "c8y_ProcessLoadMeasurement.L.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      },
+      {
+        "pathSource": "$map($map(mea.values[0].timestamp, $number), function($v, $i, $a) { $fromMillis($v) })",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      }
+    ],
+    "active": true,
+    "debug": false,
+    "tested": false,
+    "supportsMessageContext": false,
+    "createNonExistingDevice": true,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "snoopStatus": "NONE",
+    "snoopedTemplates": [],
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1735047942734,
+    "genericDeviceIdentifier": "_IDENTITY_.externalId"
+  }
+]

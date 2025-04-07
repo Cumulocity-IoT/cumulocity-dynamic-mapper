@@ -21,6 +21,7 @@
 
 package dynamic.mapping.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Direction;
@@ -61,6 +64,8 @@ import dynamic.mapping.model.Mapping;
 @RequestMapping("/operation")
 @RestController
 public class OperationController {
+
+    private final DeviceSubscriptionController deviceSubscriptionController;
 
     @Autowired
     ConnectorRegistry connectorRegistry;
@@ -97,6 +102,17 @@ public class OperationController {
 
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
+
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    OperationController(DeviceSubscriptionController deviceSubscriptionController) {
+        this.deviceSubscriptionController = deviceSubscriptionController;
+    }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> runOperation(@Valid @RequestBody ServiceOperation operation) {
@@ -137,6 +153,8 @@ public class OperationController {
                     return handleClearCache(tenant, parameters);
                 case UPDATE_TEMPLATE:
                     return handleUpdateTemplate(tenant, parameters);
+                case ADD_SAMPLE_MAPPINGS:
+                    return handleAddSampleMappings(tenant, parameters);
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
@@ -144,6 +162,27 @@ public class OperationController {
             log.error("Tenant {} - Error running operation: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
+    }
+
+    private ResponseEntity<?> handleAddSampleMappings(String tenant, Map<String, String> parameters)
+            throws Exception {
+        Direction direction = Direction.valueOf(parameters.get("direction"));
+        if (direction.equals(Direction.INBOUND)) {
+            String samples = serviceConfigurationComponent.getSampleMappingsInbound_01();
+            List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
+            });
+            mappings.forEach(mapping -> {
+                mappingComponent.createMapping(tenant, mapping);
+            });
+        } else {
+            String samples = serviceConfigurationComponent.getSampleMappingsOutbound_01();
+            List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
+            });
+            mappings.forEach(mapping -> {
+                mappingComponent.createMapping(tenant, mapping);
+            });
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleUpdateTemplate(String tenant, Map<String, String> parameters) throws Exception {

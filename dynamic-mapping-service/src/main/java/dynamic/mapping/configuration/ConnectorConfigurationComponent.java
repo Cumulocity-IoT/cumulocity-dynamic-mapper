@@ -41,7 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ConnectorConfigurationComponent {
     private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic.mapper.service";
-    private static final String OPTION_KEY_CONNECTIOR_PREFIX = "credentials.connection.configuration";
+    private static final String OPTION_KEY_CONNECTOR_PREFIX = "credentials.connection.configuration";
 
     private final TenantOptionApi tenantOptionApi;
 
@@ -60,7 +60,7 @@ public class ConnectorConfigurationComponent {
     }
 
     public String getConnectorOptionKey(String identifier) {
-        return OPTION_KEY_CONNECTIOR_PREFIX + "." + identifier;
+        return OPTION_KEY_CONNECTOR_PREFIX + "." + identifier;
     }
 
     public void saveConnectorConfiguration(final ConnectorConfiguration configuration)
@@ -123,7 +123,7 @@ public class ConnectorConfigurationComponent {
             for (OptionRepresentation optionRepresentation : optionRepresentationList) {
                 try {
                     // Just Connector Config --> Ignoring Service Configuration
-                    String optionKey = OPTION_KEY_CONNECTIOR_PREFIX.replace("credentials.", "");
+                    String optionKey = OPTION_KEY_CONNECTOR_PREFIX.replace("credentials.", "");
                     if (optionRepresentation.getKey().startsWith(optionKey)) {
                         final ConnectorConfiguration configuration = objectMapper.readValue(
                                 optionRepresentation.getValue(),

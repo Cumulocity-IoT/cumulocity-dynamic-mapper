@@ -117,6 +117,15 @@ export class MappingService {
     );
   }
 
+  async addSampleMappings(parameter: any): Promise<IFetchResponse> {
+    return await this.sharedService.runOperation(
+      {
+        operation: Operation.ADD_SAMPLE_MAPPINGS,
+        parameter
+      }
+    );
+  }
+
   listenToUpdateMapping(): Observable<MappingEnriched> {
     return this.updateMappingEnriched$;
   }
