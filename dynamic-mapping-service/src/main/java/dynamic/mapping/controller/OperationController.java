@@ -21,7 +21,6 @@
 
 package dynamic.mapping.controller;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,8 +64,6 @@ import dynamic.mapping.model.Mapping;
 @RestController
 public class OperationController {
 
-    private final DeviceSubscriptionController deviceSubscriptionController;
-
     @Autowired
     ConnectorRegistry connectorRegistry;
 
@@ -108,10 +105,6 @@ public class OperationController {
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-    }
-
-    OperationController(DeviceSubscriptionController deviceSubscriptionController) {
-        this.deviceSubscriptionController = deviceSubscriptionController;
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -172,6 +165,7 @@ public class OperationController {
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
             mappings.forEach(mapping -> {
+                mapping.setActive(false);
                 mappingComponent.createMapping(tenant, mapping);
             });
         } else {
@@ -179,6 +173,7 @@ public class OperationController {
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
             mappings.forEach(mapping -> {
+                mapping.setActive(false);
                 mappingComponent.createMapping(tenant, mapping);
             });
         }

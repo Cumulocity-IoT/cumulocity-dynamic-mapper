@@ -944,7 +944,8 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async onAddSampleMappings() {
-    this.mappingService.addSampleMappings({direction:this.stepperConfiguration.direction})
+    this.mappingService.addSampleMappings({direction:this.stepperConfiguration.direction});
+    this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
   }
 
   async onExportAll() {
