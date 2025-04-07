@@ -27,6 +27,7 @@ import {
 } from '../../shared';
 import { IDENTITY } from '../../shared/mapping/mapping.model';
 import { ValidationFormlyError } from './mapping.model';
+import { map } from 'cypress/types/bluebird';
 
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
 export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
@@ -404,13 +405,19 @@ export function expandExternalTemplate(
   } else {
     if (mapping.supportsMessageContext) {
       // Define the context data with specific values
-      const contextData = {
-        [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
-        [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
-        'publishTopic': mapping.publishTopic,
-        'api': mapping.targetAPI,
+      let contextData;
+      if (mapping.direction == Direction.INBOUND) {
+        contextData = {
+          [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+          [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
+        };
+      } else {
+        contextData = {
+          [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+          [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
+          'publishTopic': mapping.publishTopic,
+        }
       };
-
       return {
         ...template,
         _TOPIC_LEVEL_: levels,
@@ -436,6 +443,17 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
         // c8ySourceId: '909090'
       }
     };
+    if (mapping.supportsMessageContext) {
+      if (mapping.direction == Direction.INBOUND) {
+        result = {
+          ...result,
+          [TOKEN_CONTEXT_DATA]: { 'api': mapping.targetAPI }
+        };
+      }
+    };
+
+
+
     if (mapping.direction == Direction.OUTBOUND) {
       result[IDENTITY].c8ySourceId = '909090';
     }
