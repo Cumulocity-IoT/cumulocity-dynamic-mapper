@@ -171,7 +171,8 @@ export class JsonObject {
  */
 export class SubstitutionContext {
   IDENTITY = "_IDENTITY_";
-  #payload;  // Using private class field (equivalent to private final in Java)
+  #payload;
+  #payloadObject;  // Using private class field (equivalent to private final in Java)
   #genericDeviceIdentifier;
 
   // Constants
@@ -184,7 +185,9 @@ export class SubstitutionContext {
    * @param {string} payload - The JSON object representing the data
    */
   constructor(genericDeviceIdentifier, payload) {
-    this.#payload = (payload || {});
+    
+    this.#payloadObject = JSON.parse(payload);
+    this.#payload = payload;
     this.#genericDeviceIdentifier = genericDeviceIdentifier;
   }
 
@@ -203,15 +206,15 @@ export class SubstitutionContext {
   getExternalIdentifier() {
     try {
       // Check if payload and the IDENTITY map exist
-      if (this.#payload == null || this.#payload[this.IDENTITY] == null) {
+      if (this.#payloadObject == null || this.#payloadObject[this.IDENTITY] == null) {
         return null;
       }
 
-      const identityMap = this.#payload[this.IDENTITY];
+      const identityMap = this.#payloadObject[this.IDENTITY];
       return identityMap["externalId"];
     } catch (e) {
       // Optionally log the exception
-      // console.debug("Error retrieving external identifier", e);
+      console.debug("Error retrieving external identifier", e);
       return null;
     }
   }
@@ -223,15 +226,15 @@ export class SubstitutionContext {
   getC8YIdentifier() {
     try {
       // Check if payload and the IDENTITY map exist
-      if (this.#payload == null || this.#payload[this.IDENTITY] == null) {
+      if (this.#payloadObject== null || this.#payloadObject[this.IDENTITY] == null) {
         return null;
       }
 
-      const identityMap = this.#payload[this.IDENTITY];
+      const identityMap = this.#payloadObject[this.IDENTITY];
       return identityMap["c8ySourceId"];
     } catch (e) {
       // Optionally log the exception
-      // console.debug("Error retrieving c8y identifier", e);
+      console.debug("Error retrieving c8y identifier", e);
       return null;
     }
   }
