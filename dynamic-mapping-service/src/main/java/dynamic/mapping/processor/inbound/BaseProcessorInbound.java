@@ -96,7 +96,8 @@ public abstract class BaseProcessorInbound<T> {
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
             if (context.isSupportsMessageContext() && context.getKey() != null) {
                 String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
-                Map contextData = Map.of(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
+                Map contextData = Map.of(Mapping.CONTEXT_DATA_KEY_NAME, keyString, "publishTopic",
+                        context.getMapping().getPublishTopic());
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
         } else {
@@ -257,7 +258,8 @@ public abstract class BaseProcessorInbound<T> {
                     context.getProcessingCacheSize());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget.jsonString(),
+            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant,
+                    payloadTarget.jsonString(),
                     mapping.targetAPI,
                     size);
         }
@@ -325,7 +327,7 @@ public abstract class BaseProcessorInbound<T> {
         return null;
     }
 
-        public void applyFilter(ProcessingContext<Object> context) {
+    public void applyFilter(ProcessingContext<Object> context) {
         String tenant = context.getTenant();
         String mappingFilter = context.getMapping().getFilterMapping();
         if (mappingFilter != null && !("").equals(mappingFilter)) {

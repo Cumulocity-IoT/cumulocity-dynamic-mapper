@@ -406,7 +406,9 @@ export function expandExternalTemplate(
       // Define the context data with specific values
       const contextData = {
         [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
-        [CONTEXT_DATA_METHOD_NAME]: "POST" // Set to "POST" instead of a generated value
+        [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
+        'publishTopic': mapping.publishTopic
+
       };
 
       return {
@@ -458,6 +460,7 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
   _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
+  _.set(template, 'publishTopic', mapping.publishTopic);
 }
 
 export function reduceSourceTemplate(

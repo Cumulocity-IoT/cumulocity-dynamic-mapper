@@ -125,6 +125,7 @@ public abstract class BaseProcessorOutbound<T> {
                 {
                     put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
                     put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
+                    put("publishTopic", mapping.getPublishTopic());
                 }
             };
             payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
@@ -190,6 +191,9 @@ public abstract class BaseProcessorOutbound<T> {
             if (mapping.supportsMessageContext) {
                 String key = payloadTarget
                         .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
+                context.setKey(key.getBytes());
+
+                // extract method
                 try {
                     String methodString = payloadTarget
                             .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA,
@@ -198,7 +202,14 @@ public abstract class BaseProcessorOutbound<T> {
                 } catch (Exception e) {
                     // method is not defined or unknown, so we assume "POST"
                 }
-                context.setKey(key.getBytes());
+                try {
+                    String publishTopic = payloadTarget
+                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, "publishTopic"));
+                    if (publishTopic != null && !publishTopic.equals(""))
+                        context.setTopic(publishTopic);
+                } catch (Exception e) {
+                    // publishTopic is not defined or unknown, so we continue using the value defined in the mapping 
+                }
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
