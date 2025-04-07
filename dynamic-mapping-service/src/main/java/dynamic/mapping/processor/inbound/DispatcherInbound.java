@@ -202,6 +202,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                                             && mapping.supportsMessageContext)
                                     .key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
                                     .graalsContext(graalsContext)
+                                    .api(mapping.targetAPI)
                                     .sharedCode(sharedCode)
                                     .sharedCode(systemCode)
                                     .build();

@@ -407,8 +407,8 @@ export function expandExternalTemplate(
       const contextData = {
         [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
         [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
-        'publishTopic': mapping.publishTopic
-
+        'publishTopic': mapping.publishTopic,
+        'api': mapping.targetAPI,
       };
 
       return {

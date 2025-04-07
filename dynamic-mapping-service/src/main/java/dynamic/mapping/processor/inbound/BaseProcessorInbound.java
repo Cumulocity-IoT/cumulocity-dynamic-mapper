@@ -96,8 +96,13 @@ public abstract class BaseProcessorInbound<T> {
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
             if (context.isSupportsMessageContext() && context.getKey() != null) {
                 String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
-                Map contextData = Map.of(Mapping.CONTEXT_DATA_KEY_NAME, keyString, "publishTopic",
-                        context.getMapping().getPublishTopic());
+                Map contextData = new HashMap<String, String>() {
+                    {
+                        put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
+                        put("api",
+                                context.getMapping().getTargetAPI().toString());
+                    }
+                };
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
         } else {
@@ -213,7 +218,7 @@ public abstract class BaseProcessorInbound<T> {
         /*
          * step 5 prepare target payload for sending to c8y
          */
-        if (mapping.targetAPI.equals(API.INVENTORY)) {
+        if (context.getApi().equals(API.INVENTORY)) {
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor,
                             context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH,
@@ -235,13 +240,13 @@ public abstract class BaseProcessorInbound<T> {
                 context.getCurrentRequest().setError(e);
             }
             predecessor = newPredecessor;
-        } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
+        } else if (!context.getApi().equals(API.INVENTORY)) {
             AbstractExtensibleRepresentation attocRequest = null;
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor, RequestMethod.POST, device.value.toString(),
                             mapping.externalIdType,
                             payloadTarget.jsonString(),
-                            null, mapping.targetAPI, null));
+                            null, context.getApi(), null));
             try {
                 if (context.isSendPayload()) {
                     c8yAgent.createMEAO(context);
@@ -254,13 +259,13 @@ public abstract class BaseProcessorInbound<T> {
             }
             predecessor = newPredecessor;
         } else {
-            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
+            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, context.getApi(),
                     context.getProcessingCacheSize());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
             log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant,
                     payloadTarget.jsonString(),
-                    mapping.targetAPI,
+                    context.getApi(),
                     size);
         }
         return context;
@@ -274,7 +279,7 @@ public abstract class BaseProcessorInbound<T> {
             ID identity = new ID(mapping.externalIdType, substitute.value.toString());
             SubstituteValue sourceId = new SubstituteValue(substitute.value,
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
-            if (!mapping.targetAPI.equals(API.INVENTORY)) {
+            if (!context.getApi().equals(API.INVENTORY)) {
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
                 if (resolvedSourceId == null) {
                     if (mapping.createNonExistingDevice) {
@@ -296,6 +301,8 @@ public abstract class BaseProcessorInbound<T> {
                     mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.value.toString());
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
+            context.setApi(API.fromString((String)substitute.value));
         } else {
             SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }

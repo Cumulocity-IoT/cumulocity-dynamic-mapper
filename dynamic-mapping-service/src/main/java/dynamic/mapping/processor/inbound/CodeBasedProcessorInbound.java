@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -129,6 +130,10 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             // add topic levels as metadata
             List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
             ((Map) jsonObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
+            Map contextData = new HashMap<String, String>() {{
+                put("api", mapping.targetAPI.toString());
+            }};
+            ((Map) jsonObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
 
             final Value result = extractFromSourceFunc
                     .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
