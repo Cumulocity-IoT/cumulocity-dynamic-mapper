@@ -1,10 +1,10 @@
 [
   {
-    "id": "76121601809",
+    "id": "47121600685",
     "identifier": "l19zjk",
     "name": "Mapping with Filter + Expression",
     "mappingTopic": "/plant1/+/+",
-    "mappingTopicSample": "/plant1/line1/device1_measure1_Type",
+    "mappingTopicSample": "/plant1/line1/dev4711",
     "targetAPI": "MEASUREMENT",
     "direction": "INBOUND",
     "sourceTemplate": "{\"value\":100}",
@@ -36,7 +36,7 @@
         "expandArray": false
       }
     ],
-    "active": false,
+    "active": true,
     "debug": false,
     "tested": false,
     "supportsMessageContext": false,
@@ -49,10 +49,10 @@
     "snoopedTemplates": [],
     "filterMapping": "value > 50",
     "qos": "AT_LEAST_ONCE",
-    "lastUpdate": 1744032288581
+    "lastUpdate": 1744101788851
   },
   {
-    "id": "65121602704",
+    "id": "30121604644",
     "identifier": "jrr12x",
     "name": "Mapping with multi values",
     "mappingTopic": "devices/+",
@@ -94,10 +94,10 @@
     "snoopStatus": "NONE",
     "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
-    "lastUpdate": 1744032370481
+    "lastUpdate": 1744100522097
   },
   {
-    "id": "51121601810",
+    "id": "63121604645",
     "identifier": "wtocco",
     "name": "Code-based Mapping example",
     "mappingTopic": "device/+/temp",
@@ -121,6 +121,6 @@
     "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "code": "Ly8KLy8gc2FtcGxlIHRvIGdlbmVyYXRlIG9uZSBtZWFzdXJlbWVudAovLwoKLy8gcGF5bG9hZAovLyB7Ci8vICAgICAidGVtcGVyYXR1cmUiOiAxMzkuMCwKLy8gICAgICJ1bml0IjogIkMiLAovLyAgICAgImV4dGVybmFsSWQiOiAiYmVybGluXzAxIgovLyAgfQovLyB0b3BpYyAndGVzdEdyYWFsc1NpbmdsZS9iZXJsaW5fMDEnCgpmdW5jdGlvbiBleHRyYWN0RnJvbVNvdXJjZShjdHgpIHsKICAgIC8vVGhpcyBpcyB0aGUgc291cmNlIG1lc3NhZ2UgYXMganNvbgogICAgY29uc3Qgc291cmNlT2JqZWN0ID0gSlNPTi5wYXJzZShjdHguZ2V0UGF5bG9hZCgpKTsKCiAgICBmb3IgKHZhciBrZXkgaW4gc291cmNlT2JqZWN0KSB7CiAgICAgICAgY29uc29sZS5sb2coYGtleTogJHtrZXl9LCB2YWx1ZTogJHtzb3VyY2VPYmplY3Rba2V5XX1gKTsKICAgIH0KCiAgICAvLyBEZWZpbmUgYSBuZXcgTWVhc3VyZW1lbnQgVmFsdWUgZm9yIFRlbXBlcmF0dXJlcyBieSBhc3NpZ25pbmcgZnJvbSBzb3VyY2UKICAgIGNvbnN0IGZyYWdtZW50VGVtcGVyYXR1cmVTZXJpZXMgPSB7CiAgICAgICAgdmFsdWU6IHNvdXJjZU9iamVjdFsnVGVtcGVyYXR1cmUnXS52YWx1ZSwKICAgICAgICB1bml0OiBzb3VyY2VPYmplY3RbJ1RlbXBlcmF0dXJlJ10udW5pdAogICAgfTsKCiAgICAvLyBBc3NpZ24gVmFsdWVzIHRvIFNlcmllcwogICAgY29uc3QgZnJhZ21lbnRUZW1wZXJhdHVyZSA9IHsKICAgICAgICBUOiBmcmFnbWVudFRlbXBlcmF0dXJlU2VyaWVzCiAgICB9OwoKICAgIC8vIENyZWF0ZSBhIG5ldyBTdWJzdGl0dXRpb25SZXN1bHQgd2l0aCB0aGUgSGFzaE1hcAogICAgY29uc3QgcmVzdWx0ID0gbmV3IFN1YnN0aXR1dGlvblJlc3VsdCgpOwoKICAgIC8vIERlZmluZSB0ZW1wZXJhdHVyZSBmcmFnbWVudCBtYXBwaW5nIHRlbXBlcmF0dXJlIC0+IGM4eV9UZW1wZXJhdHVyZS5ULnZhbHVlL3VuaXQKICAgIGNvbnN0IHRlbXBlcmF0dXJlID0gbmV3IFN1YnN0aXR1dGlvblZhbHVlKGZyYWdtZW50VGVtcGVyYXR1cmUsIFRZUEUuT0JKRUNULCBSZXBhaXJTdHJhdGVneS5ERUZBVUxULCBmYWxzZSk7CiAgICAvLyBBZGQgdGVtcGVyYXR1cmUgd2l0aCBrZXkgJ2M4eV9UZW1wZXJhdHVyZU1lYXN1cmVtZW50JyB0byByZXN1bHQuZ2V0U3Vic3RpdHV0aW9ucygpCiAgICBhZGRUb1N1YnN0aXR1dGlvbnNNYXAocmVzdWx0LCAnYzh5X1RlbXBlcmF0dXJlTWVhc3VyZW1lbnQnLCB0ZW1wZXJhdHVyZSk7CgogICAgLy8gRGVmaW5lIERldmljZSBJZGVudGlmaWVyCiAgICBjb25zdCBkZXZpY2VJZGVudGlmaWVyID0gbmV3IFN1YnN0aXR1dGlvblZhbHVlKHNvdXJjZU9iamVjdFsnX1RPUElDX0xFVkVMXyddWzFdLCBUWVBFLlRFWFRVQUwsIFJlcGFpclN0cmF0ZWd5LkRFRkFVTFQsIGZhbHNlKTsKICAgIC8vIEFkZCBkZXZpY2VJZGVudGlmaWVyIHdpdGgga2V5IGN0eC5nZXRHZW5lcmljRGV2aWNlSWRlbnRpZmllcigpIHRvIHJlc3VsdC5nZXRTdWJzdGl0dXRpb25zKCkKICAgIGFkZFRvU3Vic3RpdHV0aW9uc01hcChyZXN1bHQsIGN0eC5nZXRHZW5lcmljRGV2aWNlSWRlbnRpZmllcigpLCBkZXZpY2VJZGVudGlmaWVyKTsKCiAgICByZXR1cm4gcmVzdWx0Owp9Cg==",
-    "lastUpdate": 1744032234333
+    "lastUpdate": 1744100522264
   }
 ]
