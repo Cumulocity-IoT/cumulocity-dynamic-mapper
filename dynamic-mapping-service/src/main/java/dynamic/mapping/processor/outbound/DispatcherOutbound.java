@@ -154,6 +154,11 @@ public class DispatcherOutbound implements NotificationCallback {
             // notification.getNotificationHeaders(),
             // connectorClient.connectorConfiguration.name,
             // connectorClient.isConnected());
+            if("UPDATE".equals(operation) && notification.getApi().equals(API.OPERATION)) {
+                log.info("Tenant {} - Update Operation notification for connector {} is received, ignoring it",
+                        tenant, connectorClient.getConnectorName());
+                return;
+            }
             C8YMessage c8yMessage = new C8YMessage();
             Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
             c8yMessage.setParsedPayload(parsedPayload);
@@ -411,7 +416,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
             } catch (Exception e) {
                 log.warn("Tenant {} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
-                        tenant);
+                        tenant, e);
                 log.debug(e.getMessage(), tenant);
                 // if (op != null)
                 // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
