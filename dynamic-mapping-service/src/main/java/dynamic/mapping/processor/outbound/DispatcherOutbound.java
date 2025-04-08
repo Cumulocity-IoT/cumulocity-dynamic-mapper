@@ -162,6 +162,12 @@ public class DispatcherOutbound implements NotificationCallback {
             c8yMessage.setMessageId(messageId);
             try {
                 String identifier = "source.id";
+                if(API.OPERATION.equals(notification.getApi())) {
+                    identifier = "deviceId";
+                }
+                if(API.INVENTORY.equals(notification.getApi())) {
+                    identifier = "id";
+                }
                 var expression = jsonata(identifier);
                 Object sourceIdResult = expression.evaluate(parsedPayload);
                 String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
