@@ -202,12 +202,8 @@ export class SubstitutionContext {
    */
   getExternalIdentifier() {
     try {
-      // Check if payload and the IDENTITY map exist
-      if (this.#payload == null || this.#payload[this.IDENTITY] == null) {
-        return null;
-      }
-
-      const identityMap = this.#payload[this.IDENTITY];
+      const parsedPayload = JSON.parse(this.#payload);
+      const identityMap = parsedPayload[this.IDENTITY];
       return identityMap["externalId"];
     } catch (e) {
       // Optionally log the exception
@@ -222,12 +218,8 @@ export class SubstitutionContext {
    */
   getC8YIdentifier() {
     try {
-      // Check if payload and the IDENTITY map exist
-      if (this.#payload == null || this.#payload[this.IDENTITY] == null) {
-        return null;
-      }
-
-      const identityMap = this.#payload[this.IDENTITY];
+      const parsedPayload = JSON.parse(this.#payload);
+      const identityMap = parsedPayload[this.IDENTITY];
       return identityMap["c8ySourceId"];
     } catch (e) {
       // Optionally log the exception
