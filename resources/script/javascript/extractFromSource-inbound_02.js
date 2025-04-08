@@ -37,5 +37,9 @@ function extractFromSource(ctx) {
     const deviceIdentifier = new SubstitutionValue(sourceObject['_TOPIC_LEVEL_'][1], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     addToSubstitutionsMap(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
 
+    // Overwrite api 
+    const api = new SubstitutionValue('ALARM', TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+    addToSubstitutionsMap(result, '_CONTEXT_DATA_.api', api);
+
     return result;
 }

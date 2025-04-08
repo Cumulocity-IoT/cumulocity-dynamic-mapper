@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.ProcessingException;
@@ -56,6 +57,8 @@ public class ProcessingContext<O> {
 
     private String topic;
 
+    private API api;
+    
     private QOS qos;
 
     private String resolvedPublishTopic;

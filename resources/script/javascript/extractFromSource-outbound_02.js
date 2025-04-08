@@ -24,6 +24,10 @@ function extractFromSource(ctx) {
     const deviceId = new SubstitutionValue(ctx.getC8YIdentifier(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     // addToSubstitutionsMap(result, 'deviceId', deviceId);
 
+    //overwrite HTTP method
+    //const method = new SubstitutionValue('PUT', TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+    //addToSubstitutionsMap(result, '_CONTEXT_DATA_.method', method);
+
     const source = {
         id: ctx.getC8YIdentifier()
     };
