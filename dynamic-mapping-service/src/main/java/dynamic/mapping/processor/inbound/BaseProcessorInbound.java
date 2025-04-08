@@ -343,8 +343,10 @@ public abstract class BaseProcessorInbound<T> {
             try {
                 var expr = jsonata(mappingFilter);
                 Object extractedSourceContent = expr.evaluate(payloadObjectNode);
-                log.info("Tenant {} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter, payload);
-                context.setIgnoreFurtherProcessing(!isNodeTrue(extractedSourceContent));
+                if(!isNodeTrue(extractedSourceContent)) {
+                    log.info("Tenant {} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter, payload);
+                    context.setIgnoreFurtherProcessing(true);
+                }
             } catch (Exception e) {
                 log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
                         payload, e);
