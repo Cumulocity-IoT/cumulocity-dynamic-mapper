@@ -54,5 +54,8 @@ public class C8YMessage {
     private String tenant; 
 
     @NotNull
-    private boolean sendPayload; 
+    private boolean sendPayload;
+
+    @NotNull
+    private String operation;
 }

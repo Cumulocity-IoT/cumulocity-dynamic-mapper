@@ -155,7 +155,7 @@ public class DispatcherOutbound implements NotificationCallback {
             // connectorClient.connectorConfiguration.name,
             // connectorClient.isConnected());
             if ("UPDATE".equals(operation) && notification.getApi().equals(API.OPERATION)) {
-                log.info("Tenant {} - Update Operation notification for connector {} is received, ignoring it",
+                log.info("Tenant {} - Update Operation message for connector {} is received, ignoring it",
                         tenant, connectorClient.getConnectorName());
                 return;
             }
@@ -163,6 +163,7 @@ public class DispatcherOutbound implements NotificationCallback {
             Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
             c8yMessage.setParsedPayload(parsedPayload);
             c8yMessage.setApi(notification.getApi());
+            c8yMessage.setOperation(operation);
             String messageId = String.valueOf(parsedPayload.get("id"));
             c8yMessage.setMessageId(messageId);
             try {
@@ -388,12 +389,12 @@ public class DispatcherOutbound implements NotificationCallback {
 
         if (serviceConfiguration.logPayload) {
             String payload = c8yMessage.getPayload();
-            log.info("Tenant {} - From API : {}, new outbound message for Device {} and connector {}: {} {}", tenant,
-                    c8yMessage.getApi(), c8yMessage.getSourceId(), connectorClient.getConnectorName(), payload,
+            log.info("Tenant {} - Received C8Y message on API: {}, Operation: {}, for Device {} and connector {}: {} {}", tenant,
+                    c8yMessage.getApi(), c8yMessage.getOperation(), c8yMessage.getSourceId(), connectorClient.getConnectorName(), payload,
                     c8yMessage.getMessageId());
         } else {
-            log.info("Tenant {} - From API : {}, new outbound message for Device {} and connector {}: {}", tenant,
-                    c8yMessage.getApi(), c8yMessage.getSourceId(), connectorClient.getConnectorName(),
+            log.info("Tenant {} - Received C8Y message on API: {}, Operation: {}, for Device {} and connector {}: {}", tenant,
+                    c8yMessage.getApi(), c8yMessage.getOperation(), c8yMessage.getSourceId(), connectorClient.getConnectorName(),
                     c8yMessage.getMessageId());
         }
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
