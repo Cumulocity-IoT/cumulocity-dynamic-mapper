@@ -252,7 +252,7 @@ public class WebHook extends AConnectorClient {
                 }
                 try {
                     if (!StringUtils.isEmpty(baseUrlHealthEndpoint)) {
-                        checkHealth();
+                        checkHealth().block();
                     }
 
                     connectionState.setTrue();
