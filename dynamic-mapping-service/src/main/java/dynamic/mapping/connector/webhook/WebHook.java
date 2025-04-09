@@ -66,6 +66,9 @@ import dynamic.mapping.connector.core.ConnectorPropertyCondition;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 public class WebHook extends AConnectorClient {
@@ -177,7 +180,7 @@ public class WebHook extends AConnectorClient {
         }
     }
 
-    protected RestClient webhookClient;
+    protected WebClient webhookClient;
 
     protected String baseUrl;
     protected Boolean baseUrlEndsWithSlash;
@@ -213,8 +216,7 @@ public class WebHook extends AConnectorClient {
                 "application/json");
 
         // Create RestClient builder
-        RestClient.Builder builder = RestClient.builder()
-                .requestFactory(new HttpComponentsClientHttpRequestFactory())
+        WebClient.Builder builder = WebClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("Accept", headerAccept);
 
@@ -229,6 +231,7 @@ public class WebHook extends AConnectorClient {
 
         // Build the client
         webhookClient = builder.build();
+
 
         // stay in the loop until successful
         boolean successful = false;
@@ -289,7 +292,7 @@ public class WebHook extends AConnectorClient {
         }
     }
 
-    public ResponseEntity<String> checkHealth() {
+    public Mono<ResponseEntity<String>> checkHealth() {
         try {
             String baseUrlHealthEndpoint = (String) connectorConfiguration.getProperties()
                     .getOrDefault("baseUrlHealthEndpoint", null);
@@ -297,13 +300,12 @@ public class WebHook extends AConnectorClient {
             return webhookClient.get()
                     .uri(baseUrlHealthEndpoint) // Use the full health endpoint URL
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        throw new RuntimeException(
-                                "Health check failed with client error: " + response.getStatusCode());
+                    .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
+                        return Mono.error(new RuntimeException("Health check failed with client error: " + response.statusCode()));
                     })
-                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                        throw new RuntimeException(
-                                "Health check failed with server error: " + response.getStatusCode());
+                    .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
+                        return Mono.error(new RuntimeException("Health check failed with client error: " + response.statusCode()));
+
                     })
                     .toEntity(String.class);
         } catch (Exception e) {
@@ -402,37 +404,37 @@ public class WebHook extends AConnectorClient {
 
         try {
             RequestMethod method = currentRequest.getMethod();
-            ResponseEntity<String> responseEntity;
+            Mono<ResponseEntity<String>> responseEntity;
             if (RequestMethod.PUT.equals(method)) {
                 responseEntity = webhookClient.put()
                         .uri(path)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .body(payload)
+                        .body(Mono.just(payload), String.class)
                         .retrieve()
-                        .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                            String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                        .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
+                            String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            throw new RuntimeException(errorMessage);
+                            return Mono.error( new RuntimeException(errorMessage));
                         })
-                        .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                            String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                        .onStatus(HttpStatusCode::is5xxServerError, ( response) -> {
+                            String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            throw new RuntimeException(errorMessage);
+                            return Mono.error( new RuntimeException(errorMessage));
                         })
                         .toEntity(String.class);
             } else if (RequestMethod.DELETE.equals(method)) {
                 responseEntity = webhookClient.delete()
                         .uri(path)
                         .retrieve()
-                        .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                            String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                        .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
+                            String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            throw new RuntimeException(errorMessage);
+                            return Mono.error( new RuntimeException(errorMessage));
                         })
-                        .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                            String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                        .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
+                            String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            throw new RuntimeException(errorMessage);
+                            return Mono.error( new RuntimeException(errorMessage));
                         })
                         .toEntity(String.class);
             } else if (RequestMethod.PATCH.equals(method)) {
@@ -445,17 +447,17 @@ public class WebHook extends AConnectorClient {
                     responseEntity = webhookClient.patch()
                             .uri(path)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .body(payload)
+                            .body(Mono.just(payload), String.class)
                             .retrieve()
-                            .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                                String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                            .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
+                                String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                                 log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                                throw new RuntimeException(errorMessage);
+                                return Mono.error( new RuntimeException(errorMessage));
                             })
-                            .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                                String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                            .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
+                                String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                                 log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                                throw new RuntimeException(errorMessage);
+                                return Mono.error( new RuntimeException(errorMessage));
                             })
                             .toEntity(String.class);
                 }
@@ -463,22 +465,32 @@ public class WebHook extends AConnectorClient {
                 responseEntity = webhookClient.post()
                         .uri(path)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .body(payload)
+                        .body(Mono.just(payload), String.class)
                         .retrieve()
-                        .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                            String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                        .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
+                            String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            throw new RuntimeException(errorMessage);
+                            return Mono.error( new RuntimeException(errorMessage));
                         })
-                        .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                            String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                        .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
+                            String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            throw new RuntimeException(errorMessage);
+                            return Mono.error( new RuntimeException(errorMessage));
                         })
                         .toEntity(String.class);
             }
+            responseEntity.doOnSuccess(response -> {
+                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}, {}",
+                        tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,
+                        connectorName);
+            });
+            responseEntity.doOnError(e -> {
+                String errorMessage = "Failed to publish MEAO message";
+                log.error("Tenant {} - {} - Error: {}", tenant, errorMessage, e.getMessage());
+                throw new RuntimeException(errorMessage, e);
+            });
 
-            if (responseEntity.getStatusCode().is2xxSuccessful()) {
+            if (responseEntity.block().getStatusCode().is2xxSuccessful()) {
                 log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}, {}",
                         tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,
                         connectorName);
@@ -511,56 +523,51 @@ public class WebHook extends AConnectorClient {
         return new ArrayList<>(Arrays.asList(Direction.OUTBOUND));
     }
 
-    public ResponseEntity<String> patchObject(String tenant, String path, String payload) {
-        try {
-            // Step 1: Retrieve the existing object
-            ResponseEntity<String> existingObjectResponse = webhookClient.get()
-                    .uri(path)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        String errorMessage = "Client error when retrieving existing object: "
-                                + response.getStatusCode();
-                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                        throw new RuntimeException(errorMessage);
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                        String errorMessage = "Server error when retrieving existing object: "
-                                + response.getStatusCode();
-                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                        throw new RuntimeException(errorMessage);
-                    })
-                    .toEntity(String.class);
+    public Mono<ResponseEntity<String>> patchObject(String tenant, String path, String payload) {
+        // Step 1: Retrieve the existing object
+        return webhookClient.get()
+                .uri(path)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
+                    String errorMessage = "Client error when retrieving existing object: " + response.statusCode();
+                    log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                    return Mono.error(new RuntimeException(errorMessage));
+                })
+                .onStatus(HttpStatusCode::is5xxServerError, ( response) -> {
+                    String errorMessage = "Server error when retrieving existing object: " + response.statusCode();
+                    log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                    return Mono.error(new RuntimeException(errorMessage));
+                })
+                .toEntity(String.class)
+                .flatMap(existingObjectResponse -> {
+                    try {
+                        // Step 2: Merge the existing payload with the new payload
+                        String mergedPayload = mergeJsonObjects(existingObjectResponse.getBody(), payload);
 
-            String existingPayload = existingObjectResponse.getBody();
-
-            // Step 2: Merge the existing payload with the new payload
-            String mergedPayload = mergeJsonObjects(existingPayload, payload);
-
-            // Step 3: Send the merged payload as a PUT operation
-            ResponseEntity<String> responseEntity = webhookClient.put()
-                    .uri(path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(mergedPayload)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        String errorMessage = "Client error when publishing merged object: " + response.getStatusCode();
-                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                        throw new RuntimeException(errorMessage);
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                        String errorMessage = "Server error when publishing merged object: " + response.getStatusCode();
-                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                        throw new RuntimeException(errorMessage);
-                    })
-                    .toEntity(String.class);
-
-            return responseEntity;
-
-        } catch (Exception e) {
-            log.error("Tenant {} - Error during PATCH operation for path {}: {}", tenant, path, e.getMessage());
-            throw new RuntimeException("Error during PATCH operation: " + e.getMessage(), e);
-        }
+                        // Step 3: Send the merged payload as a PUT operation
+                        return webhookClient.put()
+                                .uri(path)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(BodyInserters.fromValue(mergedPayload))
+                                .retrieve()
+                                .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
+                                    String errorMessage = "Client error when publishing merged object: " + response.statusCode();
+                                    log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                                    return Mono.error(new RuntimeException(errorMessage));
+                                })
+                                .onStatus(HttpStatusCode::is5xxServerError, ( response) -> {
+                                    String errorMessage = "Server error when publishing merged object: " + response.statusCode();
+                                    log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                                    return Mono.error(new RuntimeException(errorMessage));
+                                })
+                                .toEntity(String.class);
+                    } catch (Exception e) {
+                        log.error("Tenant {} - Error during PATCH operation for path {}: {}", tenant, path, e.getMessage());
+                        return Mono.error(new RuntimeException("Error during PATCH operation: " + e.getMessage(), e));
+                    }
+                });
     }
+
 
     public String mergeJsonObjects(String existingJson, String newJson) throws IOException {
         // Convert JSON strings to JsonNode objects
