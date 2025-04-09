@@ -58,7 +58,7 @@
     "lastUpdate": 1744100776902
   },
   {
-    "id": "73121602715",
+    "id": "75121602722",
     "identifier": "cxxlmh",
     "name": "Operation Mapping Example",
     "publishTopic": "op/outbound/#",
@@ -88,7 +88,7 @@
         "expandArray": false
       }
     ],
-    "active": false,
+    "active": true,
     "debug": false,
     "tested": false,
     "supportsMessageContext": false,
@@ -101,7 +101,7 @@
     "snoopedTemplates": [],
     "filterMapping": "$exists(bus_opp)",
     "qos": "AT_LEAST_ONCE",
-    "lastUpdate": 1744100837106
+    "lastUpdate": 1744211243282
   },
   {
     "id": "64121600686",
