@@ -154,7 +154,7 @@ public class DispatcherOutbound implements NotificationCallback {
             // notification.getNotificationHeaders(),
             // connectorClient.connectorConfiguration.name,
             // connectorClient.isConnected());
-            if("UPDATE".equals(operation) && notification.getApi().equals(API.OPERATION)) {
+            if ("UPDATE".equals(operation) && notification.getApi().equals(API.OPERATION)) {
                 log.info("Tenant {} - Update Operation notification for connector {} is received, ignoring it",
                         tenant, connectorClient.getConnectorName());
                 return;
@@ -166,21 +166,13 @@ public class DispatcherOutbound implements NotificationCallback {
             String messageId = String.valueOf(parsedPayload.get("id"));
             c8yMessage.setMessageId(messageId);
             try {
-                String identifier = notification.getApi().identifier;
-                // String identifier = "source.id";
-                // if(API.OPERATION.equals(notification.getApi())) {
-                //     identifier = "deviceId";
-                // }
-                // if(API.INVENTORY.equals(notification.getApi())) {
-                //     identifier = "id";
-                // }
-                var expression = jsonata(identifier);
+                var expression = jsonata(notification.getApi().identifier);
                 Object sourceIdResult = expression.evaluate(parsedPayload);
                 String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
                 c8yMessage.setSourceId(sourceId);
             } catch (Exception e) {
                 log.debug("Could not extract source.id: {}", e.getMessage());
-                
+
             }
             c8yMessage.setPayload(notification.getMessage());
             c8yMessage.setTenant(tenant);
@@ -301,7 +293,8 @@ public class DispatcherOutbound implements NotificationCallback {
                             }
 
                             Object payload = c8yMessage.getParsedPayload();
-                            ProcessingContext<?> context = ProcessingContext.builder().payload(payload).rawPayload(c8yMessage.getPayload())
+                            ProcessingContext<?> context = ProcessingContext.builder().payload(payload)
+                                    .rawPayload(c8yMessage.getPayload())
                                     .topic(mapping.publishTopic)
                                     .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
                                     .tenant(tenant).supportsMessageContext(mapping.supportsMessageContext)
@@ -393,11 +386,15 @@ public class DispatcherOutbound implements NotificationCallback {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
 
-        if (serviceConfiguration.logPayload ) {
+        if (serviceConfiguration.logPayload) {
             String payload = c8yMessage.getPayload();
-            log.info("Tenant {} - From API : {}, new outbound message for Device {} and connector {}: {} {}", tenant, c8yMessage.getApi(), c8yMessage.getSourceId(), connectorClient.getConnectorName(), payload, c8yMessage.getMessageId());
+            log.info("Tenant {} - From API : {}, new outbound message for Device {} and connector {}: {} {}", tenant,
+                    c8yMessage.getApi(), c8yMessage.getSourceId(), connectorClient.getConnectorName(), payload,
+                    c8yMessage.getMessageId());
         } else {
-            log.info("Tenant {} - From API : {}, new outbound message for Device {} and connector {}: {}", tenant, c8yMessage.getApi(), c8yMessage.getSourceId(), connectorClient.getConnectorName(), c8yMessage.getMessageId());
+            log.info("Tenant {} - From API : {}, new outbound message for Device {} and connector {}: {}", tenant,
+                    c8yMessage.getApi(), c8yMessage.getSourceId(), connectorClient.getConnectorName(),
+                    c8yMessage.getMessageId());
         }
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
