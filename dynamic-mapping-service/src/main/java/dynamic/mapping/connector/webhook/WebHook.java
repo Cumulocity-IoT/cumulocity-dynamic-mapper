@@ -21,6 +21,7 @@
 
 package dynamic.mapping.connector.webhook;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -31,6 +32,10 @@ import java.util.List;
 import java.util.Map;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -98,7 +103,9 @@ public class WebHook extends AConnectorClient {
                 new ConnectorProperty("health endpoint for GET request", false, 6,
                         ConnectorPropertyType.STRING_PROPERTY, false, false, null, null, cumulocityInternal));
         configProps.put("cumulocityInternal",
-                new ConnectorProperty("When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.", false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
+                new ConnectorProperty(
+                        "When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.",
+                        false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
                         null));
         String name = "Webhook";
         String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
@@ -426,6 +433,15 @@ public class WebHook extends AConnectorClient {
                             throw new RuntimeException(errorMessage);
                         })
                         .toEntity(String.class);
+            } else if (RequestMethod.PATCH.equals(method)) {
+                Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties().getOrDefault(
+                        "cumulocityInternal",
+                        false);
+                if (cumulocityInternal) {
+                    responseEntity = patchObject(tenant, path, payload);
+                } else {
+                    throw new NotSupportedException("Only Cumulocity internal WebHook supports PATCH method!");
+                }
             } else {
                 responseEntity = webhookClient.post()
                         .uri(path)
@@ -478,4 +494,87 @@ public class WebHook extends AConnectorClient {
         return new ArrayList<>(Arrays.asList(Direction.OUTBOUND));
     }
 
+    public ResponseEntity<String> patchObject(String tenant, String path, String payload) {
+        try {
+            // Step 1: Retrieve the existing object
+            ResponseEntity<String> existingObjectResponse = webhookClient.get()
+                    .uri(path)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        String errorMessage = "Client error when retrieving existing object: " + response.getStatusCode();
+                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                        throw new RuntimeException(errorMessage);
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        String errorMessage = "Server error when retrieving existing object: " + response.getStatusCode();
+                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                        throw new RuntimeException(errorMessage);
+                    })
+                    .toEntity(String.class);
+    
+            String existingPayload = existingObjectResponse.getBody();
+            
+            // Step 2: Merge the existing payload with the new payload
+            String mergedPayload = mergeJsonObjects(existingPayload, payload);
+            
+            // Step 3: Send the merged payload as a PUT operation
+            ResponseEntity<String> responseEntity = webhookClient.put()
+                    .uri(path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(mergedPayload)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                        String errorMessage = "Client error when publishing merged object: " + response.getStatusCode();
+                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                        throw new RuntimeException(errorMessage);
+                    })
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                        String errorMessage = "Server error when publishing merged object: " + response.getStatusCode();
+                        log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                        throw new RuntimeException(errorMessage);
+                    })
+                    .toEntity(String.class);
+                    
+            return responseEntity;
+            
+        } catch (Exception e) {
+            log.error("Tenant {} - Error during PATCH operation for path {}: {}", tenant, path, e.getMessage());
+            throw new RuntimeException("Error during PATCH operation: " + e.getMessage(), e);
+        }
+    }
+    
+    public String mergeJsonObjects(String existingJson, String newJson) throws IOException {
+        // Convert JSON strings to JsonNode objects
+        JsonNode existingNode = objectMapper.readTree(existingJson);
+        JsonNode newNode = objectMapper.readTree(newJson);
+        
+        // Perform deep merge of the two objects
+        JsonNode mergedNode = mergeNodes(existingNode, newNode);
+        
+        // Convert merged node back to JSON string
+        return objectMapper.writeValueAsString(mergedNode);
+    }
+    
+    public JsonNode mergeNodes(JsonNode existingNode, JsonNode updateNode) {
+        ObjectNode result = objectMapper.createObjectNode();
+        
+        // First, copy all fields from the existing node
+        existingNode.fields().forEachRemaining(field -> result.set(field.getKey(), field.getValue()));
+        
+        // Then, merge in the update node fields
+        updateNode.fields().forEachRemaining(field -> {
+            String fieldName = field.getKey();
+            JsonNode fieldValue = field.getValue();
+            
+            // If both nodes have the field and both are objects, recursively merge them
+            if (result.has(fieldName) && result.get(fieldName).isObject() && fieldValue.isObject()) {
+                result.set(fieldName, mergeNodes(result.get(fieldName), fieldValue));
+            } else {
+                // Otherwise, just overwrite with the update value
+                result.set(fieldName, fieldValue);
+            }
+        });
+        
+        return result;
+    }
 }

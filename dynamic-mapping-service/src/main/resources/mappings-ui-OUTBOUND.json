@@ -66,7 +66,7 @@
     "targetAPI": "OPERATION",
     "direction": "OUTBOUND",
     "sourceTemplate": "{\"bus_opp\":\"New engine restart operation!\"}",
-    "targetTemplate": "{\"c8y_Id\":\"909090\",\"decription\":\"dummy operation\",\"type\":\"bus_operation\"}",
+    "targetTemplate": "{\"c8y_Id\":\"909090\",\"description\":\"dummy operation\",\"type\":\"bus_operation\"}",
     "mappingType": "JSON",
     "substitutions": [
       {
@@ -77,7 +77,7 @@
       },
       {
         "pathSource": "bus_opp",
-        "pathTarget": "decription",
+        "pathTarget": "description",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
