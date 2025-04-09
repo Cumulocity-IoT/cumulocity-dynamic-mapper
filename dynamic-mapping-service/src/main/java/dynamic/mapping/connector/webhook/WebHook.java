@@ -28,8 +28,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -501,22 +503,24 @@ public class WebHook extends AConnectorClient {
                     .uri(path)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
-                        String errorMessage = "Client error when retrieving existing object: " + response.getStatusCode();
+                        String errorMessage = "Client error when retrieving existing object: "
+                                + response.getStatusCode();
                         log.error("Tenant {} - {} {}", tenant, errorMessage, path);
                         throw new RuntimeException(errorMessage);
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                        String errorMessage = "Server error when retrieving existing object: " + response.getStatusCode();
+                        String errorMessage = "Server error when retrieving existing object: "
+                                + response.getStatusCode();
                         log.error("Tenant {} - {} {}", tenant, errorMessage, path);
                         throw new RuntimeException(errorMessage);
                     })
                     .toEntity(String.class);
-    
+
             String existingPayload = existingObjectResponse.getBody();
-            
+
             // Step 2: Merge the existing payload with the new payload
             String mergedPayload = mergeJsonObjects(existingPayload, payload);
-            
+
             // Step 3: Send the merged payload as a PUT operation
             ResponseEntity<String> responseEntity = webhookClient.put()
                     .uri(path)
@@ -534,47 +538,79 @@ public class WebHook extends AConnectorClient {
                         throw new RuntimeException(errorMessage);
                     })
                     .toEntity(String.class);
-                    
+
             return responseEntity;
-            
+
         } catch (Exception e) {
             log.error("Tenant {} - Error during PATCH operation for path {}: {}", tenant, path, e.getMessage());
             throw new RuntimeException("Error during PATCH operation: " + e.getMessage(), e);
         }
     }
-    
+
     public String mergeJsonObjects(String existingJson, String newJson) throws IOException {
         // Convert JSON strings to JsonNode objects
         JsonNode existingNode = objectMapper.readTree(existingJson);
         JsonNode newNode = objectMapper.readTree(newJson);
-        
+
         // Perform deep merge of the two objects
         JsonNode mergedNode = mergeNodes(existingNode, newNode);
-        
+
         // Convert merged node back to JSON string
         return objectMapper.writeValueAsString(mergedNode);
     }
-    
+
     public JsonNode mergeNodes(JsonNode existingNode, JsonNode updateNode) {
         ObjectNode result = objectMapper.createObjectNode();
-        
-        // First, copy all fields from the existing node
-        existingNode.fields().forEachRemaining(field -> result.set(field.getKey(), field.getValue()));
-        
-        // Then, merge in the update node fields
+
+        // Only process top-level fields from update node
         updateNode.fields().forEachRemaining(field -> {
             String fieldName = field.getKey();
             JsonNode fieldValue = field.getValue();
-            
-            // If both nodes have the field and both are objects, recursively merge them
-            if (result.has(fieldName) && result.get(fieldName).isObject() && fieldValue.isObject()) {
-                result.set(fieldName, mergeNodes(result.get(fieldName), fieldValue));
+
+            // Check if it exists in the existing node
+            if (existingNode.has(fieldName)) {
+                JsonNode existingValue = existingNode.get(fieldName);
+
+                // If both are objects, do a deep merge
+                if (existingValue.isObject() && fieldValue.isObject()) {
+                    // Recursive deep merge of objects
+                    result.set(fieldName, deepMergeObjects(existingValue, fieldValue));
+                } else {
+                    // Not both objects, use the update value
+                    result.set(fieldName, fieldValue);
+                }
             } else {
-                // Otherwise, just overwrite with the update value
+                // Field doesn't exist in existing node, use the update value directly
                 result.set(fieldName, fieldValue);
             }
         });
-        
+
         return result;
     }
+
+    // Helper method for deep merging of objects - unlike mergeNodes, this preserves
+    // all fields
+    private JsonNode deepMergeObjects(JsonNode existingObj, JsonNode updateObj) {
+        ObjectNode result = objectMapper.createObjectNode();
+
+        // First, copy all fields from the existing object
+        existingObj.fields().forEachRemaining(field -> result.set(field.getKey(), field.getValue()));
+
+        // Then update with fields from the update object
+        updateObj.fields().forEachRemaining(field -> {
+            String fieldName = field.getKey();
+            JsonNode fieldValue = field.getValue();
+
+            // If both values are objects, recursively merge them
+            if (result.has(fieldName) && result.get(fieldName).isObject() && fieldValue.isObject()) {
+                result.set(fieldName, deepMergeObjects(result.get(fieldName), fieldValue));
+            } else {
+                // Otherwise, take the update value
+                result.set(fieldName, fieldValue);
+            }
+        });
+
+        return result;
+    }
+
 }
