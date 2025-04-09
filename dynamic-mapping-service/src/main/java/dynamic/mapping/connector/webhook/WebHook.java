@@ -442,7 +442,22 @@ public class WebHook extends AConnectorClient {
                 if (cumulocityInternal) {
                     responseEntity = patchObject(tenant, path, payload);
                 } else {
-                    throw new NotSupportedException("Only Cumulocity internal WebHook supports PATCH method!");
+                    responseEntity = webhookClient.patch()
+                            .uri(path)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(payload)
+                            .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                                String errorMessage = "Client error when publishing MEAO: " + response.getStatusCode();
+                                log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                                throw new RuntimeException(errorMessage);
+                            })
+                            .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
+                                String errorMessage = "Server error when publishing MEAO: " + response.getStatusCode();
+                                log.error("Tenant {} - {} {}", tenant, errorMessage, path);
+                                throw new RuntimeException(errorMessage);
+                            })
+                            .toEntity(String.class);
                 }
             } else {
                 responseEntity = webhookClient.post()
