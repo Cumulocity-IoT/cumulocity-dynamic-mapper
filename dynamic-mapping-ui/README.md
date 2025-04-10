@@ -6,7 +6,8 @@ this gap by providing the following artifacts:
 
 * A **Microservice** - contains connectors for generic MQTT brokers, the Cumulocity MQTT Service and Kafka brokers. The microservice listens to incoming messages and applies the appropriate mappings. Exposes REST endpoints for the UI to manage connector configurations and mappings.
 * A **Frontend Plugin** - uses the exposed endpoints of the microservice to configure a MQTT broker connection & to perform 
-graphical MQTT Data Mappings within the Cumulocity IoT UI. Mappings are defined using [JSONata](https://jsonata.org/) expressions.  
+graphical MQTT Data Mappings within the Cumulocity IoT UI. Mappings are defined using [JSONata](https://jsonata.org/) expressions.
+In addition substitutions can be defined in JavaScript.  
 
 Using the solution you are able to connect to any MQTT broker and map any JSON-based payload on any topic dynamically to
 the Cumulocity IoT Domain Model in a graphical way.
@@ -17,8 +18,7 @@ The mapper processes messages in both directions:
 
 Different mappings types can be used:
 <br>
-<br>
-![Add mapping](image/Dynamic_Mapper_Mapping_Table_Add_Modal.png)
+<img src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png" style="width: 50%;"/>
 <br>
 <br>
 Mappings are defined in a graphical editor using JSONata expressions:
