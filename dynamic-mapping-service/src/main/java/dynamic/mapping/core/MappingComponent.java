@@ -504,7 +504,7 @@ public class MappingComponent {
 
             for (Mapping mapping : cacheMappingOutbound.get(tenant).values()) {
                 if (!mapping.active || !mapping.targetAPI.equals(api)) {
-                // if (!mapping.active) {
+                    // if (!mapping.active) {
                     continue;
                 }
 
@@ -561,7 +561,9 @@ public class MappingComponent {
         try {
             Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
                     .getMOFromInventoryCache(tenant, message.getSourceId());
-
+            List<String> keyList = new ArrayList<>(cachedInventoryContent.keySet());
+            log.info("Tenant {} - For object {} found following fragments in inventory cache {}",
+                    tenant, message.getSourceId(), keyList);
             var expression = jsonata(filterExpression);
             Object result = expression.evaluate(cachedInventoryContent);
 
