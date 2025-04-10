@@ -18,7 +18,8 @@ The mapper processes messages in both directions:
 
 Different mappings types can be used:
 <br>
-<img src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png" style="width: 50%;"/>
+<br>
+![Add mapping](image/Dynamic_Mapper_Mapping_Table_Add_Modal.png)
 <br>
 <br>
 Mappings are defined in a graphical editor using JSONata expressions:
