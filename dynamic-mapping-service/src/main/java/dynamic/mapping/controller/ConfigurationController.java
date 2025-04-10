@@ -362,11 +362,11 @@ public class ConfigurationController {
         try {
             configuration.setCodeTemplates(codeTemplates);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, configuration);
-            if (!configuration.isOutboundMappingEnabled()
+            if (!configuration.isOutboundMappingEnabled() && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
                 configurationRegistry.getNotificationSubscriber().disconnect(tenant);
             } else if (configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == null
-                    || configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == null
+                    || configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
                             && configurationRegistry.getNotificationSubscriber()
                                     .getDeviceConnectionStatus(tenant) != 200) {
                 List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
