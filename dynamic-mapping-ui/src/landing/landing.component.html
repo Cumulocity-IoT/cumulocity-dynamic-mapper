@@ -91,8 +91,8 @@
     The mapper supports the following connectors and mappings:
     <br />
     <br />
-    <img width="60%" class="m-l-48 m-b-48" src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Connector_Matrix.png"
-      alt="Define substitutions" />
+    <img width="60%" class="m-l-48 m-b-48"
+      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Connector_Matrix.png" alt="Define substitutions" />
   </div>
 
   <div class="card-header">
@@ -103,7 +103,8 @@
   <div class="card-block">
     <div class="p-b-8 text-16">
       Mapping can use the json query and transformation language or use JavaScript to define a mapping and the
-      substitutions. The choice depends your the preference. Are you familiar with any of the two standards? Do you have
+      substitutions. <br />
+      The choice depends your the preference. Are you familiar with any of the two standards? Do you have
       existing JavaScript code you want to reuse? <br />
       <br />
 
@@ -124,7 +125,7 @@
         alt="Define substitutions" />
     </div>
     <div class="p-b-8 text-16">
-      The stepper leads you through the steps to define a mapping:
+      The stepper leads you through the steps to define a mapping which uses JSONata for the substitutions:
     </div>
     <ol class="text-16">
       <li>
@@ -154,7 +155,7 @@
     <div class="p-b-8"></div>
     <div class="card-header">
       <h3>
-        {{ 'How to define a substitution?' | translate }}
+        {{ 'How to define a substitution using JSONata?' | translate }}
       </h3>
     </div>
     <div class="card-block">
@@ -172,7 +173,8 @@
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif"
         alt="Define substitutions" />
-        <p class="image-description"><b>Description:</b> This animation shows the steps to define substitutions in a mapping.</p>
+      <p class="image-description"><b>Description:</b> This animation shows the steps to define substitutions in a
+        mapping.</p>
       <div class="p-b-8"></div>
       <ol class="p-b-8 text-16">
         <li>
@@ -181,7 +183,7 @@
         </li>
         <li>
           Select an node in the target payload. In the screenshot below this is:
-          source.id
+          <code>source.id</code>
         </li>
         <li>Press Add substitution</li>
         <li>The substitution is added to the table of existing substitutions</li>
@@ -190,14 +192,35 @@
         At runtime this substitution copies the value extracted at the path
         <code>_TOPIC_LEVEL_[1]</code> to the target payload at path <code>source.id</code><br />
       </p>
+      <br />
+      <img width="70%" class="m-l-48 m-b-48"
+        src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
+        alt="Define mapping" />
+      <p class="image-description"><b>Description:</b> This screenshot shows the step 4 to define substitutions using
+        JSONata.</p>
+    </div>
+    <div class="p-b-8"></div>
+    <div class="card-header">
+      <h3>
+        {{ 'How to define a substitution using JavaScript?' | translate }}
+      </h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        To define the substitutions in JavaScript in step 4 you can define the substitutions in the editor.<br />
+        At runtime the JavaScript code is evaluated substitution and copies the value extracted to the target payload at
+        path.
+      </div>
+      <br />
+      <img width="70%" class="m-l-48 m-b-48"
+        src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png"
+        alt="Define substitutions using JavaScript" />
+      <p class="image-description"><b>Description:</b> This screenshot shows the step 4 to define substitutions using
+        JavaScript.</p>
+      <div class="p-b-8"></div>
     </div>
   </div>
 
-  <div class="card-block">
-    <img width="70%" class="m-l-48 m-b-48"
-      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
-      alt="Define mapping" />
-  </div>
   <div class="card-header">
     <h3>
       {{ 'How to begin without knowing your source payload?' | translate }}
