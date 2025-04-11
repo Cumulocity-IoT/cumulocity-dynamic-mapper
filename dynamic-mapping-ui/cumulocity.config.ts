@@ -32,9 +32,6 @@ export default {
     version,
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
-    // icon: {
-    //   url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_03.png)'
-    // },
     icon: {
       class: 'c8y-icon-dynamic-mapper'
     },
@@ -47,14 +44,6 @@ export default {
     package: 'blueprint',
     contextHelp: true,
     isPackage: true,
-    // exports: [
-    //   {
-    //     name: 'Dynamic Mapping Mapper Plugin',
-    //     module: 'DynamicMappingModule',
-    //     path: './src/dynamic-mapping.module.ts',
-    //     description: 'Adds a Dynamic Mapping Mapper Plugin'
-    //   }
-    // ]
   },
   buildTime: {
     copy: [
@@ -83,6 +72,10 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif'
+      },
+      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif'
       },
@@ -103,8 +96,8 @@ export default {
       //   to: 'image/DM_App-Icon_03.png'
       // },
       {
-        from: '../resources/image/ConnectorMatrix.png',
-        to: 'image/ConnectorMatrix.png'
+        from: '../resources/image/Dynamic_Mapper_Connector_Matrix.png',
+        to: 'image/Dynamic_Mapper_Connector_Matrix.png'
       },
       {
         from: '../resources/image/Test.svg',

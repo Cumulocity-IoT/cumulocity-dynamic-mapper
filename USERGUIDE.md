@@ -53,7 +53,7 @@ The table of configured connectors to different brokers can be:
 The mapper supports the following connectors:
 
 <p align="center">
-<img src="resources/image/ConnectorMatrix.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Matrix.png"  style="width: 70%;" />
 </p>
 <br/>
 

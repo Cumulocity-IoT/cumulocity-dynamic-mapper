@@ -56,7 +56,7 @@ The Web App is part of the community store and should be available directly in y
 </p>
 <br/>
 
-~~Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "Dynamic Data Mapper Widget"~~
+~~Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "Dynamic Mapper Widget"~~
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Installation_Plugin.png" style="width: 50%;" />

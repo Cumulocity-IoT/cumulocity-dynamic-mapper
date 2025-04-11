@@ -1,4 +1,4 @@
-# Cumulocity Dynamic Data Mapper
+# Cumulocity Dynamic Mapper
 
 
 Cumulocity IoT has a MQTT endpoint, but does not yet allow devices to send generic MQTT payloads. This project addresses

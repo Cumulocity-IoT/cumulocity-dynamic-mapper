@@ -475,7 +475,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         /*
                          * mor.set(new Agent());
                          * HashMap<String, String> agentFragments = new HashMap<>();
-                         * agentFragments.put("name", "Dynamic Data Mapper");
+                         * agentFragments.put("name", "Dynamic Mapper");
                          * agentFragments.put("version", version);
                          * agentFragments.put("url",
                          * "https://github.com/SoftwareAG/cumulocity-dynamic-mapper");
@@ -754,7 +754,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             amo.setType(MappingServiceRepresentation.AGENT_TYPE);
             amo.set(new Agent());
             HashMap<String, String> agentFragments = new HashMap<>();
-            agentFragments.put("name", "Dynamic Data Mapper");
+            agentFragments.put("name", "Dynamic Mapper");
             agentFragments.put("version", version);
             agentFragments.put("url", "https://github.com/SoftwareAG/cumulocity-dynamic-mapper");
             agentFragments.put("maintainer", "Open-Source");

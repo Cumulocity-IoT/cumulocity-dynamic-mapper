@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Cumulocity Dynamic Data Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach.
+The Cumulocity Dynamic Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach.
 It can connect to multiple message brokers likes **MQTT**, **MQTT Service**, **Kafka** and others, subscribes to specific topics and maps the data in a graphical or code-based editor to the domain model of Cumulocity.
 
 Per default the followings connectors are supported
@@ -12,7 +12,7 @@ Per default the followings connectors are supported
 - **Kafka** - Kafka Broker
 - **HTTP/REST** - HTTP/REST Endpoint
 
-Using the Cumulocity Dynamic Data Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
+Using the Cumulocity Dynamic Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
 the Cumulocity IoT Domain Model in a graphical or, if you prefer code, in a web code editor.
 
 Here are the **core features** summarized:
@@ -33,11 +33,11 @@ Here are the **core features** summarized:
 
 ## Installation
 
-Please check the [Installation Guide](/INSTALLATION.md) to find out how you can install the Dynamic Data Mapper.
+Please check the [Installation Guide](/INSTALLATION.md) to find out how you can install the Dynamic Mapper.
 
 ## User Guide
 
-Please check the [User Guide](/USERGUIDE.md) to find a comprehensive guidance how to use the Dynamic Data Mapper.
+Please check the [User Guide](/USERGUIDE.md) to find a comprehensive guidance how to use the Dynamic Mapper.
 
 ## Architecture
 
@@ -45,15 +45,15 @@ Please check the [Architecture overview](/ARCHITECTURE.md) if you are eager to u
 
 ## API
 
-Please check the [REST API](/API.md) provided by the Dynamic Data Mapper.
+Please check the [REST API](/API.md) provided by the Dynamic Mapper.
 
 ## Extensions
 
-The Dynamic Data Mapper can be extended on multiple layers. Check out the [Extensions Guide](/EXTENSIONS.md) if you want to add customer mapper or connectors.
+The Dynamic Mapper can be extended on multiple layers. Check out the [Extensions Guide](/EXTENSIONS.md) if you want to add customer mapper or connectors.
 
 ## Limitations
 
-Please check the current [Limitations](/LIMITATIONS.md) of the Dynamic Data Mapper.
+Please check the current [Limitations](/LIMITATIONS.md) of the Dynamic Mapper.
 
 ## Contribution
 
