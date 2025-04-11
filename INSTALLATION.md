@@ -14,7 +14,7 @@ You need to install two components to your Cumulocity IoT Tenant:
 1. microservice - (Java)
 2. Web App Plugin & Blueprint - (angular/Cumulocity WebSDK)
 
-Both are provided as binaries in [releases](https://github.com/SoftwareAG/cumulocity-dynamic-mapper/releases).
+Both are provided as binaries in [releases](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/releases).
 Download the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
 
 > **_NOTE:_**
