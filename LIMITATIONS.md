@@ -19,4 +19,4 @@ Differences in more advanced expressions can occur. Please test your expressions
 
 For Cumulocity MQTT Service currently no wildcards topics (e.g. `topic/#` or `topic/+` ) for Inbound Mappings / Subscriptions are allowed.
 
-The [java library for JSONata](https://github.com/IBM/JSONata4Java) uses the words `and`, `or ` and `in` as reserved words in their [expression language](https://github.com/IBM/JSONata4Java/issues/317), hence they can be used as key in an JSON payload, see [issue](https://github.com/SoftwareAG/cumulocity-dynamic-mapper/issues/230).
+The [java library for JSONata](https://github.com/IBM/JSONata4Java) uses the words `and`, `or ` and `in` as reserved words in their [expression language](https://github.com/IBM/JSONata4Java/issues/317), hence they can be used as key in an JSON payload, see [issue](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/issues/230).
