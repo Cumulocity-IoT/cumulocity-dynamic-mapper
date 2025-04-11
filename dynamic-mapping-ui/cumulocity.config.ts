@@ -72,6 +72,10 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png'
+      },
+      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif'
       },
@@ -91,17 +95,9 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.svg',
         to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
       },
-      // {
-      //   from: '../resources/image/DM_App-Icon_03.png',
-      //   to: 'image/DM_App-Icon_03.png'
-      // },
       {
         from: '../resources/image/Dynamic_Mapper_Connector_Matrix.png',
         to: 'image/Dynamic_Mapper_Connector_Matrix.png'
-      },
-      {
-        from: '../resources/image/Test.svg',
-        to: 'image/Test.svg'
       },
       {
         from: '../LICENSE',
