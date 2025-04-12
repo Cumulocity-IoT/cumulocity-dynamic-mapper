@@ -55,9 +55,9 @@
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Add' | translate }}" (click)="onAddCodeTemplate()">
-    <i c8yIcon="add"></i>
-    {{ 'Add' | translate }}
+  <button class="btn btn-link" title="{{ 'Duplicate' | translate }}" (click)="onDuplicateCodeTemplate()"  [disabled]="codeTemplateDecoded?.templateType === TemplateType.SHARED || codeTemplateDecoded?.templateType === TemplateType.SYSTEM">
+    <i c8yIcon="duplicate"></i>
+    {{ 'Duplicate' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
     <i c8yIcon="refresh"></i>

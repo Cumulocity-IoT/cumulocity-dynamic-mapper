@@ -92,6 +92,7 @@ export class SharedCodeComponent implements OnInit {
       id: undefined,
       code: undefined,
       name: template.name,
+      description: template.description,
       templateType: template.templateType,
       internal: template.internal,
       readonly: template.readonly,
@@ -103,7 +104,7 @@ export class SharedCodeComponent implements OnInit {
       try {
         const decodedCode = base64ToString(template.code);
         this.codeTemplatesDecoded.set(key, {
-          id: key, name: template.name,
+          id: key, name: template.name, description: template.description,
           templateType: template.templateType, code: decodedCode, internal: template.internal, readonly: template.readonly, defaultTemplate: false,
         });
       } catch (error) {
@@ -162,7 +163,7 @@ export class SharedCodeComponent implements OnInit {
     }
   }
 
-  async onAddCodeTemplate() {
+  async onDuplicateCodeTemplate() {
     if (this.codeTemplateDecoded) {
       const initialState = {
         action: 'COPY',
@@ -177,7 +178,7 @@ export class SharedCodeComponent implements OnInit {
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
           await this.sharedService.createCodeTemplate({
-            ...templateToUpdate, code: encodeCode, id: createCustomUuid(), internal: false
+            ...templateToUpdate, code: encodeCode, id: createCustomUuid(), internal: false, readonly: false
           });
           this.alertService.success("Copied code template");
         }
