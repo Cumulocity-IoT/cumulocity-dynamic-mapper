@@ -1,5 +1,6 @@
 /**
- * @name This sample shows how to perform a partial update using the PATCH method
+ * @name OUTBOUND setting methods
+ * @description This sample shows how to perform a partial update using the PATCH method
  * @templateType OUTBOUND
  * @defaultTemplate false
  * @internal true

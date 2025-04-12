@@ -1,4 +1,5 @@
 /**
+ * @description Default OUTBOUND template
  * @name Default OUTBOUND template, use external identifier
  * @templateType OUTBOUND
  * @defaultTemplate true

@@ -92,7 +92,7 @@ export class SharedCodeComponent implements OnInit {
       id: undefined,
       code: undefined,
       name: template.name,
-      type: template.type,
+      templateType: template.templateType,
       internal: template.internal,
       readonly: template.readonly,
       defaultTemplate: template.defaultTemplate
@@ -104,12 +104,12 @@ export class SharedCodeComponent implements OnInit {
         const decodedCode = base64ToString(template.code);
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: decodedCode, internal: template.internal, readonly: template.readonly, defaultTemplate: false,
+          templateType: template.templateType, code: decodedCode, internal: template.internal, readonly: template.readonly, defaultTemplate: false,
         });
       } catch (error) {
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly, defaultTemplate: false,
+          templateType: template.templateType, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly, defaultTemplate: false,
         });
       }
     });

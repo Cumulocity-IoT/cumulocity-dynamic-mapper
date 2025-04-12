@@ -1,5 +1,6 @@
 /**
- * @name System code containing the required definitions of the java classes
+ * @name System code
+ * @description System code containing the required definitions of the java classes
  * @templateType SYSTEM
  * @defaultTemplate true
  * @internal true

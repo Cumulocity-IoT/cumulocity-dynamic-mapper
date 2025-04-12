@@ -1,5 +1,6 @@
 /**
- * @name Default INBOUND template to generate one measurement
+ * @name Default INBOUND, one measurement
+ * @description Default INBOUND template to generate one measurement
  * @templateType INBOUND
  * @defaultTemplate true
  * @internal true

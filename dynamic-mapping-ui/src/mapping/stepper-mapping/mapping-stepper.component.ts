@@ -455,12 +455,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         const decodedCode = base64ToString(template.code);
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: decodedCode, internal: template.internal, readonly: template.readonly, defaultTemplate:false,
+          templateType: template.templateType, code: decodedCode, internal: template.internal, readonly: template.readonly, defaultTemplate:false,
         });
       } catch (error) {
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly, defaultTemplate:false,
+          templateType: template.templateType, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly, defaultTemplate:false,
         });
       }
     });
@@ -1211,10 +1211,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   getCodeTemplateEntries(): { key: string; name: string,type: TemplateType }[] {
     if (!this.codeTemplates) return [];
-    const entries = Object.entries(this.codeTemplates).filter(([key, template]) => (template.type.toString() == this.stepperConfiguration.direction.toString())).map(([key, template]) => ({
+    const entries = Object.entries(this.codeTemplates).filter(([key, template]) => (template.templateType.toString() == this.stepperConfiguration.direction.toString())).map(([key, template]) => ({
       key,
       name: template.name,
-      type: template.type
+      type: template.templateType
     }));
     return entries;
   }
@@ -1233,7 +1233,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         const type = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
         const response = await this.sharedService.updateCodeTemplate(id, {
           name, id,
-          type, code, internal:false, readonly: false, defaultTemplate:false
+          templateType: type, code, internal:false, readonly: false, defaultTemplate:false
         });
         this.codeTemplates = await this.sharedService.getCodeTemplates();
         if (response.status < 300) {

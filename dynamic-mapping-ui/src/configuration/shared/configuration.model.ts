@@ -47,7 +47,8 @@ export enum TemplateType {
 export interface CodeTemplate {
   id: string;
   name: string;
-  type: TemplateType;
+  description?: string;
+  templateType: TemplateType;
   code: string;
   internal: boolean;
   readonly: boolean;

@@ -128,6 +128,7 @@ public class ServiceConfigurationComponent {
 
                     // Parse the header annotations
                     String name = extractAnnotation(content, "@name");
+                    String description = extractAnnotation(content, "@description");
                     boolean internal = Boolean.parseBoolean(extractAnnotation(content, "@internal"));
                     String templateTypeStr = extractAnnotation(content, "@templateType");
                     boolean defaultTemplate = Boolean.parseBoolean(extractAnnotation(content, "@defaultTemplate"));
@@ -157,6 +158,7 @@ public class ServiceConfigurationComponent {
                     CodeTemplate template = new CodeTemplate(
                             templateId,
                             name,
+                            description,
                             templateType,
                             encode(content),
                             internal,
@@ -310,5 +312,149 @@ public class ServiceConfigurationComponent {
         return SECURE_RANDOM.ints(UUID_LENGTH, 0, 36)
                 .mapToObj(i -> Character.toString(i < 10 ? '0' + i : 'a' + i - 10))
                 .collect(Collectors.joining());
+    }
+
+    /*
+     * method should update the annotation in the code header with the values that
+     * are defined in the codeTemplate
+     * extractAnnotation(content, "@internal");
+     * extractAnnotation(content, "@templateType");
+     * extractAnnotation(content, "@defaultTemplate");
+     * extractAnnotation(content, "@readonly");
+     */
+    /**
+     * Updates the annotation values in the code header to match the values in the
+     * CodeTemplate object.
+     * Ensures that the header's metadata is consistent with the object's
+     * properties.
+     * 
+     * @param codeTemplate The CodeTemplate object whose header needs to be updated
+     */
+    public void rectifyHeaderInCodeTemplate(CodeTemplate codeTemplate) {
+        if (codeTemplate == null || codeTemplate.code == null || codeTemplate.code.isEmpty()) {
+            log.warn("Cannot rectify header: CodeTemplate or its code is null or empty");
+            return;
+        }
+
+        try {
+            // First decode the Base64 encoded code
+            String decodedCode = decode(codeTemplate.code);
+            if (decodedCode.isEmpty()) {
+                log.warn("Cannot rectify header: Failed to decode template code");
+                return;
+            }
+
+            // Extract the header section
+            int headerEnd = decodedCode.indexOf("*/");
+            if (headerEnd == -1) {
+                // No proper header found, create a new one
+                decodedCode = createNewHeader(codeTemplate) + decodedCode;
+            } else {
+                headerEnd += 2; // Include the */ in the header
+                String header = decodedCode.substring(0, headerEnd);
+                String codeBody = decodedCode.substring(headerEnd);
+
+                // Update annotations in the header
+                header = updateAnnotation(header, "@name", codeTemplate.name);
+                header = updateAnnotation(header, "@description", "Please add a description");
+                header = updateAnnotation(header, "@templateType", codeTemplate.templateType.name());
+                header = updateAnnotation(header, "@defaultTemplate", String.valueOf(codeTemplate.defaultTemplate));
+                header = updateAnnotation(header, "@internal", String.valueOf(codeTemplate.internal));
+                header = updateAnnotation(header, "@readonly", String.valueOf(codeTemplate.readonly));
+
+                // Combine updated header with code body
+                decodedCode = header + codeBody;
+            }
+
+            // Re-encode the updated code and set it back to the template
+            codeTemplate.code = encode(decodedCode);
+            log.info("Successfully rectified header for template: {}", codeTemplate.name);
+
+        } catch (Exception e) {
+            log.error("Error rectifying header for template: {}", codeTemplate.name, e);
+        }
+    }
+
+    /**
+     * Creates a new header block with annotations for a CodeTemplate.
+     * 
+     * @param codeTemplate The CodeTemplate to create the header for
+     * @return A properly formatted header block with annotations
+     */
+    private String createNewHeader(CodeTemplate codeTemplate) {
+        StringBuilder header = new StringBuilder();
+        header.append("/**\n");
+        header.append(" * @description ").append(codeTemplate.description).append("\n");
+        header.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
+        header.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
+        header.append(" * @internal ").append(codeTemplate.internal).append("\n");
+        header.append(" * @readonly ").append(codeTemplate.readonly).append("\n");
+        header.append(" */\n\n");
+        return header.toString();
+    }
+
+    /**
+     * Updates a specific annotation in the header text.
+     * If the annotation exists, it updates its value; otherwise, it adds the
+     * annotation.
+     * 
+     * @param header     The header text to modify
+     * @param annotation The annotation to update (e.g., "@name")
+     * @param value      The new value for the annotation
+     * @return The updated header text
+     */
+    private String updateAnnotation(String header, String annotation, String value) {
+        int annotationIndex = header.indexOf(annotation);
+
+        if (annotationIndex == -1) {
+            // Annotation not found, add it before the end of the header block
+            int endCommentIndex = header.lastIndexOf("*/");
+            if (endCommentIndex != -1) {
+                String beforeEnd = header.substring(0, endCommentIndex).trim();
+                String afterEnd = header.substring(endCommentIndex);
+                return beforeEnd + "\n * " + annotation + " " + value + "\n" + afterEnd;
+            } else {
+                // No proper header format, append to the end
+                return header + "\n * " + annotation + " " + value;
+            }
+        } else {
+            // Annotation found, update its value
+            int valueStartIndex = annotationIndex + annotation.length();
+
+            // Skip whitespace
+            while (valueStartIndex < header.length() &&
+                    (header.charAt(valueStartIndex) == ' ' || header.charAt(valueStartIndex) == ':')) {
+                valueStartIndex++;
+            }
+
+            // Find end of line or end of value
+            int valueEndIndex = header.indexOf('\n', valueStartIndex);
+            if (valueEndIndex == -1) {
+                valueEndIndex = header.length();
+            }
+
+            // Replace the value
+            return header.substring(0, valueStartIndex) + " " + value + header.substring(valueEndIndex);
+        }
+    }
+
+    /**
+     * Decodes a Base64 encoded string back to a regular string.
+     * 
+     * @param encodedString The Base64 encoded string
+     * @return The decoded string
+     */
+    private String decode(String encodedString) {
+        if (encodedString == null || encodedString.isEmpty()) {
+            return "";
+        }
+
+        try {
+            byte[] decodedBytes = Base64.getDecoder().decode(encodedString);
+            return new String(decodedBytes, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("Failed to decode string", e);
+            return "";
+        }
     }
 }

@@ -43,10 +43,14 @@ public class CodeTemplate implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public String name;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String description;
     
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public TemplateType type;
+    public TemplateType templateType;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
