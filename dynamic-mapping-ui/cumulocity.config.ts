@@ -46,6 +46,7 @@ export default {
     isPackage: true,
   },
   buildTime: {
+    brandingEntry: './src/styles.less',
     copy: [
       {
         from: 'README.md',

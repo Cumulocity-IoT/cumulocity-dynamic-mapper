@@ -50,7 +50,7 @@ export interface Mapping {
   mappingTopic?: string;
   mappingTopicSample?: string;
   targetAPI: string;
-  direction?: Direction;
+  direction: Direction;
   sourceTemplate: string;
   targetTemplate: string;
   mappingType: MappingType;
@@ -58,7 +58,7 @@ export interface Mapping {
   filterMapping?: string;
   filterInventory?: string;
   active: boolean;
-  debug?: boolean;
+  debug: boolean;
   tested: boolean;
   supportsMessageContext?: boolean;
   createNonExistingDevice: boolean;
