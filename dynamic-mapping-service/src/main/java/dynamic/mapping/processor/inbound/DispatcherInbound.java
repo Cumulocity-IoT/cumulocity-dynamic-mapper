@@ -31,6 +31,7 @@ import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -187,10 +188,10 @@ public class DispatcherInbound implements GenericMessageCallback {
 
                                 }
                                 sharedCode = serviceConfiguration.getCodeTemplates()
-                                        .get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE).getCode();
+                                        .get(TemplateType.SHARED.toString()).getCode();
 
                                 systemCode = serviceConfiguration.getCodeTemplates()
-                                        .get(ServiceConfigurationComponent.SYSTEM_CODE_TEMPLATE).getCode();
+                                        .get(TemplateType.SYSTEM.toString()).getCode();
 
                             }
                             

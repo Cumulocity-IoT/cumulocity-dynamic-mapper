@@ -1,6 +1,12 @@
-/*
-    This sample showa how to create a new outgoing payload
-*/
+/**
+ * @name This sample show how to create a new outgoing payload
+ * @templateType OUTBOUND
+ * @defaultTemplate false
+ * @internal true
+ * @readonly true
+ * 
+ * This sample show how to create a new outgoing payload
+ */
 
 function extractFromSource(ctx) {
     //This is the source message as json

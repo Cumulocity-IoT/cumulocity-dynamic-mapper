@@ -55,7 +55,7 @@
      private final Map<String, List<MappingTreeNode>> childNodes = Collections.synchronizedMap(new HashMap<>());
      private Mapping mapping;
      @Builder.Default
-     private String nodeId = uuidCustom();
+     private String nodeId = createCustomUuid();
      private boolean mappingNode;
      private long depthIndex;
      @ToString.Exclude
@@ -260,7 +260,7 @@
          return parentPath + level;
      }
  
-     private static String uuidCustom() {
+     private static String createCustomUuid() {
          return SECURE_RANDOM.ints(UUID_LENGTH, 0, 36)
                  .mapToObj(i -> Character.toString(i < 10 ? '0' + i : 'a' + i - 10))
                  .collect(Collectors.joining());

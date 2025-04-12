@@ -1,6 +1,12 @@
-/*
-    This sample shows how to perform a partial update using the PATCH method
-*/
+/**
+ * @name This sample shows how to perform a partial update using the PATCH method
+ * @templateType OUTBOUND
+ * @defaultTemplate false
+ * @internal true
+ * @readonly true
+ * 
+ * This sample shows how to perform a partial update using the PATCH method
+ */
 
 function extractFromSource(ctx) {
     //This is the source message as json

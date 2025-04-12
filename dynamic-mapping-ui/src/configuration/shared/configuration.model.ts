@@ -51,6 +51,7 @@ export interface CodeTemplate {
   code: string;
   internal: boolean;
   readonly: boolean;
+  defaultTemplate: boolean;
 }
 
 export interface CodeTemplateMap {

@@ -29,6 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -50,71 +52,23 @@ public class ServiceConfigurationComponent {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int UUID_LENGTH = 6;
 
-    @Value("classpath:template-code-inbound_01.js")
-    private String inboundCodeTemplate_01;
-
-    @Value("classpath:template-code-inbound_02.js")
-    private String inboundCodeTemplate_02;
-
-    @Value("classpath:template-code-outbound_01.js")
-    private String outboundCodeTemplate_01;
-
-    @Value("classpath:template-code-outbound_02.js")
-    private String outboundCodeTemplate_02;
-
-    @Value("classpath:template-code-outbound_03.js")
-    private String outboundCodeTemplate_03;
-
-    @Value("classpath:template-code-system.js")
-    private String systemCodeTemplate;
-
-    @Value("classpath:template-code-shared.js")
-    private String sharedCodeTemplate;
-
-    @Value("classpath:mappings-ui-INBOUND.json")
+    @Value("classpath:mappings/mappings-INBOUND.json")
     private Resource sampleMappingsInbound_01;
 
     public String getSampleMappingsInbound_01() {
-        try {
-            return new String(sampleMappingsInbound_01.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            // Log the error
-            // logger.error("Failed to read mapping file", e);
-
-            // You can return a default value
-            return "{}"; // Empty JSON object
-
-            // Or rethrow as an unchecked exception
-            // throw new RuntimeException("Failed to read mapping file", e);
-        }
+        return validateAndConvert(sampleMappingsInbound_01);
     }
 
-    @Value("classpath:mappings-ui-OUTBOUND.json")
+    @Value("classpath:mappings/mappings-OUTBOUND.json")
     private Resource sampleMappingsOutbound_01;
 
     public String getSampleMappingsOutbound_01() {
-        try {
-            return new String(sampleMappingsOutbound_01.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            // Log the error
-            // logger.error("Failed to read mapping file", e);
-
-            // You can return a default value
-            return "{}"; // Empty JSON object
-
-            // Or rethrow as an unchecked exception
-            // throw new RuntimeException("Failed to read mapping file", e);
-        }
+        return validateAndConvert(sampleMappingsOutbound_01);
     }
 
     private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic.mapper.service";
 
     private static final String OPTION_KEY_SERVICE_CONFIGURATION = "service.configuration";
-
-    public static final String INBOUND_CODE_TEMPLATE = "INBOUND";
-    public static final String OUTBOUND_CODE_TEMPLATE = "OUTBOUND";
-    public static final String SYSTEM_CODE_TEMPLATE = "SYSTEM";
-    public static final String SHARED_CODE_TEMPLATE = "SHARED";
 
     private final TenantOptionApi tenantOptionApi;
 
@@ -132,28 +86,139 @@ public class ServiceConfigurationComponent {
         this.tenantOptionApi = tenantOptionApi;
     }
 
+    /*
+     * enhance this method to
+     * 1. load all templates in the directory templates, they are javascript files
+     * 2. parse the header of the file for the
+     * annotation @name, @internal, @templateType, @defaultTemplate, @readonly
+     * 3. the first template with the value defaultTemplate set to true for every
+     * category in TemplateType should be registered with its own key instead of
+     * createCustomUuid
+     */
     public void initCodeTemplates(ServiceConfiguration configuration) {
         Map<String, CodeTemplate> codeTemplates = new HashMap<>();
-        codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(INBOUND_CODE_TEMPLATE, "Default Inbound Template",
-                TemplateType.INBOUND, encode(inboundCodeTemplate_01), true, false));
-        codeTemplates.put(INBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(uuidCustom(),
-                "Inbound Template, multiple meas", TemplateType.INBOUND, encode(inboundCodeTemplate_02), true, false));
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE,
-                new CodeTemplate(OUTBOUND_CODE_TEMPLATE, "Build OUTBOUND payload, use external identifier",
-                        TemplateType.OUTBOUND, encode(outboundCodeTemplate_01), true, false));
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(OUTBOUND_CODE_TEMPLATE,
-                "Build OUTBOUND payload, use C8Y source id", TemplateType.OUTBOUND, encode(outboundCodeTemplate_02),
-                true,
-                false));
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE + "_03", new CodeTemplate(OUTBOUND_CODE_TEMPLATE,
-                "Use PATCH for partial update in inventory", TemplateType.OUTBOUND, encode(outboundCodeTemplate_03),
-                true,
-                false));
-        codeTemplates.put(SYSTEM_CODE_TEMPLATE, new CodeTemplate(SYSTEM_CODE_TEMPLATE, "System Code",
-                TemplateType.SYSTEM, encode(systemCodeTemplate), true, true));
-        codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(SHARED_CODE_TEMPLATE, "Shared Code",
-                TemplateType.SHARED, encode(sharedCodeTemplate), true, false));
+        Map<TemplateType, Boolean> defaultTemplateRegistered = new HashMap<>();
+
+        try {
+            // Initialize the defaultTemplateRegistered map with false for each template
+            // type
+            for (TemplateType type : TemplateType.values()) {
+                defaultTemplateRegistered.put(type, false);
+            }
+
+            // Get all template files from the resources
+            Resource[] resources;
+            try {
+                ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+                resources = resolver.getResources("classpath:templates/template*.js");
+            } catch (IOException e) {
+                log.error("Failed to load template resources", e);
+                throw e;
+            }
+
+            for (Resource resource : resources) {
+                try {
+                    String fileName = resource.getFilename();
+                    if (fileName == null || !fileName.startsWith("template")) {
+                        continue;
+                    }
+
+                    // Read the file content
+                    String content = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+                    // Parse the header annotations
+                    String name = extractAnnotation(content, "@name");
+                    boolean internal = Boolean.parseBoolean(extractAnnotation(content, "@internal"));
+                    String templateTypeStr = extractAnnotation(content, "@templateType");
+                    boolean defaultTemplate = Boolean.parseBoolean(extractAnnotation(content, "@defaultTemplate"));
+                    boolean readonly = Boolean.parseBoolean(extractAnnotation(content, "@readonly"));
+
+                    // Convert templateType string to enum
+                    TemplateType templateType = null;
+                    try {
+                        templateType = TemplateType.valueOf(templateTypeStr);
+                    } catch (Exception e) {
+                        log.warn("Invalid template type in file {}: {}", fileName, templateTypeStr);
+                        continue;
+                    }
+
+                    // Determine the ID for the template
+                    String templateId;
+                    if (defaultTemplate && !defaultTemplateRegistered.get(templateType)) {
+                        // Use the template type as ID for the first default template of each type
+                        templateId = templateType.name();
+                        defaultTemplateRegistered.put(templateType, true);
+                    } else {
+                        // Generate a random ID for non-default templates
+                        templateId = createCustomUuid();
+                    }
+
+                    // Create and add the template
+                    CodeTemplate template = new CodeTemplate(
+                            templateId,
+                            name,
+                            templateType,
+                            encode(content),
+                            internal,
+                            readonly,
+                            defaultTemplate);
+
+                    codeTemplates.put(templateId, template);
+                    log.info("Loaded template: {} ({})", name, templateId);
+
+                } catch (Exception e) {
+                    log.error("Failed to process template file: {}", resource.getFilename(), e);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to initialize code templates", e);
+        }
+
         configuration.setCodeTemplates(codeTemplates);
+    }
+
+    /**
+     * Extracts annotation value from the file content.
+     * 
+     * @param content    The content of the template file
+     * @param annotation The annotation name to extract
+     * @return The value of the annotation or empty string if not found
+     */
+    private String extractAnnotation(String content, String annotation) {
+        // Find the annotation in the content
+        int annotationIndex = content.indexOf(annotation);
+        if (annotationIndex == -1) {
+            return "";
+        }
+
+        // Extract the value after the annotation
+        int valueStartIndex = annotationIndex + annotation.length();
+        while (valueStartIndex < content.length() &&
+                (content.charAt(valueStartIndex) == ' ' || content.charAt(valueStartIndex) == ':')) {
+            valueStartIndex++;
+        }
+
+        int valueEndIndex = content.indexOf('\n', valueStartIndex);
+        if (valueEndIndex == -1) {
+            valueEndIndex = content.length();
+        }
+
+        return content.substring(valueStartIndex, valueEndIndex).trim();
+    }
+
+    public String validateAndConvert(Resource resource) {
+        try {
+            return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            // Log the error
+            // logger.error("Failed to read mapping file", e);
+
+            // You can return a default value
+            return "{}"; // Empty JSON object
+
+            // Or rethrow as an unchecked exception
+            // throw new RuntimeException("Failed to read mapping file", e);
+        }
     }
 
     /**
@@ -241,7 +306,7 @@ public class ServiceConfigurationComponent {
         return configuration;
     }
 
-    private static String uuidCustom() {
+    private static String createCustomUuid() {
         return SECURE_RANDOM.ints(UUID_LENGTH, 0, 36)
                 .mapToObj(i -> Character.toString(i < 10 ? '0' + i : 'a' + i - 10))
                 .collect(Collectors.joining());

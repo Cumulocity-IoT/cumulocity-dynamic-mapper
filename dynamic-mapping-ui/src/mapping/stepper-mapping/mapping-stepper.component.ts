@@ -58,7 +58,7 @@ import {
   SharedService,
   SnoopStatus,
   StepperConfiguration,
-  uuidCustom
+  createCustomUuid
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
@@ -455,12 +455,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         const decodedCode = base64ToString(template.code);
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: decodedCode, internal: template.internal, readonly: template.readonly,
+          type: template.type, code: decodedCode, internal: template.internal, readonly: template.readonly, defaultTemplate:false,
         });
       } catch (error) {
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly,
+          type: template.type, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly, defaultTemplate:false,
         });
       }
     });
@@ -1229,11 +1229,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // console.log('Configuration after edit:', editedConfiguration);
       if (name) {
         const code = stringToBase64(this.mapping['_code']);
-        const id = uuidCustom();
+        const id = createCustomUuid();
         const type = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
         const response = await this.sharedService.updateCodeTemplate(id, {
           name, id,
-          type, code, internal:false, readonly: false
+          type, code, internal:false, readonly: false, defaultTemplate:false
         });
         this.codeTemplates = await this.sharedService.getCodeTemplates();
         if (response.status < 300) {

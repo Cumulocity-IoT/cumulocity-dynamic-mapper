@@ -60,4 +60,7 @@ public class CodeTemplate implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean readonly;
 
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean defaultTemplate = false;
 }

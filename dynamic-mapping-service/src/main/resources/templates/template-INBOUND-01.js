@@ -1,14 +1,24 @@
-//
-// sample to generate one measurement
-//
+/**
+ * @name Default INBOUND template to generate one measurement
+ * @templateType INBOUND
+ * @defaultTemplate true
+ * @internal true
+ * @readonly true
+ * 
+ * Default INBOUND template to generate one measurement
+ */
 
-// payload
-// {
-//     "temperature": 139.0,
-//     "unit": "C",
-//     "externalId": "berlin_01"
-//  }
-// topic 'testGraalsSingle/berlin_01'
+/**
+   sample to generate one measurement
+  
+   payload
+   {
+       "temperature": 139.0,
+       "unit": "C",
+       "externalId": "berlin_01"
+    }
+   topic 'testGraalsSingle/berlin_01'
+*/
 
 function extractFromSource(ctx) {
     //This is the source message as json

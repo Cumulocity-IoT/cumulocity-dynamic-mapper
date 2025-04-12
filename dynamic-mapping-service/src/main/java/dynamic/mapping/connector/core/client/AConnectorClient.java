@@ -842,7 +842,7 @@ public abstract class AConnectorClient {
     /**
      * Generates a custom UUID with specified length
      */
-    public static String uuidCustom() {
+    public static String createCustomUuid() {
         return SECURE_RANDOM.ints(UUID_LENGTH, 0, 36)
                 .mapToObj(i -> Character.toString(i < 10 ? '0' + i : 'a' + i - 10))
                 .collect(Collectors.joining());

@@ -375,7 +375,7 @@ export function getSchema(
   }
 }
 
-export function uuidCustom(): string {
+export function createCustomUuid(): string {
   const id = Math.random().toString(36).slice(-6);
   return id;
 }

@@ -1,3 +1,13 @@
+/**
+ * @name System code containing the required definitions of the java classes
+ * @templateType SYSTEM
+ * @defaultTemplate true
+ * @internal true
+ * @readonly true
+ * 
+ * System code containing the required definitions of the java classes
+ */
+
 const SubstitutionResult = Java.type('dynamic.mapping.processor.model.SubstitutionResult');
 const SubstitutionValue = Java.type('dynamic.mapping.processor.model.SubstituteValue');
 const ArrayList = Java.type('java.util.ArrayList');
