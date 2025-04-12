@@ -36,7 +36,7 @@
           required>
           <option [ngValue]="null" disabled>Select template...</option>
           <option *ngFor="let item of codeTemplateEntries$ | async" [ngValue]="item.key">
-            {{ item.name }} ({{ item.type }}, {{ item.internal? 'system': 'user' }} {{ item.readonly? ', readonly': '' }})
+            {{ item.name }} ({{ item.templateType }}, {{ item.internal? 'system': 'user' }} {{ item.readonly? ', readonly': '' }})
           </option>
         </select>
       </div>
