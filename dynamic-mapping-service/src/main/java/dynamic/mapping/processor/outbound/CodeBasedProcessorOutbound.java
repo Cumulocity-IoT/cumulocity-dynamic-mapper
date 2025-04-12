@@ -21,7 +21,6 @@
 
 package dynamic.mapping.processor.outbound;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Base64;
 
@@ -34,7 +33,6 @@ import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
 import com.dashjoin.jsonata.Functions;
-import com.dashjoin.jsonata.json.Json;
 
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;

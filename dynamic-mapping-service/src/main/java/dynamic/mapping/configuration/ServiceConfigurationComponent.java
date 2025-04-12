@@ -50,22 +50,25 @@ public class ServiceConfigurationComponent {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int UUID_LENGTH = 6;
 
-    @Value("${APP.template.code.inbound_01}")
+    @Value("classpath:template-code-inbound_01.js")
     private String inboundCodeTemplate_01;
 
-    @Value("${APP.template.code.inbound_02}")
+    @Value("classpath:template-code-inbound_02.js")
     private String inboundCodeTemplate_02;
 
-    @Value("${APP.template.code.outbound_01}")
+    @Value("classpath:template-code-outbound_01.js")
     private String outboundCodeTemplate_01;
 
-    @Value("${APP.template.code.outbound_02}")
+    @Value("classpath:template-code-outbound_02.js")
     private String outboundCodeTemplate_02;
 
-    @Value("${APP.template.code.system}")
+    @Value("classpath:template-code-outbound_03.js")
+    private String outboundCodeTemplate_03;
+
+    @Value("classpath:template-code-system.js")
     private String systemCodeTemplate;
 
-    @Value("${APP.template.code.shared}")
+    @Value("classpath:template-code-shared.js")
     private String sharedCodeTemplate;
 
     @Value("classpath:mappings-ui-INBOUND.json")
@@ -132,18 +135,52 @@ public class ServiceConfigurationComponent {
     public void initCodeTemplates(ServiceConfiguration configuration) {
         Map<String, CodeTemplate> codeTemplates = new HashMap<>();
         codeTemplates.put(INBOUND_CODE_TEMPLATE, new CodeTemplate(INBOUND_CODE_TEMPLATE, "Default Inbound Template",
-                TemplateType.INBOUND, inboundCodeTemplate_01, true, false));
+                TemplateType.INBOUND, encode(inboundCodeTemplate_01), true, false));
         codeTemplates.put(INBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(uuidCustom(),
-                "Inbound Template, multiple meas", TemplateType.INBOUND, inboundCodeTemplate_02, true, false));
-        codeTemplates.put(OUTBOUND_CODE_TEMPLATE, new CodeTemplate(OUTBOUND_CODE_TEMPLATE, "Default Outbound Template",
-                TemplateType.OUTBOUND, outboundCodeTemplate_01, true, false));
+                "Inbound Template, multiple meas", TemplateType.INBOUND, encode(inboundCodeTemplate_02), true, false));
+        codeTemplates.put(OUTBOUND_CODE_TEMPLATE,
+                new CodeTemplate(OUTBOUND_CODE_TEMPLATE, "Build OUTBOUND payload, use external identifier",
+                        TemplateType.OUTBOUND, encode(outboundCodeTemplate_01), true, false));
         codeTemplates.put(OUTBOUND_CODE_TEMPLATE + "_02", new CodeTemplate(OUTBOUND_CODE_TEMPLATE,
-                "Outbound Template, Cumulocity internal", TemplateType.OUTBOUND, outboundCodeTemplate_02, true, false));
+                "Build OUTBOUND payload, use C8Y source id", TemplateType.OUTBOUND, encode(outboundCodeTemplate_02),
+                true,
+                false));
+        codeTemplates.put(OUTBOUND_CODE_TEMPLATE + "_03", new CodeTemplate(OUTBOUND_CODE_TEMPLATE,
+                "Use PATCH for partial update in inventory", TemplateType.OUTBOUND, encode(outboundCodeTemplate_03),
+                true,
+                false));
         codeTemplates.put(SYSTEM_CODE_TEMPLATE, new CodeTemplate(SYSTEM_CODE_TEMPLATE, "System Code",
-                TemplateType.SYSTEM, systemCodeTemplate, true, true));
+                TemplateType.SYSTEM, encode(systemCodeTemplate), true, true));
         codeTemplates.put(SHARED_CODE_TEMPLATE, new CodeTemplate(SHARED_CODE_TEMPLATE, "Shared Code",
-                TemplateType.SHARED, sharedCodeTemplate, true, false));
+                TemplateType.SHARED, encode(sharedCodeTemplate), true, false));
         configuration.setCodeTemplates(codeTemplates);
+    }
+
+    /**
+     * Encodes a given template string to Base64.
+     * 
+     * @param template The string to be encoded
+     * @return Base64 encoded template as string
+     */
+    private String encode(String template) {
+        if (template == null) {
+            return "";
+        }
+
+        try {
+            // Convert string to byte array
+            byte[] templateBytes = template.getBytes(StandardCharsets.UTF_8);
+
+            // Encode to Base64
+            byte[] encodedBytes = Base64.getEncoder().encode(templateBytes);
+
+            // Convert encoded bytes back to string
+            return new String(encodedBytes, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            // Log exception or handle as appropriate for your application
+            // logger.error("Failed to encode template", e);
+            return "";
+        }
     }
 
     public void saveServiceConfiguration(String tenant, final ServiceConfiguration configuration)
