@@ -50,7 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ServiceConfigurationComponent {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final int UUID_LENGTH = 6;
+    private static final int UUID_LENGTH = 8;
 
     @Value("classpath:mappings/mappings-INBOUND.json")
     private Resource sampleMappingsInbound_01;

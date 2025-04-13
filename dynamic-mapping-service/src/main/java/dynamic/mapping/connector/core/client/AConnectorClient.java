@@ -91,7 +91,7 @@ public abstract class AConnectorClient {
 
         // Security and UUID Constants
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final int UUID_LENGTH = 6;
+    private static final int UUID_LENGTH = 8;
 
     protected String connectorIdentifier;
 

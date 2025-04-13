@@ -47,7 +47,7 @@
  public class MappingTreeNode {
      // Constants
      private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-     private static final int UUID_LENGTH = 6;
+     private static final int UUID_LENGTH = 8;
      private static final String TENANT_LOG_PREFIX = "Tenant {} - ";
  
      // Core properties
