@@ -384,6 +384,7 @@ public class ServiceConfigurationComponent {
     private String createNewHeader(CodeTemplate codeTemplate) {
         StringBuilder header = new StringBuilder();
         header.append("/**\n");
+        header.append(" * @name ").append(codeTemplate.name).append("\n");
         header.append(" * @description ").append(codeTemplate.description).append("\n");
         header.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
         header.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");

@@ -141,14 +141,14 @@ export class SharedCodeComponent implements OnInit {
     if (this.codeTemplateDecoded) {
       const initialState = {
         action: 'RENAME',
-        name: this.codeTemplateDecoded.name
+        codeTemplate: { name: this.codeTemplateDecoded.name }
       };
       const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
-      modalRef.content.closeSubject.subscribe(async (name) => {
+      modalRef.content.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
         // console.log('Configuration after edit:', editedConfiguration);
-        if (name) {
-          this.codeTemplateDecoded.name = name;
+        if (codeTemplate) {
+          this.codeTemplateDecoded.name = codeTemplate.name;
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
           await this.sharedService.updateCodeTemplate(this.templateId, {
@@ -167,14 +167,14 @@ export class SharedCodeComponent implements OnInit {
     if (this.codeTemplateDecoded) {
       const initialState = {
         action: 'COPY',
-        name: this.codeTemplateDecoded.name
+        codeTemplate: { name: this.codeTemplateDecoded.name }
       };
       const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
       modalRef.content.closeSubject.subscribe(async (name) => {
         // console.log('Configuration after edit:', editedConfiguration);
         if (name) {
-          this.codeTemplateDecoded.name = name;
+          this.codeTemplateDecoded.name = name + ' - Copy';
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
           await this.sharedService.createCodeTemplate({
