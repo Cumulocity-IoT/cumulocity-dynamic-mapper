@@ -40,7 +40,7 @@
             [(ngModel)]="codeTemplate.name"
           />
       </c8y-form-group>
-      <c8y-form-group>
+      <c8y-form-group *ngIf="action =='CREATE'">
         <label>Description</label>
           <input
             class="form-control"
