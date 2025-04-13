@@ -404,38 +404,46 @@ public class ServiceConfigurationComponent {
      * @param value      The new value for the annotation
      * @return The updated header text
      */
-    private String updateAnnotation(String header, String annotation, String value) {
-        int annotationIndex = header.indexOf(annotation);
+    /**
+     * Updates an annotation in the content with a new value.
+     * If the annotation doesn't exist, it will be added at the beginning of the
+     * file.
+     * Ensures exactly one space between the annotation and its value.
+     * 
+     * @param content    The content to update
+     * @param annotation The annotation to update
+     * @param value      The new value for the annotation
+     * @return The updated content
+     */
+    private String updateAnnotation(String content, String annotation, String value) {
+        // Find the annotation in the content
+        int annotationIndex = content.indexOf(annotation);
 
         if (annotationIndex == -1) {
-            // Annotation not found, add it before the end of the header block
-            int endCommentIndex = header.lastIndexOf("*/");
-            if (endCommentIndex != -1) {
-                String beforeEnd = header.substring(0, endCommentIndex).trim();
-                String afterEnd = header.substring(endCommentIndex);
-                return beforeEnd + "\n * " + annotation + " " + value + "\n" + afterEnd;
-            } else {
-                // No proper header format, append to the end
-                return header + "\n * " + annotation + " " + value;
+            // Annotation not found, add it at the beginning of the file, after any comment
+            // block
+            if (content.trim().startsWith("/**")) {
+                // There's already a comment block, add the annotation inside it
+                int commentEndIndex = content.indexOf("*/");
+                if (commentEndIndex != -1) {
+                    // Insert before the end of the comment
+                    return content.substring(0, commentEndIndex)
+                            + "\n * " + annotation + " " + value
+                            + content.substring(commentEndIndex);
+                }
             }
+
+            // No comment block or couldn't find end of comment, add a new comment block
+            return "/**\n * " + annotation + " " + value + "\n */\n" + content;
         } else {
-            // Annotation found, update its value
-            int valueStartIndex = annotationIndex + annotation.length();
-
-            // Skip whitespace
-            while (valueStartIndex < header.length() &&
-                    (header.charAt(valueStartIndex) == ' ' || header.charAt(valueStartIndex) == ':')) {
-                valueStartIndex++;
+            // Find the end of the current line
+            int lineEndIndex = content.indexOf('\n', annotationIndex);
+            if (lineEndIndex == -1) {
+                lineEndIndex = content.length();
             }
 
-            // Find end of line or end of value
-            int valueEndIndex = header.indexOf('\n', valueStartIndex);
-            if (valueEndIndex == -1) {
-                valueEndIndex = header.length();
-            }
-
-            // Replace the value
-            return header.substring(0, valueStartIndex) + " " + value + header.substring(valueEndIndex);
+            // Replace the entire annotation line to ensure correct spacing
+            return content.substring(0, annotationIndex) + annotation + " " + value + content.substring(lineEndIndex);
         }
     }
 
