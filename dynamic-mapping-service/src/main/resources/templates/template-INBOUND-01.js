@@ -7,18 +7,16 @@
  * @readonly true
  * 
  * Default INBOUND template to generate one measurement
- */
 
-/**
-   sample to generate one measurement
+ * sample to generate one measurement
   
-   payload
-   {
-       "temperature": 139.0,
-       "unit": "C",
-       "externalId": "berlin_01"
-    }
-   topic 'testGraalsSingle/berlin_01'
+ * payload
+ * {
+ *     "temperature": 139.0,
+ *     "unit": "C",
+ *     "externalId": "berlin_01"
+ *  }
+ * topic 'testGraalsSingle/berlin_01'
 */
 
 function extractFromSource(ctx) {
