@@ -36,7 +36,16 @@
           <input
             class="form-control"
             required
-            [(ngModel)]="name"
+            placeholder="New code template"
+            [(ngModel)]="codeTemplate.name"
+          />
+      </c8y-form-group>
+      <c8y-form-group *ngIf="action =='CREATE'">
+        <label>Description</label>
+          <input
+            class="form-control"
+            required
+            [(ngModel)]="codeTemplate.description"
           />
       </c8y-form-group>
     </div>

@@ -91,7 +91,7 @@ public abstract class AConnectorClient {
 
         // Security and UUID Constants
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final int UUID_LENGTH = 6;
+    private static final int UUID_LENGTH = 8;
 
     protected String connectorIdentifier;
 
@@ -842,7 +842,7 @@ public abstract class AConnectorClient {
     /**
      * Generates a custom UUID with specified length
      */
-    public static String uuidCustom() {
+    public static String createCustomUuid() {
         return SECURE_RANDOM.ints(UUID_LENGTH, 0, 36)
                 .mapToObj(i -> Character.toString(i < 10 ? '0' + i : 'a' + i - 10))
                 .collect(Collectors.joining());

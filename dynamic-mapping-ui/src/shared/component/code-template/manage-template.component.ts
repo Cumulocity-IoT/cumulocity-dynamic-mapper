@@ -27,6 +27,7 @@ import {
 import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { CapitalizeCasePipe } from '../../../shared';
+import { CodeTemplate } from './../../../configuration';
 
 @Component({
   selector: 'd11r-manage-template',
@@ -35,9 +36,9 @@ import { CapitalizeCasePipe } from '../../../shared';
 })
 export class ManageTemplateComponent implements OnInit, OnDestroy {
   @Input() action: string = 'CREATE';
-  @Input() name: string;
+  @Input() codeTemplate: Partial<CodeTemplate>;
 
-  closeSubject: Subject<string> = new Subject();
+  closeSubject: Subject<Partial<CodeTemplate>> = new Subject();
   labels: ModalLabels = { ok: 'Submit', cancel: 'Cancel' };
 
   valid: boolean = false;
@@ -58,7 +59,7 @@ export class ManageTemplateComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
-    this.closeSubject.next(this.name);
+    this.closeSubject.next(this.codeTemplate);
     this.closeSubject.complete();
   }
 

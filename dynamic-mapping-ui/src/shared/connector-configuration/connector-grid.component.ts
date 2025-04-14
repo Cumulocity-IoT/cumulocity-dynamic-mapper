@@ -28,7 +28,7 @@ import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.c
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
 import { DeploymentMapEntry, Direction } from '../mapping/mapping.model';
-import { uuidCustom } from '../mapping/util';
+import { createCustomUuid } from '../mapping/util';
 import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
@@ -240,7 +240,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   async onConfigurationAdd(): Promise<void> {
     const newConfig: Partial<ConnectorConfiguration> = {
       properties: {},
-      identifier: uuidCustom()
+      identifier: createCustomUuid()
     };
     const modalRef = this.showConfigurationModal(newConfig, true);
     modalRef.content.closeSubject.subscribe(async addedConfiguration => {
@@ -287,7 +287,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   // Missing methods for the component:
   private prepareCopyConfiguration(config: ConnectorConfiguration): Partial<ConnectorConfiguration> {
     const copiedConfig = cloneDeep(config);
-    copiedConfig.identifier = uuidCustom();
+    copiedConfig.identifier = createCustomUuid();
     copiedConfig.name = `${copiedConfig.name}_copy`;
 
     this.alertService.warning(

@@ -30,7 +30,7 @@ import com.dashjoin.jsonata.json.Json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
-import dynamic.mapping.configuration.ServiceConfigurationComponent;
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
@@ -300,10 +300,10 @@ public class DispatcherOutbound implements NotificationCallback {
 
                                 }
                                 sharedCode = serviceConfiguration.getCodeTemplates()
-                                        .get(ServiceConfigurationComponent.SHARED_CODE_TEMPLATE).getCode();
+                                        .get(TemplateType.SHARED.name()).getCode();
 
                                 systemCode = serviceConfiguration.getCodeTemplates()
-                                        .get(ServiceConfigurationComponent.SYSTEM_CODE_TEMPLATE).getCode();
+                                        .get(TemplateType.SYSTEM.name()).getCode();
                             }
 
                             Object payload = c8yMessage.getParsedPayload();

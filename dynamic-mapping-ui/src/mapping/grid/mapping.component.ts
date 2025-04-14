@@ -51,7 +51,7 @@ import {
   SnoopStatus,
   getExternalTemplate,
   nextIdAndPad,
-  uuidCustom
+  createCustomUuid
 } from '../../shared';
 
 import { HttpStatusCode } from '@angular/common/http';
@@ -467,7 +467,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       EditorMode.CREATE, this.substitutionsAsCode
     );
 
-    const identifier = uuidCustom();
+    const identifier = createCustomUuid();
     const sub: MappingSubstitution[] = [];
     let mapping: Mapping;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
@@ -666,8 +666,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       snoopStatus: SnoopStatus.NONE,
       snoopedTemplates: [],
       name: `${this.mappingToUpdate.name} - Copy`,
-      identifier: uuidCustom(),
-      id: uuidCustom(),
+      identifier: createCustomUuid(),
+      id: createCustomUuid(),
       active: false,
     }
 

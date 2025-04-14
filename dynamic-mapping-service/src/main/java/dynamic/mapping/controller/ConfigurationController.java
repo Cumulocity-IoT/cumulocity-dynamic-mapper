@@ -362,7 +362,8 @@ public class ConfigurationController {
         try {
             configuration.setCodeTemplates(codeTemplates);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, configuration);
-            if (!configuration.isOutboundMappingEnabled() && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
+            if (!configuration.isOutboundMappingEnabled()
+                    && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
                 configurationRegistry.getNotificationSubscriber().disconnect(tenant);
             } else if (configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == null
@@ -372,8 +373,11 @@ public class ConfigurationController {
                 List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
                         .getConnectorConfigurations(tenant);
                 for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                    if(bootstrapService.initializeConnectorByConfiguration(connectorConfiguration, configuration, tenant) != null)
-                        bootstrapService.initializeConnectorByConfiguration(connectorConfiguration, configuration, tenant).get();
+                    if (bootstrapService.initializeConnectorByConfiguration(connectorConfiguration, configuration,
+                            tenant) != null)
+                        bootstrapService
+                                .initializeConnectorByConfiguration(connectorConfiguration, configuration, tenant)
+                                .get();
                 }
                 configurationRegistry.getNotificationSubscriber().initDeviceClient();
             }
@@ -469,20 +473,7 @@ public class ConfigurationController {
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("Tenant {} - Get code templates", tenant);
 
-        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-        if (codeTemplates == null || codeTemplates.isEmpty()) {
-            // Initialize code templates from properties if not already set
-            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
-            codeTemplates = serviceConfiguration.getCodeTemplates();
-
-            try {
-                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
-                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
-            } catch (JsonProcessingException ex) {
-                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-            }
-        }
+        Map<String, CodeTemplate> codeTemplates = getCodeTemplates(tenant, serviceConfiguration);
         return new ResponseEntity<>(codeTemplates, HttpStatus.OK);
     }
 
@@ -494,6 +485,7 @@ public class ConfigurationController {
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
+            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
@@ -520,6 +512,7 @@ public class ConfigurationController {
             if (codeTemplates.containsKey(codeTemplate.id)) {
                 throw new Exception(String.format("Template with id %s already exists", codeTemplate.id));
             }
+            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
@@ -560,6 +553,24 @@ public class ConfigurationController {
     private boolean userHasMappingCreateRole() {
         return !userRolesEnabled || userHasMappingAdminRole()
                 || (userRolesEnabled && roleService.getUserRoles().contains(mappingCreateRole));
+    }
+
+    private Map<String, CodeTemplate> getCodeTemplates(String tenant, ServiceConfiguration serviceConfiguration) {
+        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
+        if (codeTemplates == null || codeTemplates.isEmpty()) {
+            // Initialize code templates from properties if not already set
+            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration);
+            codeTemplates = serviceConfiguration.getCodeTemplates();
+
+            try {
+                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            } catch (JsonProcessingException ex) {
+                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            }
+        }
+        return codeTemplates;
     }
 
 }

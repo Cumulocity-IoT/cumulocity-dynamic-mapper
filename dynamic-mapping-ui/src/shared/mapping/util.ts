@@ -375,8 +375,10 @@ export function getSchema(
   }
 }
 
-export function uuidCustom(): string {
-  const id = Math.random().toString(36).slice(-6);
+export const UUID_LENGTH = 8;
+
+export function createCustomUuid(): string {
+  const id = Math.random().toString(36).slice(-UUID_LENGTH);
   return id;
 }
 

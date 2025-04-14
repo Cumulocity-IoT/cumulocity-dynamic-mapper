@@ -23,24 +23,17 @@
 
 <c8y-action-bar-item [placement]="'left'">
   <div class="d-flex">
-      <!-- <label translate class="m-r-8">Code Templates</label>
-      <span class="hidden-xs hidden-sm">
-        <ng-template #popTemplateCodeHelp>
-          <div [innerHtml]="codeEditorHelp"></div>
-        </ng-template>
-        <button type="button" placement="right" [popover]="popTemplateCodeHelp" triggers="click" class="btn-help"
-          containerClass="wide-popover" aria-label="Help content"></button>
-      </span> -->
-      <div class="c8y-select-wrapper" style="max-width: 500px">
-        <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId" name="templateSelect"
-          required>
-          <option [ngValue]="null" disabled>Select template...</option>
-          <option *ngFor="let item of codeTemplateEntries$ | async" [ngValue]="item.key">
-            {{ item.name }} ({{ item.type }}, {{ item.internal? 'system': 'user' }} {{ item.readonly? ', readonly': '' }})
-          </option>
-        </select>
-      </div>
+    <div class="c8y-select-wrapper" style="max-width: 500px">
+      <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId" name="templateSelect"
+        required>
+        <option [ngValue]="null" disabled>Select template...</option>
+        <option *ngFor="let item of codeTemplateEntries$ | async" [ngValue]="item.key">
+          {{ item.name }} ({{ item.templateType }}, {{ item.internal? 'system': 'user' }} {{ item.readonly? ',
+          readonly': '' }})
+        </option>
+      </select>
     </div>
+  </div>
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'right'">
@@ -55,9 +48,10 @@
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Add' | translate }}" (click)="onAddCodeTemplate()">
-    <i c8yIcon="add"></i>
-    {{ 'Add' | translate }}
+  <button class="btn btn-link" title="{{ 'Duplicate' | translate }}" (click)="onDuplicateCodeTemplate()"
+    [disabled]="codeTemplateDecoded?.templateType === TemplateType.SHARED || codeTemplateDecoded?.templateType === TemplateType.SYSTEM">
+    <i c8yIcon="duplicate"></i>
+    {{ 'Duplicate' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
     <i c8yIcon="refresh"></i>
@@ -85,7 +79,8 @@
   </div>
   <div class="card-footer">
     <div class="form-group p-l-24">
-      <button type="button" name="save" class="btn btn-primary" (click)="onSaveCodeTemplate()"  [disabled]="codeTemplateDecoded?.readonly" translate>
+      <button type="button" name="save" class="btn btn-primary" (click)="onSaveCodeTemplate()"
+        [disabled]="codeTemplateDecoded?.readonly" translate>
         Save
       </button>
     </div>

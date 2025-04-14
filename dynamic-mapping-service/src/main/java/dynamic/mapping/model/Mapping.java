@@ -117,14 +117,14 @@ public class Mapping implements Serializable {
     @NotNull
     public Boolean supportsMessageContext;
 
-    @NotNull
-    public Boolean createNonExistingDevice;
-
-    @NotNull
-    public Boolean updateExistingDevice;
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean createNonExistingDevice = false;
 
     @JsonSetter(nulls = Nulls.SKIP)
-    public Boolean autoAckOperation;
+    public Boolean updateExistingDevice = false;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean autoAckOperation = false;
 
     @NotNull
     public Boolean useExternalId = false;;
@@ -248,7 +248,7 @@ public class Mapping implements Serializable {
         topic = topic.trim();
         StringBuilder result = new StringBuilder();
         boolean wasSlash = false;
-        
+
         for (char c : topic.toCharArray()) {
             if (c == '/') {
                 if (!wasSlash) {
@@ -270,7 +270,7 @@ public class Mapping implements Serializable {
 
     public static String[] splitTopicExcludingSeparatorAsArray(String topic, boolean cutOffLeadingSlash) {
         String topix = topic.trim();
-        
+
         if (cutOffLeadingSlash) {
             // Original behavior: remove both leading and trailing slashes
             topix = topix.replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
@@ -281,7 +281,7 @@ public class Mapping implements Serializable {
             if (topix.startsWith("//")) {
                 topix = "/" + topix.replaceAll("^/+", "");
             }
-            
+
             if (topix.startsWith("/")) {
                 String[] parts = topix.substring(1).split("\\/");
                 String[] result = new String[parts.length + 1];
@@ -289,7 +289,7 @@ public class Mapping implements Serializable {
                 System.arraycopy(parts, 0, result, 1, parts.length);
                 return result;
             }
-            
+
             return topix.split("\\/");
         }
     }

@@ -28,7 +28,7 @@ import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { FormGroup } from '@angular/forms';
-import { ManageTemplateComponent, uuidCustom } from '../../shared';
+import { ManageTemplateComponent, createCustomUuid } from '../../shared';
 import { BehaviorSubject } from 'rxjs';
 
 let initializedMonaco = false;
@@ -92,9 +92,11 @@ export class SharedCodeComponent implements OnInit {
       id: undefined,
       code: undefined,
       name: template.name,
-      type: template.type,
+      description: template.description,
+      templateType: template.templateType,
       internal: template.internal,
-      readonly: template.readonly
+      readonly: template.readonly,
+      defaultTemplate: template.defaultTemplate
     }));
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
     // Iterate and decode
@@ -102,13 +104,13 @@ export class SharedCodeComponent implements OnInit {
       try {
         const decodedCode = base64ToString(template.code);
         this.codeTemplatesDecoded.set(key, {
-          id: key, name: template.name,
-          type: template.type, code: decodedCode, internal: template.internal, readonly: template.readonly,
+          id: key, name: template.name, description: template.description,
+          templateType: template.templateType, code: decodedCode, internal: template.internal, readonly: template.readonly, defaultTemplate: false,
         });
       } catch (error) {
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly,
+          templateType: template.templateType, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly, defaultTemplate: false,
         });
       }
     });
@@ -139,14 +141,14 @@ export class SharedCodeComponent implements OnInit {
     if (this.codeTemplateDecoded) {
       const initialState = {
         action: 'RENAME',
-        name: this.codeTemplateDecoded.name
+        codeTemplate: { name: this.codeTemplateDecoded.name }
       };
       const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
-      modalRef.content.closeSubject.subscribe(async (name) => {
+      modalRef.content.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
         // console.log('Configuration after edit:', editedConfiguration);
-        if (name) {
-          this.codeTemplateDecoded.name = name;
+        if (codeTemplate) {
+          this.codeTemplateDecoded.name = codeTemplate.name;
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
           await this.sharedService.updateCodeTemplate(this.templateId, {
@@ -161,22 +163,22 @@ export class SharedCodeComponent implements OnInit {
     }
   }
 
-  async onAddCodeTemplate() {
+  async onDuplicateCodeTemplate() {
     if (this.codeTemplateDecoded) {
       const initialState = {
         action: 'COPY',
-        name: this.codeTemplateDecoded.name
+        codeTemplate: { name: this.codeTemplateDecoded.name }
       };
       const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
       modalRef.content.closeSubject.subscribe(async (name) => {
         // console.log('Configuration after edit:', editedConfiguration);
         if (name) {
-          this.codeTemplateDecoded.name = name;
+          this.codeTemplateDecoded.name = name + ' - Copy';
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
           await this.sharedService.createCodeTemplate({
-            ...templateToUpdate, code: encodeCode, id: uuidCustom(), internal: false
+            ...templateToUpdate, code: encodeCode, id: createCustomUuid(), internal: false, readonly: false
           });
           this.alertService.success("Copied code template");
         }

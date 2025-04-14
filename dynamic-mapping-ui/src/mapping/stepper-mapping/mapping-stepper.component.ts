@@ -58,7 +58,7 @@ import {
   SharedService,
   SnoopStatus,
   StepperConfiguration,
-  uuidCustom
+  createCustomUuid
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
@@ -206,7 +206,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   stepperForward: boolean = true;
   currentStepIndex: number;
   codeEditorHelp = 'JavaScript for creating substitutions. Please do not change the methods signature <code>function extractFromSource(ctx)</code>. <br> Define substitutions: <code>Substitution(String key, Object value, String type, String repairStrategy)</code> <br> with <code>type</code>: <code>"ARRAY"</code>, <code>"IGNORE"</code>, <code>"NUMBER"</code>, <code>"OBJECT"</code>, <code>"TEXTUAL"</code> <br>and <code>repairStrategy</code>: <br><code>"DEFAULT"</code>, <code>"USE_FIRST_VALUE_OF_ARRAY"</code>, <code>"USE_LAST_VALUE_OF_ARRAY"</code>, <code>"IGNORE"</code>, <code>"REMOVE_IF_MISSING_OR_NULL"</code>,<code>"CREATE_IF_MISSING"</code>';
-  targetTemplateHelp ='The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
+  targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
 
   constructor(
     public bsModalService: BsModalService,
@@ -455,12 +455,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         const decodedCode = base64ToString(template.code);
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: decodedCode, internal: template.internal, readonly: template.readonly,
+          templateType: template.templateType, code: decodedCode, internal: template.internal, readonly: template.readonly, defaultTemplate: false,
         });
       } catch (error) {
         this.codeTemplatesDecoded.set(key, {
           id: key, name: template.name,
-          type: template.type, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly,
+          templateType: template.templateType, code: "// Code Template not valid!", internal: template.internal, readonly: template.readonly, defaultTemplate: false,
         });
       }
     });
@@ -538,7 +538,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
     setTimeout(() => {
       this.isButtonDisabled$.next(isDisabled);
-      this.supportsMessageContext = 
+      this.supportsMessageContext =
         this.deploymentMapEntry.connectorsDetailed?.some(
           (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK
         );
@@ -834,11 +834,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // this.step == 'Select templates'
     } else if (index == STEP_TEST_MAPPING) {
       if (this.mapping.code || this.mapping['_code']) {
-      const testMapping = _.clone(this.mapping);
-      testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
-      testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+        const testMapping = _.clone(this.mapping);
+        testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
+        testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
         // this.mapping.code = btoa(this.mapping['_code']);
-        testMapping.code= stringToBase64(this.mapping['_code']);
+        testMapping.code = stringToBase64(this.mapping['_code']);
         this.updateTestingTemplate.emit(testMapping);
       }
       // console.log("Step 4: onStepChange targetTemplate ", this.mapping.targetTemplate);
@@ -1209,31 +1209,32 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.mapping['_code'] = this.codeTemplatesDecoded.get(this.templateId).code;
   }
 
-  getCodeTemplateEntries(): { key: string; name: string,type: TemplateType }[] {
+  getCodeTemplateEntries(): { key: string; name: string, type: TemplateType }[] {
     if (!this.codeTemplates) return [];
-    const entries = Object.entries(this.codeTemplates).filter(([key, template]) => (template.type.toString() == this.stepperConfiguration.direction.toString())).map(([key, template]) => ({
+    const entries = Object.entries(this.codeTemplates).filter(([key, template]) => (template.templateType.toString() == this.stepperConfiguration.direction.toString())).map(([key, template]) => ({
       key,
       name: template.name,
-      type: template.type
+      type: template.templateType
     }));
     return entries;
   }
 
   async onCreateCodeTemplate() {
     const initialState = {
-      action: 'CREATE'
+      action: 'CREATE',
+      codeTemplate: { name: `New code template - ${this.stepperConfiguration.direction}` }
     };
     const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
-    modalRef.content.closeSubject.subscribe(async (name) => {
+    modalRef.content.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
       // console.log('Configuration after edit:', editedConfiguration);
-      if (name) {
+      if (codeTemplate) {
         const code = stringToBase64(this.mapping['_code']);
-        const id = uuidCustom();
-        const type = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
-        const response = await this.sharedService.updateCodeTemplate(id, {
-          name, id,
-          type, code, internal:false, readonly: false
+        const id = createCustomUuid();
+        const templateType = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
+        const response = await this.sharedService.createCodeTemplate({
+          id, name: codeTemplate.name, description: codeTemplate.description,
+          templateType, code, internal: false, readonly: false, defaultTemplate: false
         });
         this.codeTemplates = await this.sharedService.getCodeTemplates();
         if (response.status < 300) {
