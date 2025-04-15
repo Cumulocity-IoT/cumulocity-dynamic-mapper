@@ -416,6 +416,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
                                 payload,
                                 EventRepresentation.class);
+
+                        //Add Attachment to Binary
                         String attName = null;
                         String attData = null;
                         String attType = null;
@@ -425,22 +427,22 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             attName = String.valueOf(eventRepresentation.getProperty("attachment_Name"));
                             attType = String.valueOf(eventRepresentation.getProperty("attachment_Type"));
                             attData = String.valueOf(eventRepresentation.getProperty("attachment_Data"));
-                            attDataBytes = Base64.getDecoder().decode(attData.getBytes(StandardCharsets.UTF_8));
+                            if(!attData.isEmpty())
+                                attDataBytes = Base64.getDecoder().decode(attData.getBytes(StandardCharsets.UTF_8));
                             //attDataBytes = attData.getBytes(StandardCharsets.UTF_8);
                             eventRepresentation.removeProperty("attachment_Name");
                             eventRepresentation.removeProperty("attachment_Type");
                             eventRepresentation.removeProperty("attachment_Data");
-                            binaryInfo.setName(attName);
-                            binaryInfo.setType(attType);
+                            if(!attName.isEmpty())
+                                binaryInfo.setName(attName);
+                            if(!attType.isEmpty())
+                                binaryInfo.setType(attType);
                         }
                         rt = eventApi.create(eventRepresentation);
                         GId eventId = ((EventRepresentation) rt).getId();
-                        if(attData != null && binaryInfo.getName() != null && binaryInfo.getType() != null) {
+                        if(attDataBytes != null) {
                             uploadEventAttachment(binaryInfo, attDataBytes, eventId.getValue(), false);
                         }
-                        //eventBinaryApi.createEventBinary(eventId.getValue(), attDataBytes);
-
-
                         if (serviceConfiguration.logPayload)
                             log.info("Tenant {} - New event posted: {}", tenant, rt);
                         else
@@ -1017,41 +1019,44 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
      * @return response status code
      */
     public int uploadEventAttachment(final BinaryInfo binaryInfo, byte[] data, final String eventId, boolean overwrites) throws ProcessingException {
-        EventRepresentation event = eventApi.getEvent(GId.asGId(eventId));
-        if(event == null) {
-            return 404;
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+            headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+            String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
+            if(binaryInfo.getType() == null || binaryInfo.getType().isEmpty()) {
+                binaryInfo.setType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            }
+            if(binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
+                binaryInfo.setName("file");
+            }
+            String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
+            RestTemplate restTemplate = new RestTemplate();
+            log.info("Tenant {} - Uploading attachment with name {} and type {} to event {}", tenant, binaryInfo.getName(), binaryInfo.getType(), eventId);
+            ResponseEntity<EventBinary> response;
+            if (overwrites) {
+                headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+                headers.setContentDisposition(ContentDisposition.builder("attachment").filename(binaryInfo.getName()).build());
+                HttpEntity<byte[]> requestEntity = new HttpEntity<>(data, headers);
+                response = restTemplate.exchange(serverUrl, HttpMethod.PUT, requestEntity, EventBinary.class);
+            } else {
+                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+                MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+                multipartBodyBuilder.part("object", binaryInfo, MediaType.APPLICATION_JSON);
+                multipartBodyBuilder.part("file", data, MediaType.valueOf(binaryInfo.getType())).filename(binaryInfo.getName());
+                MultiValueMap<String, HttpEntity<?>> body = multipartBodyBuilder.build();
+                HttpEntity<MultiValueMap<String, HttpEntity<?>>> requestEntity = new HttpEntity<>(body, headers);
+
+                response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
+            }
+
+            if (response.getStatusCodeValue() >= 300) {
+                throw new ProcessingException("Failed to create binary: " + response.toString());
+            }
+            return response.getStatusCodeValue();
+        } catch (Exception e) {
+            log.error("Tenant {} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(), eventId, e);
+            throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage());
         }
-
-        //TODO Before sending this data to cumulocity an validation should be done: file size, does the content type fit etc.
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-        String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
-
-        String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
-        RestTemplate restTemplate = new RestTemplate();
-        log.info("Tenant {} - Uploading attachment with name {} and type {} to event {}", tenant, binaryInfo.getName(), binaryInfo.getType(), event.getId().getValue());
-        ResponseEntity<EventBinary> response;
-        if (overwrites) {
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDisposition(ContentDisposition.builder("attachment").filename(binaryInfo.getName()).build());
-            HttpEntity<byte[]> requestEntity = new HttpEntity<>(data, headers);
-            response = restTemplate.exchange(serverUrl, HttpMethod.PUT, requestEntity, EventBinary.class);
-        } else {
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-            multipartBodyBuilder.part("object", binaryInfo, MediaType.APPLICATION_JSON);
-            multipartBodyBuilder.part("file", data, MediaType.valueOf(binaryInfo.getType())).filename(binaryInfo.getName());
-            MultiValueMap<String,HttpEntity<?>> body = multipartBodyBuilder.build();
-            HttpEntity<MultiValueMap<String, HttpEntity<?>>> requestEntity = new HttpEntity<>(body, headers);
-
-            response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
-        }
-
-        if(response.getStatusCodeValue() >= 300) {
-            throw new ProcessingException("Failed to create binary: "+response.toString());
-        }
-        return response.getStatusCodeValue();
     }
 }
