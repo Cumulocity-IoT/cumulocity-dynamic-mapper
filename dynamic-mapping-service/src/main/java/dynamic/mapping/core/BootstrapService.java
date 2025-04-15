@@ -332,7 +332,7 @@ public class BootstrapService {
 
         HttpClient initialHttpClient = new HttpClient();
         initialHttpClient.getConnectorSpecification().getProperties()
-                .forEach((key, prop) -> httpConfig.properties.put(key, prop.defaultValue.toString()));
+                .forEach((key, prop) -> httpConfig.properties.put(key, prop.defaultValue));
 
         try {
             connectorConfigurationComponent.saveConnectorConfiguration(httpConfig);

@@ -65,6 +65,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AsynchronousDispatcherOutbound
@@ -247,6 +248,12 @@ public class DispatcherOutbound implements NotificationCallback {
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
             MappingStatus mappingStatusUnspecified = mappingComponent
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
+            OperationRepresentation op;
+            if(c8yMessage.getApi().equals(API.OPERATION))
+                op  = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
+            else
+                op = null;
+            AtomicBoolean autoAcknowledge = new AtomicBoolean(false);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
                 if (mapping.getActive()
@@ -257,6 +264,12 @@ public class DispatcherOutbound implements NotificationCallback {
                     Context graalsContext = null;
                     String sharedCode = null;
                     String systemCode = null;
+                    if(op != null && mapping.getAutoAckOperation() != null && mapping.getAutoAckOperation()) {
+                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
+                        //If at least one resolved mapping has autoAckOperation set to true, we acknowledge the operation
+                        autoAcknowledge.set(true);
+                    }
+
                     try {
                         if (processor != null) {
                             // prepare graals func if required
@@ -377,6 +390,18 @@ public class DispatcherOutbound implements NotificationCallback {
                     }
                 }
             });
+            if (!processingResult.isEmpty()) {
+                List<Exception> errors = new ArrayList<>();
+                processingResult.stream().filter(ProcessingContext::hasError)
+                        .forEach(context -> errors.addAll(context.getErrors()));
+                if(autoAcknowledge.get()) {
+                    if(!errors.isEmpty() && op != null )
+                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
+                                errors.toString());
+                    else
+                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.SUCCESSFUL, null);
+                }
+            }
             timer.stop(outboundProcessingTimer);
             return processingResult;
         }
@@ -402,61 +427,22 @@ public class DispatcherOutbound implements NotificationCallback {
         List<Mapping> resolvedMappings = new ArrayList<>();
 
         // Handle C8Y Operation Status
-        // TODO Add OperationAutoAck Status to activate/deactivate
-        OperationRepresentation op = null;
-        //
-        if (c8yMessage.getApi().equals(API.OPERATION)) {
-            op = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
-        }
         if (c8yMessage.getPayload() != null) {
             try {
                 resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage);
-                if (resolvedMappings.size() > 0 && op != null)
-                    c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
             } catch (Exception e) {
                 log.warn("Tenant {} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
                         tenant, e);
                 log.debug(e.getMessage(), tenant);
-                // if (op != null)
-                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                // e.getLocalizedMessage());
                 mappingStatusUnspecified.errors++;
             }
         } else {
             return futureProcessingResult;
         }
-
         futureProcessingResult = virtualThreadPool.submit(
                 new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
                         payloadProcessorsOutbound, c8yMessage, connectorClient));
 
-        if (op != null) {
-            // Blocking for Operations to receive the processing result to update operation
-            // status
-            try {
-                List<ProcessingContext<?>> results = futureProcessingResult.get();
-                if (results.size() > 0) {
-                    if (results.get(0).hasError()) {
-                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                                results.get(0).getErrors().toString());
-                    } else {
-                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.SUCCESSFUL, null);
-                    }
-                } else {
-                    // No Mapping found
-                    // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                    // "No Mapping found for operation " + op.toJSON());
-                }
-            } catch (InterruptedException e) {
-                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                // e.getLocalizedMessage());
-                log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
-            } catch (ExecutionException e) {
-                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                // e.getLocalizedMessage());
-                log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
-            }
-        }
         return futureProcessingResult;
     }
 }

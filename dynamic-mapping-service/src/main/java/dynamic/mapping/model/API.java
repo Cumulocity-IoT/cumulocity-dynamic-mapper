@@ -31,7 +31,6 @@ public enum API {
     ALARM_WITH_CHILDREN("ALARM", "source.id", "alarmsWithChildren"),
     EVENT("EVENT", "source.id", "events"),
     EVENT_WITH_CHILDREN("EVENT", "source.id", "eventsWithChildren"),
-    EVENT_WITH_BINARY("EVENT_WITH_BINARY", "source.id", "events"),
     MEASUREMENT("MEASUREMENT", "source.id", "measurements"),
     INVENTORY("INVENTORY", "id", "managedObjects"),
     OPERATION("OPERATION", "deviceId", "operations"),

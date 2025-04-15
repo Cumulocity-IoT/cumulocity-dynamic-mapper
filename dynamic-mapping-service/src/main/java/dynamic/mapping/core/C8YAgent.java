@@ -22,6 +22,7 @@
 package dynamic.mapping.core;
 
 import c8y.IsDevice;
+import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -32,6 +33,7 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.model.measurement.MeasurementValue;
 import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
+import com.cumulocity.rest.representation.CumulocityMediaType;
 import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
@@ -43,6 +45,7 @@ import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
+import com.cumulocity.sdk.client.event.EventBinaryApi;
 import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -55,12 +58,7 @@ import dynamic.mapping.core.cache.InboundExternalIdCache;
 import dynamic.mapping.core.cache.InventoryCache;
 import dynamic.mapping.core.facade.IdentityFacade;
 import dynamic.mapping.core.facade.InventoryFacade;
-import dynamic.mapping.model.API;
-import dynamic.mapping.model.Extension;
-import dynamic.mapping.model.ExtensionEntry;
-import dynamic.mapping.model.ExtensionType;
-import dynamic.mapping.model.LoggingEventType;
-import dynamic.mapping.model.MappingServiceRepresentation;
+import dynamic.mapping.model.*;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.extension.ExtensionsComponent;
@@ -78,13 +76,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.io.Resource;
+import org.springframework.http.*;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.codec.multipart.Part;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.svenson.JSONParser;
 
-import jakarta.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -101,6 +105,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     private EventApi eventApi;
+
+    @Autowired
+    private EventBinaryApi eventBinaryApi;
 
     @Autowired
     private InventoryFacade inventoryApi;
@@ -144,6 +151,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Getter
     private ConfigurationRegistry configurationRegistry;
+
+    @Autowired
+    CumulocityClientProperties clientProperties;
 
     @Autowired
     public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
@@ -292,7 +302,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         while (next) {
                             certificatesResult = platform.rest().get(
                                     nextUrl,
-                                    MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
+                                    CumulocityMediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
                             certificatesList.addAll(certificatesResult.getCertificates());
                             nextUrl = certificatesResult.getNext();
                             next = certificatesResult.getCertificates().size() > 0;
@@ -402,15 +412,43 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 AbstractExtensibleRepresentation rt = null;
                 try {
                     if (targetAPI.equals(API.EVENT)) {
+                        //TODO Add Binary API when required fields are present
                         EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
                                 payload,
                                 EventRepresentation.class);
+
+                        //Add Attachment to Binary
+                        String attName = null;
+                        String attData = null;
+                        String attType = null;
+                        byte[] attDataBytes = null;
+                        BinaryInfo binaryInfo = new BinaryInfo();
+                        if(eventRepresentation.hasProperty("attachment_Name") && eventRepresentation.hasProperty("attachment_Type") && eventRepresentation.hasProperty("attachment_Data")) {
+                            attName = String.valueOf(eventRepresentation.getProperty("attachment_Name"));
+                            attType = String.valueOf(eventRepresentation.getProperty("attachment_Type"));
+                            attData = String.valueOf(eventRepresentation.getProperty("attachment_Data"));
+                            if(!attData.isEmpty())
+                                attDataBytes = Base64.getDecoder().decode(attData.getBytes(StandardCharsets.UTF_8));
+                            //attDataBytes = attData.getBytes(StandardCharsets.UTF_8);
+                            eventRepresentation.removeProperty("attachment_Name");
+                            eventRepresentation.removeProperty("attachment_Type");
+                            eventRepresentation.removeProperty("attachment_Data");
+                            if(!attName.isEmpty())
+                                binaryInfo.setName(attName);
+                            if(!attType.isEmpty())
+                                binaryInfo.setType(attType);
+                        }
                         rt = eventApi.create(eventRepresentation);
+                        GId eventId = ((EventRepresentation) rt).getId();
+                        if(attDataBytes != null) {
+                            uploadEventAttachment(binaryInfo, attDataBytes, eventId.getValue(), false);
+                        }
                         if (serviceConfiguration.logPayload)
                             log.info("Tenant {} - New event posted: {}", tenant, rt);
                         else
                             log.info("Tenant {} - New event posted with Id {}", tenant,
                                     ((EventRepresentation) rt).getId().getValue());
+
                     } else if (targetAPI.equals(API.ALARM)) {
                         AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
                                 payload,
@@ -969,5 +1007,56 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
         
         return current;
+    }
+
+    /**
+     * Uploads an attachment to an event.
+     *
+     * @param binaryInfo
+     * @param data
+     * @param eventId
+     * @param overwrites
+     * @return response status code
+     */
+    public int uploadEventAttachment(final BinaryInfo binaryInfo, byte[] data, final String eventId, boolean overwrites) throws ProcessingException {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+            headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+            String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
+            if(binaryInfo.getType() == null || binaryInfo.getType().isEmpty()) {
+                binaryInfo.setType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            }
+            if(binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
+                binaryInfo.setName("file");
+            }
+            String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
+            RestTemplate restTemplate = new RestTemplate();
+            log.info("Tenant {} - Uploading attachment with name {} and type {} to event {}", tenant, binaryInfo.getName(), binaryInfo.getType(), eventId);
+            ResponseEntity<EventBinary> response;
+            if (overwrites) {
+                headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+                headers.setContentDisposition(ContentDisposition.builder("attachment").filename(binaryInfo.getName()).build());
+                HttpEntity<byte[]> requestEntity = new HttpEntity<>(data, headers);
+                response = restTemplate.exchange(serverUrl, HttpMethod.PUT, requestEntity, EventBinary.class);
+            } else {
+                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+                MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+                multipartBodyBuilder.part("object", binaryInfo, MediaType.APPLICATION_JSON);
+                multipartBodyBuilder.part("file", data, MediaType.valueOf(binaryInfo.getType())).filename(binaryInfo.getName());
+                MultiValueMap<String, HttpEntity<?>> body = multipartBodyBuilder.build();
+                HttpEntity<MultiValueMap<String, HttpEntity<?>>> requestEntity = new HttpEntity<>(body, headers);
+
+                response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
+            }
+
+            if (response.getStatusCodeValue() >= 300) {
+                throw new ProcessingException("Failed to create binary: " + response.toString());
+            }
+            return response.getStatusCodeValue();
+        } catch (Exception e) {
+            log.error("Tenant {} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(), eventId, e);
+            throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage());
+        }
     }
 }
