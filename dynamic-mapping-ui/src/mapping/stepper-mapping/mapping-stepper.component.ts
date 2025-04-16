@@ -35,7 +35,7 @@ import { AlertService, C8yStepper, gettext } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, debounceTime, distinctUntilChanged, filter, Subject, take } from 'rxjs';
+import { BehaviorSubject, debounceTime, distinctUntilChanged, filter, from, Subject, take } from 'rxjs';
 import { Content, Mode } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {

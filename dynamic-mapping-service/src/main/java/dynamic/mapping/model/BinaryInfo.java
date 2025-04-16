@@ -22,8 +22,12 @@
 package dynamic.mapping.model;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 @Data
+@Getter
+@Setter
 public class BinaryInfo {
     /**
      * Name of the binary object.
@@ -34,4 +38,9 @@ public class BinaryInfo {
      * Media type of the file.
      */
     private String type;
+
+    /**
+     * Base64 encoded data
+     */
+    private String data;
 }

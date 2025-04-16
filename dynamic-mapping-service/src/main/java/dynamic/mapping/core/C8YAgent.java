@@ -76,10 +76,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
-import org.springframework.http.codec.multipart.Part;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -302,7 +300,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         while (next) {
                             certificatesResult = platform.rest().get(
                                     nextUrl,
-                                    CumulocityMediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
+                                    CumulocityMediaType.APPLICATION_JSON_TYPE,
+                                    TrustedCertificateCollectionRepresentation.class);
                             certificatesList.addAll(certificatesResult.getCertificates());
                             nextUrl = certificatesResult.getNext();
                             next = certificatesResult.getCertificates().size() > 0;
@@ -412,36 +411,44 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 AbstractExtensibleRepresentation rt = null;
                 try {
                     if (targetAPI.equals(API.EVENT)) {
-                        //TODO Add Binary API when required fields are present
+                        // TODO Add Binary API when required fields are present
                         EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
                                 payload,
                                 EventRepresentation.class);
 
-                        //Add Attachment to Binary
-                        String attName = null;
-                        String attData = null;
-                        String attType = null;
-                        byte[] attDataBytes = null;
-                        BinaryInfo binaryInfo = new BinaryInfo();
-                        if(eventRepresentation.hasProperty("attachment_Name") && eventRepresentation.hasProperty("attachment_Type") && eventRepresentation.hasProperty("attachment_Data")) {
-                            attName = String.valueOf(eventRepresentation.getProperty("attachment_Name"));
-                            attType = String.valueOf(eventRepresentation.getProperty("attachment_Type"));
-                            attData = String.valueOf(eventRepresentation.getProperty("attachment_Data"));
-                            if(!attData.isEmpty())
-                                attDataBytes = Base64.getDecoder().decode(attData.getBytes(StandardCharsets.UTF_8));
-                            //attDataBytes = attData.getBytes(StandardCharsets.UTF_8);
-                            eventRepresentation.removeProperty("attachment_Name");
-                            eventRepresentation.removeProperty("attachment_Type");
-                            eventRepresentation.removeProperty("attachment_Data");
-                            if(!attName.isEmpty())
-                                binaryInfo.setName(attName);
-                            if(!attType.isEmpty())
-                                binaryInfo.setType(attType);
-                        }
+                        // Add Attachment to Binary
+                        // String attName = null;
+                        // String attData = null;
+                        // String attType = null;
+                        // byte[] attDataBytes = null;
+                        // BinaryInfo binaryInfo = new BinaryInfo();
+                        // if(eventRepresentation.hasProperty("attachment_Name") &&
+                        // eventRepresentation.hasProperty("attachment_Type") &&
+                        // eventRepresentation.hasProperty("attachment_Data")) {
+                        // if (context.getMapping().eventWithAttachment) {
+                        // // attName =
+                        // String.valueOf(eventRepresentation.getProperty("attachment_Name"));
+                        // // attType =
+                        // String.valueOf(eventRepresentation.getProperty("attachment_Type"));
+                        // // attData =
+                        // String.valueOf(eventRepresentation.getProperty("attachment_Data"));
+                        // if (!attData.isEmpty())
+                        // attDataBytes =
+                        // Base64.getDecoder().decode(attData.getBytes(StandardCharsets.UTF_8));
+                        // // attDataBytes = attData.getBytes(StandardCharsets.UTF_8);
+                        // // eventRepresentation.removeProperty("attachment_Name");
+                        // // eventRepresentation.removeProperty("attachment_Type");
+                        // // eventRepresentation.removeProperty("attachment_Data");
+                        // if (!attName.isEmpty())
+                        // binaryInfo.setName(attName);
+                        // if (!attType.isEmpty())
+                        // binaryInfo.setType(attType);
+                        // }
                         rt = eventApi.create(eventRepresentation);
                         GId eventId = ((EventRepresentation) rt).getId();
-                        if(attDataBytes != null) {
-                            uploadEventAttachment(binaryInfo, attDataBytes, eventId.getValue(), false);
+                        if (context.getMapping().eventWithAttachment) {
+                            BinaryInfo binaryInfo = context.getBinaryInfo();
+                            uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }
                         if (serviceConfiguration.logPayload)
                             log.info("Tenant {} - New event posted: {}", tenant, rt);
@@ -932,24 +939,25 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         } else
             return 0;
     }
+
     public Map<String, Object> getMOFromInventoryCache(String tenant, String deviceId) {
         Map<String, Object> result = getInventoryCache(tenant).getMOBySource(deviceId);
         if (result != null) {
             return result;
         }
-        
+
         // Create new managed object cache entry
         final Map<String, Object> newMO = new HashMap<>();
         getInventoryCache(tenant).putMOforSource(deviceId, newMO);
-        
+
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
         Map<String, Object> attrs = device.getAttrs();
-        
+
         // Process each fragment
         serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
             frag = frag.trim();
-            
+
             // Handle special cases
             if ("id".equals(frag)) {
                 newMO.put(frag, deviceId);
@@ -968,44 +976,45 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 newMO.put(frag, device.getType());
                 return;
             }
-            
+
             // Handle nested attributes
             Object value = resolveNestedAttribute(attrs, frag);
             if (value != null) {
                 newMO.put(frag, value);
             }
         });
-        
+
         return newMO;
     }
-    
+
     /**
      * Resolves a nested attribute from a map using dot notation.
+     * 
      * @param attrs The source attributes map
-     * @param path The attribute path using dot notation (e.g., "a.b.c")
+     * @param path  The attribute path using dot notation (e.g., "a.b.c")
      * @return The resolved value or null if path cannot be resolved
      */
     private Object resolveNestedAttribute(Map<String, Object> attrs, String path) {
         if (path == null || attrs == null) {
             return null;
         }
-        
+
         String[] pathParts = path.split("\\.");
         Object current = attrs;
-        
+
         for (String part : pathParts) {
             if (!(current instanceof Map)) {
                 return null;
             }
-            
+
             Map<?, ?> currentMap = (Map<?, ?>) current;
             if (!currentMap.containsKey(part)) {
                 return null;
             }
-            
+
             current = currentMap.get(part);
         }
-        
+
         return current;
     }
 
@@ -1018,32 +1027,40 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
      * @param overwrites
      * @return response status code
      */
-    public int uploadEventAttachment(final BinaryInfo binaryInfo, byte[] data, final String eventId, boolean overwrites) throws ProcessingException {
+    public int uploadEventAttachment(final BinaryInfo binaryInfo, final String eventId, boolean overwrites)
+            throws ProcessingException {
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+            headers.set("Authorization",
+                    contextService.getContext().toCumulocityCredentials().getAuthenticationString());
             headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
             String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
-            if(binaryInfo.getType() == null || binaryInfo.getType().isEmpty()) {
+            if (binaryInfo.getType() == null || binaryInfo.getType().isEmpty()) {
                 binaryInfo.setType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
             }
-            if(binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
+            if (binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
                 binaryInfo.setName("file");
             }
             String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
             RestTemplate restTemplate = new RestTemplate();
-            log.info("Tenant {} - Uploading attachment with name {} and type {} to event {}", tenant, binaryInfo.getName(), binaryInfo.getType(), eventId);
+            log.info("Tenant {} - Uploading attachment with name {} and type {} to event {}", tenant,
+                    binaryInfo.getName(), binaryInfo.getType(), eventId);
             ResponseEntity<EventBinary> response;
+            byte[] attDataBytes = null;
+            if (!binaryInfo.getData().isEmpty())
+                attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().getBytes(StandardCharsets.UTF_8));
             if (overwrites) {
                 headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-                headers.setContentDisposition(ContentDisposition.builder("attachment").filename(binaryInfo.getName()).build());
-                HttpEntity<byte[]> requestEntity = new HttpEntity<>(data, headers);
+                headers.setContentDisposition(
+                        ContentDisposition.builder("attachment").filename(binaryInfo.getName()).build());
+                HttpEntity<byte[]> requestEntity = new HttpEntity<>(attDataBytes, headers);
                 response = restTemplate.exchange(serverUrl, HttpMethod.PUT, requestEntity, EventBinary.class);
             } else {
                 headers.setContentType(MediaType.MULTIPART_FORM_DATA);
                 MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
                 multipartBodyBuilder.part("object", binaryInfo, MediaType.APPLICATION_JSON);
-                multipartBodyBuilder.part("file", data, MediaType.valueOf(binaryInfo.getType())).filename(binaryInfo.getName());
+                multipartBodyBuilder.part("file", attDataBytes, MediaType.valueOf(binaryInfo.getType()))
+                        .filename(binaryInfo.getName());
                 MultiValueMap<String, HttpEntity<?>> body = multipartBodyBuilder.build();
                 HttpEntity<MultiValueMap<String, HttpEntity<?>>> requestEntity = new HttpEntity<>(body, headers);
 
@@ -1055,7 +1072,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
             return response.getStatusCodeValue();
         } catch (Exception e) {
-            log.error("Tenant {} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(), eventId, e);
+            log.error("Tenant {} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(),
+                    eventId, e);
             throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage());
         }
     }

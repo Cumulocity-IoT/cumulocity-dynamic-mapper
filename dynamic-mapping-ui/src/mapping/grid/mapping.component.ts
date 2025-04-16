@@ -301,6 +301,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       });
     this.codeTemplateInbound = (await this.shareService.getCodeTemplate(TemplateType.INBOUND.toString())).code;
     this.codeTemplateOutbound = (await this.shareService.getCodeTemplate(TemplateType.OUTBOUND.toString())).code;
+
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      const {devices} = await this.mappingService.getSubscriptions();
+      if (devices.length == 0  ) {
+        this.alertService.warning("No subscription for outbound mapping exists. Your OUTBOUND mappings needs to be subscribed to a device!");
+      }
+    }
   }
 
   async editMessageFilter(m: MappingEnriched) {

@@ -105,6 +105,22 @@ public abstract class BaseProcessorInbound<T> {
                 };
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
+            // Handle attachment properties independently
+            if (context.getMapping().eventWithAttachment) {
+                // Get or create the context data map
+                Map<String, String> contextData;
+                if (((Map) payloadObject).containsKey(Mapping.TOKEN_CONTEXT_DATA)) {
+                    contextData = (Map<String, String>) ((Map) payloadObject).get(Mapping.TOKEN_CONTEXT_DATA);
+                } else {
+                    contextData = new HashMap<>();
+                    ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
+                }
+
+                // Add attachment properties
+                contextData.put("attachment_Name", "");
+                contextData.put("attachment_Type", "");
+                contextData.put("attachment_Data", "");
+            }
         } else {
             log.info(
                     "Tenant {} - This message is not parsed by Base Inbound Processor, will be potentially parsed by extension due to custom format.",
@@ -302,7 +318,13 @@ public abstract class BaseProcessorInbound<T> {
             context.setSourceId(sourceId.value.toString());
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
-            context.setApi(API.fromString((String)substitute.value));
+            context.setApi(API.fromString((String) substitute.value));
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Name").equals(pathTarget)) {
+            context.getBinaryInfo().setName((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Type").equals(pathTarget)) {
+            context.getBinaryInfo().setType((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Data").equals(pathTarget)) {
+            context.getBinaryInfo().setData((String) substitute.value);
         } else {
             SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
@@ -343,8 +365,9 @@ public abstract class BaseProcessorInbound<T> {
             try {
                 var expr = jsonata(mappingFilter);
                 Object extractedSourceContent = expr.evaluate(payloadObjectNode);
-                if(!isNodeTrue(extractedSourceContent)) {
-                    log.info("Tenant {} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter, payload);
+                if (!isNodeTrue(extractedSourceContent)) {
+                    log.info("Tenant {} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter,
+                            payload);
                     context.setIgnoreFurtherProcessing(true);
                 }
             } catch (Exception e) {

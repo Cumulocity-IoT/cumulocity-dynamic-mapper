@@ -61,6 +61,7 @@ export interface Mapping {
   debug: boolean;
   tested: boolean;
   supportsMessageContext?: boolean;
+  eventWithAttachment?: boolean;
   createNonExistingDevice: boolean;
   updateExistingDevice: boolean;
   autoAckOperation?: boolean;

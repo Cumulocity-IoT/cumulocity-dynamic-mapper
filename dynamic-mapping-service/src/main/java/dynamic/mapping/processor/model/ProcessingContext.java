@@ -30,6 +30,7 @@ import java.util.Set;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.API;
+import dynamic.mapping.model.BinaryInfo;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.ProcessingException;
@@ -114,6 +115,9 @@ public class ProcessingContext<O> {
     private String systemCode;
 
     private Value extractFromSourceFunc;
+
+    @Builder.Default
+    private BinaryInfo binaryInfo = new BinaryInfo();
 
     public static final String SOURCE_ID = "source.id";
 

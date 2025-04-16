@@ -443,14 +443,28 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
         // c8ySourceId: '909090'
       }
     };
-    if (mapping.supportsMessageContext) {
-      if (mapping.direction == Direction.INBOUND) {
+    if (mapping.direction == Direction.INBOUND) {
+      // Handle message context if supported
+      if (mapping.supportsMessageContext) {
         result = {
           ...result,
           [TOKEN_CONTEXT_DATA]: { 'api': mapping.targetAPI }
         };
       }
-    };
+      
+      // Handle attachment properties independently
+      if (mapping.eventWithAttachment) {
+        // Initialize [TOKEN_CONTEXT_DATA] if it doesn't exist yet
+        if (!result[TOKEN_CONTEXT_DATA]) {
+          result[TOKEN_CONTEXT_DATA] = {};
+        }
+        
+        // Add attachment properties
+        result[TOKEN_CONTEXT_DATA].attachment_Name = 'TestImage.jpeg';
+        result[TOKEN_CONTEXT_DATA].attachment_Type = 'image/jpeg';
+        result[TOKEN_CONTEXT_DATA].attachment_Data = '';
+      }
+    }
 
 
 

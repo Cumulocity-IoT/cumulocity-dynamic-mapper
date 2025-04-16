@@ -118,6 +118,9 @@ public class Mapping implements Serializable {
     public Boolean supportsMessageContext;
 
     @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean eventWithAttachment = false;
+
+    @JsonSetter(nulls = Nulls.SKIP)
     public Boolean createNonExistingDevice = false;
 
     @JsonSetter(nulls = Nulls.SKIP)

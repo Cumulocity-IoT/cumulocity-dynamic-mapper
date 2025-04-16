@@ -378,7 +378,29 @@ export class MappingStepPropertiesComponent
               (this.stepperConfiguration.direction == Direction.OUTBOUND &&
                 this.mapping.targetAPI != API.OPERATION.name)
           },
-          // filler
+
+          {
+            className: 'col-lg-3',
+            key: 'eventWithAttachment',
+            type: 'switch',
+            wrappers: ['custom-form-field-wrapper'],
+            templateOptions: {
+              label: 'Event contains attachment',
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'Event contains attachment, e.g. image, ... that is stored separately.',
+              required: false,
+              switchMode: true,
+              indeterminate: false,
+              hideLabel: true
+            },
+            hideExpression: () =>
+              this.stepperConfiguration.direction == Direction.OUTBOUND ||
+              this.mapping.targetAPI !== API.EVENT.name
+          },
+
+
+
           {
             className: 'col-lg-3',
             template: '<div class="form-group row" style="height:80px"></div>',
