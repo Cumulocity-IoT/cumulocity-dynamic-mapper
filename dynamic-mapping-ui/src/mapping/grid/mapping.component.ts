@@ -58,7 +58,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Subject, filter, finalize, switchMap, take } from 'rxjs';
+import { BehaviorSubject, Subject, filter, finalize, from, map, switchMap, take } from 'rxjs';
 import { DeploymentMapEntry, ExtensionType, LabelRendererComponent, MappingTypeDescriptionMap, SharedService, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
@@ -303,10 +303,28 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.codeTemplateOutbound = (await this.shareService.getCodeTemplate(TemplateType.OUTBOUND.toString())).code;
 
     if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
-      const {devices} = await this.mappingService.getSubscriptions();
-      if (devices.length == 0  ) {
-        this.alertService.warning("No subscription for outbound mapping exists. Your OUTBOUND mappings needs to be subscribed to a device!");
-      }
+      // Using Promise-based approach since getMappings returns a Promise
+      this.mappingService.getMappings(Direction.OUTBOUND)
+        .then(async mappings => {
+          const numberOutboundMappings = mappings.length;
+          
+          try {
+            const { devices } = await this.mappingService.getSubscriptions();
+            if (devices.length === 0 && numberOutboundMappings > 0) {
+              this.alertService.warning(
+                "No device subscriptions found for your outbound mappings. " +
+                "You need to subscribe your outbound mappings to at least one device to process data!"
+              );
+            }
+          } catch (error) {
+            console.error('Error checking device subscriptions:', error);
+            this.alertService.danger('Failed to verify outbound mapping subscriptions');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching outbound mappings:', error);
+          this.alertService.danger('Failed to fetch outbound mappings');
+        });
     }
   }
 
@@ -951,7 +969,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async onAddSampleMappings() {
-    this.mappingService.addSampleMappings({direction:this.stepperConfiguration.direction});
+    this.mappingService.addSampleMappings({ direction: this.stepperConfiguration.direction });
     this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
   }
 
