@@ -329,7 +329,7 @@ public class ServiceConfigurationComponent {
      * 
      * @param codeTemplate The CodeTemplate object whose header needs to be updated
      */
-    public void rectifyHeaderInCodeTemplate(CodeTemplate codeTemplate) {
+    public void rectifyHeaderInCodeTemplate(CodeTemplate codeTemplate, Boolean overrideHeaderWithMetadata) {
         if (codeTemplate == null || codeTemplate.code == null || codeTemplate.code.isEmpty()) {
             log.warn("Cannot rectify header: CodeTemplate or its code is null or empty");
             return;
@@ -353,10 +353,13 @@ public class ServiceConfigurationComponent {
                 String header = decodedCode.substring(0, headerEnd);
                 String codeBody = decodedCode.substring(headerEnd);
 
-                // Always use values for name, description from header
-
+                // Test if we use values for name, description from header
                 String name = extractAnnotation(header, "@name");
                 String description = extractAnnotation(header, "@description");
+                if (overrideHeaderWithMetadata) {
+                    name = codeTemplate.name;
+                    description = codeTemplate.description;
+                }
                 header = updateAnnotation(header, "@name", name);
                 header = updateAnnotation(header, "@description", description);
                 codeTemplate.name = name;

@@ -485,7 +485,7 @@ public class ConfigurationController {
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate);
+            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate,false);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
@@ -512,7 +512,7 @@ public class ConfigurationController {
             if (codeTemplates.containsKey(codeTemplate.id)) {
                 throw new Exception(String.format("Template with id %s already exists", codeTemplate.id));
             }
-            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate);
+            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate,true);
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
