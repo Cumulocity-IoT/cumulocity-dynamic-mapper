@@ -19,16 +19,17 @@
  */
 
 import { NgModule } from '@angular/core';
-import { CoreModule, hookRoute } from '@c8y/ngx-components';
+import { CoreModule, hookRoute, hookTab } from '@c8y/ngx-components';
 import { NODE3, SharedModule } from '../shared';
 import { ServiceConfigurationComponent } from './service-configuration.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { SharedCodeComponent } from './code-template/code-template.component';
+import { CodeComponent } from './code-template/code-template.component';
 import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-components/editor';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { CodeTemplateTabFactory } from './code-template-tab.factory';
 
 @NgModule({
-  declarations: [ServiceConfigurationComponent, SharedCodeComponent],
+  declarations: [ServiceConfigurationComponent, CodeComponent],
   imports: [
     EditorComponent,
     MonacoEditorMarkerValidatorDirective,
@@ -44,9 +45,18 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
       component: ServiceConfigurationComponent,
     }),
     hookRoute({
-      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate`,
-      component: SharedCodeComponent,
-    })
+      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate/inbound`,
+      component: CodeComponent,
+    }),
+    hookRoute({
+      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate/outbound`,
+      component: CodeComponent,
+    }),
+    hookRoute({
+      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate/others`,
+      component: CodeComponent,
+    }),
+    hookTab(CodeTemplateTabFactory)
   ]
 })
 export class ServiceConfigurationModule { }

@@ -353,9 +353,15 @@ public class ServiceConfigurationComponent {
                 String header = decodedCode.substring(0, headerEnd);
                 String codeBody = decodedCode.substring(headerEnd);
 
-                // Update annotations in the header
-                header = updateAnnotation(header, "@name", codeTemplate.name);
-                header = updateAnnotation(header, "@description", "Please add a description");
+                // Always use values for name, description from header
+
+                String name = extractAnnotation(header, "@name");
+                String description = extractAnnotation(header, "@description");
+                header = updateAnnotation(header, "@name", name);
+                header = updateAnnotation(header, "@description", description);
+                codeTemplate.name = name;
+                codeTemplate.description = description;
+                // Update other annotations in the header
                 header = updateAnnotation(header, "@templateType", codeTemplate.templateType.name());
                 header = updateAnnotation(header, "@defaultTemplate", String.valueOf(codeTemplate.defaultTemplate));
                 header = updateAnnotation(header, "@internal", String.valueOf(codeTemplate.internal));

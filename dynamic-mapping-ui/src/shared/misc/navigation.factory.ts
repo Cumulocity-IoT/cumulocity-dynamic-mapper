@@ -77,7 +77,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       parent: gettext('Configuration'),
       label: gettext('Code template'),
       icon: 'source-code',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate`,
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate/inbound`,
       priority: 460,
       preventDuplicates: true
     }),

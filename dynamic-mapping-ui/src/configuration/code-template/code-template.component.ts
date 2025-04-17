@@ -30,6 +30,7 @@ import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configura
 import { FormGroup } from '@angular/forms';
 import { ManageTemplateComponent, createCustomUuid } from '../../shared';
 import { BehaviorSubject } from 'rxjs';
+import { Router } from '@angular/router';
 
 let initializedMonaco = false;
 
@@ -39,11 +40,13 @@ let initializedMonaco = false;
   styleUrls: ['./code-template.component.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class SharedCodeComponent implements OnInit {
+export class CodeComponent implements OnInit {
   codeTemplateDecoded: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
   codeTemplates: CodeTemplateMap;
-  templateId: string = TemplateType.SHARED;
+  template: string;
+  defaultTemplate: string;
+  templateType: TemplateType;
   formGroup: FormGroup;
   isLoading = true;
   errorMessage = '';
@@ -63,17 +66,33 @@ export class SharedCodeComponent implements OnInit {
     public bsModalService: BsModalService,
     private sharedService: SharedService,
     private alertService: AlertService,
+    private router: Router
   ) { }
 
   async ngOnInit(): Promise<void> {
+    const href = this.router.url;
+    // First determine the template type based on URL
+    if (href.match(/sag-ps-pkg-dynamic-mapping\/node3\/codeTemplate\/inbound/g)) {
+      this.templateType = TemplateType.INBOUND;
+      this.defaultTemplate = TemplateType.INBOUND.toString();
+    } else if (href.match(/sag-ps-pkg-dynamic-mapping\/node3\/codeTemplate\/outbound/g)) {
+      this.templateType = TemplateType.OUTBOUND;
+      this.defaultTemplate = TemplateType.OUTBOUND.toString();
+    } else {
+      this.templateType = TemplateType.SHARED;
+      this.defaultTemplate = TemplateType.SHARED.toString();
+    }
+    this.template = this.defaultTemplate;
+
     await this.updateCodeTemplateEntries(); // Call this after setting codeTemplates
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
     console.log("CodeTemplateEntries after init:", this.codeTemplateEntries);
+
+    this.onSelectCodeTemplate();
   }
 
   refresh() {
     this.updateCodeTemplateEntries(); // Call this after setting codeTemplates
-
   }
 
   async ngAfterViewInit(): Promise<void> {
@@ -86,6 +105,10 @@ export class SharedCodeComponent implements OnInit {
   }
 
   async updateCodeTemplateEntries(): Promise<void> {
+    let defaultSet = [this.defaultTemplate];
+    if (this.defaultTemplate == TemplateType.SHARED.toString()) {
+      defaultSet.push(TemplateType.SYSTEM.toString());
+    }
     this.codeTemplates = await this.sharedService.getCodeTemplates();
     this.codeTemplateEntries = Object.entries(this.codeTemplates).map(([key, template]) => ({
       key,
@@ -97,7 +120,7 @@ export class SharedCodeComponent implements OnInit {
       internal: template.internal,
       readonly: template.readonly,
       defaultTemplate: template.defaultTemplate
-    }));
+    })).filter(temp => defaultSet.includes(temp.templateType));
     this.codeTemplateEntries$.next(this.codeTemplateEntries);
     // Iterate and decode
     Object.entries(this.codeTemplates).forEach(([key, template]) => {
@@ -120,7 +143,7 @@ export class SharedCodeComponent implements OnInit {
     if (this.codeTemplateDecoded) {
       const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
       const templateToUpdate = this.codeTemplateDecoded;
-      await this.sharedService.updateCodeTemplate(this.templateId, {
+      await this.sharedService.updateCodeTemplate(this.template, {
         ...templateToUpdate, code: encodeCode
       });
       this.alertService.success("Saved code template");
@@ -130,10 +153,10 @@ export class SharedCodeComponent implements OnInit {
 
   async onDeleteCodeTemplate() {
     if (this.codeTemplateDecoded) {
-      this.sharedService.deleteCodeTemplate(this.templateId);
+      this.sharedService.deleteCodeTemplate(this.template);
       this.alertService.success("Deleted code template");
+      this.template = this.defaultTemplate;
       this.updateCodeTemplateEntries();
-      this.templateId = TemplateType.SHARED;
     }
   }
 
@@ -151,13 +174,13 @@ export class SharedCodeComponent implements OnInit {
           this.codeTemplateDecoded.name = codeTemplate.name;
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
-          await this.sharedService.updateCodeTemplate(this.templateId, {
+          await this.sharedService.updateCodeTemplate(this.template, {
             ...templateToUpdate, code: encodeCode
           });
           this.alertService.success("Renamed code template");
         }
+        this.template = this.defaultTemplate;
         this.updateCodeTemplateEntries();
-        this.templateId = TemplateType.SHARED;
       });
 
     }
@@ -167,14 +190,14 @@ export class SharedCodeComponent implements OnInit {
     if (this.codeTemplateDecoded) {
       const initialState = {
         action: 'COPY',
-        codeTemplate: { name: this.codeTemplateDecoded.name }
+        codeTemplate: { name: this.codeTemplateDecoded.name + ' - Copy' }
       };
       const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
-      modalRef.content.closeSubject.subscribe(async (name) => {
+      modalRef.content.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>)  => {
         // console.log('Configuration after edit:', editedConfiguration);
-        if (name) {
-          this.codeTemplateDecoded.name = name + ' - Copy';
+        if (codeTemplate) {
+          this.codeTemplateDecoded.name = codeTemplate.name;
           const encodeCode = stringToBase64(this.codeTemplateDecoded.code);
           const templateToUpdate = this.codeTemplateDecoded;
           await this.sharedService.createCodeTemplate({
@@ -183,7 +206,7 @@ export class SharedCodeComponent implements OnInit {
           this.alertService.success("Copied code template");
         }
         this.updateCodeTemplateEntries();
-        this.templateId = TemplateType.SHARED;
+        this.template = this.defaultTemplate;
       });
 
     }
@@ -195,7 +218,7 @@ export class SharedCodeComponent implements OnInit {
   }
 
   onSelectCodeTemplate(): void {
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
   }
 
 }
