@@ -53,7 +53,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   configuration: ConnectorConfiguration;
   filterStatusLog = {
     connectorIdentifier: 'ALL',
-    type: LoggingEventType.ALL,
+    type: LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
   };
   LoggingEventTypeMap = LoggingEventTypeMap;
   LoggingEventType = LoggingEventType;

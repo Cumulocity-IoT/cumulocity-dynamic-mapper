@@ -100,7 +100,7 @@ export class ConnectorLogService {
     const filteredConnectorStatus$ = this.triggerLogs$.pipe(
       // tap(x => console.log('TriggerLogs In', x, this.filterStatusLog)),
       switchMap(x => this.eventService.list({
-        pageSize: 100,
+        pageSize: 1000,
         withTotalPages: false,
         source: this._agentId,
         ...(x.type !== 'ALL' && { type: x.type })
@@ -108,16 +108,18 @@ export class ConnectorLogService {
       map(({ data }) => data),
       map(events => events
         .filter(ev => {
-          // console.log('Event has:', ev, ev.hasOwnProperty(CONNECTOR_FRAGMENT));
-          return ev.hasOwnProperty(CONNECTOR_FRAGMENT);
+          const ce = ev.hasOwnProperty(CONNECTOR_FRAGMENT);
+          // if (ce) console.log('Event has:', ev, ev.hasOwnProperty(CONNECTOR_FRAGMENT))
+          // else console.log('Event has no CONNECTOR_FRAGMENT:', ev, ev.hasOwnProperty(CONNECTOR_FRAGMENT));
+          return ce;
         })
         .map(event => ({
           ...event[CONNECTOR_FRAGMENT],
           type: event.type
         }))
       ),
-      map(events => events.filter(event => 
-        this.filterStatusLog.connectorIdentifier === 'ALL' || 
+      map(events => events.filter(event =>
+        this.filterStatusLog.connectorIdentifier === 'ALL' ||
         event.connectorIdentifier === this.filterStatusLog.connectorIdentifier
       )),
       // tap(x => console.log('TriggerLogs Out', x))
@@ -148,7 +150,7 @@ export class ConnectorLogService {
 
   private getAllConnectorStatusEvents(): Observable<ConnectorStatusEvent[]> {
     this.eventRealtimeService.start();
-    
+
     return from(this.sharedService.getDynamicMappingServiceAgent()).pipe(
       switchMap(agentId => this.eventRealtimeService.onAll$(agentId)),
       map(({ data }) => data),
@@ -157,7 +159,7 @@ export class ConnectorLogService {
         ...event[CONNECTOR_FRAGMENT],
         type: event['type']
       })),
-      filter(event => 
+      filter(event =>
         (this.filterStatusLog.type === 'ALL' || event.type === this.filterStatusLog.type) &&
         (this.filterStatusLog.connectorIdentifier === 'ALL' || event.connectorIdentifier === this.filterStatusLog.connectorIdentifier)
       ),
