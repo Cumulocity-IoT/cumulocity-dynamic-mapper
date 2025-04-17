@@ -89,10 +89,6 @@ public abstract class AConnectorClient {
 
     protected static final int WAIT_PERIOD_MS = 10000;
 
-        // Security and UUID Constants
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final int UUID_LENGTH = 8;
-
     protected String connectorIdentifier;
 
     protected String connectorName;
@@ -838,15 +834,6 @@ public abstract class AConnectorClient {
     // Utility Methods
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneId.systemDefault());
-
-    /**
-     * Generates a custom UUID with specified length
-     */
-    public static String createCustomUuid() {
-        return SECURE_RANDOM.ints(UUID_LENGTH, 0, 36)
-                .mapToObj(i -> Character.toString(i < 10 ? '0' + i : 'a' + i - 10))
-                .collect(Collectors.joining());
-    }
 
     /**
      * Retrieves the active subscriptions
