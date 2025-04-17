@@ -1022,7 +1022,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
      * Uploads an attachment to an event.
      *
      * @param binaryInfo
-     * @param data
      * @param eventId
      * @param overwrites
      * @return response status code
@@ -1035,20 +1034,48 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     contextService.getContext().toCumulocityCredentials().getAuthenticationString());
             headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
             String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
+
+            String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
+            RestTemplate restTemplate = new RestTemplate();
+
+            ResponseEntity<EventBinary> response;
+            byte[] attDataBytes = null;
+            if (!binaryInfo.getData().isEmpty()) {
+                if(binaryInfo.getData().startsWith("data:") && binaryInfo.getType() == null || binaryInfo.getType().isEmpty())  {
+                    //Base64 File Header
+                    int pos = binaryInfo.getData().indexOf(";");
+                    String type= binaryInfo.getData().substring(5, pos-1);
+                    binaryInfo.setType(type);
+
+                    attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().substring(pos+8).getBytes(StandardCharsets.UTF_8));
+                } else
+                    attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().getBytes(StandardCharsets.UTF_8));
+            }
             if (binaryInfo.getType() == null || binaryInfo.getType().isEmpty()) {
                 binaryInfo.setType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
             }
             if (binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
-                binaryInfo.setName("file");
+                if(binaryInfo.getType() != null && !binaryInfo.getType().isEmpty()) {
+                    if (binaryInfo.getType().contains("image/")) {
+                        binaryInfo.setName("file.png");
+                    } else if (binaryInfo.getType().contains("text/")) {
+                        binaryInfo.setName("file.txt");
+                    } else if (binaryInfo.getType().contains("application/pdf")) {
+                        binaryInfo.setName("file.pdf");
+                    } else if (binaryInfo.getType().contains("application/json")) {
+                        binaryInfo.setName("file.json");
+                    } else if (binaryInfo.getType().contains("application/xml")) {
+                        binaryInfo.setName("file.xml");
+                    } else if (binaryInfo.getType().contains("application/octet-stream")) {
+                        binaryInfo.setName("file.bin");
+                    } else {
+                        binaryInfo.setName("file.bin");
+                    }
+                } else
+                    binaryInfo.setName("file");
             }
-            String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
-            RestTemplate restTemplate = new RestTemplate();
             log.info("Tenant {} - Uploading attachment with name {} and type {} to event {}", tenant,
                     binaryInfo.getName(), binaryInfo.getType(), eventId);
-            ResponseEntity<EventBinary> response;
-            byte[] attDataBytes = null;
-            if (!binaryInfo.getData().isEmpty())
-                attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().getBytes(StandardCharsets.UTF_8));
             if (overwrites) {
                 headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
                 headers.setContentDisposition(
