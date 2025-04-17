@@ -1,5 +1,6 @@
 {
   "apiVersion":"2",
+  "contextPath": "dynamic-mapping-service",
   "version":"@project.version@",
   "provider": {
     "name":"Cumulocity GmbH"

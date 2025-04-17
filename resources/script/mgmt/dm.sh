@@ -311,25 +311,25 @@ function mappings_delete() {
 function connectors_delete() {
   check_prerequisites
   echo 'Delete connectors'
-  c8y tenantoptions getForCategory --category dynamic.mapper.service | jq 'keys| .[] | select(startswith("credentials.connection.configuration"))' -r | c8y tenantoptions delete --category dynamic.mapper.service --key -.key
+  c8y tenantoptions getForCategory --category dynamic-mapping-service | jq 'keys| .[] | select(startswith("credentials.connection.configuration"))' -r | c8y tenantoptions delete --category dynamic-mapping-service --key -.key
 }
 
 function connectors_list() {
   check_prerequisites
   echo 'List connectors'
-  c8y tenantoptions getForCategory --category dynamic.mapper.service --raw | jq 'with_entries(select(.key | startswith("credentials.connection.")))'
+  c8y tenantoptions getForCategory --category dynamic-mapping-service --raw | jq 'with_entries(select(.key | startswith("credentials.connection.")))'
 }
 
 function configurations_delete() {
   check_prerequisites
   echo 'Delete configurations'
-  c8y tenantoptions getForCategory --category dynamic.mapper.service | jq 'keys| .[] | select(startswith("service.configuration"))' -r | c8y tenantoptions delete --category dynamic.mapper.service --key -.key
+  c8y tenantoptions getForCategory --category dynamic-mapping-service | jq 'keys| .[] | select(startswith("service.configuration"))' -r | c8y tenantoptions delete --category dynamic-mapping-service --key -.key
 }
 
 function configurations_list() {
   check_prerequisites
   echo 'List configurations'
-  c8y tenantoptions getForCategory --category dynamic.mapper.service --raw | jq 'with_entries(select(.key | startswith("service.configuration")))'
+  c8y tenantoptions getForCategory --category dynamic-mapping-service --raw | jq 'with_entries(select(.key | startswith("service.configuration")))'
 }
 
 function check_prerequisites() {

@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ConnectorConfigurationComponent {
-    private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic.mapper.service";
+    private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic-mapping-service";
     private static final String OPTION_KEY_CONNECTOR_PREFIX = "credentials.connection.configuration";
 
     private final TenantOptionApi tenantOptionApi;
@@ -108,7 +108,7 @@ public class ConnectorConfigurationComponent {
                 String msg = String.format("Failed to convert configurator object %s. Error: %s",
                         identifier,
                         exceptionMsg);
-                log.warn(msg);
+                log.error("Tenant {} - Failed to convert configurator object {}", tenant, identifier, e);
             }
             return rt;
         });

@@ -66,7 +66,7 @@ class ConnectorConfigurationComponentTest {
 
     private static final String TEST_TENANT = "test-tenant";
     private static final String TEST_IDENTIFIER = "test-identifier";
-    private static final String OPTION_CATEGORY = "dynamic.mapper.service";
+    private static final String OPTION_CATEGORY = "dynamic-mapping-service";
 
     @BeforeEach
     void setUp() throws Exception {
