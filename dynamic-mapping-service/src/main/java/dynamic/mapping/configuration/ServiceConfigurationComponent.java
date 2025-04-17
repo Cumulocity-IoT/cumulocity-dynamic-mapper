@@ -66,7 +66,7 @@ public class ServiceConfigurationComponent {
         return validateAndConvert(sampleMappingsOutbound_01);
     }
 
-    private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic-mapping-service";
+    private static final String OPTION_CATEGORY_CONFIGURATION = "dynMappingService";
 
     private static final String OPTION_KEY_SERVICE_CONFIGURATION = "service.configuration";
 

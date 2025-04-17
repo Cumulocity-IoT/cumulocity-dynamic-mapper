@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ConnectorConfigurationComponent {
-    private static final String OPTION_CATEGORY_CONFIGURATION = "dynamic-mapping-service";
+    private static final String OPTION_CATEGORY_CONFIGURATION = "dynMappingService";
     private static final String OPTION_KEY_CONNECTOR_PREFIX = "credentials.connection.configuration";
 
     private final TenantOptionApi tenantOptionApi;
@@ -74,6 +74,7 @@ public class ConnectorConfigurationComponent {
                 .asOptionRepresentation(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(identifier),
                         configurationJson);
         tenantOptionApi.save(optionRepresentation);
+
     }
 
     public void deleteConnectorConfiguration(final String identifier)
