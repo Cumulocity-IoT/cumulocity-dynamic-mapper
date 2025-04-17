@@ -47,7 +47,8 @@ set -e
 ###
 
 ORIGINAL_MAPPINGS_NAME="mappings-v46"
-MIGRATED_MAPPINGS_name="mappings-v47"
+MIGRATED_MAPPINGS_NAME="mappings-v47"
+TENANT_OPTIONS_CATEGORY="dynamic-mapping-service"
 
 function show_usage() {
   echo "Usage: $0 [RESOURCE OPERATION] [OPTIONS]"
@@ -214,11 +215,11 @@ function mappings_migrate() {
     "mappingType": "EXTENSION_SOURCE"
   } else {} end)
   | del(.source, .target, .filterOutbound, .subscriptionTopic, , .templateTopicSample, .templateTopic, .ident, .mapDeviceIdentifier)
-]' >"${MIGRATED_MAPPINGS_name}-step1.json"
+]' >"${MIGRATED_MAPPINGS_NAME}-step1.json"
 
   # Step 2a transform substitutions for OUTBOUND to the new format
   echo '2a transform substitutions for OUTBOUND to the new format'
-  cat ${MIGRATED_MAPPINGS_name}-step1.json | jq '[.[] | 
+  cat ${MIGRATED_MAPPINGS_NAME}-step1.json | jq '[.[] | 
   . as $parent |
   . + (if .direction == "OUTBOUND" then {
           substitutions: (.substitutions | map(
@@ -239,11 +240,11 @@ function mappings_migrate() {
       end
     ))
   } else {} end)
-]' >"${MIGRATED_MAPPINGS_name}-step2.json"
+]' >"${MIGRATED_MAPPINGS_NAME}-step2.json"
 
   # Step 2b transform substitutions for INBOUND to the new format
   echo 'Step 2b transform substitutions for INBOUND to the new format'
-  cat ${MIGRATED_MAPPINGS_name}-step2.json | jq '[.[] | 
+  cat ${MIGRATED_MAPPINGS_NAME}-step2.json | jq '[.[] | 
   . as $parent |
   . + (if .direction == "INBOUND" then {
           substitutions: (.substitutions | map(
@@ -264,7 +265,7 @@ function mappings_migrate() {
       end
     ))
   } else {} end)
-]' >"${MIGRATED_MAPPINGS_name}-final.json"
+]' >"${MIGRATED_MAPPINGS_NAME}-final.json"
 
   # Step 3 delete old mappings from tenant
   echo 'Step 3 delete old mappings from tenant'
@@ -272,7 +273,7 @@ function mappings_migrate() {
 
   # Step 4 create transformed mappings in tenant
   echo 'Step 4 create transformed mappings in tenant'
-  cat ${MIGRATED_MAPPINGS_name}-final.json | jq -c 'to_entries[] | {
+  cat ${MIGRATED_MAPPINGS_NAME}-final.json | jq -c 'to_entries[] | {
   name: .value.name,
   type: "d11r_mapping",
   d11r_mapping: .value
@@ -311,25 +312,25 @@ function mappings_delete() {
 function connectors_delete() {
   check_prerequisites
   echo 'Delete connectors'
-  c8y tenantoptions getForCategory --category dynamic-mapping-service | jq 'keys| .[] | select(startswith("credentials.connection.configuration"))' -r | c8y tenantoptions delete --category dynamic-mapping-service --key -.key
+  c8y tenantoptions getForCategory --category $TENANT_OPTIONS_CATEGORY | jq 'keys| .[] | select(startswith("credentials.connection.configuration"))' -r | c8y tenantoptions delete --category $TENANT_OPTIONS_CATEGORY --key -.key
 }
 
 function connectors_list() {
   check_prerequisites
   echo 'List connectors'
-  c8y tenantoptions getForCategory --category dynamic-mapping-service --raw | jq 'with_entries(select(.key | startswith("credentials.connection.")))'
+  c8y tenantoptions getForCategory --category $TENANT_OPTIONS_CATEGORY --raw | jq 'with_entries(select(.key | startswith("credentials.connection.")))'
 }
 
 function configurations_delete() {
   check_prerequisites
   echo 'Delete configurations'
-  c8y tenantoptions getForCategory --category dynamic-mapping-service | jq 'keys| .[] | select(startswith("service.configuration"))' -r | c8y tenantoptions delete --category dynamic-mapping-service --key -.key
+  c8y tenantoptions getForCategory --category $TENANT_OPTIONS_CATEGORY | jq 'keys| .[] | select(startswith("service.configuration"))' -r | c8y tenantoptions delete --category $TENANT_OPTIONS_CATEGORY --key -.key
 }
 
 function configurations_list() {
   check_prerequisites
   echo 'List configurations'
-  c8y tenantoptions getForCategory --category dynamic-mapping-service --raw | jq 'with_entries(select(.key | startswith("service.configuration")))'
+  c8y tenantoptions getForCategory --category $TENANT_OPTIONS_CATEGORY --raw | jq 'with_entries(select(.key | startswith("service.configuration")))'
 }
 
 function check_prerequisites() {
