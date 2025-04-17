@@ -48,7 +48,9 @@ set -e
 
 ORIGINAL_MAPPINGS_NAME="mappings-v46"
 MIGRATED_MAPPINGS_NAME="mappings-v47"
-TENANT_OPTIONS_CATEGORY="dynamic-mapping-service"
+#TENANT_OPTIONS_CATEGORY="dynamic-mapping-service"
+#TENANT_OPTIONS_CATEGORY="dynamic.mapping.service"
+TENANT_OPTIONS_CATEGORY="dynMappingService"
 
 function show_usage() {
   echo "Usage: $0 [RESOURCE OPERATION] [OPTIONS]"

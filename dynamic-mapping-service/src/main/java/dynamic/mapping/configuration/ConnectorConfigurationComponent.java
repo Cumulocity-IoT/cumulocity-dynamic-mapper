@@ -35,12 +35,12 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapping.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 public class ConnectorConfigurationComponent {
-    private static final String OPTION_CATEGORY_CONFIGURATION = "dynMappingService";
     private static final String OPTION_KEY_CONNECTOR_PREFIX = "credentials.connection.configuration";
 
     private final TenantOptionApi tenantOptionApi;
@@ -71,7 +71,7 @@ public class ConnectorConfigurationComponent {
         String identifier = configuration.getIdentifier();
         final String configurationJson = objectMapper.writeValueAsString(configuration);
         final OptionRepresentation optionRepresentation = OptionRepresentation
-                .asOptionRepresentation(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(identifier),
+                .asOptionRepresentation(Utils.OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(identifier),
                         configurationJson);
         tenantOptionApi.save(optionRepresentation);
 
@@ -83,14 +83,14 @@ public class ConnectorConfigurationComponent {
             return;
         }
         final OptionPK option = new OptionPK();
-        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
+        option.setCategory(Utils.OPTION_CATEGORY_CONFIGURATION);
         option.setKey(getConnectorOptionKey(identifier));
         tenantOptionApi.delete(option);
     }
 
     public ConnectorConfiguration getConnectorConfiguration(String identifier, String tenant) {
         final OptionPK option = new OptionPK();
-        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
+        option.setCategory(Utils.OPTION_CATEGORY_CONFIGURATION);
         option.setKey(getConnectorOptionKey(identifier));
         ConnectorConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
             ConnectorConfiguration rt = null;
@@ -120,7 +120,7 @@ public class ConnectorConfigurationComponent {
         final List<ConnectorConfiguration> connectorConfigurations = new ArrayList<>();
         subscriptionsService.runForTenant(tenant, () -> {
             final List<OptionRepresentation> optionRepresentationList = tenantOptionApi
-                    .getAllOptionsForCategory(OPTION_CATEGORY_CONFIGURATION);
+                    .getAllOptionsForCategory(Utils.OPTION_CATEGORY_CONFIGURATION);
             for (OptionRepresentation optionRepresentation : optionRepresentationList) {
                 try {
                     // Just Connector Config --> Ignoring Service Configuration
@@ -150,14 +150,14 @@ public class ConnectorConfigurationComponent {
     public void deleteConnectorConfigurations(String tenant) {
         List<ConnectorConfiguration> configs = getConnectorConfigurations(tenant);
         for (ConnectorConfiguration config : configs) {
-            OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION,
+            OptionPK optionPK = new OptionPK(Utils.OPTION_CATEGORY_CONFIGURATION,
                     getConnectorOptionKey(config.getIdentifier()));
             tenantOptionApi.delete(optionPK);
         }
     }
 
     public ConnectorConfiguration enableConnection(String identifier, boolean enabled) {
-        final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(identifier));
+        final OptionPK option = new OptionPK(Utils.OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(identifier));
         String tenant = subscriptionsService.getTenant();
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
@@ -167,7 +167,7 @@ public class ConnectorConfigurationComponent {
             configuration.enabled = enabled;
             log.debug("Tenant {} - Setting connection: {}:", tenant, configuration.enabled);
             final String configurationJson = objectMapper.writeValueAsString(configuration);
-            optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
+            optionRepresentation.setCategory(Utils.OPTION_CATEGORY_CONFIGURATION);
             optionRepresentation.setKey(getConnectorOptionKey(identifier));
             optionRepresentation.setValue(configurationJson);
             tenantOptionApi.save(optionRepresentation);

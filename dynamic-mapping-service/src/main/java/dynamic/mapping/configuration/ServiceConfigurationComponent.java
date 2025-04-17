@@ -44,6 +44,7 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapping.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -65,8 +66,6 @@ public class ServiceConfigurationComponent {
     public String getSampleMappingsOutbound_01() {
         return validateAndConvert(sampleMappingsOutbound_01);
     }
-
-    private static final String OPTION_CATEGORY_CONFIGURATION = "dynMappingService";
 
     private static final String OPTION_KEY_SERVICE_CONFIGURATION = "service.configuration";
 
@@ -258,13 +257,13 @@ public class ServiceConfigurationComponent {
 
         final String configurationJson = objectMapper.writeValueAsString(configuration);
         final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(
-                OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION, configurationJson);
+                Utils.OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION, configurationJson);
         tenantOptionApi.save(optionRepresentation);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {
         final OptionPK option = new OptionPK();
-        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
+        option.setCategory(Utils.OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
         ServiceConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
             ServiceConfiguration rt = null;
@@ -293,7 +292,7 @@ public class ServiceConfigurationComponent {
     }
 
     public void deleteServiceConfigurations(String tenant) {
-        OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION);
+        OptionPK optionPK = new OptionPK(Utils.OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION);
         tenantOptionApi.delete(optionPK);
     }
 
