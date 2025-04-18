@@ -75,11 +75,11 @@ export class CodeComponent implements OnInit {
     if (href.match(/sag-ps-pkg-dynamic-mapping\/node3\/codeTemplate\/inbound/g)) {
       this.templateType = TemplateType.INBOUND;
       this.defaultTemplate = TemplateType.INBOUND.toString();
-      this.codeEditorHelp = `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript.`;
+      this.codeEditorHelp = `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`;
     } else if (href.match(/sag-ps-pkg-dynamic-mapping\/node3\/codeTemplate\/outbound/g)) {
       this.templateType = TemplateType.OUTBOUND;
       this.defaultTemplate = TemplateType.OUTBOUND.toString();
-      this.codeEditorHelp = `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript.`;
+      this.codeEditorHelp = `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`;
     } else {
       this.templateType = TemplateType.SHARED;
       this.defaultTemplate = TemplateType.SHARED.toString();

@@ -50,7 +50,7 @@ export class CodeTemplateTabFactory implements TabFactory {
         path: `sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate/others`,
         priority: 940,
         label: 'System, shared',
-        icon: 'swipe-down',
+        icon: 'processor',
         orientation: 'horizontal'
       } as Tab);
       return merge(of(tabs)).pipe(mergeAll(), toArray());
