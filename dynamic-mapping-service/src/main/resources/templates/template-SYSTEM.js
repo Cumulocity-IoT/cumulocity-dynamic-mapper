@@ -12,7 +12,7 @@
 const ArrayList = Java.type('java.util.ArrayList');
 const HashMap = Java.type('java.util.HashMap');
 
-/**
+/*
  * @class SubstitutionResult
  * @classdesc Represents the result of a substitution extraction operation.
  * Contains a map of substitution values and status information about the extraction process.
@@ -32,7 +32,7 @@ const HashMap = Java.type('java.util.HashMap');
  */
 const SubstitutionResult = Java.type('dynamic.mapping.processor.model.SubstitutionResult');
 
-/**
+/*
  * Represents a value for substitution during the mapping process.
  * 
  * @class
@@ -50,7 +50,7 @@ const SubstitutionResult = Java.type('dynamic.mapping.processor.model.Substituti
 const SubstitutionValue = Java.type('dynamic.mapping.processor.model.SubstituteValue');
 
 
-/**
+/*
  * Enum of data types that describe the extracted data's format during mapping.
  * 
  * @typedef {string} TYPE
@@ -63,7 +63,7 @@ const SubstitutionValue = Java.type('dynamic.mapping.processor.model.SubstituteV
  */
 const TYPE = Java.type('dynamic.mapping.processor.model.SubstituteValue$TYPE');
 
-/**
+/*
  * Enum of available substitution modes that control how values are processed during mapping.
  * 
  * @typedef {string} RepairStrategy
@@ -76,7 +76,7 @@ const TYPE = Java.type('dynamic.mapping.processor.model.SubstituteValue$TYPE');
  */
 const RepairStrategy = Java.type('dynamic.mapping.processor.model.RepairStrategy');
 
-/**
+/*
  * Extracts data from the source payload to be used in substitutions during mapping.
  * 
  * This function is called during the evaluation at runtime to define the substitution values
