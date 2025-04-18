@@ -9,11 +9,11 @@ import com.jayway.jsonpath.PathNotFoundException;
 
 public class SubstituteValue implements Cloneable{
     public static enum TYPE {
-        ARRAY,
-        IGNORE,
-        NUMBER,
-        OBJECT,
-        TEXTUAL,
+         ARRAY, //                       Extracted is is an array
+         IGNORE, //                      Extracted should be ignored
+         NUMBER, //                      Extracted is is a number
+         OBJECT, //                      Extracted is is an object, e.g.  {"c8y_ThreePhaseElectricityMeasurement": {"A+": { "value": 435, "unit": "kWh" }}}
+         TEXTUAL, //                     Extracted is is a text/ string
     }
 
     public Object value;

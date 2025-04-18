@@ -22,10 +22,10 @@
 package dynamic.mapping.processor.model;
 
 public enum RepairStrategy {
-    DEFAULT,
-    USE_FIRST_VALUE_OF_ARRAY,
-    USE_LAST_VALUE_OF_ARRAY,
+    DEFAULT, // Process substitution as defined                  
+    USE_FIRST_VALUE_OF_ARRAY, // If extracted content from the source payload is an array, copy only the first item to the target payload
+    USE_LAST_VALUE_OF_ARRAY, // If extracted content from the source payload is an array, copy only the last item to the target payload
     IGNORE,
-    REMOVE_IF_MISSING_OR_NULL, // remove the node in the target if it the evaluation of the source expression returns undefined, empty. This allows for using mapping with dynamic content
-    CREATE_IF_MISSING, // create the node in the target if it doesn't exist. This allows for using mapping with dynamic content
+    REMOVE_IF_MISSING_OR_NULL, // Remove the node in the target if it the evaluation of the source expression returns undefined, empty. This allows for using mapping with dynamic content
+    CREATE_IF_MISSING, // Create the node in the target if it doesn't exist. This allows for using mapping with dynamic content
 }
