@@ -99,11 +99,11 @@ export class ConnectorLogService {
     // );
     const filteredConnectorStatus$ = this.triggerLogs$.pipe(
       // tap(x => console.log('TriggerLogs In', x, this.filterStatusLog)),
-      switchMap(x => this.eventService.list({
+      switchMap(filter => this.eventService.list({
         pageSize: 1000,
         withTotalPages: false,
         source: this._agentId,
-        ...(x.type !== 'ALL' && { type: x.type })
+        ...(filter.type !== 'ALL' && { type: filter.type })
       })),
       map(({ data }) => data),
       map(events => events
@@ -130,8 +130,8 @@ export class ConnectorLogService {
       filteredConnectorStatus$,
       this.getAllConnectorStatusEvents(),
       this.triggerLogs$.pipe(
-        filter(cmd => cmd.message === '_RESET_'),
-        map(cmd => [cmd])
+        filter(filter => filter.message === '_RESET_'),
+        map(ev => [ev])
       )
     ).pipe(
       scan((acc, val) => {

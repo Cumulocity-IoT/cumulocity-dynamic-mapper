@@ -432,7 +432,6 @@ public class BootstrapService {
                         dispatcherOutbound);
             // Subscriber must be new initialized for the new added connector
             // configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
-
         }
     }
 

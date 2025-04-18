@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import jakarta.validation.Valid;
@@ -343,11 +344,13 @@ public class ConfigurationController {
     }
 
     @PutMapping(value = "/service", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> configureConnectionToBroker(
-            @Valid @RequestBody ServiceConfiguration configuration) {
+    public ResponseEntity<HttpStatus> updateServiceConfiguration(
+            @Valid @RequestBody ServiceConfiguration serviceConfiguration) {
         String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration currentServiceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+
         // don't modify original copy
-        log.info("Tenant {} - Post service configuration: {}", tenant, configuration.toString());
+        log.info("Tenant {} - Post service configuration: {}", tenant, serviceConfiguration.toString());
         // existing code templates
         ServiceConfiguration mergeServiceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         Map<String, CodeTemplate> codeTemplates = mergeServiceConfiguration.getCodeTemplates();
@@ -360,9 +363,9 @@ public class ConfigurationController {
         }
 
         try {
-            configuration.setCodeTemplates(codeTemplates);
-            serviceConfigurationComponent.saveServiceConfiguration(tenant, configuration);
-            if (!configuration.isOutboundMappingEnabled()
+            serviceConfiguration.setCodeTemplates(codeTemplates);
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            if (!serviceConfiguration.isOutboundMappingEnabled()
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
                 configurationRegistry.getNotificationSubscriber().disconnect(tenant);
@@ -370,19 +373,31 @@ public class ConfigurationController {
                     || configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
                             && configurationRegistry.getNotificationSubscriber()
                                     .getDeviceConnectionStatus(tenant) != 200) {
-                List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
-                        .getConnectorConfigurations(tenant);
-                for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                    if (bootstrapService.initializeConnectorByConfiguration(connectorConfiguration, configuration,
-                            tenant) != null)
-                        bootstrapService
-                                .initializeConnectorByConfiguration(connectorConfiguration, configuration, tenant)
-                                .get();
+
+                // Test if OutboundMapping is switched on
+                if (serviceConfiguration.isOutboundMappingEnabled()
+                        && !currentServiceConfiguration.isOutboundMappingEnabled()) {
+                    List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
+                            .getConnectorConfigurations(tenant);
+                    for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
+                        if (bootstrapService.initializeConnectorByConfiguration(connectorConfiguration,
+                                serviceConfiguration,
+                                tenant) != null) {
+                            Future<?> future = bootstrapService
+                                    .initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
+                                            tenant);
+                            if (future != null) {
+                                // You could handle the future asynchronously if needed
+                                // For example, you could submit a task to a thread pool to handle completion
+                            }
+                        }
+                        // Optionally add error handling in a separate thread if needed
+                    }
+                    configurationRegistry.getNotificationSubscriber().initDeviceClient();
                 }
-                configurationRegistry.getNotificationSubscriber().initDeviceClient();
             }
 
-            configurationRegistry.getServiceConfigurations().put(tenant, configuration);
+            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
@@ -485,7 +500,7 @@ public class ConfigurationController {
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate,false);
+            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate, false);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
@@ -512,7 +527,7 @@ public class ConfigurationController {
             if (codeTemplates.containsKey(codeTemplate.id)) {
                 throw new Exception(String.format("Template with id %s already exists", codeTemplate.id));
             }
-            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate,true);
+            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate, true);
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
