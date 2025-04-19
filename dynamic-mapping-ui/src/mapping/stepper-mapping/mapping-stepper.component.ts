@@ -58,7 +58,8 @@ import {
   SharedService,
   SnoopStatus,
   StepperConfiguration,
-  createCustomUuid
+  createCustomUuid,
+  MappingType
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
@@ -747,6 +748,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // this.mapping.code = btoa(this.mapping['_code']);
       this.mapping.code = stringToBase64(this.mapping['_code']);
       delete this.mapping['_code'];
+    }
+    if (this.mapping.mappingType == MappingType.CODE_BASED && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '') ){ 
+      this.alertService.warning("Internal error in editor. Try again!");
+      this.commit.emit();
     }
     this.commit.emit(this.mapping);
   }
