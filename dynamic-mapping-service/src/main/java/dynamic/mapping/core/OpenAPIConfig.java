@@ -16,9 +16,8 @@ public class OpenAPIConfig {
 
     @Bean
     public OpenAPI myOpenAPI() {
-
         Contact contact = new Contact();
-        contact.setName("Stefan Witschel, Christof Strack");
+        contact.setName("Christof Strack, Stefan Witschel");
         contact.setUrl("https://www.cumulocity.com");
 
         License mitLicense = new License()
