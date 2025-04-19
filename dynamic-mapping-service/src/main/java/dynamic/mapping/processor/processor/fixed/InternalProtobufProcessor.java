@@ -56,19 +56,19 @@ public class InternalProtobufProcessor extends BaseProcessorInbound<byte[]> {
                 throw new ProcessingException(e.getMessage());
             }
 
-            context.addToProcessingCache("time", new DateTime(
+            context.addSubstitution("time", new DateTime(
                     payloadProtobuf.getTimestamp())
                     .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-            context.addToProcessingCache("c8y_GenericMeasurement.Module.value",
+            context.addSubstitution("c8y_GenericMeasurement.Module.value",
                     payloadProtobuf.getValue(), TYPE.NUMBER, RepairStrategy.DEFAULT,false);
-            context.addToProcessingCache("type",
+            context.addSubstitution("type",
                     payloadProtobuf.getMeasurementType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
-            context.addToProcessingCache("c8y_GenericMeasurement.Module.unit",
+            context.addSubstitution("c8y_GenericMeasurement.Module.unit",
                     payloadProtobuf.getUnit(), TYPE.NUMBER, RepairStrategy.DEFAULT,false);
 
             // as the mapping uses useExternalId we have to map the id to
             // _IDENTITY_.externalId
-            context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
+            context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
                     payloadProtobuf.getExternalId()
                             .toString(),
                     TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);

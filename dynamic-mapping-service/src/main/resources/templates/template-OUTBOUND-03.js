@@ -34,14 +34,14 @@ function extractFromSource(ctx) {
     // Substitution: String key, Object value, MappingSubstitution.SubstituteValue.TYPE type, RepairStrategy repairStrategy
 
     const w2a_configuration_fragment = new SubstitutionValue(w2a_configuration, TYPE.OBJECT, RepairStrategy.CREATE_IF_MISSING, false);
-    addToSubstitutionsMap(result, 'w2a_configuration', w2a_configuration_fragment);
+    addSubstitution(result, 'w2a_configuration', w2a_configuration_fragment);
 
     //Use C8Y sourceId
     const deviceId = new SubstitutionValue(ctx.getC8YIdentifier(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-    addToSubstitutionsMap(result, '_TOPIC_LEVEL_[2]', deviceId);
+    addSubstitution(result, '_TOPIC_LEVEL_[2]', deviceId);
 
     const method = new SubstitutionValue('PATCH', TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-    addToSubstitutionsMap (result, '_CONTEXT_DATA_.method', method)
+    addSubstitution (result, '_CONTEXT_DATA_.method', method)
 
     return result;
 }

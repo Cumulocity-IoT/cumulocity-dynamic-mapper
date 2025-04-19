@@ -16,7 +16,7 @@ const HashMap = Java.type('java.util.HashMap');
  * @class SubstitutionResult
  * @classdesc Represents the result of a substitution extraction operation.
  * Contains a map of substitution values and status information about the extraction process.
- * This object should be populated using the method addToSubstitutionsMap(result, key, value).
+ * This object should be populated using the method addSubstitution(result, key, value).
  * 
  * @property {Object.<string, SubstitutionValue>} substitutions - Key-value pairs of substitution values
  * 
@@ -25,8 +25,8 @@ const HashMap = Java.type('java.util.HashMap');
  * const result = new SubstitutionResult();
  * 
  * // Add values to the substitutions map
- * addToSubstitutionsMap(result, "temperature", new SubstitutionValue(23.5, TYPE.NUMBER, RepairStrategy.DEFAULT, false));
- * addToSubstitutionsMap(result, "deviceStatus", new SubstitutionValue("ACTIVE", TYPE.TEXTUAL, RepairStrategy.DEFAULT, false));
+ * addSubstitution(result, "temperature", new SubstitutionValue(23.5, TYPE.NUMBER, RepairStrategy.DEFAULT, false));
+ * addSubstitution(result, "deviceStatus", new SubstitutionValue("ACTIVE", TYPE.TEXTUAL, RepairStrategy.DEFAULT, false));
  * 
  * return result;
  */
@@ -90,10 +90,10 @@ const RepairStrategy = Java.type('dynamic.mapping.processor.model.RepairStrategy
  *   @param {string} ctx.getExternalDeviceIdentifier() - Device identifier used in external systems
  *   @param {string} ctx.getC8YDeviceIdentifier() - Cumulocity platform device identifier
  * 
- * @returns {SubstitutionResult} A result object populated using method addToSubstitutionsMap(result, key, value), containing:
+ * @returns {SubstitutionResult} A result object populated using method addSubstitution(result, key, value), containing:
  *   @returns {Object.<string, SubstitutionValue>} substitutions - Key-value pairs of substitution values
  */
-function addToSubstitutionsMap(result, key, value) {
+function addSubstitution(result, key, value) {
     let map = result.getSubstitutions();
     let valuesList = map.get(key);
 

@@ -45,7 +45,7 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
         try {
             Map jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
 
-            context.addToProcessingCache("time", new DateTime(
+            context.addSubstitution("time", new DateTime(
                     jsonObject.get("time"))
                     .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
 
@@ -53,15 +53,15 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
                     jsonObject.get("unit"));
             Map fragmentTemperature = Map.of("T", fragmentTemperatureSeries);
 
-            context.addToProcessingCache("c8y_Fragment_to_remove", null, TYPE.TEXTUAL,
+            context.addSubstitution("c8y_Fragment_to_remove", null, TYPE.TEXTUAL,
                     RepairStrategy.REMOVE_IF_MISSING_OR_NULL, false);
-            context.addToProcessingCache("c8y_Temperature",
+            context.addSubstitution("c8y_Temperature",
                     fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT,false);
-            context.addToProcessingCache("c8y_Temperature",
+            context.addSubstitution("c8y_Temperature",
                     fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT,false);
             // as the mapping uses useExternalId we have to map the id to
             // _IDENTITY_.externalId
-            context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
+            context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
                     jsonObject.get("externalId")
                             .toString(),
                     TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
@@ -72,7 +72,7 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
                 // "unexpected" does not yet exists in the target payload
                 Map fragmentUnexpectedSeries = Map.of("value", jsonObject.get("unexpected"), "unit", "unknown_unit");
                 Map fragmentUnexpected = Map.of("U", fragmentUnexpectedSeries);
-                context.addToProcessingCache("c8y_Unexpected",
+                context.addSubstitution("c8y_Unexpected",
                         fragmentUnexpected, TYPE.OBJECT, RepairStrategy.CREATE_IF_MISSING, false);
                 unexpected = (Number) jsonObject.get("unexpected");
             }

@@ -34,17 +34,17 @@ function extractFromSource(ctx) {
 
     // Add time with key 'time' to result.getSubstitutions()
     // const time = new SubstitutionValue(sourceObject['time'], 'TEXTUAL', 'DEFAULT', false);
-    // addToSubstitutionsMap(result, 'time', time);
+    // addSubstitution(result, 'time', time);
 
     // Define temperature fragment mapping temperature -> c8y_Temperature.T.value/unit
     const temperature = new SubstitutionValue(fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT, false);
     // Add temperature with key 'c8y_TemperatureMeasurement' to result.getSubstitutions()
-    addToSubstitutionsMap(result, 'c8y_TemperatureMeasurement', temperature);
+    addSubstitution(result, 'c8y_TemperatureMeasurement', temperature);
 
     // Define Device Identifier
     const deviceIdentifier = new SubstitutionValue(sourceObject['_TOPIC_LEVEL_'][1], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     // Add deviceIdentifier with key ctx.getGenericDeviceIdentifier() to result.getSubstitutions()
-    addToSubstitutionsMap(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
+    addSubstitution(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
 
     return result;
 }

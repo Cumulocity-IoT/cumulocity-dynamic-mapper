@@ -55,17 +55,17 @@ public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<b
             throw new ProcessingException(e.getMessage());
         }
 
-        context.addToProcessingCache("time", new DateTime(
+        context.addSubstitution("time", new DateTime(
                 payloadProtobuf.getTimestamp())
                 .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
-        context.addToProcessingCache("text",
+        context.addSubstitution("text",
                 payloadProtobuf.getTxt(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
-        context.addToProcessingCache("type", 
+        context.addSubstitution("type", 
                 payloadProtobuf.getEventType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
 
         // as the mapping uses useExternalId we have to map the id to
         // _IDENTITY_.externalId
-        context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
+        context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
                 payloadProtobuf.getExternalId()
                         .toString(),
                 TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);

@@ -955,21 +955,21 @@ function extractFromSource(ctx) {
     const result = new SubstitutionResult();
 
     const fragmentPressureSV = new SubstitutionValue(fragmentPressure, TYPE.OBJECT, RepairStrategy.CREATE_IF_MISSING, false);
-    addToSubstitutionsMap(result, 'c8y_Pressure', fragmentPressureSV);
+    addSubstitution(result, 'c8y_Pressure', fragmentPressureSV);
 
     const typeSV = new SubstitutionValue("c8y_PressureMeasurement", TYPE.TEXT, RepairStrategy.CREATE_IF_MISSING, false);
-    addToSubstitutionsMap(result, 'type', typeSV);
+    addSubstitution(result, 'type', typeSV);
 
     const source = {
         id: ctx.getC8YIdentifier()
     };
     const sourceFragmentSV = new SubstitutionValue(source, TYPE.OBJECT, RepairStrategy.CREATE_IF_MISSING, false);
-    addToSubstitutionsMap(result, 'source', sourceFragmentSV);
+    addSubstitution(result, 'source', sourceFragmentSV);
 
     //Set time mapping time -> time
     const time = new Date().toISOString();
     const timeSV = new SubstitutionValue(time, TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
-    addToSubstitutionsMap(result, 'time', timeSV);
+    addSubstitution(result, 'time', timeSV);
 
     return result;
 }

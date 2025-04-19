@@ -25,16 +25,16 @@ function extractFromSource(ctx) {
     // SubstitutionValue: String key, Object value, SubstituteValue.TYPE type, RepairStrategy repairStrategy
     //Define time mapping time -> time
     const time = new SubstitutionValue(sourceObject['time'], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-    addToSubstitutionsMap(result, 'time', time);
+    addSubstitution(result, 'time', time);
 
     const temperature = new SubstitutionValue(fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT, false);
-    addToSubstitutionsMap(result, 'Temperature', temperature);
+    addSubstitution(result, 'Temperature', temperature);
 
     const source = {
         id: ctx.getC8YIdentifier()
     };
     const sourceFragment = new SubstitutionValue(source, TYPE.OBJECT, RepairStrategy.CREATE_IF_MISSING, false);
-    addToSubstitutionsMap(result, 'source', sourceFragment);
+    addSubstitution(result, 'source', sourceFragment);
 
     return result;
 }

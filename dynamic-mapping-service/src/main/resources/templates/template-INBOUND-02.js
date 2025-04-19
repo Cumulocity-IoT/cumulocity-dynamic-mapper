@@ -42,16 +42,16 @@ function extractFromSource(ctx) {
             RepairStrategy.DEFAULT,
             true
         );
-        addToSubstitutionsMap(result, 'c8y_TemperatureMeasurement.T.value', temperatureValue);
+        addSubstitution(result, 'c8y_TemperatureMeasurement.T.value', temperatureValue);
     }
 
     //Define Device Identifier
     const deviceIdentifier = new SubstitutionValue(sourceObject['_TOPIC_LEVEL_'][1], TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-    addToSubstitutionsMap(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
+    addSubstitution(result, ctx.getGenericDeviceIdentifier(), deviceIdentifier);
 
     // Overwrite api 
     const api = new SubstitutionValue('ALARM', TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-    addToSubstitutionsMap(result, '_CONTEXT_DATA_.api', api);
+    addSubstitution(result, '_CONTEXT_DATA_.api', api);
 
     return result;
 }

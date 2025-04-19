@@ -69,21 +69,21 @@ public class ProcessorExtensionCustomAlarm
         try {
             Map<?, ?> jsonObject = (Map) Json.parseJson(new String(context.getPayload(), "UTF-8"));
 
-            context.addToProcessingCache("time", new DateTime(
+            context.addSubstitution("time", new DateTime(
                     jsonObject.get("time"))
                     .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-            context.addToProcessingCache("type",
+            context.addSubstitution("type",
                     jsonObject.get("type")
                             .toString(),
                     TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
             Object se = jsonObject.get("alarmType");
-            context.addToProcessingCache("severity", se.toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+            context.addSubstitution("severity", se.toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
             Object message = jsonObject.get("message");
-            context.addToProcessingCache("text", message.toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+            context.addSubstitution("text", message.toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
 
             // as the mapping uses useExternalId we have to map the id to
             // _IDENTITY_.externalId
-            context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
+            context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
                     jsonObject.get("externalId")
                             .toString(),
                     TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);

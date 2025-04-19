@@ -9,7 +9,7 @@ const ArrayList = Java.type('java.util.ArrayList');
 const HashMap = Java.type('java.util.HashMap');
 
 // Helper function to add a SubstitutionValue to the map
-function addToSubstitutionsMap(result, key, value) {
+function addSubstitution(result, key, value) {
     let map = result.getSubstitutions();
     let valuesList = map.get(key);
 

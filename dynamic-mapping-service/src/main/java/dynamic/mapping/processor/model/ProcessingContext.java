@@ -138,7 +138,7 @@ public class ProcessingContext<O> {
         errors.add(processingException);
     }
 
-    public void addToProcessingCache(String key, Object value, SubstituteValue.TYPE type,
+    public void addSubstitution(String key, Object value, SubstituteValue.TYPE type,
             RepairStrategy repairStrategy, boolean expandArray) {
         processingCache.put(key,
                 new ArrayList<>(
