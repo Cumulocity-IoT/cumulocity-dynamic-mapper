@@ -1,12 +1,10 @@
 /**
- * @name Template overriding methods, OUTBOUND
+ * @name Template overriding method: POST, PATCH, OUTBOUND
  * @description This sample shows how to perform a partial update using the PATCH method
  * @templateType OUTBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true
- * 
- * This sample shows how to perform a partial update using the PATCH method
  */
 
 function extractFromSource(ctx) {
@@ -40,6 +38,7 @@ function extractFromSource(ctx) {
     const deviceId = new SubstitutionValue(ctx.getC8YIdentifier(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     addSubstitution(result, '_TOPIC_LEVEL_[2]', deviceId);
 
+    //Set method to PATCH to partially update a nested property
     const method = new SubstitutionValue('PATCH', TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     addSubstitution (result, '_CONTEXT_DATA_.method', method)
 

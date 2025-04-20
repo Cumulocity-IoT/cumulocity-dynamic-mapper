@@ -5,8 +5,6 @@
  * @defaultTemplate true
  * @internal true
  * @readonly true
- * 
- * System code containing the required definitions of the java classes
  */
 
 const ArrayList = Java.type('java.util.ArrayList');
