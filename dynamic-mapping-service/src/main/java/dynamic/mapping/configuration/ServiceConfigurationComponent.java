@@ -94,9 +94,14 @@ public class ServiceConfigurationComponent {
      * category in TemplateType should be registered with its own key instead of
      * createCustomUuid
      */
-    public void initCodeTemplates(ServiceConfiguration configuration) {
+    public void initCodeTemplates(ServiceConfiguration configuration, Boolean overrideSystem) {
         Map<String, CodeTemplate> codeTemplates = new HashMap<>();
         Map<TemplateType, Boolean> defaultTemplateRegistered = new HashMap<>();
+
+        if (overrideSystem) {
+            codeTemplates = configuration.getCodeTemplates();
+            codeTemplates.entrySet().removeIf(entry -> entry.getValue().internal);
+        }
 
         try {
             // Initialize the defaultTemplateRegistered map with false for each template

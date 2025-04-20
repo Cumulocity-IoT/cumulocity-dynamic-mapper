@@ -22,15 +22,16 @@ import {
   OnInit, ViewEncapsulation
 } from '@angular/core';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { FormGroup } from '@angular/forms';
-import { ManageTemplateComponent, createCustomUuid } from '../../shared';
+import { ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { BehaviorSubject } from 'rxjs';
 import { Router } from '@angular/router';
+import { HttpStatusCode } from '@angular/common/http';
 
 let initializedMonaco = false;
 
@@ -141,6 +142,20 @@ export class CodeComponent implements OnInit {
       }
     });
   }
+
+
+  async onResetSystemCodeTemplate() {
+    const response1 = await this.sharedService.runOperation(
+      { operation: Operation.INIT_CODE_TEMPLATES}
+    );
+    // console.log('Details reconnect2NotificationEndpoint', response1);
+    if (response1.status === HttpStatusCode.Created) {
+      this.alertService.success(gettext('Reset system code template.'));
+    } else {
+      this.alertService.danger(gettext('Failed to reset system code template!'));
+    }
+  }
+
 
   async onSaveCodeTemplate() {
     if (this.codeTemplateDecoded) {

@@ -28,6 +28,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import jakarta.validation.Valid;
+import dynamic.mapping.configuration.CodeTemplate;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -144,10 +145,12 @@ public class OperationController {
                     return handleRefreshNotifications(tenant);
                 case CLEAR_CACHE:
                     return handleClearCache(tenant, parameters);
-                case UPDATE_TEMPLATE:
+                case UPDATE_SNOOPED_TEMPLATE:
                     return handleUpdateTemplate(tenant, parameters);
                 case ADD_SAMPLE_MAPPINGS:
                     return handleAddSampleMappings(tenant, parameters);
+                case INIT_CODE_TEMPLATES:
+                    return handleInitCodeTemplates(tenant, parameters);
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
@@ -177,6 +180,24 @@ public class OperationController {
                 mappingComponent.createMapping(tenant, mapping);
             });
         }
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    private ResponseEntity<?> handleInitCodeTemplates(String tenant, Map<String, String> parameters) throws Exception {
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        log.debug("Tenant {} - Init system code template", tenant);
+
+        // Initialize code templates from properties if not already set
+        serviceConfigurationComponent.initCodeTemplates(serviceConfiguration, true);
+
+        try {
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+        } catch (JsonProcessingException ex) {
+            log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

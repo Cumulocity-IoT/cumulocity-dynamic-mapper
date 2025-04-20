@@ -211,7 +211,7 @@ public class BootstrapService {
         Map<String, CodeTemplate> codeTemplates = serviceConfig.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
-            serviceConfigurationComponent.initCodeTemplates(serviceConfig);
+            serviceConfigurationComponent.initCodeTemplates(serviceConfig, false);
             requiresSave = true;
         }
 
