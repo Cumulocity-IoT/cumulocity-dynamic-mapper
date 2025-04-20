@@ -1,12 +1,10 @@
 /**
- * @description Default OUTBOUND template
- * @name Default OUTBOUND template, use external identifier
+ * @description Default template, OUTBOUND
+ * @name Default template using external identifier, OUTBOUND template
  * @templateType OUTBOUND
  * @defaultTemplate true
  * @internal true
  * @readonly true
- * 
- * Default OUTBOUND template, use external identifier
  */
 
 function extractFromSource(ctx) {

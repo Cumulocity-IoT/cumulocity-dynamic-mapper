@@ -1,12 +1,10 @@
 /**
- * @name OUTBOUND using C8Y source id
+ * @name Template using C8Y source id, OUTBOUND
  * @description This sample show how to create a new outgoing payload using C8Y source id
  * @templateType OUTBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true
- * 
- * This sample show how to create a new outgoing payload
  */
 
 function extractFromSource(ctx) {

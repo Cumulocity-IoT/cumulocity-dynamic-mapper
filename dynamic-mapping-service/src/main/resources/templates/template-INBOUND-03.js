@@ -1,6 +1,6 @@
 /**
- * @name Snippet shows overriding API INBOUND
- * @description Snippet shows overriding API INBOUND
+ * @name Snippet shows overriding API, INBOUND
+ * @description Snippet shows overriding API, INBOUND
  * @templateType INBOUND
  * @defaultTemplate false
  * @internal true

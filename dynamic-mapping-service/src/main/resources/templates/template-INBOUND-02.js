@@ -1,24 +1,18 @@
 /**
- * @name INBOUND multiple measurements
- * @description INBOUND template to generate multiple measurements
+ * @name Template creates multiple measurements, INBOUND
+ * @description Template creates multiple measurements, INBOUND
  * @templateType INBOUND
  * @defaultTemplate false
  * @internal true
  * @readonly true
- * 
- * INBOUND template to generate multiple measurements
- */
 
-/**
-   sample to generate multiple measurements
-  
-
-   payload
-   {
-       "temperature": [139.0, 150.0],
-       "externalId": "berlin_01"
-    }
-   topic 'testGraalsMulti/berlin_01'
+ * sample to generate multiple measurements
+ *   payload
+ *   {
+ *     "temperature": [139.0, 150.0],
+ *     "externalId": "berlin_01"
+ *  }
+ * topic 'testGraalsMulti/berlin_01'
 */
 
 function extractFromSource(ctx) {

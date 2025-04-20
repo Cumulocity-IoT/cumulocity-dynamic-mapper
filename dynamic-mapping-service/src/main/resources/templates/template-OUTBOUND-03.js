@@ -1,5 +1,5 @@
 /**
- * @name OUTBOUND setting methods
+ * @name Template overriding methods, OUTBOUND
  * @description This sample shows how to perform a partial update using the PATCH method
  * @templateType OUTBOUND
  * @defaultTemplate false

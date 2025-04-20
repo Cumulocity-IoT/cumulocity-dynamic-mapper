@@ -1,15 +1,12 @@
 /**
- * @name Default INBOUND, one measurement
- * @description Default INBOUND template to generate one measurement
+ * @name Default template, one measurement, INBOUND
+ * @description Default template, one measurement, INBOUND
  * @templateType INBOUND
  * @defaultTemplate true
  * @internal true
  * @readonly true
- * 
- * Default INBOUND template to generate one measurement
-
+ 
  * sample to generate one measurement
-  
  * payload
  * {
  *     "temperature": 139.0,
