@@ -32,6 +32,7 @@ import { ManageTemplateComponent, Operation, createCustomUuid } from '../../shar
 import { BehaviorSubject } from 'rxjs';
 import { Router } from '@angular/router';
 import { HttpStatusCode } from '@angular/common/http';
+import { createCompletionProvider } from '../../mapping/shared/stepper.model';
 
 let initializedMonaco = false;
 
@@ -102,6 +103,7 @@ export class CodeComponent implements OnInit {
   async ngAfterViewInit(): Promise<void> {
     if (!initializedMonaco) {
       const monaco = await loadMonacoEditor();
+            monaco.languages.registerCompletionItemProvider('javascript', createCompletionProvider(monaco));
       if (monaco) {
         initializedMonaco = true;
       }

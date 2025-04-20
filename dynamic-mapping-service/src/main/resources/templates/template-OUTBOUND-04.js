@@ -1,5 +1,5 @@
 /**
- * @name Snippet shows setting method, publishTopic, OUTBOUND
+ * @name Snippet shows setting method, publishTopic
  * @description This sample shows how to perform a partial update using the PATCH method
  * @templateType OUTBOUND
  * @defaultTemplate false

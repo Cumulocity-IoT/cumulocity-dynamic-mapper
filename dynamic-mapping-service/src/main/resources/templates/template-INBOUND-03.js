@@ -1,6 +1,6 @@
 /**
- * @name Snippet shows overriding API, INBOUND
- * @description Snippet shows overriding API: ALARM, EVENT MEASUREMENT, ... , INBOUND
+ * @name Snippet shows overriding API
+ * @description Snippet shows overriding API: ALARM, EVENT MEASUREMENT, ...
  * @templateType INBOUND
  * @defaultTemplate false
  * @internal true

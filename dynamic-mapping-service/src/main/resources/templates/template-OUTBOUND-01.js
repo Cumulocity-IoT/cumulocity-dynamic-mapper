@@ -1,6 +1,6 @@
 /**
- * @description Default template, OUTBOUND
- * @name Default template using external identifier, OUTBOUND
+ * @description Default template
+ * @name Default template using external identifier
  * @templateType OUTBOUND
  * @defaultTemplate true
  * @internal true

@@ -1,11 +1,11 @@
 /**
- * @name Default template, one measurement, INBOUND
- * @description Default template, one measurement, INBOUND
+ * @name Default template, one measurement
+ * @description Default template, one measurement
  * @templateType INBOUND
  * @defaultTemplate true
  * @internal true
  * @readonly true
- 
+
  * sample to generate one measurement
  * payload
  * {

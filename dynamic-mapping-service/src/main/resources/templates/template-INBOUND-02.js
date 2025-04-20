@@ -1,6 +1,6 @@
 /**
- * @name Template creates multiple measurements, INBOUND
- * @description Template creates multiple measurements, INBOUND
+ * @name Template creates multiple measurements
+ * @description Template creates multiple measurements
  * @templateType INBOUND
  * @defaultTemplate false
  * @internal true

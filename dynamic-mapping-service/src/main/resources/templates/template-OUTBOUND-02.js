@@ -1,5 +1,5 @@
 /**
- * @name Template using C8Y source id, OUTBOUND
+ * @name Template using C8Y source id
  * @description This sample show how to create a new outgoing payload using C8Y source id
  * @templateType OUTBOUND
  * @defaultTemplate false
