@@ -47,6 +47,7 @@ export interface ProcessingContext {
   processingCache: Map<string, SubstituteValue[]>;
   sendPayload?: boolean;
   sourceId?: string;
+  logs?: any[];
 }
 
 export enum ProcessingType {
@@ -209,15 +210,61 @@ export function extractLineAndColumn(stackTraceLine) {
   return null;
 }
 
+// export function evaluateWithArgs(codeString, ...args) {
+//   // Add 'Java' as the first parameter
+//   const paramNames = ['Java'].concat(args.map((_, i) => `arg${i}`)).join(',');
+
+//   // Create the function with Java and your other parameters
+//   const fn = new Function(paramNames, codeString);
+
+//   // Call the function with Java as the first argument, followed by your other args
+//   return fn(Java, ...args);
+// }
+
 export function evaluateWithArgs(codeString, ...args) {
-  // Add 'Java' as the first parameter
-  const paramNames = ['Java'].concat(args.map((_, i) => `arg${i}`)).join(',');
+  // Capture console output
+  const logs = [];
+  const originalConsoleLog = console.log;
 
-  // Create the function with Java and your other parameters
-  const fn = new Function(paramNames, codeString);
+  // Create a scoped console.log override that captures output
+  const scopedConsole = {
+    log: (...logArgs) => {
+      logs.push(logArgs.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '));
+      // Still call the original for debugging visibility if needed
+      originalConsoleLog.apply(console, logArgs);
+    }
+  };
 
-  // Call the function with Java as the first argument, followed by your other args
-  return fn(Java, ...args);
+  try {
+    // Add 'Java' and 'console' as parameters
+    const paramNames = ['Java', 'console'].concat(args.map((_, i) => `arg${i}`)).join(',');
+
+    // Create the function with Java, console, and your other parameters
+    const fn = new Function(paramNames, codeString);
+
+    // Call the function with Java and our scoped console as arguments, followed by your other args
+    const result = fn(Java, scopedConsole, ...args);
+
+    // Return both the evaluation result and the logs
+    return {
+      result,
+      logs,
+      success: true
+    };
+  } catch (error) {
+    // Return the error and logs in a structured way
+    return {
+      error: {
+        message: error.message,
+        stack: error.stack,
+        location: extractLineAndColumn(error.stack)
+      },
+      logs,
+      success: false
+    };
+  } finally {
+    // No need to restore console.log as we used a scoped version
+  }
 }
 
 export function evaluateInCurrentScope(codeString) {

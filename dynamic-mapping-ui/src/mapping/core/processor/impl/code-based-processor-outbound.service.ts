@@ -69,13 +69,27 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
       API[mapping.targetAPI].identifier
     );
 
-    let result;
-
     try {
 
       const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), JSON.stringify(context.payload));
-      // const result = this.evaluateInCurrentScope(codeToRun);
-      result = evaluateWithArgs(codeToRun, ctx);
+
+      // Call our modified evaluateWithArgs
+      const evalResult = evaluateWithArgs(codeToRun, ctx);
+
+      // Store logs in context if needed
+      context.logs = evalResult.logs;
+
+      if (!evalResult.success) {
+        // Handle evaluation error
+        const error = evalResult.error;
+        context.errors.push(error.message);
+        console.error("Error during testing", error);
+        context.logs.push(error.stack);
+        throw new Error(`Evaluation failed: ${error.message}`);
+      }
+
+      // Continue with successful result
+      const result = evalResult.result;
       const substitutions = result.getSubstitutions();
       const keys = substitutions.keySet();
 
@@ -104,14 +118,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
       context.sourceId = sourceId.toString();
 
     } catch (error) {
-
-      context.errors.push(error.message);
-      console.error("Error during testing", error);
-      const loc = extractLineAndColumn(error.stack);
-      throw (new Error(`Evaluation failed: ${error.message}, at ${loc.line - 3}:${loc.column}`));
-
+      throw error;
     }
-
   }
-
 }

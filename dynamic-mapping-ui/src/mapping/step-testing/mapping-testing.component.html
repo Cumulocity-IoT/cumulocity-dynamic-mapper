@@ -68,8 +68,9 @@
             </div>
           </div>
         </div>
-        <div class="legend form-block col-lg-10 col-lg-offset-1"></div>
-        <div class="row" [hidden]="mapping.direction === Direction.OUTBOUND">
+        <div class="legend form-block col-lg-10 col-lg-offset-1" *ngIf="mapping.direction !== Direction.OUTBOUND">
+        </div>
+        <div class="row" *ngIf="mapping.direction !== Direction.OUTBOUND">
           <div class="col-lg-5 col-lg-offset-1 column-right-border"></div>
           <div class="col-lg-5 column-left-border">
             <div class="form-group">
@@ -84,6 +85,26 @@
               <d11r-mapping-json-editor2 [options]="editorOptionsTesting" [class]="'jse-main-tiny'"
                 [data]="testingModel.response" #editorTestingResponse id="editorTestingResponse">
               </d11r-mapping-json-editor2>
+            </div>
+          </div>
+        </div>
+        <div class="legend form-block col-lg-10 col-lg-offset-1" *ngIf="mapping.mappingType === MappingType.CODE_BASED">
+        </div>
+        <div class="row" *ngIf="mapping.mappingType === MappingType.CODE_BASED">
+          <div class="col-lg-10 col-lg-offset-1">
+
+            <div class="form-group">
+              <div style="display: flex">
+                <label>Console output&nbsp;</label>
+                <h6>
+                  <span class="badge badge-success">{{
+                    selectedResult$ | async
+                    }}</span>
+                </h6>
+              </div>
+              <textarea class="form-control" _c8y-textarea-autoresize readonly="true" style="font-family: Courier, monospace">{{
+                testContext?.logs?.join('\n')
+            }}</textarea>
             </div>
           </div>
         </div>
@@ -105,12 +126,12 @@
     [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
     Reset Transform
   </button>
-  <div class= "m-l-8" style="display: inline-block">
-    <button type="button" class="btn btn-default btn-sm"
-      [disabled]="disableTestSending()"
-      (click)="onSendTest()">
+  <div class="m-l-8" style="display: inline-block">
+    <button type="button" class="btn btn-default btn-sm" [disabled]="disableTestSending()" (click)="onSendTest()">
       Send Test Message
     </button>
-    <button type="button" placement="right" [popover]="'Send Test Message is only supported for mappings that use an external id!'" triggers="focus" class="btn-help" aria-label="Help content"></button>
+    <button type="button" placement="right"
+      [popover]="'Send Test Message is only supported for mappings that use an external id!'" triggers="focus"
+      class="btn-help" aria-label="Help content"></button>
   </div>
 </div>
