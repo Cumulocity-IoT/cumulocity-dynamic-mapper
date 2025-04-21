@@ -235,4 +235,29 @@ export class SubstitutionContext {
   getPayload() {
     return this.#payload;
   }
+
 }
+
+// export function tracePayload(ctx) {
+//   const sourceObject = JSON.parse(ctx.getPayload());
+//   for (var key in sourceObject) {
+//     console.log(`Payload key: ${key}, value: ${sourceObject[key]}`);
+//   }
+//   console.log(`Identifier sourceId: ${ctx.getC8YIdentifier()}`);
+//   console.log(`Identifier externalIdentifier: ${ctx.getExternalIdentifier()}`);
+//   console.log(`Identifier genericDeviceIdentifier: ${ctx.getGenericDeviceIdentifier()}`);
+// }
+
+// export function addSubstitution(result, key, value) {
+//   let map = result.getSubstitutions();
+//   let valuesList = map.get(key);
+
+//   // If the list doesn't exist for this key, create it
+//   if (valuesList === null || valuesList === undefined) {
+//       valuesList = new ArrayList();
+//       map.put(key, valuesList);
+//   }
+
+//   // Add the value to the list
+//   valuesList.add(value);
+// }

@@ -45,6 +45,11 @@ export const STEP_TEST_MAPPING = 4;
  * @param {Monaco} monaco - The Monaco instance
  * @returns {Object} The completion provider
  */
+/**
+ * Creates a completion provider for custom JavaScript classes in Monaco Editor
+ * @param {Monaco} monaco - The Monaco instance
+ * @returns {Object} The completion provider
+ */
 export function createCompletionProvider(monaco) {
   // Register our custom classes and enums
   const customClasses = [
@@ -156,10 +161,28 @@ export function createCompletionProvider(monaco) {
     }
   ];
 
+  // Add the utility functions
+  const utilityFunctions = [
+    {
+      name: 'tracePayload',
+      parameters: ['ctx'],
+      returnType: 'void',
+      documentation: 'Logs payload details to the console for debugging purposes. Shows all keys in the payload and the identifiers from the context.',
+      description: 'Trace payload contents'
+    },
+    {
+      name: 'addSubstitution',
+      parameters: ['result', 'key', 'value'],
+      returnType: 'void',
+      documentation: 'Adds a substitution value to the result for a specific key. Creates a new ArrayList for the key if it doesn\'t exist yet.',
+      description: 'Add value to substitution result'
+    }
+  ];
+
   // Return the provider object
   return {
-    triggerCharacters: ['.', 'new '],
-    provideCompletionItems: function(model, position) {
+    triggerCharacters: ['.', ' ', '('],
+    provideCompletionItems: function (model, position) {
       const textUntilPosition = model.getValueInRange({
         startLineNumber: position.lineNumber,
         startColumn: 1,
@@ -226,8 +249,8 @@ export function createCompletionProvider(monaco) {
                   documentation: {
                     value: `**${method.returnType}** ${method.name}(${params})\n\n${method.documentation}`
                   },
-                  insertText: method.parameters.length > 0 
-                    ? `${method.name}(${method.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})` 
+                  insertText: method.parameters.length > 0
+                    ? `${method.name}(${method.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`
                     : `${method.name}()`,
                   insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                   range: range
@@ -260,8 +283,8 @@ export function createCompletionProvider(monaco) {
       customClasses.forEach(cls => {
         suggestions.push({
           label: cls.name,
-          kind: cls.isEnum 
-            ? monaco.languages.CompletionItemKind.Enum 
+          kind: cls.isEnum
+            ? monaco.languages.CompletionItemKind.Enum
             : monaco.languages.CompletionItemKind.Class,
           documentation: {
             value: cls.documentation
@@ -271,15 +294,32 @@ export function createCompletionProvider(monaco) {
         });
       });
 
+      // Utility function completion
+      utilityFunctions.forEach(func => {
+        suggestions.push({
+          label: {
+            label: `${func.name}(${func.parameters.join(', ')})`,
+            description: func.description
+          },
+          kind: monaco.languages.CompletionItemKind.Function,
+          documentation: {
+            value: `**${func.returnType}** ${func.name}(${func.parameters.join(', ')})\n\n${func.documentation}`
+          },
+          insertText: `${func.name}(${func.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          range: range
+        });
+      });
+
       // Provide new object creation completions
       const newMatch = textUntilPosition.match(/new\s+(\w*)$/);
       if (newMatch) {
         customClasses.forEach(cls => {
           if (!cls.isEnum) {
-            const constructorParams = cls.properties 
+            const constructorParams = cls.properties
               ? cls.properties.map(p => p.name).join(', ')
               : '';
-            
+
             suggestions.push({
               label: {
                 label: cls.name,
@@ -290,8 +330,8 @@ export function createCompletionProvider(monaco) {
                 value: `Create a new ${cls.name} instance:\n\n\`\`\`javascript\nnew ${cls.name}(${constructorParams})\n\`\`\``
               },
               insertText: cls.name + (
-                cls.properties && cls.properties.length > 0 
-                  ? `(${cls.properties.map((_, i) => `\${${i + 1}}`).join(', ')})` 
+                cls.properties && cls.properties.length > 0
+                  ? `(${cls.properties.map((_, i) => `\${${i + 1}}`).join(', ')})`
                   : '()'
               ),
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
@@ -299,6 +339,52 @@ export function createCompletionProvider(monaco) {
             });
           }
         });
+      }
+
+      // Check if we're inside a function call for better parameter suggestions
+      const funcCallMatch = textUntilPosition.match(/(\w+)\s*\(\s*$/);
+      if (funcCallMatch) {
+        const funcName = funcCallMatch[1];
+        const matchedFunc = utilityFunctions.find(f => f.name === funcName);
+
+        if (matchedFunc) {
+          // We're inside a function call, offer parameter suggestions
+          if (matchedFunc.name === 'tracePayload') {
+            suggestions.push({
+              label: 'ctx',
+              kind: monaco.languages.CompletionItemKind.Variable,
+              documentation: 'The SubstitutionContext object',
+              insertText: 'ctx',
+              range: range
+            });
+          } else if (matchedFunc.name === 'addSubstitution') {
+            suggestions.push({
+              label: 'result',
+              kind: monaco.languages.CompletionItemKind.Variable,
+              documentation: 'The SubstitutionResult object',
+              insertText: 'result',
+              range: range
+            });
+
+            suggestions.push({
+              label: 'key',
+              kind: monaco.languages.CompletionItemKind.Variable,
+              documentation: 'The key for the substitution',
+              insertText: '"${1:keyName}"',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range: range
+            });
+
+            suggestions.push({
+              label: 'new SubstituteValue()',
+              kind: monaco.languages.CompletionItemKind.Value,
+              documentation: 'Create a new SubstituteValue',
+              insertText: 'new SubstituteValue(${1:value}, ${2:TYPE.TEXTUAL}, ${3:RepairStrategy.DEFAULT}, ${4:false})',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range: range
+            });
+          }
+        }
       }
 
       return { suggestions };
