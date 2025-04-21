@@ -68,9 +68,9 @@
             </div>
           </div>
         </div>
-        <div class="legend form-block col-lg-10 col-lg-offset-1" *ngIf="mapping.direction !== Direction.OUTBOUND">
+        <div class="legend form-block col-lg-10 col-lg-offset-1" *ngIf="mapping.direction !== Direction.OUTBOUND && mapping.mappingType !== MappingType.CODE_BASED">
         </div>
-        <div class="row" *ngIf="mapping.direction !== Direction.OUTBOUND">
+        <div class="row" *ngIf="mapping.direction !== Direction.OUTBOUND && mapping.mappingType !== MappingType.CODE_BASED">
           <div class="col-lg-5 col-lg-offset-1 column-right-border"></div>
           <div class="col-lg-5 column-left-border">
             <div class="form-group">
@@ -95,14 +95,9 @@
 
             <div class="form-group">
               <div style="display: flex">
-                <label>Console output&nbsp;</label>
-                <h6>
-                  <span class="badge badge-success">{{
-                    selectedResult$ | async
-                    }}</span>
-                </h6>
+                <label>Console output</label>
               </div>
-              <textarea class="form-control" _c8y-textarea-autoresize readonly="true" style="font-family: Courier, monospace">{{
+              <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="font-family: Courier, monospace">{{
                 testContext?.logs?.join('\n')
             }}</textarea>
             </div>
