@@ -20,14 +20,8 @@ function extractFromSource(ctx) {
     //This is the source message as json
     const sourceObject = JSON.parse(ctx.getPayload());
 
-    //Log c8y sourceId
-    //console.log(`C8Y sourceId: ${ctx.getC8YIdentifier()}`);
-    //console.log(`C8Y externalIdentifier: ${ctx.getExternalIdentifier()}`);
+    tracePayload(ctx);
     
-    for (var key in sourceObject) {
-        console.log(`key: ${key}, value: ${sourceObject[key]}`);
-    }
-
     // Define a new Measurement Value for Temperatures by assigning from source
     const fragmentTemperatureSeries = {
         value: sourceObject['temperature'],

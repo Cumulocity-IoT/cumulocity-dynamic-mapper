@@ -104,3 +104,16 @@ function addSubstitution(result, key, value) {
     // Add the value to the list
     valuesList.add(value);
 }
+
+/*
+ * Trace payload and device identifiers data from the source payload to be used in substitutions during mapping.
+ */
+function tracePayload(ctx) {
+    const sourceObject = JSON.parse(ctx.getPayload());
+    for (var key in sourceObject) {
+        console.log(`Payload key: ${key}, value: ${sourceObject[key]}`);
+    }
+    console.log(`Identifier sourceId: ${ctx.getC8YIdentifier()}`);
+    console.log(`Identifier externalIdentifier: ${ctx.getExternalIdentifier()}`);
+    console.log(`Identifier genericDeviceIdentifier: ${ctx.getGenericDeviceIdentifier()}`);
+}
