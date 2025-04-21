@@ -28,6 +28,7 @@ function extractFromSource(ctx) {
     const temperature = new SubstitutionValue(fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT, false);
     addSubstitution(result, 'Temperature', temperature);
 
+    // define source fragment to send payload as measurement to Cumulocity
     const source = {
         id: ctx.getC8YIdentifier()
     };

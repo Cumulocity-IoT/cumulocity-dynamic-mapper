@@ -11,14 +11,6 @@ function extractFromSource(ctx) {
     // This is the source message as json
     const sourceObject = JSON.parse(ctx.getPayload());
 
-    // Log c8y sourceId
-    // console.log(`C8Y sourceId: ${ctx.getC8YIdentifier()}`);
-    // console.log(`C8Y externalIdentifier: ${ctx.getExternalIdentifier()}`);
-
-    // for (var key in sourceObject) {
-    //     console.log(`key: ${key}, value: ${sourceObject[key]}`);  
-    //  }
-
     // Define a new Measurement Value for Temperatures by assigning from source
     const fragmentTemperature = {
         value: sourceObject['c8y_TemperatureMeasurement']['T']['value'],
@@ -37,11 +29,11 @@ function extractFromSource(ctx) {
     const temperature = new SubstitutionValue(fragmentTemperature, TYPE.OBJECT, RepairStrategy.DEFAULT, false);
     addSubstitution(result, 'Temperature', temperature);
 
-    // Define Device Identifier
+    // Define Device Identifier and substitute in the publishTopic measurements/+
     const deviceIdentifier = new SubstitutionValue(ctx.getExternalIdentifier(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     addSubstitution(result, '_TOPIC_LEVEL_[1]', deviceIdentifier);
 
-    // Use C8Y sourceId
+    // Use C8Y sourceId in addition and set it in the payload
     const deviceId = new SubstitutionValue(ctx.getC8YIdentifier(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
     addSubstitution(result, 'deviceId', deviceId);
 

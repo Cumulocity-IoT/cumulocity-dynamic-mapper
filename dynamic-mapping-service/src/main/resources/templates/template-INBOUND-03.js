@@ -8,12 +8,8 @@
 */
 
 function extractFromSource(ctx) {
-    //This is the source message as json
+    // This is the source message as json
     const sourceObject = JSON.parse(ctx.getPayload());
-
-    for (var key in sourceObject) {
-        console.log(`key: ${key}, value: ${sourceObject[key]}`);
-    }
 
     // Create a new SubstitutionResult with the HashMap
     const result = new SubstitutionResult();
