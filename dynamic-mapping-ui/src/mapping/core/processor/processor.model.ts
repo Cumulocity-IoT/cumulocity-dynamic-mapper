@@ -267,11 +267,6 @@ export function evaluateWithArgs(codeString, ...args) {
   }
 }
 
-export function evaluateInCurrentScope(codeString) {
-  // Create a function that has access to Java
-  return Function('Java', `return (${codeString})`)(Java);
-}
-
 export function removeJavaTypeLines(code) {
   // Split the code into lines
   const lines = code.split('\n');
