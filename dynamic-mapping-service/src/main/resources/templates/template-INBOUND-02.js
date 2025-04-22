@@ -26,10 +26,9 @@ function extractFromSource(ctx) {
     const result = new SubstitutionResult();
 
     // Loop through all temperature array entries
-    const size = tempArray.size();
-    for (let i = 0; i < size; i++) {
+    for (let i = 0; i < tempArray.length; i++) {
         const temperatureValue = new SubstitutionValue(
-            tempArray.get(i),
+            tempArray[i],
             TYPE.NUMBER,
             RepairStrategy.DEFAULT,
             true
