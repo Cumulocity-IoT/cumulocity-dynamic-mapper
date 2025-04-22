@@ -84,7 +84,7 @@ export const GRID_COLUMNS: Column[] = [
       sortOrder: 'ASC',
       visible: true,
       cellRendererComponent: ConnectorDetailCellRendererComponent,
-      gridTrackSize: '30%'
+      gridTrackSize: '25%'
     },
     {
       name: 'connectorType',

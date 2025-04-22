@@ -24,10 +24,11 @@ package dynamic.mapping.processor.model;
 public enum MappingType {
     JSON("JSON"),
     FLAT_FILE("FLAT_FILE"),
-    BINARY("BINARY"),
+    HEX("HEX"),
     PROTOBUF_INTERNAL("PROTOBUF_INTERNAL"),
     EXTENSION_SOURCE("EXTENSION_SOURCE"),
-    EXTENSION_SOURCE_TARGET("EXTENSION_SOURCE_TARGET");
+    EXTENSION_SOURCE_TARGET("EXTENSION_SOURCE_TARGET"),
+    CODE_BASED("CODE_BASED"), ;
 
     public final String name;
 

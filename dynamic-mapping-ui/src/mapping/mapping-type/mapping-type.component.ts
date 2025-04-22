@@ -28,7 +28,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { Direction, MappingType, MappingTypeDescriptionMap } from '../../shared';
 
 @Component({
@@ -44,16 +44,20 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
   MappingTypeDescriptionMap = MappingTypeDescriptionMap;
-  formGroupStep: FormGroup;
+  formGroup: FormGroup;
   snoop: boolean = false;
   canOpenInBrowser: boolean = false;
+  substitutionsAsCodeSupported$: BehaviorSubject<boolean> = new BehaviorSubject(false);
   errorMessage: string;
   MappingType = MappingType;
   Direction = Direction;
   mappingType: MappingType = MappingType.JSON;
   mappingTypeDescription: string =
     MappingTypeDescriptionMap[MappingType.JSON].description;
-  valid: boolean = false;
+  valid: boolean = true;
+
+  // New property - filtered mapping types
+  filteredMappingTypes: any;
 
   constructor(
     private fb: FormBuilder,
@@ -65,9 +69,17 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.closeSubject = new Subject();
     // console.log('Subject:', this.closeSubject, this.labels);
-    this.formGroupStep = this.fb.group({
-      snoop: [false]
+    this.formGroup = this.fb.group({
+      snoop: [false],
+      substitutionsAsCode: [false]
     });
+
+    this.filteredMappingTypes = Object.entries(MappingType)
+      .filter(([key, value]) => (value !== MappingType.CODE_BASED && value !== MappingType.FLAT_FILE ))
+      .reduce((obj, [key, value]) => {
+        obj[key] = value;
+        return obj;
+      }, {});
   }
 
   onDismiss() {
@@ -76,14 +88,15 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
-    if (this.formGroupStep.valid) {
-      const formValue = this.formGroupStep.value;
+    if (this.formGroup.valid) {
+      const formValue = this.formGroup.value;
       // Your existing save logic
       const { snoopSupported } =
         MappingTypeDescriptionMap[this.mappingType].properties[this.direction];
       this.closeSubject.next({
         mappingType: this.mappingType,
-        snoop: formValue.snoop && snoopSupported
+        snoop: formValue.snoop && snoopSupported,
+        substitutionsAsCode: formValue.substitutionsAsCode
       });
       this.closeSubject.complete();
     }
@@ -94,17 +107,28 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     this.mappingType = t;
     this.mappingTypeDescription = MappingTypeDescriptionMap[t].description;
     if (this.shouldShowSnoop()) {
-      this.formGroupStep.addControl('snoop', new FormControl(false));
+      this.formGroup.addControl('snoop', new FormControl(false));
     } else {
-      this.formGroupStep.removeControl('snoop');
+      this.formGroup.removeControl('snoop');
+    }
+    if (this.shouldShowSubstitutionsAsCode()) {
+      this.formGroup.addControl('substitutionsAsCode', new FormControl(false));
+    } else {
+      this.formGroup.removeControl('substitutionsAsCode');
     }
   }
+
   shouldShowSnoop(): boolean {
     // Replace these conditions with your specific requirements
     return (
       MappingTypeDescriptionMap[this.mappingType].properties[this.direction]
         .snoopSupported
     );
+  }
+
+  shouldShowSubstitutionsAsCode(): boolean {
+    // Replace these conditions with your specific requirements
+    return this.mappingType == MappingType.JSON || this.mappingType == MappingType.CODE_BASED;
   }
 
   ngOnDestroy() {

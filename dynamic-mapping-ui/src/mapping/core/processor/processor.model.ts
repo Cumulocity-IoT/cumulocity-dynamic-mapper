@@ -19,8 +19,9 @@
  */
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
-import { isTypeOf, randomIdAsString } from '../../../mapping/shared/util';
-import { API, Direction, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
+import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
+import { API, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
+import { Java } from './processor-js.model';
 
 export interface C8YRequest {
   predecessor?: number;
@@ -39,7 +40,6 @@ export interface ProcessingContext {
   topic: string;
   resolvedPublishTopic?: string;
   payload?: JSON;
-  payloadRaw?: any;
   requests?: C8YRequest[];
   errors?: string[];
   processingType?: ProcessingType;
@@ -47,6 +47,7 @@ export interface ProcessingContext {
   processingCache: Map<string, SubstituteValue[]>;
   sendPayload?: boolean;
   sourceId?: string;
+  logs?: any[];
 }
 
 export enum ProcessingType {
@@ -84,7 +85,7 @@ export const isNumeric = (num: any) => (typeof num === 'number' || (typeof num =
 
 
 export function processSubstitute(processingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: MappingSubstitution) {
-  if (isTypeOf(extractedSourceContent) == 'null') {
+  if (getTypeOf(extractedSourceContent) == 'null') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.IGNORE,
@@ -94,25 +95,25 @@ export function processSubstitute(processingCacheEntry: SubstituteValue[], extra
       'No substitution for: ',
       substitution.pathSource
     );
-  } else if (isTypeOf(extractedSourceContent) == 'String') {
+  } else if (getTypeOf(extractedSourceContent) == 'String') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.TEXTUAL,
       repairStrategy: substitution.repairStrategy
     });
-  } else if (isTypeOf(extractedSourceContent) == 'Number') {
+  } else if (getTypeOf(extractedSourceContent) == 'Number') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.NUMBER,
       repairStrategy: substitution.repairStrategy
     });
-  } else if (isTypeOf(extractedSourceContent) == 'Array') {
+  } else if (getTypeOf(extractedSourceContent) == 'Array') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.ARRAY,
       repairStrategy: substitution.repairStrategy
     });
-  } else if (isTypeOf(extractedSourceContent) == 'Object') {
+  } else if (getTypeOf(extractedSourceContent) == 'Object') {
     processingCacheEntry.push({
       value: extractedSourceContent,
       type: SubstituteValueType.OBJECT,
@@ -127,7 +128,7 @@ export function processSubstitute(processingCacheEntry: SubstituteValue[], extra
 
 export function getDeviceEntries(context: ProcessingContext): SubstituteValue[] {
   const { processingCache, mapping } = context;
-  const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(mapping);
+  const pathsTargetForDeviceIdentifiers: string[] = getPathTargetForDeviceIdentifiers(context);
   const firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.length > 0
     ? pathsTargetForDeviceIdentifiers[0]
     : null;
@@ -164,7 +165,7 @@ export function substituteValueInPayload(
       if (_.has(jsonObject, keys)) {
         _.set(jsonObject, keys, getTypedValue(sub));
       } else {
-        alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
+        // alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
         throw new Error(
           `Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`
         );
@@ -189,3 +190,90 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
 }
 
+/**
+* Extract line and column numbers from a stack trace line
+* @param {string} stackTraceLine - The stack trace line to parse
+* @returns {object|null} An object with line and column numbers, or null if not found
+*/
+export function extractLineAndColumn(stackTraceLine) {
+  // This pattern looks for "<anonymous>:X:Y" where X is line and Y is column
+  const pattern = /<anonymous>:(\d+):(\d+)/;
+  const match = stackTraceLine.match(pattern);
+
+  if (match && match.length >= 3) {
+    return {
+      line: parseInt(match[1], 10),
+      column: parseInt(match[2], 10)
+    };
+  }
+
+  return null;
+}
+
+// export function evaluateWithArgs(codeString, ...args) {
+//   // Add 'Java' as the first parameter
+//   const paramNames = ['Java'].concat(args.map((_, i) => `arg${i}`)).join(',');
+
+//   // Create the function with Java and your other parameters
+//   const fn = new Function(paramNames, codeString);
+
+//   // Call the function with Java as the first argument, followed by your other args
+//   return fn(Java, ...args);
+// }
+
+export function evaluateWithArgs(codeString, ...args) {
+  // Capture console output
+  const logs = [];
+  const originalConsoleLog = console.log;
+
+  // Create a scoped console.log override that captures output
+  const scopedConsole = {
+    log: (...logArgs) => {
+      logs.push(logArgs.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '));
+      // Still call the original for debugging visibility if needed
+      originalConsoleLog.apply(console, logArgs);
+    }
+  };
+
+  try {
+    // Add 'Java' and 'console' as parameters
+    const paramNames = ['Java', 'console'].concat(args.map((_, i) => `arg${i}`)).join(',');
+
+    // Create the function with Java, console, and your other parameters
+    const fn = new Function(paramNames, codeString);
+
+    // Call the function with Java and our scoped console as arguments, followed by your other args
+    const result = fn(Java, scopedConsole, ...args);
+
+    // Return both the evaluation result and the logs
+    return {
+      result,
+      logs,
+      success: true
+    };
+  } catch (error) {
+    // Return the error and logs in a structured way
+    return {
+      error: {
+        message: error.message,
+        stack: error.stack,
+        location: extractLineAndColumn(error.stack)
+      },
+      logs,
+      success: false
+    };
+  } finally {
+    // No need to restore console.log as we used a scoped version
+  }
+}
+
+export function removeJavaTypeLines(code) {
+  // Split the code into lines
+  const lines = code.split('\n');
+
+  // Filter out lines containing Java.type
+  const filteredLines = lines.filter(line => !line.includes('Java.type'));
+
+  // Join the lines back together
+  return filteredLines.join('\n');
+}

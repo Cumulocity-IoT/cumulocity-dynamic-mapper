@@ -36,8 +36,7 @@ public class C8YNotificationSubscription {
     @NotNull
     private API api;
 
-    //@NotNull
-    //private String connectorIdentifier;
+    private String subscriptionName;
 
     private List<Device> devices;
 }

@@ -2,8 +2,8 @@
 
 ## Overview
 
-The Cumulocity Dynamic Data Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach.
-It can connect to multiple message brokers likes **MQTT**, **MQTT Service** , **Kafka** and others, subscribes to specific topics and maps the data in a graphical editor to the domain model of Cumulocity.
+The Cumulocity Dynamic Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach.
+It can connect to multiple message brokers likes **MQTT**, **MQTT Service**, **Kafka** and others, subscribes to specific topics and maps the data in a graphical or code-based editor to the domain model of Cumulocity.
 
 Per default the followings connectors are supported
 
@@ -12,16 +12,16 @@ Per default the followings connectors are supported
 - **Kafka** - Kafka Broker
 - **HTTP/REST** - HTTP/REST Endpoint
 
-Using the Cumulocity Dynamic Data Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
-the Cumulocity IoT Domain Model in a graphical editor.
+Using the Cumulocity Dynamic Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
+the Cumulocity IoT Domain Model in a graphical or, if you prefer code, in a web code editor.
 
 Here are the **core features** summarized:
 
 - **Connect** to multiple message broker of your choice at the same time.
-- **Map** any data to/from the Cumulocity IoT Domain Model in a graphical way.
+- **Map** any data to/from the Cumulocity IoT Domain Model in a graphical or code-based (javaScript) way.
 - **Bidirectional mappings** are supported - so you can forward data to Cumulocity or subscribe on Cumulocity data and forward it to the broker
-- **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/)
-- **Multiple payload formats** are supported, starting with **JSON**, **Protobuf**, **Binary**, **CSV**.
+- **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/) or plain JavaScript.
+- **Multiple payload formats** are supported, starting with **JSON**, **Protobuf**, **Hex**.
 - **Extend** the mapper easily by using payload extensions or the provided connector interface
 - Full support of **multi-tenancy** - deploy it in your enterprise tenant and subscribe it to sub-tenants.
 
@@ -33,11 +33,11 @@ Here are the **core features** summarized:
 
 ## Installation
 
-Please check the [Installation Guide](/INSTALLATION.md) to find out how you can install the Dynamic Data Mapper.
+Please check the [Installation Guide](/INSTALLATION.md) to find out how you can install the Dynamic Mapper.
 
 ## User Guide
 
-Please check the [User Guide](/USERGUIDE.md) to find a comprehensive guidance how to use the Dynamic Data Mapper.
+Please check the [User Guide](/USERGUIDE.md) to find a comprehensive guidance how to use the Dynamic Mapper.
 
 ## Architecture
 
@@ -45,15 +45,15 @@ Please check the [Architecture overview](/ARCHITECTURE.md) if you are eager to u
 
 ## API
 
-Please check the [REST API](/API.md) provided by the Dynamic Data Mapper.
+Please check the [REST API](/API.md) provided by the Dynamic Mapper.
 
 ## Extensions
 
-The Dynamic Data Mapper can be extended on multiple layers. Check out the [Extensions Guide](/EXTENSIONS.md) if you want to add customer mapper or connectors.
+The Dynamic Mapper can be extended on multiple layers. Check out the [Extensions Guide](/EXTENSIONS.md) if you want to add customer mapper or connectors.
 
 ## Limitations
 
-Please check the current [Limitations](/LIMITATIONS.md) of the Dynamic Data Mapper.
+Please check the current [Limitations](/LIMITATIONS.md) of the Dynamic Mapper.
 
 ## Contribution
 
@@ -84,3 +84,4 @@ The mappings with inputs and substitutions are explained in the [sample document
 ---
 
 These tools are provided as-is and without warranty or support. They do not constitute part of the Cumulocity product suite. Users are free to use, fork and modify them, subject to the license agreement. While Cumulocity GmbH welcomes contributions, we cannot guarantee to include every contribution in the master project.
+

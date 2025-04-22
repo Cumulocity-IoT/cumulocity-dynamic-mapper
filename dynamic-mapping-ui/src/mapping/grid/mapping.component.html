@@ -25,6 +25,10 @@
     <i c8yIcon="plus-circle"></i>
     {{ 'Add mapping' | translate }}
   </button>
+  <button class="btn btn-link" title="{{ 'Install sample mapping' | translate }}" (click)="onAddSampleMappings()">
+    <i c8yIcon="registry-editor"></i>
+    {{ 'Add sample mappings' | translate }}
+  </button>
   <button class="btn btn-link" title="{{ 'Reload mappings in service' | translate }}" (click)="onReload()">
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Reload mappings in service' | translate }}
@@ -75,7 +79,7 @@
   <div class="bottom-drawer">
     <d11r-mapping-stepper *ngIf="showConfigMapping" (cancel)="showConfigMapping = false"
       (commit)="onCommitMapping($event)" [mapping]="mappingToUpdate" [stepperConfiguration]="stepperConfiguration"
-      [(deploymentMapEntry)]="deploymentMapEntry">
+      [deploymentMapEntry]="deploymentMapEntry">
     </d11r-mapping-stepper>
   </div>
 </div>
@@ -84,7 +88,7 @@
   <div class="bottom-drawer">
     <d11r-snooping-stepper *ngIf="showSnoopingMapping" (cancel)="showSnoopingMapping = false"
       (commit)="onCommitMapping($event)" [mapping]="mappingToUpdate" [stepperConfiguration]="stepperConfiguration"
-      [(deploymentMapEntry)]="deploymentMapEntry">
+      [deploymentMapEntry]="deploymentMapEntry">
     </d11r-snooping-stepper>
   </div>
 </div>

@@ -33,7 +33,7 @@ export default {
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
-      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_03.png)'
+      class: 'c8y-icon-dynamic-mapper'
     },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
@@ -44,14 +44,6 @@ export default {
     package: 'blueprint',
     contextHelp: true,
     isPackage: true,
-    // exports: [
-    //   {
-    //     name: 'Dynamic Mapping Mapper Plugin',
-    //     module: 'DynamicMappingModule',
-    //     path: './src/dynamic-mapping.module.ts',
-    //     description: 'Adds a Dynamic Mapping Mapper Plugin'
-    //   }
-    // ]
   },
   buildTime: {
     copy: [
@@ -80,12 +72,16 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png'
       },
       {
-        from: '../resources/image/DM_App-Icon_03.png',
-        to: 'image/DM_App-Icon_03.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif'
       },
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Process.png',
@@ -100,12 +96,8 @@ export default {
         to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
       },
       {
-        from: '../resources/image/ConnectorMatrix.png',
-        to: 'image/ConnectorMatrix.png'
-      },
-      {
-        from: '../resources/image/Test.svg',
-        to: 'image/Test.svg'
+        from: '../resources/image/Dynamic_Mapper_Connector_Matrix.png',
+        to: 'image/Dynamic_Mapper_Connector_Matrix.png'
       },
       {
         from: '../LICENSE',

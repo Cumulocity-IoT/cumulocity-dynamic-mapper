@@ -52,7 +52,7 @@ import {
 } from 'vanilla-jsoneditor';
 
 import type { JSONPath } from 'immutable-json-patch'
-import { IDENTITY } from '../mapping/mapping.model';
+import { IDENTITY } from '../../mapping/mapping.model';
 
 @Component({
   selector: 'd11r-mapping-json-editor2',
@@ -166,7 +166,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   onClassName(path: JSONPath, value: any): string | undefined {
     let result = undefined;
     // if (path.join('.') == this.identifier || path.join('.') == `${IDENTITY}.externalId` || path.join('.') == '_IDENTITY_.c8ySourceId') result = 'id-node';
-    if (path.join('.') == `${IDENTITY}.externalId` || path.join('.') == '_IDENTITY_.c8ySourceId') result = 'id-node';
+    // if (path.join('.') == `${IDENTITY}.externalId` || path.join('.') == '_IDENTITY_.c8ySourceId') result = 'id-node';
     return result;
   }
 

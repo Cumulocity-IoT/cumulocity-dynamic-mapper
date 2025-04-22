@@ -23,6 +23,11 @@ package dynamic.mapping.configuration;
 
 import jakarta.validation.constraints.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
@@ -34,61 +39,81 @@ import lombok.ToString;
 @ToString()
 @AllArgsConstructor
 public class ServiceConfiguration implements Cloneable {
-	public ServiceConfiguration() {
-		this.logPayload = false;
-		this.logSubstitution = false;
-		this.logConnectorErrorInBackend = false;
-		this.sendConnectorLifecycle = false;
-		this.sendMappingStatus = true;
-		this.sendSubscriptionEvents = false;
-		this.sendNotificationLifecycle = false;
-		this.externalExtensionEnabled = true;
-		this.outboundMappingEnabled = true;
-		this.inboundExternalIdCacheSize = 0;
-		this.inboundExternalIdCacheRetention = 1;
-	}
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public boolean logPayload;
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public boolean logSubstitution;
+    public ServiceConfiguration() {
+        this.logPayload = false;
+        this.logSubstitution = false;
+        this.logConnectorErrorInBackend = false;
+        this.sendConnectorLifecycle = false;
+        this.sendMappingStatus = true;
+        this.sendSubscriptionEvents = false;
+        this.sendNotificationLifecycle = false;
+        this.externalExtensionEnabled = true;
+        this.outboundMappingEnabled = true;
+        this.inboundExternalIdCacheSize = 0;
+        this.inboundExternalIdCacheRetention = 1;
+        this.inventoryCacheSize = 0;
+        this.inventoryCacheRetention = 1;
+        this.inventoryFragmentsToCache = new ArrayList<String>();
+    }
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public boolean logConnectorErrorInBackend;
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean logPayload;
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public boolean sendConnectorLifecycle;
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean logSubstitution;
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public boolean sendMappingStatus;
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean logConnectorErrorInBackend;
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public boolean sendSubscriptionEvents;
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean sendConnectorLifecycle;
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public boolean sendNotificationLifecycle;
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean sendMappingStatus;
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public boolean externalExtensionEnabled;
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean sendSubscriptionEvents;
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public boolean outboundMappingEnabled;
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean sendNotificationLifecycle;
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public Integer inboundExternalIdCacheSize;
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean externalExtensionEnabled;
 
-	@NotNull
-	@JsonSetter(nulls = Nulls.SKIP)
-	public Integer inboundExternalIdCacheRetention;
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean outboundMappingEnabled;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Integer inboundExternalIdCacheSize;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Integer inboundExternalIdCacheRetention;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Integer inventoryCacheSize;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Integer inventoryCacheRetention;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public List<String> inventoryFragmentsToCache;
+
+    @JsonProperty("codeTemplates")
+    public Map<String, CodeTemplate> codeTemplates;
 }

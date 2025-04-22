@@ -44,13 +44,14 @@ import org.json.JSONTokener;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = { "sourceTemplate", "targetTemplate", "snoopedTemplates" })
+@ToString(exclude = { "sourceTemplate", "targetTemplate", "snoopedTemplates", "code" })
 public class Mapping implements Serializable {
 
     public static final String IDENTITY = "_IDENTITY_";
     public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
     public static final String TOKEN_CONTEXT_DATA = "_CONTEXT_DATA_";
     public static final String CONTEXT_DATA_KEY_NAME = "key";
+    public static final String CONTEXT_DATA_METHOD_NAME = "method";
     public static final String TIME = "time";
 
     public static int SNOOP_TEMPLATES_MAX = 10;
@@ -102,7 +103,7 @@ public class Mapping implements Serializable {
     public MappingType mappingType;
 
     @NotNull
-    public MappingSubstitution[] substitutions;
+    public Substitution[] substitutions;
 
     @NotNull
     public Boolean active;
@@ -116,14 +117,17 @@ public class Mapping implements Serializable {
     @NotNull
     public Boolean supportsMessageContext;
 
-    @NotNull
-    public Boolean createNonExistingDevice;
-
-    @NotNull
-    public Boolean updateExistingDevice;
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean eventWithAttachment = false;
 
     @JsonSetter(nulls = Nulls.SKIP)
-    public Boolean autoAckOperation;
+    public Boolean createNonExistingDevice = false;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean updateExistingDevice = false;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean autoAckOperation = false;
 
     @NotNull
     public Boolean useExternalId = false;;
@@ -139,19 +143,22 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public ExtensionEntry extension;
 
-    // TODO filterMapping has to be removed and for ountbound mappings as well
-    // JSONata expressions
-    // this has to be changed in MappingComponent.deleteFromMappingCache &
-    // MappingComponent.rebuildMappingOutboundCache
-
     @JsonSetter(nulls = Nulls.SKIP)
     public String filterMapping;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String filterInventory;
 
     @NotNull
     public QOS qos;
 
+    // code for substitutions encoded in base64
+    // @NotNull
+    public String code;
+
     @NotNull
     public long lastUpdate;
+    public static final String EXTRACT_FROM_SOURCE = "extractFromSource";
 
     @Override
     public boolean equals(Object m) {
@@ -169,7 +176,7 @@ public class Mapping implements Serializable {
 
     @JsonIgnore
     public Boolean definesDeviceIdentifier(
-            MappingSubstitution sub) {
+            Substitution sub) {
         if (Direction.INBOUND.equals(direction)) {
             if (useExternalId && !("").equals(externalIdType)) {
                 return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
@@ -198,11 +205,11 @@ public class Mapping implements Serializable {
 
     @JsonIgnore
     public void sortSubstitutions() {
-        MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
+        Substitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
                 (s1, s2) -> -(Boolean.valueOf(definesDeviceIdentifier(s1))
                         .compareTo(
                                 Boolean.valueOf(definesDeviceIdentifier(s2)))))
-                .toArray(size -> new MappingSubstitution[size]);
+                .toArray(size -> new Substitution[size]);
         substitutions = sortedSubstitutions;
     }
 
@@ -244,7 +251,7 @@ public class Mapping implements Serializable {
         topic = topic.trim();
         StringBuilder result = new StringBuilder();
         boolean wasSlash = false;
-        
+
         for (char c : topic.toCharArray()) {
             if (c == '/') {
                 if (!wasSlash) {
@@ -266,7 +273,7 @@ public class Mapping implements Serializable {
 
     public static String[] splitTopicExcludingSeparatorAsArray(String topic, boolean cutOffLeadingSlash) {
         String topix = topic.trim();
-        
+
         if (cutOffLeadingSlash) {
             // Original behavior: remove both leading and trailing slashes
             topix = topix.replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
@@ -277,7 +284,7 @@ public class Mapping implements Serializable {
             if (topix.startsWith("//")) {
                 topix = "/" + topix.replaceAll("^/+", "");
             }
-            
+
             if (topix.startsWith("/")) {
                 String[] parts = topix.substring(1).split("\\/");
                 String[] result = new String[parts.length + 1];
@@ -285,7 +292,7 @@ public class Mapping implements Serializable {
                 System.arraycopy(parts, 0, result, 1, parts.length);
                 return result;
             }
-            
+
             return topix.split("\\/");
         }
     }
@@ -308,6 +315,7 @@ public class Mapping implements Serializable {
                 && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE)
                 && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE_TARGET)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_INTERNAL)
+                && !mapping.mappingType.equals(MappingType.CODE_BASED)
                 && !mapping.direction.equals(Direction.OUTBOUND)) {
             if (count > 1) {
                 result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
@@ -471,8 +479,8 @@ public class Mapping implements Serializable {
         return nt;
     }
 
-    static public List<MappingSubstitution> getDeviceIdentifiers(Mapping mapping) {
-        List<MappingSubstitution> mp = Arrays.stream(mapping.substitutions)
+    static public List<Substitution> getDeviceIdentifiers(Mapping mapping) {
+        List<Substitution> mp = Arrays.stream(mapping.substitutions)
                 .filter(sub -> mapping.definesDeviceIdentifier(sub))
                 .toList();
         return mp;

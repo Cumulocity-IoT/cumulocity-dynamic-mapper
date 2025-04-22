@@ -22,7 +22,7 @@
 package dynamic.mapping.model;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 import com.dashjoin.jsonata.json.Json;
 
 import lombok.extern.slf4j.Slf4j;

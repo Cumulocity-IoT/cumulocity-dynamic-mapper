@@ -27,33 +27,37 @@ import {
 } from '../../shared';
 import { IDENTITY } from '../../shared/mapping/mapping.model';
 import { ValidationFormlyError } from './mapping.model';
+import { map } from 'cypress/types/bluebird';
 
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
 export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
+export const CONTEXT_DATA_METHOD_NAME = 'method';
 export const TIME = 'time';
 
 export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
-  let topix = topic.trim();
-  
-  if (cutOffLeadingSlash) {
+  if (topic) {
+    let topix = topic.trim();
+
+    if (cutOffLeadingSlash) {
       // Original behavior: remove both leading and trailing slashes
       topix = topix.replace(/(\/{1,}$)|(^\/{1,})/g, '');
       return topix.split(/\//g);
-  } else {
+    } else {
       // New behavior: keep leading slash, remove only trailing slashes
       topix = topix.replace(/\/{1,}$/g, '');
       if (topix.startsWith('//')) {
-          topix = '/' + topix.replace(/^\/+/, '');
+        topix = '/' + topix.replace(/^\/+/, '');
       }
-      
+
       if (topix.startsWith('/')) {
-          const parts = topix.substring(1).split(/\//g);
-          return ['/'].concat(parts);
+        const parts = topix.substring(1).split(/\//g);
+        return ['/'].concat(parts);
       }
-      
+
       return topix.split(/\//g);
-  }
+    }
+  } else return undefined;
 }
 
 export function splitTopicIncludingSeparator(topic: string): string[] {
@@ -273,104 +277,73 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
 
 export function checkTopicsOutboundAreValid(control: AbstractControl) {
   let errors = {};
-
   const { publishTopic, publishTopicSample } = control['controls'];
-  publishTopic.setErrors(null);
-  publishTopicSample.setErrors(null);
+  if (publishTopic.valid && publishTopicSample.value) {
+    publishTopic.setErrors(null);
+    publishTopicSample.setErrors(null);
 
-  // avoid displaying the message error when values are empty
-  if (publishTopic.value == '' || publishTopicSample.value == '') {
-    return null;
-  }
+    // avoid displaying the message error when values are empty
+    if (publishTopic.value == '' || publishTopicSample.value == '') {
+      return null;
+    }
 
-  // count number of "#" in publishTopic
-  const count_multi = (publishTopic.value.match(/#/g) || []).length;
-  if (count_multi > 1) {
-    errors = {
-      ...errors,
-      Only_One_Multi_Level_Wildcard: {
-        ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
-        errorPath: 'publishTopic'
-      }
-    };
-  }
+    // count number of "#" in publishTopic
+    const count_multi = (publishTopic.value?.match(/#/g) || []).length;
+    if (count_multi > 1) {
+      errors = {
+        ...errors,
+        Only_One_Multi_Level_Wildcard: {
+          ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
+          errorPath: 'publishTopic'
+        }
+      };
+    }
 
-  // count number of "+" in publishTopic
-  const count_single = (publishTopic.value.match(/\+/g) || []).length;
-  if (count_single > 1) {
-    errors = {
-      ...errors,
-      Only_One_Single_Level_Wildcard: {
-        ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
-        errorPath: 'publishTopic'
-      }
-    };
-  }
+    // count number of "+" in publishTopic
+    const count_single = (publishTopic.value?.match(/\+/g) || []).length;
+    if (count_single > 1) {
+      errors = {
+        ...errors,
+        Only_One_Single_Level_Wildcard: {
+          ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
+          errorPath: 'publishTopic'
+        }
+      };
+    }
 
-  // wildcard "#" can only appear at the end in mappingTopic
-  if (
-    count_multi >= 1 &&
-    publishTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
-    publishTopic.value.length
-  ) {
-    errors = {
-      ...errors,
-      Multi_Level_Wildcard_Only_At_End: {
-        ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
-        errorPath: 'publishTopic'
-      }
-    };
-  }
+    // wildcard "#" can only appear at the end in mappingTopic
+    if (
+      count_multi >= 1 &&
+      publishTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
+      publishTopic.value.length
+    ) {
+      errors = {
+        ...errors,
+        Multi_Level_Wildcard_Only_At_End: {
+          ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
+          errorPath: 'publishTopic'
+        }
+      };
+    }
 
-  const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value, false);
-  const splitTTS: string[] = splitTopicExcludingSeparator(
-    publishTopicSample.value, false
-  );
-  if (splitPT.length != splitTTS.length) {
-    errors = {
-      ...errors,
-      PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
-      {
-        ...ValidationFormlyError[
-        'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
-        ],
-        errorPath: 'publishTopicSample'
-      }
-    };
-  } else {
-    for (let i = 0; i < splitPT.length; i++) {
-      if ('/' == splitPT[i] && !('/' == splitTTS[i])) {
-        errors = {
-          ...errors,
-          PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-          {
-            ...ValidationFormlyError[
-            'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-            ],
-            errorPath: 'publishTopicSample'
-          }
-        };
-        break;
-      }
-      if ('/' == splitTTS[i] && !('/' == splitPT[i])) {
-        errors = {
-          ...errors,
-          PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-          {
-            ...ValidationFormlyError[
-            'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-            ],
-            errorPath: 'publishTopicSample'
-          }
-        };
-        break;
-      }
-      if (
-        !('/' == splitPT[i]) &&
-        !('+' == splitPT[i]) &&
-        !('#' == splitPT[i])
-      ) {
-        if (splitPT[i] != splitTTS[i]) {
+    const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value, false);
+    const splitTTS: string[] = splitTopicExcludingSeparator(
+      publishTopicSample.value, false
+    );
+    if (splitPT.length != splitTTS.length) {
+      errors = {
+        ...errors,
+        PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+        {
+          ...ValidationFormlyError[
+          'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
+          ],
+          errorPath: 'publishTopicSample'
+        }
+      };
+    } else {
+      for (let i = 0; i < splitPT.length; i++) {
+        if ('/' == splitPT[i] && !('/' == splitTTS[i])) {
           errors = {
             ...errors,
             PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
@@ -383,9 +356,42 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
           };
           break;
         }
+        if ('/' == splitTTS[i] && !('/' == splitPT[i])) {
+          errors = {
+            ...errors,
+            PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+            {
+              ...ValidationFormlyError[
+              'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+              ],
+              errorPath: 'publishTopicSample'
+            }
+          };
+          break;
+        }
+        if (
+          !('/' == splitPT[i]) &&
+          !('+' == splitPT[i]) &&
+          !('#' == splitPT[i])
+        ) {
+          if (splitPT[i] != splitTTS[i]) {
+            errors = {
+              ...errors,
+              PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+              {
+                ...ValidationFormlyError[
+                'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+                ],
+                errorPath: 'publishTopicSample'
+              }
+            };
+            break;
+          }
+        }
       }
     }
   }
+
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
@@ -398,20 +404,31 @@ export function expandExternalTemplate(
     return template;
   } else {
     if (mapping.supportsMessageContext) {
-      const keys = [CONTEXT_DATA_KEY_NAME];
+      // Define the context data with specific values
+      let contextData;
+      if (mapping.direction == Direction.INBOUND) {
+        contextData = {
+          [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+          [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
+        };
+      } else {
+        contextData = {
+          [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+          [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
+          'publishTopic': mapping.publishTopic,
+        }
+      };
       return {
         ...template,
         _TOPIC_LEVEL_: levels,
-        _CONTEXT_DATA_: keys.reduce((obj, key) => {
-          obj[key] = `${key}-sample`;
-          return obj;
-        }, {})
+        _CONTEXT_DATA_: contextData
       };
-    } else
+    } else {
       return {
         ...template,
         _TOPIC_LEVEL_: levels
       };
+    }
   }
 }
 
@@ -426,6 +443,31 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
         // c8ySourceId: '909090'
       }
     };
+    if (mapping.direction == Direction.INBOUND) {
+      // Handle message context if supported
+      if (mapping.supportsMessageContext) {
+        result = {
+          ...result,
+          [TOKEN_CONTEXT_DATA]: { 'api': mapping.targetAPI }
+        };
+      }
+      
+      // Handle attachment properties independently
+      if (mapping.eventWithAttachment) {
+        // Initialize [TOKEN_CONTEXT_DATA] if it doesn't exist yet
+        if (!result[TOKEN_CONTEXT_DATA]) {
+          result[TOKEN_CONTEXT_DATA] = {};
+        }
+        
+        // Add attachment properties
+        result[TOKEN_CONTEXT_DATA].attachment_Name = 'TestImage.jpeg';
+        result[TOKEN_CONTEXT_DATA].attachment_Type = 'image/jpeg';
+        result[TOKEN_CONTEXT_DATA].attachment_Data = '';
+      }
+    }
+
+
+
     if (mapping.direction == Direction.OUTBOUND) {
       result[IDENTITY].c8ySourceId = '909090';
     }
@@ -450,6 +492,7 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
   _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
+  _.set(template, 'publishTopic', mapping.publishTopic);
 }
 
 export function reduceSourceTemplate(
@@ -478,10 +521,11 @@ export function reduceTargetTemplate(
   return tt;
 }
 
-export function isTypeOf(object) {
+export function getTypeOf(object) {
   const stringConstructor = 'test'.constructor;
   const arrayConstructor = [].constructor;
   const objectConstructor = {}.constructor;
+  const booleanConstructor = true.constructor;
   if (object === null) {
     return 'null';
   } else if (object === undefined) {
@@ -492,9 +536,96 @@ export function isTypeOf(object) {
     return 'Array';
   } else if (object.constructor === objectConstructor) {
     return 'Object';
+  } else if (object.constructor === booleanConstructor) {
+    return 'Boolean';
   } else if (typeof object === 'number') {
     return 'Number';
   } else {
     return "don't know";
   }
 }
+
+export function base64ToString(base64) {
+  const binString = atob(base64);
+  return new TextDecoder().decode(Uint8Array.from(binString, (m) => m.codePointAt(0)));
+}
+
+export function stringToBase64(code2Encode) {
+  const bytes = new TextEncoder().encode(code2Encode);
+  const binString = Array.from(bytes, (byte: any) =>
+    String.fromCodePoint(byte),
+  ).join("");
+  return btoa(binString);
+}
+
+export function base64ToBytes(base64) {
+  const binString = atob(base64);
+  return Uint8Array.from(binString, (m) => m.codePointAt(0));
+}
+
+export function bytesToBase64(bytes) {
+  const binString = Array.from(bytes, (byte: any) =>
+    String.fromCodePoint(byte),
+  ).join("");
+  return btoa(binString);
+}
+
+export /**
+* Creates a new object with sorted keys, optionally placing specified keys at the end
+* @param {Object} obj - The original object
+* @param {Object} options - Configuration options
+* @param {boolean} [options.specialKeysAtEnd=false] - Whether to place special keys at the end
+* @param {string[]} [options.specialKeys=['_CONTEXT_DATA_', '_TOPIC_LEVEL_']] - Keys to place at the end
+* @param {Function} [options.sortFn=null] - Optional custom sort function for keys
+* @returns {Object} - New object with sorted keys
+*/
+  function sortObjectKeys(obj, options = {}) {
+  // Set default options
+  const defaultOptions = {
+    specialKeysAtEnd: true,
+    specialKeys: ['_CONTEXT_DATA_', '_TOPIC_LEVEL_'],
+    sortFn: null
+  };
+
+  const config = { ...defaultOptions, ...options };
+
+  // Get the keys of the object
+  let keys = Object.keys(obj);
+  let specialKeysPresent = [];
+
+  // If we need to place special keys at the end, remove them temporarily
+  if (config.specialKeysAtEnd) {
+    // Extract special keys that exist in the object
+    specialKeysPresent = keys.filter(key => config.specialKeys.includes(key));
+
+    // Remove special keys from the main keys array
+    keys = keys.filter(key => !config.specialKeys.includes(key));
+  }
+
+  // Sort the remaining keys
+  if (config.sortFn && typeof config.sortFn === 'function') {
+    keys.sort(config.sortFn);
+  } else {
+    keys.sort();
+  }
+
+  // Add special keys back at the end in their original order
+  if (config.specialKeysAtEnd) {
+    // Sort special keys according to their order in the specialKeys array
+    specialKeysPresent.sort((a, b) => {
+      return config.specialKeys.indexOf(a) - config.specialKeys.indexOf(b);
+    });
+
+    // Append special keys to the end
+    keys = [...keys, ...specialKeysPresent];
+  }
+
+  // Create a new object with the sorted keys
+  const sortedObj = {};
+  keys.forEach(key => {
+    sortedObj[key] = obj[key];
+  });
+
+  return sortedObj;
+}
+

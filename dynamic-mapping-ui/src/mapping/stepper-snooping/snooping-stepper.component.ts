@@ -89,12 +89,6 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   }
 
 
-  private cleanup(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.isButtonDisabled$.complete();
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   deploymentMapEntryChange(e) {
     this.isButtonDisabled$.next(
@@ -105,7 +99,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.supportsMessageContext =
         this.deploymentMapEntry.connectorsDetailed?.some(
-          (con) => con.connectorType == ConnectorType.KAFKA
+          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK
         );
     });
   }

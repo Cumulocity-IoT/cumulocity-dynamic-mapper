@@ -21,11 +21,9 @@
 
 package dynamic.mapping.processor.outbound;
 
-import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
-import java.io.IOException;
 import java.util.*;
 
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -35,16 +33,14 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import dynamic.mapping.processor.C8YMessage;
+import dynamic.mapping.processor.model.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -63,9 +59,6 @@ public abstract class BaseProcessorOutbound<T> {
     protected C8YAgent c8yAgent;
 
     protected AConnectorClient connectorClient;
-
-    public abstract T deserializePayload(Mapping mapping, C8YMessage c8yMessage)
-            throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
 
@@ -100,6 +93,8 @@ public abstract class BaseProcessorOutbound<T> {
         }
         if (payloadObject instanceof Map) {
             ((Map) payloadObject).put(Mapping.IDENTITY, identityFragment);
+            List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
+            ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         } else {
             log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                     tenant);
@@ -114,7 +109,7 @@ public abstract class BaseProcessorOutbound<T> {
         String tenant = context.getTenant();
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
         Set<String> pathTargets = processingCache.keySet();
 
         int predecessor = -1;
@@ -129,6 +124,8 @@ public abstract class BaseProcessorOutbound<T> {
             Map<String, String> cod = new HashMap<String, String>() {
                 {
                     put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
+                    put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
+                    put("publishTopic", mapping.getPublishTopic());
                 }
             };
             payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
@@ -142,34 +139,42 @@ public abstract class BaseProcessorOutbound<T> {
         String deviceSource = context.getSourceId();
 
         for (String pathTarget : pathTargets) {
-            MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
+            SubstituteValue substitute = new SubstituteValue(
                     "NOT_DEFINED", TYPE.TEXTUAL,
-                    RepairStrategy.DEFAULT);
+                    RepairStrategy.DEFAULT, false);
             if (processingCache.get(pathTarget).size() > 0) {
                 substitute = processingCache.get(pathTarget).get(0).clone();
             }
-            substituteValueInPayload(substitute, payloadTarget, pathTarget);
+            SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to mqttBroker
          */
-        if(Arrays.stream(API.values()).anyMatch(v -> mapping.targetAPI.equals(v))) {
-        //if (!mapping.targetAPI.equals(API.INVENTORY)) {
+        if (Arrays.stream(API.values()).anyMatch(v -> mapping.targetAPI.equals(v))) {
+            // if (!mapping.targetAPI.equals(API.INVENTORY)) {
             List<String> topicLevels = payloadTarget.read(Mapping.TOKEN_TOPIC_LEVEL);
             if (topicLevels != null && topicLevels.size() > 0) {
                 // now merge the replaced topic levels
                 MutableInt c = new MutableInt(0);
-                //MutableInt index = new MutableInt(0);
+                // MutableInt index = new MutableInt(0);
                 String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
-                log.info("Tenant {} - Resolving topic: context.getTopic() {}, splitTopicInAsList {}, topicLevels {}", tenant, context.getTopic(),splitTopicInAsList, topicLevels);
+                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                    log.info(
+                            "Tenant {} - Resolving topic: context.getTopic():{}, splitTopicInAsList:{}, topicLevels:{}",
+                            tenant, context.getTopic(), splitTopicInAsList, topicLevels);
+                }
                 topicLevels.forEach(tl -> {
                     while (c.intValue() < splitTopicInAsList.length
-                            && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0 )) {
+                            && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0)) {
                         c.increment();
                     }
                     splitTopicInAsList[c.intValue()] = tl;
                     c.increment();
                 });
+                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                    log.info("Tenant {} - Resolved topic: context.getTopic():{}, splitTopicInAsList:{}, topicLevels:{}",
+                            tenant, context.getTopic(), splitTopicInAsList, topicLevels);
+                }
 
                 StringBuffer resolvedPublishTopic = new StringBuffer();
                 for (int d = 0; d < splitTopicInAsList.length; d++) {
@@ -179,17 +184,37 @@ public abstract class BaseProcessorOutbound<T> {
             } else {
                 context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
             }
+
             // remove TOPIC_LEVEL
             payloadTarget.delete("$." + Mapping.TOKEN_TOPIC_LEVEL);
+            RequestMethod method = RequestMethod.POST;
             if (mapping.supportsMessageContext) {
                 String key = payloadTarget
                         .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
                 context.setKey(key.getBytes());
+
+                // extract method
+                try {
+                    String methodString = payloadTarget
+                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA,
+                                    Mapping.CONTEXT_DATA_METHOD_NAME));
+                    method = RequestMethod.resolve(methodString.toUpperCase());
+                } catch (Exception e) {
+                    // method is not defined or unknown, so we assume "POST"
+                }
+                try {
+                    String publishTopic = payloadTarget
+                            .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, "publishTopic"));
+                    if (publishTopic != null && !publishTopic.equals(""))
+                        context.setTopic(publishTopic);
+                } catch (Exception e) {
+                    // publishTopic is not defined or unknown, so we continue using the value defined in the mapping 
+                }
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
             var newPredecessor = context.addRequest(
-                    new C8YRequest(predecessor, RequestMethod.POST, deviceSource, mapping.externalIdType,
+                    new C8YRequest(predecessor, method, deviceSource, mapping.externalIdType,
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
@@ -207,13 +232,16 @@ public abstract class BaseProcessorOutbound<T> {
             }
             predecessor = newPredecessor;
         } else {
-            //FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
+            // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     processingCache.size());
         }
-        log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
-                mapping.targetAPI,
-                1);
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant,
+                    payloadTarget.jsonString(),
+                    mapping.targetAPI,
+                    1);
+        }
         return context;
     }
 

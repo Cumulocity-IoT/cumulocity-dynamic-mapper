@@ -30,7 +30,7 @@ import {
 } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
-import { uuidCustom, Mapping } from '../../shared';
+import { createCustomUuid, Mapping } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-import-extension',
@@ -73,7 +73,7 @@ export class ImportMappingsComponent implements OnDestroy {
     const errors = [];
     mappings.forEach(async (m, i) => {
       try {
-        m.identifier = uuidCustom();
+        m.identifier = createCustomUuid();
         m.lastUpdate = Date.now();
         m.active = false;
         await this.mappingService.createMapping(m);

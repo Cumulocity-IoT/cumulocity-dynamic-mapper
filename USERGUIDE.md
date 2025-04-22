@@ -15,6 +15,7 @@
       - [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
       - [Map Device Identifier](#map-device-identifier)
       - [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
+      - [Substitutions defined as code (javascript)](#substitutions-defined-as-code-javascript)
       - [Different type of substitutions](#different-type-of-substitutions)
     - [Apply a filter for a mapping](#apply-a-filter-for-a-mapping)
     - [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
@@ -30,7 +31,7 @@
 
 ## Connector configuration to broker and http endpoint
 
-Connectors are the client to the different messaging servers: MQTT brokers, Kafka.
+Connectors are clients to different messaging servers: MQTT brokers, Kafka.
 The `Default HTTP Connector` is a special case of a connector:
 1. It has not to be created as the connector will be created automatically at startup of the backend for every tenant.
 1. The endpoint for the `Default HTTP Connector` can be accessed at the url `https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/<MAPPING_TOPIC>`
@@ -52,11 +53,11 @@ The table of configured connectors to different brokers can be:
 The mapper supports the following connectors:
 
 <p align="center">
-<img src="resources/image/ConnectorMatrix.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Matrix.png"  style="width: 70%;" />
 </p>
 <br/>
 
-Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently we support the following connectors:
+Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently, we support the following connectors:
 
 - MQTT: supports connections to MQTT version 3.1.1 over websocket and tcp
 - MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
@@ -78,10 +79,17 @@ The settings for the Kafka connector can be seen on the following screenshot:
 </p>
 <br/>
 
-The settings for the Default HTTP Connector are as follows
+The settings for the Default HTTP Connector (inbound) are as follows
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Connector_Http.png"  style="width: 50%;" />
+</p>
+<br/>
+
+The settings for the Webhook (outbound) are as follows
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Connector_WebHook.png"  style="width: 50%;" />
 </p>
 <br/>
 
@@ -140,8 +148,7 @@ Further example for JSONata expressions are:
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 
 1. `JSON`: if your payload is in JSON format
-1. `Flat File`: if your payload is in a CSV format
-1. `Binary`: if your payload is in HEX format
+1. `Hex`: if your payload is in HEX format
 1. `Protobuf Internal`: if your payload is a serialized protobuf message
 1. `Extension Source`: if you want to process the message yourself, by registering a processor extension
 
@@ -155,16 +162,15 @@ The wizard to define a mapping consists of the steps:
 1. Select the type of mapping:
 
 - `JSON`
-- `Flat File`
-- `Binary`
+- `Hex`
 - `Protobuf Internal`
 - `Extension Source`
 
 ---
 
 **NOTE:**
-Payload for `Flat File` and `Binary` are wrapped.
-For example for a flat file messages:
+Payload for `Hex` is wrapped.
+For example for a hexadecimal the payload is like:
 
 ```
 {
@@ -180,7 +186,7 @@ $split(message,",")[1]
 
 splits the payload and return the second field: `100`.
 
-And for the binary payload is encoded as hex string:
+And for the hexadecimal payload is encoded as hex string:
 
 ```
 {
@@ -226,10 +232,8 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 
 For outbound mappings the properties are slightly different. Most important are the properties:
 
-1. `filterMapping`: The Filter Outbound can contain one fragment name to associate a
-   mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is
-   applied.
-2. `publishTopic`: MQTT topic to publish outbound messages to.
+1. `publishTopic`: MQTT topic to publish outbound messages to.
+2. `filterMapping`: An expression that is applied on the incoming topic + payload and must be evaluated as `true` to apply the mapping.
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png"  style="width: 70%;" />
@@ -238,7 +242,11 @@ For outbound mappings the properties are slightly different. Most important are 
 
 For an outbound mapping to be applied two conditions have to be fulfilled:
 
-1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterMapping`
+1. the Cumulocity MEAO message must match the expression defined in the  `Filter Mapping` field. This can be a simple expression that checks if a fragment exists or a more complex one e.g. using regex to check if a key or value matches a specific condition.
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Filter_Outbound.png"  style="width: 70%;" />
+</p>
+
 2. for the device a Notification 2.0 subscription has to be created. This is done using the following dialog:
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png"  style="width: 70%;" />
@@ -365,6 +373,65 @@ In the sample below, e.g. a warning is shown since the required property `source
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SchemaValidation_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
+
+#### Substitutions defined as code (javascript)
+
+When you choose to define the substitutions in javascript code, see following screenshot, then the flow in the stepper is different.
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_CodeBasedSubstitution.png"  style="width: 50%;" />
+</p>
+<br/>
+
+In step 4 of the mapping stepper 
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_CodeBasedSubstitution.png"  style="width: 70%;" />
+</p>
+<br/>
+
+a javascript editor allows you to define your substitutions:
+
+```
+function extractFromSource(ctx) {
+
+    //This is the source message as json
+    const sourceObject = JSON.parse(ctx.getPayload());
+    // for (var key in sourceObject) {
+    //     console.log(`key: ${key}, value: ${sourceObject[key]}`);  
+    // }
+
+    //Define a new Measurement Value for Temperatures by assigning from source
+    const fragmentTemperatureSeries = {
+        value: sourceObject['temperature'],
+        unit: sourceObject['unit']
+    };
+
+    //Assign Values to Series
+    const fragmentTemperature = {
+        T: fragmentTemperatureSeries
+    };
+   
+    // Substitution: String key, Object value, MappingSubstitution.SubstituteValue.TYPE type, RepairStrategy repairStrategy
+    //Define time mapping time -> time
+    
+    //Define temperature fragment mapping temperature -> c8y_Temperature.T.value/unit
+    const temperature = new Substitution('c8y_TemperatureMeasurement', fragmentTemperature, 'OBJECT', 'DEFAULT');
+
+    //Define Device Identifier
+    const deviceIdentifier = new Substitution(ctx.getGenericDeviceIdentifier(), sourceObject['_TOPIC_LEVEL_'][1], 'TEXTUAL', 'DEFAULT');
+    //Return undefined, if you want to skip the message and not process it further
+    return new SubstitutionResult([deviceIdentifier, temperature]);
+}
+```
+
+The code that you write in the web editor is evaluated together with the shared code:
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Configuration_SharedCode.png"  style="width: 70%;" />
+</p>
+<br/>
+
 
 #### Different type of substitutions
 

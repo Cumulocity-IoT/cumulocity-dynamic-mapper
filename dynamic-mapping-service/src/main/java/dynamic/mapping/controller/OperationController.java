@@ -24,7 +24,11 @@ package dynamic.mapping.controller;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import jakarta.validation.Valid;
+import dynamic.mapping.configuration.CodeTemplate;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
@@ -48,6 +52,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Direction;
@@ -95,6 +101,13 @@ public class OperationController {
     @Value("${APP.mappingCreateRole}")
     private String mappingCreateRole;
 
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> runOperation(@Valid @RequestBody ServiceOperation operation) {
         String tenant = contextService.getContext().getTenant();
@@ -132,8 +145,12 @@ public class OperationController {
                     return handleRefreshNotifications(tenant);
                 case CLEAR_CACHE:
                     return handleClearCache(tenant, parameters);
-                case UPDATE_TEMPLATE:
+                case UPDATE_SNOOPED_TEMPLATE:
                     return handleUpdateTemplate(tenant, parameters);
+                case ADD_SAMPLE_MAPPINGS:
+                    return handleAddSampleMappings(tenant, parameters);
+                case INIT_CODE_TEMPLATES:
+                    return handleInitCodeTemplates(tenant, parameters);
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
@@ -141,6 +158,47 @@ public class OperationController {
             log.error("Tenant {} - Error running operation: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
+    }
+
+    private ResponseEntity<?> handleAddSampleMappings(String tenant, Map<String, String> parameters)
+            throws Exception {
+        Direction direction = Direction.valueOf(parameters.get("direction"));
+        if (direction.equals(Direction.INBOUND)) {
+            String samples = serviceConfigurationComponent.getSampleMappingsInbound_01();
+            List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
+            });
+            mappings.forEach(mapping -> {
+                mapping.setActive(false);
+                mappingComponent.createMapping(tenant, mapping);
+            });
+        } else {
+            String samples = serviceConfigurationComponent.getSampleMappingsOutbound_01();
+            List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
+            });
+            mappings.forEach(mapping -> {
+                mapping.setActive(false);
+                mappingComponent.createMapping(tenant, mapping);
+            });
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    private ResponseEntity<?> handleInitCodeTemplates(String tenant, Map<String, String> parameters) throws Exception {
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        log.debug("Tenant {} - Init system code template", tenant);
+
+        // Initialize code templates from properties if not already set
+        serviceConfigurationComponent.initCodeTemplates(serviceConfiguration, true);
+
+        try {
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+        } catch (JsonProcessingException ex) {
+            log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleUpdateTemplate(String tenant, Map<String, String> parameters) throws Exception {
@@ -249,11 +307,22 @@ public class OperationController {
 
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent
                 .getServiceConfiguration(tenant);
-        bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
-        configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 
-        AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-        client.submitConnect();
+        Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
+                tenant);
+        AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+                connectorIdentifier);
+        // Wait until client is connected before subscribing - otherwise "old"
+        // notification messages will be ignored
+        if (client.supportedDirections().contains(Direction.OUTBOUND)) {
+            try {
+                connectTask.get(10, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                log.error("Tenant {} - Error waiting for client to connect: {}", tenant, e.getMessage());
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            }
+            configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -284,6 +353,12 @@ public class OperationController {
             Integer cacheSize = serviceConfigurationComponent
                     .getServiceConfiguration(tenant).inboundExternalIdCacheSize;
             configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
+            log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } else if ("INVENTORY_CACHE".equals(cacheId)) {
+            Integer cacheSize = serviceConfigurationComponent
+                    .getServiceConfiguration(tenant).inventoryCacheSize;
+            configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
             log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         }

@@ -108,7 +108,7 @@ public class KafkaClient extends AConnectorClient {
             String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.\n The connector uses SASL_SSL as security protocol.";
             connectorType = ConnectorType.KAFKA;
             supportsMessageContext = true;
-            connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, true, supportedDirections());
+            connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, supportsMessageContext, supportedDirections());
         } catch (IOException e) {
             throw new ConnectorException(e.getMessage());
         }
@@ -149,7 +149,7 @@ public class KafkaClient extends AConnectorClient {
 		this.connectorIdentifier = connectorConfiguration.identifier;
 		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.identifier);
 		this.c8yAgent = configurationRegistry.getC8yAgent();
-		this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+		this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();
 		this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 		this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);

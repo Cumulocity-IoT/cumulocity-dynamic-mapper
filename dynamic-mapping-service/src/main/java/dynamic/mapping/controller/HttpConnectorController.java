@@ -25,14 +25,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.cumulocity.microservice.context.credentials.Credentials;
 import com.cumulocity.microservice.security.service.SecurityUserDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
-import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.core.*;
 import jakarta.servlet.http.HttpServletResponse;
@@ -53,7 +51,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.cumulocity.microservice.security.service.RoleService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -78,9 +75,6 @@ public class HttpConnectorController {
 
     @Autowired
     C8YAgent c8YAgent;
-
-    @Autowired
-    private RoleService roleService;
 
     @Autowired
     private ContextService<UserCredentials> contextService;
@@ -108,8 +102,8 @@ public class HttpConnectorController {
         try {
             HttpClient connectorClient = connectorRegistry
                     .getHttpConnectorForTenant(tenant);
-            Integer cutOffLength = Boolean.parseBoolean((String) connectorClient.getConnectorConfiguration()
-                    .getProperties().get(HttpClient.PROPERTY_CUTOFF_LEADING_SLASH)) ? 1 : 0;
+            Integer cutOffLength = (Boolean) connectorClient.getConnectorConfiguration()
+                    .getProperties().get(HttpClient.PROPERTY_CUTOFF_LEADING_SLASH) ? 1 : 0;
             // Get the path
             String subPath = fullPath.equals(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH) ? ""
                     : fullPath.substring(HttpClient.HTTP_CONNECTOR_ABSOLUTE_PATH.length() + cutOffLength);

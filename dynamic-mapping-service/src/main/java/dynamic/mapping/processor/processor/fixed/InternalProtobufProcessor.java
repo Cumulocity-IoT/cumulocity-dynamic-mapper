@@ -24,7 +24,7 @@ package dynamic.mapping.processor.processor.fixed;
 import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstituteValue.TYPE;
 import dynamic.mapping.processor.inbound.BaseProcessorInbound;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.ProcessingException;
@@ -56,28 +56,24 @@ public class InternalProtobufProcessor extends BaseProcessorInbound<byte[]> {
                 throw new ProcessingException(e.getMessage());
             }
 
-            context.addToProcessingCache("time", new DateTime(
+            context.addSubstitution("time", new DateTime(
                     payloadProtobuf.getTimestamp())
-                    .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
-            context.addToProcessingCache("c8y_GenericMeasurement.Module.value",
-                    payloadProtobuf.getValue(), TYPE.NUMBER, RepairStrategy.DEFAULT);
-            context.addToProcessingCache("type",
-                    payloadProtobuf.getMeasurementType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
-            context.addToProcessingCache("c8y_GenericMeasurement.Module.unit",
-                    payloadProtobuf.getUnit(), TYPE.NUMBER, RepairStrategy.DEFAULT);
+                    .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+            context.addSubstitution("c8y_GenericMeasurement.Module.value",
+                    payloadProtobuf.getValue(), TYPE.NUMBER, RepairStrategy.DEFAULT,false);
+            context.addSubstitution("type",
+                    payloadProtobuf.getMeasurementType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
+            context.addSubstitution("c8y_GenericMeasurement.Module.unit",
+                    payloadProtobuf.getUnit(), TYPE.NUMBER, RepairStrategy.DEFAULT,false);
 
             // as the mapping uses useExternalId we have to map the id to
             // _IDENTITY_.externalId
-            context.addToProcessingCache(context.getMapping().getGenericDeviceIdentifier(),
+            context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
                     payloadProtobuf.getExternalId()
                             .toString(),
-                    TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+                    TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
 
         }
     }
 
-    @Override
-    public void applyFilter(ProcessingContext<byte[]> context) {
-        // do nothing
-    }
 }

@@ -23,14 +23,13 @@ package dynamic.mapping.core;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
+import dynamic.mapping.configuration.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
@@ -46,10 +45,6 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import dynamic.mapping.configuration.ConnectorConfiguration;
-import dynamic.mapping.configuration.ConnectorConfigurationComponent;
-import dynamic.mapping.configuration.ServiceConfiguration;
-import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
@@ -81,7 +76,9 @@ public class BootstrapService {
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final String additionalSubscriptionIdTest;
     private final Integer inboundExternalIdCacheSize;
-    private final Map<String, Instant> cacheRetentionStartMap;
+    private final Integer inventoryCacheSize;
+    private final Map<String, Instant> cacheInboundExternalIdRetentionStartMap;
+    private final Map<String, Instant> cacheInventoryRetentionStartMap;
 
     @Qualifier("virtThreadPool")
     private ExecutorService virtThreadPool;
@@ -100,7 +97,8 @@ public class BootstrapService {
             ConnectorConfigurationComponent connectorConfigurationComponent,
             MicroserviceSubscriptionsService subscriptionsService,
             @Value("${APP.additionalSubscriptionIdTest}") String additionalSubscriptionIdTest,
-            @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize) {
+            @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize,
+            @Value("#{new Integer('${APP.inventoryCacheSize}')}") Integer inventoryCacheSize) {
 
         this.connectorRegistry = connectorRegistry;
         this.configurationRegistry = configurationRegistry;
@@ -111,7 +109,9 @@ public class BootstrapService {
         this.subscriptionsService = subscriptionsService;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
-        this.cacheRetentionStartMap = new ConcurrentHashMap<>();
+        this.inventoryCacheSize = inventoryCacheSize;
+        this.cacheInboundExternalIdRetentionStartMap = new ConcurrentHashMap<>();
+        this.cacheInventoryRetentionStartMap = new ConcurrentHashMap<>();
     }
 
     @PreDestroy
@@ -129,7 +129,7 @@ public class BootstrapService {
         try {
             cleanupTenantResources(tenant);
         } catch (Exception e) {
-            log.error("Tenant {} - Error during unsubscription cleanup: {}", tenant, e.getMessage());
+            log.error("Tenant {} - Error during unsubscription cleanup: {}", tenant, e.getMessage(), e);
         }
     }
 
@@ -146,8 +146,10 @@ public class BootstrapService {
         mappingComponent.cleanMappingStatus(tenant);
         configurationRegistry.getPayloadProcessorsInbound().remove(tenant);
         configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
+        configurationRegistry.deleteGraalsEngine(tenant);
 
         c8YAgent.deleteInboundExternalIdCache(tenant);
+        c8YAgent.deleteInventoryCache(tenant);
     }
 
     @EventListener
@@ -158,7 +160,7 @@ public class BootstrapService {
         try {
             initializeTenantResources(tenant, event.getCredentials());
         } catch (Exception e) {
-            log.error("Tenant {} - Initialization error: {}", tenant, e.getMessage());
+            log.error("Tenant {} - Initialization error: {}", tenant, e.getMessage(), e);
         }
     }
 
@@ -166,10 +168,23 @@ public class BootstrapService {
         configurationRegistry.getMicroserviceCredentials().put(tenant, credentials);
 
         ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
-        initializeCache(tenant, serviceConfig);
+        initializeCaches(tenant, serviceConfig);
         initializeTimeZoneAndMappings(tenant);
-        initializeConnectors(tenant, serviceConfig);
-
+        // Wait for ALL connectors are successfully connected before handling Outbound
+        // Mappings
+        List<Future<?>> connectorTasks = initializeConnectors(tenant, serviceConfig);
+        if (connectorTasks != null) {
+            connectorTasks.forEach(connectorTask -> {
+                try {
+                    connectorTask.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    log.error("Tenant {} - Error initializing connector: {}", tenant, e.getMessage(), e);
+                }
+            });
+        }
+        virtThreadPool.submit(() -> {
+            initializeGraalsEngine(tenant);
+        });
         handleOutboundMapping(tenant, serviceConfig);
     }
 
@@ -187,11 +202,24 @@ public class BootstrapService {
             requiresSave = true;
         }
 
+
+        if (serviceConfig.inventoryCacheSize == null || serviceConfig.inventoryCacheSize == 0) {
+            serviceConfig.inventoryCacheSize = inventoryCacheSize;
+            requiresSave = true;
+        }
+
+        Map<String, CodeTemplate> codeTemplates = serviceConfig.getCodeTemplates();
+        if (codeTemplates == null || codeTemplates.isEmpty()) {
+            // Initialize code templates from properties if not already set
+            serviceConfigurationComponent.initCodeTemplates(serviceConfig, false);
+            requiresSave = true;
+        }
+
         if (requiresSave) {
             try {
-                serviceConfigurationComponent.saveServiceConfiguration(serviceConfig);
+                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfig);
             } catch (JsonProcessingException e) {
-                log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
+                log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage(), e);
             }
         }
 
@@ -199,13 +227,19 @@ public class BootstrapService {
         return serviceConfig;
     }
 
-    private void initializeCache(String tenant, ServiceConfiguration serviceConfig) {
-        int cacheSize = Optional.ofNullable(serviceConfig.inboundExternalIdCacheSize)
+    private void initializeCaches(String tenant, ServiceConfiguration serviceConfig) {
+        int cacheSizeInbound = Optional.ofNullable(serviceConfig.inboundExternalIdCacheSize)
                 .filter(size -> size != 0)
                 .orElse(inboundExternalIdCacheSize);
 
-        c8YAgent.initializeInboundExternalIdCache(tenant, cacheSize);
-        cacheRetentionStartMap.put(tenant, Instant.now());
+        int cacheSizeInventory = Optional.ofNullable(serviceConfig.inventoryCacheSize)
+                .filter(size -> size != 0)
+                .orElse(inventoryCacheSize);
+
+        c8YAgent.initializeInboundExternalIdCache(tenant, cacheSizeInbound);
+        c8YAgent.initializeInventoryCache(tenant, cacheSizeInventory);
+        cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
+        cacheInventoryRetentionStartMap.put(tenant, Instant.now());
     }
 
     private void initializeTimeZoneAndMappings(String tenant) {
@@ -225,6 +259,10 @@ public class BootstrapService {
         initializeMappingComponents(tenant);
     }
 
+    private void initializeGraalsEngine(String tenant) {
+        configurationRegistry.createGraalsEngine(tenant);
+    }
+
     private void initializeMappingComponents(String tenant) {
         mappingComponent.initializeMappingStatus(tenant, false);
         mappingComponent.initializeDeploymentMap(tenant, false);
@@ -233,14 +271,15 @@ public class BootstrapService {
         mappingComponent.rebuildMappingInboundCache(tenant);
     }
 
-    private void initializeConnectors(String tenant, ServiceConfiguration serviceConfig) {
+    private List<Future<?>> initializeConnectors(String tenant, ServiceConfiguration serviceConfig) {
         try {
             initializeConnectorRegistry(tenant);
             registerDefaultConnectors();
-            setupConnectorConfigurations(tenant, serviceConfig);
+            return setupConnectorConfigurations(tenant, serviceConfig);
         } catch (Exception e) {
-            log.error("Tenant {} - Error initializing connectors: {}", tenant, e.getMessage());
+            log.error("Tenant {} - Error initializing connectors: {}", tenant, e.getMessage(), e);
         }
+        return null;
     }
 
     private void initializeConnectorRegistry(String tenant) {
@@ -260,15 +299,18 @@ public class BootstrapService {
         connectorRegistry.registerConnector(ConnectorType.HTTP, initialHttpClient.getConnectorSpecification());
     }
 
-    private void setupConnectorConfigurations(String tenant, ServiceConfiguration serviceConfig)
-            throws ConnectorRegistryException, ConnectorException {
+    private List<Future<?>> setupConnectorConfigurations(String tenant, ServiceConfiguration serviceConfig)
+            throws ConnectorRegistryException, ConnectorException, ExecutionException, InterruptedException {
         List<ConnectorConfiguration> connectorConfigs = connectorConfigurationComponent
                 .getConnectorConfigurations(tenant);
 
         ConnectorConfiguration httpConfig = null;
-
+        List<Future<?>> connectTasks = new ArrayList<>();
         for (ConnectorConfiguration config : connectorConfigs) {
-            initializeConnectorByConfiguration(config, serviceConfig, tenant);
+            Future<?> connectTask = initializeConnectorByConfiguration(config, serviceConfig, tenant);
+            if (connectTask != null)
+                connectTasks.add(connectTask);
+
             if (ConnectorType.HTTP.equals(config.connectorType)) {
                 httpConfig = config;
             }
@@ -277,6 +319,7 @@ public class BootstrapService {
         if (httpConfig == null) {
             createAndInitializeDefaultHttpConnector(tenant, serviceConfig);
         }
+        return connectTasks;
     }
 
     private void createAndInitializeDefaultHttpConnector(String tenant, ServiceConfiguration serviceConfig)
@@ -289,7 +332,7 @@ public class BootstrapService {
 
         HttpClient initialHttpClient = new HttpClient();
         initialHttpClient.getConnectorSpecification().getProperties()
-                .forEach((key, prop) -> httpConfig.properties.put(key, prop.defaultValue.toString()));
+                .forEach((key, prop) -> httpConfig.properties.put(key, prop.defaultValue));
 
         try {
             connectorConfigurationComponent.saveConnectorConfiguration(httpConfig);
@@ -339,22 +382,23 @@ public class BootstrapService {
     private void disableOutboundMapping(String tenant, ServiceConfiguration serviceConfig) {
         try {
             serviceConfig.setOutboundMappingEnabled(false);
-            serviceConfigurationComponent.saveServiceConfiguration(serviceConfig);
+            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfig);
         } catch (JsonProcessingException e) {
-            log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
+            log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage(), e);
         }
     }
 
-    public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
+    public Future<?> initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
             ServiceConfiguration serviceConfiguration, String tenant)
             throws ConnectorRegistryException, ConnectorException {
         AConnectorClient connectorClient = null;
+        Future<?> future = null;
         if (connectorConfiguration.isEnabled()) {
             try {
                 connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
                         additionalSubscriptionIdTest, tenant);
             } catch (ConnectorException e) {
-                log.error("Tenant {} - Error on creating connector {} {}", connectorConfiguration.getConnectorType(),
+                log.error("Tenant {} - Error on creating connector {}", tenant, connectorConfiguration.getConnectorType(),
                         e);
                 throw new ConnectorRegistryException(e.getMessage());
             }
@@ -364,16 +408,19 @@ public class BootstrapService {
                     connectorClient);
             configurationRegistry.initializePayloadProcessorsInbound(tenant);
             connectorClient.setDispatcher(dispatcherInbound);
-            connectorClient.reconnect();
+            // Connection is done async, future is returned to wait for the connection if
+            // needed
+            future = connectorClient.reconnect();
             connectorClient.submitHousekeeping();
             initializeOutboundMapping(tenant, serviceConfiguration, connectorClient);
         }
-        return connectorClient;
+        return future;
     }
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
             AConnectorClient connectorClient) {
-        if (serviceConfiguration.isOutboundMappingEnabled() && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
+        if (serviceConfiguration.isOutboundMappingEnabled()
+                && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
             // initialize AsynchronousDispatcherOutbound
             configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
             DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
@@ -385,7 +432,6 @@ public class BootstrapService {
                         dispatcherOutbound);
             // Subscriber must be new initialized for the new added connector
             // configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
-
         }
     }
 
@@ -393,29 +439,49 @@ public class BootstrapService {
     public void cleanUpCaches() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
-            cleanupCacheForTenant(tenant);
+            cleanupCachesForTenant(tenant);
         });
     }
 
-    private void cleanupCacheForTenant(String tenant) {
-        Instant cacheRetentionStart = cacheRetentionStartMap.get(tenant);
-        if (cacheRetentionStart == null)
+    private void cleanupCachesForTenant(String tenant) {
+        Instant cacheRetentionStartInbound = cacheInboundExternalIdRetentionStartMap.get(tenant);
+        if (cacheRetentionStartInbound == null)
             return;
 
         ServiceConfiguration serviceConfig = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        int retentionDays = serviceConfig.getInboundExternalIdCacheRetention();
+        int retentionDaysInbound = serviceConfig.getInboundExternalIdCacheRetention();
 
-        if (shouldClearCache(cacheRetentionStart, retentionDays)) {
+        if (shouldClearCacheInboundExternalId(cacheRetentionStartInbound, retentionDaysInbound)) {
             int cacheSize = c8YAgent.getInboundExternalIdCache(tenant).getCacheSize();
             c8YAgent.clearInboundExternalIdCache(tenant, false, cacheSize);
-            cacheRetentionStartMap.put(tenant, Instant.now());
+            cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
 
-            log.info("Tenant {} - Identity Cache cleared. Old Size: {}, New size: {}",
+            log.info("Tenant {} - Identity cache cleared. Old Size: {}, New size: {}",
                     tenant, cacheSize, c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
+        }
+
+        Instant cacheRetentionStartInventory = cacheInventoryRetentionStartMap.get(tenant);
+        if (cacheRetentionStartInventory == null)
+            return;
+
+        int retentionDaysInventory = serviceConfig.getInventoryCacheRetention();
+
+        if (shouldClearCacheInventory(cacheRetentionStartInbound, retentionDaysInventory)) {
+            int cacheSize = c8YAgent.getInventoryCache(tenant).getCacheSize();
+            c8YAgent.clearInventoryCache(tenant, false, cacheSize);
+            cacheInventoryRetentionStartMap.put(tenant, Instant.now());
+
+            log.info("Tenant {} - Inventory cache cleared. Old Size: {}, New size: {}",
+                    tenant, cacheSize, c8YAgent.getInventoryCache(tenant).getCacheSize());
         }
     }
 
-    private boolean shouldClearCache(Instant cacheRetentionStart, int retentionDays) {
+    private boolean shouldClearCacheInboundExternalId(Instant cacheRetentionStart, int retentionDays) {
+        return retentionDays > 0 &&
+                Duration.between(cacheRetentionStart, Instant.now()).compareTo(Duration.ofDays(retentionDays)) >= 0;
+    }
+
+    private boolean shouldClearCacheInventory(Instant cacheRetentionStart, int retentionDays) {
         return retentionDays > 0 &&
                 Duration.between(cacheRetentionStart, Instant.now()).compareTo(Duration.ofDays(retentionDays)) >= 0;
     }

@@ -118,14 +118,17 @@ export class ConnectorConfigurationModalComponent implements OnInit {
         props: {
           label: entry.key,
           required: entry.property.required,
-          readonly: entry.property.readonly,
+          disabled: entry.property.readonly,
           description: entry.property.description || undefined,
           ...additionalProps
         },
         hideExpression: (model) => {
           if (entry.property?.condition && entry.property?.condition.anyOf) {
             const convertedAnyOf = this.convertBooleanStrings(entry.property.condition.anyOf);
-            console.log("Evaluating:", entry.key, entry.property?.condition.key, entry.property?.condition.anyOf, convertedAnyOf, convertedAnyOf, model.properties[entry.property?.condition.key], model);
+            //console.log("Evaluating:", entry.key, entry.property?.condition.key, entry.property?.condition.anyOf, convertedAnyOf, convertedAnyOf, model.properties[entry.property?.condition.key], model);
+            //console.log("Evaluating:", entry.key, convertedAnyOf, entry.property?.condition.key, model.properties[entry.property?.condition.key], !convertedAnyOf.includes(model.properties[entry.property?.condition.key],));
+            //console.log("Model:", entry.property.condition.anyOf, model, model.properties);
+            //console.log("Model:", model.properties);
             return !convertedAnyOf.includes(model.properties[entry.property?.condition.key])
           } else { return false }
         }
@@ -245,7 +248,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
     const sortedFields = new Array(numberFields);
 
     Object.entries(dynamicFields.properties).forEach(([key, property]) => {
-      if (property.defaultValue && this.add) {
+      if ('defaultValue' in property && this.add) {
         this.configuration.properties[key] = property.defaultValue;
       }
 
@@ -266,6 +269,12 @@ export class ConnectorConfigurationModalComponent implements OnInit {
   }
 
   onSave(): void {
+
     this.closeSubject.next(this.configuration);
+  }
+
+  onValidate(): void {
+    this.dynamicForm.updateValueAndValidity();
+    this.dynamicForm.reset();
   }
 }

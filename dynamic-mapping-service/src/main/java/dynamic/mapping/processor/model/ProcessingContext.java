@@ -29,15 +29,18 @@ import java.util.Map;
 import java.util.Set;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.model.API;
+import dynamic.mapping.model.BinaryInfo;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.ProcessingException;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.Value;
 
 @Getter
 @Setter
@@ -50,10 +53,13 @@ import lombok.Setter;
  * when a <code>mapping</code> is applied to an inbound <code>payload</code>
  */
 public class ProcessingContext<O> {
+
     private Mapping mapping;
 
     private String topic;
 
+    private API api;
+    
     private QOS qos;
 
     private String resolvedPublishTopic;
@@ -63,7 +69,7 @@ public class ProcessingContext<O> {
      */
     private O payload;
 
-    private byte[] payloadRaw;
+    private Object rawPayload;
 
     @Builder.Default
     private List<C8YRequest> requests = new ArrayList<C8YRequest>();
@@ -78,7 +84,7 @@ public class ProcessingContext<O> {
 
     // <pathTarget, substituteValues>
     @Builder.Default
-    private Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = new HashMap<String, List<MappingSubstitution.SubstituteValue>>();
+    private Map<String, List<SubstituteValue>> processingCache = new HashMap<String, List<SubstituteValue>>();
 
     @Builder.Default
     private boolean sendPayload = false;
@@ -100,6 +106,19 @@ public class ProcessingContext<O> {
 
     private String sourceId;
 
+    private Engine graalsEngine;
+
+    private Context graalsContext;
+
+    private String sharedCode;
+
+    private String systemCode;
+
+    private Value extractFromSourceFunc;
+
+    @Builder.Default
+    private BinaryInfo binaryInfo = new BinaryInfo();
+
     public static final String SOURCE_ID = "source.id";
 
     public boolean hasError() {
@@ -119,20 +138,21 @@ public class ProcessingContext<O> {
         errors.add(processingException);
     }
 
-    public void addToProcessingCache(String key, Object value, MappingSubstitution.SubstituteValue.TYPE type,
-            RepairStrategy repairStrategy) {
+    public void addSubstitution(String key, Object value, SubstituteValue.TYPE type,
+            RepairStrategy repairStrategy, boolean expandArray) {
         processingCache.put(key,
                 new ArrayList<>(
                         Arrays.asList(
-                                new MappingSubstitution.SubstituteValue(
+                                new SubstituteValue(
                                         value,
                                         type,
-                                        repairStrategy))));
+                                        repairStrategy, expandArray))));
     }
 
-    public List<MappingSubstitution.SubstituteValue> getDeviceEntries() {
+    public List<SubstituteValue> getDeviceEntries() {
         List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())) {
+        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
+                || MappingType.CODE_BASED.equals(mapping.getMappingType())) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
@@ -140,14 +160,15 @@ public class ProcessingContext<O> {
         String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
                 ? pathsTargetForDeviceIdentifiers.get(0)
                 : null;
-        List<MappingSubstitution.SubstituteValue> deviceEntries = processingCache
+        List<SubstituteValue> deviceEntries = processingCache
                 .get(firstPathTargetForDeviceIdentifiers);
         return deviceEntries;
     }
 
     public List<String> getPathsTargetForDeviceIdentifiers() {
         List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())) {
+        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
+                || MappingType.CODE_BASED.equals(mapping.getMappingType())) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();

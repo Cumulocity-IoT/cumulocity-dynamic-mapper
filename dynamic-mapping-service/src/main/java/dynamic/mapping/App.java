@@ -85,6 +85,7 @@ import lombok.SneakyThrows;
 @EnableAsync
 @EnableScheduling
 public class App {
+
     @Bean
     MeterRegistryCustomizer<MeterRegistry> configurer(
             @Value("${application.name}") String applicationName) {
@@ -102,7 +103,7 @@ public class App {
 
     @Bean("virtThreadPool")
     public ExecutorService virtThreadPool() {
-        final ThreadFactory factory = Thread.ofVirtual().name("virtThread-",0).factory();
+        final ThreadFactory factory = Thread.ofVirtual().name("virtThread-", 0).factory();
         return Executors.newThreadPerTaskExecutor(factory);
     }
 

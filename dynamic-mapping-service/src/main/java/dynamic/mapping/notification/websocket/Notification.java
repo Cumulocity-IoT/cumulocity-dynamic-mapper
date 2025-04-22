@@ -64,10 +64,16 @@ public class Notification {
             case "events":
                 api = API.EVENT;
                 break;
+            case "eventsWithChildren":
+                api = API.EVENT_WITH_CHILDREN;
+                break;
+            case "alarmsWithChildren":
+                api = API.ALARM_WITH_CHILDREN;
+                break;
             case "measurements":
                 api = API.MEASUREMENT;
                 break;
-            case "managedObjects":
+            case "managedobjects":
                 api = API.INVENTORY;
                 break;
             case "operations":

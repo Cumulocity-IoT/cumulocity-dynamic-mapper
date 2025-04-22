@@ -22,8 +22,7 @@
 package dynamic.mapping.processor.inbound;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
-import static dynamic.mapping.model.MappingSubstitution.isArray;
-import static dynamic.mapping.model.MappingSubstitution.toPrettyJsonString;
+import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,8 +39,10 @@ import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import dynamic.mapping.model.Substitution;
+import dynamic.mapping.processor.model.SubstituteValue.TYPE;
+import dynamic.mapping.processor.model.SubstitutionEvaluation;
+import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
@@ -70,7 +71,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
         Object payloadObject = context.getPayload();
-        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
         String payload = toPrettyJsonString(payloadObject);
         if (serviceConfiguration.logPayload || mapping.debug) {
@@ -79,7 +80,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
         }
 
         boolean substitutionTimeExists = false;
-        for (MappingSubstitution substitution : mapping.substitutions) {
+        for (Substitution substitution : mapping.substitutions) {
             Object extractedSourceContent = null;
             /*
              * step 1 extract content from inbound payload
@@ -94,19 +95,19 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
             /*
              * step 2 analyse extracted content: textual, array
              */
-            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
+            List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     substitution.pathTarget,
                     new ArrayList<>());
 
-            if (extractedSourceContent != null && isArray(extractedSourceContent) && substitution.expandArray) {
+            if (extractedSourceContent != null && SubstitutionEvaluation.isArray(extractedSourceContent) && substitution.expandArray) {
                 // extracted result from sourcePayload is an array, so we potentially have to
                 // iterate over the result, e.g. creating multiple devices
                 for (Object jn : (Collection) extractedSourceContent) {
-                    MappingSubstitution.processSubstitute(tenant, processingCacheEntry, jn,
+                    SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, jn,
                             substitution, mapping);
                 }
             } else {
-                MappingSubstitution.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
+                SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
                         substitution, mapping);
             }
             processingCache.put(substitution.pathTarget, processingCacheEntry);
@@ -125,48 +126,14 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
 
         // no substitution for the time property exists, then use the system time
         if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
-            List<MappingSubstitution.SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
+            List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     Mapping.TIME,
                     new ArrayList<>());
             processingCacheEntry.add(
-                    new MappingSubstitution.SubstituteValue(new DateTime().toString(),
-                            TYPE.TEXTUAL, RepairStrategy.DEFAULT));
+                    new SubstituteValue(new DateTime().toString(),
+                            TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false));
             processingCache.put(Mapping.TIME, processingCacheEntry);
         }
-    }
-
-    @Override
-    public void applyFilter(ProcessingContext<Object> context) {
-        String tenant = context.getTenant();
-        String mappingFilter = context.getMapping().getFilterMapping();
-        if (mappingFilter != null && !("").equals(mappingFilter)) {
-            Object payloadObjectNode = context.getPayload();
-            String payload = toPrettyJsonString(payloadObjectNode);
-            try {
-                var expr = jsonata(mappingFilter);
-                Object extractedSourceContent = expr.evaluate(payloadObjectNode);
-                context.setIgnoreFurtherProcessing(!isNodeTrue(extractedSourceContent));
-            } catch (Exception e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
-                        payload, e);
-            }
-        }
-    }
-
-    private boolean isNodeTrue(Object node) {
-        // Case 1: Direct boolean value check
-        if (node instanceof Boolean) {
-            return (Boolean) node;
-        }
-
-        // Case 2: String value that can be converted to boolean
-        if (node instanceof String) {
-            String text = ((String) node).trim().toLowerCase();
-            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
-            // Add more string variations if needed
-        }
-
-        return false;
     }
 
 }

@@ -20,7 +20,7 @@
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, Column, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, combineLatest, from, Observable,  } from 'rxjs';
+import { BehaviorSubject, combineLatest, from, Observable, } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
@@ -28,11 +28,12 @@ import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.c
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
 import { DeploymentMapEntry, Direction } from '../mapping/mapping.model';
-import { uuidCustom } from '../mapping/util';
+import { createCustomUuid } from '../mapping/util';
 import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
+import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
@@ -42,7 +43,7 @@ import { ActionVisibilityRule } from './types';
 })
 export class ConnectorGridComponent implements OnInit, AfterViewInit {
   @Input() selectable = true;
-  @Input() directions : Direction[] = [Direction.INBOUND,Direction.OUTBOUND];
+  @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
   @Input() readOnly = false;
   @Input() deploy: string[];
   @Input() deploymentMapEntry: DeploymentMapEntry;
@@ -72,11 +73,12 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     private connectorConfigurationService: ConnectorConfigurationService,
     private alertService: AlertService,
   ) {
-    this.initializeColumns();
-    this.initializeActionControls();
+
   }
 
   ngOnInit(): void {
+    this.initializeColumns();
+    this.initializeActionControls();
     this.initializeSelection();
     this.initializeConfigurations();
     this.initializeSpecifications();
@@ -103,13 +105,14 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
       ...column,
       gridTrackSize: column.name === 'status' || column.name === 'enabled'
         ? this.selectable ? column.gridTrackSize : `${parseInt(column.gridTrackSize) + 4}%`
-        : column.gridTrackSize
+        : column.gridTrackSize,
+      cellRendererComponent: this.selectable && column.name === 'name' ? undefined : column.cellRendererComponent,
     }));
   }
 
   private initializeConfigurations(): void {
     this.configurations$ = this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus().pipe(
-      map(configs => configs.filter(config => 
+      map(configs => configs.filter(config =>
         config.supportedDirections?.some(dir => this.directions.includes(dir))
       ))
     )
@@ -237,7 +240,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   async onConfigurationAdd(): Promise<void> {
     const newConfig: Partial<ConnectorConfiguration> = {
       properties: {},
-      identifier: uuidCustom()
+      identifier: createCustomUuid()
     };
     const modalRef = this.showConfigurationModal(newConfig, true);
     modalRef.content.closeSubject.subscribe(async addedConfiguration => {
@@ -255,7 +258,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   get shouldHideBulkActionsAndReadOnly(): boolean {
-    return this.selectable && this.readOnly;
+    //return this.selectable && this.readOnly;
+    return  this.readOnly;
   }
 
   // Helper methods for showing modals
@@ -283,7 +287,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   // Missing methods for the component:
   private prepareCopyConfiguration(config: ConnectorConfiguration): Partial<ConnectorConfiguration> {
     const copiedConfig = cloneDeep(config);
-    copiedConfig.identifier = uuidCustom();
+    copiedConfig.identifier = createCustomUuid();
     copiedConfig.name = `${copiedConfig.name}_copy`;
 
     this.alertService.warning(

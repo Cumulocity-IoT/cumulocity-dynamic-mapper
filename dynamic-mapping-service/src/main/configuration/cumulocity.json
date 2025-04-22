@@ -1,6 +1,8 @@
 {
   "apiVersion":"2",
   "version":"@project.version@",
+  "name": "dynamic-mapping-service",
+  "settingsCategory": "dynMappingService",
   "provider": {
     "name":"Cumulocity GmbH"
   },
@@ -34,8 +36,7 @@
     "ROLE_NOTIFICATION_2_ADMIN",
     "ROLE_USER_MANAGEMENT_READ",
     "ROLE_USER_MANAGEMENT_CREATE",
-	"ROLE_USER_MANAGEMENT_ADMIN",
-    "ROLE_MQTT_SERVICE_ADMIN"
+	  "ROLE_USER_MANAGEMENT_ADMIN"
   ],
 
   "roles":[

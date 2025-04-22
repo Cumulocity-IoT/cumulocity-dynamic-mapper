@@ -33,9 +33,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 //@Service
-public class BinaryProcessorInbound extends JSONProcessorInbound {
+public class HexProcessorInbound extends JSONProcessorInbound {
 
-    public BinaryProcessorInbound(ConfigurationRegistry configurationRegistry) {
+    public HexProcessorInbound(ConfigurationRegistry configurationRegistry) {
         super(configurationRegistry);
     }
 

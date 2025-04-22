@@ -28,13 +28,13 @@ import java.util.Map;
 
 public enum API {
     ALARM("ALARM", "source.id", "alarms"),
+    ALARM_WITH_CHILDREN("ALARM", "source.id", "alarmsWithChildren"),
     EVENT("EVENT", "source.id", "events"),
-    EVENT_WITH_BINARY("EVENT_WITH_BINARY", "source.id", "events"),
+    EVENT_WITH_CHILDREN("EVENT", "source.id", "eventsWithChildren"),
     MEASUREMENT("MEASUREMENT", "source.id", "measurements"),
     INVENTORY("INVENTORY", "id", "managedObjects"),
     OPERATION("OPERATION", "deviceId", "operations"),
     EMPTY("NN", "nn", "nn"),
-
     ALL("ALL", "*", "*");
 
     public final String name;

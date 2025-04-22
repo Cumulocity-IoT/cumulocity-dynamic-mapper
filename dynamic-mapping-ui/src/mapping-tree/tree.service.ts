@@ -22,7 +22,7 @@ import { Injectable } from '@angular/core';
 import { FetchClient, InventoryService } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
-import { isTypeOf } from '../mapping/shared/util';
+import { getTypeOf } from '../mapping/shared/util';
 import { BASE_URL, PATH_MAPPING_TREE_ENDPOINT } from '../shared';
 
 @Injectable({ providedIn: 'root' })
@@ -68,7 +68,7 @@ export class MappingTreeService {
   }
 
   clean(tree: JSON, removeSet: string[]): void {
-    const typeTree = isTypeOf(tree);
+    const typeTree = getTypeOf(tree);
 
     // remove properties that should not be displayed
     if (typeTree == 'Object') {
@@ -93,7 +93,7 @@ export class MappingTreeService {
 
       for (const key in tree) {
         if (Object.prototype.hasOwnProperty.call(tree, key)) {
-          const typeItem = isTypeOf(tree[key]);
+          const typeItem = getTypeOf(tree[key]);
           const tempItem = tree[key];
           if (typeItem == 'Array' && (tempItem as any[]).length == 1) {
             _.unset(tree, key);

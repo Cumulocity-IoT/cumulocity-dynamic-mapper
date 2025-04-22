@@ -17,6 +17,8 @@
  *
  * @authors Christof Strack
  */
+export * from './component/code-template/manage-template.component';
+export * from './component/editor/jsoneditor.component';
 export * from './component/formly/custom-form-field-wrapper.component';
 export * from './component/formly/input-custom.type.component';
 export * from './component/formly/textarea.type.component';
@@ -28,10 +30,10 @@ export * from './connector-configuration/edit/connector-configuration-modal.comp
 export * from './connector-details/connector-details.component';
 export * from './connector-log/connector-log.component';
 export * from './connector-log/connector-log.model';
-export * from './editor/jsoneditor.component';
 export * from './mapping/mapping.model';
 export * from './mapping/util';
 export * from './misc/admin.guard';
+export * from './misc/base64-decode.pipe';
 export * from './misc/camel-case.pipe';
 export * from './misc/capitalize-case.pipe';
 export * from './misc/filter-json.pipe';

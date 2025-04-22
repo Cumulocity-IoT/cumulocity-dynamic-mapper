@@ -413,6 +413,7 @@ public class C8YNotificationSubscriber {
 						API api = API.fromString(
 								notificationSubscriptionRepresentation.getSubscriptionFilter().getApis().get(0));
 						c8yNotificationSubscription.setApi(api);
+                        c8yNotificationSubscription.setSubscriptionName(notificationSubscriptionRepresentation.getSubscription());
 					}
 				}
 			}
@@ -423,8 +424,14 @@ public class C8YNotificationSubscriber {
 
 	public void unsubscribeDeviceAndDisconnect(ManagedObjectRepresentation mor) throws SDKException {
 		subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-			subscriptionAPI.deleteByFilter(
-					new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId()));
+            try {
+                getNotificationSubscriptionForDevices(mor.getId().getValue(), DEVICE_SUBSCRIPTION).get().forEach(sub -> {
+                    subscriptionAPI.delete(sub);
+					log.info("Tenant {} - Subscription {} deleted for device with ID {}", subscriptionsService.getTenant(), sub.getSubscription(), mor.getId().getValue());
+                });
+            } catch (Exception e) {
+                log.error("Tenant {} - Error on unsubscribing device: {}", subscriptionsService.getTenant(), e.getLocalizedMessage());
+            }
 			if (!subscriptionAPI
 					.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
 					.get().allPages().iterator().hasNext()) {

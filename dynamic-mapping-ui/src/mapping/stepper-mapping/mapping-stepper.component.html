@@ -54,7 +54,8 @@
         </div>
       </div>
       <div class="col-xs-12 flex-grow no-gutter">
-        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]" [deploymentMapEntry]="deploymentMapEntry"
+        <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [directions]="[mapping.direction]"
+          [deploymentMapEntry]="deploymentMapEntry"
           (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
       </div>
       <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
@@ -65,7 +66,7 @@
     <cdk-step label="General settings" [stepControl]="propertyFormly">
       <div class="col-xs-12 flex-grow no-gutter">
         <d11r-mapping-properties [mapping]="mapping" [supportsMessageContext]="supportsMessageContext"
-          [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly"
+          [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly" [codeFormly]="codeFormly"
           (targetAPIChanged)="onTargetAPIChanged($event)">
         </d11r-mapping-properties>
       </div>
@@ -75,7 +76,7 @@
       </c8y-stepper-buttons>
     </cdk-step>
 
-    <cdk-step label="Select templates" [stepControl]="templateForm">
+    <cdk-step label="Select templates" [stepControl]="filterFormly">
       <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
         <div class="row">
           <div class="col-lg-6 col-lg-offset-3">
@@ -113,11 +114,11 @@
                         </select>
                       </div>
                       <div>
-                        <small class="text-muted">{{
-                          stepperConfiguration.showEditorSource
-                          ? 'Use snooped templates in the source template.'
-                          : 'Template is described internally by the chosen mapping
-                          type'
+                        <small class="text-muted">{{stepperConfiguration.showProcessorExtensionsInternal
+                          ||stepperConfiguration.showProcessorExtensionsSource
+                          ||stepperConfiguration.showProcessorExtensionsSourceTarget ?
+                          'Template is described internally by the chosen mapping
+                          type.': 'Use sample templates for the source.'
                           }}</small>
                       </div>
                     </div>
@@ -143,13 +144,15 @@
                       <div>
                         <label translate>Source Template - {{ sourceSystem }}</label>
                       </div>
-                      <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorSource"
+                      <d11r-mapping-json-editor2
+                        *ngIf="stepperConfiguration.showEditorSource || stepperConfiguration.showCodeEditor"
                         [updateEditor]="updateSourceEditor" [options]="editorOptionsSourceTemplate"
-                        [class]="'jse-main-medium'" (initialized)="onEditorSourceInitialized()"
+                        [class]="'jse-main-small'" (initialized)="onEditorSourceInitialized()"
                         (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
+                        (pathChanged)="onSelectedPathFilterMappingChanged($event)"
                         #editorSourceStepTemplate></d11r-mapping-json-editor2>
                       <ng-container
-                        *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal">
+                        *ngIf="(stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget  || stepperConfiguration.showProcessorExtensionsInternal)">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
@@ -164,10 +167,37 @@
                       </div>
                       <d11r-mapping-json-editor2 *ngIf="stepperConfiguration.showEditorTarget"
                         [updateEditor]="updateTargetEditor" [options]="editorOptionsTargetTemplate"
-                        [class]="'jse-main-medium'" (initialized)="onEditorTargetInitialized()"
+                        [class]="'jse-main-small'" (initialized)="onEditorTargetInitialized()"
                         (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
                         #editorTargetStepTemplate>
                       </d11r-mapping-json-editor2>
+                      <div>
+                        <small class="text-muted">{{
+                          'Template is described internally by the chosen mapping
+                          type.'
+                          }}</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- <div *ngIf="!(stepperConfiguration.showCodeEditor)"> -->
+              <div>
+                <div class="row">
+                  <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
+                </div>
+                <div class="row">
+                  <div class="col-lg-5 col-lg-offset-1">
+                    <div class="form-group m-b-4" style="margin-left: 0px">
+                      <label translate style="padding-left: 6px">Filter Result [{{
+                        filterModel.filterExpression?.resultType
+                        }}]</label>
+                      <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                              font-size: var(--c8y-font-size-small);
+                              line-height: var(--c8y-line-height-small);
+                            ">{{
+                              filterModel.filterExpression?.result
+                            }}</textarea>
                     </div>
                   </div>
                 </div>
@@ -185,7 +215,7 @@
       <div class="col-lg-12 flex-grow no-gutter">
         <div class="card-inner-scroll fit-h">
           <div class="card-block p-b-0">
-            <div class="container">
+            <div class="container" *ngIf="!(stepperConfiguration.showCodeEditor)">
               <div [formGroup]="templateForm">
                 <div class="row" #editorsTemplate>
                   <div class="col-lg-5 col-lg-offset-1 column-right-border" #leftTemplateTemplate>
@@ -200,7 +230,8 @@
                           (initialized)="onEditorSourceInitialized()" [data]="sourceTemplate"
                           #editorSourceStepSubstitution></d11r-mapping-json-editor2>
                       </div>
-                      <ng-container *ngIf="stepperConfiguration.showProcessorExtensionsSource">
+                      <ng-container
+                        *ngIf="stepperConfiguration.showProcessorExtensionsSource && !(stepperConfiguration.showCodeEditor)">
                         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
                         </ng-container>
                       </ng-container>
@@ -217,9 +248,10 @@
                         <div class="d-flex">
                           <label>Target Template - {{ targetSystem }}</label>
                           <span class="hidden-xs hidden-sm m-l-4">
-                            <button type="button" placement="right" [popover]="'The template contains the dummy field
-                              _TOPIC_LEVEL_ for outbound to map device
-                              identifiers.'" triggers="focus" class="btn-help" aria-label="Help content"></button>
+                            <ng-template #popupTargetTemplateHelp>
+                              <div [innerHtml]="targetTemplateHelp"></div>
+                            </ng-template>
+                            <button type="button" placement="right" [popover]="popupTargetTemplateHelp" triggers="click" class="btn-help" aria-label="Help content"></button>
                           </span>
                         </div>
                       </div>
@@ -321,9 +353,8 @@
                           }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)">
                       </d11r-mapping-substitution-grid>
                     </div>
-                    <ng-container *ngIf="isSubstitutionValid$ | async as isValid">
-                      <span class="text-warning text-12 p-l-8" *ngIf="isValid
-                          ">One substitution for <code *ngIf="mapping.useExternalId"
+                    <ng-container *ngIf="!(isSubstitutionValid$ | async)">
+                      <span class="text-warning text-12 p-l-8">One substitution for <code *ngIf="mapping.useExternalId"
                           class="text-warning text-10">_IDENTITY_.externalId</code> <code *ngIf="!mapping.useExternalId"
                           class="text-warning text-10">_IDENTITY_.c8ySourceId<</code> must exist.</span>
 
@@ -331,6 +362,13 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div class="container">
+              <ng-container *ngIf="stepperConfiguration.showCodeEditor">
+                <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
+                </ng-container>
+              </ng-container>
             </div>
           </div>
         </div>
@@ -366,14 +404,15 @@
                 Select an extension
               </option>
               <option *ngFor="let extension of extensions | keyvalue" [ngValue]="extension.key"
-                [selected]="extension.key === mapping.extension?.extensionName">
+                [selected]="extension.key === mapping.extension?.extensionName"
+                [disabled]="stepperConfiguration.showCodeEditor">
                 {{ extension.key }}
               </option>
             </select>
           </div>
         </div>
         <div class="form-group">
-          <label translate>Events for {{ mapping.extension.name }}</label>
+          <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
             <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl (change)="
                 onSelectExtensionEvent(templateForm.value.eventName)
@@ -382,10 +421,59 @@
                 Select an event
               </option>
               <option *ngFor="let extensionEntry of (extensionEvents$ | async)" [ngValue]="extensionEntry.eventName"
-                [selected]="extensionEntry.eventName === mapping.extension?.eventName">
+                [selected]="extensionEntry.eventName === mapping.extension?.eventName"
+                [disabled]="stepperConfiguration.showCodeEditor">
                 {{ extensionEntry.eventName }}
               </option>
             </select>
+          </div>
+        </div>
+      </div>
+      <div class="p-t-48" *ngIf="stepperConfiguration.showProcessorExtensionsInternal
+    ">
+        <small class="text-muted">Template is described internally by the chosen
+          mapping type</small>
+      </div>
+    </ng-template>
+
+    <ng-template #extensionTemplateSourceGraals let-form="form">
+      <div>
+        <div class="form-group p-b-8">
+          <div class="row p-b-8">
+            <div class="col-lg-8">
+              <div class="d-flex">
+                <label translate style="margin-top:4px">JavaScript callback for creating substitutions</label>
+                <span class="hidden-xs hidden-sm">
+                  <ng-template #popupTemplateCodeHelp>
+                    <div [innerHtml]="codeEditorHelp"></div>
+                  </ng-template>
+                  <button type="button" placement="right" [popover]="popupTemplateCodeHelp" triggers="focus"
+                    class="btn-help" aria-label="Help content"></button>
+                </span>
+              </div>
+            </div>
+            <div class="col-lg-2">
+              <div class="c8y-select-wrapper" style="max-width: 200px; overflow: auto !important">
+                <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId"
+                  name="templateSelect" required>
+                  <option [ngValue]="undefined" disabled>Select template...</option>
+                  <option *ngFor="let item of getCodeTemplateEntries()" [ngValue]="item.key">
+                    {{ item.name | capitalCase }} ({{ item.type }})
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="col-lg-2" style="padding-top: 2px;">
+              <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()"
+                translate>
+                Create new code template
+              </button>
+            </div>
+          </div>
+          <div>
+            <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="mapping['_code']"
+              (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
+            </c8y-editor>
           </div>
         </div>
       </div>
@@ -402,7 +490,7 @@
           <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
             <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
-              (change)="
+              [disabled]="stepperConfiguration.showCodeEditor" (change)="
                   onSelectExtensionName(templateForm.value.extensionName)
                 " required>
               <option [ngValue]="null" disabled>
@@ -418,7 +506,8 @@
         <div class="form-group">
           <label translate>Events for {{ mapping.extension['name'] }}</label>
           <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
-            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl (change)="
+            <select class="form-control" [formControl]="templateForm.get('eventName')" #eventNameControl
+              [disabled]="stepperConfiguration.showCodeEditor" (change)="
                 onSelectExtensionEvent(templateForm.value.eventName)
               " required>
               <option [ngValue]="null" disabled>

@@ -24,6 +24,9 @@ package dynamic.mapping.processor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.Map;
+
 import dynamic.mapping.model.API;
 
 import jakarta.validation.constraints.NotNull;
@@ -33,7 +36,16 @@ import jakarta.validation.constraints.NotNull;
 @NoArgsConstructor
 public class C8YMessage {
     @NotNull
+    private String sourceId; 
+
+    @NotNull
+    private String messageId; 
+
+    @NotNull
     private String payload; 
+
+    @NotNull
+    private Map parsedPayload; 
     
     @NotNull
     private API api; 
@@ -42,5 +54,8 @@ public class C8YMessage {
     private String tenant; 
 
     @NotNull
-    private boolean sendPayload; 
+    private boolean sendPayload;
+
+    @NotNull
+    private String operation;
 }

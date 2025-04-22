@@ -51,14 +51,14 @@ import {
   SnoopStatus,
   getExternalTemplate,
   nextIdAndPad,
-  uuidCustom
+  createCustomUuid
 } from '../../shared';
 
 import { HttpStatusCode } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Subject, filter, finalize, switchMap, take } from 'rxjs';
+import { BehaviorSubject, Subject, filter, finalize, from, map, switchMap, take } from 'rxjs';
 import { DeploymentMapEntry, ExtensionType, LabelRendererComponent, MappingTypeDescriptionMap, SharedService, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
@@ -74,6 +74,7 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
+import { TemplateType } from '../../configuration';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -95,8 +96,10 @@ export class MappingComponent implements OnInit, OnDestroy {
   );
   mappingsCount: number = 0;
   mappingToUpdate: Mapping;
+  substitutionsAsCode: boolean;
   devices: IIdentified[] = [];
   snoopStatus: SnoopStatus = SnoopStatus.NONE;
+  snoopEnabled: boolean = false;
   Direction = Direction;
 
   stepperConfiguration: StepperConfiguration = {};
@@ -139,6 +142,8 @@ export class MappingComponent implements OnInit, OnDestroy {
   };
   actionControls: ActionControl[] = [];
   bulkActionControls: BulkActionControl[] = [];
+  codeTemplateInbound: string;
+  codeTemplateOutbound: string;
 
   constructor(
     public mappingService: MappingService,
@@ -189,7 +194,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: 'Apply filter',
         icon: 'filter',
         callback: this.editMessageFilter.bind(this),
-        showIf: (item) => item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND
+        showIf: (item) => (item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) || item['mapping']['direction'] == Direction.OUTBOUND
       },
       {
         type: 'ENABLE_DEBUG',
@@ -294,6 +299,33 @@ export class MappingComponent implements OnInit, OnDestroy {
         console.log('Triggered updating mapping', m);
         this.updateMapping(m);
       });
+    this.codeTemplateInbound = (await this.shareService.getCodeTemplate(TemplateType.INBOUND.toString())).code;
+    this.codeTemplateOutbound = (await this.shareService.getCodeTemplate(TemplateType.OUTBOUND.toString())).code;
+
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      // Using Promise-based approach since getMappings returns a Promise
+      this.mappingService.getMappings(Direction.OUTBOUND)
+        .then(async mappings => {
+          const numberOutboundMappings = mappings.length;
+          
+          try {
+            const { devices } = await this.mappingService.getSubscriptions();
+            if (devices.length === 0 && numberOutboundMappings > 0) {
+              this.alertService.warning(
+                "No device subscriptions found for your outbound mappings. " +
+                "You need to subscribe your outbound mappings to at least one device to process data!"
+              );
+            }
+          } catch (error) {
+            console.error('Error checking device subscriptions:', error);
+            this.alertService.danger('Failed to verify outbound mapping subscriptions');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching outbound mappings:', error);
+          this.alertService.danger('Failed to fetch outbound mappings');
+        });
+    }
   }
 
   async editMessageFilter(m: MappingEnriched) {
@@ -372,12 +404,13 @@ export class MappingComponent implements OnInit, OnDestroy {
           path: 'mapping.mappingTopic',
           filterable: true
         }
-        : {
-          header: 'Publish topic sample',
-          name: 'publishTopicSample',
-          path: 'mapping.publishTopicSample',
-          filterable: true
-        },
+        : undefined,
+      //  {
+      //   header: 'Publish topic sample',
+      //   name: 'publishTopicSample',
+      //   path: 'mapping.publishTopicSample',
+      //   filterable: true
+      // },
       {
         name: 'targetAPI',
         header: 'API',
@@ -406,7 +439,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '10%'
       },
       {
-        // header: 'Test/Debug/Snoop',
         header: 'Templates snooped',
         name: 'snoopedTemplates',
         path: 'mapping',
@@ -442,7 +474,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       if (result) {
         if (result.snoop) {
           this.snoopStatus = SnoopStatus.ENABLED;
+          this.snoopEnabled = true;
         }
+        this.substitutionsAsCode = result.substitutionsAsCode;
         this.mappingType = result.mappingType;
         this.addMapping();
       }
@@ -455,10 +489,10 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.setStepperConfiguration(
       this.mappingType,
       this.stepperConfiguration.direction,
-      EditorMode.CREATE
+      EditorMode.CREATE, this.substitutionsAsCode
     );
 
-    const identifier = uuidCustom();
+    const identifier = createCustomUuid();
     const sub: MappingSubstitution[] = [];
     let mapping: Mapping;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
@@ -478,11 +512,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType: this.mappingType,
+        mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
+        code: this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
         snoopStatus: this.snoopStatus,
-        supportsMessageContext: false,
+        supportsMessageContext: this.substitutionsAsCode,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -494,22 +529,24 @@ export class MappingComponent implements OnInit, OnDestroy {
         name: `Mapping - ${identifier.substring(0, 7)}`,
         id: identifier,
         identifier: identifier,
-        publishTopic: '',
-        publishTopicSample: '',
+        // publishTopic: '',
+        // publishTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
         sourceTemplate: '{}',
         targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
         qos: QOS.AT_LEAST_ONCE,
+        filterMapping: this.snoopEnabled ? ' $exists(C8Y_FRAGMENT)' : undefined,
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType: this.mappingType,
+        mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
+        code: this.substitutionsAsCode ? this.codeTemplateOutbound : undefined,
         snoopStatus: this.snoopStatus,
-        supportsMessageContext: false,
+        supportsMessageContext: this.substitutionsAsCode,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -600,13 +637,15 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.setStepperConfiguration(
           mapping.mappingType,
           this.stepperConfiguration.direction,
-          EditorMode.READ_ONLY
+          EditorMode.READ_ONLY,
+          mapping.mappingType == MappingType.CODE_BASED
         );
       } else {
         this.setStepperConfiguration(
           mapping.mappingType,
           this.stepperConfiguration.direction,
-          EditorMode.UPDATE
+          EditorMode.UPDATE,
+          mapping.mappingType == MappingType.CODE_BASED
         );
       }
       // create deep copy of existing mapping, in case user cancels changes
@@ -641,7 +680,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.setStepperConfiguration(
       mapping.mappingType,
       mapping.direction,
-      EditorMode.COPY
+      EditorMode.COPY,
+      mapping?.extension?.eventName == "GraalsCodeExtension"
     );
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
@@ -651,8 +691,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       snoopStatus: SnoopStatus.NONE,
       snoopedTemplates: [],
       name: `${this.mappingToUpdate.name} - Copy`,
-      identifier: uuidCustom(),
-      id: uuidCustom(),
+      identifier: createCustomUuid(),
+      id: createCustomUuid(),
       active: false,
     }
 
@@ -928,6 +968,11 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingGrid.setAllItemsSelected(false);
   }
 
+  async onAddSampleMappings() {
+    this.mappingService.addSampleMappings({ direction: this.stepperConfiguration.direction });
+    this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
+  }
+
   async onExportAll() {
     this.mappingsEnriched$.pipe(take(1)).subscribe((ms) => {
       const mappings2Export = ms.map((me) => me.mapping);
@@ -968,7 +1013,8 @@ export class MappingComponent implements OnInit, OnDestroy {
   setStepperConfiguration(
     mappingType: MappingType,
     direction: Direction,
-    editorMode: EditorMode
+    editorMode: EditorMode,
+    substitutionsAsCode: boolean
   ) {
     // console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
     // console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
@@ -978,6 +1024,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.stepperConfiguration.editorMode = editorMode;
     if (direction == Direction.OUTBOUND)
       this.stepperConfiguration.allowTestSending = false;
+
+    if (substitutionsAsCode) {
+      delete this.stepperConfiguration.advanceFromStepToEndStep;
+      this.stepperConfiguration.showCodeEditor = true;
+      this.stepperConfiguration.allowTestSending = false;
+      this.stepperConfiguration.allowTestTransformation = true;
+    }
   }
 
   ngOnDestroy() {

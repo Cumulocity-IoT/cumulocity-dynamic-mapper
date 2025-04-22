@@ -22,6 +22,7 @@
 package dynamic.mapping.core;
 
 import c8y.IsDevice;
+import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -32,6 +33,7 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.model.measurement.MeasurementValue;
 import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
+import com.cumulocity.rest.representation.CumulocityMediaType;
 import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
@@ -43,6 +45,7 @@ import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
+import com.cumulocity.sdk.client.event.EventBinaryApi;
 import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -52,16 +55,12 @@ import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapping.configuration.TrustedCertificateRepresentation;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.cache.InboundExternalIdCache;
+import dynamic.mapping.core.cache.InventoryCache;
 import dynamic.mapping.core.facade.IdentityFacade;
 import dynamic.mapping.core.facade.InventoryFacade;
-import dynamic.mapping.model.API;
-import dynamic.mapping.model.Extension;
-import dynamic.mapping.model.ExtensionEntry;
-import dynamic.mapping.model.ExtensionType;
-import dynamic.mapping.model.LoggingEventType;
-import dynamic.mapping.model.MappingServiceRepresentation;
+import dynamic.mapping.model.*;
 import dynamic.mapping.processor.ProcessingException;
-import dynamic.mapping.processor.extension.ExtensibleProcessor;
+import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.extension.ExtensionsComponent;
 import dynamic.mapping.processor.extension.ProcessorExtensionSource;
 import dynamic.mapping.processor.extension.ProcessorExtensionTarget;
@@ -77,13 +76,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.*;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.svenson.JSONParser;
 
-import jakarta.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -100,6 +103,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     private EventApi eventApi;
+
+    @Autowired
+    private EventBinaryApi eventBinaryApi;
 
     @Autowired
     private InventoryFacade inventoryApi;
@@ -139,7 +145,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new HashMap<>();
 
     @Getter
+    private Map<String, InventoryCache> inventoryCaches = new HashMap<>();
+
+    @Getter
     private ConfigurationRegistry configurationRegistry;
+
+    @Autowired
+    CumulocityClientProperties clientProperties;
 
     @Autowired
     public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
@@ -288,7 +300,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         while (next) {
                             certificatesResult = platform.rest().get(
                                     nextUrl,
-                                    MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
+                                    CumulocityMediaType.APPLICATION_JSON_TYPE,
+                                    TrustedCertificateCollectionRepresentation.class);
                             certificatesList.addAll(certificatesResult.getCertificates());
                             nextUrl = certificatesResult.getNext();
                             next = certificatesResult.getCertificates().size() > 0;
@@ -398,15 +411,51 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 AbstractExtensibleRepresentation rt = null;
                 try {
                     if (targetAPI.equals(API.EVENT)) {
+                        // TODO Add Binary API when required fields are present
                         EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
                                 payload,
                                 EventRepresentation.class);
+
+                        // Add Attachment to Binary
+                        // String attName = null;
+                        // String attData = null;
+                        // String attType = null;
+                        // byte[] attDataBytes = null;
+                        // BinaryInfo binaryInfo = new BinaryInfo();
+                        // if(eventRepresentation.hasProperty("attachment_Name") &&
+                        // eventRepresentation.hasProperty("attachment_Type") &&
+                        // eventRepresentation.hasProperty("attachment_Data")) {
+                        // if (context.getMapping().eventWithAttachment) {
+                        // // attName =
+                        // String.valueOf(eventRepresentation.getProperty("attachment_Name"));
+                        // // attType =
+                        // String.valueOf(eventRepresentation.getProperty("attachment_Type"));
+                        // // attData =
+                        // String.valueOf(eventRepresentation.getProperty("attachment_Data"));
+                        // if (!attData.isEmpty())
+                        // attDataBytes =
+                        // Base64.getDecoder().decode(attData.getBytes(StandardCharsets.UTF_8));
+                        // // attDataBytes = attData.getBytes(StandardCharsets.UTF_8);
+                        // // eventRepresentation.removeProperty("attachment_Name");
+                        // // eventRepresentation.removeProperty("attachment_Type");
+                        // // eventRepresentation.removeProperty("attachment_Data");
+                        // if (!attName.isEmpty())
+                        // binaryInfo.setName(attName);
+                        // if (!attType.isEmpty())
+                        // binaryInfo.setType(attType);
+                        // }
                         rt = eventApi.create(eventRepresentation);
+                        GId eventId = ((EventRepresentation) rt).getId();
+                        if (context.getMapping().eventWithAttachment) {
+                            BinaryInfo binaryInfo = context.getBinaryInfo();
+                            uploadEventAttachment(binaryInfo, eventId.getValue(), false);
+                        }
                         if (serviceConfiguration.logPayload)
                             log.info("Tenant {} - New event posted: {}", tenant, rt);
                         else
                             log.info("Tenant {} - New event posted with Id {}", tenant,
                                     ((EventRepresentation) rt).getId().getValue());
+
                     } else if (targetAPI.equals(API.ALARM)) {
                         AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
                                 payload,
@@ -471,10 +520,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         /*
                          * mor.set(new Agent());
                          * HashMap<String, String> agentFragments = new HashMap<>();
-                         * agentFragments.put("name", "Dynamic Data Mapper");
+                         * agentFragments.put("name", "Dynamic Mapper");
                          * agentFragments.put("version", version);
                          * agentFragments.put("url",
-                         * "https://github.com/SoftwareAG/cumulocity-dynamic-mapper");
+                         * "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
                          * agentFragments.put("maintainer", "Open-Source");
                          * mor.set(agentFragments, "c8y_Agent");
                          */
@@ -579,7 +628,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void registerExtensionInProcessor(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
             boolean external)
             throws IOException {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         extensibleProcessor.addExtension(tenant, new Extension(id, extensionName, external));
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
@@ -675,17 +724,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public Map<String, Extension> getProcessorExtensions(String tenant) {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         return extensibleProcessor.getExtensions();
     }
 
     public Extension getProcessorExtension(String tenant, String extension) {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         return extensibleProcessor.getExtension(extension);
     }
 
     public Extension deleteProcessorExtension(String tenant, String extensionName) {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
             if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
@@ -696,7 +745,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void reloadExtensions(String tenant) {
-        ExtensibleProcessor extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         extensibleProcessor.deleteExtensions();
         loadProcessorExtensions(tenant);
     }
@@ -750,9 +799,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             amo.setType(MappingServiceRepresentation.AGENT_TYPE);
             amo.set(new Agent());
             HashMap<String, String> agentFragments = new HashMap<>();
-            agentFragments.put("name", "Dynamic Data Mapper");
+            agentFragments.put("name", "Dynamic Mapper");
             agentFragments.put("version", version);
-            agentFragments.put("url", "https://github.com/SoftwareAG/cumulocity-dynamic-mapper");
+            agentFragments.put("url", "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
             agentFragments.put("maintainer", "Open-Source");
             amo.set(agentFragments, "c8y_Agent");
             amo.set(new IsDevice());
@@ -770,7 +819,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void createExtensibleProcessor(String tenant) {
-        ExtensibleProcessor extensibleProcessor = new ExtensibleProcessor(configurationRegistry);
+        ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
         configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
         log.debug("Tenant {} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
 
@@ -814,7 +863,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    public MicroserviceCredentials removeAppKeyHeaderFromContext(MicroserviceCredentials context) {
+    public static MicroserviceCredentials removeAppKeyHeaderFromContext(MicroserviceCredentials context) {
         final MicroserviceCredentials clonedContext = new MicroserviceCredentials(
                 context.getTenant(),
                 context.getUsername(), context.getPassword(),
@@ -824,8 +873,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
-        log.info("Tenant {} - Initialize cache {}", tenant, inboundExternalIdCacheSize);
+        log.info("Tenant {} - Initialize inboundExternalIdCache {}", tenant, inboundExternalIdCacheSize);
         inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+    }
+
+    public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
+        log.info("Tenant {} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
+        inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
     }
 
     public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
@@ -834,6 +888,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public InboundExternalIdCache getInboundExternalIdCache(String tenant) {
         return inboundExternalIdCaches.get(tenant);
+    }
+
+    public InventoryCache deleteInventoryCache(String tenant) {
+        return inventoryCaches.remove(tenant);
+    }
+
+    public InventoryCache getInventoryCache(String tenant) {
+        return inventoryCaches.get(tenant);
     }
 
     public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
@@ -857,4 +919,189 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             return 0;
     }
 
+    public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
+        InventoryCache inventoryCache = inventoryCaches.get(tenant);
+        if (inventoryCache != null) {
+            // FIXME Recreating the cache creates a new instance of InventoryCache
+            // which causes issues with Metering
+            if (recreate) {
+                inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
+            } else {
+                inventoryCache.clearCache();
+            }
+        }
+    }
+
+    public int getSizeInventoryCache(String tenant) {
+        InventoryCache inventoryCache = inventoryCaches.get(tenant);
+        if (inventoryCache != null) {
+            return inventoryCache.getCacheSize();
+        } else
+            return 0;
+    }
+
+    public Map<String, Object> getMOFromInventoryCache(String tenant, String deviceId) {
+        Map<String, Object> result = getInventoryCache(tenant).getMOBySource(deviceId);
+        if (result != null) {
+            return result;
+        }
+
+        // Create new managed object cache entry
+        final Map<String, Object> newMO = new HashMap<>();
+        getInventoryCache(tenant).putMOforSource(deviceId, newMO);
+
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
+        Map<String, Object> attrs = device.getAttrs();
+
+        // Process each fragment
+        serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
+            frag = frag.trim();
+
+            // Handle special cases
+            if ("id".equals(frag)) {
+                newMO.put(frag, deviceId);
+                return; // using return in forEach as continue
+            }
+            if ("name".equals(frag)) {
+                newMO.put(frag, device.getName());
+                return;
+            }
+            if ("owner".equals(frag)) {
+                newMO.put(frag, device.getOwner());
+                return;
+            }
+
+            if ("type".equals(frag)) {
+                newMO.put(frag, device.getType());
+                return;
+            }
+
+            // Handle nested attributes
+            Object value = resolveNestedAttribute(attrs, frag);
+            if (value != null) {
+                newMO.put(frag, value);
+            }
+        });
+
+        return newMO;
+    }
+
+    /**
+     * Resolves a nested attribute from a map using dot notation.
+     * 
+     * @param attrs The source attributes map
+     * @param path  The attribute path using dot notation (e.g., "a.b.c")
+     * @return The resolved value or null if path cannot be resolved
+     */
+    private Object resolveNestedAttribute(Map<String, Object> attrs, String path) {
+        if (path == null || attrs == null) {
+            return null;
+        }
+
+        String[] pathParts = path.split("\\.");
+        Object current = attrs;
+
+        for (String part : pathParts) {
+            if (!(current instanceof Map)) {
+                return null;
+            }
+
+            Map<?, ?> currentMap = (Map<?, ?>) current;
+            if (!currentMap.containsKey(part)) {
+                return null;
+            }
+
+            current = currentMap.get(part);
+        }
+
+        return current;
+    }
+
+    /**
+     * Uploads an attachment to an event.
+     *
+     * @param binaryInfo
+     * @param eventId
+     * @param overwrites
+     * @return response status code
+     */
+    public int uploadEventAttachment(final BinaryInfo binaryInfo, final String eventId, boolean overwrites)
+            throws ProcessingException {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization",
+                    contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+            headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+            String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
+
+            String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
+            RestTemplate restTemplate = new RestTemplate();
+
+            ResponseEntity<EventBinary> response;
+            byte[] attDataBytes = null;
+            if (!binaryInfo.getData().isEmpty()) {
+                if(binaryInfo.getData().startsWith("data:") && binaryInfo.getType() == null || binaryInfo.getType().isEmpty())  {
+                    //Base64 File Header
+                    int pos = binaryInfo.getData().indexOf(";");
+                    String type= binaryInfo.getData().substring(5, pos-1);
+                    binaryInfo.setType(type);
+
+                    attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().substring(pos+8).getBytes(StandardCharsets.UTF_8));
+                } else
+                    attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().getBytes(StandardCharsets.UTF_8));
+            }
+            if (binaryInfo.getType() == null || binaryInfo.getType().isEmpty()) {
+                binaryInfo.setType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            }
+            if (binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
+                if(binaryInfo.getType() != null && !binaryInfo.getType().isEmpty()) {
+                    if (binaryInfo.getType().contains("image/")) {
+                        binaryInfo.setName("file.png");
+                    } else if (binaryInfo.getType().contains("text/")) {
+                        binaryInfo.setName("file.txt");
+                    } else if (binaryInfo.getType().contains("application/pdf")) {
+                        binaryInfo.setName("file.pdf");
+                    } else if (binaryInfo.getType().contains("application/json")) {
+                        binaryInfo.setName("file.json");
+                    } else if (binaryInfo.getType().contains("application/xml")) {
+                        binaryInfo.setName("file.xml");
+                    } else if (binaryInfo.getType().contains("application/octet-stream")) {
+                        binaryInfo.setName("file.bin");
+                    } else {
+                        binaryInfo.setName("file.bin");
+                    }
+                } else
+                    binaryInfo.setName("file");
+            }
+            log.info("Tenant {} - Uploading attachment with name {} and type {} to event {}", tenant,
+                    binaryInfo.getName(), binaryInfo.getType(), eventId);
+            if (overwrites) {
+                headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+                headers.setContentDisposition(
+                        ContentDisposition.builder("attachment").filename(binaryInfo.getName()).build());
+                HttpEntity<byte[]> requestEntity = new HttpEntity<>(attDataBytes, headers);
+                response = restTemplate.exchange(serverUrl, HttpMethod.PUT, requestEntity, EventBinary.class);
+            } else {
+                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+                MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+                multipartBodyBuilder.part("object", binaryInfo, MediaType.APPLICATION_JSON);
+                multipartBodyBuilder.part("file", attDataBytes, MediaType.valueOf(binaryInfo.getType()))
+                        .filename(binaryInfo.getName());
+                MultiValueMap<String, HttpEntity<?>> body = multipartBodyBuilder.build();
+                HttpEntity<MultiValueMap<String, HttpEntity<?>>> requestEntity = new HttpEntity<>(body, headers);
+
+                response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
+            }
+
+            if (response.getStatusCodeValue() >= 300) {
+                throw new ProcessingException("Failed to create binary: " + response.toString());
+            }
+            return response.getStatusCodeValue();
+        } catch (Exception e) {
+            log.error("Tenant {} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(),
+                    eventId, e);
+            throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage());
+        }
+    }
 }

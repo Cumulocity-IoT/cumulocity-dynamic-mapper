@@ -34,15 +34,18 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>4.8.0</revision>
+		<revision>5.0.0</revision>
 		<spring-boot-dependencies.version>3.3.5</spring-boot-dependencies.version>
-		<c8y.version>2025.8.0</c8y.version>
+		<c8y.version>2025.9.0</c8y.version>
 		<lombok.version>1.18.34</lombok.version>
 		<slf4j.version>1.7.36</slf4j.version>
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.target>21</maven.compiler.target>
 		<java.version>21</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<graalvm.version>23.0.7</graalvm.version>
+		<graalvm.js.version>23.0.7</graalvm.js.version>
+		<graalvm.js-language.version>23.0.7</graalvm.js-language.version>
 	</properties>
 	<repositories>
 		<repository>
@@ -114,7 +117,7 @@
 			<dependency>
 				<groupId>com.hivemq</groupId>
 				<artifactId>hivemq-mqtt-client</artifactId>
-				<version>1.3.3</version>
+				<version>1.3.5</version>
 			</dependency>
 			<dependency>
 				<groupId>io.netty</groupId>
@@ -193,6 +196,45 @@
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-collections4</artifactId>
 				<version>4.5.0-M2</version>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.sdk</groupId>
+				<artifactId>graal-sdk</artifactId>
+				<version>${graalvm.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.js</groupId>
+				<artifactId>js</artifactId>
+				<version>${graalvm.js.version}</version>
+				<scope>runtime</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.graalvm.truffle</groupId>
+				<artifactId>truffle-api</artifactId>
+				<version>${graalvm.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-webflux</artifactId>
+				<version>3.3.5</version>
+			</dependency>
+			<!-- Explicitly include the core OpenAPI models -->
+			<dependency>
+				<groupId>io.swagger.core.v3</groupId>
+				<artifactId>swagger-models</artifactId>
+				<version>2.2.15</version>
+			</dependency>
+
+			<!-- Explicitly include the core annotations -->
+			<dependency>
+				<groupId>io.swagger.core.v3</groupId>
+				<artifactId>swagger-annotations</artifactId>
+				<version>2.2.15</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springdoc</groupId>
+				<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+				<version>2.3.0</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

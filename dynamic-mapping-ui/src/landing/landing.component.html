@@ -27,19 +27,19 @@
   </div>
   <div class="card-block">
     <div class="p-b-8 text-16">
-      Using the Cumulocity Dynamic Data Mapper you are able to connect to almost
+      Using the Cumulocity Dynamic Mapper you are able to connect to almost
       any message broker and map any payload to Cumulocity format.<br />
       To do so you define a mapping in a intuitive graphical editor. During
       operation, your custom payload is automatically converted <br />
       to align with the Cumulocity IoT Domain Model, ensuring seamless
       integration and data flow.
       <br />
-      The following links help you get started with the Dynamic Data Mapper:
+      The following links help you get started with the Dynamic Mapper:
     </div>
     <ul class="text-16">
       <li>
         Detailed documentation for the
-        <a href="https://github.com/SoftwareAG/cumulocity-dynamic-mapper" target="_blank">Dynamic Data Mapper</a>
+        <a href="https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper" target="_blank">Dynamic Mapper</a>
         can be found in the Git repository.
       </li>
       <li>
@@ -88,11 +88,10 @@
     </h3>
   </div>
   <div class="card-block">
-    The mapper supports the following connectors and mappings:
+    <div class="p-b-8 text-16"> The mapper supports the following connectors and mappings:</div>
     <br />
-    <br />
-    <img width="60%" class="m-l-48 m-b-48" src="/apps/sag-ps-pkg-dynamic-mapping/image/ConnectorMatrix.png"
-      alt="Define substitutions" />
+    <img width="60%" class="m-l-48 m-b-48"
+      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Connector_Matrix.png" alt="Define substitutions" />
   </div>
 
   <div class="card-header">
@@ -102,21 +101,30 @@
   </div>
   <div class="card-block">
     <div class="p-b-8 text-16">
-      The Dynamic Data Mapper offers you the choice to use different types of
-      mappings: JSON, Generic Binary, Flat File, Processor Extension. <br />
+      Mapping can use the json query and transformation language or use JavaScript to define a mapping and the
+      substitutions. <br />
+      The choice depends your the preference. Are you familiar with any of the two standards? Do you have
+      existing JavaScript code you want to reuse? <br />
+      <br />
+
+      The Dynamic Mapper offers you the choice to use different types of
+      mappings: JSON, Hex, Processor Extension. <br />
       So before defining the actual mapping you have to choose which type of
       mapping to use. <br />
       In most cases this will be JSON if you want to map your custom JSON
       payload from your device to the Cumulocity JSON format.<br />
       You start the stepper by clicking on <b>Add mapping</b> to add a mapping
       (Mapping -> Inbound Mapping -> Action Add mapping).<br />
+      In the modal dialog <b>Add mapping</b> you have the option to <b>Define substitutions as JavaScript</b> to start
+      with JavaScript.
+      <br />
       <br />
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif"
         alt="Define substitutions" />
     </div>
     <div class="p-b-8 text-16">
-      The stepper leads you through the steps to define a mapping:
+      The stepper leads you through the steps to define a mapping which uses JSONata for the substitutions:
     </div>
     <ol class="text-16">
       <li>
@@ -146,7 +154,7 @@
     <div class="p-b-8"></div>
     <div class="card-header">
       <h3>
-        {{ 'How to define a substitution?' | translate }}
+        {{ 'How to define a substitution using JSONata?' | translate }}
       </h3>
     </div>
     <div class="card-block">
@@ -160,30 +168,63 @@
         your defined broker. Defining a substitution consists of the following
         steps:
       </div>
-      div>
+      <br />
+      <img width="70%" class="m-l-48 m-b-48"
+        src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif"
+        alt="Define substitutions" />
+      <p class="image-description"><b>Description:</b> This animation shows the steps to define substitutions in a
+        mapping.</p>
+      <div class="p-b-8"></div>
       <ol class="p-b-8 text-16">
         <li>
           Select an node in the source payload. In the screenshot below this is:
-          _TOPIC_LEVEL_[1]
+          <code>_TOPIC_LEVEL_[1]</code>
         </li>
         <li>
           Select an node in the target payload. In the screenshot below this is:
-          source.id
+          <code>source.id</code>
         </li>
         <li>Press Add substitution</li>
+        <li>The substitution is added to the table of existing substitutions</li>
       </ol>
       <p class="p-b-8 text-16">
         At runtime this substitution copies the value extracted at the path
-        _TOPIC_LEVEL_[1] to the target payload at path source.id<br />
+        <code>_TOPIC_LEVEL_[1]</code> to the target payload at path <code>source.id</code><br />
       </p>
+      <br />
+      <img width="70%" class="m-l-48 m-b-48"
+        src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
+        alt="Define mapping" />
+      <p class="image-description"><b>Description:</b> This screenshot shows the step 4 to define substitutions using
+        JSONata.</p>
+    </div>
+    <div class="p-b-8"></div>
+    <div class="card-header">
+      <h3>
+        {{ 'How to define a substitution using JavaScript?' | translate }}
+      </h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        In step 4, you can define the substitutions directly in the editor using JavaScript syntax.<br />
+        At runtime the JavaScript code is evaluated substitution and copies the value extracted to the target payload at
+        path.
+      </div>
+      <div class="p-b-8 text-16">
+        <span class="text-primary">Note:</span>
+        The JavaScript editor is only shown when you select the option <code>Define substitutions as JavaScript</code>
+        is selected, when the mapping is created.
+      </div>
+      <br />
+      <img width="70%" class="m-l-48 m-b-48"
+        src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png"
+        alt="Define substitutions using JavaScript" />
+      <p class="image-description"><b>Description:</b> This screenshot shows the step 4 to define substitutions using
+        JavaScript.</p>
+      <div class="p-b-8"></div>
     </div>
   </div>
 
-  <div class="card-block">
-    <img width="70%" class="m-l-48 m-b-48"
-      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
-      alt="Define mapping" />
-  </div>
   <div class="card-header">
     <h3>
       {{ 'How to begin without knowing your source payload?' | translate }}

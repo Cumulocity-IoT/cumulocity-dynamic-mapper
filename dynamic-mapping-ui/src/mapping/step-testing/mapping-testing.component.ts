@@ -40,8 +40,8 @@ import {
 } from '../../shared/';
 import { MappingService } from '../core/mapping.service';
 import { C8YRequest, ProcessingContext } from '../core/processor/processor.model';
-import { StepperConfiguration } from '../../shared/mapping/mapping.model';
-import { patchC8YTemplateForTesting } from '../shared/util';
+import { MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
+import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 
 interface TestingModel {
@@ -75,6 +75,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @ViewChild('editorTestingResponse') editorTestingResponse: JsonEditorComponent;
 
   readonly Direction = Direction;
+  readonly MappingType = MappingType;
 
   private subscription: Subscription;
   private readonly defaultEditorOptions = {
@@ -133,10 +134,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private async handleTestMappingUpdate(testMapping: any): Promise<void> {
     try {
       this.testMapping = testMapping;
+
       this.sourceTemplate = JSON.parse(testMapping.sourceTemplate);
 
       if (testMapping.direction === Direction.OUTBOUND) {
         patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
+        sortObjectKeys(this.sourceTemplate);
       }
 
       await this.initializeTestContext(testMapping);
@@ -219,8 +222,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private updateEditors(): void {
-    this.editorTestingRequest?.set(this.testingModel.request);
-    this.editorTestingResponse?.set(this.testingModel.response);
+    this.editorTestingRequest?.set(sortObjectKeys(this.testingModel.request));
+    this.editorTestingResponse?.set(sortObjectKeys(this.testingModel.response));
   }
 
   private calculateNextVisibleResultIndex(): number {
@@ -238,7 +241,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.testingModel.selectedResult = index;
     this.selectedResult$.next(index + 1);
 
-    const currentResult = this.testingModel.results[index];
+    const currentResult = sortObjectKeys(this.testingModel.results[index]);
     if (currentResult) {
       this.updateTestingModelFromResult(currentResult);
     } else {
@@ -248,8 +251,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private updateTestingModelFromResult(result: C8YRequest): void {
     const { request, response, targetAPI, error } = result;
-    this.testingModel.request = request;
-    this.testingModel.response = response;
+    this.testingModel.request = sortObjectKeys(request);
+    this.testingModel.response = sortObjectKeys(response);
     this.testingModel.errorMsg = error;
 
     this.editorTestingRequest?.setSchema(
@@ -287,7 +290,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       } else {
       }
     } else {
-      this.alertService.danger(`${message}: ${error.message}`);
+      const m = message || error.message;
+      this.alertService.danger(`${m}`);
     }
   }
 
@@ -349,7 +353,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  disableTestSending() : boolean {
+  disableTestSending(): boolean {
     return !this.stepperConfiguration.allowTestSending || this.testingModel.results.length == 0 || !this.testMapping.useExternalId;
   }
 }

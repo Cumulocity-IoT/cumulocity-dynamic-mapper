@@ -30,12 +30,13 @@ import {
   Direction,
   Feature,
   PATH_CONFIGURATION_SERVICE_ENDPOINT,
+  PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT,
   PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT
 } from '..';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { FetchClient } from '@c8y/ngx-components/api';
-import { ServiceConfiguration } from '../../configuration';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration';
 import { ServiceOperation } from './shared.model';
 import { OptionsService } from '@c8y/ngx-components';
 
@@ -153,5 +154,72 @@ export class SharedService {
     }
 
     return this._serviceConfiguration;
+  }
+
+  async getCodeTemplate(id: string): Promise<CodeTemplate> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
+      {
+        headers: {
+          accept: 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    return await response.json();
+  }
+
+  async getCodeTemplates(): Promise<CodeTemplateMap> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}`,
+      {
+        headers: {
+          accept: 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    return await response.json();
+  }
+
+  async deleteCodeTemplate(templateId: string): Promise<any> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${templateId}`,
+      {
+        headers: {
+          accept: 'application/json'
+        },
+        method: 'DELETE'
+      }
+    );
+    return await response.json();
+  }
+
+  async updateCodeTemplate(id: string, codeTemplate: CodeTemplate) {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(codeTemplate),
+        method: 'PUT'
+      }
+    );
+    return response;
+  }
+
+  async createCodeTemplate(codeTemplate: CodeTemplate) {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(codeTemplate),
+        method: 'POST'
+      }
+    );
+    return response;
   }
 }

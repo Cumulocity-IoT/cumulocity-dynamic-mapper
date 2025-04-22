@@ -30,6 +30,7 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -41,12 +42,20 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+
+import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
 
 /**
  * AsynchronousDispatcherInbound
@@ -74,18 +83,16 @@ public class DispatcherInbound implements GenericMessageCallback {
 
     private AConnectorClient connectorClient;
 
-    private ExecutorService virtThreadPool;
+    private ExecutorService virtualThreadPool;
 
     private MappingComponent mappingComponent;
 
     private ConfigurationRegistry configurationRegistry;
 
-    private Counter inboundMessageCounter;
-
     public DispatcherInbound(ConfigurationRegistry configurationRegistry,
             AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
-        this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.mappingComponent = configurationRegistry.getMappingComponent();
         this.configurationRegistry = configurationRegistry;
     }
@@ -101,7 +108,8 @@ public class DispatcherInbound implements GenericMessageCallback {
         Timer inboundProcessingTimer;
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
-        ExecutorService virtThreadPool;
+        Engine graalsEngine;
+        ExecutorService virtualThreadPool;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message, AConnectorClient connectorClient) {
@@ -121,7 +129,8 @@ public class DispatcherInbound implements GenericMessageCallback {
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
-            this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+            this.graalsEngine = configurationRegistry.getGraalsEngine(message.getTenant());
+            this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
 
         }
 
@@ -143,21 +152,76 @@ public class DispatcherInbound implements GenericMessageCallback {
                     MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
                     BaseProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
+                    Context graalsContext = null;
+                    String sharedCode = null;
+                    String systemCode = null;
+
                     try {
                         if (processor != null) {
+
+                            // prepare graals func if required
+                            Value extractFromSourceFunc = null;
+                            if (mapping.code != null) {
+                                graalsContext = Context.newBuilder("js")
+                                        .option("engine.WarnInterpreterOnly", "false")
+                                        .allowHostAccess(HostAccess.ALL)
+                                        .allowHostClassLookup(className -> 
+                                            className.startsWith("dynamic.mapping.processor.model") || 
+                                            className.startsWith("java.util"))
+                                        .build();
+                                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                                extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
+                                if (extractFromSourceFunc == null) {
+                                    byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                                    String decodedCode = new String(decodedBytes);
+                                    String decodedCodeAdapted = decodedCode.replaceFirst(
+                                            Mapping.EXTRACT_FROM_SOURCE,
+                                            identifier);
+                                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                                            .buildLiteral();
+
+                                    // // make the engine evaluate the javascript script
+                                    graalsContext.eval(source);
+                                    extractFromSourceFunc = graalsContext.getBindings("js")
+                                            .getMember(identifier);
+
+                                }
+                                sharedCode = serviceConfiguration.getCodeTemplates()
+                                        .get(TemplateType.SHARED.name()).getCode();
+
+                                systemCode = serviceConfiguration.getCodeTemplates()
+                                        .get(TemplateType.SYSTEM.name()).getCode();
+
+                            }
+                            
                             inboundProcessingCounter.increment();
                             Object payload = processor.deserializePayload(mapping, connectorMessage);
-                            ProcessingContext<?> context = ProcessingContext.builder().payload(payload).topic(topic)
+                            ProcessingContext<?> context = ProcessingContext.builder().payload(payload).rawPayload(connectorMessage.getPayload()).topic(topic)
                                     .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
                                     .tenant(tenant).supportsMessageContext(connectorMessage.isSupportsMessageContext()
-                                            && mapping.supportsMessageContext).key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
+                                            && mapping.supportsMessageContext)
+                                    .key(connectorMessage.getKey()).serviceConfiguration(serviceConfiguration)
+                                    .graalsContext(graalsContext)
+                                    .api(mapping.targetAPI)
+                                    .sharedCode(sharedCode)
+                                    .sharedCode(systemCode)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
+                                Object pp = context.getPayload();
+                                String ppLog = null;
+
+                                if (payload instanceof byte[]) {
+                                    // Convert byte[] to String
+                                    ppLog = new String((byte[]) pp, StandardCharsets.UTF_8);
+                                } else if (payload != null) {
+                                    // For any other object, call toString()
+                                    ppLog = pp.toString();
+                                }
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",
                                         tenant,
                                         context.getTopic(),
                                         connectorClient.getConnectorIdentifier(),
-                                        context.getPayload().toString());
+                                        ppLog);
                             } else {
                                 log.info("Tenant {} - New message on topic: {}, on connector: {}", tenant,
                                         context.getTopic(), connectorClient.getConnectorIdentifier());
@@ -186,8 +250,12 @@ public class DispatcherInbound implements GenericMessageCallback {
                             } else {
                                 processor.enrichPayload(context);
                                 processor.extractFromSource(context);
-                                processor.validateProcessingCache(context);
-                                processor.applyFilter(context);
+                                //Ignored because code based mapping output is null
+                                if(!context.isIgnoreFurtherProcessing()) {
+                                    processor.validateProcessingCache(context);
+                                    processor.applyFilter(context);
+                                }
+                                //Ignored because filter applies
                                 if (!context.isIgnoreFurtherProcessing()) {
                                     processor.substituteInTargetAndSend(context);
                                     List<C8YRequest> resultRequests = context.getRequests();
@@ -205,8 +273,12 @@ public class DispatcherInbound implements GenericMessageCallback {
                     } catch (Exception e) {
                         log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
                                 e.getMessage());
-                        log.debug("Tenant {} - Message Stacktrace: ", tenant, e);
+                        log.warn("Tenant {} - Message Stacktrace: ", tenant, e);
                         mappingStatus.errors++;
+                    } finally {
+                        if (graalsContext != null) {
+                            graalsContext.close();
+                        }
                     }
                 }
             });
@@ -219,6 +291,11 @@ public class DispatcherInbound implements GenericMessageCallback {
     public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) {
         String topic = message.getTopic();
         String tenant = message.getTenant();
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        if (serviceConfiguration.logPayload ) {
+            String payload = new String(message.getPayload(), StandardCharsets.UTF_8);
+            log.info("Tenant {} - On topic: {}, new inbound message: {}", tenant, topic, payload);
+        }
 
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
@@ -241,8 +318,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         } else {
             return futureProcessingResult;
         }
-
-        futureProcessingResult = virtThreadPool.submit(
+        futureProcessingResult = virtualThreadPool.submit(
                 new MappingInboundTask(configurationRegistry, resolvedMappings,
                         message, connectorClient));
 
@@ -256,6 +332,7 @@ public class DispatcherInbound implements GenericMessageCallback {
 
     @Override
     public void onMessage(ConnectorMessage message) {
+        //TODO Return a future so it can be blocked for QoS 1 or 2
         processMessage(message);
     }
 

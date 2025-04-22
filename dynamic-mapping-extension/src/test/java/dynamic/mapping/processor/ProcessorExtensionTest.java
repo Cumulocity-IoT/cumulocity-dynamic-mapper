@@ -26,9 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.ArrayList;
 
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
 import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.processor.model.SubstituteValue;
+
 import org.junit.jupiter.api.Test;
 
 import lombok.extern.slf4j.Slf4j;
@@ -60,7 +60,7 @@ public class ProcessorExtensionTest {
 
     ArrayList<SubstituteValue> extractedTypes = (ArrayList) context.getProcessingCache().get("type");
     assertEquals( extractedTypes.size(), 1);
-    MappingSubstitution.SubstituteValue extractedType = extractedTypes.get(0);
+    SubstituteValue extractedType = extractedTypes.get(0);
     log.info("Extracted: {}, {} ", extractedType.value, extractedType.value.getClass().getName());
     assertEquals( extractedType.value, "type_Dummy");
    // assertEquals( (JsonNode)extractedType.typedValue(), "Dummy Text");

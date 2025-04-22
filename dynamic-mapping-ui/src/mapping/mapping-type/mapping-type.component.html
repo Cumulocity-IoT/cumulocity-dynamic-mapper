@@ -31,15 +31,15 @@
       }}
     </p>
     <div class="p-t-24 p-b-24">
-      <form [formGroup]="formGroupStep">
+      <form [formGroup]="formGroup">
         <c8y-list-group class="separator-top">
-          <ng-container *ngFor="let q of MappingType | keyvalue">
+          <ng-container *ngFor="let q of filteredMappingTypes | keyvalue">
             <c8y-li *ngIf="
                 MappingTypeDescriptionMap[q.key].properties[direction]
                   .directionSupported
               ">
               <c8y-li-radio #liRadioOption1 name="mapping_type_group" title="{{ q.value }}"
-                (click)="onSelectMappingType(q.value)"></c8y-li-radio>
+                (click)="onSelectMappingType(q.value)" [selected]="mappingType == q.value"></c8y-li-radio>
               <span>{{ q.value | formatStringAsWords }}</span>
             </c8y-li>
           </ng-container>
@@ -47,7 +47,7 @@
         <div class="card-block separator-top">
           <c8y-form-group *ngIf="shouldShowSnoop()">
             <label class="c8y-checkbox">
-              <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox" checked="checked"
+              <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox"
                 name="snoop" formControlName="snoop" />
               <span class="m-r-8"></span>
               Enable snooping
@@ -59,7 +59,14 @@
               Step 2 to defining a complete mapping, incl. substitutions you
               have to stop the snooping for the respective mapping.</small>
           </c8y-form-group>
-          <!-- <label>Mapping type description</label> -->
+          <c8y-form-group *ngIf="shouldShowSubstitutionsAsCode()">
+            <label class="c8y-checkbox">
+              <input title="{{ 'Define substitutions as JavaScript instead of JSONata' | translate }}" type="checkbox"
+                name="substitutionsAsCode" formControlName="substitutionsAsCode" />
+              <span class="m-r-8"></span>
+              Define substitutions as JavaScript
+            </label>
+          </c8y-form-group>
           <c8y-form-group>
             <textarea readonly c8y-textarea-autoresize
               class="form-control fit-w">{{ mappingTypeDescription }}</textarea>

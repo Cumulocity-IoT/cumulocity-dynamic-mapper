@@ -14,7 +14,7 @@ You need to install two components to your Cumulocity IoT Tenant:
 1. microservice - (Java)
 2. Web App Plugin & Blueprint - (angular/Cumulocity WebSDK)
 
-Both are provided as binaries in [releases](https://github.com/SoftwareAG/cumulocity-dynamic-mapper/releases).
+Both are provided as binaries in [releases](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/releases).
 Download the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
 
 > **_NOTE:_**
@@ -56,7 +56,7 @@ The Web App is part of the community store and should be available directly in y
 </p>
 <br/>
 
-~~Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "Dynamic Data Mapper Widget"~~
+~~Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "Dynamic Mapper Widget"~~
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Installation_Plugin.png" style="width: 50%;" />

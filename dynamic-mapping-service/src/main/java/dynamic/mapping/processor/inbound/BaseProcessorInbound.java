@@ -21,7 +21,23 @@
 
 package dynamic.mapping.processor.inbound;
 
-import static dynamic.mapping.model.MappingSubstitution.substituteValueInPayload;
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+import static dynamic.mapping.model.Substitution.toPrettyJsonString;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
@@ -32,30 +48,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
-import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingSubstitution;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue;
-import dynamic.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
+import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
-
-import org.springframework.web.bind.annotation.RequestMethod;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import dynamic.mapping.processor.model.SubstituteValue;
+import dynamic.mapping.processor.model.SubstituteValue.TYPE;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class BaseProcessorInbound<T> {
@@ -63,7 +68,7 @@ public abstract class BaseProcessorInbound<T> {
     public BaseProcessorInbound(ConfigurationRegistry configurationRegistry) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+        this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
     }
 
     protected C8YAgent c8yAgent;
@@ -77,8 +82,6 @@ public abstract class BaseProcessorInbound<T> {
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
 
-    public abstract void applyFilter(ProcessingContext<T> context);
-
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public void enrichPayload(ProcessingContext<T> context) {
         /*
@@ -88,23 +91,46 @@ public abstract class BaseProcessorInbound<T> {
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
 
-        List<String> splitTopicAsList =  Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
+        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
         if (payloadObject instanceof Map) {
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
             if (context.isSupportsMessageContext() && context.getKey() != null) {
                 String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
-                Map contextData = Map.of(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
+                Map contextData = new HashMap<String, String>() {
+                    {
+                        put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
+                        put("api",
+                                context.getMapping().getTargetAPI().toString());
+                    }
+                };
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
             }
+            // Handle attachment properties independently
+            if (context.getMapping().eventWithAttachment) {
+                // Get or create the context data map
+                Map<String, String> contextData;
+                if (((Map) payloadObject).containsKey(Mapping.TOKEN_CONTEXT_DATA)) {
+                    contextData = (Map<String, String>) ((Map) payloadObject).get(Mapping.TOKEN_CONTEXT_DATA);
+                } else {
+                    contextData = new HashMap<>();
+                    ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
+                }
+
+                // Add attachment properties
+                contextData.put("attachment_Name", "");
+                contextData.put("attachment_Type", "");
+                contextData.put("attachment_Data", "");
+            }
         } else {
-            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+            log.info(
+                    "Tenant {} - This message is not parsed by Base Inbound Processor, will be potentially parsed by extension due to custom format.",
                     tenant);
         }
     }
 
     public void validateProcessingCache(ProcessingContext<T> context) {
         // if there are too few devices identified, then we replicate the first device
-        Map<String, List<MappingSubstitution.SubstituteValue>> processingCache = context.getProcessingCache();
+        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
         String entryWithMaxSubstitutes = processingCache.entrySet()
                 .stream()
                 .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
@@ -118,9 +144,9 @@ public abstract class BaseProcessorInbound<T> {
                 ? pathsTargetForDeviceIdentifiers.get(0)
                 : null;
 
-        List<MappingSubstitution.SubstituteValue> deviceEntries = processingCache
+        List<SubstituteValue> deviceEntries = processingCache
                 .get(firstPathTargetForDeviceIdentifiers);
-        MappingSubstitution.SubstituteValue toDuplicate = deviceEntries.get(0);
+        SubstituteValue toDuplicate = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxEntries) {
             deviceEntries.add(toDuplicate);
         }
@@ -132,13 +158,13 @@ public abstract class BaseProcessorInbound<T> {
          */
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        List<MappingSubstitution.SubstituteValue> deviceEntries = context.getDeviceEntries();
+        List<SubstituteValue> deviceEntries = context.getDeviceEntries();
         // if devices have to be created implicitly, then request have to b process in
         // sequence, other multiple threads will try to create a device with the same
         // externalId
         if (mapping.createNonExistingDevice) {
             for (int i = 0; i < deviceEntries.size(); i++) {
-                // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
+                // for (MappingSubstituteValue device : deviceEntries) {
                 getBuildProcessingContext(context, deviceEntries.get(i),
                         i, deviceEntries.size());
             }
@@ -147,7 +173,7 @@ public abstract class BaseProcessorInbound<T> {
         } else {
             List<Future<ProcessingContext<T>>> contextFutureList = new ArrayList<>();
             for (int i = 0; i < deviceEntries.size(); i++) {
-                // for (MappingSubstitution.SubstituteValue device : deviceEntries) {
+                // for (MappingSubstituteValue device : deviceEntries) {
                 int finalI = i;
                 contextFutureList.add(virtThreadPool.submit(() -> {
                     return getBuildProcessingContext(context, deviceEntries.get(finalI),
@@ -169,7 +195,7 @@ public abstract class BaseProcessorInbound<T> {
     }
 
     private ProcessingContext<T> getBuildProcessingContext(ProcessingContext<T> context,
-            MappingSubstitution.SubstituteValue device, int finalI,
+            SubstituteValue device, int finalI,
             int size) {
         Set<String> pathTargets = context.getPathTargets();
         Mapping mapping = context.getMapping();
@@ -177,9 +203,9 @@ public abstract class BaseProcessorInbound<T> {
         int predecessor = -1;
         DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
         for (String pathTarget : pathTargets) {
-            MappingSubstitution.SubstituteValue substitute = new MappingSubstitution.SubstituteValue(
+            SubstituteValue substitute = new SubstituteValue(
                     "NOT_DEFINED", TYPE.TEXTUAL,
-                    RepairStrategy.DEFAULT);
+                    RepairStrategy.DEFAULT, false);
             List<SubstituteValue> pathTargetSubstitute = context.getFromProcessingCache(pathTarget);
             if (finalI < pathTargetSubstitute.size()) {
                 substitute = pathTargetSubstitute.get(finalI).clone();
@@ -208,7 +234,7 @@ public abstract class BaseProcessorInbound<T> {
         /*
          * step 5 prepare target payload for sending to c8y
          */
-        if (mapping.targetAPI.equals(API.INVENTORY)) {
+        if (context.getApi().equals(API.INVENTORY)) {
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor,
                             context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH,
@@ -230,13 +256,13 @@ public abstract class BaseProcessorInbound<T> {
                 context.getCurrentRequest().setError(e);
             }
             predecessor = newPredecessor;
-        } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
+        } else if (!context.getApi().equals(API.INVENTORY)) {
             AbstractExtensibleRepresentation attocRequest = null;
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor, RequestMethod.POST, device.value.toString(),
                             mapping.externalIdType,
                             payloadTarget.jsonString(),
-                            null, mapping.targetAPI, null));
+                            null, context.getApi(), null));
             try {
                 if (context.isSendPayload()) {
                     c8yAgent.createMEAO(context);
@@ -249,24 +275,27 @@ public abstract class BaseProcessorInbound<T> {
             }
             predecessor = newPredecessor;
         } else {
-            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
+            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, context.getApi(),
                     context.getProcessingCacheSize());
         }
-        log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
-                mapping.targetAPI,
-                size);
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant,
+                    payloadTarget.jsonString(),
+                    context.getApi(),
+                    size);
+        }
         return context;
     }
 
     private void prepareAndSubstituteInPayload(ProcessingContext<T> context, DocumentContext payloadTarget,
-            String pathTarget, MappingSubstitution.SubstituteValue substitute) {
+            String pathTarget, SubstituteValue substitute) {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
         if ((Mapping.IDENTITY + ".externalId").equals(pathTarget)) {
             ID identity = new ID(mapping.externalIdType, substitute.value.toString());
-            MappingSubstitution.SubstituteValue sourceId = new MappingSubstitution.SubstituteValue(substitute.value,
-                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING);
-            if (!mapping.targetAPI.equals(API.INVENTORY)) {
+            SubstituteValue sourceId = new SubstituteValue(substitute.value,
+                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
+            if (!context.getApi().equals(API.INVENTORY)) {
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
                 if (resolvedSourceId == null) {
                     if (mapping.createNonExistingDevice) {
@@ -275,19 +304,29 @@ public abstract class BaseProcessorInbound<T> {
                 } else {
                     sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
                 }
-                substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+                SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
+                        mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.value.toString());
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             }
         } else if ((Mapping.IDENTITY + ".c8ySourceId").equals(pathTarget)) {
-            MappingSubstitution.SubstituteValue sourceId = new MappingSubstitution.SubstituteValue(substitute.value,
-                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING);
+            SubstituteValue sourceId = new SubstituteValue(substitute.value,
+                    TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             // in this case the device needs to exists beforehand
-            substituteValueInPayload(sourceId, payloadTarget, mapping.transformGenericPath2C8YPath(pathTarget));
+            SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
+                    mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.value.toString());
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
+            context.setApi(API.fromString((String) substitute.value));
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Name").equals(pathTarget)) {
+            context.getBinaryInfo().setName((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Type").equals(pathTarget)) {
+            context.getBinaryInfo().setType((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Data").equals(pathTarget)) {
+            context.getBinaryInfo().setData((String) substitute.value);
         } else {
-            substituteValueInPayload(substitute, payloadTarget, pathTarget);
+            SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
     }
 
@@ -315,5 +354,42 @@ public abstract class BaseProcessorInbound<T> {
             context.getCurrentRequest().setError(e);
         }
         return null;
+    }
+
+    public void applyFilter(ProcessingContext<Object> context) {
+        String tenant = context.getTenant();
+        String mappingFilter = context.getMapping().getFilterMapping();
+        if (mappingFilter != null && !("").equals(mappingFilter)) {
+            Object payloadObjectNode = context.getPayload();
+            String payload = toPrettyJsonString(payloadObjectNode);
+            try {
+                var expr = jsonata(mappingFilter);
+                Object extractedSourceContent = expr.evaluate(payloadObjectNode);
+                if (!isNodeTrue(extractedSourceContent)) {
+                    log.info("Tenant {} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter,
+                            payload);
+                    context.setIgnoreFurtherProcessing(true);
+                }
+            } catch (Exception e) {
+                log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
+                        payload, e);
+            }
+        }
+    }
+
+    private boolean isNodeTrue(Object node) {
+        // Case 1: Direct boolean value check
+        if (node instanceof Boolean) {
+            return (Boolean) node;
+        }
+
+        // Case 2: String value that can be converted to boolean
+        if (node instanceof String) {
+            String text = ((String) node).trim().toLowerCase();
+            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
+            // Add more string variations if needed
+        }
+
+        return false;
     }
 }

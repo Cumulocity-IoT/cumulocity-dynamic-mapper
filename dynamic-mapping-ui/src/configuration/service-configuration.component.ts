@@ -23,7 +23,6 @@ import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import packageJson from '../../package.json';
-import { ConnectorConfigurationService } from '../connector';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 
@@ -47,7 +46,9 @@ export class ServiceConfigurationComponent implements OnInit {
     sendNotificationLifecycle: false,
     outboundMappingEnabled: true,
     inboundExternalIdCacheSize: 0,
-    inboundExternalIdCacheRetention: 0
+    inboundExternalIdCacheRetention: 0,
+    inventoryCacheSize: 0,
+    inventoryCacheRetention: 0,
   };
   editable2updated: boolean = false;
 
@@ -55,7 +56,6 @@ export class ServiceConfigurationComponent implements OnInit {
     public bsModalService: BsModalService,
     public alertService: AlertService,
     private sharedService: SharedService,
-    public connectorConfigurationService: ConnectorConfigurationService,
     private fb: FormBuilder
   ) { }
 
@@ -71,7 +71,10 @@ export class ServiceConfigurationComponent implements OnInit {
       sendNotificationLifecycle: new FormControl(''),
       outboundMappingEnabled: new FormControl(''),
       inboundExternalIdCacheSize: new FormControl(''),
-      inboundExternalIdCacheRetention: new FormControl('')
+      inboundExternalIdCacheRetention: new FormControl(''),
+      inventoryCacheRetention: new FormControl(''),
+      inventoryCacheSize: new FormControl(''),
+      inventoryFragmentsToCache: new FormControl('')
     });
 
     this.loadData();
@@ -94,7 +97,13 @@ export class ServiceConfigurationComponent implements OnInit {
       inboundExternalIdCacheSize:
         this.serviceConfiguration.inboundExternalIdCacheSize,
       inboundExternalIdCacheRetention:
-        this.serviceConfiguration.inboundExternalIdCacheRetention
+        this.serviceConfiguration.inboundExternalIdCacheRetention,
+      inventoryCacheSize:
+        this.serviceConfiguration.inventoryCacheSize,
+      inventoryCacheRetention:
+        this.serviceConfiguration.inventoryCacheRetention,
+      inventoryFragmentsToCache:
+        this.serviceConfiguration.inventoryFragmentsToCache.join(",")
     });
   }
 
@@ -124,6 +133,20 @@ export class ServiceConfigurationComponent implements OnInit {
     }
   }
 
+  async clickedClearInventoryCache() {
+    const response1 = await this.sharedService.runOperation(
+      {
+        operation: Operation.CLEAR_CACHE,
+        parameter: { cacheId: 'INVENTORY_CACHE' }
+      }
+    );
+    if (response1.status === HttpStatusCode.Created) {
+      this.alertService.success(gettext('Cache cleared.'));
+    } else {
+      this.alertService.danger(gettext('Failed to clear cache!'));
+    }
+  }
+
   async clickedResetDeploymentMapEndpoint() {
     const response1 = await this.sharedService.runOperation(
       { operation: Operation.RESET_DEPLOYMENT_MAP }
@@ -138,6 +161,11 @@ export class ServiceConfigurationComponent implements OnInit {
 
   async clickedSaveServiceConfiguration() {
     const conf = this.serviceForm.value;
+    // trim the separated fragments
+    conf.inventoryFragmentsToCache = this.serviceForm.value['inventoryFragmentsToCache']
+      .split(",")
+      .map(fragment => fragment.trim())
+      .filter(fragment => fragment.length > 0);
     const response = await this.sharedService.updateServiceConfiguration(conf);
     if (response.status < 300) {
       this.alertService.success(gettext('Update successful'));

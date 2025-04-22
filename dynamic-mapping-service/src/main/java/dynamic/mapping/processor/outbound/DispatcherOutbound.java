@@ -21,12 +21,16 @@
 
 package dynamic.mapping.processor.outbound;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+
 import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
+import com.dashjoin.jsonata.json.Json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
@@ -35,6 +39,7 @@ import dynamic.mapping.notification.websocket.NotificationCallback;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -48,11 +53,19 @@ import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.notification.websocket.Notification;
 import dynamic.mapping.processor.C8YMessage;
 
+import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
+
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AsynchronousDispatcherOutbound
@@ -87,7 +100,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
     protected ObjectMapper objectMapper;
 
-    protected ExecutorService virtThreadPool;
+    protected ExecutorService virtualThreadPool;
 
     protected MappingComponent mappingComponent;
 
@@ -103,7 +116,7 @@ public class DispatcherOutbound implements NotificationCallback {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.mappingComponent = configurationRegistry.getMappingComponent();
-        this.virtThreadPool = configurationRegistry.getVirtThreadPool();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.connectorClient = connectorClient;
         // log.info("Tenant {} - HIER I {} {}", connectorClient.getTenant(),
         // configurationRegistry.getPayloadProcessorsOutbound());
@@ -132,18 +145,41 @@ public class DispatcherOutbound implements NotificationCallback {
         if (!connectorClient.isConnected())
             log.warn("Tenant {} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
-        if ("CREATE".equals(notification.getNotificationHeaders().get(1)) && connectorClient.isConnected()) {
+        String operation = notification.getNotificationHeaders().get(1);
+
+        // log.info("Tenant {} - Notification message received {}",
+        // tenant, operation);
+        if (("CREATE".equals(operation) || "UPDATE".equals(operation)) && connectorClient.isConnected()) {
             // log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
             // notification.getMessage(),
             // notification.getNotificationHeaders(),
             // connectorClient.connectorConfiguration.name,
             // connectorClient.isConnected());
+            if ("UPDATE".equals(operation) && notification.getApi().equals(API.OPERATION)) {
+                log.info("Tenant {} - Update Operation message for connector {} is received, ignoring it",
+                        tenant, connectorClient.getConnectorName());
+                return;
+            }
             C8YMessage c8yMessage = new C8YMessage();
-            c8yMessage.setPayload(notification.getMessage());
+            Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
+            c8yMessage.setParsedPayload(parsedPayload);
             c8yMessage.setApi(notification.getApi());
+            c8yMessage.setOperation(operation);
+            String messageId = String.valueOf(parsedPayload.get("id"));
+            c8yMessage.setMessageId(messageId);
+            try {
+                var expression = jsonata(notification.getApi().identifier);
+                Object sourceIdResult = expression.evaluate(parsedPayload);
+                String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
+                c8yMessage.setSourceId(sourceId);
+            } catch (Exception e) {
+                log.debug("Could not extract source.id: {}", e.getMessage());
+
+            }
+            c8yMessage.setPayload(notification.getMessage());
             c8yMessage.setTenant(tenant);
             c8yMessage.setSendPayload(true);
-            virtThreadPool.submit(() -> {
+            virtualThreadPool.submit(() -> {
                 processMessage(c8yMessage);
             });
         }
@@ -176,6 +212,7 @@ public class DispatcherOutbound implements NotificationCallback {
         ObjectMapper objectMapper;
         ServiceConfiguration serviceConfiguration;
         AConnectorClient connectorClient;
+        Engine graalsEngine;
         Timer outboundProcessingTimer;
         Counter outboundProcessingCounter;
 
@@ -198,7 +235,7 @@ public class DispatcherOutbound implements NotificationCallback {
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(c8yMessage.getTenant());
             this.payloadProcessorsOutbound = payloadProcessorsOutbound;
-
+            this.graalsEngine = configurationRegistry.getGraalsEngine(c8yMessage.getTenant());
         }
 
         @Override
@@ -211,6 +248,12 @@ public class DispatcherOutbound implements NotificationCallback {
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
             MappingStatus mappingStatusUnspecified = mappingComponent
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
+            OperationRepresentation op;
+            if(c8yMessage.getApi().equals(API.OPERATION))
+                op  = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
+            else
+                op = null;
+            AtomicBoolean autoAcknowledge = new AtomicBoolean(false);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
                 if (mapping.getActive()
@@ -218,26 +261,73 @@ public class DispatcherOutbound implements NotificationCallback {
                     MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
                     // identify the correct processor based on the mapping type
                     BaseProcessorOutbound processor = payloadProcessorsOutbound.get(mapping.mappingType);
+                    Context graalsContext = null;
+                    String sharedCode = null;
+                    String systemCode = null;
+                    if(op != null && mapping.getAutoAckOperation() != null && mapping.getAutoAckOperation()) {
+                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
+                        //If at least one resolved mapping has autoAckOperation set to true, we acknowledge the operation
+                        autoAcknowledge.set(true);
+                    }
+
                     try {
                         if (processor != null) {
-                            Object payload = processor.deserializePayload(mapping, c8yMessage);
+                            // prepare graals func if required
+                            Value extractFromSourceFunc = null;
+                            if (mapping.code != null) {
+                                graalsContext = Context.newBuilder("js")
+                                        .option("engine.WarnInterpreterOnly", "false")
+                                        .allowHostAccess(HostAccess.ALL)
+                                        .allowHostClassLookup(
+                                                className -> className.startsWith("dynamic.mapping.processor.model") ||
+                                                        className.startsWith("java.util"))
+                                        .build();
+                                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                                extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
+                                if (extractFromSourceFunc == null) {
+                                    byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                                    String decodedCode = new String(decodedBytes);
+                                    String decodedCodeAdapted = decodedCode.replaceFirst(
+                                            Mapping.EXTRACT_FROM_SOURCE,
+                                            identifier);
+                                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                                            .buildLiteral();
+
+                                    // // make the engine evaluate the javascript script
+                                    graalsContext.eval(source);
+                                    extractFromSourceFunc = graalsContext.getBindings("js")
+                                            .getMember(identifier);
+
+                                }
+                                sharedCode = serviceConfiguration.getCodeTemplates()
+                                        .get(TemplateType.SHARED.name()).getCode();
+
+                                systemCode = serviceConfiguration.getCodeTemplates()
+                                        .get(TemplateType.SYSTEM.name()).getCode();
+                            }
+
+                            Object payload = c8yMessage.getParsedPayload();
                             ProcessingContext<?> context = ProcessingContext.builder().payload(payload)
+                                    .rawPayload(c8yMessage.getPayload())
                                     .topic(mapping.publishTopic)
                                     .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
                                     .tenant(tenant).supportsMessageContext(mapping.supportsMessageContext)
                                     .qos(mapping.qos).serviceConfiguration(serviceConfiguration)
+                                    .graalsContext(graalsContext)
+                                    .sharedCode(sharedCode)
+                                    .sharedCode(systemCode)
                                     .build();
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info(
                                         "Tenant {} - New message for topic: {}, for connector: {}, wrapped message: {}",
                                         tenant,
                                         context.getTopic(),
-                                        connectorClient.getConnectorIdentifier(),
+                                        connectorClient.getConnectorName(),
                                         context.getPayload().toString());
                             } else {
                                 log.info("Tenant {} - New message for topic: {}, for connector: {}, sendPayload: {}",
                                         tenant,
-                                        context.getTopic(), connectorClient.getConnectorIdentifier(), sendPayload);
+                                        context.getTopic(), connectorClient.getConnectorName(), sendPayload);
                             }
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
@@ -263,7 +353,13 @@ public class DispatcherOutbound implements NotificationCallback {
                             } else {
                                 processor.enrichPayload(context);
                                 processor.extractFromSource(context);
-                                processor.substituteInTargetAndSend(context);
+                                if (!context.isIgnoreFurtherProcessing()) {
+                                    processor.substituteInTargetAndSend(context);
+                                    List<C8YRequest> resultRequests = context.getRequests();
+                                    if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
+                                        mappingStatus.errors++;
+                                    }
+                                }
                                 Counter.builder("dynmapper_outbound_message_total")
                                         .tag("tenant", c8yMessage.getTenant())
                                         .description("Total number of outbound messages")
@@ -294,6 +390,18 @@ public class DispatcherOutbound implements NotificationCallback {
                     }
                 }
             });
+            if (!processingResult.isEmpty()) {
+                List<Exception> errors = new ArrayList<>();
+                processingResult.stream().filter(ProcessingContext::hasError)
+                        .forEach(context -> errors.addAll(context.getErrors()));
+                if(autoAcknowledge.get()) {
+                    if(!errors.isEmpty() && op != null )
+                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
+                                errors.toString());
+                    else
+                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.SUCCESSFUL, null);
+                }
+            }
             timer.stop(outboundProcessingTimer);
             return processingResult;
         }
@@ -302,67 +410,39 @@ public class DispatcherOutbound implements NotificationCallback {
 
     public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage) {
         String tenant = c8yMessage.getTenant();
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+
+        if (serviceConfiguration.logPayload) {
+            String payload = c8yMessage.getPayload();
+            log.info("Tenant {} - Received C8Y message on API: {}, Operation: {}, for Device {} and connector {}: {} {}", tenant,
+                    c8yMessage.getApi(), c8yMessage.getOperation(), c8yMessage.getSourceId(), connectorClient.getConnectorName(), payload,
+                    c8yMessage.getMessageId());
+        } else {
+            log.info("Tenant {} - Received C8Y message on API: {}, Operation: {}, for Device {} and connector {}: {}", tenant,
+                    c8yMessage.getApi(), c8yMessage.getOperation(), c8yMessage.getSourceId(), connectorClient.getConnectorName(),
+                    c8yMessage.getMessageId());
+        }
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
 
         // Handle C8Y Operation Status
-        // TODO Add OperationAutoAck Status to activate/deactive
-        OperationRepresentation op = null;
-        //
-        if (c8yMessage.getApi().equals(API.OPERATION)) {
-            op = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
-        }
         if (c8yMessage.getPayload() != null) {
             try {
-                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage.getPayload(),
-                        c8yMessage.getApi());
-                if (resolvedMappings.size() > 0 && op != null)
-                    c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
+                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage);
             } catch (Exception e) {
                 log.warn("Tenant {} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
-                        tenant);
+                        tenant, e);
                 log.debug(e.getMessage(), tenant);
-                // if (op != null)
-                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                // e.getLocalizedMessage());
                 mappingStatusUnspecified.errors++;
             }
         } else {
             return futureProcessingResult;
         }
-
-        futureProcessingResult = virtThreadPool.submit(
+        futureProcessingResult = virtualThreadPool.submit(
                 new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
                         payloadProcessorsOutbound, c8yMessage, connectorClient));
 
-        if (op != null) {
-            // Blocking for Operations to receive the processing result to update operation
-            // status
-            try {
-                List<ProcessingContext<?>> results = futureProcessingResult.get();
-                if (results.size() > 0) {
-                    if (results.get(0).hasError()) {
-                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                                results.get(0).getErrors().toString());
-                    } else {
-                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.SUCCESSFUL, null);
-                    }
-                } else {
-                    // No Mapping found
-                    // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                    // "No Mapping found for operation " + op.toJSON());
-                }
-            } catch (InterruptedException e) {
-                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                // e.getLocalizedMessage());
-                log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
-            } catch (ExecutionException e) {
-                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                // e.getLocalizedMessage());
-                log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
-            }
-        }
         return futureProcessingResult;
     }
 }

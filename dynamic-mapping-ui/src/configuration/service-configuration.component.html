@@ -21,31 +21,31 @@
 
 <c8y-title>Service configuration</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button
-    class="btn btn-link"
-    title="{{ 'Clear inbound cache' | translate }}"
-    (click)="clickedClearInboundExternalIdCache()"
-  >
+  <button class="btn btn-link" title="{{ 'Clear inbound cache' | translate }}"
+    (click)="clickedClearInboundExternalIdCache()">
     <i c8yIcon="clear"></i>
     {{ 'Clear inbound cache' | translate }}
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
-  <button
-    class="btn btn-link"
-    title="{{ 'Reconnect notification endpoint' | translate }}"
-    (click)="clickedReconnect2NotificationEndpoint()"
-  >
+  <button class="btn btn-link" title="{{ 'Clear inventory cache' | translate }}" (click)="clickedClearInventoryCache()">
+    <i c8yIcon="clear"></i>
+    {{ 'Clear inventory cache' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Reconnect notification endpoint' | translate }}"
+    (click)="clickedReconnect2NotificationEndpoint()">
     <i c8yIcon="disconnected"></i>
     {{ 'Reconnect notification endpoint' | translate }}
   </button>
 </c8y-action-bar-item>
 
 <div class="card card--fullpage">
-  <div class="card-block">
-    <form [formGroup]="serviceForm">
-      <div class="col-lg-8 col-lg-offset-2">
-        <c8y-list-group data-cy="c8y-alarms-details--audit-logs">
+  <div class="inner-scroll">
+    <div class="card-block">
+      <c8y-list-group class="p-l-48 p-r-48">
+        <form [formGroup]="serviceForm">
           <c8y-li>
             <c8y-li-icon icon="file-type-document"></c8y-li-icon>
             <div class="d-flex a-i-center">
@@ -55,15 +55,8 @@
                   <small translate>Log payload in microservice log file.</small>
                 </p>
               </div>
-              <label
-                class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Log payload' | translate }}"
-              >
-                <input
-                  name="logPayload"
-                  type="checkbox"
-                  formControlName="logPayload"
-                />
+              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Log payload' | translate }}">
+                <input name="logPayload" type="checkbox" formControlName="logPayload" />
                 <span></span>
               </label>
             </div>
@@ -74,21 +67,12 @@
               <div>
                 <p>{{ 'Log substitution' | translate }}</p>
                 <p>
-                  <small translate
-                    >Log substitution in microservice log file when applying a
-                    mapping.</small
-                  >
+                  <small translate>Log substitution in microservice log file when applying a
+                    mapping.</small>
                 </p>
               </div>
-              <label
-                class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Log substitution' | translate }}"
-              >
-                <input
-                  name="logSubstitution"
-                  type="checkbox"
-                  formControlName="logSubstitution"
-                />
+              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Log substitution' | translate }}">
+                <input name="logSubstitution" type="checkbox" formControlName="logSubstitution" />
                 <span></span>
               </label>
             </div>
@@ -99,20 +83,11 @@
               <div>
                 <p>{{ 'Log connector errors' | translate }}</p>
                 <p>
-                  <small translate
-                    >Log errors when connecting in microservice log file.</small
-                  >
+                  <small translate>Log errors when connecting in microservice log file.</small>
                 </p>
               </div>
-              <label
-                class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Log connector errors' | translate }}"
-              >
-                <input
-                  name="logConnectorErrorInBackend"
-                  type="checkbox"
-                  formControlName="logConnectorErrorInBackend"
-                />
+              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Log connector errors' | translate }}">
+                <input name="logConnectorErrorInBackend" type="checkbox" formControlName="logConnectorErrorInBackend" />
                 <span></span>
               </label>
             </div>
@@ -123,21 +98,13 @@
               <div>
                 <p>{{ 'Send connector lifecycle' | translate }}</p>
                 <p>
-                  <small translate
-                    >Send events when status of a connector changes. Be aware
-                    this can cause additional costs </small
-                  ><i c8yIcon="euro"></i>
+                  <small translate>Send events when status of a connector changes. Be aware
+                    this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <label
-                class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send connector lifecycle' | translate }}"
-              >
-                <input
-                  name="sendMappingStatus"
-                  type="checkbox"
-                  formControlName="sendConnectorLifecycle"
-                />
+              <label class="c8y-switch c8y-switch--inline m-l-auto"
+                title="{{ 'Send connector lifecycle' | translate }}">
+                <input name="sendMappingStatus" type="checkbox" formControlName="sendConnectorLifecycle" />
                 <span></span>
               </label>
             </div>
@@ -149,21 +116,12 @@
               <div>
                 <p>{{ 'Send mapping statistics' | translate }}</p>
                 <p>
-                  <small translate
-                    >Send statics about how often a mapping was applied. Be
-                    aware this can cause additional costs </small
-                  ><i c8yIcon="euro"></i>
+                  <small translate>Send statics about how often a mapping was applied. Be
+                    aware this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <label
-                class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send mapping status' | translate }}"
-              >
-                <input
-                  name="sendMappingStatus"
-                  type="checkbox"
-                  formControlName="sendMappingStatus"
-                />
+              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Send mapping status' | translate }}">
+                <input name="sendMappingStatus" type="checkbox" formControlName="sendMappingStatus" />
                 <span></span>
               </label>
             </div>
@@ -175,21 +133,13 @@
               <div>
                 <p>{{ 'Send events on topic subscriptions' | translate }}</p>
                 <p>
-                  <small translate
-                    >Send events when the subscription for a topic changes. Be
-                    aware this can cause additional costs </small
-                  ><i c8yIcon="euro"></i>
+                  <small translate>Send events when the subscription for a topic changes. Be
+                    aware this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <label
-                class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send events on topic subscriptions' | translate }}"
-              >
-                <input
-                  name="sendSubscriptionEvents"
-                  type="checkbox"
-                  formControlName="sendSubscriptionEvents"
-                />
+              <label class="c8y-switch c8y-switch--inline m-l-auto"
+                title="{{ 'Send events on topic subscriptions' | translate }}">
+                <input name="sendSubscriptionEvents" type="checkbox" formControlName="sendSubscriptionEvents" />
                 <span></span>
               </label>
             </div>
@@ -201,21 +151,13 @@
               <div>
                 <p>{{ 'Send notification lifecycle' | translate }}</p>
                 <p>
-                  <small translate
-                    >Send events when status for outbound notifications changes.
-                    Be aware this can cause additional costs </small
-                  ><i c8yIcon="euro"></i>
+                  <small translate>Send events when status for outbound notifications changes.
+                    Be aware this can cause additional costs </small><i c8yIcon="euro"></i>
                 </p>
               </div>
-              <label
-                class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Send notification lifecycle' | translate }}"
-              >
-                <input
-                  name="sendNotificationLifecycle"
-                  type="checkbox"
-                  formControlName="sendNotificationLifecycle"
-                />
+              <label class="c8y-switch c8y-switch--inline m-l-auto"
+                title="{{ 'Send notification lifecycle' | translate }}">
+                <input name="sendNotificationLifecycle" type="checkbox" formControlName="sendNotificationLifecycle" />
                 <span></span>
               </label>
             </div>
@@ -230,15 +172,8 @@
                   <small translate>Outbound mappings</small>
                 </p>
               </div>
-              <label
-                class="c8y-switch c8y-switch--inline m-l-auto"
-                title="{{ 'Outbound mappings' | translate }}"
-              >
-                <input
-                  name="sendNotificationLifecycle"
-                  type="checkbox"
-                  formControlName="outboundMappingEnabled"
-                />
+              <label class="c8y-switch c8y-switch--inline m-l-auto" title="{{ 'Outbound mappings' | translate }}">
+                <input name="sendNotificationLifecycle" type="checkbox" formControlName="outboundMappingEnabled" />
                 <span></span>
               </label>
             </div>
@@ -250,23 +185,14 @@
               <div>
                 <p>{{ 'Size inbound Id cache' | translate }}</p>
                 <p>
-                  <small translate
-                    >Set size inbound Id cache. After changing the size you have
-                    to clear the cache to take effect</small
-                  >
+                  <small translate>Set size inbound Id cache. After changing the size you have
+                    to clear the cache to take effect</small>
                 </p>
               </div>
-              <label
-                class="editable m-l-auto"
-                title="{{ 'Size inbound Id cache' | translate }}"
-                [ngClass]="{ updated: editable2updated }"
-              >
-                <input
-                  class="form-control"
-                  name="inboundExternalIdCacheSize"
-                  type="number"
-                  formControlName="inboundExternalIdCacheSize"
-                />
+              <label class="editable m-l-auto" title="{{ 'Size inbound Id cache' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <input class="form-control" name="inboundExternalIdCacheSize" type="number"
+                  formControlName="inboundExternalIdCacheSize" />
                 <span></span>
               </label>
             </div>
@@ -278,41 +204,86 @@
               <div>
                 <p>{{ 'Days lifetime inbound Id cache' | translate }}</p>
                 <p>
-                  <small translate
-                    >Set time after which complete cache in cleared. This is
+                  <small translate>Set time after which complete cache in cleared. This is
                     useful when you plan to delete a device or assign an
-                    external id to different device</small
-                  >
+                    external id to different device</small>
                 </p>
               </div>
-              <label
-                class="editable m-l-auto"
-                title="{{ 'Outbound mappings' | translate }}"
-                [ngClass]="{ updated: editable2updated }"
-              >
-                <input
-                  class="form-control"
-                  name="inboundExternalIdCacheRetention"
-                  type="number"
-                  formControlName="inboundExternalIdCacheRetention"
-                />
+              <label class="editable m-l-auto" title="{{ 'Days lifetime ' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <input class="form-control" name="inboundExternalIdCacheRetention" type="number"
+                  formControlName="inboundExternalIdCacheRetention" />
                 <span></span>
               </label>
             </div>
           </c8y-li>
-        </c8y-list-group>
-      </div>
-    </form>
+
+
+          <c8y-li>
+            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Size inventory cache' | translate }}</p>
+                <p>
+                  <small translate>Set size inventory cache. After changing the size you have
+                    to clear the cache to take effect</small>
+                </p>
+              </div>
+              <label class="editable m-l-auto" title="{{ 'Size inventory cache' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <input class="form-control" name="inventoryCacheSize" type="number"
+                  formControlName="inventoryCacheSize" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="time-machine"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Days lifetime inventory cache' | translate }}</p>
+                <p>
+                  <small translate>Set time after which complete cache in cleared. This is
+                    useful when you plan to delete a device or assign an
+                    external id to different device</small>
+                </p>
+              </div>
+              <label class="editable m-l-auto" title="{{ 'Days lifetime' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <input class="form-control" name="inventoryCacheRetention" type="number"
+                  formControlName="inventoryCacheRetention" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Fragments from inventory to cache' | translate }}</p>
+                <p>
+                  <small translate>The listed fragments (comma separated list) will be cached and can be referenced in
+                    'filterInventory'</small>
+                </p>
+              </div>
+              <label class="editable m-l-auto" title="{{ 'Fragments from inventory to cache' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <input class="form-control" name="inventoryFragmentsToCache" type="string"
+                  formControlName="inventoryFragmentsToCache" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+        </form>
+      </c8y-list-group>
+
+    </div>
   </div>
   <div class="card-footer">
     <div class="form-group">
-      <button
-        type="button"
-        name="update"
-        class="btn btn-primary"
-        (click)="clickedSaveServiceConfiguration()"
-        translate
-      >
+      <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveServiceConfiguration()" translate>
         Save
       </button>
     </div>

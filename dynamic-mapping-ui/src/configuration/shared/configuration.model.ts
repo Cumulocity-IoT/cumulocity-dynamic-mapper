@@ -1,3 +1,5 @@
+import { internalApps } from "@c8y/ngx-components";
+
 /*
  * Copyright (c) 2025 Cumulocity GmbH
  *
@@ -29,4 +31,30 @@ export interface ServiceConfiguration {
   outboundMappingEnabled: boolean;
   inboundExternalIdCacheSize: number;
   inboundExternalIdCacheRetention: number;
+  inventoryCacheSize: number;
+  inventoryCacheRetention: number;
+  inventoryFragmentsToCache?: string[];
+  codeTemplates?: any;
+}
+
+export enum TemplateType {
+  INBOUND = "INBOUND",
+  OUTBOUND = "OUTBOUND",
+  SHARED = "SHARED",
+  SYSTEM = "SYSTEM"
+}
+
+export interface CodeTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  templateType: TemplateType;
+  code: string;
+  internal: boolean;
+  readonly: boolean;
+  defaultTemplate: boolean;
+}
+
+export interface CodeTemplateMap {
+  [key: string]: CodeTemplate;
 }

@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 
+import { ProcessingContext } from './../../mapping/core/processor/processor.model';
 import { EditorMode } from '../../mapping/shared/stepper.model';
 import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 
@@ -49,16 +50,18 @@ export interface Mapping {
   mappingTopic?: string;
   mappingTopicSample?: string;
   targetAPI: string;
-  direction?: Direction;
+  direction: Direction;
   sourceTemplate: string;
   targetTemplate: string;
   mappingType: MappingType;
   substitutions?: MappingSubstitution[];
   filterMapping?: string;
+  filterInventory?: string;
   active: boolean;
-  debug?: boolean;
+  debug: boolean;
   tested: boolean;
   supportsMessageContext?: boolean;
+  eventWithAttachment?: boolean;
   createNonExistingDevice: boolean;
   updateExistingDevice: boolean;
   autoAckOperation?: boolean;
@@ -68,6 +71,7 @@ export interface Mapping {
   snoopedTemplates?: string[];
   extension?: ExtensionEntry;
   qos: QOS;
+  code?: string;
   lastUpdate: number;
 }
 
@@ -130,6 +134,7 @@ export interface StepperConfiguration {
   showProcessorExtensionsSource?: boolean;
   showProcessorExtensionsSourceTarget?: boolean;
   showProcessorExtensionsInternal?: boolean;
+  showCodeEditor?: boolean;
   editorMode?: EditorMode;
   allowNoDefinedIdentifier?: boolean;
   allowDefiningSubstitutions?: boolean;
@@ -142,10 +147,11 @@ export interface StepperConfiguration {
 export enum MappingType {
   JSON = 'JSON',
   FLAT_FILE = 'FLAT_FILE',
-  BINARY = 'BINARY',
+  HEX = 'HEX',
   PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
   EXTENSION_SOURCE = 'EXTENSION_SOURCE',
-  EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET'
+  EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
+  CODE_BASED = 'CODE_BASED'
 }
 
 export interface MappingTypeProperties {
@@ -205,8 +211,8 @@ export const MappingTypeDescriptionMap: Record<
       allowTestSending: true
     }
   },
-  [MappingType.BINARY]: {
-    key: MappingType.BINARY,
+  [MappingType.HEX]: {
+    key: MappingType.HEX,
     description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x". 
 Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
     properties: {
@@ -280,6 +286,24 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       allowTestSending: false,
       advanceFromStepToEndStep: 2
     }
+  },
+  [MappingType.CODE_BASED]: {
+    key: MappingType.CODE_BASED,
+    description: 'Mapping handles payloads in JSON format and defines substitutions as code.',
+    properties: {
+      [Direction.INBOUND]: { snoopSupported: true, directionSupported: false },
+      [Direction.OUTBOUND]: { snoopSupported: true, directionSupported: true }
+    },
+    stepperConfiguration: {
+      showEditorSource: true,
+      showEditorTarget: true,
+      showCodeEditor: true,
+      allowNoDefinedIdentifier: false,
+      allowDefiningSubstitutions: true,
+      showProcessorExtensionsSource: false,
+      allowTestTransformation: true,
+      allowTestSending: false
+    }
   }
 };
 
@@ -349,10 +373,16 @@ export interface Feature {
   return mp;
 }
 
-export function getPathTargetForDeviceIdentifiers(mapping: Mapping): string[] {
-  const pss = mapping.substitutions
-    .filter(sub => definesDeviceIdentifier(mapping, sub))
-    .map(sub => sub.pathTarget);
+export function getPathTargetForDeviceIdentifiers(context: ProcessingContext): string[] {
+  const { mapping } = context;
+  let pss;
+  if (mapping.mappingType === MappingType.CODE_BASED) {
+     pss = [getGenericDeviceIdentifier(mapping)];
+  } else {
+    pss = mapping.substitutions
+      .filter(sub => definesDeviceIdentifier(mapping, sub))
+      .map(sub => sub.pathTarget);
+  }
   return pss;
 }
 
@@ -388,13 +418,13 @@ export function definesDeviceIdentifier(
   sub: MappingSubstitution
 ): boolean {
   if (mapping.direction == Direction.INBOUND) {
-    if (mapping.externalIdType) {
+    if (mapping.useExternalId) {
       return sub?.pathTarget == `${IDENTITY}.externalId`;
     } else {
       return sub?.pathTarget == `${IDENTITY}.c8ySourceId`;
     }
   } else {
-    if (mapping.externalIdType) {
+    if (mapping.useExternalId) {
       return sub?.pathSource == `${IDENTITY}.externalId`;
     } else {
       return sub?.pathSource == `${IDENTITY}.c8ySourceId`;
