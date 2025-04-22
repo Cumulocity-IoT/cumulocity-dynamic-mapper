@@ -131,7 +131,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
                     new ArrayList<>());
             processingCacheEntry.add(
                     new SubstituteValue(new DateTime().toString(),
-                            TYPE.TEXTUAL, RepairStrategy.DEFAULT, false));
+                            TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false));
             processingCache.put(Mapping.TIME, processingCacheEntry);
         }
     }

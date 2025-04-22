@@ -117,6 +117,9 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
         }
 
         processingCache.set(key, processingCacheEntry);
+        if (key === TIME) {
+          substitutionTimeExists = true;
+        }
       }
 
     } catch (error) {
@@ -133,7 +136,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
       processingCacheEntry.push({
         value: new Date().toISOString(),
         type: SubstituteValueType.TEXTUAL,
-        repairStrategy: RepairStrategy.DEFAULT
+        repairStrategy: RepairStrategy.CREATE_IF_MISSING
       });
 
       processingCache.set(TIME, processingCacheEntry);

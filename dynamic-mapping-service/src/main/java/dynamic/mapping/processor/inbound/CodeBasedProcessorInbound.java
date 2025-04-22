@@ -24,7 +24,6 @@ package dynamic.mapping.processor.inbound;
 import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -185,7 +184,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                     new ArrayList<>());
             processingCacheEntry.add(
                     new SubstituteValue(new DateTime().toString(),
-                            TYPE.TEXTUAL, RepairStrategy.DEFAULT, false));
+                            TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false));
             processingCache.put(Mapping.TIME, processingCacheEntry);
         }
     }
