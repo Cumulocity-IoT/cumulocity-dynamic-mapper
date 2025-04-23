@@ -28,7 +28,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import jakarta.validation.Valid;
-import dynamic.mapping.configuration.CodeTemplate;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
