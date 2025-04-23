@@ -521,6 +521,16 @@ export function reduceTargetTemplate(
   return tt;
 }
 
+export function isExpression(path) {
+  const containsSpecialChars = (str: string): boolean => {
+    // IMPORTANT: here all special characters that are part of an expression must be listed, as they cause the editor to crash 
+    // when the path is used in a selection, e.g. 2 * c8yTemperature.T.value
+    const regex = /[\$\(\)&\s\+\-\/\*\=]/;
+    return regex.test(str);
+  }
+  return containsSpecialChars(path)
+}
+
 export function getTypeOf(object) {
   const stringConstructor = 'test'.constructor;
   const arrayConstructor = [].constructor;
