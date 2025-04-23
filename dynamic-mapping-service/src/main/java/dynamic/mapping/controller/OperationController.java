@@ -127,8 +127,9 @@ public class OperationController {
                 case REFRESH_STATUS_MAPPING:
                     return handleRefreshStatusMapping(tenant);
                 case RESET_STATUS_MAPPING:
-                case RESET_DEPLOYMENT_MAP:
                     return handleResetStatusMapping(tenant);
+                case RESET_DEPLOYMENT_MAP:
+                    return handleResetDeploymentMap(tenant);
                 case RELOAD_EXTENSIONS:
                     return handleReloadExtensions(tenant);
                 case ACTIVATE_MAPPING:
@@ -219,6 +220,11 @@ public class OperationController {
             updatedMappingsOutbound.forEach(mapping -> client.updateActiveSubscriptionOutbound(mapping));
         });
 
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    private ResponseEntity<?> handleResetDeploymentMap(String tenant) throws Exception {
+        mappingComponent.initializeDeploymentMap(tenant, true);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

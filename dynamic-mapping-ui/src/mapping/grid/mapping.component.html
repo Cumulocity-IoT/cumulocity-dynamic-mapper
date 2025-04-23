@@ -37,6 +37,11 @@
     <i c8yIcon="download"></i>
     {{ 'Export all mappings' | translate }}
   </button>
+  <button class="btn btn-link" title="{{ 'Reset deployment cache' | translate }}"
+    (click)="clickedResetDeploymentMapEndpoint()">
+    <i c8yIcon="erase"></i>
+    {{ 'Reset deployment cache' | translate }}
+  </button>
   <button class="btn btn-link" title="{{ 'Import mappings' | translate }}" (click)="onImport()">
     <i c8yIcon="upload"></i>
     {{ 'Import mappings' | translate }}
