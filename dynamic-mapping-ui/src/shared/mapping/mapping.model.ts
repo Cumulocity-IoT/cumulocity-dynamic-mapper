@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { ProcessingContext } from './../../mapping/core/processor/processor.model';
+import { ProcessingContext, TOKEN_IDENTITY } from './../../mapping/core/processor/processor.model';
 import { EditorMode } from '../../mapping/shared/stepper.model';
 import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 
@@ -419,15 +419,15 @@ export function definesDeviceIdentifier(
 ): boolean {
   if (mapping.direction == Direction.INBOUND) {
     if (mapping.useExternalId) {
-      return sub?.pathTarget == `${IDENTITY}.externalId`;
+      return sub?.pathTarget == `${TOKEN_IDENTITY}.externalId`;
     } else {
-      return sub?.pathTarget == `${IDENTITY}.c8ySourceId`;
+      return sub?.pathTarget == `${TOKEN_IDENTITY}.c8ySourceId`;
     }
   } else {
     if (mapping.useExternalId) {
-      return sub?.pathSource == `${IDENTITY}.externalId`;
+      return sub?.pathSource == `${TOKEN_IDENTITY}.externalId`;
     } else {
-      return sub?.pathSource == `${IDENTITY}.c8ySourceId`;
+      return sub?.pathSource == `${TOKEN_IDENTITY}.c8ySourceId`;
     }
   }
 }
@@ -450,12 +450,11 @@ export function countDeviceIdentifiers(mapping: Mapping): number {
   ).length;
   return n;
 }
-export const IDENTITY = '_IDENTITY_';
 export function getGenericDeviceIdentifier(mapping: Mapping): string {
   if (mapping.useExternalId && mapping.externalIdType !== '') {
-    return `${IDENTITY}.externalId`;
+    return `${TOKEN_IDENTITY}.externalId`;
   } else {
-    return `${IDENTITY}.c8ySourceId`;
+    return `${TOKEN_IDENTITY}.c8ySourceId`;
   }
 }
 

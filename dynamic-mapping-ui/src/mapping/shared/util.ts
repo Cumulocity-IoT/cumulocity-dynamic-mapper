@@ -25,15 +25,11 @@ import {
   Mapping,
   SnoopStatus
 } from '../../shared';
-import { IDENTITY } from '../../shared/mapping/mapping.model';
 import { ValidationFormlyError } from './mapping.model';
-import { map } from 'cypress/types/bluebird';
+import { TOKEN_CONTEXT_DATA, TOKEN_IDENTITY, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
 
-export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
-export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
 export const CONTEXT_DATA_METHOD_NAME = 'method';
-export const TIME = 'time';
 
 export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
   if (topic) {
@@ -469,13 +465,13 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
 
 
     if (mapping.direction == Direction.OUTBOUND) {
-      result[IDENTITY].c8ySourceId = '909090';
+      result[TOKEN_IDENTITY].c8ySourceId = '909090';
     }
     return result;
   } else {
     result = {
       ...template,
-      _IDENTITY_: {
+      [TOKEN_IDENTITY]: {
         c8ySourceId: '909090'
       }
     };
@@ -491,8 +487,8 @@ export function randomIdAsString() {
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
-  _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
-  _.set(template, 'publishTopic', mapping.publishTopic);
+  _.set(template, `${TOKEN_IDENTITY}.c8ySourceId`, identifier);
+  _.set(template, `${TOKEN_CONTEXT_DATA}.publishTopic`, mapping.publishTopic);
 }
 
 export function reduceSourceTemplate(
@@ -500,7 +496,7 @@ export function reduceSourceTemplate(
   returnPatched: boolean
 ): string {
   if (!returnPatched) {
-    delete template[IDENTITY];
+    delete template[TOKEN_IDENTITY];
     delete template[TOKEN_TOPIC_LEVEL];
     delete template[TOKEN_CONTEXT_DATA];
   }
@@ -513,7 +509,7 @@ export function reduceTargetTemplate(
   patched: boolean
 ): string {
   if (template && !patched) {
-    delete template[IDENTITY];
+    delete template[TOKEN_IDENTITY];
     delete template[TOKEN_TOPIC_LEVEL];
     delete template[TOKEN_CONTEXT_DATA];
   }

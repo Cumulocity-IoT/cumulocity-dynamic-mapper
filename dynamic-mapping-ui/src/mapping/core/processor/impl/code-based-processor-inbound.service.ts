@@ -22,12 +22,12 @@ import * as _ from 'lodash';
 import { API, getGenericDeviceIdentifier, Mapping, RepairStrategy } from '../../../../shared';
 import {
   base64ToBytes,
-  TIME,
 } from '../../../shared/util';
 import { BaseProcessorInbound } from '../base-processor-inbound.service';
 import {
   evaluateWithArgs,
   extractLineAndColumn,
+  KEY_TIME,
   ProcessingContext,
   processSubstitute,
   SubstituteValue,
@@ -117,7 +117,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
         }
 
         processingCache.set(key, processingCacheEntry);
-        if (key === TIME) {
+        if (key === KEY_TIME) {
           substitutionTimeExists = true;
         }
       }
@@ -130,7 +130,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
     if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name && mapping.targetAPI != API.OPERATION.name) {
       const processingCacheEntry: SubstituteValue[] = _.get(
         processingCache,
-        TIME,
+        KEY_TIME,
         []
       );
       processingCacheEntry.push({
@@ -139,7 +139,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
         repairStrategy: RepairStrategy.CREATE_IF_MISSING
       });
 
-      processingCache.set(TIME, processingCacheEntry);
+      processingCache.set(KEY_TIME, processingCacheEntry);
     }
   }
 }

@@ -119,7 +119,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
                         substitution.pathTarget);
             }
 
-            if (substitution.pathTarget.equals(Mapping.TIME)) {
+            if (substitution.pathTarget.equals(Mapping.KEY_TIME)) {
                 substitutionTimeExists = true;
             }
         }
@@ -127,12 +127,12 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
         // no substitution for the time property exists, then use the system time
         if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
             List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                    Mapping.TIME,
+                    Mapping.KEY_TIME,
                     new ArrayList<>());
             processingCacheEntry.add(
                     new SubstituteValue(new DateTime().toString(),
                             TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false));
-            processingCache.put(Mapping.TIME, processingCacheEntry);
+            processingCache.put(Mapping.KEY_TIME, processingCacheEntry);
         }
     }
 
