@@ -147,7 +147,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   constructor(
     public mappingService: MappingService,
-    public shareService: SharedService,
+    public sharedService: SharedService,
     public alertService: AlertService,
     private bsModalService: BsModalService,
     private router: Router
@@ -299,8 +299,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         console.log('Triggered updating mapping', m);
         this.updateMapping(m);
       });
-    this.codeTemplateInbound = (await this.shareService.getCodeTemplate(TemplateType.INBOUND.toString())).code;
-    this.codeTemplateOutbound = (await this.shareService.getCodeTemplate(TemplateType.OUTBOUND.toString())).code;
+    this.codeTemplateInbound = (await this.sharedService.getCodeTemplate(TemplateType.INBOUND.toString())).code;
+    this.codeTemplateOutbound = (await this.sharedService.getCodeTemplate(TemplateType.OUTBOUND.toString())).code;
 
     if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
       // Using Promise-based approach since getMappings returns a Promise
@@ -367,7 +367,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       id: mappingId
     };
 
-    await this.shareService.runOperation({
+    await this.sharedService.runOperation({
       operation: Operation.APPLY_MAPPING_FILTER,
       parameter: params
     });
@@ -998,7 +998,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   private async reloadMappingsInBackend() {
-    const response2 = await this.shareService.runOperation(
+    const response2 = await this.sharedService.runOperation(
       { operation: Operation.RELOAD_MAPPINGS }
     );
     // console.log('Activate mapping response:', response2);
@@ -1041,6 +1041,18 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   refreshMappings() {
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+  }
+
+  async clickedResetDeploymentMapEndpoint() {
+    const response1 = await this.sharedService.runOperation(
+      { operation: Operation.RESET_DEPLOYMENT_MAP }
+    );
+    // console.log('Details reconnect2NotificationEndpoint', response1);
+    if (response1.status === HttpStatusCode.Created) {
+      this.alertService.success(gettext('Reset deploymentMap.'));
+    } else {
+      this.alertService.danger(gettext('Failed to reset deploymentMap!'));
+    }
   }
 
 }

@@ -174,11 +174,11 @@ export function substituteValueInPayload(
   }
 }
 
-export const IDENTITY = '_IDENTITY_';
+export const TOKEN_IDENTITY = '_IDENTITY_';
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
 export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const CONTEXT_DATA_KEY_NAME = 'key';
-export const TIME = 'time';
+export const KEY_TIME = 'time';
 
 export const TOPIC_WILDCARD_MULTI = '#';
 export const TOPIC_WILDCARD_SINGLE = '+';
@@ -187,7 +187,7 @@ export const TOPIC_WILDCARD_SINGLE = '+';
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
   _.set(template, API[mapping.targetAPI].identifier, identifier);
-  _.set(template, `${IDENTITY}.c8ySourceId`, identifier);
+  _.set(template, `${TOKEN_IDENTITY}.c8ySourceId`, identifier);
 }
 
 /**

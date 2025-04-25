@@ -191,11 +191,22 @@ public class MappingComponent {
                 if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null && initialized) {
                     log.debug("Tenant {} - Sending monitoring: {}", tenant, statusMapping.values().size());
                     Map<String, Object> service = new HashMap<String, Object>();
-                    MappingStatus[] ms = statusMapping.values().toArray(new MappingStatus[0]);
-                    // add current name of mappings to the status messages
+                    // Convert statusMapping values to a list for filtering
+                    List<MappingStatus> msList = new ArrayList<>(statusMapping.values());
+
+                    // Filter the list to keep only desired items
+                    msList.removeIf(status -> !"UNSPECIFIED".equals(status.id) &&
+                            !cacheMappingInbound.get(tenant).containsKey(status.id) &&
+                            !cacheMappingOutbound.get(tenant).containsKey(status.id));
+
+                    // Convert filtered list to array
+                    MappingStatus[] ms = msList.toArray(new MappingStatus[0]);
+
+                    // Set names according to the rules
                     for (int index = 0; index < ms.length; index++) {
-                        ms[index].name = "UNSPECIFIED".equals(ms[index].id) ? "Unspecified" : "Mapping deleted";
-                        if (cacheMappingInbound.get(tenant).containsKey(ms[index].id)) {
+                        if ("UNSPECIFIED".equals(ms[index].id)) {
+                            ms[index].name = "Unspecified";
+                        } else if (cacheMappingInbound.get(tenant).containsKey(ms[index].id)) {
                             ms[index].name = cacheMappingInbound.get(tenant).get(ms[index].id).name;
                         } else if (cacheMappingOutbound.get(tenant).containsKey(ms[index].id)) {
                             ms[index].name = cacheMappingOutbound.get(tenant).get(ms[index].id).name;

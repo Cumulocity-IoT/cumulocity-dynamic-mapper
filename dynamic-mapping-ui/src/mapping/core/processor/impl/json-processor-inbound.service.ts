@@ -20,11 +20,9 @@
 import { Injectable } from '@angular/core';
 import * as _ from 'lodash';
 import { API, Mapping, RepairStrategy } from '../../../../shared';
-import {
-  TIME,
-} from '../../../shared/util';
 import { BaseProcessorInbound } from '../base-processor-inbound.service';
 import {
+  KEY_TIME,
   ProcessingContext,
   processSubstitute,
   SubstituteValue,
@@ -84,7 +82,7 @@ export class JSONProcessorInbound extends BaseProcessorInbound {
         //  `Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget})`
         //);
 
-        if (substitution.pathTarget === TIME) {
+        if (substitution.pathTarget === KEY_TIME) {
           substitutionTimeExists = true;
         }
       } catch (error) {
@@ -96,7 +94,7 @@ export class JSONProcessorInbound extends BaseProcessorInbound {
     if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name && mapping.targetAPI != API.OPERATION.name) {
       const processingCacheEntry: SubstituteValue[] = _.get(
         processingCache,
-        TIME,
+        KEY_TIME,
         []
       );
       processingCacheEntry.push({
@@ -105,7 +103,7 @@ export class JSONProcessorInbound extends BaseProcessorInbound {
         repairStrategy: RepairStrategy.DEFAULT
       });
 
-      processingCache.set(TIME, processingCacheEntry);
+      processingCache.set(KEY_TIME, processingCacheEntry);
     }
   }
 }

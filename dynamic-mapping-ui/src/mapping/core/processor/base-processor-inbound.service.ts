@@ -34,7 +34,7 @@ import {
 import { splitTopicExcludingSeparator } from '../../shared/util';
 import { C8YAgent } from '../c8y-agent.service';
 import {
-  IDENTITY,
+  TOKEN_IDENTITY,
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType,
@@ -146,7 +146,7 @@ export abstract class BaseProcessorInbound {
 
         // check if the targetPath == externalId and  we need to resolve an external id
         if (
-          `${IDENTITY}.externalId` == pathTarget && mapping.useExternalId
+          `${TOKEN_IDENTITY}.externalId` == pathTarget && mapping.useExternalId
         ) {
           identity = {
             externalId: substitute.value.toString(),
@@ -179,7 +179,7 @@ export abstract class BaseProcessorInbound {
             context.sourceId = sourceId.value;
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
           }
-        } else if (`${IDENTITY}.c8ySourceId` == pathTarget) {
+        } else if (`${TOKEN_IDENTITY}.c8ySourceId` == pathTarget) {
           let sourceId = {
             value: substitute.value,
             repairStrategy: RepairStrategy.CREATE_IF_MISSING,

@@ -121,4 +121,10 @@
       </c8y-li>
     </c8y-li-timeline>
   </c8y-list-group>
+  <div class="c8y-empty-state" *ngIf="(events$ | async)?.data?.length === 0">
+    <h2 c8yIcon="c8y-events"></h2>
+    <p>
+      <strong>No events available.</strong><br />
+    </p>
+  </div>
 </div>

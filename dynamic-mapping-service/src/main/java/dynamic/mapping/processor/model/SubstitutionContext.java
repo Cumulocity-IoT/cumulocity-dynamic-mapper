@@ -10,8 +10,8 @@ import dynamic.mapping.model.Mapping;
 public class SubstitutionContext {
     private final String payload;
     private final String genericDeviceIdentifier;
-    public final String IDENTITY_EXTERNAL = Mapping.IDENTITY + ".externalId";
-    public final String IDENTITY_C8Y = Mapping.IDENTITY + ".c8ySourceId";
+    public final String IDENTITY_EXTERNAL = Mapping.TOKEN_IDENTITY + ".externalId";
+    public final String IDENTITY_C8Y = Mapping.TOKEN_IDENTITY + ".c8ySourceId";
 
     public SubstitutionContext(String genericDeviceIdentifier, String payload) {
         this.payload = payload;
@@ -30,11 +30,11 @@ public class SubstitutionContext {
 
         try {
             // Check if payload and the IDENTITY map exist
-            if (json == null || json.get(Mapping.IDENTITY) == null || ! (json instanceof Map) ) {
+            if (json == null || json.get(Mapping.TOKEN_IDENTITY) == null || ! (json instanceof Map) ) {
                 return null;
             }
 
-            Map identityMap = (Map)json.get(Mapping.IDENTITY);
+            Map identityMap = (Map)json.get(Mapping.TOKEN_IDENTITY);
             return (String) identityMap.get("externalId");
         } catch (Exception e) {
             // Optionally log the exception
@@ -51,11 +51,11 @@ public class SubstitutionContext {
 
         try {
             // Check if payload and the IDENTITY map exist
-            if (json == null || json.get(Mapping.IDENTITY) == null || ! (json instanceof Map) ) {
+            if (json == null || json.get(Mapping.TOKEN_IDENTITY) == null || ! (json instanceof Map) ) {
                 return null;
             }
 
-            Map identityMap = (Map) json.get(Mapping.IDENTITY);
+            Map identityMap = (Map) json.get(Mapping.TOKEN_IDENTITY);
             return (String) identityMap.get("c8ySourceId");
         } catch (Exception e) {
             // Optionally log the exception

@@ -147,17 +147,7 @@ export class ServiceConfigurationComponent implements OnInit {
     }
   }
 
-  async clickedResetDeploymentMapEndpoint() {
-    const response1 = await this.sharedService.runOperation(
-      { operation: Operation.RESET_DEPLOYMENT_MAP }
-    );
-    // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Reset deploymentMap.'));
-    } else {
-      this.alertService.danger(gettext('Failed to reset deploymentMap!'));
-    }
-  }
+
 
   async clickedSaveServiceConfiguration() {
     const conf = this.serviceForm.value;

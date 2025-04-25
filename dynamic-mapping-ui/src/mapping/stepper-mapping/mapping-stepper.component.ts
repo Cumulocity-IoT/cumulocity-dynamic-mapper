@@ -69,6 +69,7 @@ import {
   expandC8YTemplate,
   expandExternalTemplate,
   getTypeOf,
+  isExpression,
   reduceSourceTemplate,
   splitTopicExcludingSeparator,
   stringToBase64
@@ -251,17 +252,19 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       stepperConfiguration: this.stepperConfiguration,
       pathSource: '',
       pathTarget: '',
+      pathSourceIsExpression :false,
+      pathTargetIsExpression :false,
       repairStrategy: RepairStrategy.DEFAULT,
       expandArray: false,
       targetExpression: {
         result: '',
         resultType: 'empty',
-        valid: false,
+        valid: false
       },
       sourceExpression: {
         result: '',
         resultType: 'empty',
-        valid: false,
+        valid: false
       }
     };
 
@@ -542,7 +545,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.isButtonDisabled$.next(isDisabled);
       this.supportsMessageContext =
         this.deploymentMapEntry.connectorsDetailed?.some(
-          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK|| this.mapping.mappingType == MappingType.CODE_BASED
+          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK || this.mapping.mappingType == MappingType.CODE_BASED
         );
     });
   }
@@ -569,8 +572,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.substitutionModel.sourceExpression = {
         resultType: getTypeOf(r),
         result: JSON.stringify(r, null, 4),
-        valid: true
+        valid: true,
       };
+      this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
       if (this.expertMode) {
         this.substitutionFormly.get('pathSource').setErrors(null);
         if (
@@ -670,8 +674,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.expertMode) {
       this.substitutionFormly.get('pathSource').setValue(path);
       this.substitutionModel.pathSource = path;
+      this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
     } else {
       this.substitutionModel.pathSource = path;
+      this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
       this.updateSourceExpressionResult(path);
     }
     if (path == API[this.mapping.targetAPI].identifier) {
@@ -750,7 +756,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.code = stringToBase64(this.mapping['_code']);
       delete this.mapping['_code'];
     }
-    if (this.mapping.mappingType == MappingType.CODE_BASED && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '') ){ 
+    if (this.mapping.mappingType == MappingType.CODE_BASED && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
       this.alertService.warning("Internal error in editor. Try again!");
       this.commit.emit();
     }
@@ -1178,6 +1184,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       ...substitutions[selected],
       stepperConfiguration
     };
+    this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
 
     // Parallel execution of path selections
     await Promise.all([

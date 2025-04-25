@@ -47,12 +47,12 @@ import org.json.JSONTokener;
 @ToString(exclude = { "sourceTemplate", "targetTemplate", "snoopedTemplates", "code" })
 public class Mapping implements Serializable {
 
-    public static final String IDENTITY = "_IDENTITY_";
+    public static final String TOKEN_IDENTITY = "_IDENTITY_";
     public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
     public static final String TOKEN_CONTEXT_DATA = "_CONTEXT_DATA_";
     public static final String CONTEXT_DATA_KEY_NAME = "key";
     public static final String CONTEXT_DATA_METHOD_NAME = "method";
-    public static final String TIME = "time";
+    public static final String KEY_TIME = "time";
 
     public static int SNOOP_TEMPLATES_MAX = 10;
     public static final String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
@@ -168,9 +168,9 @@ public class Mapping implements Serializable {
     @JsonIgnore
     public String getGenericDeviceIdentifier() {
         if (useExternalId && !("").equals(externalIdType)) {
-            return (Mapping.IDENTITY + ".externalId");
+            return (Mapping.TOKEN_IDENTITY + ".externalId");
         } else {
-            return (Mapping.IDENTITY + ".c8ySourceId");
+            return (Mapping.TOKEN_IDENTITY + ".c8ySourceId");
         }
     }
 
@@ -179,15 +179,15 @@ public class Mapping implements Serializable {
             Substitution sub) {
         if (Direction.INBOUND.equals(direction)) {
             if (useExternalId && !("").equals(externalIdType)) {
-                return (Mapping.IDENTITY + ".externalId").equals(sub.pathTarget);
+                return (Mapping.TOKEN_IDENTITY + ".externalId").equals(sub.pathTarget);
             } else {
-                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
+                return (Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
             }
         } else {
             if (useExternalId && !("").equals(externalIdType)) {
-                return (Mapping.IDENTITY + ".externalId").equals(sub.pathSource);
+                return (Mapping.TOKEN_IDENTITY + ".externalId").equals(sub.pathSource);
             } else {
-                return (Mapping.IDENTITY + ".c8ySourceId").equals(sub.pathSource);
+                return (Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(sub.pathSource);
             }
         }
     }

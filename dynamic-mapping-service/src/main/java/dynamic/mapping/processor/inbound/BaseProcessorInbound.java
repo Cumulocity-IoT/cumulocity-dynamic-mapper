@@ -291,7 +291,7 @@ public abstract class BaseProcessorInbound<T> {
             String pathTarget, SubstituteValue substitute) {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
-        if ((Mapping.IDENTITY + ".externalId").equals(pathTarget)) {
+        if ((Mapping.TOKEN_IDENTITY + ".externalId").equals(pathTarget)) {
             ID identity = new ID(mapping.externalIdType, substitute.value.toString());
             SubstituteValue sourceId = new SubstituteValue(substitute.value,
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
@@ -309,7 +309,7 @@ public abstract class BaseProcessorInbound<T> {
                 context.setSourceId(sourceId.value.toString());
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             }
-        } else if ((Mapping.IDENTITY + ".c8ySourceId").equals(pathTarget)) {
+        } else if ((Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(pathTarget)) {
             SubstituteValue sourceId = new SubstituteValue(substitute.value,
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             // in this case the device needs to exists beforehand

@@ -22,7 +22,6 @@ import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { API, Mapping, MappingType, RepairStrategy, SharedService } from '../../../shared';
 import {
-  TOKEN_TOPIC_LEVEL,
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator
 } from '../../shared/util';
@@ -32,6 +31,7 @@ import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType,
+  TOKEN_TOPIC_LEVEL,
   getTypedValue
 } from './processor.model';
 

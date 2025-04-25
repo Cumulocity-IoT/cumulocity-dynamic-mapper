@@ -92,7 +92,7 @@ public abstract class BaseProcessorOutbound<T> {
             }
         }
         if (payloadObject instanceof Map) {
-            ((Map) payloadObject).put(Mapping.IDENTITY, identityFragment);
+            ((Map) payloadObject).put(Mapping.TOKEN_IDENTITY, identityFragment);
             List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         } else {

@@ -251,7 +251,8 @@
                             <ng-template #popupTargetTemplateHelp>
                               <div [innerHtml]="targetTemplateHelp"></div>
                             </ng-template>
-                            <button type="button" placement="right" [popover]="popupTargetTemplateHelp" triggers="click" class="btn-help" aria-label="Help content"></button>
+                            <button type="button" placement="right" [popover]="popupTargetTemplateHelp" triggers="click"
+                              class="btn-help" aria-label="Help content"></button>
                           </span>
                         </div>
                       </div>
@@ -268,15 +269,16 @@
                     <div class="form-group m-b-8">
                       <div *ngIf="stepperConfiguration.showEditorSource">
                         <span class="text-info text-12 p-l-8">{{substitutionModel.pathSource === '' ?'Select source
-                          node to define substitution!':'Selected source node: ' +
-                          substitutionModel.pathSource }}</span>
+                          node to define substitution!':(substitutionModel.pathSourceIsExpression ? 'Selected substitution is an expression':
+                          'Selected source node: ' +
+                          substitutionModel.pathSource) }}</span>
                       </div>
                     </div>
                   </div>
                   <div class="col-lg-5" #rightTemplateTemplate>
                     <div class="form-group m-b-8">
                       <span class="text-info text-12 p-l-8">{{substitutionModel.pathTarget === '' &&
-                        stepperConfiguration.showEditorSource ?'Select target
+                        stepperConfiguration.showEditorSource ? 'Select target
                         node to define substitution!':'Selected target node: ' +
                         substitutionModel.pathTarget }}</span>
                     </div>
