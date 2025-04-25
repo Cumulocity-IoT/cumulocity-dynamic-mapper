@@ -111,7 +111,7 @@ function addSubstitution(result, key, value) {
 function tracePayload(ctx) {
     const sourceObject = JSON.parse(ctx.getPayload());
     for (var key in sourceObject) {
-        console.log(`Payload key: ${key}, value: ${sourceObject[key]}`);
+        console.log(`Payload key: ${key}, value: ${JSON.stringify(sourceObject[key])}`);
     }
     console.log(`Identifier sourceId: ${ctx.getC8YIdentifier()}`);
     console.log(`Identifier externalIdentifier: ${ctx.getExternalIdentifier()}`);
