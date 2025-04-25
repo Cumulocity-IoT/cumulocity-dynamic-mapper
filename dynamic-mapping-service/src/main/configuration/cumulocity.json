@@ -38,10 +38,25 @@
     "ROLE_USER_MANAGEMENT_CREATE",
 	  "ROLE_USER_MANAGEMENT_ADMIN"
   ],
-
   "roles":[
     "ROLE_MAPPING_ADMIN",
     "ROLE_MAPPING_CREATE",
     "ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
-  ]
+  ],
+  "livenessProbe": {
+    "httpGet": {
+      "path": "/health"
+    },
+    "initialDelaySeconds": 90,
+    "periodSeconds": 10
+  },
+  "readinessProbe": {
+    "httpGet": {
+      "path": "/health",
+      "port": 80
+
+    },
+    "initialDelaySeconds": 90,
+    "periodSeconds": 10
+  }
 }
