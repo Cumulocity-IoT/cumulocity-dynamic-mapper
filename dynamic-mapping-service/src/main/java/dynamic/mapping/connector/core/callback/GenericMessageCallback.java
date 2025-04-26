@@ -21,10 +21,15 @@
 
 package dynamic.mapping.connector.core.callback;
 
+import java.util.List;
+import java.util.concurrent.Future;
+
+import dynamic.mapping.processor.model.ProcessingContext;
+
 public interface GenericMessageCallback {
     void onClose(String closeMessage, Throwable closeException);
 
-    void onMessage(ConnectorMessage message);
+    Future<List<ProcessingContext<?>>> onMessage(ConnectorMessage message);
 
-    void onError( Throwable errorException);
+    void onError(Throwable errorException);
 }

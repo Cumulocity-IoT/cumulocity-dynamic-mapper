@@ -180,6 +180,7 @@ public class DispatcherOutbound implements NotificationCallback {
             c8yMessage.setTenant(tenant);
             c8yMessage.setSendPayload(true);
             virtualThreadPool.submit(() -> {
+                //TODO Return a future so it can be blocked for QoS 1 or 2
                 processMessage(c8yMessage);
             });
         }

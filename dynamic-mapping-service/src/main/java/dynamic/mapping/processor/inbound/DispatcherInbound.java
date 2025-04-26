@@ -331,9 +331,9 @@ public class DispatcherInbound implements GenericMessageCallback {
     }
 
     @Override
-    public void onMessage(ConnectorMessage message) {
+    public Future<List<ProcessingContext<?>>>  onMessage(ConnectorMessage message) {
         //TODO Return a future so it can be blocked for QoS 1 or 2
-        processMessage(message);
+        return processMessage(message);
     }
 
     @Override

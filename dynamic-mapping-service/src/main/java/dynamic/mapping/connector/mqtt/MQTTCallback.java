@@ -28,6 +28,7 @@ import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
+import dynamic.mapping.model.QOS;
 
 public class MQTTCallback implements Consumer<Mqtt3Publish> {
     GenericMessageCallback genericMessageCallback;
@@ -35,13 +36,15 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
     String tenant;
     String connectorIdentifier;
     boolean supportsMessageContext;
+    QOS qos;
 
     MQTTCallback(GenericMessageCallback callback, String tenant, String connectorIdentifier,
-            boolean supportsMessageContext) {
+            boolean supportsMessageContext, QOS qos) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.supportsMessageContext = supportsMessageContext;
+        this.qos = qos;
     }
 
     @Override
