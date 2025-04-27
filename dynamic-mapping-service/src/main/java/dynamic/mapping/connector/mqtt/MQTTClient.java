@@ -163,6 +163,7 @@ public class MQTTClient extends AConnectorClient {
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE, QOS.EXACTLY_ONCE);
+        this.qos = QOS.AT_LEAST_ONCE;
     }
 
     protected AConnectorClient.Certificate cert;
@@ -256,7 +257,7 @@ public class MQTTClient extends AConnectorClient {
         int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
-        QOS qos = QOS.valueOf((String)connectorConfiguration.getProperties().get("qos"));
+        qos = QOS.valueOf((String)connectorConfiguration.getProperties().getOrDefault("qos", "0"));
 
         Mqtt3ClientBuilder partialBuilder;
         partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)

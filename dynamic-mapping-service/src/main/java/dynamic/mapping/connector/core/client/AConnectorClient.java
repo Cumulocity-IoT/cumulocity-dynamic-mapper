@@ -93,6 +93,9 @@ public abstract class AConnectorClient {
 
     protected String connectorName;
 
+    @Getter
+    public QOS qos  = QOS.AT_LEAST_ONCE;
+
     protected String additionalSubscriptionIdTest;
 
     protected MutableBoolean connectionState = new MutableBoolean(false);
@@ -389,7 +392,6 @@ public abstract class AConnectorClient {
         updatedSubscriptionCache.keySet().stream()
                 .filter(topic -> !getActiveSubscriptionsView().containsKey(topic))
                 .forEach(topic -> {
-                    QOS qos = determineMaxQos(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
                         log.info("Tenant {} - Successfully subscribed to topic: {}, qos: {}",
@@ -398,15 +400,6 @@ public abstract class AConnectorClient {
                         log.error("Tenant {} - Error subscribing to topic: {}", tenant, topic, exp);
                     }
                 });
-    }
-
-    private QOS determineMaxQos(String topic, List<Mapping> mappings) {
-        int qosOrdinal = mappings.stream()
-                .filter(m -> m.mappingTopic.equals(topic))
-                .map(m -> m.qos.ordinal())
-                .max(Integer::compareTo)
-                .orElse(0);
-        return QOS.values()[qosOrdinal];
     }
 
     /**
@@ -454,8 +447,8 @@ public abstract class AConnectorClient {
         if (create || subscriptionCount.intValue() == 0) {
             try {
                 log.info("Tenant {} - Subscribing to topic: {}, qos: {}",
-                        tenant, mapping.mappingTopic, mapping.qos);
-                subscribe(mapping.mappingTopic, mapping.qos);
+                        tenant, mapping.mappingTopic, qos);
+                subscribe(mapping.mappingTopic, qos);
             } catch (ConnectorException exp) {
                 log.error("Tenant {} - Error subscribing to topic: {}",
                         tenant, mapping.mappingTopic, exp);
