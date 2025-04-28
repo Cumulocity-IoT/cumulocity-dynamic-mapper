@@ -121,9 +121,9 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                 return null; // Proper return for Callable<Void>
             });
         } else {
-            // For QoS 0, just process the message and acknowledgment
             genericMessageCallback.onMessage(connectorMessage);
-            mqttMessage.acknowledge();
+            // For QoS in th emessage > 0, just process the message and acknowledgment
+            if (mqttMessage.getQos().getCode() > 0 ) mqttMessage.acknowledge();
         }
     }
 
