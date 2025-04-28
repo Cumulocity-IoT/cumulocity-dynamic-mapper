@@ -66,7 +66,7 @@ import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.LoggingEventType;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.AllArgsConstructor;
@@ -227,7 +227,7 @@ public abstract class AConnectorClient {
     /**
      * Subscribe to a topic on the Broker
      **/
-    public abstract void subscribe(String topic, QOS qos) throws ConnectorException;
+    public abstract void subscribe(String topic, Qos qos) throws ConnectorException;
 
     /**
      * Unsubscribe a topic on the Broker
@@ -393,7 +393,7 @@ public abstract class AConnectorClient {
         updatedSubscriptionCache.keySet().stream()
                 .filter(topic -> !getActiveSubscriptionsView().containsKey(topic))
                 .forEach(topic -> {
-                    QOS qos = determineMaxQos(topic, updatedMappings);
+                    Qos qos = determineMaxQos(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
                         log.info("Tenant {} - Successfully subscribed to topic: {}, qos: {}",
@@ -404,13 +404,13 @@ public abstract class AConnectorClient {
                 });
     }
 
-    private QOS determineMaxQos(String topic, List<Mapping> mappings) {
+    public Qos determineMaxQos(String topic, List<Mapping> mappings) {
         int qosOrdinal = mappings.stream()
                 .filter(m -> m.mappingTopic.equals(topic))
                 .map(m -> m.qos.ordinal())
                 .max(Integer::compareTo)
                 .orElse(0);
-        return QOS.values()[qosOrdinal];
+        return Qos.values()[qosOrdinal];
     }
 
     /**
@@ -709,11 +709,11 @@ public abstract class AConnectorClient {
     }
 
     // Event Handling Methods
-    public List<ProcessingContext<?>> test(String topic, boolean sendPayload, Map<String, Object> payload)
+    public List<? extends ProcessingContext<?>>test(String topic, boolean sendPayload, Map<String, Object> payload)
             throws Exception {
         String payloadMessage = serializePayload(payload);
         ConnectorMessage message = createTestMessage(topic, sendPayload, payloadMessage);
-        return dispatcher.processMessage(message).get();
+        return dispatcher.processMessage(message).getProcessingResult().get();
     }
 
     private String serializePayload(Map<String, Object> payload) throws Exception {

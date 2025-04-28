@@ -70,7 +70,7 @@ export interface Mapping {
   snoopStatus: SnoopStatus;
   snoopedTemplates?: string[];
   extension?: ExtensionEntry;
-  qos: QOS;
+  qos: Qos;
   code?: string;
   lastUpdate: number;
 }
@@ -122,7 +122,7 @@ export enum ExtensionType {
   EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
 }
 
-export enum QOS {
+export enum Qos {
   AT_MOST_ONCE = 'AT_MOST_ONCE',
   AT_LEAST_ONCE = 'AT_LEAST_ONCE',
   EXACTLY_ONCE = 'EXACTLY_ONCE'

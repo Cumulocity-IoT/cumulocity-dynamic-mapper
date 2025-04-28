@@ -21,6 +21,7 @@
 
 package dynamic.mapping.connector.core.callback;
 
+import dynamic.mapping.model.Qos;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Getter;

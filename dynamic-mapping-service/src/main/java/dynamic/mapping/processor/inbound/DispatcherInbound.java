@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
+import dynamic.mapping.model.Qos;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -41,6 +42,7 @@ import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.processor.model.ProcessingResult;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -288,23 +290,27 @@ public class DispatcherInbound implements GenericMessageCallback {
         }
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) {
-        String topic = message.getTopic();
-        String tenant = message.getTenant();
+    public ProcessingResult<?> processMessage(ConnectorMessage connectorMessage) {
+        String topic = connectorMessage.getTopic();
+        String tenant = connectorMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         if (serviceConfiguration.logPayload ) {
-            String payload = new String(message.getPayload(), StandardCharsets.UTF_8);
+            String payload = new String(connectorMessage.getPayload(), StandardCharsets.UTF_8);
             log.info("Tenant {} - On topic: {}, new inbound message: {}", tenant, topic, payload);
         }
 
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
-        Future<List<ProcessingContext<?>>> futureProcessingResult = null;
+
         List<Mapping> resolvedMappings = new ArrayList<>();
+        Qos consolidatedQos = Qos.AT_LEAST_ONCE;
+        ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
 
         if (topic != null && !topic.startsWith("$SYS")) {
-            if (message.getPayload() != null) {
+            if (connectorMessage.getPayload() != null) {
                 try {
                     resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
+                    consolidatedQos = connectorClient.determineMaxQos(topic, resolvedMappings);
+                    result.setConsolidatedQos(consolidatedQos);
                 } catch (Exception e) {
                     log.warn(
                             "Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
@@ -313,17 +319,16 @@ public class DispatcherInbound implements GenericMessageCallback {
                     mappingStatusUnspecified.errors++;
                 }
             } else {
-                return futureProcessingResult;
+                return result;
             }
         } else {
-            return futureProcessingResult;
+            return result;
         }
-        futureProcessingResult = virtualThreadPool.submit(
+        Future futureProcessingResult = futureProcessingResult = virtualThreadPool.submit(
                 new MappingInboundTask(configurationRegistry, resolvedMappings,
-                        message, connectorClient));
-
-        return futureProcessingResult;
-
+                        connectorMessage, connectorClient));
+        result.setProcessingResult(futureProcessingResult);
+        return result;
     }
 
     @Override
@@ -331,7 +336,7 @@ public class DispatcherInbound implements GenericMessageCallback {
     }
 
     @Override
-    public Future<List<ProcessingContext<?>>>  onMessage(ConnectorMessage message) {
+    public ProcessingResult<?>  onMessage(ConnectorMessage message) {
         //TODO Return a future so it can be blocked for QoS 1 or 2
         return processMessage(message);
     }

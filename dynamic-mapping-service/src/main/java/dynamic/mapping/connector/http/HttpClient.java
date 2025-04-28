@@ -35,7 +35,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -103,7 +103,7 @@ public class HttpClient extends AConnectorClient {
     protected AConnectorClient.Certificate cert;
 
     @Getter
-    protected List<QOS> supportedQOS;
+    protected List<Qos> supportedQOS;
 
     public boolean initialize() {
         loadConfiguration();
@@ -192,7 +192,7 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public void subscribe(String topic, QOS qos) throws ConnectorException {
+    public void subscribe(String topic, Qos qos) throws ConnectorException {
         log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
         sendSubscriptionEvents(topic, "Subscribing");
     }

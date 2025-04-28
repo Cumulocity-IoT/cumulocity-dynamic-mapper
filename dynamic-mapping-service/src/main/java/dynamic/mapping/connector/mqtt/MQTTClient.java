@@ -47,7 +47,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -163,7 +163,7 @@ public class MQTTClient extends AConnectorClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
-        this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE, QOS.EXACTLY_ONCE);
+        this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE, Qos.EXACTLY_ONCE);
         // set qQoS to default QoS
         //this.qos = QOS.AT_LEAST_ONCE;
     }
@@ -177,7 +177,7 @@ public class MQTTClient extends AConnectorClient {
     protected Mqtt3BlockingClient mqttClient;
 
     @Getter
-    protected List<QOS> supportedQOS;
+    protected List<Qos> supportedQOS;
 
     public boolean initialize() {
         loadConfiguration();
@@ -502,18 +502,18 @@ public class MQTTClient extends AConnectorClient {
     }
 
     @Override
-    public void subscribe(String topic, QOS qos) throws ConnectorException {
+    public void subscribe(String topic, Qos qos) throws ConnectorException {
         log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
-        QOS usedQOS = qos;
+        Qos usedQOS = qos;
         sendSubscriptionEvents(topic, "Subscribing");
         if (usedQOS.equals(null))
-            usedQOS = QOS.AT_LEAST_ONCE;
+            usedQOS = Qos.AT_LEAST_ONCE;
         else if (!supportedQOS.contains(qos)) {
             // determine maximum supported QOS
-            usedQOS = QOS.AT_LEAST_ONCE;
+            usedQOS = Qos.AT_LEAST_ONCE;
             for (int i = 1; i < qos.ordinal(); i++) {
-                if (supportedQOS.contains(QOS.values()[i])) {
-                    usedQOS = QOS.values()[i];
+                if (supportedQOS.contains(Qos.values()[i])) {
+                    usedQOS = Qos.values()[i];
                 }
             }
             if (usedQOS.ordinal() < qos.ordinal()) {

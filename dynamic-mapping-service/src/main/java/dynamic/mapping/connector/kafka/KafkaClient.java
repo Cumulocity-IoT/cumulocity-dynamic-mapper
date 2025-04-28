@@ -51,7 +51,7 @@ import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -328,7 +328,7 @@ public class KafkaClient extends AConnectorClient {
 	}
 
 	@Override
-	public void subscribe(String topic, QOS qos) throws ConnectorException {
+	public void subscribe(String topic, Qos qos) throws ConnectorException {
 		TopicConsumer kafkaConsumer = new TopicConsumer(
 				new TopicConfig(tenant, bootstrapServers, topic, username, password, saslMechanism, groupId,
 						defaultPropertiesConsumer),

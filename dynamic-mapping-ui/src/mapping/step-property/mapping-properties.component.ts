@@ -34,7 +34,7 @@ import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { EditorMode } from '../shared/stepper.model';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
-import { StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
+import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
 @Component({
@@ -415,8 +415,8 @@ export class MappingStepPropertiesComponent
             type: 'select',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'QOS',
-              options: Object.values(QOS).map((key) => {
+              label: 'QoS',
+              options: Object.values(Qos).map((key) => {
                 return { label: this.formatStringPipe.transform(key), value: key };
               }),
               disabled:

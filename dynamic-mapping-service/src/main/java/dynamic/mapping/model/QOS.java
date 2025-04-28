@@ -21,7 +21,7 @@
 
 package dynamic.mapping.model;
 
-public enum QOS {
+public enum Qos {
   AT_MOST_ONCE,
   AT_LEAST_ONCE,
   EXACTLY_ONCE

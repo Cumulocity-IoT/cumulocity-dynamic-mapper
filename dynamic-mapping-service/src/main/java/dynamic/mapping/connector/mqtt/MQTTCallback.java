@@ -24,7 +24,6 @@ package dynamic.mapping.connector.mqtt;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
 import com.hivemq.client.mqtt.datatypes.MqttTopic;
@@ -33,8 +32,8 @@ import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.core.ConfigurationRegistry;
-import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.processor.model.ProcessingResult;
 
 public class MQTTCallback implements Consumer<Mqtt3Publish> {
     GenericMessageCallback genericMessageCallback;
@@ -57,15 +56,16 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
     }
 
     // Define callback with QoS OPTION_II
-    // MQTTCallback(ConfigurationRegistry configurationRegistry, GenericMessageCallback callback, String tenant,
-    //         String connectorIdentifier,
-    //         boolean supportsMessageContext, QOS qos) {
-    //     this.genericMessageCallback = callback;
-    //     this.tenant = tenant;
-    //     this.connectorIdentifier = connectorIdentifier;
-    //     this.supportsMessageContext = supportsMessageContext;
-    //     this.qos = qos;
-    //     this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+    // MQTTCallback(ConfigurationRegistry configurationRegistry,
+    // GenericMessageCallback callback, String tenant,
+    // String connectorIdentifier,
+    // boolean supportsMessageContext, QOS qos) {
+    // this.genericMessageCallback = callback;
+    // this.tenant = tenant;
+    // this.connectorIdentifier = connectorIdentifier;
+    // this.supportsMessageContext = supportsMessageContext;
+    // this.qos = qos;
+    // this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     // }
 
     @Override
@@ -90,15 +90,15 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         connectorMessage.setSupportsMessageContext(supportsMessageContext);
 
         // Only manually handle acknowledgment for QoS 1 or 2
-        if (mqttMessage.getQos().getCode() > 0) {
-            Future<List<ProcessingContext<?>>> processedResults = genericMessageCallback.onMessage(connectorMessage);
+        ProcessingResult<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
+        if (mqttMessage.getQos().getCode() > 0 && processedResults.getConsolidatedQos().ordinal() > 0) {
 
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
                 try {
                     // Wait for the future to complete
-                    List<ProcessingContext<?>> results = processedResults.get();
-
+                    List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult().get();
+            
                     // Check for errors in results
                     boolean hasErrors = false;
                     if (results != null) {
@@ -109,7 +109,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                             }
                         }
                     }
-
+            
                     if (!hasErrors) {
                         // No errors found, acknowledge the message
                         mqttMessage.acknowledge();
@@ -118,7 +118,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                     // Processing failed, don't acknowledge to allow redelivery
                     Thread.currentThread().interrupt();
                 }
-                return null; // Return value needed for submit() method
+                return null; // Proper return for Callable<Void>
             });
         } else {
             // For QoS 0, just process the message and acknowledgment

@@ -36,7 +36,7 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 
 public class MQTTServiceClient extends MQTTClient {
     public MQTTServiceClient() {
@@ -114,7 +114,7 @@ public class MQTTServiceClient extends MQTTClient {
         getConnectorSpecification().getProperties().put("clientId",
                 new ConnectorProperty(null, true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
                         getClientId(this.connectorIdentifier, this.additionalSubscriptionIdTest), null, null));
-        this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE);
+        this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE);
     }
 
     @Override

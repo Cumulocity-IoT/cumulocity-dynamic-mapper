@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,13 +19,21 @@
  *
  */
 
-package dynamic.mapping.connector.core.callback;
+package dynamic.mapping.processor.model;
 
-import dynamic.mapping.processor.model.ProcessingResult;
-public interface GenericMessageCallback {
-    void onClose(String closeMessage, Throwable closeException);
+import java.util.List;
+import java.util.concurrent.Future;
 
-    ProcessingResult<?>  onMessage(ConnectorMessage message);
+import dynamic.mapping.model.Qos;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
-    void onError(Throwable errorException);
+@Getter
+@Setter
+@Builder
+
+public class ProcessingResult<O> {
+    private Future<List<ProcessingContext<O>>> processingResult;
+    private Qos consolidatedQos;
 }
