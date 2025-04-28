@@ -409,22 +409,21 @@ export class MappingStepPropertiesComponent
               (this.stepperConfiguration.direction == Direction.OUTBOUND &&
                 this.mapping.targetAPI == API.OPERATION.name)
           },
-          // moved property to connector
-          // {
-          //   className: 'col-lg-6',
-          //   key: 'qos',
-          //   type: 'select',
-          //   wrappers: ['c8y-form-field'],
-          //   templateOptions: {
-          //     label: 'QOS',
-          //     options: Object.values(QOS).map((key) => {
-          //       return { label: this.formatStringPipe.transform(key), value: key };
-          //     }),
-          //     disabled:
-          //       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-          //     required: true
-          //   }
-          // }
+          {
+            className: 'col-lg-6',
+            key: 'qos',
+            type: 'select',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'QOS',
+              options: Object.values(QOS).map((key) => {
+                return { label: this.formatStringPipe.transform(key), value: key };
+              }),
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              required: true
+            }
+          }
         ]
       },
       {

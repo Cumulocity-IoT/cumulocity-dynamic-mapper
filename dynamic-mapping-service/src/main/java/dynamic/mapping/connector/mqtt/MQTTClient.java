@@ -125,13 +125,14 @@ public class MQTTClient extends AConnectorClient {
         configProps.put("serverPath",
                 new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         wsCondition));
-        configProps.put("qos",
-                new ConnectorProperty("QoS", true, 11, ConnectorPropertyType.OPTION_PROPERTY, false, false, "0",
-                        Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("0", "0"),
-                                new AbstractMap.SimpleEntry<String, String>("1", "1"),
-                                new AbstractMap.SimpleEntry<String, String>("2", "2")),
-                        null));
+        // define qos in connector OPTION_II
+        // configProps.put("qos",
+        //         new ConnectorProperty("QoS", true, 11, ConnectorPropertyType.OPTION_PROPERTY, false, false, "0",
+        //                 Map.ofEntries(
+        //                         new AbstractMap.SimpleEntry<String, String>("0", "0"),
+        //                         new AbstractMap.SimpleEntry<String, String>("1", "1"),
+        //                         new AbstractMap.SimpleEntry<String, String>("2", "2")),
+        //                 null));
         String name = "Generic MQTT";
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
@@ -155,7 +156,7 @@ public class MQTTClient extends AConnectorClient {
                 connectorConfiguration.identifier);
         // this.connectorType = connectorConfiguration.connectorType;
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
@@ -163,7 +164,8 @@ public class MQTTClient extends AConnectorClient {
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE, QOS.EXACTLY_ONCE);
-        this.qos = QOS.AT_LEAST_ONCE;
+        // set qQoS to default QoS
+        //this.qos = QOS.AT_LEAST_ONCE;
     }
 
     protected AConnectorClient.Certificate cert;
@@ -257,7 +259,8 @@ public class MQTTClient extends AConnectorClient {
         int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
-        qos = QOS.valueOf((String) connectorConfiguration.getProperties().getOrDefault("qos", "0"));
+        // set Qos from connector OPTION_II
+        // qos = QOS.valueOf((String) connectorConfiguration.getProperties().getOrDefault("qos", "0"));
 
         Mqtt3ClientBuilder partialBuilder;
         partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
@@ -332,8 +335,10 @@ public class MQTTClient extends AConnectorClient {
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
         Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-        mqttCallback = new MQTTCallback(configurationRegistry, dispatcher, tenant, getConnectorIdentifier(), false,
-                qos);
+        mqttCallback = new MQTTCallback(configurationRegistry, dispatcher, tenant, getConnectorIdentifier(), false);
+        // use QoS from connector OPTION_II
+        // mqttCallback = new MQTTCallback(configurationRegistry, dispatcher, tenant, getConnectorIdentifier(), false,
+        //         qos);
         mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
         // stay in the loop until successful

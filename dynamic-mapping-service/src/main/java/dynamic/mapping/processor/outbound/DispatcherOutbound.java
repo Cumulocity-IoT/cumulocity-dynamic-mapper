@@ -313,7 +313,9 @@ public class DispatcherOutbound implements NotificationCallback {
                                     .topic(mapping.publishTopic)
                                     .mappingType(mapping.mappingType).mapping(mapping).sendPayload(sendPayload)
                                     .tenant(tenant).supportsMessageContext(mapping.supportsMessageContext)
-                                    .qos(connectorClient.qos).serviceConfiguration(serviceConfiguration)
+                                    .qos(mapping.qos)    // use QoS from mapping
+                                    // .qos(connectorClient.qos)   // use QoS from connector OPTION_II
+                                    .serviceConfiguration(serviceConfiguration)
                                     .graalsContext(graalsContext)
                                     .sharedCode(sharedCode)
                                     .sharedCode(systemCode)

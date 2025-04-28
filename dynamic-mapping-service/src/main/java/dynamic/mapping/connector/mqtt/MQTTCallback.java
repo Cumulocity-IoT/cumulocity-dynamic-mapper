@@ -42,18 +42,31 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
     String tenant;
     String connectorIdentifier;
     boolean supportsMessageContext;
-    QOS qos;
+    // Define callback with QoS
+    // QOS qos;
     private ExecutorService virtualThreadPool;
 
-    MQTTCallback(ConfigurationRegistry configurationRegistry, GenericMessageCallback callback, String tenant, String connectorIdentifier,
-            boolean supportsMessageContext, QOS qos) {
+    MQTTCallback(ConfigurationRegistry configurationRegistry, GenericMessageCallback callback, String tenant,
+            String connectorIdentifier,
+            boolean supportsMessageContext) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.supportsMessageContext = supportsMessageContext;
-        this.qos = qos;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
+
+    // Define callback with QoS OPTION_II
+    // MQTTCallback(ConfigurationRegistry configurationRegistry, GenericMessageCallback callback, String tenant,
+    //         String connectorIdentifier,
+    //         boolean supportsMessageContext, QOS qos) {
+    //     this.genericMessageCallback = callback;
+    //     this.tenant = tenant;
+    //     this.connectorIdentifier = connectorIdentifier;
+    //     this.supportsMessageContext = supportsMessageContext;
+    //     this.qos = qos;
+    //     this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+    // }
 
     @Override
     public void accept(Mqtt3Publish mqttMessage) {

@@ -93,8 +93,9 @@ public abstract class AConnectorClient {
 
     protected String connectorName;
 
-    @Getter
-    public QOS qos  = QOS.AT_LEAST_ONCE;
+    // define QoS in connector OPTION_II
+    // @Getter
+    // public QOS qos  = QOS.AT_LEAST_ONCE;
 
     protected String additionalSubscriptionIdTest;
 
@@ -136,7 +137,7 @@ public abstract class AConnectorClient {
     protected ConfigurationRegistry configurationRegistry;
 
 	@Getter
-	protected ExecutorService virtThreadPool;
+	protected ExecutorService virtualThreadPool;
 
     private Future<?> connectTask;
     private ScheduledExecutorService housekeepingExecutor = Executors
@@ -249,7 +250,7 @@ public abstract class AConnectorClient {
     public Future<?> submitInitialize() {
         if (initializeTask == null || initializeTask.isDone()) {
             log.debug("Tenant {} - Initializing...", tenant);
-            initializeTask = virtThreadPool.submit(this::initialize);
+            initializeTask = virtualThreadPool.submit(this::initialize);
         }
         return initializeTask;
     }
@@ -258,7 +259,7 @@ public abstract class AConnectorClient {
         loadConfiguration();
         if (connectTask == null || connectTask.isDone()) {
             log.debug("Tenant {} - Connecting...", tenant);
-            connectTask = virtThreadPool.submit(this::connect);
+            connectTask = virtualThreadPool.submit(this::connect);
         }
         return connectTask;
     }
@@ -271,7 +272,7 @@ public abstract class AConnectorClient {
 
         if (disconnectTask == null || disconnectTask.isDone()) {
             log.debug("Tenant {} - Disconnecting...", tenant);
-            disconnectTask = virtThreadPool.submit(this::disconnect);
+            disconnectTask = virtualThreadPool.submit(this::disconnect);
         }
         return disconnectTask;
     }
@@ -392,6 +393,7 @@ public abstract class AConnectorClient {
         updatedSubscriptionCache.keySet().stream()
                 .filter(topic -> !getActiveSubscriptionsView().containsKey(topic))
                 .forEach(topic -> {
+                    QOS qos = determineMaxQos(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
                         log.info("Tenant {} - Successfully subscribed to topic: {}, qos: {}",
@@ -400,6 +402,15 @@ public abstract class AConnectorClient {
                         log.error("Tenant {} - Error subscribing to topic: {}", tenant, topic, exp);
                     }
                 });
+    }
+
+    private QOS determineMaxQos(String topic, List<Mapping> mappings) {
+        int qosOrdinal = mappings.stream()
+                .filter(m -> m.mappingTopic.equals(topic))
+                .map(m -> m.qos.ordinal())
+                .max(Integer::compareTo)
+                .orElse(0);
+        return QOS.values()[qosOrdinal];
     }
 
     /**
@@ -446,9 +457,10 @@ public abstract class AConnectorClient {
 
         if (create || subscriptionCount.intValue() == 0) {
             try {
+
                 log.info("Tenant {} - Subscribing to topic: {}, qos: {}",
-                        tenant, mapping.mappingTopic, qos);
-                subscribe(mapping.mappingTopic, qos);
+                        tenant, mapping.mappingTopic, mapping.qos);
+                subscribe(mapping.mappingTopic, mapping.qos);  // use qos from mapping
             } catch (ConnectorException exp) {
                 log.error("Tenant {} - Error subscribing to topic: {}",
                         tenant, mapping.mappingTopic, exp);
@@ -901,7 +913,7 @@ public abstract class AConnectorClient {
      */
     protected <T> Optional<T> executeWithTimeout(Callable<T> operation, long timeout, TimeUnit unit) {
         try {
-            Future<T> future = virtThreadPool.submit(operation);
+            Future<T> future = virtualThreadPool.submit(operation);
             return Optional.ofNullable(future.get(timeout, unit));
         } catch (Exception e) {
             log.warn("Operation timed out or failed: {}", e.getMessage());
