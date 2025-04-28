@@ -22,7 +22,11 @@
 package dynamic.mapping.processor;
 
 public class ProcessingException extends Exception {
-    public ProcessingException(String string) {
-        super(string);
+    public ProcessingException(String errorMessage) {
+        super(errorMessage);
+    }
+
+    public ProcessingException(String errorMessage, Exception e) {
+        super(errorMessage, e);
     }
 }
