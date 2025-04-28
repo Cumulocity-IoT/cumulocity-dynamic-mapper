@@ -87,18 +87,21 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                 .payload(payloadBytes)
                 .build();
 
-        connectorMessage.setSupportsMessageContext(supportsMessageContext);
-
-        // Only manually handle acknowledgment for QoS 1 or 2
+        // Process the message
         ProcessingResult<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
-        if (mqttMessage.getQos().getCode() > 0 && processedResults.getConsolidatedQos().ordinal() > 0) {
 
+        // Determine downgraded QoS as the minimum of QoS in the message and the
+        // consolidated QoS of the mappings
+        int publishQos = mqttMessage.getQos().getCode();
+        int mappingQos = processedResults.getConsolidatedQos().ordinal();
+        int effectiveQos = Math.min(publishQos, mappingQos);
+        if (effectiveQos > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
                 try {
                     // Wait for the future to complete
                     List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult().get();
-            
+
                     // Check for errors in results
                     boolean hasErrors = false;
                     if (results != null) {
@@ -109,7 +112,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                             }
                         }
                     }
-            
+
                     if (!hasErrors) {
                         // No errors found, acknowledge the message
                         mqttMessage.acknowledge();
@@ -121,9 +124,13 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                 return null; // Proper return for Callable<Void>
             });
         } else {
-            genericMessageCallback.onMessage(connectorMessage);
-            // For QoS in th emessage > 0, just process the message and acknowledgment
-            if (mqttMessage.getQos().getCode() > 0 ) mqttMessage.acknowledge();
+            // For QoS 0 (or downgraded to 0), no need for special handling
+
+            // If the original publish was QoS > 0 but got downgraded, we should still
+            // acknowledge
+            if (publishQos > 0) {
+                mqttMessage.acknowledge();
+            }
         }
     }
 
