@@ -416,9 +416,17 @@ export class MappingStepPropertiesComponent
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'QoS',
-              options: Object.values(Qos).map((key) => {
-                return { label: this.formatStringPipe.transform(key), value: key };
-              }),
+              options: Object.values(Qos).filter(key => {
+                // When direction is OUTBOUND, only include AT_MOST_ONCE and AT_LEAST_ONCE
+                if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
+                  return key === Qos.AT_MOST_ONCE || key === Qos.AT_LEAST_ONCE;
+                }
+                // Otherwise, include all QoS options
+                return true;
+              }).
+                map((key) => {
+                  return { label: this.formatStringPipe.transform(key), value: key };
+                }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               required: true
