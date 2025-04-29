@@ -440,7 +440,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             if (connectorMessage.getPayload() != null) {
                 try {
                     resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
-                    consolidatedQos = connectorClient.determineMaxQos(topic, resolvedMappings);
+                    consolidatedQos = connectorClient.determineMaxQosInbound(topic, resolvedMappings);
                     result.setConsolidatedQos(consolidatedQos);
                 } catch (Exception e) {
                     log.warn(

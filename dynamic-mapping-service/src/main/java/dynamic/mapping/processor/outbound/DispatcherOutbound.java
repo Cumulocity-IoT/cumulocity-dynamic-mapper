@@ -34,12 +34,13 @@ import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.notification.websocket.NotificationCallback;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
-
+import dynamic.mapping.processor.model.ProcessingResult;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -140,7 +141,10 @@ public class DispatcherOutbound implements NotificationCallback {
     }
 
     @Override
-    public void onNotification(Notification notification) {
+    public ProcessingResult<?> onNotification(Notification notification) {
+        Qos consolidatedQos = Qos.AT_LEAST_ONCE;
+        ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
+
         // We don't care about UPDATES nor DELETES and ignore notifications if connector
         // is not connected
         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
@@ -160,7 +164,7 @@ public class DispatcherOutbound implements NotificationCallback {
             if ("UPDATE".equals(operation) && notification.getApi().equals(API.OPERATION)) {
                 log.info("Tenant {} - Update Operation message for connector {} is received, ignoring it",
                         tenant, connectorClient.getConnectorName());
-                return;
+                return result;
             }
             C8YMessage c8yMessage = new C8YMessage();
             Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
@@ -181,11 +185,14 @@ public class DispatcherOutbound implements NotificationCallback {
             c8yMessage.setPayload(notification.getMessage());
             c8yMessage.setTenant(tenant);
             c8yMessage.setSendPayload(true);
-            virtualThreadPool.submit(() -> {
-                // TODO Return a future so it can be blocked for QoS 1 or 2
-                processMessage(c8yMessage);
-            });
+            // virtualThreadPool.submit(() -> {
+            // // TODO Return a future so it can be blocked for QoS 1 or 2
+            // processMessage(c8yMessage);
+            // });
+            // TODO Return a future so it can be blocked for QoS 1 or 2
+            return processMessage(c8yMessage);
         }
+        return result;
     }
 
     @Override
@@ -548,7 +555,7 @@ public class DispatcherOutbound implements NotificationCallback {
         }
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage) {
+    public ProcessingResult<?> processMessage(C8YMessage c8yMessage) {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
 
@@ -568,13 +575,17 @@ public class DispatcherOutbound implements NotificationCallback {
                     c8yMessage.getMessageId());
         }
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
-        Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
+
+        Qos consolidatedQos = Qos.AT_LEAST_ONCE;
+        ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
 
         // Handle C8Y Operation Status
         if (c8yMessage.getPayload() != null) {
             try {
                 resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage);
+                consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
+                result.setConsolidatedQos(consolidatedQos);
             } catch (Exception e) {
                 log.warn("Tenant {} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
                         tenant, e);
@@ -582,12 +593,13 @@ public class DispatcherOutbound implements NotificationCallback {
                 mappingStatusUnspecified.errors++;
             }
         } else {
-            return futureProcessingResult;
+            return result;
         }
-        futureProcessingResult = virtualThreadPool.submit(
+        Future futureProcessingResult = virtualThreadPool.submit(
                 new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
                         payloadProcessorsOutbound, c8yMessage, connectorClient));
+        result.setProcessingResult(futureProcessingResult);
 
-        return futureProcessingResult;
+        return result;
     }
 }

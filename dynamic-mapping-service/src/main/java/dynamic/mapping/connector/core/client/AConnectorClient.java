@@ -393,7 +393,7 @@ public abstract class AConnectorClient {
         updatedSubscriptionCache.keySet().stream()
                 .filter(topic -> !getActiveSubscriptionsView().containsKey(topic))
                 .forEach(topic -> {
-                    Qos qos = determineMaxQos(topic, updatedMappings);
+                    Qos qos = determineMaxQosInbound(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
                         log.info("Tenant {} - Successfully subscribed to topic: {}, qos: {}",
@@ -404,9 +404,17 @@ public abstract class AConnectorClient {
                 });
     }
 
-    public Qos determineMaxQos(String topic, List<Mapping> mappings) {
+    public Qos determineMaxQosInbound(String topic, List<Mapping> mappings) {
         int qosOrdinal = mappings.stream()
                 .filter(m -> m.mappingTopic.equals(topic))
+                .map(m -> m.qos.ordinal())
+                .max(Integer::compareTo)
+                .orElse(0);
+        return Qos.values()[qosOrdinal];
+    }
+
+    public Qos determineMaxQosOutbound( List<Mapping> mappings) {
+        int qosOrdinal = mappings.stream()
                 .map(m -> m.qos.ordinal())
                 .max(Integer::compareTo)
                 .orElse(0);

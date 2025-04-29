@@ -41,7 +41,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
     String tenant;
     String connectorIdentifier;
     boolean supportsMessageContext;
-    // Define callback with QoS
+    // Define callback with QoS OPTION_II
     // QOS qos;
     private ExecutorService virtualThreadPool;
 
