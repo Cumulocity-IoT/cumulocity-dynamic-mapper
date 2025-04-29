@@ -31,6 +31,7 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -192,6 +193,10 @@ public class DispatcherInbound implements GenericMessageCallback {
                         try {
                             graalsContext = setupGraalVMContext(mapping, serviceConfiguration);
                             context.setGraalsContext(graalsContext);
+                            context.setSharedCode(serviceConfiguration.getCodeTemplates()
+                                    .get(TemplateType.SHARED.name()).getCode());
+                            context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                                    .get(TemplateType.SYSTEM.name()).getCode());
                         } catch (Exception e) {
                             handleGraalVMError(tenant, mapping, e, context, mappingStatus);
                             processingResult.add(context);
@@ -348,11 +353,14 @@ public class DispatcherInbound implements GenericMessageCallback {
                 } else if (pp != null) {
                     ppLog = pp.toString();
                 }
-                log.info("Tenant {} - New message on topic: {}, on connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
-                        tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(), mapping.getQos().ordinal(), ppLog);
+                log.info(
+                        "Tenant {} - New message on topic: {}, on connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
+                        tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
+                        mapping.getQos().ordinal(), ppLog);
             } else {
                 log.info("Tenant {} - New message on topic: {}, on connector: {}, for Mapping {} with QoS: {}",
-                        tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(), mapping.getQos().ordinal());
+                        tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
+                        mapping.getQos().ordinal());
             }
         }
 
@@ -403,8 +411,8 @@ public class DispatcherInbound implements GenericMessageCallback {
                     }
                 }
             } catch (Exception e) {
-                String errorMessage = String.format("Tenant %s - Message processing error: %s",
-                        tenant, e.getMessage());
+                String errorMessage = String.format("Tenant %s - Message for mapping: %s processing error: %s",
+                        tenant, mapping.name, e.getMessage());
                 log.warn(errorMessage);
                 log.debug("Tenant {} - Processing error details:", tenant, e);
                 context.addError(new ProcessingException(errorMessage, e));

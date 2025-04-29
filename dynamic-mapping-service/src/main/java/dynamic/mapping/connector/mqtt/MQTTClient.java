@@ -57,7 +57,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.hivemq.client.mqtt.MqttClientSslConfig;
 import com.hivemq.client.mqtt.MqttClientSslConfigBuilder;
-import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
@@ -335,7 +334,7 @@ public class MQTTClient extends AConnectorClient {
         String configuredUrl = String.format("%s://%s:%s%s", configuredProtocol, mqttClient.getConfig().getServerHost(),
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
-        Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
+        // Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
         mqttCallback = new MQTTCallback(configurationRegistry, dispatcher, tenant, getConnectorIdentifier(), false);
 
         // use QoS from connector OPTION_II

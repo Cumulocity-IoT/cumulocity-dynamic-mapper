@@ -505,8 +505,8 @@ public class DispatcherOutbound implements NotificationCallback {
                     }
                 }
             } catch (Exception e) {
-                String errorMessage = String.format("Tenant %s - Message processing error: %s",
-                        tenant, e.getMessage());
+                String errorMessage = String.format("Tenant %s - Message for mapping: %s processing error: %s",
+                        tenant, mapping.name, e.getMessage());
                 log.warn(errorMessage);
                 log.debug("Tenant {} - Processing error details:", tenant, e);
                 context.addError(new ProcessingException(errorMessage, e));

@@ -3,8 +3,6 @@ package dynamic.mapping.connector.webhook;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

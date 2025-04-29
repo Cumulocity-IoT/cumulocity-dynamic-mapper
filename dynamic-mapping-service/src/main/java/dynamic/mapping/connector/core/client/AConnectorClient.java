@@ -23,7 +23,6 @@ package dynamic.mapping.connector.core.client;
 
 import static java.util.Map.entry;
 
-import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -95,7 +94,7 @@ public abstract class AConnectorClient {
 
     // define QoS in connector OPTION_II
     // @Getter
-    // public QOS qos  = QOS.AT_LEAST_ONCE;
+    // public QOS qos = QOS.AT_LEAST_ONCE;
 
     protected String additionalSubscriptionIdTest;
 
@@ -136,8 +135,8 @@ public abstract class AConnectorClient {
 
     protected ConfigurationRegistry configurationRegistry;
 
-	@Getter
-	protected ExecutorService virtualThreadPool;
+    @Getter
+    protected ExecutorService virtualThreadPool;
 
     private Future<?> connectTask;
     private ScheduledExecutorService housekeepingExecutor = Executors
@@ -266,7 +265,7 @@ public abstract class AConnectorClient {
 
     public Future<?> submitDisconnect() {
         loadConfiguration();
-        if(connectTask != null && (!connectTask.isDone() || !connectTask.isCancelled())) {
+        if (connectTask != null && (!connectTask.isDone() || !connectTask.isCancelled())) {
             connectTask.cancel(true);
         }
 
@@ -396,7 +395,8 @@ public abstract class AConnectorClient {
                     Qos qos = determineMaxQosInbound(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
-                        log.info("Tenant {} - Successfully subscribed on topic: {} for connector {} with QoS {}", tenant, topic,
+                        log.info("Tenant {} - Successfully subscribed on topic: {} for connector {} with QoS {}",
+                                tenant, topic,
                                 connectorName, qos);
                     } catch (ConnectorException exp) {
                         log.error("Tenant {} - Error subscribing to topic: {}", tenant, topic, exp);
@@ -413,8 +413,9 @@ public abstract class AConnectorClient {
         return Qos.values()[qosOrdinal];
     }
 
-    public Qos determineMaxQosOutbound( List<Mapping> mappings) {
+    public Qos determineMaxQosOutbound(List<Mapping> mappings) {
         int qosOrdinal = mappings.stream()
+                .filter(m -> m.active)
                 .map(m -> m.qos.ordinal())
                 .max(Integer::compareTo)
                 .orElse(0);
@@ -466,11 +467,12 @@ public abstract class AConnectorClient {
         if (create || subscriptionCount.intValue() == 0) {
             try {
 
-                //log.info("Tenant {} - Subscribing to topic: {}, qos: {}",
-                //        tenant, mapping.mappingTopic, mapping.qos);
+                // log.info("Tenant {} - Subscribing to topic: {}, qos: {}",
+                // tenant, mapping.mappingTopic, mapping.qos);
                 subscribe(mapping.mappingTopic, mapping.qos);
-                log.info("Tenant {} - Successfully subscribed on topic: {} for connector {} with QoS {}", tenant, mapping.mappingTopic,
-                        connectorName,  mapping.qos);// use qos from mapping
+                log.info("Tenant {} - Successfully subscribed on topic: {} for connector {} with QoS {}", tenant,
+                        mapping.mappingTopic,
+                        connectorName, mapping.qos);// use qos from mapping
             } catch (ConnectorException exp) {
                 log.error("Tenant {} - Error subscribing to topic: {}",
                         tenant, mapping.mappingTopic, exp);
@@ -639,9 +641,9 @@ public abstract class AConnectorClient {
 
     public Future<?> reconnect() {
         try {
-            //Blocking to wait for disconnect
+            // Blocking to wait for disconnect
             submitDisconnect().get();
-            //Blocking to wait for initialization
+            // Blocking to wait for initialization
             submitInitialize().get();
             return submitConnect();
         } catch (Exception e) {
@@ -719,7 +721,7 @@ public abstract class AConnectorClient {
     }
 
     // Event Handling Methods
-    public List<? extends ProcessingContext<?>>test(String topic, boolean sendPayload, Map<String, Object> payload)
+    public List<? extends ProcessingContext<?>> test(String topic, boolean sendPayload, Map<String, Object> payload)
             throws Exception {
         String payloadMessage = serializePayload(payload);
         ConnectorMessage message = createTestMessage(topic, sendPayload, payloadMessage);
@@ -864,7 +866,7 @@ public abstract class AConnectorClient {
         return Collections.unmodifiableMap(activeSubscriptionsInbound);
     }
 
-        /**
+    /**
      * Safely adds a subscription
      */
     protected void addActiveSubscription(String topic, MutableInt count) {
@@ -1085,5 +1087,5 @@ public abstract class AConnectorClient {
         }
     }
 
-	public abstract List<Direction> supportedDirections();
+    public abstract List<Direction> supportedDirections();
 }
