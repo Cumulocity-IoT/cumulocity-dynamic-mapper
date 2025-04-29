@@ -128,7 +128,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
 
             // If the original publish was QoS > 0 but got downgraded, we should still
             // acknowledge
-            if (publishQos > 0) {
+            if (publishQos >= 0) {
                 mqttMessage.acknowledge();
             }
         }
