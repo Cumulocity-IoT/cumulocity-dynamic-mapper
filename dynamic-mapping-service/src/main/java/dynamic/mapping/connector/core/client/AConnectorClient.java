@@ -406,7 +406,7 @@ public abstract class AConnectorClient {
 
     public Qos determineMaxQosInbound(String topic, List<Mapping> mappings) {
         int qosOrdinal = mappings.stream()
-                .filter(m -> m.mappingTopic.equals(topic))
+                .filter(m -> m.mappingTopic.equals(topic) && m.active)
                 .map(m -> m.qos.ordinal())
                 .max(Integer::compareTo)
                 .orElse(0);
