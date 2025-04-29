@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.TrustManagerFactory;
+
 import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3Unsubscribe;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
@@ -81,11 +82,11 @@ public class MQTTClient extends AConnectorClient {
     public MQTTClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
-                new String[] { "mqtts://", "wss://" });
+                new String[]{"mqtts://", "wss://"});
         ConnectorPropertyCondition useSelfSignedCertificateCondition = new ConnectorPropertyCondition(
-                "useSelfSignedCertificate", new String[] { "true" });
+                "useSelfSignedCertificate", new String[]{"true"});
         ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol",
-                new String[] { "ws://", "wss://" });
+                new String[]{"ws://", "wss://"});
         configProps.put("protocol",
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
                         Map.ofEntries(
@@ -141,8 +142,8 @@ public class MQTTClient extends AConnectorClient {
     }
 
     public MQTTClient(ConfigurationRegistry configurationRegistry,
-            ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+                      ConnectorConfiguration connectorConfiguration,
+                      DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingComponent = configurationRegistry.getMappingComponent();
@@ -220,7 +221,7 @@ public class MQTTClient extends AConnectorClient {
                 List<String> expectedProtocols = Arrays.asList("TLSv1.2");
                 sslConfig = sslConfigBuilder.trustManagerFactory(tmf).protocols(expectedProtocols).build();
             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
-                    | KeyManagementException e) {
+                     | KeyManagementException e) {
                 log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
@@ -336,10 +337,11 @@ public class MQTTClient extends AConnectorClient {
         // Registering Callback
         Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
         mqttCallback = new MQTTCallback(configurationRegistry, dispatcher, tenant, getConnectorIdentifier(), false);
+
         // use QoS from connector OPTION_II
         // mqttCallback = new MQTTCallback(configurationRegistry, dispatcher, tenant, getConnectorIdentifier(), false,
         //         qos);
-        mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
+        //mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
         // stay in the loop until successful
         boolean successful = false;
@@ -506,11 +508,12 @@ public class MQTTClient extends AConnectorClient {
         log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
         Qos usedQOS = qos;
         sendSubscriptionEvents(topic, "Subscribing");
+        //Default to QoS=0 if not provided
         if (usedQOS.equals(null))
-            usedQOS = Qos.AT_LEAST_ONCE;
+            usedQOS = Qos.AT_MOST_ONCE;
         else if (!supportedQOS.contains(qos)) {
             // determine maximum supported QOS
-            usedQOS = Qos.AT_LEAST_ONCE;
+            usedQOS = Qos.AT_MOST_ONCE;
             for (int i = 1; i < qos.ordinal(); i++) {
                 if (supportedQOS.contains(Qos.values()[i])) {
                     usedQOS = Qos.values()[i];
@@ -523,15 +526,15 @@ public class MQTTClient extends AConnectorClient {
 
         // We don't need to add a handler on subscribe using hive client
         Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
-        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal())).send()
-                .thenRun(() -> {
-                    log.info("Tenant {} - Successfully subscribed on topic: {} for connector {}", tenant, topic,
-                            connectorName);
-                }).exceptionally(throwable -> {
+        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal()))
+                .callback(mqttCallback).manualAcknowledgement(true)
+                .send()
+                .exceptionally(throwable -> {
                     log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
                             throwable.getMessage());
                     return null;
                 });
+
     }
 
     public void unsubscribe(String topic) throws Exception {

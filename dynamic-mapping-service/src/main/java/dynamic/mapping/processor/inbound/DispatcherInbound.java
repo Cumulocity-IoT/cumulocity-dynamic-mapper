@@ -348,12 +348,11 @@ public class DispatcherInbound implements GenericMessageCallback {
                 } else if (pp != null) {
                     ppLog = pp.toString();
                 }
-
-                log.info("Tenant {} - New message on topic: {}, on connector: {}, wrapped message: {}",
-                        tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), ppLog);
+                log.info("Tenant {} - New message on topic: {}, on connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
+                        tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(), mapping.getQos().ordinal(), ppLog);
             } else {
-                log.info("Tenant {} - New message on topic: {}, on connector: {}",
-                        tenant, context.getTopic(), connectorClient.getConnectorIdentifier());
+                log.info("Tenant {} - New message on topic: {}, on connector: {}, for Mapping {} with QoS: {}",
+                        tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(), mapping.getQos().ordinal());
             }
         }
 
@@ -455,7 +454,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         } else {
             return result;
         }
-        Future futureProcessingResult = futureProcessingResult = virtualThreadPool.submit(
+        Future futureProcessingResult = virtualThreadPool.submit(
                 new MappingInboundTask(configurationRegistry, resolvedMappings,
                         connectorMessage, connectorClient));
         result.setProcessingResult(futureProcessingResult);

@@ -34,7 +34,9 @@ import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.ProcessingResult;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class MQTTCallback implements Consumer<Mqtt3Publish> {
     GenericMessageCallback genericMessageCallback;
     static String TOPIC_LEVEL_SEPARATOR = String.valueOf(MqttTopic.TOPIC_LEVEL_SEPARATOR);
@@ -90,11 +92,15 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         // Process the message
         ProcessingResult<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
 
+        log.info("Tenant {} - MQTT message received: topic: {}, QoS: {}, Connector {}",
+                tenant,  mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
         // Determine downgraded QoS as the minimum of QoS in the message and the
         // consolidated QoS of the mappings
         int publishQos = mqttMessage.getQos().getCode();
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
         int effectiveQos = Math.min(publishQos, mappingQos);
+        log.info("Tenant {} - Calculated effective QoS: {} for MQTT message: topic: {}, Mapping QoS: {}, Publish QoS: {}",
+                tenant,  effectiveQos, topic, mappingQos, publishQos);
         if (effectiveQos > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
@@ -106,8 +112,11 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                     boolean hasErrors = false;
                     if (results != null) {
                         for (ProcessingContext<?> context : results) {
+                            //We need to separate logic for different error cases otherwise it could be that message are never acked!
                             if (context.hasError()) {
                                 hasErrors = true;
+                                log.error("Tenant {} - Error in processing context for topic: {}, not sending ack to MQTT broker",
+                                        tenant,  topic);
                                 break;
                             }
                         }
@@ -115,6 +124,8 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
 
                     if (!hasErrors) {
                         // No errors found, acknowledge the message
+                        log.info("Tenant {} - Sending manual ack for MQTT message: topic: {}, QoS: {}, Connector {}",
+                                tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
                     }
                 } catch (InterruptedException | ExecutionException e) {
@@ -126,11 +137,11 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         } else {
             // For QoS 0 (or downgraded to 0), no need for special handling
 
-            // If the original publish was QoS > 0 but got downgraded, we should still
-            // acknowledge
-            if (publishQos > 0) {
-                mqttMessage.acknowledge();
-            }
+           //Acknowledge message with QoS=0
+            log.info("Tenant {} - Sending manual ack for MQTT message: topic: {}, QoS: {}, Connector {}",
+                    tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
+            mqttMessage.acknowledge();
+
         }
     }
 

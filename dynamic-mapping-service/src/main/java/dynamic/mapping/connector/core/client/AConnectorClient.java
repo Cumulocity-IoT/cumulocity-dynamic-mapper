@@ -396,8 +396,8 @@ public abstract class AConnectorClient {
                     Qos qos = determineMaxQosInbound(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
-                        log.info("Tenant {} - Successfully subscribed to topic: {}, qos: {}",
-                                tenant, topic, qos);
+                        log.info("Tenant {} - Successfully subscribed on topic: {} for connector {} with QoS {}", tenant, topic,
+                                connectorName, qos);
                     } catch (ConnectorException exp) {
                         log.error("Tenant {} - Error subscribing to topic: {}", tenant, topic, exp);
                     }
@@ -466,9 +466,11 @@ public abstract class AConnectorClient {
         if (create || subscriptionCount.intValue() == 0) {
             try {
 
-                log.info("Tenant {} - Subscribing to topic: {}, qos: {}",
-                        tenant, mapping.mappingTopic, mapping.qos);
-                subscribe(mapping.mappingTopic, mapping.qos);  // use qos from mapping
+                //log.info("Tenant {} - Subscribing to topic: {}, qos: {}",
+                //        tenant, mapping.mappingTopic, mapping.qos);
+                subscribe(mapping.mappingTopic, mapping.qos);
+                log.info("Tenant {} - Successfully subscribed on topic: {} for connector {} with QoS {}", tenant, mapping.mappingTopic,
+                        connectorName,  mapping.qos);// use qos from mapping
             } catch (ConnectorException exp) {
                 log.error("Tenant {} - Error subscribing to topic: {}",
                         tenant, mapping.mappingTopic, exp);
