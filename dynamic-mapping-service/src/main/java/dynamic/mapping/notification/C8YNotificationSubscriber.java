@@ -582,8 +582,8 @@ public class C8YNotificationSubscriber {
         try {
             String baseUrl = this.baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
-            final CustomWebSocketClient client = new CustomWebSocketClient(configurationRegistry, webSocketUrl,
-                    callback, tenant);
+            final CustomWebSocketClient client = new CustomWebSocketClient(tenant, configurationRegistry, webSocketUrl,
+                    callback);
             client.setConnectionLostTimeout(30);
             client.connect();
             configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);

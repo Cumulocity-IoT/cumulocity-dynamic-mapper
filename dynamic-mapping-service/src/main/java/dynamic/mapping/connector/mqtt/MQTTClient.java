@@ -335,8 +335,7 @@ public class MQTTClient extends AConnectorClient {
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
         // Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-        mqttCallback = new MQTTCallback(configurationRegistry, dispatcher, tenant, getConnectorIdentifier(), false);
-
+        mqttCallback = new MQTTCallback(tenant, configurationRegistry, dispatcher, getConnectorIdentifier(), false);
         // use QoS from connector OPTION_II
         // mqttCallback = new MQTTCallback(configurationRegistry, dispatcher, tenant, getConnectorIdentifier(), false,
         //         qos);

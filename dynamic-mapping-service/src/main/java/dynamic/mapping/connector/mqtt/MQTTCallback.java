@@ -29,6 +29,7 @@ import java.util.function.Consumer;
 import com.hivemq.client.mqtt.datatypes.MqttTopic;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -38,37 +39,26 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MQTTCallback implements Consumer<Mqtt3Publish> {
-    GenericMessageCallback genericMessageCallback;
     static String TOPIC_LEVEL_SEPARATOR = String.valueOf(MqttTopic.TOPIC_LEVEL_SEPARATOR);
-    String tenant;
-    String connectorIdentifier;
-    boolean supportsMessageContext;
-    // Define callback with QoS OPTION_II
-    // QOS qos;
+    private GenericMessageCallback genericMessageCallback;
+    private String tenant;
+    private String connectorIdentifier;
+    private boolean supportsMessageContext;
+    private ConfigurationRegistry configurationRegistry;
+    private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
 
-    MQTTCallback(ConfigurationRegistry configurationRegistry, GenericMessageCallback callback, String tenant,
+    MQTTCallback(String tenant, ConfigurationRegistry configurationRegistry, GenericMessageCallback callback,
             String connectorIdentifier,
             boolean supportsMessageContext) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.supportsMessageContext = supportsMessageContext;
+        this.configurationRegistry = configurationRegistry;
+        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
-
-    // Define callback with QoS OPTION_II
-    // MQTTCallback(ConfigurationRegistry configurationRegistry,
-    // GenericMessageCallback callback, String tenant,
-    // String connectorIdentifier,
-    // boolean supportsMessageContext, QOS qos) {
-    // this.genericMessageCallback = callback;
-    // this.tenant = tenant;
-    // this.connectorIdentifier = connectorIdentifier;
-    // this.supportsMessageContext = supportsMessageContext;
-    // this.qos = qos;
-    // this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-    // }
 
     @Override
     public void accept(Mqtt3Publish mqttMessage) {
@@ -91,16 +81,17 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
 
         // Process the message
         ProcessingResult<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
-
-        log.info("Tenant {} - MQTT message received: topic: {}, QoS: {}, Connector {}",
-                tenant,  mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
         // Determine downgraded QoS as the minimum of QoS in the message and the
         // consolidated QoS of the mappings
         int publishQos = mqttMessage.getQos().getCode();
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
         int effectiveQos = Math.min(publishQos, mappingQos);
-        log.info("Tenant {} - Calculated effective QoS: {} for MQTT message: topic: {}, Mapping QoS: {}, Publish QoS: {}",
-                tenant,  effectiveQos, topic, mappingQos, publishQos);
+        if (serviceConfiguration.logPayload) {
+            log.info(
+                    "Tenant {} - MQTT message received: topic: {}, QoS message: {}, QoS effective: {}, QoS mappings: {},Connector {}",
+                    tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), effectiveQos, mappingQos,
+                    connectorIdentifier);
+        }
         if (effectiveQos > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
@@ -112,11 +103,13 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                     boolean hasErrors = false;
                     if (results != null) {
                         for (ProcessingContext<?> context : results) {
-                            //We need to separate logic for different error cases otherwise it could be that message are never acked!
+                            // We need to separate logic for different error cases otherwise it could be
+                            // that message are never acked!
                             if (context.hasError()) {
                                 hasErrors = true;
-                                log.error("Tenant {} - Error in processing context for topic: {}, not sending ack to MQTT broker",
-                                        tenant,  topic);
+                                log.error(
+                                        "Tenant {} - Error in processing context for topic: {}, not sending ack to MQTT broker",
+                                        tenant, topic);
                                 break;
                             }
                         }
@@ -124,7 +117,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
 
                     if (!hasErrors) {
                         // No errors found, acknowledge the message
-                        log.info("Tenant {} - Sending manual ack for MQTT message: topic: {}, QoS: {}, Connector {}",
+                        log.warn("Tenant {} - Sending manual ack for MQTT message: topic: {}, QoS: {}, Connector {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
                     }
@@ -137,9 +130,11 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         } else {
             // For QoS 0 (or downgraded to 0), no need for special handling
 
-           //Acknowledge message with QoS=0
-            log.info("Tenant {} - Sending manual ack for MQTT message: topic: {}, QoS: {}, Connector {}",
-                    tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
+            // Acknowledge message with QoS=0
+            if (serviceConfiguration.logPayload) {
+                log.info("Tenant {} - Sending manual ack for MQTT message: topic: {}, QoS: {}, Connector {}",
+                        tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
+            }
             mqttMessage.acknowledge();
 
         }

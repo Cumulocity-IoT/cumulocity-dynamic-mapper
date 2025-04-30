@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.ProcessingResult;
@@ -43,13 +44,15 @@ public class CustomWebSocketClient extends WebSocketClient {
     private ScheduledExecutorService executorService = null;
     private String tenant;
     private ExecutorService virtualThreadPool;
+    ServiceConfiguration serviceConfiguration;
 
-    public CustomWebSocketClient(ConfigurationRegistry configurationRegistry, URI serverUri,
-            NotificationCallback callback, String tenant) {
+    public CustomWebSocketClient(String tenant, ConfigurationRegistry configurationRegistry, URI serverUri,
+            NotificationCallback callback) {
         super(serverUri);
         this.callback = callback;
         this.tenant = tenant;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
     }
 
     @Override
@@ -65,7 +68,11 @@ public class CustomWebSocketClient extends WebSocketClient {
         Notification notification = Notification.parse(message);
         ProcessingResult<?> processedResults = this.callback.onNotification(notification);
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
-
+        if (serviceConfiguration.logPayload) {
+            log.info(
+                    "Tenant {} - MQTT message received: api: {}, QoS mappings: {},Connector InternalWebSocket",
+                    tenant, notification.getApi(), mappingQos);
+        }
         if (mappingQos > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
