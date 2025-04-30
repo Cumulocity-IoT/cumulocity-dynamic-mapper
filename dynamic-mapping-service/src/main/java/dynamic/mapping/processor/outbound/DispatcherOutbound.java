@@ -413,12 +413,29 @@ public class DispatcherOutbound implements NotificationCallback {
 
         private Context setupGraalVMContext(Mapping mapping, ServiceConfiguration serviceConfiguration)
                 throws Exception {
+            HostAccess customHostAccess = HostAccess.newBuilder()
+                    // Allow access to public members of accessible classes
+                    .allowPublicAccess(true)
+                    // Allow array access for basic functionality
+                    .allowArrayAccess(true)
+                    // Allow List operations
+                    .allowListAccess(true)
+                    // Allow Map operations
+                    .allowMapAccess(true)
+                    .build();
             Context graalsContext = Context.newBuilder("js")
                     .option("engine.WarnInterpreterOnly", "false")
-                    .allowHostAccess(HostAccess.ALL)
-                    .allowHostClassLookup(
-                            className -> className.startsWith("dynamic.mapping.processor.model") ||
-                                    className.startsWith("java.util"))
+                    .allowHostAccess(customHostAccess)
+                    .allowHostClassLookup(className ->
+                    // Allow only the specific SubstitutionContext class
+                    className.equals("dynamic.mapping.processor.model.SubstitutionContext")
+                            || className.equals("dynamic.mapping.processor.model.SubstitutionResult")
+                            || className.equals("dynamic.mapping.processor.model.SubstituteValue")
+                            || className.equals("dynamic.mapping.processor.model.SubstituteValue$TYPE")
+                            || className.equals("dynamic.mapping.processor.model.RepairStrategy")
+                            // Allow base collection classes needed for return values
+                            || className.equals("java.util.ArrayList") ||
+                            className.equals("java.util.HashMap"))
                     .build();
 
             String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;

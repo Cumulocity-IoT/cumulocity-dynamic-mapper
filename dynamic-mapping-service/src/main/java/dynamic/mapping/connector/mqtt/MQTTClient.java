@@ -125,14 +125,6 @@ public class MQTTClient extends AConnectorClient {
         configProps.put("serverPath",
                 new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         wsCondition));
-        // define qos in connector OPTION_II
-        // configProps.put("qos",
-        //         new ConnectorProperty("QoS", true, 11, ConnectorPropertyType.OPTION_PROPERTY, false, false, "0",
-        //                 Map.ofEntries(
-        //                         new AbstractMap.SimpleEntry<String, String>("0", "0"),
-        //                         new AbstractMap.SimpleEntry<String, String>("1", "1"),
-        //                         new AbstractMap.SimpleEntry<String, String>("2", "2")),
-        //                 null));
         String name = "Generic MQTT";
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
@@ -259,8 +251,6 @@ public class MQTTClient extends AConnectorClient {
         int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
-        // set Qos from connector OPTION_II
-        // qos = QOS.valueOf((String) connectorConfiguration.getProperties().getOrDefault("qos", "0"));
 
         Mqtt3ClientBuilder partialBuilder;
         partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
@@ -336,10 +326,6 @@ public class MQTTClient extends AConnectorClient {
         // Registering Callback
         // Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
         mqttCallback = new MQTTCallback(tenant, configurationRegistry, dispatcher, getConnectorIdentifier(), false);
-        // use QoS from connector OPTION_II
-        // mqttCallback = new MQTTCallback(configurationRegistry, dispatcher, tenant, getConnectorIdentifier(), false,
-        //         qos);
-        //mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
         // stay in the loop until successful
         boolean successful = false;

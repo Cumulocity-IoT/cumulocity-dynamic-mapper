@@ -92,10 +92,6 @@ public abstract class AConnectorClient {
 
     protected String connectorName;
 
-    // define QoS in connector OPTION_II
-    // @Getter
-    // public QOS qos = QOS.AT_LEAST_ONCE;
-
     protected String additionalSubscriptionIdTest;
 
     protected MutableBoolean connectionState = new MutableBoolean(false);
@@ -407,6 +403,15 @@ public abstract class AConnectorClient {
     public Qos determineMaxQosInbound(String topic, List<Mapping> mappings) {
         int qosOrdinal = mappings.stream()
                 .filter(m -> m.mappingTopic.equals(topic) && m.active)
+                .map(m -> m.qos.ordinal())
+                .max(Integer::compareTo)
+                .orElse(0);
+        return Qos.values()[qosOrdinal];
+    }
+
+    public Qos determineMaxQosInbound(List<Mapping> mappings) {
+        int qosOrdinal = mappings.stream()
+                .filter(m -> m.active)
                 .map(m -> m.qos.ordinal())
                 .max(Integer::compareTo)
                 .orElse(0);
