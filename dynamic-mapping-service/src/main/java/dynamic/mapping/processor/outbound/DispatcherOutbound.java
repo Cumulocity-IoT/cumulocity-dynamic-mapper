@@ -526,7 +526,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 if (e.getStackTrace().length > 0){
                     lineNumber = e.getStackTrace()[0].getLineNumber();
                 }
-                String errorMessage = String.format("Tenant %s - Message for mapping: %s processing error: %s at line %s",
+                String errorMessage = String.format("Tenant %s - Message for mapping: %s processing error: %s, line %s",
                         tenant, mapping.name, e.getMessage(), lineNumber);
                 log.warn(errorMessage);
                 log.debug("Tenant {} - Processing error details:", tenant, e);
