@@ -430,8 +430,12 @@ public class DispatcherInbound implements GenericMessageCallback {
                     }
                 }
             } catch (Exception e) {
-                String errorMessage = String.format("Tenant %s - Message for mapping: %s processing error: %s",
-                        tenant, mapping.name, e.getMessage());
+                int lineNumber = 0;
+                if (e.getStackTrace().length > 0){
+                    lineNumber = e.getStackTrace()[0].getLineNumber();
+                }
+                String errorMessage = String.format("Tenant %s - Message for mapping: %s processing error: %s at line %s",
+                        tenant, mapping.name, e.getMessage(), lineNumber);
                 log.warn(errorMessage);
                 log.debug("Tenant {} - Processing error details:", tenant, e);
                 context.addError(new ProcessingException(errorMessage, e));
