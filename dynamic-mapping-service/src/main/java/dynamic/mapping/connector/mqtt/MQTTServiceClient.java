@@ -51,7 +51,7 @@ public class MQTTServiceClient extends MQTTClient {
                                 new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")),
                         null));
         configProps.put("mqttHost",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, true, true, "cumulocity",
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, true, true, "c8y-mqtt-service",
                         null, null));
         configProps.put("mqttPort",
                 new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, true, true, 2883, null, null));
