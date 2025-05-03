@@ -523,7 +523,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 }
             } catch (Exception e) {
                 int lineNumber = 0;
-                if (e.getStackTrace().length > 0){
+                if (e.getStackTrace().length > 0) {
                     lineNumber = e.getStackTrace()[0].getLineNumber();
                 }
                 String errorMessage = String.format("Tenant %s - Message for mapping: %s processing error: %s, line %s",
@@ -603,6 +603,14 @@ public class DispatcherOutbound implements NotificationCallback {
                 resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage);
                 consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
                 result.setConsolidatedQos(consolidatedQos);
+
+                // Check if at least one Code based mappings exits, then we nee to timeout the
+                // execution
+                for (Mapping mapping : resolvedMappings) {
+                    if (MappingType.CODE_BASED.equals(mapping.mappingType)) {
+                        result.setMaxCPUTimeMS(serviceConfiguration.getMaxCPUTimeMS());
+                    }
+                }
             } catch (Exception e) {
                 log.warn("Tenant {} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
                         tenant, e);

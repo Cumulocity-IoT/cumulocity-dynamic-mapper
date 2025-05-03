@@ -326,8 +326,8 @@ public class DispatcherInbound implements GenericMessageCallback {
                     className.equals("dynamic.mapping.processor.model.SubstitutionContext")
                             || className.equals("dynamic.mapping.processor.model.SubstitutionResult")
                             || className.equals("dynamic.mapping.processor.model.SubstituteValue")
-                            || className.equals("dynamic.mapping.processor.model.SubstituteValue$TYPE") 
-                            || className.equals("dynamic.mapping.processor.model.RepairStrategy") 
+                            || className.equals("dynamic.mapping.processor.model.SubstituteValue$TYPE")
+                            || className.equals("dynamic.mapping.processor.model.RepairStrategy")
                             // Allow base collection classes needed for return values
                             || className.equals("java.util.ArrayList") ||
                             className.equals("java.util.HashMap"))
@@ -431,7 +431,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 }
             } catch (Exception e) {
                 int lineNumber = 0;
-                if (e.getStackTrace().length > 0){
+                if (e.getStackTrace().length > 0) {
                     lineNumber = e.getStackTrace()[0].getLineNumber();
                 }
                 String errorMessage = String.format("Tenant %s - Message for mapping: %s processing error: %s, line %s",
@@ -472,6 +472,14 @@ public class DispatcherInbound implements GenericMessageCallback {
                     resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
                     consolidatedQos = connectorClient.determineMaxQosInbound(resolvedMappings);
                     result.setConsolidatedQos(consolidatedQos);
+
+                    // Check if at least one Code based mappings exits, then we nee to timeout the execution
+                    for (Mapping mapping : resolvedMappings) {
+                        if (MappingType.CODE_BASED.equals(mapping.mappingType)) {
+                            result.setMaxCPUTimeMS(serviceConfiguration.getMaxCPUTimeMS());
+                        }
+                    }
+
                 } catch (Exception e) {
                     log.warn(
                             "Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",

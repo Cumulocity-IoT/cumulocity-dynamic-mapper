@@ -36,4 +36,5 @@ import lombok.Setter;
 public class ProcessingResult<O> {
     private Future<List<ProcessingContext<O>>> processingResult;
     private Qos consolidatedQos;
+    private int maxCPUTimeMS;
 }

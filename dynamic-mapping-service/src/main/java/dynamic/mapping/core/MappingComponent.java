@@ -332,7 +332,6 @@ public class MappingComponent {
                     .engine(configurationRegistry.getGraalsEngine(tenant))
                     .logHandler(GRAALJS_LOG_HANDLER)
                     .allowAllAccess(true)
-                    .option("js.strict", "true")
                     .build()) {
 
                 // Before closing the context, clean up the members

@@ -49,6 +49,7 @@ export class ServiceConfigurationComponent implements OnInit {
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
+    maxCPUTimeMS: 150,
   };
   editable2updated: boolean = false;
 
@@ -74,7 +75,8 @@ export class ServiceConfigurationComponent implements OnInit {
       inboundExternalIdCacheRetention: new FormControl(''),
       inventoryCacheRetention: new FormControl(''),
       inventoryCacheSize: new FormControl(''),
-      inventoryFragmentsToCache: new FormControl('')
+      inventoryFragmentsToCache: new FormControl(''),
+      maxCPUTimeMS: new FormControl('')
     });
 
     this.loadData();
@@ -103,7 +105,9 @@ export class ServiceConfigurationComponent implements OnInit {
       inventoryCacheRetention:
         this.serviceConfiguration.inventoryCacheRetention,
       inventoryFragmentsToCache:
-        this.serviceConfiguration.inventoryFragmentsToCache.join(",")
+        this.serviceConfiguration.inventoryFragmentsToCache.join(","),
+        maxCPUTimeMS:
+        this.serviceConfiguration.maxCPUTimeMS
     });
   }
 

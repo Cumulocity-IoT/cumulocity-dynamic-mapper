@@ -24,6 +24,8 @@ package dynamic.mapping.connector.mqtt;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import com.hivemq.client.mqtt.datatypes.MqttTopic;
@@ -85,6 +87,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         // consolidated QoS of the mappings
         int publishQos = mqttMessage.getQos().getCode();
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
+        int timeout = processedResults.getMaxCPUTimeMS();
         int effectiveQos = Math.min(publishQos, mappingQos);
         if (serviceConfiguration.logPayload) {
             log.info(
@@ -92,12 +95,13 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), effectiveQos, mappingQos,
                     connectorIdentifier);
         }
-        if (effectiveQos > 0) {
+        if (effectiveQos > 0 || timeout > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
                 try {
                     // Wait for the future to complete
-                    List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult().get();
+                    //List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult().get();
+                    List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
 
                     // Check for errors in results
                     boolean hasErrors = false;
@@ -123,6 +127,11 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery
+                    Thread.currentThread().interrupt();
+                } catch (TimeoutException e) {
+                    var cancelResult = processedResults.getProcessingResult().cancel(true);
+                    log.warn("Tenant {} - Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
+                    tenant, timeout, connectorIdentifier, cancelResult);
                     Thread.currentThread().interrupt();
                 }
                 return null; // Proper return for Callable<Void>

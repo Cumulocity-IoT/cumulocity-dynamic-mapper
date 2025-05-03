@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 public class CustomWebSocketClient extends WebSocketClient {
@@ -68,9 +69,10 @@ public class CustomWebSocketClient extends WebSocketClient {
         Notification notification = Notification.parse(message);
         ProcessingResult<?> processedResults = this.callback.onNotification(notification);
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
+        int timeout = processedResults.getMaxCPUTimeMS();
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "Tenant {} - MQTT message received: api: {}, QoS mappings: {},Connector InternalWebSocket",
+                    "Tenant {} - MQTT message received: api: {}, QoS mappings: {}, connector InternalWebSocket",
                     tenant, notification.getApi(), mappingQos);
         }
         if (mappingQos > 0) {
@@ -78,7 +80,10 @@ public class CustomWebSocketClient extends WebSocketClient {
             virtualThreadPool.submit(() -> {
                 try {
                     // Wait for the future to complete
-                    List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult().get();
+                    // List<? extends ProcessingContext<?>> results =
+                    // processedResults.getProcessingResult().get();
+                    List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult().get(timeout,
+                            TimeUnit.MILLISECONDS);
 
                     // Check for errors in results
                     boolean hasErrors = false;
@@ -101,6 +106,12 @@ public class CustomWebSocketClient extends WebSocketClient {
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery
+                    Thread.currentThread().interrupt();
+                } catch (TimeoutException e) {
+                    var cancelResult = processedResults.getProcessingResult().cancel(true);
+                    log.warn(
+                            "Tenant {} - Processing timed out with: {} milliseconds, connector InternalWebSocket, result of cancelling: {}",
+                            tenant, timeout, cancelResult);
                     Thread.currentThread().interrupt();
                 }
                 return null; // Proper return for Callable<Void>

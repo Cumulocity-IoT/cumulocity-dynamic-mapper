@@ -276,6 +276,26 @@
               </label>
             </div>
           </c8y-li>
+
+
+
+          <c8y-li>
+            <c8y-li-icon icon="alarm1"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'MaxCPU time im milliseconds for JavaScript code' | translate }}</p>
+                <p>
+                  <small translate>Set the maxCPU time in milliseconds for JavaScript code, to avoid malicious code from starving the CPU</small>
+                </p>
+              </div>
+              <label class="editable m-l-auto" title="{{ ' maxCPU time in milliseconds ' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <input class="form-control" name="maxCPUTimeMS" type="number"
+                  formControlName="maxCPUTimeMS" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
         </form>
       </c8y-list-group>
 
