@@ -127,12 +127,11 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery
-                    Thread.currentThread().interrupt();
+                    // Thread.currentThread().interrupt();
                 } catch (TimeoutException e) {
                     var cancelResult = processedResults.getProcessingResult().cancel(true);
                     log.warn("Tenant {} - Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
                     tenant, timeout, connectorIdentifier, cancelResult);
-                    Thread.currentThread().interrupt();
                 }
                 return null; // Proper return for Callable<Void>
             });
