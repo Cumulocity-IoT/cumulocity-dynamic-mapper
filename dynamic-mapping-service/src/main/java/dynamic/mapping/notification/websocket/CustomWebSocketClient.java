@@ -75,15 +75,21 @@ public class CustomWebSocketClient extends WebSocketClient {
                     "Tenant {} - MQTT message received: api: {}, QoS mappings: {}, connector InternalWebSocket",
                     tenant, notification.getApi(), mappingQos);
         }
-        if (mappingQos > 0) {
+        if (mappingQos > 0 || timeout > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
                 try {
                     // Wait for the future to complete
                     // List<? extends ProcessingContext<?>> results =
                     // processedResults.getProcessingResult().get();
-                    List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult().get(timeout,
-                            TimeUnit.MILLISECONDS);
+                    List<? extends ProcessingContext<?>> results;
+                    if (timeout > 0) {
+                        results = processedResults.getProcessingResult().get(timeout,
+                                TimeUnit.MILLISECONDS);
+                    }
+                    else {
+                        results = processedResults.getProcessingResult().get();
+                    }
 
                     // Check for errors in results
                     boolean hasErrors = false;
