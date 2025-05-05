@@ -464,7 +464,9 @@ public class DispatcherInbound implements GenericMessageCallback {
 
         List<Mapping> resolvedMappings = new ArrayList<>();
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
-        ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
+        ProcessingResult result = ProcessingResult.builder()
+                .consolidatedQos(consolidatedQos)
+                .build();
 
         if (topic != null && !topic.startsWith("$SYS")) {
             if (connectorMessage.getPayload() != null) {
@@ -473,7 +475,8 @@ public class DispatcherInbound implements GenericMessageCallback {
                     consolidatedQos = connectorClient.determineMaxQosInbound(resolvedMappings);
                     result.setConsolidatedQos(consolidatedQos);
 
-                    // Check if at least one Code based mappings exits, then we nee to timeout the execution
+                    // Check if at least one Code based mappings exists, then we need to timeout the
+                    // execution
                     for (Mapping mapping : resolvedMappings) {
                         if (MappingType.CODE_BASED.equals(mapping.mappingType)) {
                             result.setMaxCPUTimeMS(serviceConfiguration.getMaxCPUTimeMS());
@@ -493,7 +496,8 @@ public class DispatcherInbound implements GenericMessageCallback {
         } else {
             return result;
         }
-        Future futureProcessingResult = virtualThreadPool.submit(
+
+        Future<List<ProcessingContext<?>>> futureProcessingResult = virtualThreadPool.submit(
                 new MappingInboundTask(configurationRegistry, resolvedMappings,
                         connectorMessage, connectorClient));
         result.setProcessingResult(futureProcessingResult);
