@@ -138,7 +138,7 @@ public class CustomWebSocketClient extends WebSocketClient {
 
     @Override
     public void onClose(int statusCode, String reason, boolean remote) {
-        log.info("Tenant {} - WebSocket closed {} statusCode: {}, reason: {}", tenant, remote ? "by server." : "",
+        log.info("Tenant {} - WebSocket closed {}statusCode: {}, reason: {}", tenant, remote ? "by server, " : ", ",
                 statusCode, reason);
         if (this.executorService != null)
             this.executorService.shutdownNow();

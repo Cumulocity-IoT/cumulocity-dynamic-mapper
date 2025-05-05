@@ -457,7 +457,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         if (serviceConfiguration.logPayload) {
             String payload = new String(connectorMessage.getPayload(), StandardCharsets.UTF_8);
-            log.info("Tenant {} - INITIAL: new inbound message on topic: {}, payload: {}", tenant, topic, payload);
+            log.info("Tenant {} - INITIAL: new message on topic: {}, payload: {}", tenant, topic, payload);
         }
 
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);

@@ -135,7 +135,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onOpen(URI serverUri) {
-        log.info("Tenant {} - Connector {} connected to Cumulocity notification service over WebSocket",
+        log.info("Tenant {} - Phase III: connected {} to Cumulocity notification service over WebSocket",
                 connectorClient.getTenant(), connectorClient.getConnectorName());
         notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 200);
     }
@@ -198,7 +198,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onClose(int statusCode, String reason) {
-        log.info("Tenant {} - Web Socket connection closed.", connectorClient.getTenant());
+        log.info("Tenant {} - WebSocket connection closed", connectorClient.getTenant());
         if (reason.contains("401"))
             notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 401);
         else
