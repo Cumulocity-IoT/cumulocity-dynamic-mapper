@@ -643,11 +643,11 @@ public class C8YNotificationSubscriber {
                             if (!deviceClient.isOpen()) {
                                 if (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) == 401
                                         || deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                                    log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
+                                    log.info("Tenant {} - Trying to reconnect WebSocket device client... ", tenant);
                                     initDeviceClient();
                                 } else if (deviceClient.getReadyState().equals(ReadyState.CLOSING)
                                         || deviceClient.getReadyState().equals(ReadyState.CLOSED)) {
-                                    log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
+                                    log.info("Tenant {} - Trying to reconnect WebSocket device client... ", tenant);
                                     deviceClient.reconnect();
                                 }
                             }
