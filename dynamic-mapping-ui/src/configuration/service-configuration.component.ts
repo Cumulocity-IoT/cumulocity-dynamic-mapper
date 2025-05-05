@@ -49,7 +49,7 @@ export class ServiceConfigurationComponent implements OnInit {
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
-    maxCPUTimeMS: 150,
+    maxCPUTimeMS: 5000,  // 5 seconds
   };
   editable2updated: boolean = false;
 
