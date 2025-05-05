@@ -326,7 +326,7 @@ public abstract class AConnectorClient {
             handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
 
             activeSubscriptionsInbound = updatedSubscriptionCache;
-            log.info("Tenant {} - Updating subscriptions successful. Active subscriptions: {}",
+            log.info("Tenant {} - Updated subscriptions, active subscriptions: {}",
                     tenant, getActiveSubscriptionsView().size());
         }
     }
