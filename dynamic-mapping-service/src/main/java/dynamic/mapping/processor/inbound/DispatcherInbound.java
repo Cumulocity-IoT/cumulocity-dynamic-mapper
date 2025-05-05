@@ -373,11 +373,11 @@ public class DispatcherInbound implements GenericMessageCallback {
                     ppLog = pp.toString();
                 }
                 log.info(
-                        "Tenant {} - New message on topic: {}, on connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
+                        "Tenant {} - BEGIN: new message on topic: {}, on connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal(), ppLog);
             } else {
-                log.info("Tenant {} - New message on topic: {}, on connector: {}, for Mapping {} with QoS: {}",
+                log.info("Tenant {} - BEGIN: new message on topic: {}, on connector: {}, for Mapping {} with QoS: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal());
             }

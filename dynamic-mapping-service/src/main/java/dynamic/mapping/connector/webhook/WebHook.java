@@ -190,7 +190,7 @@ public class WebHook extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+        log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -234,7 +234,7 @@ public class WebHook extends AConnectorClient {
             loadConfiguration();
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
-                log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
+                log.info("Tenant {} - Phase II, connecting with {}, (shouldConnect):{} {}", tenant,
                         getConnectorName(),
                         shouldConnect(), baseUrl);
                 if (!firstRun) {
@@ -251,7 +251,7 @@ public class WebHook extends AConnectorClient {
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Connected to webHook endpoint {}", tenant,
+                    log.info("Tenant {} - Phase III, connected to webHook endpoint {}", tenant,
                             baseUrl);
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);

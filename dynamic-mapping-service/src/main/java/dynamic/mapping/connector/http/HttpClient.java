@@ -117,7 +117,7 @@ public class HttpClient extends AConnectorClient {
     @Override
     public void connect() {
         String path = (String) connectorSpecification.getProperties().get("path").defaultValue;
-        log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+        log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -132,14 +132,14 @@ public class HttpClient extends AConnectorClient {
             loadConfiguration();
             try {
                 connectionState.setTrue();
-                log.info("Tenant {} - Connected to http endpoint {}", tenant,
+                log.info("Tenant {} - Phase III, connected to http endpoint {}", tenant,
                         path);
                 updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                 List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
                 updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
                 successful = true;
             } catch (Exception e) {
-                log.error("Tenant {} - Connected to http endpoint {}, {}, {}", tenant,
+                log.error("Tenant {} - Phase III, connected to http endpoint {}, {}, {}", tenant,
                         path, e.getMessage(), connectionState.booleanValue());
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();

@@ -226,7 +226,7 @@ public class KafkaClient extends AConnectorClient {
 
 	@Override
 	public void connect() {
-		log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+		log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
 				tenant, getConnectorName(), isConnected(),
 				shouldConnect());
 		if (shouldConnect())
@@ -246,10 +246,10 @@ public class KafkaClient extends AConnectorClient {
 			defaultPropertiesProducer.put("sasl.mechanism", saslMechanism);
 			defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 			defaultPropertiesProducer.put("group.id", groupId);
-			log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
+			log.info("Tenant {} - Phase II, connecting with {}, (shouldConnect):{} {}", tenant,
 					getConnectorName(),
 					shouldConnect(), bootstrapServers);
-			log.info("Tenant {} - Connected to broker {}", tenant,
+			log.info("Tenant {} - Phase III, connected to broker {}", tenant,
 					bootstrapServers);
 			try {
 				// test if the mqtt connection is configured and enabled

@@ -109,7 +109,7 @@ public class ProcessorExtensionCustomAlarm
             getBuildProcessingContext(context, deviceEntries.get(i),
                     i, deviceEntries.size(), c8yAgent);
         }
-        log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {} !", tenant,
+        log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {}.", tenant,
                 mapping.createNonExistingDevice);
 
     }
@@ -140,7 +140,7 @@ public class ProcessorExtensionCustomAlarm
                     substitute = pathTargetSubstitute.get(last).clone();
                 }
                 log.warn(
-                        "Tenant {} - During the processing of this pathTarget: '{}' a repair strategy: '{}' was used.",
+                        "Tenant {} - Processing pathTarget: '{}', repairStrategy: '{}'.",
                         tenant,
                         pathTarget, substitute.repairStrategy);
             }
