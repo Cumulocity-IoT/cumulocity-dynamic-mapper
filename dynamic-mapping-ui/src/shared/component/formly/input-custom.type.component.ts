@@ -44,7 +44,8 @@ import { FieldType } from '@ngx-formly/core';
         [class.is-invalid]="showError"
       />
     </ng-template>`,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false
 })
 export class FieldInputCustom extends FieldType {
   get type() {

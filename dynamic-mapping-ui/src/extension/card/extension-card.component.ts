@@ -27,7 +27,8 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 
 @Component({
   selector: 'd11r-mapping-extension-card',
-  templateUrl: './extension-card.component.html'
+  templateUrl: './extension-card.component.html',
+  standalone: false
 })
 export class ExtensionCardComponent implements OnInit {
   @Input() app: IManagedObject;

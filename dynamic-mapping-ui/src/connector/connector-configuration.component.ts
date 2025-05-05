@@ -34,7 +34,8 @@ import { ConnectorGridComponent } from '../shared/connector-configuration/connec
 @Component({
   selector: 'd11r-mapping-broker-connector',
   styleUrls: ['./connector-configuration.component.style.css'],
-  templateUrl: 'connector-configuration.component.html'
+  templateUrl: 'connector-configuration.component.html',
+  standalone: false
 })
 export class ConnectorConfigurationComponent {
   @ViewChild(ConnectorGridComponent) connectorGrid!: ConnectorGridComponent;

@@ -30,7 +30,8 @@ import { Direction } from '../../shared';
         class="m-r-5"
       ></i>
     </span>
-  `
+  `,
+  standalone: false
 })
 export class DirectionRendererComponent {
   Direction = Direction;

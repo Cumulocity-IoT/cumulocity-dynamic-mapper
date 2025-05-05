@@ -80,7 +80,8 @@ import { TemplateType } from '../../configuration';
   selector: 'd11r-mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid: DataGridComponent;

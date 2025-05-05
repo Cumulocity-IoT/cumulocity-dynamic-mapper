@@ -39,7 +39,8 @@ interface PropertyEntry {
 
 @Component({
   selector: 'd11r-edit-connector-modal',
-  templateUrl: 'connector-configuration-modal.component.html'
+  templateUrl: 'connector-configuration-modal.component.html',
+  standalone: false
 })
 export class ConnectorConfigurationModalComponent implements OnInit {
   @Input() add: boolean;

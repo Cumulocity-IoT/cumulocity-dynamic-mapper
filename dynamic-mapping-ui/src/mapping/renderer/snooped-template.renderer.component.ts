@@ -39,7 +39,8 @@ import { SnoopExplorerComponent } from '../snoop-explorer/snoop-explorer-modal.c
         }}</span>
       </button>
     </div>
-  `
+  `,
+  standalone: false
 })
 export class SnoopedTemplateRendererComponent {
   constructor(

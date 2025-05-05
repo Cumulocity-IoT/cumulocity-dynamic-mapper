@@ -28,7 +28,8 @@ selector: 'd11r-mapping-renderer-qos',
       : context.item.value === 'AT_LEAST_ONCE'
         ? 'At least once'
         : 'Exactly once'
-  }}</span>`
+  }}</span>`,
+  standalone: false
 })
 export class QOSRendererComponent {
   constructor(public context: CellRendererContext) {}

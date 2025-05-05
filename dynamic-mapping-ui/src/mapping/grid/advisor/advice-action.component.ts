@@ -32,7 +32,8 @@ import { AdvisorAction } from '../../shared/stepper.model';
 @Component({
   selector: 'd11r-advice-action',
   templateUrl: './advice-action.component.html',
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class AdviceActionComponent implements OnInit, OnDestroy {
   @Input() enrichedMapping: MappingEnriched;

@@ -47,7 +47,8 @@ const CONSTANTS = {
   selector: 'd11r-snooping-stepper',
   templateUrl: 'snooping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class SnoopingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;

@@ -32,7 +32,8 @@ import { IIdentified } from '@c8y/client';
   selector: 'd11r-device-selector-subscription',
   templateUrl: 'device-selector-subscription.component.html',
   styleUrls: ['../../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class DeviceSelectorSubscriptionComponent implements OnInit {
   @Input() deviceList: IIdentified[];

@@ -27,7 +27,8 @@ import { MappingTreeService } from './tree.service';
   selector: 'd11r-mapping-tree-grid',
   templateUrl: 'tree.component.html',
   styleUrls: ['./tree.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingTreeComponent implements OnInit {
   constructor(

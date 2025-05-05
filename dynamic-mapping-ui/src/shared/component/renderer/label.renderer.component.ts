@@ -37,7 +37,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
         </div>
     </ng-container>
 </div>
-  `
+  `,
+  standalone: false
 })
 export class LabelRendererComponent {
   constructor(public context: CellRendererContext) {

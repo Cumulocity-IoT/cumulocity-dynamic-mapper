@@ -29,7 +29,8 @@ import { ServiceConfiguration } from './shared/configuration.model';
 @Component({
   selector: 'd11r-mapping-service-configuration',
   styleUrls: ['./service-configuration.component.style.css'],
-  templateUrl: 'service-configuration.component.html'
+  templateUrl: 'service-configuration.component.html',
+  standalone: false
 })
 export class ServiceConfigurationComponent implements OnInit {
   version: string = packageJson.version;

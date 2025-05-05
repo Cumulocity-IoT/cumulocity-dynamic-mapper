@@ -54,7 +54,8 @@ import { HttpStatusCode } from '@angular/common/http';
         </span>
       </label>
     </div>
-  `
+  `,
+  standalone: false
 })
 export class StatusActivationRendererComponent {
   constructor(

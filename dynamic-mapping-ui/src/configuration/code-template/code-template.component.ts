@@ -40,7 +40,8 @@ let initializedMonaco = false;
   selector: 'd11r-shared-code',
   templateUrl: 'code-template.component.html',
   styleUrls: ['./code-template.component.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class CodeComponent implements OnInit {
   codeTemplateDecoded: CodeTemplate;

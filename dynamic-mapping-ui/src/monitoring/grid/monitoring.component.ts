@@ -46,7 +46,8 @@ import { NameRendererComponent } from '../../mapping/renderer/name.renderer.comp
   selector: 'd11r-mapping-monitoring-grid',
   templateUrl: 'monitoring.component.html',
   styleUrls: ['../../mapping/shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
   mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();

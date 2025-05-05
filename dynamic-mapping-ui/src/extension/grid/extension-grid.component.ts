@@ -37,7 +37,8 @@ interface ExtensionState {
 @Component({
   selector: 'd11r-mapping-extension',
   templateUrl: './extension-grid.component.html',
-  styleUrls: ['../share/extension.component.css']
+  styleUrls: ['../share/extension.component.css'],
+  standalone: false
 })
 export class ExtensionGridComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();

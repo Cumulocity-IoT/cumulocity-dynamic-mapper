@@ -34,7 +34,8 @@ import { Direction, MappingType, MappingTypeDescriptionMap } from '../../shared'
 @Component({
   selector: 'd11r-mapping-type',
   templateUrl: './mapping-type.component.html',
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingTypeComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
