@@ -43,7 +43,8 @@ import { HttpStatusCode } from '@angular/common/http';
 @Component({
   selector: 'd11r-mapping-connector-details',
   styleUrls: ['./connector-details.component.style.css'],
-  templateUrl: 'connector-details.component.html'
+  templateUrl: 'connector-details.component.html',
+  standalone: false
 })
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;

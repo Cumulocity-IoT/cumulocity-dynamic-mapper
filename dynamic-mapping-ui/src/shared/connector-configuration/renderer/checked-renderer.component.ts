@@ -36,7 +36,8 @@ import { AlertService, CellRendererContext } from '@c8y/ngx-components';
 		<span></span>
       </label>
     </div>
-  `
+  `,
+  standalone: false
 })
 export class CheckedRendererComponent {
   constructor(

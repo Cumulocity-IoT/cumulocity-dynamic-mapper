@@ -62,7 +62,8 @@ interface TestResult {
   selector: 'd11r-mapping-testing',
   templateUrl: 'mapping-testing.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;

@@ -41,7 +41,8 @@ import { MappingService } from '../core/mapping.service';
   selector: 'd11r-mapping-properties',
   templateUrl: 'mapping-properties.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingStepPropertiesComponent
   implements OnInit, OnChanges, OnDestroy {

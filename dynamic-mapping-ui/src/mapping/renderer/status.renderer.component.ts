@@ -32,7 +32,8 @@ import { SnoopStatus } from '../../shared';
   <span *ngSwitchCase="'STOPPED'" class="text-10 label label-primary">snoop: stopped</span>
   <span *ngSwitchCase="'ENABLED'" class="text-10 label label-primary">snoop: pending</span>
 </ng-container>
-  `
+  `,
+  standalone: false
 })
 export class StatusRendererComponent {
   constructor(public context: CellRendererContext) {

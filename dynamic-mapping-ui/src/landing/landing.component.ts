@@ -29,7 +29,8 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 @Component({
   selector: 'd11r-landing',
   templateUrl: './landing.component.html',
-  styleUrl: './landing.component.css'
+  styleUrl: './landing.component.css',
+  standalone: false
 })
 export class LandingComponent implements OnInit {
   constructor(

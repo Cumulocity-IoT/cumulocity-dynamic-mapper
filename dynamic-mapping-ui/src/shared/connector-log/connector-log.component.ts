@@ -35,7 +35,8 @@ import { ConnectorConfigurationService } from '../service/connector-configuratio
 @Component({
   selector: 'd11r-mapping-connector-log',
   styleUrls: ['./connector-log.component.style.css'],
-  templateUrl: 'connector-log.component.html'
+  templateUrl: 'connector-log.component.html',
+  standalone: false
 })
 export class ConnectorStatusComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;

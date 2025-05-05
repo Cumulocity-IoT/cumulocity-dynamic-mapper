@@ -85,7 +85,8 @@ let initializedMonaco = false;
   selector: 'd11r-mapping-stepper',
   templateUrl: 'mapping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;

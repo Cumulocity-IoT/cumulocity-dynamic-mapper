@@ -38,7 +38,8 @@ import { EditorMode } from '../shared/stepper.model';
   selector: 'd11r-mapping-substitution-grid',
   templateUrl: 'substitution-grid.component.html',
   styleUrls: ['./substitution-grid.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class SubstitutionRendererComponent  {
   @Input()

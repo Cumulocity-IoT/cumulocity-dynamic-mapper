@@ -42,7 +42,8 @@ import { ExtensionService } from '../extension.service';
   selector: 'd11r-mapping-add-extension',
   templateUrl: './add-extension-modal.component.html',
   styleUrls: ['./add-extension-modal.component.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class AddExtensionComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;

@@ -25,7 +25,8 @@ import { IManagedObject } from '@c8y/client';
 
 @Component({
   selector: 'd11r-mapping-extension-properties',
-  templateUrl: './extension-properties.component.html'
+  templateUrl: './extension-properties.component.html',
+  standalone: false
 })
 export class ExtensionPropertiesComponent implements OnInit {
   extensionsEntryForm: FormGroup;
