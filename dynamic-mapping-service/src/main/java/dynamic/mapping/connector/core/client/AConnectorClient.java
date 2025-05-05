@@ -375,10 +375,10 @@ public abstract class AConnectorClient {
                 .filter(topic -> !updatedSubscriptionCache.containsKey(topic))
                 .forEach(topic -> {
                     try {
-                        log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
+                        log.debug("Tenant {} - Unsubscribing from topic: [{}]", tenant, topic);
                         unsubscribe(topic);
                     } catch (Exception exp) {
-                        log.error("Tenant {} - Error unsubscribing from topic: {}", tenant, topic, exp);
+                        log.error("Tenant {} - Error unsubscribing from topic: [{}]", tenant, topic, exp);
                     }
                 });
     }
@@ -391,11 +391,11 @@ public abstract class AConnectorClient {
                     Qos qos = determineMaxQosInbound(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
-                        log.info("Tenant {} - Subscribed to topic: {} for connector {} with QoS {}",
+                        log.info("Tenant {} - Subscribed to topic:[{}] for connector {} with QoS {}",
                                 tenant, topic,
                                 connectorName, qos);
                     } catch (ConnectorException exp) {
-                        log.error("Tenant {} - Error subscribing to topic: {}", tenant, topic, exp);
+                        log.error("Tenant {} - Error subscribing to topic:[{}]", tenant, topic, exp);
                     }
                 });
     }
@@ -472,14 +472,14 @@ public abstract class AConnectorClient {
         if (create || subscriptionCount.intValue() == 0) {
             try {
 
-                // log.info("Tenant {} - Subscribing to topic: {}, qos: {}",
+                // log.info("Tenant {} - Subscribing to topic: [{}], qos: {}",
                 // tenant, mapping.mappingTopic, mapping.qos);
                 subscribe(mapping.mappingTopic, mapping.qos);
-                log.info("Tenant {} - Subscribed to topic: {} for connector {} with QoS {}", tenant,
+                log.info("Tenant {} - Subscribed to topic:[{}] for connector {} with QoS {}", tenant,
                         mapping.mappingTopic,
                         connectorName, mapping.qos);// use qos from mapping
             } catch (ConnectorException exp) {
-                log.error("Tenant {} - Error subscribing to topic: {}",
+                log.error("Tenant {} - Error subscribing to topic:[{}]",
                         tenant, mapping.mappingTopic, exp);
             }
         }
@@ -492,12 +492,12 @@ public abstract class AConnectorClient {
 
         if (subscriptionCount.intValue() <= 0) {
             try {
-                log.info("Tenant {} - Unsubscribing from topic: {}",
+                log.info("Tenant {} - Unsubscribing from topic: [{}]",
                         tenant, mapping.mappingTopic);
                 unsubscribe(mapping.mappingTopic);
                 getActiveSubscriptionsInbound().remove(mapping.mappingTopic);
             } catch (Exception exp) {
-                log.error("Tenant {} - Error unsubscribing from topic: {}",
+                log.error("Tenant {} - Error unsubscribing from topic: [{}]",
                         tenant, mapping.mappingTopic, exp);
             }
         }
@@ -523,7 +523,7 @@ public abstract class AConnectorClient {
             try {
                 unsubscribe(mapping.mappingTopic);
             } catch (Exception e) {
-                log.error("Tenant {} - Error unsubscribing from topic: {}",
+                log.error("Tenant {} - Error unsubscribing from topic: [{}]",
                         tenant, mapping.mappingTopic, e);
             }
         }

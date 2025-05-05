@@ -482,7 +482,7 @@ public class C8YNotificationSubscriber {
             if (deviceTokenPerConnector.get(tenant).get(connectorIdentifier) != null) {
                 try {
                     tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdentifier)));
-                    log.info("Tenant {} - Subscriber for Connector {} successfully unsubscribed for Notification 2.0!",
+                    log.info("Tenant {} - Subscriber for Connector {} unsubscribed for Notification 2.0!",
                             tenant, connectorIdentifier);
                     deviceTokenPerConnector.get(tenant).remove(connectorIdentifier);
                 } catch (SDKException e) {

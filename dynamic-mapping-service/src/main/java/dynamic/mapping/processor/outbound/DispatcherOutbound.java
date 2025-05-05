@@ -135,7 +135,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onOpen(URI serverUri) {
-        log.info("Tenant {} - Phase III: connected {} to Cumulocity notification service over WebSocket",
+        log.info("Tenant {} - Phase III, connected {} to Cumulocity notification service over WebSocket",
                 connectorClient.getTenant(), connectorClient.getConnectorName());
         notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 200);
     }
@@ -468,11 +468,11 @@ public class DispatcherOutbound implements NotificationCallback {
         private void logOutboundMessageReceived(String tenant, Mapping mapping, ProcessingContext<?> context,
                 ServiceConfiguration serviceConfiguration) {
             if (serviceConfiguration.logPayload || mapping.debug) {
-                log.info("Tenant {} - New message for topic: {}, for connector: {}, wrapped message: {}",
+                log.info("Tenant {} - New message for topic: [{}], for connector: {}, wrapped message: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorName(),
                         context.getPayload().toString());
             } else {
-                log.info("Tenant {} - New message for topic: {}, for connector: {}, sendPayload: {}",
+                log.info("Tenant {} - New message for topic: [{}], for connector: {}, sendPayload: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorName(),
                         context.isSendPayload());
             }

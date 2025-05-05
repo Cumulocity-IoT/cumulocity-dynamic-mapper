@@ -60,19 +60,23 @@ public class HttpClient extends AConnectorClient {
         String httpPath = new StringBuilder().append("/service/dynamic-mapping-service/").append(HTTP_CONNECTOR_PATH)
                 .toString();
         configProps.put("path",
-                new ConnectorProperty(null, false, 0, ConnectorPropertyType.STRING_PROPERTY, true, false, httpPath, null, null));
+                new ConnectorProperty(null, false, 0, ConnectorPropertyType.STRING_PROPERTY, true, false, httpPath,
+                        null, null));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null, null));
+                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
         configProps.put(PROPERTY_CUTOFF_LEADING_SLASH,
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null, null));
+                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                        null));
         String name = "HTTP Endpoint";
-        String description = "HTTP Endpoint to receive custom payload in the body.\n" 
-                + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n" 
+        String description = "HTTP Endpoint to receive custom payload in the body.\n"
+                + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n"
                 + "will be resolved to a mapping with mapping topic: 'temp/berlin_01'.\n"
-                + "The message must be send in a POST request.\n" 
+                + "The message must be send in a POST request.\n"
                 + "NOTE: The leading '/' is cut off from the sub path automatically. This can be configured ";
         connectorType = ConnectorType.HTTP;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,supportedDirections());
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
+                supportedDirections());
     }
 
     public HttpClient(ConfigurationRegistry configurationRegistry,
@@ -108,9 +112,8 @@ public class HttpClient extends AConnectorClient {
     public boolean initialize() {
         loadConfiguration();
 
-        log.info("Tenant {} - Phase 0, initializing  connector {}, {} was successful", tenant,
-                getConnectorType(),
-                getConnectorName());
+        log.info("Tenant {} - Phase 0, initialized connector {},{} ", tenant,
+                getConnectorName(), getConnectorType());
         return true;
     }
 
@@ -193,12 +196,12 @@ public class HttpClient extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, Qos qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
+        log.debug("Tenant {} - Subscribing on topic: [{}] for connector {}", tenant, topic, connectorName);
         sendSubscriptionEvents(topic, "Subscribing");
     }
 
     public void unsubscribe(String topic) throws Exception {
-        log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
+        log.debug("Tenant {} - Unsubscribing from topic: [{}]", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
     }
 
@@ -226,8 +229,8 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public List<Direction>  supportedDirections() {
-        return new ArrayList<>( Arrays.asList(Direction.INBOUND));
+    public List<Direction> supportedDirections() {
+        return new ArrayList<>(Arrays.asList(Direction.INBOUND));
     }
 
 }

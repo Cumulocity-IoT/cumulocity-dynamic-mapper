@@ -475,7 +475,7 @@ public class WebHook extends AConnectorClient {
                         .toEntity(String.class);
             }
             responseEntity.doOnSuccess(response -> {
-                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}, {}, {}",
+                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}, {}, {}",
                         tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,
                         connectorName, method);
             });
@@ -486,7 +486,7 @@ public class WebHook extends AConnectorClient {
             });
 
             if (responseEntity.block().getStatusCode().is2xxSuccessful()) {
-                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}, {}, {}",
+                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}, {}, {}",
                         tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,
                         connectorName, method);
             }

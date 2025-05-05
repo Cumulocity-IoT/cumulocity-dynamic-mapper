@@ -373,11 +373,11 @@ public class DispatcherInbound implements GenericMessageCallback {
                     ppLog = pp.toString();
                 }
                 log.info(
-                        "Tenant {} - BEGIN: new message on topic: {}, on connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
+                        "Tenant {} - BEGIN: new message on topic: [{}], on connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal(), ppLog);
             } else {
-                log.info("Tenant {} - BEGIN: new message on topic: {}, on connector: {}, for Mapping {} with QoS: {}",
+                log.info("Tenant {} - BEGIN: new message on topic: [{}], on connector: {}, for Mapping {} with QoS: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal());
             }
@@ -457,7 +457,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         if (serviceConfiguration.logPayload) {
             String payload = new String(connectorMessage.getPayload(), StandardCharsets.UTF_8);
-            log.info("Tenant {} - INITIAL: new message on topic: {}, payload: {}", tenant, topic, payload);
+            log.info("Tenant {} - INITIAL: new message on topic: [{}], payload: {}", tenant, topic, payload);
         }
 
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);

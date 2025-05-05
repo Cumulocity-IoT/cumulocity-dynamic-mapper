@@ -360,23 +360,23 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                     payload,
                                     EventRepresentation.class);
                             rt = eventApi.create(eventRepresentation);
-                            log.info("Tenant {} - END: event posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: event posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.ALARM)) {
                             AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
                                     payload,
                                     AlarmRepresentation.class);
                             rt = alarmApi.create(alarmRepresentation);
-                            log.info("Tenant {} - END: alarm posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: alarm posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
                             MeasurementRepresentation measurementRepresentation = jsonParser
                                     .parse(MeasurementRepresentation.class, payload);
                             rt = measurementApi.create(measurementRepresentation);
-                            log.info("Tenant {} - END: measurement posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: measurement posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.OPERATION)) {
                             OperationRepresentation operationRepresentation = jsonParser
                                     .parse(OperationRepresentation.class, payload);
                             rt = deviceControlApi.create(operationRepresentation);
-                            log.info("Tenant {} - END: operation posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: operation posted: {}", tenant, rt);
                         } else {
                             log.error("Tenant {} - Not existing API!", tenant);
                         }
@@ -451,9 +451,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - END: event posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: event posted: {}", tenant, rt);
                         else
-                            log.info("Tenant {} - END: event posted with Id {}", tenant,
+                            log.info("Tenant {} - SEND: event posted with Id {}", tenant,
                                     ((EventRepresentation) rt).getId().getValue());
 
                     } else if (targetAPI.equals(API.ALARM)) {
@@ -462,24 +462,24 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 AlarmRepresentation.class);
                         rt = alarmApi.create(alarmRepresentation);
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - END: alarm posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: alarm posted: {}", tenant, rt);
                         else
-                            log.info("Tenant {} - END: alarm posted with Id {}", tenant,
+                            log.info("Tenant {} - SEND: alarm posted with Id {}", tenant,
                                     ((AlarmRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.MEASUREMENT)) {
                         MeasurementRepresentation measurementRepresentation = jsonParser
                                 .parse(MeasurementRepresentation.class, payload);
                         rt = measurementApi.create(measurementRepresentation);
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - END: measurement posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: measurement posted: {}", tenant, rt);
                         else
-                            log.info("Tenant {} - END: measurement posted with Id {}", tenant,
+                            log.info("Tenant {} - SEND: measurement posted with Id {}", tenant,
                                     ((MeasurementRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.OPERATION)) {
                         OperationRepresentation operationRepresentation = jsonParser
                                 .parse(OperationRepresentation.class, payload);
                         rt = deviceControlApi.create(operationRepresentation);
-                        log.info("Tenant {} - END: operation posted: {}", tenant, rt);
+                        log.info("Tenant {} - SEND: operation posted: {}", tenant, rt);
                     } else {
                         log.error("Tenant {} - Not existing API!", tenant);
                     }

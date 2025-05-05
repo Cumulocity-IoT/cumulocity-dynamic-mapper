@@ -389,7 +389,7 @@ public class KafkaClient extends AConnectorClient {
 		}
 		kafkaProducer.send(new ProducerRecord<String, String>(context.getMapping().publishTopic, key, payload));
 
-		log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
+		log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}", tenant, payload,
 				context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
 	}
 

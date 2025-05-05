@@ -135,7 +135,7 @@ public class MappingController {
             log.error("Tenant {} - Exception when deleting mapping: ", tenant, ex);
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
-        log.info("Tenant {} - Mapping {} successfully deleted!", tenant, id);
+        log.info("Tenant {} - Mapping {} deleted!", tenant, id);
 
         return ResponseEntity.status(HttpStatus.OK).body(id);
     }

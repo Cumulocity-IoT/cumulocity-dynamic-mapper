@@ -113,12 +113,12 @@ public class CustomWebSocketClient extends WebSocketClient {
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery
                     // Thread.currentThread().interrupt();
-                    log.warn("Tenant {} - Processing InterruptedException |  ExecutionException: {}",
+                    log.warn("Tenant {} - END: Processing InterruptedException |  ExecutionException: {}",
                     tenant, e.getMessage());
                 } catch (TimeoutException e) {
                     var cancelResult = processedResults.getProcessingResult().cancel(true);
                     log.warn(
-                            "Tenant {} - Processing timed out with: {} milliseconds, connector InternalWebSocket, result of cancelling: {}",
+                            "Tenant {} - END: Processing timed out with: {} milliseconds, connector InternalWebSocket, result of cancelling: {}",
                             tenant, timeout, cancelResult);
                 }
                 return null; // Proper return for Callable<Void>

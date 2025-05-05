@@ -489,7 +489,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, Qos qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
+        log.debug("Tenant {} - Subscribing on topic: [{}] for connector {}", tenant, topic, connectorName);
         Qos usedQOS = qos;
         sendSubscriptionEvents(topic, "Subscribing");
         //Default to QoS=0 if not provided
@@ -522,11 +522,11 @@ public class MQTTClient extends AConnectorClient {
     }
 
     public void unsubscribe(String topic) throws Exception {
-        log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
+        log.debug("Tenant {} - Unsubscribing from topic: [{}]", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
         Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
         asyncMqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
-            log.info("Tenant {} - Successfully unsubscribed from topic: {} for connector {}", tenant, topic,
+            log.info("Tenant {} - Successfully unsubscribed from topic: [{}] for connector {}", tenant, topic,
                     connectorName);
         }).exceptionally(throwable -> {
             log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
@@ -545,7 +545,7 @@ public class MQTTClient extends AConnectorClient {
         mqttClient.publish(mqttMessage);
 
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
+            log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}", tenant, payload,
                     context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
         }
     }
