@@ -72,7 +72,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         int timeout = processedResults.getMaxCPUTimeMS();
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "Tenant {} - MQTT message received: api: {}, QoS mappings: {}, connector InternalWebSocket",
+                    "Tenant {} - INITIAL: new message notification 2.0 : {}: api: {}, QoS mappings: {}, connector InternalWebSocket",
                     tenant, notification.getApi(), mappingQos);
         }
         if (mappingQos > 0 || timeout > 0) {

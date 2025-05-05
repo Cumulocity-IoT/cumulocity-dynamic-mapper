@@ -434,7 +434,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 if (e.getStackTrace().length > 0) {
                     lineNumber = e.getStackTrace()[0].getLineNumber();
                 }
-                String errorMessage = String.format("Tenant %s - Message for mapping: %s processing error: %s, line %s",
+                String errorMessage = String.format("Tenant %s - Processing error: %s for mapping: %s, line %s",
                         tenant, mapping.name, e.getMessage(), lineNumber);
                 log.warn(errorMessage);
                 log.debug("Tenant {} - Processing error details:", tenant, e);
@@ -457,7 +457,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         if (serviceConfiguration.logPayload) {
             String payload = new String(connectorMessage.getPayload(), StandardCharsets.UTF_8);
-            log.info("Tenant {} - On topic: {}, new inbound message: {}", tenant, topic, payload);
+            log.info("Tenant {} - INITIAL: new inbound message on topic: {}, payload: {}", tenant, topic, payload);
         }
 
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);

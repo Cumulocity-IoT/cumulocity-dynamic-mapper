@@ -109,7 +109,7 @@ public class ProcessorExtensionCustomAlarm
             getBuildProcessingContext(context, deviceEntries.get(i),
                     i, deviceEntries.size(), c8yAgent);
         }
-        log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {}.", tenant,
+        log.info("Tenant {} - Completed context, processing sequentially, createNonExistingDevice: {}", tenant,
                 mapping.createNonExistingDevice);
 
     }

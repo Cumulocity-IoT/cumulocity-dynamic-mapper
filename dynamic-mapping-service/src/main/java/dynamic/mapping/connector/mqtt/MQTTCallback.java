@@ -91,7 +91,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         int effectiveQos = Math.min(publishQos, mappingQos);
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "Tenant {} - MQTT message received: topic: {}, QoS message: {}, QoS effective: {}, QoS mappings: {},Connector {}",
+                    "Tenant {} - INITIAL: new inbound message on topic: {}, QoS message: {}, QoS effective: {}, QoS mappings: {}, Connector {}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), effectiveQos, mappingQos,
                     connectorIdentifier);
         }
