@@ -226,7 +226,7 @@ public class MQTTClient extends AConnectorClient {
                 return false;
             }
         }
-        log.info("Tenant {} - Phase 0, initializing  connector {}, {} was successful", tenant,
+        log.info("Tenant {} - Phase 0, initializing connector {}, {} was successful", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;

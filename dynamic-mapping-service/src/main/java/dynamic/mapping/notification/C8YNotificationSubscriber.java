@@ -204,10 +204,10 @@ public class C8YNotificationSubscriber {
         boolean notificationAvailable = subscriptionsService.callForTenant(tenant, () -> {
             try {
                 subscriptionAPI.getSubscriptions().get(1);
-                log.info("Tenant {} - Notification 2.0 available, proceed connecting...", tenant);
+                log.info("Tenant {} - Phase 0, initializing Notification 2.0, proceed connecting ...", tenant);
                 return true;
             } catch (SDKException e) {
-                log.warn("Tenant {} - Notification 2.0 Service not available, disabling Outbound Mapping", tenant);
+                log.warn("Tenant {} - Phase 0, initializing Notification 2.0 Service not available, disabling Outbound Mapping", tenant);
                 return false;
             }
         });
