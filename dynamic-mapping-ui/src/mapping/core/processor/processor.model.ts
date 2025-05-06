@@ -21,7 +21,7 @@ import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
 import { API, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
-import { Java } from './processor-js.model';
+import { Java, SubstitutionContext } from './processor-js.model';
 
 export interface C8YRequest {
   predecessor?: number;
@@ -210,17 +210,6 @@ export function extractLineAndColumn(stackTraceLine) {
   return null;
 }
 
-// export function evaluateWithArgs(codeString, ...args) {
-//   // Add 'Java' as the first parameter
-//   const paramNames = ['Java'].concat(args.map((_, i) => `arg${i}`)).join(',');
-
-//   // Create the function with Java and your other parameters
-//   const fn = new Function(paramNames, codeString);
-
-//   // Call the function with Java as the first argument, followed by your other args
-//   return fn(Java, ...args);
-// }
-
 export function evaluateWithArgs(codeString, ...args) {
   // Capture console output
   const logs = [];
@@ -276,4 +265,332 @@ export function removeJavaTypeLines(code) {
 
   // Join the lines back together
   return filteredLines.join('\n');
+}
+
+export interface EvaluationError {
+  message: string;
+  stack: string | null;
+  location: any | null;
+}
+
+export interface EvaluationResult {
+  success: boolean;
+  result?: any;
+  error?: EvaluationError;
+  logs: string[];
+}
+
+/**
+ * Evaluates JavaScript code with arguments and a timeout
+ * @param codeString The JavaScript code to evaluate
+ * @param args Arguments to pass to the code
+ * @returns Promise resolving to evaluation result
+ */
+
+export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionContext): Promise<EvaluationResult> {
+  // Serialize the SubstitutionContext object
+  const serializableCtx = {
+    identifier: ctx.getGenericDeviceIdentifier ? ctx.getGenericDeviceIdentifier() : ctx['deviceIdentifier'],
+    payload: ctx.getPayload ? ctx.getPayload() : ctx['payload']
+  };
+
+  // Define the timeout duration
+  const timeoutMs = 250;
+
+  // Create a promise for the evaluation
+  return Promise.race([
+    // Timeout promise
+    new Promise<EvaluationResult>(resolve => setTimeout(() => {
+      resolve({
+        success: false,
+        error: {
+          message: `Execution timed out after ${timeoutMs}ms`,
+          stack: null,
+          location: null
+        },
+        logs: ["Execution timed out"]
+      });
+    }, timeoutMs)),
+
+    // Worker promise
+    new Promise<EvaluationResult>((resolve) => {
+      const logs: string[] = [];
+      let worker: Worker | null = null;
+      let workerUrl: string | null = null;
+      let timeoutId: number | null = null;
+
+      try {
+        // Create worker script with improved log handling
+        const workerScript = `
+          self.onmessage = function(event) {
+            // Set up console capture
+            const logs = [];
+            const consoleLog = function(...args) {
+              const logString = args.map(arg => {
+                if (arg === undefined) return 'undefined';
+                if (arg === null) return 'null';
+                if (typeof arg === 'object') {
+                  try {
+                    return JSON.stringify(arg);
+                  } catch (e) {
+                    return String(arg);
+                  }
+                }
+                return String(arg);
+              }).join(' ');
+              
+              logs.push(logString);
+              
+              // Real-time log streaming to main thread
+              self.postMessage({ 
+                type: 'log', 
+                data: logString 
+              });
+            };
+            
+            // Create console object with all common methods
+            const console = {
+              log: consoleLog,
+              info: consoleLog,
+              warn: consoleLog,
+              error: consoleLog,
+              debug: consoleLog
+            };
+            
+            /**
+             * JavaScript equivalent of the Java SubstitutionContext class
+             */
+            class SubstitutionContext {
+              IDENTITY = "_IDENTITY_";
+              #payload;  // Using private class field (equivalent to private final in Java)
+              #genericDeviceIdentifier;
+
+              // Constants
+              IDENTITY_EXTERNAL = this.IDENTITY + ".externalId";
+              IDENTITY_C8Y = this.IDENTITY + ".c8ySourceId";
+
+              /**
+               * Constructor for the SubstitutionContext class
+               * @param {string} genericDeviceIdentifier - The generic device identifier
+               * @param {string} payload - The JSON object representing the data
+               */
+              constructor(genericDeviceIdentifier, payload) {
+                this.#payload = (payload || {});
+                this.#genericDeviceIdentifier = genericDeviceIdentifier;
+              }
+
+              /**
+               * Gets the generic device identifier
+               * @returns {string} The generic device identifier
+               */
+              getGenericDeviceIdentifier() {
+                return this.#genericDeviceIdentifier;
+              }
+
+              /**
+               * Gets the external identifier from the JSON object
+               * @returns {string|null} The external identifier or null if not found
+               */
+              getExternalIdentifier() {
+                try {
+                  const parsedPayload = JSON.parse(this.#payload);
+                  const identityMap = parsedPayload[this.IDENTITY];
+                  return identityMap["externalId"];
+                } catch (e) {
+                  console.debug("Error retrieving external identifier", e);
+                  return null;
+                }
+              }
+
+              /**
+               * Gets the C8Y identifier from the JSON object
+               * @returns {string|null} The C8Y identifier or null if not found
+               */
+              getC8YIdentifier() {
+                try {
+                  const parsedPayload = JSON.parse(this.#payload);
+                  const identityMap = parsedPayload[this.IDENTITY];
+                  return identityMap["c8ySourceId"];
+                } catch (e) {
+                  console.debug("Error retrieving c8y identifier", e);
+                  return null;
+                }
+              }
+
+              /**
+               * Gets the JSON object
+               * @returns {Object} The JSON object
+               */
+              getPayload() {
+                return this.#payload;
+              }
+            }
+
+            const { code, ctx } = event.data;
+            
+            try {
+              // Debug marker to verify code execution context
+              console.log("Starting script execution in worker");
+              
+              // Create context object
+              const arg0 = new SubstitutionContext(ctx.identifier, ctx.payload);
+              
+              // Use Function constructor with console explicitly passed
+              const fn = new Function('arg0', 'console', code);
+              const result = fn(arg0, console);
+              
+              // Send back successful result with logs
+              self.postMessage({ 
+                type: 'result',
+                success: true, 
+                result,
+                logs
+              });
+            } catch (error) {
+              console.error("Error in worker:", error.message);
+              
+              // Send back error
+              self.postMessage({ 
+                type: 'result', 
+                success: false, 
+                error: {
+                  message: error.message,
+                  stack: error.stack
+                },
+                logs
+              });
+            }
+          };
+        `;
+
+        // Rest of your code remains the same
+        const blob = new Blob([workerScript], { type: 'application/javascript' });
+        workerUrl = URL.createObjectURL(blob);
+
+        // Create and start the worker
+        worker = new Worker(workerUrl);
+
+        // Set up timeout to terminate worker
+        timeoutId = window.setTimeout(() => {
+          if (worker) {
+            worker.terminate();
+          }
+          if (workerUrl) {
+            URL.revokeObjectURL(workerUrl);
+          }
+
+          resolve({
+            success: false,
+            error: {
+              message: `Execution timed out after ${timeoutMs}ms`,
+              stack: null,
+              location: null
+            },
+            logs
+          });
+        }, timeoutMs);
+
+        // Handle messages from the worker - IMPROVED LOG HANDLING
+        worker.onmessage = (e) => {
+          const { type, data } = e.data;
+
+          if (type === 'log') {
+            // Add log to our collection
+            logs.push(data);
+            // You can also log to the main thread console for debugging
+            console.log(`[Worker Log] ${data}`);
+          } else if (type === 'result') {
+            // Clear timeout
+            if (timeoutId !== null) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
+
+            // Clean up
+            if (worker) {
+              worker.terminate();
+              worker = null;
+            }
+            if (workerUrl) {
+              URL.revokeObjectURL(workerUrl);
+              workerUrl = null;
+            }
+
+            // IMPORTANT: Use the logs from the worker result
+            // along with any logs we collected from streaming
+            const workerLogs = e.data.logs || [];
+            const allLogs = [...logs];
+
+            // Avoid duplicate logs (might happen with the streaming approach)
+            for (const wLog of workerLogs) {
+              if (!logs.includes(wLog)) {
+                allLogs.push(wLog);
+              }
+            }
+
+            resolve({
+              success: e.data.success,
+              result: e.data.result,
+              error: e.data.error,
+              logs: allLogs
+            } as EvaluationResult);
+          }
+        };
+
+        // Handle worker errors
+        worker.onerror = (error) => {
+          if (timeoutId !== null) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+
+          if (worker) {
+            worker.terminate();
+            worker = null;
+          }
+          if (workerUrl) {
+            URL.revokeObjectURL(workerUrl);
+            workerUrl = null;
+          }
+
+          resolve({
+            success: false,
+            error: {
+              message: `Worker error: ${error.message}`,
+              stack: null,
+              location: null
+            },
+            logs
+          });
+        };
+
+        // Start the worker with code and context
+        worker.postMessage({
+          code: codeString,
+          ctx: serializableCtx
+        });
+      } catch (error: any) {
+        // Clean up if creation fails
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+        }
+        if (worker) {
+          worker.terminate();
+        }
+        if (workerUrl) {
+          URL.revokeObjectURL(workerUrl);
+        }
+
+        resolve({
+          success: false,
+          error: {
+            message: `Failed to create or run worker: ${error.message}`,
+            stack: error.stack || null,
+            location: null
+          },
+          logs
+        });
+      }
+    })
+  ]);
 }
