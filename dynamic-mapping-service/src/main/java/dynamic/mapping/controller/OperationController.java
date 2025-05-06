@@ -215,7 +215,8 @@ public class OperationController {
 
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {
-            client.updateActiveSubscriptionsInbound(updatedMappingsInbound, false, true);
+            // we always start with a cleanSession in case we reload the mappings
+            client.updateActiveSubscriptionsInbound(updatedMappingsInbound, false,true);
             updatedMappingsOutbound.forEach(mapping -> client.updateActiveSubscriptionOutbound(mapping));
         });
 

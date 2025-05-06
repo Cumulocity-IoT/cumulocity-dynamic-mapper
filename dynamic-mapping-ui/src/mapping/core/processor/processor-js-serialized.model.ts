@@ -19,27 +19,156 @@
  */
 // JavaScript simulation of Java classes
 
+export const Java_Types_Serialized = `
 // Simulate Java.type function
-export const Java = {
+const Java = {
   type: function (className) {
     switch (className) {
       case 'dynamic.mapping.processor.model.SubstitutionResult':
-        return SubstitutionResult;
+        return SubstitutionResult_Custom;
       case 'dynamic.mapping.processor.model.SubstituteValue':
-        return SubstituteValue;
+        return SubstituteValue_Custom;
       case 'dynamic.mapping.processor.model.RepairStrategy':
-        return RepairStrategy;
-      case 'dynamic.mapping.processor.model.SubstituteValue$TYPE':
-        return TYPE;
+        return RepairStrategy_Custom;
       case 'java.util.ArrayList':
-        return ArrayList;
+        return ArrayList_Custom;
       case 'java.util.HashMap':
-        return HashMap;
+        return HashMap_Custom;
+      case 'dynamic.mapping.processor.model.SubstituteValue$TYPE':
+        return TYPE_Custom;
       default:
-        throw new Error(`Unknown Java class: ${className}`);
+        throw new Error("Unknown Java class: " +  className);
     }
   }
 };
+
+// RepairStrategy enum
+const RepairStrategy_Custom = {
+  DEFAULT: 'DEFAULT',
+  USE_FIRST_VALUE_OF_ARRAY: 'USE_FIRST_VALUE_OF_ARRAY',
+  USE_LAST_VALUE_OF_ARRAY: 'USE_LAST_VALUE_OF_ARRAY',
+  IGNORE: 'IGNORE',
+  REMOVE_IF_MISSING_OR_NULL: 'REMOVE_IF_MISSING_OR_NULL',
+  CREATE_IF_MISSING: 'CREATE_IF_MISSING'
+};
+
+// TYPE enum (inside SubstituteValue in Java)
+const TYPE_Custom = {
+  ARRAY: 'ARRAY',
+  IGNORE: 'IGNORE',
+  NUMBER: 'NUMBER',
+  OBJECT: 'OBJECT',
+  TEXTUAL: 'TEXTUAL'
+};
+
+// SubstituteValue class
+class SubstituteValue_Custom {
+  value;
+  type;
+  repairStrategy;
+  expandArray;
+  constructor(value, type, repairStrategy, expandArray) {
+    this.value = value;
+    this.type = type;
+    this.repairStrategy = repairStrategy;
+    this.expandArray = expandArray;
+  }
+
+  // Clone method if needed
+  clone() {
+    return new SubstituteValue(
+      this.value,
+      this.type,
+      this.repairStrategy,
+      this.expandArray
+    );
+  }
+}
+
+// ArrayList simulation
+class ArrayList_Custom {
+  items;
+  constructor() {
+    this.items = [];
+  }
+
+  add(item) {
+    this.items.push(item);
+    return true;
+  }
+
+  get(index) {
+    return this.items[index];
+  }
+
+  size() {
+    return this.items.length;
+  }
+
+  isEmpty() {
+    return this.items.length === 0;
+  }
+
+  // Additional ArrayList methods as needed
+}
+
+// HashMap simulation
+class HashMap_Custom {
+  map;
+  constructor() {
+    this.map = {};
+  }
+
+  put(key, value) {
+    this.map[key] = value;
+    return value;
+  }
+
+  get(key) {
+    return this.map[key] || null;
+  }
+
+  containsKey(key) {
+    return key in this.map;
+  }
+
+  keySet() {
+    return Object.keys(this.map);
+  }
+
+  // Additional HashMap methods as needed
+}
+
+// SubstitutionResult class
+class SubstitutionResult_Custom {
+  substitutions;
+  constructor(substitutions) {
+    this.substitutions = substitutions || new HashMap();
+  }
+
+  getSubstitutions() {
+    return this.substitutions;
+  }
+
+  toString() {
+    const substitutions = {substitutions : JSON.stringify(this.substitutions.map)}
+    return substitutions;
+  }
+}
+
+// Mock JsonObject for testing
+class JsonObject_Custom {
+  data;
+  constructor(data) {
+    this.data = data || {};
+  }
+
+  get(key) {
+    return this.data[key];
+  }
+}
+
+`
 
 // RepairStrategy enum
 export const RepairStrategy = {
@@ -235,4 +364,5 @@ export class SubstitutionContext {
   getPayload() {
     return this.#payload;
   }
+
 }
