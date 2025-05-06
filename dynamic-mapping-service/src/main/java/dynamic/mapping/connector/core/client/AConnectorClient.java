@@ -314,7 +314,7 @@ public abstract class AConnectorClient {
      * If a connector does not support wildcards in this topic subscriptions, i.e.
      * Kafka, the mapping can't be activated for this connector
      **/
-    public void updateActiveSubscriptionsInbound(List<Mapping> updatedMappings, boolean reset) {
+    public void updateActiveSubscriptionsInbound(List<Mapping> updatedMappings, boolean reset, boolean cleanSession) {
         setMappingsDeployedInbound(new ConcurrentHashMap<>());
         if (reset) {
             activeSubscriptionsInbound = new HashMap<>();
@@ -323,7 +323,11 @@ public abstract class AConnectorClient {
         if (isConnected()) {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<>();
             processInboundMappings(updatedMappings, updatedSubscriptionCache);
-            handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
+            // Update subscriptions only in case of a cleanSession
+            // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ..
+            if (cleanSession){
+                handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
+            }
 
             activeSubscriptionsInbound = updatedSubscriptionCache;
             log.info("Tenant {} - Updated subscriptions, active subscriptions: {}",

@@ -81,11 +81,11 @@ public class MQTTClient extends AConnectorClient {
     public MQTTClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
-                new String[]{"mqtts://", "wss://"});
+                new String[] { "mqtts://", "wss://" });
         ConnectorPropertyCondition useSelfSignedCertificateCondition = new ConnectorPropertyCondition(
-                "useSelfSignedCertificate", new String[]{"true"});
+                "useSelfSignedCertificate", new String[] { "true" });
         ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol",
-                new String[]{"ws://", "wss://"});
+                new String[] { "ws://", "wss://" });
         configProps.put("protocol",
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
                         Map.ofEntries(
@@ -125,6 +125,9 @@ public class MQTTClient extends AConnectorClient {
         configProps.put("serverPath",
                 new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         wsCondition));
+        configProps.put("cleanSession",
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                        null));
         String name = "Generic MQTT";
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
@@ -133,8 +136,8 @@ public class MQTTClient extends AConnectorClient {
     }
 
     public MQTTClient(ConfigurationRegistry configurationRegistry,
-                      ConnectorConfiguration connectorConfiguration,
-                      DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+            ConnectorConfiguration connectorConfiguration,
+            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingComponent = configurationRegistry.getMappingComponent();
@@ -157,7 +160,7 @@ public class MQTTClient extends AConnectorClient {
         this.tenant = tenant;
         this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE, Qos.EXACTLY_ONCE);
         // set qQoS to default QoS
-        //this.qos = QOS.AT_LEAST_ONCE;
+        // this.qos = QOS.AT_LEAST_ONCE;
     }
 
     protected AConnectorClient.Certificate cert;
@@ -167,6 +170,8 @@ public class MQTTClient extends AConnectorClient {
     protected MQTTCallback mqttCallback = null;
 
     protected Mqtt3BlockingClient mqttClient;
+
+    protected Boolean cleanSession = false;
 
     @Getter
     protected List<Qos> supportedQOS;
@@ -212,7 +217,7 @@ public class MQTTClient extends AConnectorClient {
                 List<String> expectedProtocols = Arrays.asList("TLSv1.2");
                 sslConfig = sslConfigBuilder.trustManagerFactory(tmf).protocols(expectedProtocols).build();
             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
-                     | KeyManagementException e) {
+                    | KeyManagementException e) {
                 log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
@@ -251,6 +256,7 @@ public class MQTTClient extends AConnectorClient {
         int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
+        cleanSession = (Boolean) connectorConfiguration.getProperties().get("cleanSession");
 
         Mqtt3ClientBuilder partialBuilder;
         partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
@@ -349,7 +355,7 @@ public class MQTTClient extends AConnectorClient {
                 }
                 try {
                     Mqtt3ConnAck ack = mqttClient.connectWith()
-                            .cleanSession(true)
+                            .cleanSession(cleanSession != null ? cleanSession : true)
                             .keepAlive(60)
                             .send();
                     if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
@@ -364,7 +370,7 @@ public class MQTTClient extends AConnectorClient {
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-                    updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+                    updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
                     List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
@@ -474,7 +480,7 @@ public class MQTTClient extends AConnectorClient {
             }
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+            updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
             List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
             updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
@@ -492,7 +498,7 @@ public class MQTTClient extends AConnectorClient {
         log.debug("Tenant {} - Subscribing on topic: [{}] for connector {}", tenant, topic, connectorName);
         Qos usedQOS = qos;
         sendSubscriptionEvents(topic, "Subscribing");
-        //Default to QoS=0 if not provided
+        // Default to QoS=0 if not provided
         if (usedQOS.equals(null))
             usedQOS = Qos.AT_MOST_ONCE;
         else if (!supportedQOS.contains(qos)) {
