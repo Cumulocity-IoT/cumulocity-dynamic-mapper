@@ -262,7 +262,7 @@ public class KafkaClient extends AConnectorClient {
 					connectionState.setTrue();
 					updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
 					List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-					updateActiveSubscriptionsInbound(updatedMappings, true);
+					updateActiveSubscriptionsInbound(updatedMappings, true, true);
 				}
 				successful = true;
 			} catch (Exception e) {
@@ -306,7 +306,7 @@ public class KafkaClient extends AConnectorClient {
 			connectionState.setFalse();
 			updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
 			List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-			updateActiveSubscriptionsInbound(updatedMappings, true);
+			updateActiveSubscriptionsInbound(updatedMappings, true, true);
 			kafkaProducer.close();
 			log.info("Tenant {} - Disconnected from from broker: {}", tenant, getConnectorName(),
 					bootstrapServers);

@@ -360,7 +360,7 @@ public class WebHook extends AConnectorClient {
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+            updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
             List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
             updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("Tenant {} - Disconnected from webHook endpoint II: {}", tenant,

@@ -92,6 +92,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Map.entry;
 
@@ -400,7 +401,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
             throws ProcessingException {
         String tenant = context.getTenant();
-        StringBuffer error = new StringBuffer("");
+        AtomicReference<ProcessingException> pe = new AtomicReference<>();
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
@@ -484,18 +485,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         log.error("Tenant {} - Not existing API!", tenant);
                     }
                 } catch (JsonProcessingException e) {
-                    log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload);
-                    error.append("Could not map payload: " + targetAPI + "/" + payload);
+                    log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
+                    pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
+                    //error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
                     log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
-                    error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
+                    pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
+                    //error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
                 }
                 return rt;
             });
-        });
-        if (!error.toString().equals("")) {
-            throw new ProcessingException(error.toString());
-        }
+       });
+       if (pe.get() != null) {
+            throw pe.get();
+       }
+
         return result;
     }
 

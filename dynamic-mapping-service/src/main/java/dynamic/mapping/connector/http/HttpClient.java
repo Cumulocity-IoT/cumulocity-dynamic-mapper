@@ -139,7 +139,7 @@ public class HttpClient extends AConnectorClient {
                         path);
                 updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                 List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-                updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+                updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
                 successful = true;
             } catch (Exception e) {
                 log.error("Tenant {} - Phase III, connected to http endpoint {}, {}, {}", tenant,
@@ -183,7 +183,7 @@ public class HttpClient extends AConnectorClient {
 
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+            updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
             log.info("Tenant {} - Disconnected from http endpoint II: {}", tenant,
                     path);
         }

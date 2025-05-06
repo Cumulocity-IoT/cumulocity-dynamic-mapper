@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
+import com.cumulocity.sdk.client.SDKException;
 import com.hivemq.client.mqtt.datatypes.MqttTopic;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 
@@ -35,6 +36,7 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.core.ConfigurationRegistry;
+import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.ProcessingResult;
 import lombok.extern.slf4j.Slf4j;
@@ -111,11 +113,19 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
 
                     // Check for errors in results
                     boolean hasErrors = false;
+                    int httpStatusCode = 0;
                     if (results != null) {
                         for (ProcessingContext<?> context : results) {
-                            // We need to separate logic for different error cases otherwise it could be
-                            // that message are never acked!
                             if (context.hasError()) {
+                                for(Exception error : context.getErrors()) {
+                                    if(error instanceof ProcessingException) {
+                                        if( ((ProcessingException) error).getOriginException() instanceof SDKException) {
+                                            if(((SDKException)((ProcessingException) error).getOriginException()).getHttpStatus() > httpStatusCode) {
+                                                httpStatusCode = ((SDKException)((ProcessingException) error).getOriginException()).getHttpStatus();
+                                            }
+                                        }
+                                    }
+                                }
                                 hasErrors = true;
                                 log.error(
                                         "Tenant {} - Error in processing context for topic: [{}], not sending ack to MQTT broker",
@@ -130,6 +140,14 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                         log.warn("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, Connector {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
+                    } else if(httpStatusCode < 500){
+                        //Errors found but not a server error, acknowledge the message
+                        log.warn("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, Connector {}",
+                                tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
+                        mqttMessage.acknowledge();
+                    } else {
+                        //Not sending ack, trigger retransmission
+                        //TODO Trigger Connector reconnect to after delay
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery

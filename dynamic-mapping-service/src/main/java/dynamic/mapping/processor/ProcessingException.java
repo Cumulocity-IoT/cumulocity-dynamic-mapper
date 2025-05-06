@@ -22,11 +22,17 @@
 package dynamic.mapping.processor;
 
 public class ProcessingException extends Exception {
+    Exception originException = null;
     public ProcessingException(String errorMessage) {
         super(errorMessage);
     }
 
     public ProcessingException(String errorMessage, Exception e) {
         super(errorMessage, e);
+        this.originException = e;
+    }
+
+    public Exception getOriginException() {
+        return originException;
     }
 }

@@ -215,7 +215,7 @@ public class OperationController {
 
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {
-            client.updateActiveSubscriptionsInbound(updatedMappingsInbound, false);
+            client.updateActiveSubscriptionsInbound(updatedMappingsInbound, false, true);
             updatedMappingsOutbound.forEach(mapping -> client.updateActiveSubscriptionOutbound(mapping));
         });
 
