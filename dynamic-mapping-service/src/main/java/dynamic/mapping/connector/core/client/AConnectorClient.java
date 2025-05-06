@@ -324,7 +324,7 @@ public abstract class AConnectorClient {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<>();
             processInboundMappings(updatedMappings, updatedSubscriptionCache);
             // Update subscriptions only in case of a cleanSession
-            // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ..
+            // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ... in case of cleanSession=false?
             if (cleanSession){
                 handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
             }
