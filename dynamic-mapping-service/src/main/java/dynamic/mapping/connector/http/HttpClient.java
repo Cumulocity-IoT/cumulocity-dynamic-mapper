@@ -101,7 +101,7 @@ public class HttpClient extends AConnectorClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
-        this.supportedQOS = Arrays.asList();
+        this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE);
     }
 
     protected AConnectorClient.Certificate cert;
