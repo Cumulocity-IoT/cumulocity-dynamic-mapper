@@ -43,6 +43,7 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.Qos;
+import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -409,12 +410,12 @@ public class WebHook extends AConnectorClient {
                         .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
                             String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error(  new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .onStatus(HttpStatusCode::is5xxServerError, ( response) -> {
                             String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .toEntity(String.class);
             } else if (RequestMethod.DELETE.equals(method)) {
@@ -424,12 +425,12 @@ public class WebHook extends AConnectorClient {
                         .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
                             String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                             String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error(  new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .toEntity(String.class);
             } else if (RequestMethod.PATCH.equals(method)) {
@@ -447,12 +448,12 @@ public class WebHook extends AConnectorClient {
                             .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
                                 String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                                 log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                                return Mono.error( new RuntimeException(errorMessage));
+                                return Mono.error(  new ProcessingException(errorMessage, response.statusCode().value()));
                             })
                             .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                                 String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                                 log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                                return Mono.error( new RuntimeException(errorMessage));
+                                return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                             })
                             .toEntity(String.class);
                 }
@@ -465,12 +466,12 @@ public class WebHook extends AConnectorClient {
                         .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
                             String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                             String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .toEntity(String.class);
             }
@@ -484,7 +485,6 @@ public class WebHook extends AConnectorClient {
                 log.error("Tenant {} - {} - Error: {}", tenant, errorMessage, e.getMessage());
                 throw new RuntimeException(errorMessage, e);
             });
-
             if (responseEntity.block().getStatusCode().is2xxSuccessful()) {
                 log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}, {}, {}",
                         tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,

@@ -505,9 +505,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context)
             throws ProcessingException {
-        StringBuffer error = new StringBuffer("");
+        //StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        AtomicReference<ProcessingException> pe = new AtomicReference<>();
+        API targetAPI = context.getMapping().getTargetAPI();
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -554,14 +556,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 } catch (SDKException s) {
                     log.error("Tenant {} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(),
                             s);
-                    error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
+                    pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + currentRequest.getRequest(), s));
+                    //error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
                 }
                 return mor;
             });
         });
-        if (!error.toString().equals("")) {
-            throw new ProcessingException(error.toString());
+        if (pe.get() != null) {
+            throw pe.get();
         }
+        //if (!error.toString().equals("")) {
+        //    throw new ProcessingException(error.toString());
+        //}
         return device;
     }
 
@@ -1098,14 +1104,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
             }
 
-            if (response.getStatusCodeValue() >= 300) {
-                throw new ProcessingException("Failed to create binary: " + response.toString());
+            if (response.getStatusCode().value() >= 300) {
+                throw new ProcessingException("Failed to create binary: " + response.toString(), response.getStatusCode().value());
             }
-            return response.getStatusCodeValue();
+            return response.getStatusCode().value();
         } catch (Exception e) {
             log.error("Tenant {} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(),
                     eventId, e);
-            throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage());
+            throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage(), e);
         }
     }
 }
