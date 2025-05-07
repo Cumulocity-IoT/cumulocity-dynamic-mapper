@@ -61,16 +61,8 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
     const systemCodeTemplate = codeTemplates[TemplateType.SYSTEM];
     const systemCodeTemplateDecoded = enc.decode(base64ToBytes(systemCodeTemplate.code));
     // Modify codeToRun to use arg0 instead of ctx
-    const codeToRun = `
-            ${mappingCodeTemplateDecoded};
-            ${Java_Types_Serialized};
-            ${systemCodeTemplateDecoded};
-            ${sharedCodeTemplateDecoded};
-            // Use arg0 which is the ctx parameter passed to the function
-            return extractFromSource(arg0);
-            `;
-
-
+    const codeToRun = `${mappingCodeTemplateDecoded}${Java_Types_Serialized}${systemCodeTemplateDecoded}${sharedCodeTemplateDecoded}return extractFromSource(arg0);`;
+    // console.log("Code to run:", codeToRun);
     let substitutionTimeExists: boolean = false;
 
     try {
@@ -78,7 +70,6 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
       
       // Call our modified evaluateWithArgs
       const evalResult = await evaluateWithArgsWebWorker(codeToRun, ctx) as any;
-      // const evalResult = evaluateWithArgs(codeToRun, ctx);
 
       // Store logs in context if needed
       context.logs = evalResult.logs;
@@ -88,7 +79,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
         const error = evalResult.error;
         context.errors.push(error.message);
         console.error("Error during testing", error);
-        context.logs.push(error.stack);
+        context.logs.push(error.message);
         throw new Error(`Evaluation failed: ${error.message}`);
       }
 
@@ -99,7 +90,6 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
       const keys = Object.keys(substitutions);
 
       for (const key of keys) {
-        // const values = substitutions.get(key);
         const values = substitutions[key];
         // console.log(`Key: ${key}, Value: ${value}`);
         const processingCacheEntry: SubstituteValue[] = _.get(

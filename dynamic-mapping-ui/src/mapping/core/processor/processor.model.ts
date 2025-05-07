@@ -190,82 +190,6 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   _.set(template, `${TOKEN_IDENTITY}.c8ySourceId`, identifier);
 }
 
-/**
-* Extract line and column numbers from a stack trace line
-* @param {string} stackTraceLine - The stack trace line to parse
-* @returns {object|null} An object with line and column numbers, or null if not found
-*/
-export function extractLineAndColumn(stackTraceLine) {
-  // This pattern looks for "<anonymous>:X:Y" where X is line and Y is column
-  const pattern = /<anonymous>:(\d+):(\d+)/;
-  const match = stackTraceLine.match(pattern);
-
-  if (match && match.length >= 3) {
-    return {
-      line: parseInt(match[1], 10),
-      column: parseInt(match[2], 10)
-    };
-  }
-
-  return null;
-}
-
-export function evaluateWithArgs(codeString, ...args) {
-  // Capture console output
-  const logs = [];
-  const originalConsoleLog = console.log;
-
-  // Create a scoped console.log override that captures output
-  const scopedConsole = {
-    log: (...logArgs) => {
-      logs.push(logArgs.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '));
-      // Still call the original for debugging visibility if needed
-      originalConsoleLog.apply(console, logArgs);
-    }
-  };
-
-  try {
-    // Add 'Java' and 'console' as parameters
-    const paramNames = ['Java', 'console'].concat(args.map((_, i) => `arg${i}`)).join(',');
-
-    // Create the function with Java, console, and your other parameters
-    const fn = new Function(paramNames, codeString);
-
-    // Call the function with Java and our scoped console as arguments, followed by your other args
-    const result = fn(Java, scopedConsole, ...args);
-
-    // Return both the evaluation result and the logs
-    return {
-      result,
-      logs,
-      success: true
-    };
-  } catch (error) {
-    // Return the error and logs in a structured way
-    return {
-      error: {
-        message: error.message,
-        stack: error.stack,
-        location: extractLineAndColumn(error.stack)
-      },
-      logs,
-      success: false
-    };
-  } finally {
-    // No need to restore console.log as we used a scoped version
-  }
-}
-
-export function removeJavaTypeLines(code) {
-  // Split the code into lines
-  const lines = code.split('\n');
-
-  // Filter out lines containing Java.type
-  const filteredLines = lines.filter(line => !line.includes('Java.type'));
-
-  // Join the lines back together
-  return filteredLines.join('\n');
-}
 
 export interface EvaluationError {
   message: string;
@@ -430,8 +354,6 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
             
             try {
               // Debug marker to verify code execution context
-              console.log("Starting script execution in worker");
-              
               // Create context object
               const arg0 = new SubstitutionContext(ctx.identifier, ctx.payload);
               
@@ -449,13 +371,54 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
             } catch (error) {
               console.error("Error in worker:", error.message);
               
-              // Send back error
+            // Extract and fix line numbers in a more robust way
+              let errorStack = error.stack || "";
+              let errorMessage = error.message || "Unknown error";
+              let lineInfo = null;
+              
+              // Log the original error stack for debugging
+              // console.error("Original error stack:", errorStack);
+              
+              // Parse line numbers more robustly - handle different browser formats
+              const lineMatches = errorStack.match(/<anonymous>:(\\d+):(\\d+)/);
+              const evalMatches = errorStack.match(/eval.*<anonymous>:(\\d+):(\\d+)/);
+              const functionMatches = errorStack.match(/Function:(\\d+):(\\d+)/);
+              
+              let adjustedLine = null;
+              let column = null;
+              
+              if (lineMatches) {
+                adjustedLine = Math.max(1, parseInt(lineMatches[1]) - 2);
+                column = parseInt(lineMatches[2]);
+                // console.error("Found line from <anonymous>:", adjustedLine);
+              } else if (evalMatches) {
+                adjustedLine = Math.max(1, parseInt(evalMatches[1]) - 2);
+                column = parseInt(evalMatches[2]);
+                // console.error("Found line from eval:", adjustedLine);
+              } else if (functionMatches) {
+                adjustedLine = Math.max(1, parseInt(functionMatches[1]) - 2);
+                column = parseInt(functionMatches[2]);
+                // console.error("Found line from Function:", adjustedLine);
+              } else {
+                // console.error("No line number found in error stack.");
+              }
+              
+              // Add line info to the error message if found
+              if (adjustedLine !== null) {
+                errorMessage = errorMessage + " (at line " + adjustedLine + 
+                              (column ? ", column " + column : "") + ")";
+                
+                lineInfo = { line: adjustedLine, column: column };
+              }
+              
+              // Send back error with adjusted information
               self.postMessage({ 
                 type: 'result', 
                 success: false, 
                 error: {
-                  message: error.message,
-                  stack: error.stack
+                  message: errorMessage,
+                  stack: errorStack,
+                  location: lineInfo
                 },
                 logs
               });
