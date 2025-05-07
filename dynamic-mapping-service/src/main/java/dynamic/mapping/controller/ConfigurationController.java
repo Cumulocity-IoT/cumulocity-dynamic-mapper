@@ -114,7 +114,7 @@ public class ConfigurationController {
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Get Feature status", tenant);
+        log.debug("Tenant {} - Get feature", tenant);
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(serviceConfiguration.isOutboundMappingEnabled());
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
@@ -127,7 +127,7 @@ public class ConfigurationController {
     public ResponseEntity<List<ConnectorSpecification>> getConnectorSpecifications() {
         String tenant = contextService.getContext().getTenant();
         List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
-        log.info("Tenant {} - Getting connection properties...", tenant);
+        log.info("Tenant {} - Get connector specifications", tenant);
         Map<ConnectorType, ConnectorSpecification> spec = connectorRegistry
                 .getConnectorSpecifications();
         // Iterate over all connectors
@@ -167,7 +167,7 @@ public class ConfigurationController {
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
-            log.error("Tenant {} - Error getting mqtt broker configuration: ", tenant, ex);
+            log.error("Tenant {} - Error creating connector instance", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -176,7 +176,7 @@ public class ConfigurationController {
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(
             @RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
-        log.debug("Tenant {} - Get connection details", tenant);
+        log.debug("Tenant {} - Get connector instances", tenant);
 
         try {
             // Convert wildcard pattern to regex pattern if name is provided
@@ -205,7 +205,7 @@ public class ConfigurationController {
             }
             return ResponseEntity.ok(modifiedConfigs);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error on loading configuration {}", tenant, ex);
+            log.error("Tenant {} - Error getting connector instances", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -213,7 +213,7 @@ public class ConfigurationController {
     @GetMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
-        log.debug("Tenant {} - Get connection details: {}", tenant, identifier);
+        log.debug("Tenant {} - Get connector instance: {}", tenant, identifier);
 
         try {
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
@@ -234,7 +234,7 @@ public class ConfigurationController {
             }
             return ResponseEntity.ok(modifiedConfig);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error getting configuration: {},  {}", tenant, identifier, ex);
+            log.error("Tenant {} - Error getting connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -268,7 +268,7 @@ public class ConfigurationController {
             connectorRegistry.removeClientFromStatusMap(tenant, identifier);
             bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
+            log.error("Tenant {} - Error deleting connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return ResponseEntity.status(HttpStatus.OK).body(identifier);
@@ -319,7 +319,7 @@ public class ConfigurationController {
             // configuration.getIdent());
             // client.reconnect();
         } catch (Exception ex) {
-            log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
+            log.error("Tenant {} - Error updating connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
@@ -328,7 +328,7 @@ public class ConfigurationController {
     @GetMapping(value = "/service", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Get connection details", tenant);
+        log.info("Tenant {} - Get service configuration", tenant);
 
         try {
             final ServiceConfiguration configuration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -338,7 +338,7 @@ public class ConfigurationController {
             // don't modify original copy
             return new ResponseEntity<ServiceConfiguration>(configuration, HttpStatus.OK);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error on loading configuration {}", tenant, ex);
+            log.error("Tenant {} - Error getting service configuration", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -350,7 +350,7 @@ public class ConfigurationController {
         ServiceConfiguration currentServiceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
 
         // don't modify original copy
-        log.info("Tenant {} - Post service configuration: {}", tenant, serviceConfiguration.toString());
+        log.info("Tenant {} - Update service configuration: {}", tenant, serviceConfiguration.toString());
         // existing code templates
         ServiceConfiguration mergeServiceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         Map<String, CodeTemplate> codeTemplates = mergeServiceConfiguration.getCodeTemplates();
@@ -400,7 +400,7 @@ public class ConfigurationController {
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
-            log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
+            log.error("Tenant {} - Error updating service configuration", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -409,7 +409,7 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> getCodeTemplate(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Get code template", tenant);
+        log.debug("Tenant {} - Get code template: {}", tenant, id);
 
         Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
@@ -429,7 +429,7 @@ public class ConfigurationController {
         CodeTemplate result = codeTemplates.get(id);
         if (result == null) {
             // Template not found - return 404 Not Found
-            log.warn("Tenant {} - Code template with ID '{}' not found", tenant, id);
+            log.warn("Tenant {} - Code template with ID [{}] not found", tenant, id);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
             // Template exists - return it with 200 OK
@@ -441,7 +441,7 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Delete code template", tenant);
+        log.debug("Tenant {} - Delete code template: {}", tenant, id);
 
         Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
@@ -468,13 +468,13 @@ public class ConfigurationController {
             result = codeTemplates.remove(id);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error updating code template {}", tenant, ex);
+            log.error("Tenant {} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
         if (result == null) {
             // Template not found - return 404 Not Found
-            log.warn("Tenant {} - Code template with ID '{}' not found", tenant, id);
+            log.warn("Tenant {} - Code template with ID [{}] not found", tenant, id);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
             // Template exists - return it with 200 OK
@@ -506,7 +506,7 @@ public class ConfigurationController {
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             log.debug("Tenant {} - Updated code template", tenant);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error updating code template {}", tenant, ex);
+            log.error("Tenant {} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         } finally {
             if (graalsContext != null) {
@@ -533,10 +533,10 @@ public class ConfigurationController {
             configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             log.debug("Tenant {} - Create code template", tenant);
         } catch (JsonProcessingException ex) {
-            log.error("Tenant {} - Error updating code template {}", tenant, ex);
+            log.error("Tenant {} - Error creating code template", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         } catch (Exception ex) {
-            log.error("Tenant {} - Error updating code template {}", tenant, ex);
+            log.error("Tenant {} - Error creating code template", tenant, ex);
             throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
         } finally {
             if (graalsContext != null) {
@@ -581,7 +581,7 @@ public class ConfigurationController {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
-                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+                log.error("Tenant {} - Error saving service configuration with code templates", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
             }
         }

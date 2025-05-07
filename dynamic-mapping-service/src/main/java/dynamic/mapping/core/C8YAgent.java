@@ -324,7 +324,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             }
                         }
                     } catch (Exception e) {
-                        log.error("Tenant {} - Connector {} - Exception when initializing connector: ", tenant,
+                        log.error("Tenant {} - Connector {} - Error initializing connector: ", tenant,
                                 connectorName, e);
                     }
                     return certResult;
