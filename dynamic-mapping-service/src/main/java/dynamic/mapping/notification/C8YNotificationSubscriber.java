@@ -226,7 +226,7 @@ public class C8YNotificationSubscriber {
                 .cleanSession(true)
                 .keepAlive(60)
                 .send().thenRun(() -> {
-                    log.info("Tenant {} - Phase I-III, connected to C8Y MQTT host {} for device {}", tenant, mqttHost,
+                    log.info("Tenant {} - Phase I-III, connected with C8Y MQTT host {} for device {}", tenant, mqttHost,
                             deviceId);
                     client.toAsync().subscribeWith().topicFilter("s/ds").qos(MqttQos.AT_LEAST_ONCE)
                             .callback(publish -> {
