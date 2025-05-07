@@ -22,17 +22,31 @@
 package dynamic.mapping.processor;
 
 public class ProcessingException extends Exception {
-    Exception originException = null;
+    Throwable originException = null;
+    int httpStatusCode = 0;
     public ProcessingException(String errorMessage) {
         super(errorMessage);
     }
 
-    public ProcessingException(String errorMessage, Exception e) {
+    public ProcessingException(String errorMessage, Throwable e) {
         super(errorMessage, e);
         this.originException = e;
     }
 
-    public Exception getOriginException() {
+    public ProcessingException(String errorMessage, Throwable e, int httpStatusCode) {
+        super(errorMessage, e);
+        this.httpStatusCode = httpStatusCode;
+        this.originException = e;
+    }
+
+    public ProcessingException(String errorMessage, int httpStatusCode) {
+        super(errorMessage);
+        this.httpStatusCode = httpStatusCode;
+    }
+    public int getHttpStatusCode() {
+        return httpStatusCode;
+    }
+    public Throwable getOriginException() {
         return originException;
     }
 }
