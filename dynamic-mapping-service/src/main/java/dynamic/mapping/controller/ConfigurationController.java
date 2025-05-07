@@ -214,12 +214,12 @@ public class ConfigurationController {
     public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.debug("Tenant {} - Get connector instance: {}", tenant, identifier);
-
+    
         try {
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
                     .getConnectorConfigurations(tenant);
             ConnectorConfiguration modifiedConfig = null;
-
+    
             // Remove sensitive data before sending to UI
             for (ConnectorConfiguration config : configurations) {
                 if (config.getIdentifier().equals(identifier)) {
@@ -230,9 +230,13 @@ public class ConfigurationController {
                 }
             }
             if (modifiedConfig == null) {
-                ResponseEntity.notFound();
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Connector instance not found");
             }
             return ResponseEntity.ok(modifiedConfig);
+        } catch (ResponseStatusException ex) {
+            // Re-throw ResponseStatusException as is
+            log.error("Tenant {} - Connector instance not found: {}", tenant, identifier);
+            throw ex;
         } catch (Exception ex) {
             log.error("Tenant {} - Error getting connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());

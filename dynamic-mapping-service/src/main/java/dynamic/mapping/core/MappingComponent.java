@@ -53,6 +53,7 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
@@ -283,18 +284,22 @@ public class MappingComponent {
 
     public Mapping getMapping(String tenant, String id) {
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
-            ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
-            if (mo != null) {
-                try {
+            ManagedObjectRepresentation mo = null;
+            try {
+                mo = inventoryApi.get(GId.asGId(id));
+                if (mo != null) {
                     MappingRepresentation mappingMO = toMappingObject(mo);
                     Mapping mapping = mappingMO.getC8yMQTTMapping();
                     mapping.setId(mappingMO.getId());
                     log.debug("Tenant {} - Found Mapping: {}", tenant, mapping.id);
                     return mapping;
-                } catch (IllegalArgumentException e) {
-                    log.warn("Failed to convert managed object to mapping: {}", mo.getId(), e);
-                    return null;
                 }
+            } catch (SDKException e) {
+                log.warn("Failed to find managed object to mapping: {}", id, e);
+                return null;
+            } catch (IllegalArgumentException e) {
+                log.warn("Failed to convert managed object to mapping: {}", id, e);
+                return null;
             }
             return null;
         });
