@@ -21,6 +21,7 @@
 
 package dynamic.mapping.notification.websocket;
 
+import dynamic.mapping.processor.model.C8YRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -95,7 +96,8 @@ public class CustomWebSocketClient extends WebSocketClient {
                     boolean hasErrors = false;
                     if (results != null) {
                         for (ProcessingContext<?> context : results) {
-                            if (context.hasError()) {
+                            List<C8YRequest> resultRequests = context.getRequests();
+                            if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                 hasErrors = true;
                                 break;
                             }
