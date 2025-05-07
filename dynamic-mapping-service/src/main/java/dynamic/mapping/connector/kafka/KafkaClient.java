@@ -249,7 +249,7 @@ public class KafkaClient extends AConnectorClient {
 			log.info("Tenant {} - Phase II, connecting with {}, (shouldConnect):{} {}", tenant,
 					getConnectorName(),
 					shouldConnect(), bootstrapServers);
-			log.info("Tenant {} - Phase III, connected to broker {}", tenant,
+			log.info("Tenant {} - Phase III, connected with {}", tenant,
 					bootstrapServers);
 			try {
 				// test if the mqtt connection is configured and enabled

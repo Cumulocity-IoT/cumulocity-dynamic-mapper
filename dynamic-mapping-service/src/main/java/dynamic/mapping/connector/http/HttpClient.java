@@ -135,14 +135,14 @@ public class HttpClient extends AConnectorClient {
             loadConfiguration();
             try {
                 connectionState.setTrue();
-                log.info("Tenant {} - Phase III, connected to http endpoint {}", tenant,
+                log.info("Tenant {} - Phase III, connected with http endpoint {}", tenant,
                         path);
                 updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                 List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
                 updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
                 successful = true;
             } catch (Exception e) {
-                log.error("Tenant {} - Phase III, connected to http endpoint {}, {}, {}", tenant,
+                log.error("Tenant {} - Phase III, connected with http endpoint {}, {}, {}", tenant,
                         path, e.getMessage(), connectionState.booleanValue());
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
