@@ -89,7 +89,7 @@ public class C8YNotificationSubscriber {
 
     @Autowired
     @Qualifier("virtThreadPool")
-    private ExecutorService virtThreadPool;
+    private ExecutorService virtualThreadPool;
 
     // structure: <tenant, <connectorIdentifier, asynchronousDispatcherOutbound>>
     @Getter
@@ -147,7 +147,9 @@ public class C8YNotificationSubscriber {
         try {
             // Getting existing subscriptions
             deviceSubList = getNotificationSubscriptionForDevices(null, DEVICE_SUBSCRIPTION).get();
-            log.info("Tenant {} - Subscribing to devices {}", tenant, deviceSubList);
+            log.info("Tenant {} - Phase 0, initializing Notification 2.0, subscribing to devices", tenant);
+            log.debug("Tenant {} - Phase 0, initializing Notification 2.0, subscribing to devices {}", tenant,
+                    deviceSubList);
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
@@ -204,10 +206,12 @@ public class C8YNotificationSubscriber {
         boolean notificationAvailable = subscriptionsService.callForTenant(tenant, () -> {
             try {
                 subscriptionAPI.getSubscriptions().get(1);
-                log.info("Tenant {} - Phase 0, initializing Notification 2.0, proceed connecting ...", tenant);
+                log.info("Tenant {} - Phase 0, initializing Notification 2.0", tenant);
                 return true;
             } catch (SDKException e) {
-                log.warn("Tenant {} - Phase 0, initializing Notification 2.0 Service not available, disabling Outbound Mapping", tenant);
+                log.warn(
+                        "Tenant {} - Phase 0, initializing Notification 2.0 Service not available, disabling Outbound Mapping",
+                        tenant);
                 return false;
             }
         });
@@ -267,7 +271,7 @@ public class C8YNotificationSubscriber {
         while (subIt.hasNext()) {
             notificationSubscriptionRepresentation = subIt.next();
             if (DEVICE_SUBSCRIPTION.equals(notificationSubscriptionRepresentation.getSubscription())) {
-                log.info("Tenant {} - Subscription with ID {} and Source {} already exists.", tenant,
+                log.info("Tenant {} - Subscription with ID {} and source {} already exists.", tenant,
                         notificationSubscriptionRepresentation.getId().getValue(),
                         notificationSubscriptionRepresentation.getSource().getId().getValue());
                 return notificationSubscriptionRepresentation;
@@ -342,7 +346,7 @@ public class C8YNotificationSubscriber {
                         activatePushConnectivityStatus(tenant, extId.getExternalId());
                     return notification;
                 });
-        return virtThreadPool.submit(callableTask);
+        return virtualThreadPool.submit(callableTask);
     }
 
     public Future<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDevices(
@@ -371,14 +375,17 @@ public class C8YNotificationSubscriber {
                     while (subIt.hasNext()) {
                         notificationSubscriptionRepresentation = subIt.next();
                         if (!"tenant".equals(notificationSubscriptionRepresentation.getContext())) {
-                            log.info("Tenant {} - Subscription with ID {} retrieved", tenant,
-                                    notificationSubscriptionRepresentation.getId().getValue());
+                            log.info(
+                                    "Tenant {} - Phase 0, initializing Notification 2.0, subscription with ID {} retrieved, filter: {},{}", tenant,
+                            notificationSubscriptionRepresentation.getId().getValue(),
+                            notificationSubscriptionRepresentation.getSource(),
+                            notificationSubscriptionRepresentation.getSubscriptionFilter());
                             deviceSubList.add(notificationSubscriptionRepresentation);
                         }
                     }
                     return deviceSubList;
                 });
-        return virtThreadPool.submit(callableTask);
+        return virtualThreadPool.submit(callableTask);
     }
 
     public C8YNotificationSubscription getDeviceSubscriptions(String tenant, String deviceId,
@@ -405,8 +412,10 @@ public class C8YNotificationSubscriber {
             while (subIt.hasNext()) {
                 notificationSubscriptionRepresentation = subIt.next();
                 if (!"tenant".equals(notificationSubscriptionRepresentation.getContext())) {
-                    log.debug("Tenant {} - Subscription with ID {} retrieved", tenant,
-                            notificationSubscriptionRepresentation.getId().getValue());
+                    log.debug("Tenant {} - Subscription with ID {} retrieved: {},{}", tenant,
+                            notificationSubscriptionRepresentation.getId().getValue(),
+                            notificationSubscriptionRepresentation.getSource(),
+                            notificationSubscriptionRepresentation.getSubscriptionFilter());
                     Device device = new Device();
                     device.setId(notificationSubscriptionRepresentation.getSource().getId().getValue());
                     ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant,
@@ -414,7 +423,7 @@ public class C8YNotificationSubscriber {
                     if (mor != null)
                         device.setName(mor.getName());
                     else
-                        log.warn("Tenant {} - Device with ID {} does not exists!", tenant,
+                        log.warn("Tenant {} - Device in subscription with ID {} does not exists!", tenant,
                                 notificationSubscriptionRepresentation.getSource().getId().getValue());
                     devices.add(device);
                     if (notificationSubscriptionRepresentation.getSubscriptionFilter().getApis().size() > 0) {

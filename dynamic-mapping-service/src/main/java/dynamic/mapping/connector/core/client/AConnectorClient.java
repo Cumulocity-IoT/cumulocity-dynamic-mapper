@@ -634,15 +634,16 @@ public abstract class AConnectorClient {
 
     private void logConnectionLost(String closeMessage, Throwable closeException) {
         if (closeException != null) {
-            log.error("Tenant {} - Connection lost to broker {}: {}",
+            log.error("Tenant {} - Connection lost: [{},{}], {}",
                     tenant,
+                    getConnectorName(),
                     getConnectorIdentifier(),
                     closeException.getMessage(),
                     closeException);
         }
 
         if (closeMessage != null) {
-            log.info("Tenant {} - Connection lost to broker: {}",
+            log.info("Tenant {} - Connection lost: {}",
                     tenant,
                     closeMessage);
         }

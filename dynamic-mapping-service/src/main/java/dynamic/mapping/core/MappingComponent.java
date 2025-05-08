@@ -492,7 +492,7 @@ public class MappingComponent {
         List<Mapping> updatedMappings = getMappings(tenant, Direction.OUTBOUND).stream()
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        log.info("Tenant {} - Loaded mappings outbound: {} to cache", tenant, updatedMappings.size());
+        log.info("Tenant {} - Loaded mappings outbound: {}", tenant, updatedMappings.size());
 
         cacheMappingOutbound.replace(tenant, updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
@@ -641,7 +641,7 @@ public class MappingComponent {
     }
 
     private List<Mapping> rebuildMappingInboundCache(String tenant, List<Mapping> updatedMappings) {
-        log.info("Tenant {} - Loaded mappings inbound: {} to cache", tenant, updatedMappings.size());
+        log.info("Tenant {} - Loaded mappings inbound: {}", tenant, updatedMappings.size());
         cacheMappingInbound.replace(tenant, updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // update mappings tree

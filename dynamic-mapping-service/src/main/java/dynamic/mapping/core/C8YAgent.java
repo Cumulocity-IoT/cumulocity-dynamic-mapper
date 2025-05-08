@@ -487,25 +487,26 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 } catch (JsonProcessingException e) {
                     log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
-                    //error.append("Could not map payload: " + targetAPI + "/" + payload);
+                    // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
                     log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
-                    //error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
+                    // error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload +
+                    // "/" + s);
                 }
                 return rt;
             });
-       });
-       if (pe.get() != null) {
+        });
+        if (pe.get() != null) {
             throw pe.get();
-       }
+        }
 
         return result;
     }
 
     public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context)
             throws ProcessingException {
-        //StringBuffer error = new StringBuffer("");
+        // StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
@@ -556,8 +557,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 } catch (SDKException s) {
                     log.error("Tenant {} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(),
                             s);
-                    pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + currentRequest.getRequest(), s));
-                    //error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
+                    pe.set(new ProcessingException(
+                            "Could not sent payload to c8y: " + targetAPI + "/" + currentRequest.getRequest(), s));
+                    // error.append("Could not sent payload to c8y: " + currentRequest.getRequest()
+                    // + " " + s);
                 }
                 return mor;
             });
@@ -565,9 +568,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         if (pe.get() != null) {
             throw pe.get();
         }
-        //if (!error.toString().equals("")) {
-        //    throw new ProcessingException(error.toString());
-        //}
+        // if (!error.toString().equals("")) {
+        // throw new ProcessingException(error.toString());
+        // }
         return device;
     }
 
@@ -801,9 +804,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
         if (mappingServiceIdRepresentation != null) {
             amo = inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
-            log.info("Tenant {} - Agent with ID {} already exists {}", tenant,
+            log.info("Tenant {} - Agent with external ID [{}] already exists {}", tenant,
                     MappingServiceRepresentation.AGENT_ID,
-                    mappingServiceIdRepresentation, amo.getId());
+                    amo.getId().getValue());
         } else {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
             amo.setType(MappingServiceRepresentation.AGENT_TYPE);
@@ -1051,13 +1054,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             ResponseEntity<EventBinary> response;
             byte[] attDataBytes = null;
             if (!binaryInfo.getData().isEmpty()) {
-                if(binaryInfo.getData().startsWith("data:") && binaryInfo.getType() == null || binaryInfo.getType().isEmpty())  {
-                    //Base64 File Header
+                if (binaryInfo.getData().startsWith("data:") && binaryInfo.getType() == null
+                        || binaryInfo.getType().isEmpty()) {
+                    // Base64 File Header
                     int pos = binaryInfo.getData().indexOf(";");
-                    String type= binaryInfo.getData().substring(5, pos-1);
+                    String type = binaryInfo.getData().substring(5, pos - 1);
                     binaryInfo.setType(type);
 
-                    attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().substring(pos+8).getBytes(StandardCharsets.UTF_8));
+                    attDataBytes = Base64.getDecoder()
+                            .decode(binaryInfo.getData().substring(pos + 8).getBytes(StandardCharsets.UTF_8));
                 } else
                     attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().getBytes(StandardCharsets.UTF_8));
             }
@@ -1065,7 +1070,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 binaryInfo.setType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
             }
             if (binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
-                if(binaryInfo.getType() != null && !binaryInfo.getType().isEmpty()) {
+                if (binaryInfo.getType() != null && !binaryInfo.getType().isEmpty()) {
                     if (binaryInfo.getType().contains("image/")) {
                         binaryInfo.setName("file.png");
                     } else if (binaryInfo.getType().contains("text/")) {
@@ -1105,7 +1110,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
 
             if (response.getStatusCode().value() >= 300) {
-                throw new ProcessingException("Failed to create binary: " + response.toString(), response.getStatusCode().value());
+                throw new ProcessingException("Failed to create binary: " + response.toString(),
+                        response.getStatusCode().value());
             }
             return response.getStatusCode().value();
         } catch (Exception e) {
