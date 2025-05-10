@@ -1030,9 +1030,9 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Reset deploymentMap.'));
+      this.alertService.success(gettext('Reset deployment cache.'));
     } else {
-      this.alertService.danger(gettext('Failed to reset deploymentMap!'));
+      this.alertService.danger(gettext('Failed to reset deployment cache!'));
     }
   }
 
