@@ -86,7 +86,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   columnsSubscriptions: Column[] = [
     {
       name: 'id',
-      header: 'System ID',
+      header: 'Device ID',
       path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,
