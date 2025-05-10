@@ -95,7 +95,8 @@ export class ConnectorConfigurationModalComponent implements OnInit {
           value: sp.connectorType
         })),
         change: () => this.createDynamicForm(this.brokerForm.get('connectorType').value),
-        required: true
+        required: true,
+        disabled: this.readOnly
       }
     }];
   }
@@ -119,7 +120,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
         props: {
           label: entry.key,
           required: entry.property.required,
-          disabled: entry.property.readonly,
+          disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
           ...additionalProps
         },
@@ -207,7 +208,8 @@ export class ConnectorConfigurationModalComponent implements OnInit {
           wrappers: ['c8y-form-field'],
           props: {
             label: 'Name',
-            required: true
+            required: true,
+            disabled: this.readOnly,
           }
         },
         {
@@ -219,6 +221,7 @@ export class ConnectorConfigurationModalComponent implements OnInit {
             label: 'Description',
             readonly: true,
             placeholder: 'choose connector ...',
+            disabled: this.readOnly,
           },
         }
       ]
