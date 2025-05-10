@@ -578,22 +578,27 @@ public abstract class AConnectorClient {
 
     private void createAndSendLifecycleEvent() {
         Map<String, String> statusMap = createStatusMap();
+        String message = "Connector status: " + connectorStatus.status;
         c8yAgent.createEvent(
-                "Connector status: " + connectorStatus.status,
-                LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
-                DateTime.now(),
-                mappingServiceRepresentation,
-                tenant,
-                statusMap);
-    }
-
-    private Map<String, String> createStatusMap() {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String date = dateFormat.format(new Date());
+            message,
+            LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
+            DateTime.now(),
+            mappingServiceRepresentation,
+            tenant,
+            statusMap);
+        }
+        
+        private Map<String, String> createStatusMap() {
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String date = dateFormat.format(new Date());
+            String message =connectorStatus.getMessage(); 
+            if ("".equals(connectorStatus.getMessage())) {
+                message =  "Connector status: " + connectorStatus.status;
+            }
 
         return Map.ofEntries(
                 entry("status", connectorStatus.getStatus().name()),
-                entry("message", connectorStatus.message),
+                entry("message", message),
                 entry("connectorName", getConnectorName()),
                 entry("connectorIdentifier", getConnectorIdentifier()),
                 entry("date", date));
