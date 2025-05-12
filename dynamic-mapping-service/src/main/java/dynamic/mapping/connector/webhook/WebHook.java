@@ -42,7 +42,8 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
+import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -132,7 +133,7 @@ public class WebHook extends AConnectorClient {
                 connectorConfiguration.identifier);
         // this.connectorType = connectorConfiguration.connectorType;
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
@@ -182,7 +183,7 @@ public class WebHook extends AConnectorClient {
 
     public boolean initialize() {
         loadConfiguration();
-        log.info("Tenant {} - Connector {} - Initialization of connector {} was successful!", tenant,
+        log.info("Tenant {} - Phase 0, initializing connector {}, {} was successful", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;
@@ -190,7 +191,7 @@ public class WebHook extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+        log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -234,7 +235,7 @@ public class WebHook extends AConnectorClient {
             loadConfiguration();
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
-                log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
+                log.info("Tenant {} - Phase II, connecting with {}, (shouldConnect):{} {}", tenant,
                         getConnectorName(),
                         shouldConnect(), baseUrl);
                 if (!firstRun) {
@@ -251,7 +252,7 @@ public class WebHook extends AConnectorClient {
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Connected to webHook endpoint {}", tenant,
+                    log.info("Tenant {} - Phase III, connected with webHook {}", tenant,
                             baseUrl);
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
@@ -360,7 +361,7 @@ public class WebHook extends AConnectorClient {
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+            updateActiveSubscriptionsInbound(updatedMappingsInbound, true,true);
             List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
             updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("Tenant {} - Disconnected from webHook endpoint II: {}", tenant,
@@ -374,7 +375,7 @@ public class WebHook extends AConnectorClient {
     }
 
     @Override
-    public void subscribe(String topic, QOS qos) throws ConnectorException {
+    public void subscribe(String topic, Qos qos) throws ConnectorException {
         throw new NotSupportedException("WebHook does not support inbound mappings");
     }
 
@@ -409,12 +410,12 @@ public class WebHook extends AConnectorClient {
                         .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
                             String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error(  new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .onStatus(HttpStatusCode::is5xxServerError, ( response) -> {
                             String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .toEntity(String.class);
             } else if (RequestMethod.DELETE.equals(method)) {
@@ -424,12 +425,12 @@ public class WebHook extends AConnectorClient {
                         .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
                             String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                             String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error(  new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .toEntity(String.class);
             } else if (RequestMethod.PATCH.equals(method)) {
@@ -447,12 +448,12 @@ public class WebHook extends AConnectorClient {
                             .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
                                 String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                                 log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                                return Mono.error( new RuntimeException(errorMessage));
+                                return Mono.error(  new ProcessingException(errorMessage, response.statusCode().value()));
                             })
                             .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                                 String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                                 log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                                return Mono.error( new RuntimeException(errorMessage));
+                                return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                             })
                             .toEntity(String.class);
                 }
@@ -465,17 +466,17 @@ public class WebHook extends AConnectorClient {
                         .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
                             String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                             String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new RuntimeException(errorMessage));
+                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .toEntity(String.class);
             }
             responseEntity.doOnSuccess(response -> {
-                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}, {}, {}",
+                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}, {}, {}",
                         tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,
                         connectorName, method);
             });
@@ -484,9 +485,8 @@ public class WebHook extends AConnectorClient {
                 log.error("Tenant {} - {} - Error: {}", tenant, errorMessage, e.getMessage());
                 throw new RuntimeException(errorMessage, e);
             });
-
             if (responseEntity.block().getStatusCode().is2xxSuccessful()) {
-                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}, {}, {}",
+                log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}, {}, {}",
                         tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,
                         connectorName, method);
             }

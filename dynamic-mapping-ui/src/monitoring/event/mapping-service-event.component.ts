@@ -33,7 +33,8 @@ import { EventService, IEvent, IResultList } from '@c8y/client';
   selector: 'd11r-mapping-service-event',
   templateUrl: 'mapping-service-event.component.html',
   styleUrls: ['../../mapping/shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingServiceEventComponent implements OnInit, OnDestroy {
 

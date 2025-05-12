@@ -366,7 +366,7 @@ public class BootstrapService {
     }
 
     private void handleOutboundMapping(String tenant, ServiceConfiguration serviceConfig) {
-        log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, serviceConfig.isOutboundMappingEnabled());
+        log.info("Tenant {} - Config mappingOutbound enabled: {}", tenant, serviceConfig.isOutboundMappingEnabled());
 
         if (!serviceConfig.isOutboundMappingEnabled()) {
             return;

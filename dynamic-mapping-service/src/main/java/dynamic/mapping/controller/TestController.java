@@ -92,11 +92,11 @@ public class TestController {
     private String mappingCreateRole;
 
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
+    public ResponseEntity<List<? extends ProcessingContext<?>>> forwardPayload(@PathVariable String method,
             @RequestParam URI topic, @RequestParam String connectorIdentifier,
             @Valid @RequestBody Map<String, Object> payload) {
         String path = topic.getPath();
-        List<ProcessingContext<?>> result = null;
+        List<? extends ProcessingContext<?>> result = null;
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Test payload: {}, {}, {}", tenant, path, method,
                 payload);
@@ -109,7 +109,7 @@ public class TestController {
             } catch (ConnectorRegistryException e) {
                 throw new RuntimeException(e);
             }
-            return new ResponseEntity<List<ProcessingContext<?>>>(result, HttpStatus.OK);
+            return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());

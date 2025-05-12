@@ -56,7 +56,8 @@ import { C8YNotificationSubscription, Device } from '../shared/mapping.model';
   selector: 'd11r-mapping-subscription-grid',
   templateUrl: 'subscription.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
@@ -85,7 +86,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   columnsSubscriptions: Column[] = [
     {
       name: 'id',
-      header: 'System ID',
+      header: 'Device ID',
       path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,

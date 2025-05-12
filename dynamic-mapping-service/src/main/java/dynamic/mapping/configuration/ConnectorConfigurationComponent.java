@@ -105,10 +105,10 @@ public class ConnectorConfigurationComponent {
             } catch (SDKException exception) {
                 log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
             } catch (Exception e) {
-                String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
-                String msg = String.format("Failed to convert configurator object %s. Error: %s",
-                        identifier,
-                        exceptionMsg);
+                // String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+                // String msg = String.format("Failed to convert configurator object %s. Error: %s",
+                //         identifier,
+                //         exceptionMsg);
                 log.error("Tenant {} - Failed to convert configurator object {}", tenant, identifier, e);
             }
             return rt;

@@ -35,7 +35,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -60,19 +60,23 @@ public class HttpClient extends AConnectorClient {
         String httpPath = new StringBuilder().append("/service/dynamic-mapping-service/").append(HTTP_CONNECTOR_PATH)
                 .toString();
         configProps.put("path",
-                new ConnectorProperty(null, false, 0, ConnectorPropertyType.STRING_PROPERTY, true, false, httpPath, null, null));
+                new ConnectorProperty(null, false, 0, ConnectorPropertyType.STRING_PROPERTY, true, false, httpPath,
+                        null, null));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null, null));
+                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
         configProps.put(PROPERTY_CUTOFF_LEADING_SLASH,
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null, null));
+                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                        null));
         String name = "HTTP Endpoint";
-        String description = "HTTP Endpoint to receive custom payload in the body.\n" 
-                + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n" 
+        String description = "HTTP Endpoint to receive custom payload in the body.\n"
+                + "The sub path following '.../dynamic-mapping-service/httpConnector/' is used as '<MAPPING_TOPIC>', e.g. a json payload send to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapping-service/httpConnector/temp/berlin_01' \n"
                 + "will be resolved to a mapping with mapping topic: 'temp/berlin_01'.\n"
-                + "The message must be send in a POST request.\n" 
+                + "The message must be send in a POST request.\n"
                 + "NOTE: The leading '/' is cut off from the sub path automatically. This can be configured ";
         connectorType = ConnectorType.HTTP;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,supportedDirections());
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
+                supportedDirections());
     }
 
     public HttpClient(ConfigurationRegistry configurationRegistry,
@@ -90,34 +94,33 @@ public class HttpClient extends AConnectorClient {
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
-        this.supportedQOS = Arrays.asList();
+        this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE);
     }
 
     protected AConnectorClient.Certificate cert;
 
     @Getter
-    protected List<QOS> supportedQOS;
+    protected List<Qos> supportedQOS;
 
     public boolean initialize() {
         loadConfiguration();
 
-        log.info("Tenant {} - Connector {} - Initialization of connector {} was successful!", tenant,
-                getConnectorType(),
-                getConnectorName());
+        log.info("Tenant {} - Phase 0, initialized connector {},{} ", tenant,
+                getConnectorName(), getConnectorType());
         return true;
     }
 
     @Override
     public void connect() {
         String path = (String) connectorSpecification.getProperties().get("path").defaultValue;
-        log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+        log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -132,14 +135,14 @@ public class HttpClient extends AConnectorClient {
             loadConfiguration();
             try {
                 connectionState.setTrue();
-                log.info("Tenant {} - Connected to http endpoint {}", tenant,
+                log.info("Tenant {} - Phase III, connected with http endpoint {}", tenant,
                         path);
                 updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                 List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-                updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+                updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
                 successful = true;
             } catch (Exception e) {
-                log.error("Tenant {} - Connected to http endpoint {}, {}, {}", tenant,
+                log.error("Tenant {} - Phase III, connected with http endpoint {}, {}, {}", tenant,
                         path, e.getMessage(), connectionState.booleanValue());
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
@@ -180,7 +183,7 @@ public class HttpClient extends AConnectorClient {
 
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+            updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
             log.info("Tenant {} - Disconnected from http endpoint II: {}", tenant,
                     path);
         }
@@ -192,13 +195,13 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public void subscribe(String topic, QOS qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
+    public void subscribe(String topic, Qos qos) throws ConnectorException {
+        log.debug("Tenant {} - Subscribing on topic: [{}] for connector {}", tenant, topic, connectorName);
         sendSubscriptionEvents(topic, "Subscribing");
     }
 
     public void unsubscribe(String topic) throws Exception {
-        log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
+        log.debug("Tenant {} - Unsubscribing from topic: [{}]", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
     }
 
@@ -226,8 +229,8 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public List<Direction>  supportedDirections() {
-        return new ArrayList<>( Arrays.asList(Direction.INBOUND));
+    public List<Direction> supportedDirections() {
+        return new ArrayList<>(Arrays.asList(Direction.INBOUND));
     }
 
 }

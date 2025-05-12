@@ -29,7 +29,8 @@ import { ServiceConfiguration } from './shared/configuration.model';
 @Component({
   selector: 'd11r-mapping-service-configuration',
   styleUrls: ['./service-configuration.component.style.css'],
-  templateUrl: 'service-configuration.component.html'
+  templateUrl: 'service-configuration.component.html',
+  standalone: false
 })
 export class ServiceConfigurationComponent implements OnInit {
   version: string = packageJson.version;
@@ -49,6 +50,7 @@ export class ServiceConfigurationComponent implements OnInit {
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
+    maxCPUTimeMS: 5000,  // 5 seconds
   };
   editable2updated: boolean = false;
 
@@ -74,7 +76,8 @@ export class ServiceConfigurationComponent implements OnInit {
       inboundExternalIdCacheRetention: new FormControl(''),
       inventoryCacheRetention: new FormControl(''),
       inventoryCacheSize: new FormControl(''),
-      inventoryFragmentsToCache: new FormControl('')
+      inventoryFragmentsToCache: new FormControl(''),
+      maxCPUTimeMS: new FormControl('')
     });
 
     this.loadData();
@@ -103,7 +106,9 @@ export class ServiceConfigurationComponent implements OnInit {
       inventoryCacheRetention:
         this.serviceConfiguration.inventoryCacheRetention,
       inventoryFragmentsToCache:
-        this.serviceConfiguration.inventoryFragmentsToCache.join(",")
+        this.serviceConfiguration.inventoryFragmentsToCache.join(","),
+        maxCPUTimeMS:
+        this.serviceConfiguration.maxCPUTimeMS
     });
   }
 

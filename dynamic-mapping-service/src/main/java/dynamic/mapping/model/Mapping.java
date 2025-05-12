@@ -150,7 +150,7 @@ public class Mapping implements Serializable {
     public String filterInventory;
 
     @NotNull
-    public QOS qos;
+    public Qos qos;
 
     // code for substitutions encoded in base64
     // @NotNull

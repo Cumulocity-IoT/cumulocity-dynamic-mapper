@@ -56,6 +56,7 @@ public class ServiceConfiguration implements Cloneable {
         this.inventoryCacheSize = 0;
         this.inventoryCacheRetention = 1;
         this.inventoryFragmentsToCache = new ArrayList<String>();
+        this.maxCPUTimeMS = 5000;  // 5 seconds
     }
 
     @NotNull
@@ -116,4 +117,8 @@ public class ServiceConfiguration implements Cloneable {
 
     @JsonProperty("codeTemplates")
     public Map<String, CodeTemplate> codeTemplates;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Integer maxCPUTimeMS;
 }

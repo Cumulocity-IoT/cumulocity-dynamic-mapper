@@ -23,7 +23,6 @@ package dynamic.mapping.connector.core.client;
 
 import static java.util.Map.entry;
 
-import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -66,7 +65,7 @@ import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.LoggingEventType;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.AllArgsConstructor;
@@ -132,8 +131,8 @@ public abstract class AConnectorClient {
 
     protected ConfigurationRegistry configurationRegistry;
 
-	@Getter
-	protected ExecutorService virtThreadPool;
+    @Getter
+    protected ExecutorService virtualThreadPool;
 
     private Future<?> connectTask;
     private ScheduledExecutorService housekeepingExecutor = Executors
@@ -223,7 +222,7 @@ public abstract class AConnectorClient {
     /**
      * Subscribe to a topic on the Broker
      **/
-    public abstract void subscribe(String topic, QOS qos) throws ConnectorException;
+    public abstract void subscribe(String topic, Qos qos) throws ConnectorException;
 
     /**
      * Unsubscribe a topic on the Broker
@@ -246,7 +245,7 @@ public abstract class AConnectorClient {
     public Future<?> submitInitialize() {
         if (initializeTask == null || initializeTask.isDone()) {
             log.debug("Tenant {} - Initializing...", tenant);
-            initializeTask = virtThreadPool.submit(this::initialize);
+            initializeTask = virtualThreadPool.submit(this::initialize);
         }
         return initializeTask;
     }
@@ -255,20 +254,20 @@ public abstract class AConnectorClient {
         loadConfiguration();
         if (connectTask == null || connectTask.isDone()) {
             log.debug("Tenant {} - Connecting...", tenant);
-            connectTask = virtThreadPool.submit(this::connect);
+            connectTask = virtualThreadPool.submit(this::connect);
         }
         return connectTask;
     }
 
     public Future<?> submitDisconnect() {
         loadConfiguration();
-        if(connectTask != null && (!connectTask.isDone() || !connectTask.isCancelled())) {
+        if (connectTask != null && (!connectTask.isDone() || !connectTask.isCancelled())) {
             connectTask.cancel(true);
         }
 
         if (disconnectTask == null || disconnectTask.isDone()) {
             log.debug("Tenant {} - Disconnecting...", tenant);
-            disconnectTask = virtThreadPool.submit(this::disconnect);
+            disconnectTask = virtualThreadPool.submit(this::disconnect);
         }
         return disconnectTask;
     }
@@ -315,7 +314,7 @@ public abstract class AConnectorClient {
      * If a connector does not support wildcards in this topic subscriptions, i.e.
      * Kafka, the mapping can't be activated for this connector
      **/
-    public void updateActiveSubscriptionsInbound(List<Mapping> updatedMappings, boolean reset) {
+    public void updateActiveSubscriptionsInbound(List<Mapping> updatedMappings, boolean reset, boolean cleanSession) {
         setMappingsDeployedInbound(new ConcurrentHashMap<>());
         if (reset) {
             activeSubscriptionsInbound = new HashMap<>();
@@ -324,10 +323,14 @@ public abstract class AConnectorClient {
         if (isConnected()) {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<>();
             processInboundMappings(updatedMappings, updatedSubscriptionCache);
-            handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
+            // Update subscriptions only in case of a cleanSession
+            // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ... in case of cleanSession=false?
+            //if (cleanSession){
+                handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
+            // }
 
             activeSubscriptionsInbound = updatedSubscriptionCache;
-            log.info("Tenant {} - Updating subscriptions successful. Active subscriptions: {}",
+            log.info("Tenant {} - Updated subscriptions, active subscriptions: {}",
                     tenant, getActiveSubscriptionsView().size());
         }
     }
@@ -376,10 +379,10 @@ public abstract class AConnectorClient {
                 .filter(topic -> !updatedSubscriptionCache.containsKey(topic))
                 .forEach(topic -> {
                     try {
-                        log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
+                        log.debug("Tenant {} - Unsubscribing from topic: [{}]", tenant, topic);
                         unsubscribe(topic);
                     } catch (Exception exp) {
-                        log.error("Tenant {} - Error unsubscribing from topic: {}", tenant, topic, exp);
+                        log.error("Tenant {} - Error unsubscribing from topic: [{}]", tenant, topic, exp);
                     }
                 });
     }
@@ -389,24 +392,43 @@ public abstract class AConnectorClient {
         updatedSubscriptionCache.keySet().stream()
                 .filter(topic -> !getActiveSubscriptionsView().containsKey(topic))
                 .forEach(topic -> {
-                    QOS qos = determineMaxQos(topic, updatedMappings);
+                    Qos qos = determineMaxQosInbound(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
-                        log.info("Tenant {} - Successfully subscribed to topic: {}, qos: {}",
-                                tenant, topic, qos);
+                        log.info("Tenant {} - Subscribed to topic:[{}] for connector {} with QoS {}",
+                                tenant, topic,
+                                connectorName, qos);
                     } catch (ConnectorException exp) {
-                        log.error("Tenant {} - Error subscribing to topic: {}", tenant, topic, exp);
+                        log.error("Tenant {} - Error subscribing to topic:[{}]", tenant, topic, exp);
                     }
                 });
     }
 
-    private QOS determineMaxQos(String topic, List<Mapping> mappings) {
+    public Qos determineMaxQosInbound(String topic, List<Mapping> mappings) {
         int qosOrdinal = mappings.stream()
-                .filter(m -> m.mappingTopic.equals(topic))
+                .filter(m -> m.mappingTopic.equals(topic) && m.active)
                 .map(m -> m.qos.ordinal())
                 .max(Integer::compareTo)
                 .orElse(0);
-        return QOS.values()[qosOrdinal];
+        return Qos.values()[qosOrdinal];
+    }
+
+    public Qos determineMaxQosInbound(List<Mapping> mappings) {
+        int qosOrdinal = mappings.stream()
+                .filter(m -> m.active)
+                .map(m -> m.qos.ordinal())
+                .max(Integer::compareTo)
+                .orElse(0);
+        return Qos.values()[qosOrdinal];
+    }
+
+    public Qos determineMaxQosOutbound(List<Mapping> mappings) {
+        int qosOrdinal = mappings.stream()
+                .filter(m -> m.active)
+                .map(m -> m.qos.ordinal())
+                .max(Integer::compareTo)
+                .orElse(0);
+        return Qos.values()[qosOrdinal];
     }
 
     /**
@@ -453,11 +475,15 @@ public abstract class AConnectorClient {
 
         if (create || subscriptionCount.intValue() == 0) {
             try {
-                log.info("Tenant {} - Subscribing to topic: {}, qos: {}",
-                        tenant, mapping.mappingTopic, mapping.qos);
+
+                // log.info("Tenant {} - Subscribing to topic: [{}], qos: {}",
+                // tenant, mapping.mappingTopic, mapping.qos);
                 subscribe(mapping.mappingTopic, mapping.qos);
+                log.info("Tenant {} - Subscribed to topic:[{}] for connector {} with QoS {}", tenant,
+                        mapping.mappingTopic,
+                        connectorName, mapping.qos);// use qos from mapping
             } catch (ConnectorException exp) {
-                log.error("Tenant {} - Error subscribing to topic: {}",
+                log.error("Tenant {} - Error subscribing to topic:[{}]",
                         tenant, mapping.mappingTopic, exp);
             }
         }
@@ -470,12 +496,12 @@ public abstract class AConnectorClient {
 
         if (subscriptionCount.intValue() <= 0) {
             try {
-                log.info("Tenant {} - Unsubscribing from topic: {}",
+                log.info("Tenant {} - Unsubscribing from topic: [{}]",
                         tenant, mapping.mappingTopic);
                 unsubscribe(mapping.mappingTopic);
                 getActiveSubscriptionsInbound().remove(mapping.mappingTopic);
             } catch (Exception exp) {
-                log.error("Tenant {} - Error unsubscribing from topic: {}",
+                log.error("Tenant {} - Error unsubscribing from topic: [{}]",
                         tenant, mapping.mappingTopic, exp);
             }
         }
@@ -501,7 +527,7 @@ public abstract class AConnectorClient {
             try {
                 unsubscribe(mapping.mappingTopic);
             } catch (Exception e) {
-                log.error("Tenant {} - Error unsubscribing from topic: {}",
+                log.error("Tenant {} - Error unsubscribing from topic: [{}]",
                         tenant, mapping.mappingTopic, e);
             }
         }
@@ -552,22 +578,27 @@ public abstract class AConnectorClient {
 
     private void createAndSendLifecycleEvent() {
         Map<String, String> statusMap = createStatusMap();
+        String message = "Connector status: " + connectorStatus.status;
         c8yAgent.createEvent(
-                "Connector status: " + connectorStatus.status,
-                LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
-                DateTime.now(),
-                mappingServiceRepresentation,
-                tenant,
-                statusMap);
-    }
-
-    private Map<String, String> createStatusMap() {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String date = dateFormat.format(new Date());
+            message,
+            LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
+            DateTime.now(),
+            mappingServiceRepresentation,
+            tenant,
+            statusMap);
+        }
+        
+        private Map<String, String> createStatusMap() {
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String date = dateFormat.format(new Date());
+            String message =connectorStatus.getMessage(); 
+            if ("".equals(connectorStatus.getMessage())) {
+                message =  "Connector status: " + connectorStatus.status;
+            }
 
         return Map.ofEntries(
                 entry("status", connectorStatus.getStatus().name()),
-                entry("message", connectorStatus.message),
+                entry("message", message),
                 entry("connectorName", getConnectorName()),
                 entry("connectorIdentifier", getConnectorIdentifier()),
                 entry("date", date));
@@ -608,15 +639,16 @@ public abstract class AConnectorClient {
 
     private void logConnectionLost(String closeMessage, Throwable closeException) {
         if (closeException != null) {
-            log.error("Tenant {} - Connection lost to broker {}: {}",
+            log.error("Tenant {} - Connection lost: [{},{}], {}",
                     tenant,
+                    getConnectorName(),
                     getConnectorIdentifier(),
                     closeException.getMessage(),
                     closeException);
         }
 
         if (closeMessage != null) {
-            log.info("Tenant {} - Connection lost to broker: {}",
+            log.info("Tenant {} - Connection lost: {}",
                     tenant,
                     closeMessage);
         }
@@ -624,9 +656,9 @@ public abstract class AConnectorClient {
 
     public Future<?> reconnect() {
         try {
-            //Blocking to wait for disconnect
+            // Blocking to wait for disconnect
             submitDisconnect().get();
-            //Blocking to wait for initialization
+            // Blocking to wait for initialization
             submitInitialize().get();
             return submitConnect();
         } catch (Exception e) {
@@ -704,11 +736,11 @@ public abstract class AConnectorClient {
     }
 
     // Event Handling Methods
-    public List<ProcessingContext<?>> test(String topic, boolean sendPayload, Map<String, Object> payload)
+    public List<? extends ProcessingContext<?>> test(String topic, boolean sendPayload, Map<String, Object> payload)
             throws Exception {
         String payloadMessage = serializePayload(payload);
         ConnectorMessage message = createTestMessage(topic, sendPayload, payloadMessage);
-        return dispatcher.processMessage(message).get();
+        return dispatcher.processMessage(message).getProcessingResult().get();
     }
 
     private String serializePayload(Map<String, Object> payload) throws Exception {
@@ -849,7 +881,7 @@ public abstract class AConnectorClient {
         return Collections.unmodifiableMap(activeSubscriptionsInbound);
     }
 
-        /**
+    /**
      * Safely adds a subscription
      */
     protected void addActiveSubscription(String topic, MutableInt count) {
@@ -908,7 +940,7 @@ public abstract class AConnectorClient {
      */
     protected <T> Optional<T> executeWithTimeout(Callable<T> operation, long timeout, TimeUnit unit) {
         try {
-            Future<T> future = virtThreadPool.submit(operation);
+            Future<T> future = virtualThreadPool.submit(operation);
             return Optional.ofNullable(future.get(timeout, unit));
         } catch (Exception e) {
             log.warn("Operation timed out or failed: {}", e.getMessage());
@@ -1070,5 +1102,5 @@ public abstract class AConnectorClient {
         }
     }
 
-	public abstract List<Direction> supportedDirections();
+    public abstract List<Direction> supportedDirections();
 }

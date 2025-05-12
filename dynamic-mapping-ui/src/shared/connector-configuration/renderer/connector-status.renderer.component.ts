@@ -32,7 +32,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
           : 'tag--default')
     "
     >{{ context.item?.status$ | async }}
-  </span> `
+  </span> `,
+  standalone: false
 })
 export class ConnectorStatusRendererComponent {
   constructor(public context: CellRendererContext) {

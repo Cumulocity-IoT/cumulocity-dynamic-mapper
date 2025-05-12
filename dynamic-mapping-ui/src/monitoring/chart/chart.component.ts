@@ -28,7 +28,8 @@ import { ECharts, EChartsOption } from 'echarts';
 @Component({
   selector: 'd11r-monitoring-chart',
   templateUrl: './chart.component.html',
-  styleUrls: ['./chart.component.css']
+  styleUrls: ['./chart.component.css'],
+  standalone: false
 })
 export class MonitoringChartComponent implements OnInit, OnDestroy {
   constructor(

@@ -22,7 +22,8 @@ import { FieldWrapper } from '@ngx-formly/core';
 
 @Component({
   selector: 'd11r-wrapper-form-field',
-  templateUrl: './custom-form-field-wrapper.component.html'
+  templateUrl: './custom-form-field-wrapper.component.html',
+  standalone: false
   // changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WrapperCustomFormField extends FieldWrapper implements OnInit {

@@ -92,6 +92,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Map.entry;
 
@@ -323,7 +324,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             }
                         }
                     } catch (Exception e) {
-                        log.error("Tenant {} - Connector {} - Exception when initializing connector: ", tenant,
+                        log.error("Tenant {} - Connector {} - Error initializing connector: ", tenant,
                                 connectorName, e);
                     }
                     return certResult;
@@ -360,23 +361,23 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                     payload,
                                     EventRepresentation.class);
                             rt = eventApi.create(eventRepresentation);
-                            log.info("Tenant {} - New event posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: event posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.ALARM)) {
                             AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
                                     payload,
                                     AlarmRepresentation.class);
                             rt = alarmApi.create(alarmRepresentation);
-                            log.info("Tenant {} - New alarm posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: alarm posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
                             MeasurementRepresentation measurementRepresentation = jsonParser
                                     .parse(MeasurementRepresentation.class, payload);
                             rt = measurementApi.create(measurementRepresentation);
-                            log.info("Tenant {} - New measurement posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: measurement posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.OPERATION)) {
                             OperationRepresentation operationRepresentation = jsonParser
                                     .parse(OperationRepresentation.class, payload);
                             rt = deviceControlApi.create(operationRepresentation);
-                            log.info("Tenant {} - New operation posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: operation posted: {}", tenant, rt);
                         } else {
                             log.error("Tenant {} - Not existing API!", tenant);
                         }
@@ -400,7 +401,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
             throws ProcessingException {
         String tenant = context.getTenant();
-        StringBuffer error = new StringBuffer("");
+        AtomicReference<ProcessingException> pe = new AtomicReference<>();
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
@@ -451,9 +452,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - New event posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: event posted: {}", tenant, rt);
                         else
-                            log.info("Tenant {} - New event posted with Id {}", tenant,
+                            log.info("Tenant {} - SEND: event posted with Id {}", tenant,
                                     ((EventRepresentation) rt).getId().getValue());
 
                     } else if (targetAPI.equals(API.ALARM)) {
@@ -462,48 +463,54 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 AlarmRepresentation.class);
                         rt = alarmApi.create(alarmRepresentation);
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - New alarm posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: alarm posted: {}", tenant, rt);
                         else
-                            log.info("Tenant {} - New alarm posted with Id {}", tenant,
+                            log.info("Tenant {} - SEND: alarm posted with Id {}", tenant,
                                     ((AlarmRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.MEASUREMENT)) {
                         MeasurementRepresentation measurementRepresentation = jsonParser
                                 .parse(MeasurementRepresentation.class, payload);
                         rt = measurementApi.create(measurementRepresentation);
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - New measurement posted: {}", tenant, rt);
+                            log.info("Tenant {} - SEND: measurement posted: {}", tenant, rt);
                         else
-                            log.info("Tenant {} - New measurement posted with Id {}", tenant,
+                            log.info("Tenant {} - SEND: measurement posted with Id {}", tenant,
                                     ((MeasurementRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.OPERATION)) {
                         OperationRepresentation operationRepresentation = jsonParser
                                 .parse(OperationRepresentation.class, payload);
                         rt = deviceControlApi.create(operationRepresentation);
-                        log.info("Tenant {} - New operation posted: {}", tenant, rt);
+                        log.info("Tenant {} - SEND: operation posted: {}", tenant, rt);
                     } else {
                         log.error("Tenant {} - Not existing API!", tenant);
                     }
                 } catch (JsonProcessingException e) {
-                    log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload);
-                    error.append("Could not map payload: " + targetAPI + "/" + payload);
+                    log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
+                    pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
+                    // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
                     log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
-                    error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
+                    pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
+                    // error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload +
+                    // "/" + s);
                 }
                 return rt;
             });
         });
-        if (!error.toString().equals("")) {
-            throw new ProcessingException(error.toString());
+        if (pe.get() != null) {
+            throw pe.get();
         }
+
         return result;
     }
 
     public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context)
             throws ProcessingException {
-        StringBuffer error = new StringBuffer("");
+        // StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        AtomicReference<ProcessingException> pe = new AtomicReference<>();
+        API targetAPI = context.getMapping().getTargetAPI();
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
             return contextService.callWithinContext(contextCredentials, () -> {
@@ -550,14 +557,20 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 } catch (SDKException s) {
                     log.error("Tenant {} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(),
                             s);
-                    error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
+                    pe.set(new ProcessingException(
+                            "Could not sent payload to c8y: " + targetAPI + "/" + currentRequest.getRequest(), s));
+                    // error.append("Could not sent payload to c8y: " + currentRequest.getRequest()
+                    // + " " + s);
                 }
                 return mor;
             });
         });
-        if (!error.toString().equals("")) {
-            throw new ProcessingException(error.toString());
+        if (pe.get() != null) {
+            throw pe.get();
         }
+        // if (!error.toString().equals("")) {
+        // throw new ProcessingException(error.toString());
+        // }
         return device;
     }
 
@@ -791,9 +804,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
         if (mappingServiceIdRepresentation != null) {
             amo = inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
-            log.info("Tenant {} - Agent with ID {} already exists {}", tenant,
+            log.info("Tenant {} - Agent with external ID [{}] already exists {}", tenant,
                     MappingServiceRepresentation.AGENT_ID,
-                    mappingServiceIdRepresentation, amo.getId());
+                    amo.getId().getValue());
         } else {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
             amo.setType(MappingServiceRepresentation.AGENT_TYPE);
@@ -1041,13 +1054,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             ResponseEntity<EventBinary> response;
             byte[] attDataBytes = null;
             if (!binaryInfo.getData().isEmpty()) {
-                if(binaryInfo.getData().startsWith("data:") && binaryInfo.getType() == null || binaryInfo.getType().isEmpty())  {
-                    //Base64 File Header
+                if (binaryInfo.getData().startsWith("data:") && binaryInfo.getType() == null
+                        || binaryInfo.getType().isEmpty()) {
+                    // Base64 File Header
                     int pos = binaryInfo.getData().indexOf(";");
-                    String type= binaryInfo.getData().substring(5, pos-1);
+                    String type = binaryInfo.getData().substring(5, pos - 1);
                     binaryInfo.setType(type);
 
-                    attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().substring(pos+8).getBytes(StandardCharsets.UTF_8));
+                    attDataBytes = Base64.getDecoder()
+                            .decode(binaryInfo.getData().substring(pos + 8).getBytes(StandardCharsets.UTF_8));
                 } else
                     attDataBytes = Base64.getDecoder().decode(binaryInfo.getData().getBytes(StandardCharsets.UTF_8));
             }
@@ -1055,7 +1070,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 binaryInfo.setType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
             }
             if (binaryInfo.getName() == null || binaryInfo.getName().isEmpty()) {
-                if(binaryInfo.getType() != null && !binaryInfo.getType().isEmpty()) {
+                if (binaryInfo.getType() != null && !binaryInfo.getType().isEmpty()) {
                     if (binaryInfo.getType().contains("image/")) {
                         binaryInfo.setName("file.png");
                     } else if (binaryInfo.getType().contains("text/")) {
@@ -1094,14 +1109,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
             }
 
-            if (response.getStatusCodeValue() >= 300) {
-                throw new ProcessingException("Failed to create binary: " + response.toString());
+            if (response.getStatusCode().value() >= 300) {
+                throw new ProcessingException("Failed to create binary: " + response.toString(),
+                        response.getStatusCode().value());
             }
-            return response.getStatusCodeValue();
+            return response.getStatusCode().value();
         } catch (Exception e) {
             log.error("Tenant {} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(),
                     eventId, e);
-            throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage());
+            throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage(), e);
         }
     }
 }

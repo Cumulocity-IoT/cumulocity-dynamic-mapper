@@ -39,7 +39,8 @@ import { FieldType } from '@ngx-formly/core';
 </textarea>
   `,
   styleUrls: ['./textarea.type.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false
 })
 export class FieldTextareaCustom extends FieldType {
   get class() {

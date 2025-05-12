@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.TrustManagerFactory;
+
 import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3Unsubscribe;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
@@ -47,7 +48,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -56,7 +57,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.hivemq.client.mqtt.MqttClientSslConfig;
 import com.hivemq.client.mqtt.MqttClientSslConfigBuilder;
-import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
@@ -125,6 +125,9 @@ public class MQTTClient extends AConnectorClient {
         configProps.put("serverPath",
                 new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         wsCondition));
+        configProps.put("cleanSession",
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                        null));
         String name = "Generic MQTT";
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
@@ -148,14 +151,16 @@ public class MQTTClient extends AConnectorClient {
                 connectorConfiguration.identifier);
         // this.connectorType = connectorConfiguration.connectorType;
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
-        this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE, QOS.EXACTLY_ONCE);
+        this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE, Qos.EXACTLY_ONCE);
+        // set qQoS to default QoS
+        // this.qos = QOS.AT_LEAST_ONCE;
     }
 
     protected AConnectorClient.Certificate cert;
@@ -166,8 +171,10 @@ public class MQTTClient extends AConnectorClient {
 
     protected Mqtt3BlockingClient mqttClient;
 
+    protected Boolean cleanSession = false;
+
     @Getter
-    protected List<QOS> supportedQOS;
+    protected List<Qos> supportedQOS;
 
     public boolean initialize() {
         loadConfiguration();
@@ -211,20 +218,20 @@ public class MQTTClient extends AConnectorClient {
                 sslConfig = sslConfigBuilder.trustManagerFactory(tmf).protocols(expectedProtocols).build();
             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
                     | KeyManagementException e) {
-                log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS: ", tenant,
+                log.error("Tenant {} - Connector {} - Error configuring socketFactory for TLS: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             } catch (Exception e) {
-                log.error("Tenant {} - Connector {} - Exception when initializing connector: ", tenant,
+                log.error("Tenant {} - Connector {} - Error initializing connector: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             }
         }
-        log.info("Tenant {} - Connector {} - Initialization of connector {} was successful!", tenant,
+        log.info("Tenant {} - Phase 0, initializing connector {}, {} was successful", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;
@@ -232,7 +239,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+        log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -249,8 +256,7 @@ public class MQTTClient extends AConnectorClient {
         int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
-        // boolean useWSS = (Boolean)
-        // connectorConfiguration.getProperties().getOrDefault("useWSS", false);
+        cleanSession = (Boolean) connectorConfiguration.getProperties().get("cleanSession");
 
         Mqtt3ClientBuilder partialBuilder;
         partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
@@ -294,7 +300,7 @@ public class MQTTClient extends AConnectorClient {
                     connectionState.setFalse();
                     if (connectorConfiguration.enabled) {
                         try {
-                            connectionLost("Disconnected from "+ context.getSource().toString(), context.getCause());
+                            connectionLost("Disconnected from " + context.getSource().toString(), context.getCause());
                         } catch (InterruptedException e) {
                             return;
                         }
@@ -324,9 +330,8 @@ public class MQTTClient extends AConnectorClient {
         String configuredUrl = String.format("%s://%s:%s%s", configuredProtocol, mqttClient.getConfig().getServerHost(),
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
-        Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-        mqttCallback = new MQTTCallback(dispatcher, tenant, getConnectorIdentifier(), false);
-        mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
+        // Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
+        mqttCallback = new MQTTCallback(tenant, configurationRegistry, dispatcher, getConnectorIdentifier(), false);
 
         // stay in the loop until successful
         boolean successful = false;
@@ -338,7 +343,7 @@ public class MQTTClient extends AConnectorClient {
             while (!isConnected() && shouldConnect()) {
                 if (Thread.currentThread().isInterrupted())
                     return;
-                log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
+                log.info("Tenant {} - Phase II, connecting with {}, (shouldConnect):{} {}", tenant,
                         getConnectorName(),
                         shouldConnect(), configuredUrl);
                 if (!firstRun) {
@@ -350,7 +355,7 @@ public class MQTTClient extends AConnectorClient {
                 }
                 try {
                     Mqtt3ConnAck ack = mqttClient.connectWith()
-                            .cleanSession(true)
+                            .cleanSession(cleanSession != null ? cleanSession : true)
                             .keepAlive(60)
                             .send();
                     if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
@@ -361,16 +366,16 @@ public class MQTTClient extends AConnectorClient {
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Connected to broker {}", tenant,
+                    log.info("Tenant {} - Phase III, connected with {}", tenant,
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-                    updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+                    updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
                     List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
-                    if(e instanceof InterruptedException || e instanceof RuntimeException)
+                    if (e instanceof InterruptedException || e instanceof RuntimeException)
                         return;
                     log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
                             mqttClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
@@ -475,7 +480,7 @@ public class MQTTClient extends AConnectorClient {
             }
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+            updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
             List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
             updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
@@ -489,18 +494,19 @@ public class MQTTClient extends AConnectorClient {
     }
 
     @Override
-    public void subscribe(String topic, QOS qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
-        QOS usedQOS = qos;
+    public void subscribe(String topic, Qos qos) throws ConnectorException {
+        log.debug("Tenant {} - Subscribing on topic: [{}] for connector {}", tenant, topic, connectorName);
+        Qos usedQOS = qos;
         sendSubscriptionEvents(topic, "Subscribing");
+        // Default to QoS=0 if not provided
         if (usedQOS.equals(null))
-            usedQOS = QOS.AT_LEAST_ONCE;
+            usedQOS = Qos.AT_MOST_ONCE;
         else if (!supportedQOS.contains(qos)) {
             // determine maximum supported QOS
-            usedQOS = QOS.AT_LEAST_ONCE;
+            usedQOS = Qos.AT_MOST_ONCE;
             for (int i = 1; i < qos.ordinal(); i++) {
-                if (supportedQOS.contains(QOS.values()[i])) {
-                    usedQOS = QOS.values()[i];
+                if (supportedQOS.contains(Qos.values()[i])) {
+                    usedQOS = Qos.values()[i];
                 }
             }
             if (usedQOS.ordinal() < qos.ordinal()) {
@@ -510,23 +516,23 @@ public class MQTTClient extends AConnectorClient {
 
         // We don't need to add a handler on subscribe using hive client
         Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
-        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal())).send()
-                .thenRun(() -> {
-                    log.info("Tenant {} - Successfully subscribed on topic: {} for connector {}", tenant, topic,
-                            connectorName);
-                }).exceptionally(throwable -> {
+        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal()))
+                .callback(mqttCallback).manualAcknowledgement(true)
+                .send()
+                .exceptionally(throwable -> {
                     log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
                             throwable.getMessage());
                     return null;
                 });
+
     }
 
     public void unsubscribe(String topic) throws Exception {
-        log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
+        log.debug("Tenant {} - Unsubscribing from topic: [{}]", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
         Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
         asyncMqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
-            log.info("Tenant {} - Successfully unsubscribed from topic: {} for connector {}", tenant, topic,
+            log.info("Tenant {} - Successfully unsubscribed from topic: [{}] for connector {}", tenant, topic,
                     connectorName);
         }).exceptionally(throwable -> {
             log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
@@ -545,7 +551,7 @@ public class MQTTClient extends AConnectorClient {
         mqttClient.publish(mqttMessage);
 
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
+            log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}", tenant, payload,
                     context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
         }
     }

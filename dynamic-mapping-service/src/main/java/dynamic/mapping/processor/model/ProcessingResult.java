@@ -19,10 +19,22 @@
  *
  */
 
-package dynamic.mapping.model;
+package dynamic.mapping.processor.model;
 
-public enum QOS {
-  AT_MOST_ONCE,
-  AT_LEAST_ONCE,
-  EXACTLY_ONCE
+import java.util.List;
+import java.util.concurrent.Future;
+
+import dynamic.mapping.model.Qos;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@Builder
+
+public class ProcessingResult<O> {
+    private Future<List<ProcessingContext<O>>> processingResult;
+    private Qos consolidatedQos;
+    private int maxCPUTimeMS;
 }

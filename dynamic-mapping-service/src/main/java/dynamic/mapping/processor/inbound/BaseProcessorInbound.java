@@ -168,7 +168,7 @@ public abstract class BaseProcessorInbound<T> {
                 getBuildProcessingContext(context, deviceEntries.get(i),
                         i, deviceEntries.size());
             }
-            log.info("Tenant {} - Context is completed, sequentially processed, createNonExistingDevice: {} !", tenant,
+            log.info("Tenant {} - Completed context, processing sequentially, createNonExistingDevice: {}", tenant,
                     mapping.createNonExistingDevice);
         } else {
             List<Future<ProcessingContext<T>>> contextFutureList = new ArrayList<>();
@@ -190,7 +190,7 @@ public abstract class BaseProcessorInbound<T> {
                     log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
                 }
             }
-            log.info("Tenant {} - Context is completed, {} parallel requests processed!", tenant, j);
+            log.info("Tenant {} - Completed context, processing in parallel {} requests", tenant, j);
         }
     }
 
@@ -220,7 +220,7 @@ public abstract class BaseProcessorInbound<T> {
                     substitute = pathTargetSubstitute.get(last).clone();
                 }
                 log.warn(
-                        "Tenant {} - During the processing of this pathTarget: '{}' a repair strategy: '{}' was used.",
+                        "Tenant {} - Processing pathTarget: '{}', repairStrategy: '{}'.",
                         tenant,
                         pathTarget, substitute.repairStrategy);
             }

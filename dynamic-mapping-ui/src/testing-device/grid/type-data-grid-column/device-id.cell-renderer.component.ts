@@ -40,7 +40,8 @@ import { TestingDeviceService } from '../testing.service';
         >{{ context.item.id }}</a
       >
     </span>
-  `
+  `,
+  standalone: false
 })
 export class DeviceIdCellRendererComponent {
   constructor(

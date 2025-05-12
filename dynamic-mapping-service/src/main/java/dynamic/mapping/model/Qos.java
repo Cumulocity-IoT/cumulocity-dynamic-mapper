@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Cumulocity GmbH.
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,14 +19,10 @@
  *
  */
 
-package dynamic.mapping.connector.core.callback;
+package dynamic.mapping.model;
 
-import dynamic.mapping.processor.model.ProcessingResult;
-
-public interface GenericMessageCallback {
-    void onClose(String closeMessage, Throwable closeException);
-
-    ProcessingResult<?> onMessage(ConnectorMessage message);
-
-    void onError(Throwable errorException);
+public enum Qos {
+  AT_MOST_ONCE,
+  AT_LEAST_ONCE,
+  EXACTLY_ONCE
 }

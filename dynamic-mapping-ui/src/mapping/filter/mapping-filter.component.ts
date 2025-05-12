@@ -38,7 +38,8 @@ import { getTypeOf } from '../shared/util';
   selector: 'd11r-mapping-filter',
   templateUrl: './mapping-filter.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() mapping: Mapping;

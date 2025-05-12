@@ -46,7 +46,7 @@ import {
   MappingSubstitution,
   MappingType,
   Operation,
-  QOS,
+  Qos,
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
   getExternalTemplate,
@@ -80,7 +80,8 @@ import { TemplateType } from '../../configuration';
   selector: 'd11r-mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid: DataGridComponent;
@@ -307,7 +308,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingService.getMappings(Direction.OUTBOUND)
         .then(async mappings => {
           const numberOutboundMappings = mappings.length;
-          
+
           try {
             const { devices } = await this.mappingService.getSubscriptions();
             if (devices.length === 0 && numberOutboundMappings > 0) {
@@ -508,7 +509,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
-        qos: QOS.AT_LEAST_ONCE,
+        qos: Qos.AT_LEAST_ONCE,
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
@@ -536,7 +537,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
-        qos: QOS.AT_LEAST_ONCE,
+        qos: Qos.AT_LEAST_ONCE,
         filterMapping: this.snoopEnabled ? ' $exists(C8Y_FRAGMENT)' : undefined,
         substitutions: sub,
         useExternalId: false,
@@ -826,56 +827,32 @@ export class MappingComponent implements OnInit, OnDestroy {
   async onCommitMapping(mapping: Mapping) {
     // test if new/updated mapping was committed or if cancel
     mapping.lastUpdate = Date.now();
-    // ('Changed mapping:', mapping);
-    if (
-      mapping.direction == Direction.INBOUND ||
-      // test if we can attach multiple outbound mappings to the same filterMapping
-      mapping.direction == Direction.OUTBOUND
-      //  && isFilterOutboundUnique(mapping, this.mappings)
-    ) {
-      if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
-        // console.log('Update existing mapping:', mapping);
-        try {
-          await this.mappingService.updateMapping(mapping);
-          this.alertService.success(gettext(`Mapping ${mapping.name} updated successfully`));
-        } catch (error) {
-          this.alertService.danger(
-            gettext(`Failed to updated mapping ${mapping.name}: `) + error.message
-          );
-        }
-        // this.activateMappings();
-      } else if (
-        this.stepperConfiguration.editorMode == EditorMode.CREATE ||
-        this.stepperConfiguration.editorMode == EditorMode.COPY
-      ) {
-        // new mapping
-        // console.log('Push new mapping:', mapping);
-        try {
-          await this.mappingService.createMapping(mapping);
-          this.alertService.success(gettext(`Mapping ${mapping.name} created successfully`));
-        } catch (error) {
-          this.alertService.danger(
-            gettext(`Failed to updated mapping ${mapping.name}: `) + error
-          );
-        }
-        // this.activateMappings();
-      }
-      this.isConnectionToMQTTEstablished = true;
-    } else {
-      if (mapping.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
+      // console.log('Update existing mapping:', mapping);
+      try {
+        await this.mappingService.updateMapping(mapping);
+        this.alertService.success(gettext(`Mapping ${mapping.name} updated successfully`));
+      } catch (error) {
         this.alertService.danger(
-          gettext(
-            `Topic is already used: ${mapping.mappingTopic}. Please use a different topic.`
-          )
+          gettext(`Failed to updated mapping ${mapping.name}: `) + error.message
         );
-      } else {
+      }
+    } else if (
+      this.stepperConfiguration.editorMode == EditorMode.CREATE ||
+      this.stepperConfiguration.editorMode == EditorMode.COPY
+    ) {
+      // new mapping
+      // console.log('Push new mapping:', mapping);
+      try {
+        await this.mappingService.createMapping(mapping);
+        this.alertService.success(gettext(`Mapping ${mapping.name} created successfully`));
+      } catch (error) {
         this.alertService.danger(
-          gettext(
-            `FilterMapping is already used: ${mapping.filterMapping}. Please use a different filter.`
-          )
+          gettext(`Failed to updated mapping ${mapping.name}: `) + error
         );
       }
     }
+    this.isConnectionToMQTTEstablished = true;
 
     this.mappingService.updateDefinedDeploymentMapEntry(
       this.deploymentMapEntry
@@ -883,6 +860,10 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;
+
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      this.alertService.info("For your outbound mapping to work, it requires an active subscription. Please create a subscription for this outbound mapping.");
+    }
   }
 
   async onReload() {
@@ -1049,9 +1030,9 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Reset deploymentMap.'));
+      this.alertService.success(gettext('Reset deployment cache.'));
     } else {
-      this.alertService.danger(gettext('Failed to reset deploymentMap!'));
+      this.alertService.danger(gettext('Failed to reset deployment cache!'));
     }
   }
 

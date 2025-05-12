@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -94,6 +95,9 @@ public class ConfigurationRegistry {
 
     @Getter
     private C8YAgent c8yAgent;
+
+    @Value("${APP.mqttServiceUrl}")
+    @Getter String mqttServiceUrl;
 
     @Autowired
     public void setC8yAgent(C8YAgent c8yAgent) {

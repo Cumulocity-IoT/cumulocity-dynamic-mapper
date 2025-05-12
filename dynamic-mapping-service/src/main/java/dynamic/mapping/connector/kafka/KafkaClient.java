@@ -51,7 +51,7 @@ import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -149,7 +149,7 @@ public class KafkaClient extends AConnectorClient {
 		this.connectorIdentifier = connectorConfiguration.identifier;
 		this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name, connectorConfiguration.identifier);
 		this.c8yAgent = configurationRegistry.getC8yAgent();
-		this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
+		this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
 		this.objectMapper = configurationRegistry.getObjectMapper();
 		this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 		this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
@@ -226,7 +226,7 @@ public class KafkaClient extends AConnectorClient {
 
 	@Override
 	public void connect() {
-		log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+		log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
 				tenant, getConnectorName(), isConnected(),
 				shouldConnect());
 		if (shouldConnect())
@@ -246,10 +246,10 @@ public class KafkaClient extends AConnectorClient {
 			defaultPropertiesProducer.put("sasl.mechanism", saslMechanism);
 			defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 			defaultPropertiesProducer.put("group.id", groupId);
-			log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
+			log.info("Tenant {} - Phase II, connecting with {}, (shouldConnect):{} {}", tenant,
 					getConnectorName(),
 					shouldConnect(), bootstrapServers);
-			log.info("Tenant {} - Connected to broker {}", tenant,
+			log.info("Tenant {} - Phase III, connected with {}", tenant,
 					bootstrapServers);
 			try {
 				// test if the mqtt connection is configured and enabled
@@ -262,7 +262,7 @@ public class KafkaClient extends AConnectorClient {
 					connectionState.setTrue();
 					updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
 					List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-					updateActiveSubscriptionsInbound(updatedMappings, true);
+					updateActiveSubscriptionsInbound(updatedMappings, true, true);
 				}
 				successful = true;
 			} catch (Exception e) {
@@ -306,7 +306,7 @@ public class KafkaClient extends AConnectorClient {
 			connectionState.setFalse();
 			updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
 			List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-			updateActiveSubscriptionsInbound(updatedMappings, true);
+			updateActiveSubscriptionsInbound(updatedMappings, true, true);
 			kafkaProducer.close();
 			log.info("Tenant {} - Disconnected from from broker: {}", tenant, getConnectorName(),
 					bootstrapServers);
@@ -328,7 +328,7 @@ public class KafkaClient extends AConnectorClient {
 	}
 
 	@Override
-	public void subscribe(String topic, QOS qos) throws ConnectorException {
+	public void subscribe(String topic, Qos qos) throws ConnectorException {
 		TopicConsumer kafkaConsumer = new TopicConsumer(
 				new TopicConfig(tenant, bootstrapServers, topic, username, password, saslMechanism, groupId,
 						defaultPropertiesConsumer),
@@ -389,7 +389,7 @@ public class KafkaClient extends AConnectorClient {
 		}
 		kafkaProducer.send(new ProducerRecord<String, String>(context.getMapping().publishTopic, key, payload));
 
-		log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
+		log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}", tenant, payload,
 				context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
 	}
 

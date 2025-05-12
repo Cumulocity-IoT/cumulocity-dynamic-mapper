@@ -53,6 +53,7 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
@@ -283,18 +284,22 @@ public class MappingComponent {
 
     public Mapping getMapping(String tenant, String id) {
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
-            ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
-            if (mo != null) {
-                try {
+            ManagedObjectRepresentation mo = null;
+            try {
+                mo = inventoryApi.get(GId.asGId(id));
+                if (mo != null) {
                     MappingRepresentation mappingMO = toMappingObject(mo);
                     Mapping mapping = mappingMO.getC8yMQTTMapping();
                     mapping.setId(mappingMO.getId());
                     log.debug("Tenant {} - Found Mapping: {}", tenant, mapping.id);
                     return mapping;
-                } catch (IllegalArgumentException e) {
-                    log.warn("Failed to convert managed object to mapping: {}", mo.getId(), e);
-                    return null;
                 }
+            } catch (SDKException e) {
+                log.warn("Failed to find managed object to mapping: {}", id, e);
+                return null;
+            } catch (IllegalArgumentException e) {
+                log.warn("Failed to convert managed object to mapping: {}", id, e);
+                return null;
             }
             return null;
         });
@@ -332,7 +337,6 @@ public class MappingComponent {
                     .engine(configurationRegistry.getGraalsEngine(tenant))
                     .logHandler(GRAALJS_LOG_HANDLER)
                     .allowAllAccess(true)
-                    .option("js.strict", "true")
                     .build()) {
 
                 // Before closing the context, clean up the members
@@ -488,7 +492,7 @@ public class MappingComponent {
         List<Mapping> updatedMappings = getMappings(tenant, Direction.OUTBOUND).stream()
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        log.info("Tenant {} - Loaded mappings outbound: {} to cache", tenant, updatedMappings.size());
+        log.info("Tenant {} - Loaded mappings outbound: {}", tenant, updatedMappings.size());
 
         cacheMappingOutbound.replace(tenant, updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
@@ -637,7 +641,7 @@ public class MappingComponent {
     }
 
     private List<Mapping> rebuildMappingInboundCache(String tenant, List<Mapping> updatedMappings) {
-        log.info("Tenant {} - Loaded mappings inbound: {} to cache", tenant, updatedMappings.size());
+        log.info("Tenant {} - Loaded mappings inbound: {}", tenant, updatedMappings.size());
         cacheMappingInbound.replace(tenant, updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // update mappings tree
@@ -913,7 +917,7 @@ public class MappingComponent {
             MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                     .getMappingServiceRepresentations().get(tenant);
             // avoid sending empty monitoring events
-            log.info("Tenant {} - Saving deploymentMap: number all deployments:{}", tenant,
+            log.info("Tenant {} - Saving deploymentMap, number deployments:{}", tenant,
                     tenantDeploymentMap.get(tenant).size());
             Map<String, Object> map = new HashMap<String, Object>();
             Map<String, List<String>> deploymentMapPerTenant = tenantDeploymentMap.get(tenant);

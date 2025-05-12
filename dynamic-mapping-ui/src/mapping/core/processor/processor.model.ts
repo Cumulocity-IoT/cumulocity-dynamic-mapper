@@ -21,7 +21,7 @@ import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
 import { API, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
-import { Java } from './processor-js.model';
+import { Java, SubstitutionContext } from './processor-js.model';
 
 export interface C8YRequest {
   predecessor?: number;
@@ -190,90 +190,370 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   _.set(template, `${TOKEN_IDENTITY}.c8ySourceId`, identifier);
 }
 
-/**
-* Extract line and column numbers from a stack trace line
-* @param {string} stackTraceLine - The stack trace line to parse
-* @returns {object|null} An object with line and column numbers, or null if not found
-*/
-export function extractLineAndColumn(stackTraceLine) {
-  // This pattern looks for "<anonymous>:X:Y" where X is line and Y is column
-  const pattern = /<anonymous>:(\d+):(\d+)/;
-  const match = stackTraceLine.match(pattern);
 
-  if (match && match.length >= 3) {
-    return {
-      line: parseInt(match[1], 10),
-      column: parseInt(match[2], 10)
-    };
-  }
-
-  return null;
+export interface EvaluationError {
+  message: string;
+  stack: string | null;
+  location: any | null;
 }
 
-// export function evaluateWithArgs(codeString, ...args) {
-//   // Add 'Java' as the first parameter
-//   const paramNames = ['Java'].concat(args.map((_, i) => `arg${i}`)).join(',');
+export interface EvaluationResult {
+  success: boolean;
+  result?: any;
+  error?: EvaluationError;
+  logs: string[];
+}
 
-//   // Create the function with Java and your other parameters
-//   const fn = new Function(paramNames, codeString);
+/**
+ * Evaluates JavaScript code with arguments and a timeout
+ * @param codeString The JavaScript code to evaluate
+ * @param args Arguments to pass to the code
+ * @returns Promise resolving to evaluation result
+ */
 
-//   // Call the function with Java as the first argument, followed by your other args
-//   return fn(Java, ...args);
-// }
-
-export function evaluateWithArgs(codeString, ...args) {
-  // Capture console output
-  const logs = [];
-  const originalConsoleLog = console.log;
-
-  // Create a scoped console.log override that captures output
-  const scopedConsole = {
-    log: (...logArgs) => {
-      logs.push(logArgs.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '));
-      // Still call the original for debugging visibility if needed
-      originalConsoleLog.apply(console, logArgs);
-    }
+export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionContext): Promise<EvaluationResult> {
+  // Serialize the SubstitutionContext object
+  const serializableCtx = {
+    identifier: ctx.getGenericDeviceIdentifier ? ctx.getGenericDeviceIdentifier() : ctx['deviceIdentifier'],
+    payload: ctx.getPayload ? ctx.getPayload() : ctx['payload']
   };
 
-  try {
-    // Add 'Java' and 'console' as parameters
-    const paramNames = ['Java', 'console'].concat(args.map((_, i) => `arg${i}`)).join(',');
+  // Define the timeout duration
+  const timeoutMs = 250;
 
-    // Create the function with Java, console, and your other parameters
-    const fn = new Function(paramNames, codeString);
+  // Create a promise for the evaluation
+  return Promise.race([
+    // Timeout promise
+    new Promise<EvaluationResult>(resolve => setTimeout(() => {
+      resolve({
+        success: false,
+        error: {
+          message: `Execution timed out after ${timeoutMs}ms`,
+          stack: null,
+          location: null
+        },
+        logs: ["Execution timed out"]
+      });
+    }, timeoutMs)),
 
-    // Call the function with Java and our scoped console as arguments, followed by your other args
-    const result = fn(Java, scopedConsole, ...args);
+    // Worker promise
+    new Promise<EvaluationResult>((resolve) => {
+      const logs: string[] = [];
+      let worker: Worker | null = null;
+      let workerUrl: string | null = null;
+      let timeoutId: number | null = null;
 
-    // Return both the evaluation result and the logs
-    return {
-      result,
-      logs,
-      success: true
-    };
-  } catch (error) {
-    // Return the error and logs in a structured way
-    return {
-      error: {
-        message: error.message,
-        stack: error.stack,
-        location: extractLineAndColumn(error.stack)
-      },
-      logs,
-      success: false
-    };
-  } finally {
-    // No need to restore console.log as we used a scoped version
-  }
-}
+      try {
+        // Create worker script with improved log handling
+        const workerScript = `
+          self.onmessage = function(event) {
+            // Set up console capture
+            const logs = [];
+            const consoleLog = function(...args) {
+              const logString = args.map(arg => {
+                if (arg === undefined) return 'undefined';
+                if (arg === null) return 'null';
+                if (typeof arg === 'object') {
+                  try {
+                    return JSON.stringify(arg);
+                  } catch (e) {
+                    return String(arg);
+                  }
+                }
+                return String(arg);
+              }).join(' ');
+              
+              logs.push(logString);
+              
+              // Real-time log streaming to main thread
+              self.postMessage({ 
+                type: 'log', 
+                data: logString 
+              });
+            };
+            
+            // Create console object with all common methods
+            const console = {
+              log: consoleLog,
+              info: consoleLog,
+              warn: consoleLog,
+              error: consoleLog,
+              debug: consoleLog
+            };
+            
+            /**
+             * JavaScript equivalent of the Java SubstitutionContext class
+             */
+            class SubstitutionContext {
+              IDENTITY = "_IDENTITY_";
+              #payload;  // Using private class field (equivalent to private final in Java)
+              #genericDeviceIdentifier;
 
-export function removeJavaTypeLines(code) {
-  // Split the code into lines
-  const lines = code.split('\n');
+              // Constants
+              IDENTITY_EXTERNAL = this.IDENTITY + ".externalId";
+              IDENTITY_C8Y = this.IDENTITY + ".c8ySourceId";
 
-  // Filter out lines containing Java.type
-  const filteredLines = lines.filter(line => !line.includes('Java.type'));
+              /**
+               * Constructor for the SubstitutionContext class
+               * @param {string} genericDeviceIdentifier - The generic device identifier
+               * @param {string} payload - The JSON object representing the data
+               */
+              constructor(genericDeviceIdentifier, payload) {
+                this.#payload = (payload || {});
+                this.#genericDeviceIdentifier = genericDeviceIdentifier;
+              }
 
-  // Join the lines back together
-  return filteredLines.join('\n');
+              /**
+               * Gets the generic device identifier
+               * @returns {string} The generic device identifier
+               */
+              getGenericDeviceIdentifier() {
+                return this.#genericDeviceIdentifier;
+              }
+
+              /**
+               * Gets the external identifier from the JSON object
+               * @returns {string|null} The external identifier or null if not found
+               */
+              getExternalIdentifier() {
+                try {
+                  const parsedPayload = JSON.parse(this.#payload);
+                  const identityMap = parsedPayload[this.IDENTITY];
+                  return identityMap["externalId"];
+                } catch (e) {
+                  console.debug("Error retrieving external identifier", e);
+                  return null;
+                }
+              }
+
+              /**
+               * Gets the C8Y identifier from the JSON object
+               * @returns {string|null} The C8Y identifier or null if not found
+               */
+              getC8YIdentifier() {
+                try {
+                  const parsedPayload = JSON.parse(this.#payload);
+                  const identityMap = parsedPayload[this.IDENTITY];
+                  return identityMap["c8ySourceId"];
+                } catch (e) {
+                  console.debug("Error retrieving c8y identifier", e);
+                  return null;
+                }
+              }
+
+              /**
+               * Gets the JSON object
+               * @returns {Object} The JSON object
+               */
+              getPayload() {
+                return this.#payload;
+              }
+            }
+
+            const { code, ctx } = event.data;
+            
+            try {
+              // Debug marker to verify code execution context
+              // Create context object
+              const arg0 = new SubstitutionContext(ctx.identifier, ctx.payload);
+              
+              // Use Function constructor with console explicitly passed
+              const fn = new Function('arg0', 'console', code);
+              const result = fn(arg0, console);
+              
+              // Send back successful result with logs
+              self.postMessage({ 
+                type: 'result',
+                success: true, 
+                result,
+                logs
+              });
+            } catch (error) {
+              console.error("Error in worker:", error.message);
+              
+            // Extract and fix line numbers in a more robust way
+              let errorStack = error.stack || "";
+              let errorMessage = error.message || "Unknown error";
+              let lineInfo = null;
+              
+              // Log the original error stack for debugging
+              // console.error("Original error stack:", errorStack);
+              
+              // Parse line numbers more robustly - handle different browser formats
+              const lineMatches = errorStack.match(/<anonymous>:(\\d+):(\\d+)/);
+              const evalMatches = errorStack.match(/eval.*<anonymous>:(\\d+):(\\d+)/);
+              const functionMatches = errorStack.match(/Function:(\\d+):(\\d+)/);
+              
+              let adjustedLine = null;
+              let column = null;
+              
+              if (lineMatches) {
+                adjustedLine = Math.max(1, parseInt(lineMatches[1]) - 2);
+                column = parseInt(lineMatches[2]);
+                // console.error("Found line from <anonymous>:", adjustedLine);
+              } else if (evalMatches) {
+                adjustedLine = Math.max(1, parseInt(evalMatches[1]) - 2);
+                column = parseInt(evalMatches[2]);
+                // console.error("Found line from eval:", adjustedLine);
+              } else if (functionMatches) {
+                adjustedLine = Math.max(1, parseInt(functionMatches[1]) - 2);
+                column = parseInt(functionMatches[2]);
+                // console.error("Found line from Function:", adjustedLine);
+              } else {
+                // console.error("No line number found in error stack.");
+              }
+              
+              // Add line info to the error message if found
+              if (adjustedLine !== null) {
+                errorMessage = errorMessage + " (at line " + adjustedLine + 
+                              (column ? ", column " + column : "") + ")";
+                
+                lineInfo = { line: adjustedLine, column: column };
+              }
+              
+              // Send back error with adjusted information
+              self.postMessage({ 
+                type: 'result', 
+                success: false, 
+                error: {
+                  message: errorMessage,
+                  stack: errorStack,
+                  location: lineInfo
+                },
+                logs
+              });
+            }
+          };
+        `;
+
+        // Rest of your code remains the same
+        const blob = new Blob([workerScript], { type: 'application/javascript' });
+        workerUrl = URL.createObjectURL(blob);
+
+        // Create and start the worker
+        worker = new Worker(workerUrl);
+
+        // Set up timeout to terminate worker
+        timeoutId = window.setTimeout(() => {
+          if (worker) {
+            worker.terminate();
+          }
+          if (workerUrl) {
+            URL.revokeObjectURL(workerUrl);
+          }
+
+          resolve({
+            success: false,
+            error: {
+              message: `Execution timed out after ${timeoutMs}ms`,
+              stack: null,
+              location: null
+            },
+            logs
+          });
+        }, timeoutMs);
+
+        // Handle messages from the worker - IMPROVED LOG HANDLING
+        worker.onmessage = (e) => {
+          const { type, data } = e.data;
+
+          if (type === 'log') {
+            // Add log to our collection
+            logs.push(data);
+            // You can also log to the main thread console for debugging
+            console.log(`[Worker Log] ${data}`);
+          } else if (type === 'result') {
+            // Clear timeout
+            if (timeoutId !== null) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
+
+            // Clean up
+            if (worker) {
+              worker.terminate();
+              worker = null;
+            }
+            if (workerUrl) {
+              URL.revokeObjectURL(workerUrl);
+              workerUrl = null;
+            }
+
+            // IMPORTANT: Use the logs from the worker result
+            // along with any logs we collected from streaming
+            const workerLogs = e.data.logs || [];
+            const allLogs = [...logs];
+
+            // Avoid duplicate logs (might happen with the streaming approach)
+            for (const wLog of workerLogs) {
+              if (!logs.includes(wLog)) {
+                allLogs.push(wLog);
+              }
+            }
+
+            resolve({
+              success: e.data.success,
+              result: e.data.result,
+              error: e.data.error,
+              logs: allLogs
+            } as EvaluationResult);
+          }
+        };
+
+        // Handle worker errors
+        worker.onerror = (error) => {
+          if (timeoutId !== null) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+
+          if (worker) {
+            worker.terminate();
+            worker = null;
+          }
+          if (workerUrl) {
+            URL.revokeObjectURL(workerUrl);
+            workerUrl = null;
+          }
+
+          resolve({
+            success: false,
+            error: {
+              message: `Worker error: ${error.message}`,
+              stack: null,
+              location: null
+            },
+            logs
+          });
+        };
+
+        // Start the worker with code and context
+        worker.postMessage({
+          code: codeString,
+          ctx: serializableCtx
+        });
+      } catch (error: any) {
+        // Clean up if creation fails
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+        }
+        if (worker) {
+          worker.terminate();
+        }
+        if (workerUrl) {
+          URL.revokeObjectURL(workerUrl);
+        }
+
+        resolve({
+          success: false,
+          error: {
+            message: `Failed to create or run worker: ${error.message}`,
+            stack: error.stack || null,
+            location: null
+          },
+          logs
+        });
+      }
+    })
+  ]);
 }
