@@ -102,7 +102,7 @@ console.log(process.env);    // <---- line 15
 // Log all environment variables via Java
 const System = Java.type('java.lang.System');   // <---- line 19
 const env = System.getenv();
-console.log('Environement via JavaS', env);
+console.log('Environment via JavaS', env);
 ```
 
 ```
