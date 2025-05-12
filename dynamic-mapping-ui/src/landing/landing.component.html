@@ -93,7 +93,6 @@
     <img width="60%" class="m-l-48 m-b-48"
       src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Connector_Matrix.png" alt="Define substitutions" />
   </div>
-
   <div class="card-header">
     <h3>
       {{ 'How to define a mapping?' | translate }}
@@ -270,5 +269,27 @@
     </div>
     <p class="image-description"><b>Description:</b> This animation shows the steps for defining a mapping in snooping
       mode.</p>
+  </div>
+
+  <div class="card-header">
+    <h3>
+      {{ 'How do I use the reliability settings when processing mappings?' | translate }}
+    </h3>
+  </div>
+  <div class="card-block">
+    <div class="p-b-8 text-16"> The following table shows the reliability settings when processing mappings:</div>
+    <ul>
+      <li><strong>HTTP Connector</strong>: Only supports basic QoS 0 (immediate response without guarantees)</li>
+      <li><strong>MQTT</strong>: Most comprehensive support; handles all QoS levels (0-2) with varying acknowledgment
+        behaviors</li>
+      <li><strong>WebHook</strong>: Primarily outbound-focused with conditional acknowledgments based on QoS level</li>
+      <li><strong>Kafka</strong>: Limited support with only QoS 0 for outbound operations</li>
+    </ul>
+    <p>Generally, higher QoS levels (1-2) provide better delivery guarantees but aren't universally supported across all
+      connectors. MQTT offers the most complete implementation while other connectors have more limited QoS
+      capabilities.</p>
+    <br />
+    <img width="80%" class="m-l-48 m-b-48" src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_QoS_Matrix.png"
+      alt="Use QoS in mappings" />
   </div>
 </div>
