@@ -40,6 +40,7 @@ export const STEP_SELECT_TEMPLATES = 2;
 export const STEP_DEFINE_SUBSTITUTIONS = 3;
 export const STEP_TEST_MAPPING = 4;
 
+
 /**
  * Creates a completion provider for custom JavaScript classes in Monaco Editor
  * @param {Monaco} monaco - The Monaco instance
@@ -182,7 +183,7 @@ export function createCompletionProvider(monaco) {
   // Return the provider object
   return {
     triggerCharacters: ['.', ' ', '('],
-    provideCompletionItems: function (model, position) {
+    provideCompletionItems: function (model, position, context, token) {
       const textUntilPosition = model.getValueInRange({
         startLineNumber: position.lineNumber,
         startColumn: 1,
@@ -210,7 +211,7 @@ export function createCompletionProvider(monaco) {
         if (matchedClass) {
           if (matchedClass.isEnum) {
             // Enum value completion
-            matchedClass.values.forEach(value => {
+            matchedClass.values.forEach((value, index) => {
               suggestions.push({
                 label: value,
                 kind: monaco.languages.CompletionItemKind.EnumMember,
@@ -218,13 +219,14 @@ export function createCompletionProvider(monaco) {
                   value: `${matchedClass.name}.${value}`
                 },
                 insertText: value,
-                range: range
+                range: range,
+                sortText: `00-${index.toString().padStart(2, '0')}` // High priority sorting
               });
             });
           } else {
             // Class property and method completion
             if (matchedClass.properties) {
-              matchedClass.properties.forEach(prop => {
+              matchedClass.properties.forEach((prop, index) => {
                 suggestions.push({
                   label: prop.name,
                   kind: monaco.languages.CompletionItemKind.Field,
@@ -232,13 +234,14 @@ export function createCompletionProvider(monaco) {
                     value: `**${prop.type}**\n\n${prop.documentation}`
                   },
                   insertText: prop.name,
-                  range: range
+                  range: range,
+                  sortText: `01-${index.toString().padStart(2, '0')}` // High priority sorting
                 });
               });
             }
 
             if (matchedClass.methods) {
-              matchedClass.methods.forEach(method => {
+              matchedClass.methods.forEach((method, index) => {
                 const params = method.parameters.join(', ');
                 suggestions.push({
                   label: {
@@ -253,18 +256,22 @@ export function createCompletionProvider(monaco) {
                     ? `${method.name}(${method.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`
                     : `${method.name}()`,
                   insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                  range: range
+                  range: range,
+                  sortText: `02-${index.toString().padStart(2, '0')}` // High priority sorting
                 });
               });
             }
           }
-          return { suggestions };
+          return {
+            suggestions,
+            incomplete: false // Mark as complete to avoid other providers
+          };
         }
 
         // For enum value access (e.g. RepairStrategy.DEFAULT)
         const enumClass = customClasses.find(cls => cls.isEnum && cls.name === objectName);
         if (enumClass) {
-          enumClass.values.forEach(value => {
+          enumClass.values.forEach((value, index) => {
             suggestions.push({
               label: value,
               kind: monaco.languages.CompletionItemKind.EnumMember,
@@ -272,15 +279,19 @@ export function createCompletionProvider(monaco) {
                 value: `${enumClass.name}.${value}`
               },
               insertText: value,
-              range: range
+              range: range,
+              sortText: `00-${index.toString().padStart(2, '0')}` // High priority sorting
             });
           });
-          return { suggestions };
+          return {
+            suggestions,
+            incomplete: false // Mark as complete to avoid other providers 
+          };
         }
       }
 
       // Global class/enum completion
-      customClasses.forEach(cls => {
+      customClasses.forEach((cls, index) => {
         suggestions.push({
           label: cls.name,
           kind: cls.isEnum
@@ -290,12 +301,13 @@ export function createCompletionProvider(monaco) {
             value: cls.documentation
           },
           insertText: cls.name,
-          range: range
+          range: range,
+          sortText: `03-${index.toString().padStart(2, '0')}` // High priority sorting
         });
       });
 
       // Utility function completion
-      utilityFunctions.forEach(func => {
+      utilityFunctions.forEach((func, index) => {
         suggestions.push({
           label: {
             label: `${func.name}(${func.parameters.join(', ')})`,
@@ -307,14 +319,15 @@ export function createCompletionProvider(monaco) {
           },
           insertText: `${func.name}(${func.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`,
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          range: range
+          range: range,
+          sortText: `04-${index.toString().padStart(2, '0')}` // High priority sorting
         });
       });
 
       // Provide new object creation completions
       const newMatch = textUntilPosition.match(/new\s+(\w*)$/);
       if (newMatch) {
-        customClasses.forEach(cls => {
+        customClasses.forEach((cls, index) => {
           if (!cls.isEnum) {
             const constructorParams = cls.properties
               ? cls.properties.map(p => p.name).join(', ')
@@ -335,10 +348,16 @@ export function createCompletionProvider(monaco) {
                   : '()'
               ),
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              range: range
+              range: range,
+              sortText: `05-${index.toString().padStart(2, '0')}` // High priority sorting
             });
           }
         });
+
+        return {
+          suggestions,
+          incomplete: false // Mark as complete to avoid other providers when dealing with constructors
+        };
       }
 
       // Check if we're inside a function call for better parameter suggestions
@@ -355,7 +374,8 @@ export function createCompletionProvider(monaco) {
               kind: monaco.languages.CompletionItemKind.Variable,
               documentation: 'The SubstitutionContext object',
               insertText: 'ctx',
-              range: range
+              range: range,
+              sortText: '00-01' // High priority sorting
             });
           } else if (matchedFunc.name === 'addSubstitution') {
             suggestions.push({
@@ -363,7 +383,8 @@ export function createCompletionProvider(monaco) {
               kind: monaco.languages.CompletionItemKind.Variable,
               documentation: 'The SubstitutionResult object',
               insertText: 'result',
-              range: range
+              range: range,
+              sortText: '00-01' // High priority sorting
             });
 
             suggestions.push({
@@ -372,7 +393,8 @@ export function createCompletionProvider(monaco) {
               documentation: 'The key for the substitution',
               insertText: '"${1:keyName}"',
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              range: range
+              range: range,
+              sortText: '00-02' // High priority sorting
             });
 
             suggestions.push({
@@ -381,13 +403,31 @@ export function createCompletionProvider(monaco) {
               documentation: 'Create a new SubstituteValue',
               insertText: 'new SubstituteValue(${1:value}, ${2:TYPE.TEXTUAL}, ${3:RepairStrategy.DEFAULT}, ${4:false})',
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              range: range
+              range: range,
+              sortText: '00-03' // High priority sorting
             });
+          }
+
+          if (suggestions.length > 0) {
+            return {
+              suggestions,
+              incomplete: false // Mark as complete to avoid other providers 
+            };
           }
         }
       }
 
-      return { suggestions };
+      // If we have any suggestions, return them with a signal that they're complete
+      if (suggestions.length > 0) {
+        return {
+          suggestions,
+          incomplete: false // Mark as complete to avoid other providers
+        };
+      }
+
+      // For other contexts, don't provide any suggestions
+      return { suggestions: [] };
     }
   };
 }
+
