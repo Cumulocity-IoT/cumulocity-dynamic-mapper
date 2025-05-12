@@ -105,7 +105,7 @@ public class KafkaClient extends AConnectorClient {
             				removeDateCommentLine(writerConsumer.getBuffer().toString()), null, null));
 
             String name = "Kafka";
-            String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.\n The connector uses SASL_SSL as security protocol.";
+            String description = "Connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.\n The connector uses SASL_SSL as security protocol.";
             connectorType = ConnectorType.KAFKA;
             supportsMessageContext = true;
             connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, supportsMessageContext, supportedDirections());

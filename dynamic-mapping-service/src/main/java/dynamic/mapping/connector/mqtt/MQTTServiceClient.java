@@ -81,8 +81,8 @@ public class MQTTServiceClient extends MQTTClient {
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
                         null));
-        String name = "Cumulocity IoT MQTT Service";
-        String description = "Specific connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
+        String name = "Cumulocity MQTT Service";
+        String description = "Connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
         connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE;
         connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
                 supportedDirections());
