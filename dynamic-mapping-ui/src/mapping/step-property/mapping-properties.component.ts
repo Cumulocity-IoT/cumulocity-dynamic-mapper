@@ -472,9 +472,22 @@ export class MappingStepPropertiesComponent
             template: '<div class="form-group row" style="height:80px"></div>',
             hideExpression: (model) => model.useExternalId
           },
+          // {
+          //   className: 'col-lg-6',
+          //   template: '<div class="form-group row" style="height:80px"></div>'
+          // },
           {
             className: 'col-lg-6',
-            template: '<div class="form-group row" style="height:80px"></div>'
+            key: 'maxFailureCount',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Max failure count',
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description:
+                'Max failure count, if this is exceeded the mapping is automatically deactivated. A value of 0 means no limit. The failure count is reset to 0 if the mapping is reactivated.',
+            },
           }
         ]
       },
@@ -496,7 +509,7 @@ export class MappingStepPropertiesComponent
               hideLabel: true
             },
             hideExpression: () => !this.supportsMessageContext
-          }
+          },
         ]
       }
     ];

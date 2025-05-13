@@ -234,7 +234,7 @@ public class MappingComponent {
         if (ms == null) {
             log.info("Tenant {} - Adding: {}", tenant, m.identifier);
             ms = new MappingStatus(m.id, m.name, m.identifier, m.direction, m.mappingTopic, m.publishTopic, 0, 0,
-                    0, 0, null);
+                    0,0, 0, null);
             mappingStatus.put(m.identifier, ms);
         }
         return ms;
@@ -254,15 +254,6 @@ public class MappingComponent {
                 DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant, stMap);
     }
 
-    // ic List<MappingStatus> getMappingLoadingError(String tenant) {
-    // // log.info("Tenant {} - get MappingStatus: {
-    // ", tenant, m.identifier);
-    // Map<String, MappingStatus> mappingLoadError
-    // = tenantMappingLoadingError.get(tenant);
-    // List<MappingStatus> mappingLoadErrorList =
-    // mappingLoadError.values().stream().collect(Collectors.toList());
-    // return mappingLoadErrorList;
-    // }
 
     public List<MappingStatus> getMappingStatus(String tenant) {
         Map<String, MappingStatus> statusMapping = tenantMappingStatus.get(tenant);
@@ -682,6 +673,12 @@ public class MappingComponent {
             addToCacheMappingInbound(tenant, mapping);
             cacheMappingInbound.get(tenant).put(mapping.id, mapping);
         }
+
+        // if mapping is activated reset currentFailureCount of mapping
+        if (active) {
+            MappingStatus mappingStatus = getMappingStatus(tenant, mapping);
+            mappingStatus.currentFailureCount = 0;
+        }
         return mapping;
     }
 
@@ -927,6 +924,29 @@ public class MappingComponent {
             updateMor.setAttrs(map);
             this.inventoryApi.update(updateMor);
         });
+    }
+
+    public void increaseAndHandleFailureCount(String tenant, Mapping mapping, MappingStatus mappingStatus) {
+        mappingStatus.currentFailureCount++;
+        // check if failure count is exceeded, a value of 0 means no limit
+        if (mappingStatus.currentFailureCount >= mapping.getMaxFailureCount() && mapping.getMaxFailureCount() > 0) {
+            // deactivate mapping
+            try {
+                setActivationMapping(tenant, mapping.id, false);
+                String message = String.format(
+                        "Tenant %s - Mapping %s deactivated mapping due to exceeded failure count: %d",
+                        tenant, mapping.id, mappingStatus.getCurrentFailureCount());
+                log.warn(message);
+                configurationRegistry.getC8yAgent().createEvent(message,
+                        LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE,
+                        DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+                        null);
+            } catch (Exception e) {
+                log.error("Tenant {} - Mapping {} failed to deactivate mapping, due to exceeded failure count: {}",
+                        tenant, mapping.id,
+                        mappingStatus.getCurrentFailureCount());
+            }
+        }
     }
 
 }

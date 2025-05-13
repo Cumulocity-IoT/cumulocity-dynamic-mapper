@@ -222,6 +222,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     log.error(errorMessage, e);
                     context.addError(new ProcessingException(errorMessage, e));
                     mappingStatus.errors++;
+                    mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
 
                     // Determine if this is a critical exception that should be propagated
                     criticalExceptions.add(e);
@@ -302,6 +303,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             log.debug("Tenant {} - Deserialization error details:", tenant, e);
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
+            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
         private Context setupGraalVMContext(Mapping mapping, ServiceConfiguration serviceConfiguration)
@@ -359,6 +361,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             log.debug("Tenant {} - GraalVM error details:", tenant, e);
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
+            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
         private void logMessageReceived(String tenant, Mapping mapping, ProcessingContext<?> context,
@@ -440,6 +443,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 log.debug("Tenant {} - Processing error details:", tenant, e);
                 context.addError(new ProcessingException(errorMessage, e));
                 mappingStatus.errors++;
+                mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
         }
 
@@ -456,7 +460,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         String tenant = connectorMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         if (serviceConfiguration.logPayload) {
-            if(connectorMessage.getPayload() != null) {
+            if (connectorMessage.getPayload() != null) {
                 String payload = new String(connectorMessage.getPayload(), StandardCharsets.UTF_8);
                 log.info("Tenant {} - INITIAL: new message on topic: [{}], payload: {}", tenant, topic, payload);
             }

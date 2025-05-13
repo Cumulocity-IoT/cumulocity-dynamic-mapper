@@ -36,59 +36,62 @@ import java.io.Serializable;
 @ToString(exclude = {})
 public class MappingStatus implements Serializable {
 
-  public static MappingStatus UNSPECIFIED_MAPPING_STATUS;
-  public static final String IDENT_UNSPECIFIED_MAPPING = "UNSPECIFIED";
+    public static MappingStatus UNSPECIFIED_MAPPING_STATUS;
+    public static final String IDENT_UNSPECIFIED_MAPPING = "UNSPECIFIED";
 
-  static {
-    UNSPECIFIED_MAPPING_STATUS = new MappingStatus(IDENT_UNSPECIFIED_MAPPING, IDENT_UNSPECIFIED_MAPPING,
-        IDENT_UNSPECIFIED_MAPPING, null, "#", "#", 0, 0, 0,
-        0, null);
-  }
+    static {
+        UNSPECIFIED_MAPPING_STATUS = new MappingStatus(IDENT_UNSPECIFIED_MAPPING, IDENT_UNSPECIFIED_MAPPING,
+                IDENT_UNSPECIFIED_MAPPING, null, "#", "#", 0, 0, 0,0,
+                0, null);
+    }
 
-  @NotNull
-  public String id;
+    @NotNull
+    public String id;
 
-  @NotNull
-  public String name;
+    @NotNull
+    public String name;
 
-  @NotNull
-  public String identifier;
+    @NotNull
+    public String identifier;
 
-  @NotNull
-  public Direction direction;
+    @NotNull
+    public Direction direction;
 
-  @NotNull
-  public String mappingTopic;
+    @NotNull
+    public String mappingTopic;
 
-  @NotNull
-  public String publishTopic;
+    @NotNull
+    public String publishTopic;
 
-  @NotNull
-  public long messagesReceived;
+    @NotNull
+    public long messagesReceived;
 
-  @NotNull
-  public long errors;
+    @NotNull
+    public long errors = 0;
 
-  @NotNull
-  public long snoopedTemplatesActive;
+    @NotNull
+    public long currentFailureCount = 0;
 
-  @NotNull
-  public long snoopedTemplatesTotal;
+    @NotNull
+    public long snoopedTemplatesActive;
 
-  @NotNull
-  @Setter
-  public String loadingError;
+    @NotNull
+    public long snoopedTemplatesTotal;
 
-  @Override
-  public boolean equals(Object m) {
-    return (m instanceof MappingStatus) && id == ((MappingStatus) m).id;
-  }
+    @NotNull
+    @Setter
+    public String loadingError;
 
-  public void reset() {
-    messagesReceived = 0;
-    errors = 0;
-    loadingError = "";
-    snoopedTemplatesActive = 0;
-    snoopedTemplatesTotal = 0;
-  }
+    @Override
+    public boolean equals(Object m) {
+        return (m instanceof MappingStatus) && id == ((MappingStatus) m).id;
+    }
+
+    public void reset() {
+        messagesReceived = 0;
+        errors = 0;
+        loadingError = "";
+        snoopedTemplatesActive = 0;
+        snoopedTemplatesTotal = 0;
+    }
 }

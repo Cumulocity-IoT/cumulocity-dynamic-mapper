@@ -349,6 +349,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
                     context.addError(new ProcessingException(errorMessage, e));
                     mappingStatus.errors++;
+                    mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
                     encounteredErrors.add(e);
                 } finally {
                     // Clean up GraalVM context
@@ -463,6 +464,7 @@ public class DispatcherOutbound implements NotificationCallback {
             log.error(errorMessage, e);
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
+            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
         private void logOutboundMessageReceived(String tenant, Mapping mapping, ProcessingContext<?> context,
@@ -519,6 +521,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     List<C8YRequest> resultRequests = context.getRequests();
                     if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                         mappingStatus.errors++;
+                        mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
                     }
                 }
             } catch (Exception e) {
@@ -532,6 +535,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 log.debug("Tenant {} - Processing error details:", tenant, e);
                 context.addError(new ProcessingException(errorMessage, e));
                 mappingStatus.errors++;
+                mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
         }
 

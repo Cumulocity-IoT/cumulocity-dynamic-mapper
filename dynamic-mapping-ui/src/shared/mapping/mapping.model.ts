@@ -57,6 +57,7 @@ export interface Mapping {
   substitutions?: MappingSubstitution[];
   filterMapping?: string;
   filterInventory?: string;
+  maxFailureCount?: number;
   active: boolean;
   debug: boolean;
   tested: boolean;
