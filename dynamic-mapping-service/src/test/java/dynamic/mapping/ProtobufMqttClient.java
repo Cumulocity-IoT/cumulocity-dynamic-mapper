@@ -83,6 +83,7 @@ public class ProtobufMqttClient {
                 .setExternalIdType("c8y_Serial")
                 .setExternalId("berlin_01")
                 .setUnit("C")
+                .setTimestamp(System.currentTimeMillis())
                 .setMeasurementType("c8y_GenericMeasurement")
                 .setValue(99.7F)
                 .build();
