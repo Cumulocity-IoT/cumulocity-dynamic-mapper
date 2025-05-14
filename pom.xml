@@ -111,7 +111,7 @@
 			<dependency>
 				<groupId>com.google.protobuf</groupId>
 				<artifactId>protobuf-java</artifactId>
-				<version>4.28.0</version>
+				<version>4.30.2‚</version>
 			</dependency>
 			<dependency>
 				<groupId>com.hivemq</groupId>

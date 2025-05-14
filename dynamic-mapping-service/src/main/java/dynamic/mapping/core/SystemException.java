@@ -19,12 +19,10 @@
  *
  */
 
-package dynamic.mapping.connector.core.client;
+package dynamic.mapping.core;
 
-import dynamic.mapping.core.SystemException;
-
-public class ConnectorException extends SystemException {
-    public ConnectorException(String string) {
+public class SystemException extends Exception {
+    public SystemException(String string) {
         super(string);
     }
 }
