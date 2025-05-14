@@ -75,8 +75,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
 
         String payload = toPrettyJsonString(payloadObject);
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.debug("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
-                    mapping.debug, serviceConfiguration.logPayload || mapping.debug);
+            log.info("Tenant {} - Patched payload: {}", tenant, payload);
         }
 
         boolean substitutionTimeExists = false;

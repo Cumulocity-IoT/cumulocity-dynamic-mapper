@@ -82,8 +82,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
         String payload = toPrettyJsonString(payloadObject);
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.debug("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
-                    mapping.debug, serviceConfiguration.logPayload || mapping.debug);
+            log.info("Tenant {} - Patched payload: {}", tenant, payload);
         }
 
         boolean substitutionTimeExists = false;
@@ -129,9 +128,11 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             // add topic levels as metadata
             List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
             ((Map) jsonObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
-            Map contextData = new HashMap<String, String>() {{
-                put("api", mapping.targetAPI.toString());
-            }};
+            Map contextData = new HashMap<String, String>() {
+                {
+                    put("api", mapping.targetAPI.toString());
+                }
+            };
             ((Map) jsonObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
 
             final Value result = extractFromSourceFunc
@@ -143,7 +144,9 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
             if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
                 context.setIgnoreFurtherProcessing(true);
-                log.info("Tenant {} - Ignoring payload over CodeBasedProcessorInbound: {}", context.getTenant(),
+                log.info(
+                        "Tenant {} - Extraction of source in CodeBasedProcessorInbound.extractFromSource returned no result, payload: {}",
+                        context.getTenant(),
                         jsonObject);
             } else { // Now use the copied objects
                 Set<String> keySet = typedResult.getSubstitutions().keySet();
@@ -170,8 +173,10 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                     }
                 }
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                    log.info("Tenant {} - New payload over CodeBasedProcessorInbound: {}", context.getTenant(),
-                            jsonObject);
+                    log.info(
+                            "Tenant {} - Extraction of source in CodeBasedProcessorInbound.extractFromSource returned {} results, payload: {} ",
+                            context.getTenant(),
+                            keySet == null ? 0 : keySet.size(), jsonObject);
                 }
             }
 

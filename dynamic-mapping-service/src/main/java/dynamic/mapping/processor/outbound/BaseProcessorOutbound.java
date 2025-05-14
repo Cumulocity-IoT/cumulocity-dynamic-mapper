@@ -132,8 +132,7 @@ public abstract class BaseProcessorOutbound<T> {
         }
         if (serviceConfiguration.logPayload || mapping.debug) {
             String patchedPayloadTarget = payloadTarget.jsonString();
-            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, patchedPayloadTarget,
-                    serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
+            log.info("Tenant {} - Patched payload: {}", tenant, patchedPayloadTarget);
         }
 
         String deviceSource = context.getSourceId();
@@ -158,11 +157,7 @@ public abstract class BaseProcessorOutbound<T> {
                 MutableInt c = new MutableInt(0);
                 // MutableInt index = new MutableInt(0);
                 String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
-                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                    log.info(
-                            "Tenant {} - Resolving topic: context.getTopic():{}, splitTopicInAsList:{}, topicLevels:{}",
-                            tenant, context.getTopic(), splitTopicInAsList, topicLevels);
-                }
+                String[] splitTopicInAsListOriginal = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
                 topicLevels.forEach(tl -> {
                     while (c.intValue() < splitTopicInAsList.length
                             && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0)) {
@@ -172,8 +167,8 @@ public abstract class BaseProcessorOutbound<T> {
                     c.increment();
                 });
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                    log.info("Tenant {} - Resolved topic: context.getTopic():{}, splitTopicInAsList:{}, topicLevels:{}",
-                            tenant, context.getTopic(), splitTopicInAsList, topicLevels);
+                    log.info("Tenant {} - Resolved topic from {} to {}",
+                            tenant, splitTopicInAsListOriginal, splitTopicInAsList);
                 }
 
                 StringBuffer resolvedPublishTopic = new StringBuffer();
@@ -208,7 +203,8 @@ public abstract class BaseProcessorOutbound<T> {
                     if (publishTopic != null && !publishTopic.equals(""))
                         context.setTopic(publishTopic);
                 } catch (Exception e) {
-                    // publishTopic is not defined or unknown, so we continue using the value defined in the mapping 
+                    // publishTopic is not defined or unknown, so we continue using the value
+                    // defined in the mapping
                 }
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
@@ -237,7 +233,7 @@ public abstract class BaseProcessorOutbound<T> {
                     processingCache.size());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant,
+            log.info("Tenant {} - Prepare payload for sending: {}, {}, numberDevices: {}", tenant,
                     payloadTarget.jsonString(),
                     mapping.targetAPI,
                     1);
