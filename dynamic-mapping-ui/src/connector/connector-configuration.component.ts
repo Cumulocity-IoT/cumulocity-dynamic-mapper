@@ -17,8 +17,9 @@
  *
  * @authors Christof Strack
  */
+import { HttpStatusCode } from '@angular/common/http';
 import { Component, ViewChild } from '@angular/core';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable } from 'rxjs';
 import packageJson from '../../package.json';
@@ -26,7 +27,9 @@ import {
   ConnectorConfiguration,
   ConnectorSpecification,
   ConnectorStatus,
-  Feature
+  Feature,
+  Operation,
+  SharedService
 } from '../shared';
 import { ConnectorConfigurationService } from '../shared/service/connector-configuration.service';
 import { ConnectorGridComponent } from '../shared/connector-configuration/connector-grid.component';
@@ -48,11 +51,24 @@ export class ConnectorConfigurationComponent {
   constructor(
     public bsModalService: BsModalService,
     public connectorConfigurationService: ConnectorConfigurationService,
-    public alertService: AlertService
-  ) {}
+    public alertService: AlertService,
+    private sharedService: SharedService,
+  ) { }
 
   refresh() {
     this.connectorGrid.refresh();
+  }
+
+  async clickedReconnect2NotificationEndpoint() {
+    const response1 = await this.sharedService.runOperation(
+      { operation: Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS }
+    );
+    // console.log('Details reconnect2NotificationEndpoint', response1);
+    if (response1.status === HttpStatusCode.Created) {
+      this.alertService.success(gettext('Reconnected successfully.'));
+    } else {
+      this.alertService.danger(gettext('Failed to reconnect!'));
+    }
   }
 
   async onConfigurationAdd() {

@@ -168,7 +168,8 @@ public class C8YNotificationSubscriber {
                             String token = createToken(DEVICE_SUBSCRIPTION,
                                     tokenSeed);
                             deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(), token);
-                            CustomWebSocketClient client = connect(token, dispatcherOutbound);
+                            CustomWebSocketClient client = connect(token, dispatcherOutbound,
+                                    dispatcherOutbound.getConnectorClient().getConnectorName());
                             deviceClientMap.get(tenant).put(
                                     dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
                                     client);
@@ -328,7 +329,8 @@ public class C8YNotificationSubscriber {
                                         dispatcherOutbound.getConnectorClient().getConnectorName());
                                 deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
                                         token);
-                                CustomWebSocketClient client = connect(token, dispatcherOutbound);
+                                CustomWebSocketClient client = connect(token, dispatcherOutbound,
+                                        dispatcherOutbound.getConnectorClient().getConnectorName());
                                 deviceClientMap.get(tenant).put(
                                         dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
                                         client);
@@ -376,10 +378,11 @@ public class C8YNotificationSubscriber {
                         notificationSubscriptionRepresentation = subIt.next();
                         if (!"tenant".equals(notificationSubscriptionRepresentation.getContext())) {
                             log.info(
-                                    "Tenant {} - Phase 0, initializing Notification 2.0, subscription with ID {} retrieved, filter: {},{}", tenant,
-                            notificationSubscriptionRepresentation.getId().getValue(),
-                            notificationSubscriptionRepresentation.getSource(),
-                            notificationSubscriptionRepresentation.getSubscriptionFilter());
+                                    "Tenant {} - Phase 0, initializing Notification 2.0, subscription with ID {} retrieved, filter: {},{}",
+                                    tenant,
+                                    notificationSubscriptionRepresentation.getId().getValue(),
+                                    notificationSubscriptionRepresentation.getSource(),
+                                    notificationSubscriptionRepresentation.getSubscriptionFilter());
                             deviceSubList.add(notificationSubscriptionRepresentation);
                         }
                     }
@@ -585,14 +588,15 @@ public class C8YNotificationSubscriber {
         configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.DISCONNECTED, null);
     }
 
-    public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
+    public CustomWebSocketClient connect(String token, NotificationCallback callback, String connectorName)
+            throws URISyntaxException {
         String tenant = subscriptionsService.getTenant();
         configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
         try {
             String baseUrl = this.baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
             final CustomWebSocketClient client = new CustomWebSocketClient(tenant, configurationRegistry, webSocketUrl,
-                    callback);
+                    callback, connectorName);
             client.setConnectionLostTimeout(30);
             client.connect();
             configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);

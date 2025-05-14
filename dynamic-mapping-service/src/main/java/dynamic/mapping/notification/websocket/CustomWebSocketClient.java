@@ -46,13 +46,15 @@ public class CustomWebSocketClient extends WebSocketClient {
     private final NotificationCallback callback;
     private ScheduledExecutorService executorService = null;
     private String tenant;
+    private String connectorName;
     private ExecutorService virtualThreadPool;
     ServiceConfiguration serviceConfiguration;
 
     public CustomWebSocketClient(String tenant, ConfigurationRegistry configurationRegistry, URI serverUri,
-            NotificationCallback callback) {
+            NotificationCallback callback, String connectorName) {
         super(serverUri);
         this.callback = callback;
+        this.connectorName = connectorName;
         this.tenant = tenant;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
@@ -74,8 +76,8 @@ public class CustomWebSocketClient extends WebSocketClient {
         int timeout = processedResults.getMaxCPUTimeMS();
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "Tenant {} - INITIAL: new message notification 2.0: api: {}, QoS mappings: {}, connector InternalWebSocket",
-                    tenant, notification.getApi(), mappingQos);
+                    "Tenant {} - INITIAL: new message notification 2.0 on connector InternalWebSocket for connectors {} api: {}, QoS mappings: {},",
+                    tenant, notification.getApi(), mappingQos, connectorName);
         }
         if (mappingQos > 0 || timeout > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
@@ -88,8 +90,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                     if (timeout > 0) {
                         results = processedResults.getProcessingResult().get(timeout,
                                 TimeUnit.MILLISECONDS);
-                    }
-                    else {
+                    } else {
                         results = processedResults.getProcessingResult().get();
                     }
 
@@ -103,17 +104,18 @@ public class CustomWebSocketClient extends WebSocketClient {
                                 for (C8YRequest r : resultRequests) {
                                     if (r.hasError()) {
                                         Throwable e = r.getError();
-                                        while(!(e instanceof ProcessingException) && e != e.getCause()) {
+                                        while (!(e instanceof ProcessingException) && e != e.getCause()) {
                                             e = e.getCause();
                                         }
                                         if (e instanceof ProcessingException) {
                                             ProcessingException processingException = (ProcessingException) e;
-                                            httpStatusCode = Math.max(processingException.getHttpStatusCode(), httpStatusCode);
+                                            httpStatusCode = Math.max(processingException.getHttpStatusCode(),
+                                                    httpStatusCode);
                                         }
                                     }
                                 }
                                 hasErrors = true;
-                                //break;
+                                // break;
                             }
                         }
                     }
@@ -121,16 +123,18 @@ public class CustomWebSocketClient extends WebSocketClient {
                     if (!hasErrors) {
                         // No errors found, acknowledge the message
                         if (notification.getAckHeader() != null) {
-                            log.info("Tenant {} - END: Sending manual ack for Notification message. API: {} api, QoS: {}, Connector InternalWebSocket",
+                            log.info(
+                                    "Tenant {} - END: Sending manual ack for Notification message. API: {} api, QoS: {}, Connector InternalWebSocket",
                                     tenant, notification.getApi(), mappingQos);
                             send(notification.getAckHeader()); // ack message
                         } else {
                             throw new RuntimeException("No message id found for ack");
                         }
-                    } else if(httpStatusCode < 500) {
-                        //Errors found but not a server error, acknowledge the message
+                    } else if (httpStatusCode < 500) {
+                        // Errors found but not a server error, acknowledge the message
                         if (notification.getAckHeader() != null) {
-                            log.info("Tenant {} - END: Sending manual ack for Notification message. API: {} api, QoS: {}, Connector InternalWebSocket",
+                            log.info(
+                                    "Tenant {} - END: Sending manual ack for Notification message. API: {} api, QoS: {}, Connector InternalWebSocket",
                                     tenant, notification.getApi(), mappingQos);
                             send(notification.getAckHeader()); // ack message
                         } else {
@@ -138,14 +142,15 @@ public class CustomWebSocketClient extends WebSocketClient {
                         }
                     } else {
                         // Server error, do not acknowledge
-                        log.error("Tenant {} - END: Processing failed with server error. API: {} api, QoS: {}, Connector InternalWebSocket",
+                        log.error(
+                                "Tenant {} - END: Processing failed with server error. API: {} api, QoS: {}, Connector InternalWebSocket",
                                 tenant, notification.getApi(), mappingQos);
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery
                     // Thread.currentThread().interrupt();
                     log.warn("Tenant {} - END: Processing InterruptedException |  ExecutionException: {}",
-                    tenant, e.getMessage());
+                            tenant, e.getMessage());
                 } catch (TimeoutException e) {
                     var cancelResult = processedResults.getProcessingResult().cancel(true);
                     log.warn(
@@ -160,7 +165,8 @@ public class CustomWebSocketClient extends WebSocketClient {
             // If the original publish was QoS > 0 but got downgraded, we should still
             // acknowledge
             if (notification.getAckHeader() != null) {
-                log.info("Tenant {} - END: Sending manual ack for Notification message. API: {} api, QoS: {}, Connector InternalWebSocket",
+                log.info(
+                        "Tenant {} - END: Sending manual ack for Notification message. API: {} api, QoS: {}, Connector InternalWebSocket",
                         tenant, notification.getApi(), mappingQos);
                 send(notification.getAckHeader()); // ack message
             } else {

@@ -112,17 +112,6 @@ export class ServiceConfigurationComponent implements OnInit {
     });
   }
 
-  async clickedReconnect2NotificationEndpoint() {
-    const response1 = await this.sharedService.runOperation(
-      { operation: Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS }
-    );
-    // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Reconnected successfully.'));
-    } else {
-      this.alertService.danger(gettext('Failed to reconnect!'));
-    }
-  }
 
   async clickedClearInboundExternalIdCache() {
     const response1 = await this.sharedService.runOperation(
