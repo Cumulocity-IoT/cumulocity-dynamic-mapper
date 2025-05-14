@@ -47,19 +47,19 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
     private GenericMessageCallback genericMessageCallback;
     private String tenant;
     private String connectorIdentifier;
+    private String connectorName;
     private boolean supportsMessageContext;
-    private ConfigurationRegistry configurationRegistry;
     private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
 
     MQTTCallback(String tenant, ConfigurationRegistry configurationRegistry, GenericMessageCallback callback,
-            String connectorIdentifier,
+            String connectorIdentifier, String connectorName,
             boolean supportsMessageContext) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
+        this.connectorName = connectorName;
         this.supportsMessageContext = supportsMessageContext;
-        this.configurationRegistry = configurationRegistry;
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
@@ -84,9 +84,9 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                 .build();
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "Tenant {} - INITIAL: message on topic: [{}], QoS message: {}, connector {}",
+                    "Tenant {} - INITIAL: message on topic: [{}], QoS message: {}, connector: {},{}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(),
-                    connectorIdentifier);
+                    connectorName, connectorIdentifier);
         }
         // Process the message
         ProcessingResult<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
@@ -111,8 +111,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                     if (timeout > 0) {
                         results = processedResults.getProcessingResult().get(timeout,
                                 TimeUnit.MILLISECONDS);
-                    }
-                    else {
+                    } else {
                         results = processedResults.getProcessingResult().get();
                     }
 
@@ -122,11 +121,14 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                     if (results != null) {
                         for (ProcessingContext<?> context : results) {
                             if (context.hasError()) {
-                                for(Exception error : context.getErrors()) {
-                                    if(error instanceof ProcessingException) {
-                                        if( ((ProcessingException) error).getOriginException() instanceof SDKException) {
-                                            if(((SDKException)((ProcessingException) error).getOriginException()).getHttpStatus() > httpStatusCode) {
-                                                httpStatusCode = ((SDKException)((ProcessingException) error).getOriginException()).getHttpStatus();
+                                for (Exception error : context.getErrors()) {
+                                    if (error instanceof ProcessingException) {
+                                        if (((ProcessingException) error)
+                                                .getOriginException() instanceof SDKException) {
+                                            if (((SDKException) ((ProcessingException) error).getOriginException())
+                                                    .getHttpStatus() > httpStatusCode) {
+                                                httpStatusCode = ((SDKException) ((ProcessingException) error)
+                                                        .getOriginException()).getHttpStatus();
                                             }
                                         }
                                     }
@@ -142,27 +144,30 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
 
                     if (!hasErrors) {
                         // No errors found, acknowledge the message
-                        log.warn("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                        log.warn(
+                                "Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
-                    } else if(httpStatusCode < 500){
-                        //Errors found but not a server error, acknowledge the message
-                        log.warn("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                    } else if (httpStatusCode < 500) {
+                        // Errors found but not a server error, acknowledge the message
+                        log.warn(
+                                "Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
                     } else {
-                        //Not sending ack, trigger retransmission
-                        //TODO Trigger Connector reconnect to after delay
+                        // Not sending ack, trigger retransmission
+                        // TODO Trigger Connector reconnect to after delay
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery
                     // Thread.currentThread().interrupt();
                     log.warn("Tenant {} - END: Was interrupted for MQTT message: topic: [{}], QoS: {}, connector: {}",
-                    tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
+                            tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                 } catch (TimeoutException e) {
                     var cancelResult = processedResults.getProcessingResult().cancel(true);
-                    log.warn("Tenant {} - END: Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
-                    tenant, timeout, connectorIdentifier, cancelResult);
+                    log.warn(
+                            "Tenant {} - END: Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
+                            tenant, timeout, connectorIdentifier, cancelResult);
                 }
                 return null; // Proper return for Callable<Void>
             });

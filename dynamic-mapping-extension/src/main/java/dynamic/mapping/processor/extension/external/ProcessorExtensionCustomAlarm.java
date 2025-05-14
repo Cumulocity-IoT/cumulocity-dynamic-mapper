@@ -199,7 +199,7 @@ public class ProcessorExtensionCustomAlarm
                     context.getProcessingCacheSize());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Prepare payload for sending: {}, {}, numberDevices: {}", tenant,
+            log.info("Tenant {} - Payload was sent: {}, API: {}, numberDevices: {}", tenant,
                     payloadTarget.jsonString(),
                     mapping.targetAPI,
                     size);
