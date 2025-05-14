@@ -77,7 +77,7 @@ public class ProtobufMqttClient {
         System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
         testClient.connect();
 
-        System.out.println("Publishing message on topic" + topic);
+        System.out.println("Publishing message on topic:" + topic);
 
         InternalCustomMeasurementOuter.InternalCustomMeasurement proto = InternalCustomMeasurement.newBuilder()
                 .setExternalIdType("c8y_Serial")
@@ -103,7 +103,7 @@ public class ProtobufMqttClient {
         System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
         testClient.connect();
 
-        System.out.println("Publishing message on topic" + topic);
+        System.out.println("Publishing message on topic:" + topic);
 
         InternalCustomAlarmOuter.InternalCustomAlarm proto = InternalCustomAlarm.newBuilder()
                 .setExternalIdType("c8y_Serial")

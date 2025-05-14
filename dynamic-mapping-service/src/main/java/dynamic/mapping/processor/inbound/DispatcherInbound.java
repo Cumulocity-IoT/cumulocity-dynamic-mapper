@@ -206,7 +206,7 @@ public class DispatcherInbound implements GenericMessageCallback {
 
                     // Log message and increment counter
                     inboundProcessingCounter.increment();
-                    logMessageReceived(tenant, mapping, context, serviceConfiguration);
+                    logInboundMessageReceived(tenant, mapping, context, serviceConfiguration);
                     mappingStatus.messagesReceived++;
 
                     // Handle snooping or normal processing
@@ -364,7 +364,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
-        private void logMessageReceived(String tenant, Mapping mapping, ProcessingContext<?> context,
+        private void logInboundMessageReceived(String tenant, Mapping mapping, ProcessingContext<?> context,
                 ServiceConfiguration serviceConfiguration) {
             if (serviceConfiguration.logPayload || mapping.debug) {
                 Object pp = context.getPayload();
@@ -376,11 +376,11 @@ public class DispatcherInbound implements GenericMessageCallback {
                     ppLog = pp.toString();
                 }
                 log.info(
-                        "Tenant {} - BEGIN: new message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
+                        "Tenant {} - Start processing message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal(), ppLog);
             } else {
-                log.info("Tenant {} - BEGIN: new message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
+                log.info("Tenant {} - Start processing message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal());
             }
