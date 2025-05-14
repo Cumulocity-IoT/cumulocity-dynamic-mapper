@@ -462,7 +462,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         if (serviceConfiguration.logPayload) {
             if (connectorMessage.getPayload() != null) {
                 String payload = new String(connectorMessage.getPayload(), StandardCharsets.UTF_8);
-                log.info("Tenant {} - INITIAL: new message on topic: [{}], payload: {}", tenant, topic, payload);
+                log.info("Tenant {} - PROCESSING: message on topic: [{}], payload: {}", tenant, topic, payload);
             }
         }
 

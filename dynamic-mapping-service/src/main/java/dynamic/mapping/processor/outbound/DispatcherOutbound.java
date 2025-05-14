@@ -581,7 +581,7 @@ public class DispatcherOutbound implements NotificationCallback {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
 
-        log.info("Tenant {} - Processing C8Y message on API: {}, for Device {} and connector {}, payload {}",
+        log.info("Tenant {} - PROCESSING: C8Y message, API: {}, device: {}. connector: {}, payload: {}",
                 tenant,
                 c8yMessage.getApi(), c8yMessage.getSourceId(),
                 connectorClient.getConnectorName(),
