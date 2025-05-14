@@ -183,7 +183,7 @@ public class WebHook extends AConnectorClient {
 
     public boolean initialize() {
         loadConfiguration();
-        log.info("Tenant {} - Phase 0, initializing connector {}, {} was successful", tenant,
+        log.info("Tenant {} - Phase 0: initializing connector {}, type:{} was successful", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;
@@ -191,7 +191,7 @@ public class WebHook extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
+        log.info("Tenant {} - Phase I: connecting with {}, isConnected:{}, shouldConnect:{}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -228,14 +228,13 @@ public class WebHook extends AConnectorClient {
         // Build the client
         webhookClient = builder.build();
 
-
         // stay in the loop until successful
         boolean successful = false;
         while (!successful) {
             loadConfiguration();
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
-                log.info("Tenant {} - Phase II, connecting with {}, (shouldConnect):{} {}", tenant,
+                log.info("Tenant {} - Phase II: connecting with {}, shouldConnect:{}, server:{}", tenant,
                         getConnectorName(),
                         shouldConnect(), baseUrl);
                 if (!firstRun) {
@@ -296,11 +295,13 @@ public class WebHook extends AConnectorClient {
             return webhookClient.get()
                     .uri(baseUrlHealthEndpoint) // Use the full health endpoint URL
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
-                        return Mono.error(new RuntimeException("Health check failed with client error: " + response.statusCode()));
+                    .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
+                        return Mono.error(new RuntimeException(
+                                "Health check failed with client error: " + response.statusCode()));
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
-                        return Mono.error(new RuntimeException("Health check failed with client error: " + response.statusCode()));
+                        return Mono.error(new RuntimeException(
+                                "Health check failed with client error: " + response.statusCode()));
 
                     })
                     .toEntity(String.class);
@@ -361,7 +362,7 @@ public class WebHook extends AConnectorClient {
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true,true);
+            updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
             List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
             updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("Tenant {} - Disconnected from webHook endpoint II: {}", tenant,
@@ -407,15 +408,15 @@ public class WebHook extends AConnectorClient {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(Mono.just(payload), String.class)
                         .retrieve()
-                        .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
+                        .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
                             String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error(  new ProcessingException(errorMessage, response.statusCode().value()));
+                            return Mono.error(new ProcessingException(errorMessage, response.statusCode().value()));
                         })
-                        .onStatus(HttpStatusCode::is5xxServerError, ( response) -> {
+                        .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                             String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
+                            return Mono.error(new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .toEntity(String.class);
             } else if (RequestMethod.DELETE.equals(method)) {
@@ -425,12 +426,12 @@ public class WebHook extends AConnectorClient {
                         .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
                             String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
+                            return Mono.error(new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                             String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error(  new ProcessingException(errorMessage, response.statusCode().value()));
+                            return Mono.error(new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .toEntity(String.class);
             } else if (RequestMethod.PATCH.equals(method)) {
@@ -448,12 +449,12 @@ public class WebHook extends AConnectorClient {
                             .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
                                 String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                                 log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                                return Mono.error(  new ProcessingException(errorMessage, response.statusCode().value()));
+                                return Mono.error(new ProcessingException(errorMessage, response.statusCode().value()));
                             })
                             .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                                 String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                                 log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                                return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
+                                return Mono.error(new ProcessingException(errorMessage, response.statusCode().value()));
                             })
                             .toEntity(String.class);
                 }
@@ -463,15 +464,15 @@ public class WebHook extends AConnectorClient {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(Mono.just(payload), String.class)
                         .retrieve()
-                        .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
+                        .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
                             String errorMessage = "Client error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
+                            return Mono.error(new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                             String errorMessage = "Server error when publishing MEAO: " + response.statusCode();
                             log.error("Tenant {} - {} {}", tenant, errorMessage, path);
-                            return Mono.error( new ProcessingException(errorMessage, response.statusCode().value()));
+                            return Mono.error(new ProcessingException(errorMessage, response.statusCode().value()));
                         })
                         .toEntity(String.class);
             }
@@ -523,12 +524,12 @@ public class WebHook extends AConnectorClient {
         return webhookClient.get()
                 .uri(path)
                 .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, ( response) -> {
+                .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
                     String errorMessage = "Client error when retrieving existing object: " + response.statusCode();
                     log.error("Tenant {} - {} {}", tenant, errorMessage, path);
                     return Mono.error(new RuntimeException(errorMessage));
                 })
-                .onStatus(HttpStatusCode::is5xxServerError, ( response) -> {
+                .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
                     String errorMessage = "Server error when retrieving existing object: " + response.statusCode();
                     log.error("Tenant {} - {} {}", tenant, errorMessage, path);
                     return Mono.error(new RuntimeException(errorMessage));
@@ -546,23 +547,25 @@ public class WebHook extends AConnectorClient {
                                 .body(BodyInserters.fromValue(mergedPayload))
                                 .retrieve()
                                 .onStatus(HttpStatusCode::is4xxClientError, (response) -> {
-                                    String errorMessage = "Client error when publishing merged object: " + response.statusCode();
+                                    String errorMessage = "Client error when publishing merged object: "
+                                            + response.statusCode();
                                     log.error("Tenant {} - {} {}", tenant, errorMessage, path);
                                     return Mono.error(new RuntimeException(errorMessage));
                                 })
-                                .onStatus(HttpStatusCode::is5xxServerError, ( response) -> {
-                                    String errorMessage = "Server error when publishing merged object: " + response.statusCode();
+                                .onStatus(HttpStatusCode::is5xxServerError, (response) -> {
+                                    String errorMessage = "Server error when publishing merged object: "
+                                            + response.statusCode();
                                     log.error("Tenant {} - {} {}", tenant, errorMessage, path);
                                     return Mono.error(new RuntimeException(errorMessage));
                                 })
                                 .toEntity(String.class);
                     } catch (Exception e) {
-                        log.error("Tenant {} - Error during PATCH operation for path {}: {}", tenant, path, e.getMessage());
+                        log.error("Tenant {} - Error during PATCH operation for path {}: {}", tenant, path,
+                                e.getMessage());
                         return Mono.error(new RuntimeException("Error during PATCH operation: " + e.getMessage(), e));
                     }
                 });
     }
-
 
     public String mergeJsonObjects(String existingJson, String newJson) throws IOException {
         // Convert JSON strings to JsonNode objects

@@ -470,12 +470,12 @@ public class DispatcherOutbound implements NotificationCallback {
                 ServiceConfiguration serviceConfiguration) {
             if (serviceConfiguration.logPayload || mapping.debug) {
                 log.info(
-                        "Tenant {} - Start processing message on topic: [{}] connector: {}, mapping : {}, wrapped message: {}",
+                        "Tenant {} - Start processing message on topic: [{}]  connector: {}, mapping : {}, wrapped message: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorName(), mapping.getName(),
                         context.getPayload().toString());
             } else {
                 log.info(
-                        "Tenant {} - Start processing message on topic: [{}] connector: {}, mapping : {}, sendPayload: {}",
+                        "Tenant {} - Start processing message on topic: [{}]  connector: {}, mapping : {}, sendPayload: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorName(), mapping.getName(),
                         context.isSendPayload());
             }

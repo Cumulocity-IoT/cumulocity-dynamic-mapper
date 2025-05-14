@@ -147,8 +147,8 @@ public class C8YNotificationSubscriber {
         try {
             // Getting existing subscriptions
             deviceSubList = getNotificationSubscriptionForDevices(null, DEVICE_SUBSCRIPTION).get();
-            log.info("Tenant {} - Phase 0, initializing Notification 2.0, subscribing to devices", tenant);
-            log.debug("Tenant {} - Phase 0, initializing Notification 2.0, subscribing to devices {}", tenant,
+            log.info("Tenant {} - Phase 0: initializing Notification 2.0, subscribing to devices", tenant);
+            log.debug("Tenant {} - Phase 0: initializing Notification 2.0, subscribing to devices {}", tenant,
                     deviceSubList);
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
@@ -207,11 +207,11 @@ public class C8YNotificationSubscriber {
         boolean notificationAvailable = subscriptionsService.callForTenant(tenant, () -> {
             try {
                 subscriptionAPI.getSubscriptions().get(1);
-                log.info("Tenant {} - Phase 0, initializing Notification 2.0", tenant);
+                log.info("Tenant {} - Phase 0: initializing Notification 2.0", tenant);
                 return true;
             } catch (SDKException e) {
                 log.warn(
-                        "Tenant {} - Phase 0, initializing Notification 2.0 Service not available, disabling Outbound Mapping",
+                        "Tenant {} - Phase 0: initializing Notification 2.0 Service not available, disabling Outbound Mapping",
                         tenant);
                 return false;
             }
@@ -231,7 +231,7 @@ public class C8YNotificationSubscriber {
                 .cleanSession(true)
                 .keepAlive(60)
                 .send().thenRun(() -> {
-                    log.info("Tenant {} - Phase I-III, connected with C8Y MQTT host {} for device {}", tenant, mqttHost,
+                    log.info("Tenant {} - Phase I-III: connected with C8Y MQTT host {} for device {}", tenant, mqttHost,
                             deviceId);
                     client.toAsync().subscribeWith().topicFilter("s/ds").qos(MqttQos.AT_LEAST_ONCE)
                             .callback(publish -> {
@@ -378,7 +378,7 @@ public class C8YNotificationSubscriber {
                         notificationSubscriptionRepresentation = subIt.next();
                         if (!"tenant".equals(notificationSubscriptionRepresentation.getContext())) {
                             log.info(
-                                    "Tenant {} - Phase 0, initializing Notification 2.0, subscription with ID {} retrieved, filter: {},{}",
+                                    "Tenant {} - Phase 0: initializing Notification 2.0, subscription with ID {} retrieved, filter: {},{}",
                                     tenant,
                                     notificationSubscriptionRepresentation.getId().getValue(),
                                     notificationSubscriptionRepresentation.getSource(),

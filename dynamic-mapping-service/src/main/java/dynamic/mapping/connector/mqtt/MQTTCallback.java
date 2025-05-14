@@ -142,12 +142,12 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
 
                     if (!hasErrors) {
                         // No errors found, acknowledge the message
-                        log.warn("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, Connector {}",
+                        log.warn("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
                     } else if(httpStatusCode < 500){
                         //Errors found but not a server error, acknowledge the message
-                        log.warn("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, Connector {}",
+                        log.warn("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
                     } else {
@@ -157,7 +157,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery
                     // Thread.currentThread().interrupt();
-                    log.warn("Tenant {} - END: Was interrupted for MQTT message: topic: [{}], QoS: {}, Connector {}",
+                    log.warn("Tenant {} - END: Was interrupted for MQTT message: topic: [{}], QoS: {}, connector: {}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                 } catch (TimeoutException e) {
                     var cancelResult = processedResults.getProcessingResult().cancel(true);
@@ -171,7 +171,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
 
             // Acknowledge message with QoS=0
             if (serviceConfiguration.logPayload) {
-                log.info("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, Connector {}",
+                log.info("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                         tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
             }
             mqttMessage.acknowledge();

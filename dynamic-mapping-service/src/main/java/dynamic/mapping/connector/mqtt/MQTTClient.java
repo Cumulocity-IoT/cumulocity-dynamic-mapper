@@ -231,7 +231,7 @@ public class MQTTClient extends AConnectorClient {
                 return false;
             }
         }
-        log.info("Tenant {} - Phase 0, initializing connector {}, {} was successful", tenant,
+        log.info("Tenant {} - Phase 0: initializing connector {}, type:{} was successful", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;
@@ -239,7 +239,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
+        log.info("Tenant {} - Phase I: connecting with {}, isConnected:{}, shouldConnect:{}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -343,7 +343,7 @@ public class MQTTClient extends AConnectorClient {
             while (!isConnected() && shouldConnect()) {
                 if (Thread.currentThread().isInterrupted())
                     return;
-                log.info("Tenant {} - Phase II, connecting with {}, (shouldConnect):{} {}", tenant,
+                log.info("Tenant {} - Phase II: connecting with {}, shouldConnect:{}, server:{}", tenant,
                         getConnectorName(),
                         shouldConnect(), configuredUrl);
                 if (!firstRun) {

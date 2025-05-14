@@ -178,7 +178,7 @@ public class BootstrapService {
                 try {
                     connectorTask.get();
                 } catch (InterruptedException | ExecutionException e) {
-                    log.error("Tenant {} - Error initializing connector: {}", tenant, e.getMessage(), e);
+                    log.error("Tenant {} - Error initializing  connector: {}", tenant, e.getMessage(), e);
                 }
             });
         }

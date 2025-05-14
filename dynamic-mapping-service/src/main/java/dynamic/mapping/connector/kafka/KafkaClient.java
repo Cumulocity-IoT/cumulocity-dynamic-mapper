@@ -226,7 +226,7 @@ public class KafkaClient extends AConnectorClient {
 
 	@Override
 	public void connect() {
-		log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
+        log.info("Tenant {} - Phase I: connecting with {}, isConnected:{}, shouldConnect:{}",
 				tenant, getConnectorName(), isConnected(),
 				shouldConnect());
 		if (shouldConnect())
@@ -246,7 +246,7 @@ public class KafkaClient extends AConnectorClient {
 			defaultPropertiesProducer.put("sasl.mechanism", saslMechanism);
 			defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 			defaultPropertiesProducer.put("group.id", groupId);
-			log.info("Tenant {} - Phase II, connecting with {}, (shouldConnect):{} {}", tenant,
+			log.info("Tenant {} - Phase II: connecting with {}, shouldConnect:{}, server:{}", tenant,
 					getConnectorName(),
 					shouldConnect(), bootstrapServers);
 			log.info("Tenant {} - Phase III, connected with {}", tenant,

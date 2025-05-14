@@ -112,7 +112,7 @@ public class HttpClient extends AConnectorClient {
     public boolean initialize() {
         loadConfiguration();
 
-        log.info("Tenant {} - Phase 0, initialized connector {},{} ", tenant,
+        log.info("Tenant {} - Phase 0: initialized connector {},{} ", tenant,
                 getConnectorName(), getConnectorType());
         return true;
     }
@@ -120,7 +120,7 @@ public class HttpClient extends AConnectorClient {
     @Override
     public void connect() {
         String path = (String) connectorSpecification.getProperties().get("path").defaultValue;
-        log.info("Tenant {} - Phase I, connecting with {}, (isConnected:shouldConnect) ({}:{})",
+        log.info("Tenant {} - Phase I: connecting with {}, isConnected:{}, shouldConnect:{}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
