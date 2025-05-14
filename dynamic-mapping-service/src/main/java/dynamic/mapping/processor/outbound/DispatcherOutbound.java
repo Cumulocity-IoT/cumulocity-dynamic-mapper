@@ -151,17 +151,16 @@ public class DispatcherOutbound implements NotificationCallback {
         if (!connectorClient.isConnected())
             log.warn("Tenant {} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
-        String operation = notification.getNotificationHeaders().get(1);
-
         // log.info("Tenant {} - Notification message received {}",
         // tenant, operation);
-        if (("CREATE".equals(operation) || "UPDATE".equals(operation)) && connectorClient.isConnected()) {
+        if (("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))
+                && connectorClient.isConnected()) {
             // log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
             // notification.getMessage(),
             // notification.getNotificationHeaders(),
             // connectorClient.connectorConfiguration.name,
             // connectorClient.isConnected());
-            if ("UPDATE".equals(operation) && notification.getApi().equals(API.OPERATION)) {
+            if ("UPDATE".equals(notification.getOperation()) && notification.getApi().equals(API.OPERATION)) {
                 log.info("Tenant {} - Update Operation message for connector {} is received, ignoring it",
                         tenant, connectorClient.getConnectorName());
                 return result;
@@ -170,7 +169,7 @@ public class DispatcherOutbound implements NotificationCallback {
             Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
             c8yMessage.setParsedPayload(parsedPayload);
             c8yMessage.setApi(notification.getApi());
-            c8yMessage.setOperation(operation);
+            c8yMessage.setOperation(notification.getOperation());
             String messageId = String.valueOf(parsedPayload.get("id"));
             c8yMessage.setMessageId(messageId);
             try {
@@ -582,21 +581,12 @@ public class DispatcherOutbound implements NotificationCallback {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
 
-        if (serviceConfiguration.logPayload) {
-            String payload = c8yMessage.getPayload();
-            log.info(
-                    "Tenant {} - Received C8Y message on API: {}, Operation: {}, for Device {} and connector {}: {} {}",
-                    tenant,
-                    c8yMessage.getApi(), c8yMessage.getOperation(), c8yMessage.getSourceId(),
-                    connectorClient.getConnectorName(), payload,
-                    c8yMessage.getMessageId());
-        } else {
-            log.info("Tenant {} - Received C8Y message on API: {}, Operation: {}, for Device {} and connector {}: {}",
-                    tenant,
-                    c8yMessage.getApi(), c8yMessage.getOperation(), c8yMessage.getSourceId(),
-                    connectorClient.getConnectorName(),
-                    c8yMessage.getMessageId());
-        }
+        log.info("Tenant {} - Processing C8Y message on API: {}, for Device {} and connector {}, payload {}",
+                tenant,
+                c8yMessage.getApi(), c8yMessage.getSourceId(),
+                connectorClient.getConnectorName(),
+                c8yMessage.getMessageId());
+
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         List<Mapping> resolvedMappings = new ArrayList<>();
 

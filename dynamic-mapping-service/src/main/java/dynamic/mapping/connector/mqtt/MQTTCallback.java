@@ -82,7 +82,12 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
                 .build();
-
+        if (serviceConfiguration.logPayload) {
+            log.info(
+                    "Tenant {} - INITIAL: message on topic: [{}], QoS message: {}, Connector {}",
+                    tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(),
+                    connectorIdentifier);
+        }
         // Process the message
         ProcessingResult<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
         // Determine downgraded QoS as the minimum of QoS in the message and the
@@ -93,7 +98,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         int effectiveQos = Math.min(publishQos, mappingQos);
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "Tenant {} - INITIAL: new message on topic: [{}], QoS message: {}, QoS effective: {}, QoS mappings: {}, Connector {}",
+                    "Tenant {} - PROCESSED: message on topic: [{}], QoS message: {}, QoS effective: {}, QoS mappings: {}, Connector {}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), effectiveQos, mappingQos,
                     connectorIdentifier);
         }

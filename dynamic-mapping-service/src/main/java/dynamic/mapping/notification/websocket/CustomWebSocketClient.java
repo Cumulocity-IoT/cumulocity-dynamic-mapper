@@ -71,13 +71,19 @@ public class CustomWebSocketClient extends WebSocketClient {
     @Override
     public void onMessage(String message) {
         Notification notification = Notification.parse(message);
+
+        if (serviceConfiguration.logPayload) {
+            log.info(
+                    "Tenant {} - INITIAL: message notification 2.0 on connector InternalWebSocket for connectors {}, API: {},Operation: {}",
+                    tenant, connectorName, notification.getApi());
+        }
         ProcessingResult<?> processedResults = this.callback.onNotification(notification);
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
         int timeout = processedResults.getMaxCPUTimeMS();
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "Tenant {} - INITIAL: new message notification 2.0 on connector InternalWebSocket for connectors {} api: {}, QoS mappings: {},",
-                    tenant, notification.getApi(), mappingQos, connectorName);
+                    "Tenant {} - Processed: message notification 2.0 on connector InternalWebSocket for connectors {}, API: {}, Operation: {}, QoS mappings: {},",
+                    tenant, notification.getApi(), notification.getOperation(), mappingQos, connectorName);
         }
         if (mappingQos > 0 || timeout > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread

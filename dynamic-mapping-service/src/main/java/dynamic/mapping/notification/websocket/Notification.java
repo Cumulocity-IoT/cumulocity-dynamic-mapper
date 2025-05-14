@@ -37,6 +37,7 @@ public class Notification {
     private final List<String> notificationHeaders;
     private final String message;
     private final API api;
+    private final String operation;
 
     public static Notification parse(String message) {
         ArrayList<String> headers = new ArrayList<>(8);
@@ -53,9 +54,10 @@ public class Notification {
             headers.add(header);
         }
         if (headers.isEmpty()) {
-            return new Notification(null, Collections.emptyList(), message, API.EMPTY);
+            return new Notification(null, Collections.emptyList(), message, API.EMPTY, null);
         }
         String apiString = headers.get(1).split("/")[2];
+        String operation = headers.get(1);
         API api = API.EMPTY;
         switch (apiString) {
             case "alarms":
@@ -83,7 +85,7 @@ public class Notification {
                 break;
         }
         return new Notification(headers.get(0), Collections.unmodifiableList(headers.subList(1, headers.size())),
-                message, api);
+                message, api, operation);
     }
 
     public String getTenantFromNotificationHeaders() {
