@@ -45,6 +45,7 @@ import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.ProcessingResult;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -170,7 +171,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     // Get the appropriate processor for this mapping type
                     BaseProcessorInbound processor = payloadProcessorsInbound.get(mapping.mappingType);
                     if (processor == null) {
-                        handleMissingProcessor(tenant, mapping, context, mappingStatusUnspecified);
+                        handleMissingProcessor(tenant, mapping, context, mappingStatus, mappingStatusUnspecified);
                         processingResult.add(context);
                         continue;
                     }
@@ -179,7 +180,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     Object payload = null;
                     try {
                         payload = processor.deserializePayload(mapping, connectorMessage);
-                    } catch (Exception e) {
+                    } catch (IOException e) {
                         handleDeserializationError(tenant, mapping, e, context, mappingStatus);
                         processingResult.add(context);
                         continue;
@@ -287,12 +288,14 @@ public class DispatcherInbound implements GenericMessageCallback {
         }
 
         private void handleMissingProcessor(String tenant, Mapping mapping, ProcessingContext<?> context,
-                MappingStatus mappingStatusUnspecified) {
-            mappingStatusUnspecified.errors++;
+                MappingStatus mappingStatus, MappingStatus mappingStatusUnspecified) {
             String errorMessage = String.format("Tenant %s - No processor for MessageType: %s registered",
                     tenant, mapping.mappingType);
             log.error(errorMessage);
             context.addError(new ProcessingException(errorMessage));
+            mappingStatus.errors++;
+            mappingStatusUnspecified.errors++;
+            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
         private void handleDeserializationError(String tenant, Mapping mapping, Exception e,
@@ -357,8 +360,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 ProcessingContext<?> context, MappingStatus mappingStatus) {
             String errorMessage = String.format("Tenant %s - Failed to set up GraalVM context: %s",
                     tenant, e.getMessage());
-            log.error(errorMessage);
-            log.debug("Tenant {} - GraalVM error details:", tenant, e);
+            log.error(errorMessage, e);
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
             mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -380,7 +382,8 @@ public class DispatcherInbound implements GenericMessageCallback {
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal(), ppLog);
             } else {
-                log.info("Tenant {} - Start processing message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
+                log.info(
+                        "Tenant {} - Start processing message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal());
             }
@@ -439,8 +442,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 }
                 String errorMessage = String.format("Tenant %s - Processing error: %s for mapping: %s, line %s",
                         tenant, mapping.name, e.getMessage(), lineNumber);
-                log.warn(errorMessage);
-                log.debug("Tenant {} - Processing error details:", tenant, e);
+                log.error(errorMessage, e);
                 context.addError(new ProcessingException(errorMessage, e));
                 mappingStatus.errors++;
                 mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

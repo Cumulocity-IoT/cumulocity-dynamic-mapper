@@ -285,6 +285,10 @@ export class MappingService {
           mappingsEnriched.push({
             id: m.id,
             mapping: m,
+            snoopSupported:
+              MappingTypeDescriptionMap[m.mappingType]?.properties[
+                Direction.OUTBOUND
+              ].snoopSupported,
             connectors: mappingsDeployed[m.identifier]
           });
         });

@@ -266,7 +266,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
             // Track if any mapping requested auto-acknowledgment
             boolean shouldAutoAcknowledge = false;
-            List<Exception> encounteredErrors = new ArrayList<>();
+            List<Exception> criticalExceptions = new ArrayList<>();
 
             // Process each mapping independently
             for (Mapping mapping : resolvedMappings) {
@@ -291,7 +291,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     } catch (Exception e) {
                         log.warn("Tenant {} - Failed to update operation status to EXECUTING: {}",
                                 tenant, e.getMessage());
-                        encounteredErrors.add(e);
+                        criticalExceptions.add(e);
                     }
                 }
 
@@ -299,7 +299,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     // Get the appropriate processor for this mapping type
                     BaseProcessorOutbound processor = payloadProcessorsOutbound.get(mapping.mappingType);
                     if (processor == null) {
-                        handleMissingProcessor(tenant, mapping, mappingStatusUnspecified);
+                        handleMissingProcessor(tenant, mapping, context, mappingStatus, mappingStatusUnspecified);
                         continue;
                     }
 
@@ -319,7 +319,7 @@ public class DispatcherOutbound implements NotificationCallback {
                         } catch (Exception e) {
                             handleGraalVMError(tenant, mapping, e, context, mappingStatus);
                             processingResult.add(context);
-                            encounteredErrors.add(e);
+                            criticalExceptions.add(e);
                             continue;
                         }
                     }
@@ -337,7 +337,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
                         // Collect errors if any occurred
                         if (context.hasError()) {
-                            encounteredErrors.addAll(context.getErrors());
+                            criticalExceptions.addAll(context.getErrors());
                         }
                     }
                 } catch (Exception e) {
@@ -345,11 +345,10 @@ public class DispatcherOutbound implements NotificationCallback {
                     String errorMessage = String.format("Tenant %s - Error processing outbound mapping %s: %s",
                             tenant, mapping.identifier, e.getMessage());
                     log.error(errorMessage, e);
-
                     context.addError(new ProcessingException(errorMessage, e));
                     mappingStatus.errors++;
+                    criticalExceptions.add(e);
                     mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-                    encounteredErrors.add(e);
                 } finally {
                     // Clean up GraalVM context
                     if (graalsContext != null) {
@@ -367,7 +366,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
             // Handle operation status updates if auto-acknowledge was requested
             if (shouldAutoAcknowledge && op != null) {
-                updateOperationStatus(tenant, op, encounteredErrors);
+                updateOperationStatus(tenant, op, criticalExceptions);
             }
 
             // Stop the timer
@@ -403,12 +402,16 @@ public class DispatcherOutbound implements NotificationCallback {
                     .build();
         }
 
-        private void handleMissingProcessor(String tenant, Mapping mapping,
-                MappingStatus mappingStatusUnspecified) {
-            mappingStatusUnspecified.errors++;
+        private void handleMissingProcessor(String tenant, Mapping mapping, ProcessingContext<?> context,
+                MappingStatus mappingStatus, MappingStatus mappingStatusUnspecified) {
             String errorMessage = String.format("Tenant %s - No processor for MessageType: %s registered",
                     tenant, mapping.mappingType);
             log.error(errorMessage);
+            mappingStatus.errors++;
+            mappingStatusUnspecified.errors++;
+            context.addError(new ProcessingException(errorMessage));
+            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+
         }
 
         private Context setupGraalVMContext(Mapping mapping, ServiceConfiguration serviceConfiguration)
@@ -532,8 +535,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 }
                 String errorMessage = String.format("Tenant %s - Processing error: %s for mapping: %s, line %s",
                         tenant, mapping.name, e.getMessage(), lineNumber);
-                log.warn(errorMessage);
-                log.debug("Tenant {} - Processing error details:", tenant, e);
+                log.error(errorMessage, e);
                 context.addError(new ProcessingException(errorMessage, e));
                 mappingStatus.errors++;
                 mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

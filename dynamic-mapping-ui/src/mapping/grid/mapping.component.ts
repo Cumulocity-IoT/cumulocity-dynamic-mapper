@@ -1005,8 +1005,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       MappingTypeDescriptionMap[mappingType].stepperConfiguration;
     this.stepperConfiguration.direction = direction;
     this.stepperConfiguration.editorMode = editorMode;
-    if (direction == Direction.OUTBOUND)
+    if (direction == Direction.OUTBOUND) {
       this.stepperConfiguration.allowTestSending = false;
+      // if snoop is enabled, then skip the first step selecting an connector
+      if (this.snoopStatus == SnoopStatus.ENABLED) {
+        this.stepperConfiguration.advanceFromStepToEndStep = 0;
+      }
+    }
 
     if (substitutionsAsCode) {
       delete this.stepperConfiguration.advanceFromStepToEndStep;
