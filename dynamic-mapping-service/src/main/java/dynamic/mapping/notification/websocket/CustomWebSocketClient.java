@@ -162,6 +162,15 @@ public class CustomWebSocketClient extends WebSocketClient {
                     log.warn(
                             "Tenant {} - END: Processing timed out with: {} milliseconds, connector InternalWebSocket, result of cancelling: {}",
                             tenant, timeout, cancelResult);
+                } catch (Exception e) {
+                    // Handle other exceptions
+                    log.error("Tenant {} - END: Processing failed with exception: {}", tenant, e.getMessage(), e);
+                    if (notification.getAckHeader() != null) {
+                        log.info(
+                                "Tenant {} - END: Sending manual ack for Notification message. API: {} api, QoS: {}, Connector InternalWebSocket",
+                                tenant, notification.getApi(), mappingQos);
+                        send(notification.getAckHeader()); // ack message
+                    }
                 }
                 return null; // Proper return for Callable<Void>
             });
