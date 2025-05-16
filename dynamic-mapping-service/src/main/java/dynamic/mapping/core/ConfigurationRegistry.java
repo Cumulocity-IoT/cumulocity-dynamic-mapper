@@ -43,6 +43,7 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTT3Client;
+import dynamic.mapping.connector.mqtt.MQTT5Client;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.MappingServiceRepresentation;
@@ -97,7 +98,8 @@ public class ConfigurationRegistry {
     private C8YAgent c8yAgent;
 
     @Value("${APP.mqttServiceUrl}")
-    @Getter String mqttServiceUrl;
+    @Getter
+    String mqttServiceUrl;
 
     @Autowired
     public void setC8yAgent(C8YAgent c8yAgent) {
@@ -166,9 +168,17 @@ public class ConfigurationRegistry {
             String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
         AConnectorClient connectorClient = null;
         if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new MQTT3Client(this, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
+            // if version is not set, default to 3.1.1, as this property was introduced later. This will not break existing configuration
+            String version = ((String) connectorConfiguration.getProperties().getOrDefault("version","3.1.1"));
+            if ("3.1.1".equals(version)) {
+                connectorClient = new MQTT3Client(this, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+            } else {
+                connectorClient = new MQTT5Client(this, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+            }
             log.info("Tenant {} - Initializing MQTT Connector with identifier {}", tenant,
                     connectorConfiguration.getIdentifier());
         } else if (ConnectorType.CUMULOCITY_MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {

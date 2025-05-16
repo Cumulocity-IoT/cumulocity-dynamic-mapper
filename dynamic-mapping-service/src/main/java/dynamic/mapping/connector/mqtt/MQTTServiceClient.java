@@ -44,9 +44,14 @@ import dynamic.mapping.model.Qos;
 public class MQTTServiceClient extends MQTT3Client {
     public MQTTServiceClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
-
+        configProps.put("version",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "3.1.1",
+                        Map.ofEntries(
+                                new AbstractMap.SimpleEntry<String, String>("3.1.1", "3.1.1"),
+                                new AbstractMap.SimpleEntry<String, String>("5.0", "5.0")),
+                        null));
         configProps.put("protocol",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, true, "mqtt://",
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true, "mqtt://",
                         Map.ofEntries(
                                 new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
                                 new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
@@ -54,32 +59,32 @@ public class MQTTServiceClient extends MQTT3Client {
                                 new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")),
                         null));
         configProps.put("mqttHost",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         "c8y-mqtt-service",
                         null, null));
         configProps.put("mqttPort",
-                new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, true, true, 2883, null,
+                new ConnectorProperty(null, true, 3, ConnectorPropertyType.NUMERIC_PROPERTY, true, true, 2883, null,
                         null));
         configProps.put("user",
-                new ConnectorProperty(null, true, 3, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null,
+                new ConnectorProperty(null, true, 4, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null,
                         null));
         configProps.put("password",
-                new ConnectorProperty(null, true, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true, null,
+                new ConnectorProperty(null, true, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true, null,
                         null, null));
         configProps.put("clientId",
-                new ConnectorProperty(null, true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 6, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
                         null, null, null));
         configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
+                new ConnectorProperty(null, false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
                         null));
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null,
-                        null));
-        configProps.put("nameCertificate",
                 new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null,
                         null));
+        configProps.put("nameCertificate",
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null,
+                        null));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
                         null));
         String name = "Cumulocity MQTT Service";
         String description = "Connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
