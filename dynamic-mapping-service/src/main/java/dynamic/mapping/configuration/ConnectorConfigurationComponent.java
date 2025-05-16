@@ -118,15 +118,7 @@ public class ConnectorConfigurationComponent {
             }
             return rt;
         });
-        if (result != null && result.getConnectorType().equals(ConnectorType.MQTT)) {
-            // if version is not set, default to 3.1.1, as this property was introduced
-            // later. This will not break existing configuration
-            String version = ((String) result.getProperties().getOrDefault("version", null));
-            if (version == null) {
-                result.getProperties().put("version", "3.1.1");
-                log.info("Tenant {} - Adding version attribute to old MQTT configuration", tenant);
-            } 
-        }
+        patchMQTTConfiguration(tenant, result);
         return result;
     }
 
@@ -143,6 +135,7 @@ public class ConnectorConfigurationComponent {
                         final ConnectorConfiguration configuration = objectMapper.readValue(
                                 optionRepresentation.getValue(),
                                 ConnectorConfiguration.class);
+                        patchMQTTConfiguration(tenant, configuration);
                         connectorConfigurations.add(configuration);
                         log.debug("Tenant {} - Connection configuration found: {}:", tenant,
                                 configuration.getConnectorType());
@@ -159,6 +152,18 @@ public class ConnectorConfigurationComponent {
             }
         });
         return connectorConfigurations;
+    }
+
+    private void patchMQTTConfiguration(String tenant, final ConnectorConfiguration configuration) {
+        if (configuration != null && configuration.getConnectorType().equals(ConnectorType.MQTT)) {
+            // if version is not set, default to 3.1.1, as this property was introduced
+            // later. This will not break existing configuration
+            String version = ((String) configuration.getProperties().getOrDefault("version", null));
+            if (version == null) {
+                configuration.getProperties().put("version", "3.1.1");
+                log.info("Tenant {} - Adding version attribute to old MQTT configuration", tenant);
+            }
+        }
     }
 
     public void deleteConnectorConfigurations(String tenant) {
