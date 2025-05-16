@@ -77,8 +77,8 @@ import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 
 @Slf4j
-public class MQTTClient extends AConnectorClient {
-    public MQTTClient() {
+public class MQTT3Client extends AConnectorClient {
+    public MQTT3Client() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
                 new String[] { "mqtts://", "wss://" });
@@ -135,7 +135,7 @@ public class MQTTClient extends AConnectorClient {
                 supportedDirections());
     }
 
-    public MQTTClient(ConfigurationRegistry configurationRegistry,
+    public MQTT3Client(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
             DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
@@ -167,7 +167,7 @@ public class MQTTClient extends AConnectorClient {
 
     protected MqttClientSslConfig sslConfig;
 
-    protected MQTTCallback mqttCallback = null;
+    protected MQTT3Callback mqttCallback = null;
 
     protected Mqtt3BlockingClient mqttClient;
 
@@ -331,7 +331,7 @@ public class MQTTClient extends AConnectorClient {
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
         // Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-        mqttCallback = new MQTTCallback(tenant, configurationRegistry, dispatcher, getConnectorIdentifier(), getConnectorIdentifier(),false);
+        mqttCallback = new MQTT3Callback(tenant, configurationRegistry, dispatcher, getConnectorIdentifier(), getConnectorIdentifier(),false);
 
         // stay in the loop until successful
         boolean successful = false;

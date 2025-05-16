@@ -41,7 +41,7 @@ import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.model.Qos;
 
 @Slf4j
-public class MQTTServiceClient extends MQTTClient {
+public class MQTTServiceClient extends MQTT3Client {
     public MQTTServiceClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
 

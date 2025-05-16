@@ -42,7 +42,7 @@ import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
-import dynamic.mapping.connector.mqtt.MQTTClient;
+import dynamic.mapping.connector.mqtt.MQTT3Client;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.MappingServiceRepresentation;
@@ -166,7 +166,7 @@ public class ConfigurationRegistry {
             String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
         AConnectorClient connectorClient = null;
         if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new MQTTClient(this, connectorConfiguration,
+            connectorClient = new MQTT3Client(this, connectorConfiguration,
                     null,
                     additionalSubscriptionIdTest, tenant);
             log.info("Tenant {} - Initializing MQTT Connector with identifier {}", tenant,
