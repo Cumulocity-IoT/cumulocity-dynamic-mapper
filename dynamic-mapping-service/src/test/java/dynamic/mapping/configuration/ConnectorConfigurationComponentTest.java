@@ -49,6 +49,8 @@ import com.cumulocity.rest.representation.tenant.OptionRepresentation;
 import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapping.connector.core.client.ConnectorType;
+
 @ExtendWith(MockitoExtension.class)
 class ConnectorConfigurationComponentTest {
 
@@ -102,6 +104,7 @@ class ConnectorConfigurationComponentTest {
     void testGetConnectorConfiguration() throws Exception {
         // Arrange
         ConnectorConfiguration expectedConfig = new ConnectorConfiguration();
+        expectedConfig.setConnectorType(ConnectorType.MQTT);
         expectedConfig.setIdentifier(TEST_IDENTIFIER);
         
         OptionRepresentation optionRepresentation = new OptionRepresentation();
@@ -131,8 +134,11 @@ class ConnectorConfigurationComponentTest {
 
         ConnectorConfiguration config1 = new ConnectorConfiguration();
         config1.setIdentifier("1");
+        config1.setConnectorType(ConnectorType.MQTT);
         ConnectorConfiguration config2 = new ConnectorConfiguration();
         config2.setIdentifier("2");
+        config2.setConnectorType(ConnectorType.MQTT);
+
 
         when(tenantOptionApi.getAllOptionsForCategory(OPTION_CATEGORY)).thenReturn(options);
         when(objectMapper.readValue(contains("1"), eq(ConnectorConfiguration.class))).thenReturn(config1);

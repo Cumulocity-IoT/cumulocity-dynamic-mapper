@@ -35,6 +35,9 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapping.connector.core.client.ConnectorType;
+import dynamic.mapping.connector.mqtt.MQTT3Client;
+import dynamic.mapping.connector.mqtt.MQTT5Client;
 import dynamic.mapping.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -105,14 +108,17 @@ public class ConnectorConfigurationComponent {
             } catch (SDKException exception) {
                 log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
             } catch (Exception e) {
-                // String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
-                // String msg = String.format("Failed to convert configurator object %s. Error: %s",
-                //         identifier,
-                //         exceptionMsg);
+                // String exceptionMsg = e.getCause() == null ? e.getMessage() :
+                // e.getCause().getMessage();
+                // String msg = String.format("Failed to convert configurator object %s. Error:
+                // %s",
+                // identifier,
+                // exceptionMsg);
                 log.error("Tenant {} - Failed to convert configurator object {}", tenant, identifier, e);
             }
             return rt;
         });
+        patchMQTTConfiguration(tenant, result);
         return result;
     }
 
@@ -129,6 +135,7 @@ public class ConnectorConfigurationComponent {
                         final ConnectorConfiguration configuration = objectMapper.readValue(
                                 optionRepresentation.getValue(),
                                 ConnectorConfiguration.class);
+                        patchMQTTConfiguration(tenant, configuration);
                         connectorConfigurations.add(configuration);
                         log.debug("Tenant {} - Connection configuration found: {}:", tenant,
                                 configuration.getConnectorType());
@@ -145,6 +152,18 @@ public class ConnectorConfigurationComponent {
             }
         });
         return connectorConfigurations;
+    }
+
+    private void patchMQTTConfiguration(String tenant, final ConnectorConfiguration configuration) {
+        if (configuration != null && configuration.getConnectorType().equals(ConnectorType.MQTT)) {
+            // if version is not set, default to 3.1.1, as this property was introduced
+            // later. This will not break existing configuration
+            String version = ((String) configuration.getProperties().getOrDefault("version", null));
+            if (version == null) {
+                configuration.getProperties().put("version", "3.1.1");
+                log.info("Tenant {} - Adding version attribute to old MQTT configuration", tenant);
+            }
+        }
     }
 
     public void deleteConnectorConfigurations(String tenant) {

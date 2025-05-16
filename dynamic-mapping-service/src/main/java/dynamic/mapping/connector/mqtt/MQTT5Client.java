@@ -40,45 +40,46 @@ import java.util.Map;
 
 import javax.net.ssl.TrustManagerFactory;
 
-import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3Unsubscribe;
-import dynamic.mapping.connector.core.ConnectorPropertyType;
-import dynamic.mapping.connector.core.ConnectorSpecification;
-import dynamic.mapping.connector.core.client.AConnectorClient;
-import dynamic.mapping.connector.core.client.ConnectorException;
-import dynamic.mapping.connector.core.client.ConnectorType;
-import dynamic.mapping.model.Direction;
-import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.Qos;
-import dynamic.mapping.processor.inbound.DispatcherInbound;
-import dynamic.mapping.processor.model.C8YRequest;
-import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.hivemq.client.mqtt.MqttClientSslConfig;
 import com.hivemq.client.mqtt.MqttClientSslConfigBuilder;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
-import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
-import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuthBuilder.Complete;
-import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
-import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCode;
-import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
+import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
+import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
+import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
+import com.hivemq.client.mqtt.mqtt5.Mqtt5ClientBuilder;
+import com.hivemq.client.mqtt.mqtt5.message.auth.Mqtt5SimpleAuth;
+import com.hivemq.client.mqtt.mqtt5.message.auth.Mqtt5SimpleAuthBuilder.Complete;
+import com.hivemq.client.mqtt.mqtt5.message.connect.connack.Mqtt5ConnAck;
+import com.hivemq.client.mqtt.mqtt5.message.connect.connack.Mqtt5ConnAckReasonCode;
+import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
+import com.hivemq.client.mqtt.mqtt5.message.unsubscribe.Mqtt5Unsubscribe;
+
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.connector.core.ConnectorPropertyCondition;
+import dynamic.mapping.connector.core.ConnectorPropertyType;
+import dynamic.mapping.connector.core.ConnectorSpecification;
+import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.connector.core.client.ConnectorException;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
+import dynamic.mapping.model.Direction;
+import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.Qos;
+import dynamic.mapping.processor.inbound.DispatcherInbound;
+import dynamic.mapping.processor.model.C8YRequest;
+import dynamic.mapping.processor.model.ProcessingContext;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class MQTTClient extends AConnectorClient {
-    public MQTTClient() {
+public class MQTT5Client extends AConnectorClient {
+    public MQTT5Client() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
                 new String[] { "mqtts://", "wss://" });
@@ -86,8 +87,14 @@ public class MQTTClient extends AConnectorClient {
                 "useSelfSignedCertificate", new String[] { "true" });
         ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol",
                 new String[] { "ws://", "wss://" });
+        configProps.put("version",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "3.1.1",
+                        Map.ofEntries(
+                                new AbstractMap.SimpleEntry<String, String>("3.1.1", "3.1.1"),
+                                new AbstractMap.SimpleEntry<String, String>("5.0", "5.0")),
+                        null));
         configProps.put("protocol",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
                         Map.ofEntries(
                                 new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
                                 new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
@@ -95,38 +102,38 @@ public class MQTTClient extends AConnectorClient {
                                 new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")),
                         null));
         configProps.put("mqttHost",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         null));
         configProps.put("mqttPort",
-                new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, false, false, null, null,
+                new ConnectorProperty(null, true, 3, ConnectorPropertyType.NUMERIC_PROPERTY, false, false, null, null,
                         null));
         configProps.put("user",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         null));
         configProps.put("password",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false,
                         null,
                         null, null));
         configProps.put("clientId",
-                new ConnectorProperty(null, true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                new ConnectorProperty(null, true, 6, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         null));
         configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
+                new ConnectorProperty(null, false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
                         tlsCondition));
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
-                        useSelfSignedCertificateCondition));
-        configProps.put("nameCertificate",
                 new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         useSelfSignedCertificateCondition));
+        configProps.put("nameCertificate",
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                        useSelfSignedCertificateCondition));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
                         null));
         configProps.put("serverPath",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         wsCondition));
         configProps.put("cleanSession",
-                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
                         null));
         String name = "Generic MQTT";
         String description = "Connector for connecting to external MQTT broker over tcp or websocket.";
@@ -135,7 +142,7 @@ public class MQTTClient extends AConnectorClient {
                 supportedDirections());
     }
 
-    public MQTTClient(ConfigurationRegistry configurationRegistry,
+    public MQTT5Client(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
             DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
@@ -167,9 +174,9 @@ public class MQTTClient extends AConnectorClient {
 
     protected MqttClientSslConfig sslConfig;
 
-    protected MQTTCallback mqttCallback = null;
+    protected MQTT5Callback mqttCallback = null;
 
-    protected Mqtt3BlockingClient mqttClient;
+    protected Mqtt5BlockingClient mqttClient;
 
     protected Boolean cleanSession = false;
 
@@ -212,7 +219,7 @@ public class MQTTClient extends AConnectorClient {
                 // sslSocketFactory = sslContext.getSocketFactory();
                 MqttClientSslConfigBuilder sslConfigBuilder = MqttClientSslConfig.builder();
                 // use sample from
-                // https://github.com/micronaut-projects/micronaut-mqtt/blob/ac2720937871b8907ad429f7ea5b8b4664a0776e/mqtt-hivemq/src/main/java/io/micronaut/mqtt/hivemq/v3/client/Mqtt3ClientFactory.java#L118
+                // https://github.com/micronaut-projects/micronaut-mqtt/blob/ac2720937871b8907ad429f7ea5b8b4664a0776e/mqtt-hivemq/src/main/java/io/micronaut/mqtt/hivemq/v3/client/Mqtt5ClientFactory.java#L118
                 // and https://hivemq.github.io/hivemq-mqtt-client/docs/client-configuration/
                 List<String> expectedProtocols = Arrays.asList("TLSv1.2");
                 sslConfig = sslConfigBuilder.trustManagerFactory(tmf).protocols(expectedProtocols).build();
@@ -258,13 +265,13 @@ public class MQTTClient extends AConnectorClient {
         String password = (String) connectorConfiguration.getProperties().get("password");
         cleanSession = (Boolean) connectorConfiguration.getProperties().get("cleanSession");
 
-        Mqtt3ClientBuilder partialBuilder;
-        partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
+        Mqtt5ClientBuilder partialBuilder;
+        partialBuilder = Mqtt5Client.builder().serverHost(mqttHost).serverPort(mqttPort)
                 .identifier(clientId + additionalSubscriptionIdTest);
 
         // is username & password used
         if (!StringUtils.isEmpty(user)) {
-            Complete simpleAuthComplete = Mqtt3SimpleAuth.builder().username(user);
+            Complete simpleAuthComplete = Mqtt5SimpleAuth.builder().username(user);
             if (!StringUtils.isEmpty(password)) {
                 simpleAuthComplete = simpleAuthComplete.password(password.getBytes());
             }
@@ -330,8 +337,9 @@ public class MQTTClient extends AConnectorClient {
         String configuredUrl = String.format("%s://%s:%s%s", configuredProtocol, mqttClient.getConfig().getServerHost(),
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
-        // Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-        mqttCallback = new MQTTCallback(tenant, configurationRegistry, dispatcher, getConnectorIdentifier(), getConnectorIdentifier(),false);
+        // Mqtt5AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
+        mqttCallback = new MQTT5Callback(tenant, configurationRegistry, dispatcher, getConnectorIdentifier(),
+                getConnectorIdentifier(), false);
 
         // stay in the loop until successful
         boolean successful = false;
@@ -354,15 +362,15 @@ public class MQTTClient extends AConnectorClient {
                     }
                 }
                 try {
-                    Mqtt3ConnAck ack = mqttClient.connectWith()
-                            .cleanSession(cleanSession != null ? cleanSession : true)
+                    Mqtt5ConnAck ack = mqttClient.connectWith()
+                            .cleanStart(cleanSession != null ? cleanSession : true)
                             .keepAlive(60)
                             .send();
-                    if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
+                    if (!ack.getReasonCode().equals(Mqtt5ConnAckReasonCode.SUCCESS)) {
 
                         throw new ConnectorException(
                                 String.format("Tenant %s - Error connecting to broker: %s. Error code: %s", tenant,
-                                        mqttClient.getConfig().getServerHost(), ack.getReturnCode().name()));
+                                        mqttClient.getConfig().getServerHost(), ack.getReasonCode().name()));
                     }
 
                     connectionState.setTrue();
@@ -463,12 +471,12 @@ public class MQTTClient extends AConnectorClient {
                 String topic = entry.getKey();
                 MutableInt activeSubs = entry.getValue();
                 if (activeSubs.intValue() > 0 && mqttClient.getState().isConnected()) {
-                    mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
+                    mqttClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter(topic).build());
                 }
             });
 
             // if (mqttClient.getState().isConnected()) {
-            // mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
+            // mqttClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter("$SYS").build());
             // }
 
             try {
@@ -515,9 +523,14 @@ public class MQTTClient extends AConnectorClient {
         }
 
         // We don't need to add a handler on subscribe using hive client
-        Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
+        Mqtt5AsyncClient asyncMqttClient = mqttClient.toAsync();
         asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal()))
-                .callback(mqttCallback).manualAcknowledgement(true)
+                .callback(publish -> {
+                    // Handle the received message here
+                    // You can call methods on your mqttCallback object
+                    mqttCallback.accept(publish);
+                })
+                .manualAcknowledgement(true)
                 .send()
                 .exceptionally(throwable -> {
                     log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
@@ -530,8 +543,8 @@ public class MQTTClient extends AConnectorClient {
     public void unsubscribe(String topic) throws Exception {
         log.debug("Tenant {} - Unsubscribing from topic: [{}]", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
-        Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
-        asyncMqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
+        Mqtt5AsyncClient asyncMqttClient = mqttClient.toAsync();
+        asyncMqttClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
             log.info("Tenant {} - Successfully unsubscribed from topic: [{}] for connector {}", tenant, topic,
                     connectorName);
         }).exceptionally(throwable -> {
@@ -539,14 +552,14 @@ public class MQTTClient extends AConnectorClient {
                     throwable.getMessage());
             return null;
         });
-        // mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
+        // mqttClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter(topic).build());
     }
 
     public void publishMEAO(ProcessingContext<?> context) {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
-        Mqtt3Publish mqttMessage = Mqtt3Publish.builder().topic(context.getResolvedPublishTopic()).qos(mqttQos)
+        Mqtt5Publish mqttMessage = Mqtt5Publish.builder().topic(context.getResolvedPublishTopic()).qos(mqttQos)
                 .payload(payload.getBytes()).build();
         mqttClient.publish(mqttMessage);
 

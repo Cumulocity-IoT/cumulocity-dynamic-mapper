@@ -52,7 +52,7 @@ import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
-import dynamic.mapping.connector.mqtt.MQTTClient;
+import dynamic.mapping.connector.mqtt.MQTT3Client;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.Direction;
@@ -289,7 +289,7 @@ public class BootstrapService {
     }
 
     private void registerDefaultConnectors() throws ConnectorRegistryException, ConnectorException {
-        connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getConnectorSpecification());
+        connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTT3Client().getConnectorSpecification());
         connectorRegistry.registerConnector(ConnectorType.CUMULOCITY_MQTT_SERVICE,
                 new MQTTServiceClient().getConnectorSpecification());
         connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
