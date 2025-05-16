@@ -92,11 +92,11 @@ public class CustomWebSocketClient extends WebSocketClient {
                     // Wait for the future to complete
                     // List<? extends ProcessingContext<?>> results =
                     // processedResults.getProcessingResult().get();
-                    List<? extends ProcessingContext<?>> results;
-                    if (timeout > 0) {
+                    List<? extends ProcessingContext<?>> results = null;
+                    if (timeout > 0 && processedResults.getProcessingResult() != null) {
                         results = processedResults.getProcessingResult().get(timeout,
                                 TimeUnit.MILLISECONDS);
-                    } else {
+                    } else if(processedResults.getProcessingResult() != null) {
                         results = processedResults.getProcessingResult().get();
                     }
 
