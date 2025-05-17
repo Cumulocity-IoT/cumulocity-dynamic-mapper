@@ -75,7 +75,7 @@ public class ConnectorSpecification implements Cloneable {
 				return false;
 			}
 		} catch (NullPointerException e) {
-			log.error("NullPointerException occurred: ({}:{})",
+			log.error("NullPointerException occurred: ({}: {})",
 					name,
 					connectorType, e);
 			return false;

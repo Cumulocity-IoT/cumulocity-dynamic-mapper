@@ -121,7 +121,7 @@ public class MappingController {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Mapping with id " + id + " could not be found");
 
-            mappingComponent.deleteFromMappingCache(tenant, deletedMapping);
+            mappingComponent.removeFromMappingCaches(tenant, deletedMapping);
 
             if (!Direction.OUTBOUND.equals(deletedMapping.direction)) {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
@@ -160,9 +160,9 @@ public class MappingController {
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).updateActiveSubscriptionInbound(createdMapping, true, false);
                 });
-                mappingComponent.deleteFromCacheMappingInbound(tenant, createdMapping);
+                mappingComponent.removeFromCacheMappingInbound(tenant, createdMapping);
                 mappingComponent.addToCacheMappingInbound(tenant, createdMapping);
-                mappingComponent.getCacheMappingInbound().get(tenant).put(createdMapping.id, mapping);
+                mappingComponent.addCacheMappingInbound(tenant, createdMapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(createdMapping);
         } catch (Exception ex) {
@@ -188,9 +188,9 @@ public class MappingController {
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).updateActiveSubscriptionInbound(updatedMapping, false, false);
                 });
-                mappingComponent.deleteFromCacheMappingInbound(tenant, mapping);
+                mappingComponent.removeFromCacheMappingInbound(tenant, mapping);
                 mappingComponent.addToCacheMappingInbound(tenant, mapping);
-                mappingComponent.getCacheMappingInbound().get(tenant).put(mapping.id, mapping);
+                mappingComponent.addCacheMappingInbound(tenant, mapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(mapping);
         } catch (Exception ex) {

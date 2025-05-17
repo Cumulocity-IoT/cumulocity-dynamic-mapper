@@ -93,7 +93,7 @@ public class JSONProcessorOutbound extends BaseProcessorOutbound<Object> {
             processingCache.put(substitution.pathTarget, processingCacheEntry);
 
             if (context.getServiceConfiguration().logSubstitution || mapping.debug) {
-                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
                         context.getTenant(),
                         substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
             }

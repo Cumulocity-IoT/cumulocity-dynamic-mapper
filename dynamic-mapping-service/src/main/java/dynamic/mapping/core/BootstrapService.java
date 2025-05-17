@@ -52,7 +52,7 @@ import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
-import dynamic.mapping.connector.mqtt.MQTTClient;
+import dynamic.mapping.connector.mqtt.MQTT3Client;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.Direction;
@@ -141,19 +141,22 @@ public class BootstrapService {
         connectorRegistry.unregisterAllClientsForTenant(tenant);
 
         // Clean up configurations
-        configurationRegistry.getServiceConfigurations().remove(tenant);
-        configurationRegistry.getMappingServiceRepresentations().remove(tenant);
-        mappingComponent.cleanMappingStatus(tenant);
-        configurationRegistry.getPayloadProcessorsInbound().remove(tenant);
-        configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
-        configurationRegistry.deleteGraalsEngine(tenant);
-
+        configurationRegistry.removeServiceConfiguration(tenant);
+        configurationRegistry.removeMappingServiceRepresentation(tenant);
+        configurationRegistry.removePayloadProcessorsInbound(tenant);
+        configurationRegistry.removePayloadProcessorsOutbound(tenant);
+        configurationRegistry.removeExtensibleProcessor(tenant);
+        configurationRegistry.removeGraalsEngine(tenant);
+        configurationRegistry.removeMicroserviceCredentials(tenant);
+        
+        mappingComponent.removeResources(tenant);
+        
         c8YAgent.deleteInboundExternalIdCache(tenant);
         c8YAgent.deleteInventoryCache(tenant);
     }
 
     @EventListener
-    public void initialize(MicroserviceSubscriptionAddedEvent event) {
+    public void subscribeTenant(MicroserviceSubscriptionAddedEvent event) {
         String tenant = event.getCredentials().getTenant();
         log.info("Tenant {} - Microservice subscribed", tenant);
 
@@ -165,7 +168,7 @@ public class BootstrapService {
     }
 
     private void initializeTenantResources(String tenant, MicroserviceCredentials credentials) {
-        configurationRegistry.getMicroserviceCredentials().put(tenant, credentials);
+        configurationRegistry.addMicroserviceCredentials(tenant, credentials);
 
         ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
         initializeCaches(tenant, serviceConfig);
@@ -223,7 +226,7 @@ public class BootstrapService {
             }
         }
 
-        configurationRegistry.getServiceConfigurations().put(tenant, serviceConfig);
+        configurationRegistry.addServiceConfiguration(tenant, serviceConfig);
         return serviceConfig;
     }
 
@@ -254,19 +257,19 @@ public class BootstrapService {
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
                 .convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
 
-        configurationRegistry.getMappingServiceRepresentations().put(tenant, mappingServiceRepresentation);
+        configurationRegistry.addMappingServiceRepresentation(tenant, mappingServiceRepresentation);
 
-        initializeMappingComponents(tenant);
+        initializeResourcesMappingComponent(tenant);
     }
 
     private void initializeGraalsEngine(String tenant) {
         configurationRegistry.createGraalsEngine(tenant);
     }
 
-    private void initializeMappingComponents(String tenant) {
+    private void initializeResourcesMappingComponent(String tenant) {
         mappingComponent.initializeMappingStatus(tenant, false);
         mappingComponent.initializeDeploymentMap(tenant, false);
-        mappingComponent.initializeMappingCaches(tenant);
+        mappingComponent.initializeResources(tenant);
         mappingComponent.rebuildMappingOutboundCache(tenant);
         mappingComponent.rebuildMappingInboundCache(tenant);
     }
@@ -283,13 +286,13 @@ public class BootstrapService {
     }
 
     private void initializeConnectorRegistry(String tenant) {
-        if (connectorRegistry.getConnectorStatusMap().get(tenant) == null) {
-            connectorRegistry.getConnectorStatusMap().put(tenant, new HashMap<>());
+        if (connectorRegistry.getConnectorStatusMap(tenant) == null) {
+            connectorRegistry.addConnectorStatusMap(tenant, new ConcurrentHashMap<>());
         }
     }
 
     private void registerDefaultConnectors() throws ConnectorRegistryException, ConnectorException {
-        connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getConnectorSpecification());
+        connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTT3Client().getConnectorSpecification());
         connectorRegistry.registerConnector(ConnectorType.CUMULOCITY_MQTT_SERVICE,
                 new MQTTServiceClient().getConnectorSpecification());
         connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());

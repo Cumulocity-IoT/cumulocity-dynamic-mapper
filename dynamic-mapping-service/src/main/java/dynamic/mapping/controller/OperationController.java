@@ -192,7 +192,7 @@ public class OperationController {
 
         try {
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
-            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
         } catch (JsonProcessingException ex) {
             log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());

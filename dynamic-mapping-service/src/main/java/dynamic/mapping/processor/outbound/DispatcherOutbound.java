@@ -125,9 +125,8 @@ public class DispatcherOutbound implements NotificationCallback {
         // configurationRegistry.getPayloadProcessorsOutbound());
         // log.info("Tenant {} - HIER II {} {}", connectorClient.getTenant(),
         // configurationRegistry.getPayloadProcessorsOutbound().get(connectorClient.getTenant()));
-        this.payloadProcessorsOutbound = configurationRegistry.getPayloadProcessorsOutbound()
-                .get(connectorClient.getTenant())
-                .get(connectorClient.getConnectorIdentifier());
+        this.payloadProcessorsOutbound = configurationRegistry.getPayloadProcessorsOutbound(connectorClient.getTenant(),
+                connectorClient.getConnectorIdentifier());
         this.configurationRegistry = configurationRegistry;
         this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
 
@@ -238,7 +237,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
             this.c8yMessage = c8yMessage;
             this.objectMapper = configurationRegistry.getObjectMapper();
-            this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(c8yMessage.getTenant());
+            this.serviceConfiguration = configurationRegistry.getServiceConfiguration(c8yMessage.getTenant());
             this.payloadProcessorsOutbound = payloadProcessorsOutbound;
             this.graalsEngine = configurationRegistry.getGraalsEngine(c8yMessage.getTenant());
         }
@@ -581,7 +580,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
     public ProcessingResult<?> processMessage(C8YMessage c8yMessage) {
         String tenant = c8yMessage.getTenant();
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
         log.info("Tenant {} - PROCESSING: C8Y message, API: {}, device: {}. connector: {}, payload: {}",
                 tenant,

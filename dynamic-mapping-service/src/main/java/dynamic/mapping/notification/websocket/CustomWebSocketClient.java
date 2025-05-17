@@ -57,7 +57,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         this.connectorName = connectorName;
         this.tenant = tenant;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
     }
 
     @Override

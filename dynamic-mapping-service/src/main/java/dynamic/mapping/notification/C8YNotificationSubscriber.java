@@ -91,7 +91,7 @@ public class C8YNotificationSubscriber {
     @Qualifier("virtThreadPool")
     private ExecutorService virtualThreadPool;
 
-    // structure: <tenant, <connectorIdentifier, asynchronousDispatcherOutbound>>
+    // Structure: <Tenant, < ConnectorIdentifier, DispatcherOutbound > >
     @Getter
     private Map<String, Map<String, DispatcherOutbound>> dispatcherOutboundMaps = new HashMap<>();
 
@@ -109,7 +109,7 @@ public class C8YNotificationSubscriber {
 
     private Map<String, Map<String, Mqtt3Client>> activePushConnections = new HashMap<>();
 
-    // structure: <tenant, <connectorIdentifier, tokenSeed>>
+    // Structure: <Tenant, < ConnectorIdentifier, TokenSeed > >
     private Map<String, Map<String, String>> deviceTokenPerConnector = new HashMap<>();
 
     public void addSubscriber(String tenant, String identifier, DispatcherOutbound dispatcherOutbound) {
@@ -494,7 +494,7 @@ public class C8YNotificationSubscriber {
             if (deviceTokenPerConnector.get(tenant).get(connectorIdentifier) != null) {
                 try {
                     tokenApi.unsubscribe(new Token(deviceTokenPerConnector.get(tenant).get(connectorIdentifier)));
-                    log.info("Tenant {} - Subscriber for Connector {} unsubscribed for Notification 2.0!",
+                    log.info("Tenant {} - Subscriber for Connector {} unsubscribed for Notification 2.0",
                             tenant, connectorIdentifier);
                     deviceTokenPerConnector.get(tenant).remove(connectorIdentifier);
                 } catch (SDKException e) {

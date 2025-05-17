@@ -351,7 +351,7 @@ public class ConfigurationController {
     public ResponseEntity<HttpStatus> updateServiceConfiguration(
             @Valid @RequestBody ServiceConfiguration serviceConfiguration) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration currentServiceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ServiceConfiguration currentServiceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
         // don't modify original copy
         log.info("Tenant {} - Update service configuration: {}", tenant, serviceConfiguration.toString());
@@ -401,7 +401,7 @@ public class ConfigurationController {
                 }
             }
 
-            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Tenant {} - Error updating service configuration", tenant, ex);
@@ -423,7 +423,7 @@ public class ConfigurationController {
 
             try {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
-                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+                configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -455,7 +455,7 @@ public class ConfigurationController {
 
             try {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
-                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+                configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -475,7 +475,7 @@ public class ConfigurationController {
             log.error("Tenant {} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
-        configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+        configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
         if (result == null) {
             // Template not found - return 404 Not Found
             log.warn("Tenant {} - Code template with ID [{}] not found", tenant, id);
@@ -507,7 +507,7 @@ public class ConfigurationController {
             serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate, false);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
-            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             log.debug("Tenant {} - Updated code template", tenant);
         } catch (Exception ex) {
             log.error("Tenant {} - Error updating code template [{}]", tenant, id, ex);
@@ -534,7 +534,7 @@ public class ConfigurationController {
             serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate, true);
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
-            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             log.debug("Tenant {} - Create code template", tenant);
         } catch (JsonProcessingException ex) {
             log.error("Tenant {} - Error creating code template", tenant, ex);
@@ -583,7 +583,7 @@ public class ConfigurationController {
 
             try {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
-                configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+                configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("Tenant {} - Error saving service configuration with code templates", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
