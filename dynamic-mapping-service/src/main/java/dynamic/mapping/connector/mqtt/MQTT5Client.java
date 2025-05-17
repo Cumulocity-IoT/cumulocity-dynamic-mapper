@@ -88,10 +88,10 @@ public class MQTT5Client extends AConnectorClient {
         ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol",
                 new String[] { "ws://", "wss://" });
         configProps.put("version",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "3.1.1",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, MQTT_3_1_1,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("3.1.1", "3.1.1"),
-                                new AbstractMap.SimpleEntry<String, String>("5.0", "5.0")),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_3_1_1, MQTT_3_1_1),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_3_1_1, MQTT_3_1_1)),
                         null));
         configProps.put("protocol",
                 new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
@@ -161,8 +161,8 @@ public class MQTT5Client extends AConnectorClient {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE, Qos.EXACTLY_ONCE);
@@ -525,11 +525,7 @@ public class MQTT5Client extends AConnectorClient {
         // We don't need to add a handler on subscribe using hive client
         Mqtt5AsyncClient asyncMqttClient = mqttClient.toAsync();
         asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal()))
-                .callback(publish -> {
-                    // Handle the received message here
-                    // You can call methods on your mqttCallback object
-                    mqttCallback.accept(publish);
-                })
+                .callback(mqttCallback)
                 .manualAcknowledgement(true)
                 .send()
                 .exceptionally(throwable -> {
@@ -552,7 +548,6 @@ public class MQTT5Client extends AConnectorClient {
                     throwable.getMessage());
             return null;
         });
-        // mqttClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter(topic).build());
     }
 
     public void publishMEAO(ProcessingContext<?> context) {

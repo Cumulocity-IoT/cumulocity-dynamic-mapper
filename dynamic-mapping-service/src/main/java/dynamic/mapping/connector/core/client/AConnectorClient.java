@@ -178,6 +178,9 @@ public abstract class AConnectorClient {
     @Setter
     public Boolean supportsMessageContext;
 
+    public static final String MQTT_3_1_1 = "3.1.1";
+    public static final String MQTT_5_0 = "5.0";
+
     public abstract boolean initialize();
 
     public abstract Boolean supportsWildcardsInTopic();
@@ -287,7 +290,7 @@ public abstract class AConnectorClient {
         connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
 
         serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+        configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
     }
 
     /**

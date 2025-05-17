@@ -45,10 +45,10 @@ public class MQTTServiceClient extends MQTT3Client {
     public MQTTServiceClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("version",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "3.1.1",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, MQTT_3_1_1,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("3.1.1", "3.1.1"),
-                                new AbstractMap.SimpleEntry<String, String>("5.0", "5.0")),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_3_1_1, MQTT_3_1_1),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_3_1_1, MQTT_3_1_1)),
                         null));
         configProps.put("protocol",
                 new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true, "mqtt://",
@@ -115,8 +115,8 @@ public class MQTTServiceClient extends MQTT3Client {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);

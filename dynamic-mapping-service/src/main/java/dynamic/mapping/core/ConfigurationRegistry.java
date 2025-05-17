@@ -21,10 +21,11 @@
 
 package dynamic.mapping.core;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
+import org.graalvm.polyglot.Engine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -39,7 +40,7 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
-import dynamic.mapping.connector.core.client.ConnectorType;
+
 import dynamic.mapping.connector.http.HttpClient;
 import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTT3Client;
@@ -50,9 +51,9 @@ import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.inbound.BaseProcessorInbound;
-import dynamic.mapping.processor.inbound.HexProcessorInbound;
 import dynamic.mapping.processor.inbound.CodeBasedProcessorInbound;
 import dynamic.mapping.processor.inbound.FlatFileProcessorInbound;
+import dynamic.mapping.processor.inbound.HexProcessorInbound;
 import dynamic.mapping.processor.inbound.JSONProcessorInbound;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.outbound.BaseProcessorOutbound;
@@ -62,37 +63,30 @@ import dynamic.mapping.processor.processor.fixed.InternalProtobufProcessor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.graalvm.polyglot.Engine;
 
 @Slf4j
 @Component
 public class ConfigurationRegistry {
 
-    @Getter
-    private Map<String, Engine> graalsEngines = new HashMap<>();
+    private Map<String, Engine> graalsEngines = new ConcurrentHashMap<>();
 
     @Getter
-    private Map<String, MicroserviceCredentials> microserviceCredentials = new HashMap<>();
+    private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
 
-    // structure: <tenant, <mappingType, mappingServiceRepresentation>>
-    @Getter
-    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new HashMap<>();
+    // Structure: < Tenant, < MappingType, < MappingServiceRepresentation > >
+    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new ConcurrentHashMap<>();
 
-    // structure: <tenant, <mappingType, extensibleProcessorInbound>>
-    @Getter
-    private Map<String, Map<MappingType, BaseProcessorInbound<?>>> payloadProcessorsInbound = new HashMap<>();
+    // Structure: < Tenant, < MappingType, ProcessorInbound>>
+    private Map<String, Map<MappingType, BaseProcessorInbound<?>>> payloadProcessorsInbound = new ConcurrentHashMap<>();
 
-    // structure: <tenant, <connectorIdentifier, <mappingType,
-    // extensibleProcessorOutbound>>>
-    @Getter
-    private Map<String, Map<String, Map<MappingType, BaseProcessorOutbound<?>>>> payloadProcessorsOutbound = new HashMap<>();
+    // Structure: < Tenant, < ConnectorIdentifier, < MappingType, ProcessorOutbound > >>
+    private Map<String, Map<String, Map<MappingType, BaseProcessorOutbound<?>>>> payloadProcessorsOutbound = new ConcurrentHashMap<>();
 
-    @Getter
-    private Map<String, ServiceConfiguration> serviceConfigurations = new HashMap<>();
+    // Structure: < Tenant, < ServiceConfiguration > >
+    private Map<String, ServiceConfiguration> serviceConfigurations = new ConcurrentHashMap<>();
 
-    // structure: <tenant, <extensibleProcessorSource>>
-    @Getter
-    private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
+    // Structure: < Tenant, < ExtensibleProcessorSource > >
+    private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new ConcurrentHashMap<>();
 
     @Getter
     private C8YAgent c8yAgent;
@@ -153,7 +147,7 @@ public class ConfigurationRegistry {
     private ExecutorService virtualThreadPool;
 
     public Map<MappingType, BaseProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
         return Map.of(
                 MappingType.JSON, new JSONProcessorInbound(this),
                 MappingType.CODE_BASED, new CodeBasedProcessorInbound(this),
@@ -167,45 +161,63 @@ public class ConfigurationRegistry {
     public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
             String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
         AConnectorClient connectorClient = null;
-        if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
-            // if version is not set, default to 3.1.1, as this property was introduced later. This will not break existing configuration
-            String version = ((String) connectorConfiguration.getProperties().getOrDefault("version","3.1.1"));
-            if ("3.1.1".equals(version)) {
-                connectorClient = new MQTT3Client(this, connectorConfiguration,
+
+        // Convert if statement to switch statement
+        switch (connectorConfiguration.getConnectorType()) {
+            case MQTT:
+                // if version is not set, default to 3.1.1, as this property was introduced
+                // later. This will not break existing configuration
+                String version = ((String) connectorConfiguration.getProperties().getOrDefault("version", AConnectorClient.MQTT_3_1_1));
+                if (AConnectorClient.MQTT_3_1_1.equals(version)) {
+                    connectorClient = new MQTT3Client(this, connectorConfiguration,
+                            null,
+                            additionalSubscriptionIdTest, tenant);
+                } else {
+                    connectorClient = new MQTT5Client(this, connectorConfiguration,
+                            null,
+                            additionalSubscriptionIdTest, tenant);
+                }
+                log.info("Tenant {} - Initializing MQTT {} Connector, identifier {}", tenant, version,
+                        connectorConfiguration.getIdentifier());
+                break;
+
+            case CUMULOCITY_MQTT_SERVICE:
+                connectorClient = new MQTTServiceClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-            } else {
-                connectorClient = new MQTT5Client(this, connectorConfiguration,
+                log.info("Tenant {} - Initializing MQTTService Connector, identifier {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+
+            case KAFKA:
+                connectorClient = new KafkaClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-            }
-            log.info("Tenant {} - Initializing MQTT Connector with identifier {}", tenant,
-                    connectorConfiguration.getIdentifier());
-        } else if (ConnectorType.CUMULOCITY_MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new MQTTServiceClient(this, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
-            log.info("Tenant {} - Initializing MQTTService Connector with identifier {}", tenant,
-                    connectorConfiguration.getIdentifier());
-        } else if (ConnectorType.KAFKA.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new KafkaClient(this, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
-            log.info("Tenant {} - Initializing Kafka Connector with identifier {}", tenant,
-                    connectorConfiguration.getIdentifier());
-        } else if (ConnectorType.HTTP.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new HttpClient(this, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
-            log.info("Tenant {} - Initializing HTTP Connector with identifier {}", tenant,
-                    connectorConfiguration.getIdentifier());
-        } else if (ConnectorType.WEB_HOOK.equals(connectorConfiguration.getConnectorType())) {
-            connectorClient = new WebHook(this, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
-            log.info("Tenant {} - Initializing WebHook Connector with identifier {}", tenant,
-                    connectorConfiguration.getIdentifier());
+                log.info("Tenant {} - Initializing Kafka Connector, identifier {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+
+            case HTTP:
+                connectorClient = new HttpClient(this, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("Tenant {} - Initializing HTTP Connector, identifier {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+
+            case WEB_HOOK:
+                connectorClient = new WebHook(this, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("Tenant {} - Initializing WebHook Connector, identifier {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+
+            default:
+                log.warn("Tenant {} - Unknown connector type: {}", tenant, connectorConfiguration.getConnectorType());
+                break;
         }
+
         return connectorClient;
     }
 
@@ -228,7 +240,7 @@ public class ConfigurationRegistry {
         if (processorPerTenant == null) {
             // log.info("Tenant {} - HIER III {} {}", connectorClient.getTenant(),
             // processorPerTenant);
-            processorPerTenant = new HashMap<>();
+            processorPerTenant = new ConcurrentHashMap<>();
             payloadProcessorsOutbound.put(connectorClient.getTenant(), processorPerTenant);
         }
         // if (!processorPerTenant.containsKey(connectorClient.getConnectorIdent())) {
@@ -245,20 +257,98 @@ public class ConfigurationRegistry {
     }
 
     public void createGraalsEngine(String tenant) {
-        // TODO Auto-generated method stub
         Engine eng = Engine.newBuilder()
                 .option("engine.WarnInterpreterOnly", "false")
                 .build();
         ;
-        this.getGraalsEngines().put(tenant, eng);
+        graalsEngines.put(tenant, eng);
     }
 
     public Engine getGraalsEngine(String tenant) {
-        return this.getGraalsEngines().get(tenant);
+        return graalsEngines.get(tenant);
     }
 
-    public void deleteGraalsEngine(String tenant) {
-        this.getGraalsEngines().remove(tenant);
+    public void removeGraalsEngine(String tenant) {
+        graalsEngines.remove(tenant);
     }
 
+    public ServiceConfiguration getServiceConfiguration(String tenant) {
+        return serviceConfigurations.get(tenant);
+    }
+
+    public void removeServiceConfiguration(String tenant) {
+        serviceConfigurations.remove(tenant);
+    }
+
+    public void addServiceConfiguration(String tenant, ServiceConfiguration configuration) {
+        serviceConfigurations.put(tenant, configuration);
+    }
+
+    public void addMappingServiceRepresentation(String tenant,
+            MappingServiceRepresentation mappingServiceRepresentation) {
+        mappingServiceRepresentations.put(tenant, mappingServiceRepresentation);
+    }
+
+    public MappingServiceRepresentation getMappingServiceRepresentation(String tenant) {
+        return mappingServiceRepresentations.get(tenant);
+    }
+
+    public void removeMappingServiceRepresentation(String tenant) {
+        mappingServiceRepresentations.remove(tenant);
+    }
+
+    public ExtensibleProcessorInbound getExtensibleProcessor(String tenant) {
+        return extensibleProcessors.get(tenant);
+    }
+
+    public void addExtensibleProcessor(String tenant, ExtensibleProcessorInbound extensibleProcessor) {
+        extensibleProcessors.put(tenant, extensibleProcessor);
+    }
+
+    public void removeExtensibleProcessor(String tenant) {
+        extensibleProcessors.remove(tenant);
+    }
+
+    public void addMicroserviceCredential(String tenant, MicroserviceCredentials microserviceCredentials) {
+        this.microserviceCredentials.put(tenant, microserviceCredentials);
+    }
+
+    public void removeMicroserviceCredential(String tenant) {
+        microserviceCredentials.remove(tenant);
+    }
+
+    public void addPayloadProcessorInbound(String tenant, MappingType mappingType,
+            BaseProcessorInbound<?> payloadProcessorInbound) {
+        payloadProcessorsInbound.get(tenant).put(mappingType, payloadProcessorInbound);
+    }
+
+    public Map<MappingType, BaseProcessorInbound<?>> getPayloadProcessorsInbound(String tenant) {
+        return payloadProcessorsInbound.get(tenant);
+    }
+
+    public Map<MappingType, BaseProcessorOutbound<?>> getPayloadProcessorsOutbound(String tenant,
+            String connectorIdentifier) {
+        return payloadProcessorsOutbound.get(tenant).get(connectorIdentifier);
+    }
+
+    public void addPayloadProcessorOutbound(String tenant, String connectorIdentifier, MappingType mappingType,
+            BaseProcessorOutbound<?> payloadProcessorOutbound) {
+        payloadProcessorsOutbound.get(tenant).get(connectorIdentifier).put(mappingType, payloadProcessorOutbound);
+    }
+
+    public void removePayloadProcessorOutbound(String tenant, String connectorIdentifier, MappingType mappingType) {
+        payloadProcessorsOutbound.get(tenant).get(connectorIdentifier).remove(mappingType);
+    }
+
+    public void removePayloadProcessorOutbound(String tenant, String connectorIdentifier) {
+        payloadProcessorsOutbound.get(tenant).remove(connectorIdentifier);
+    }
+
+    public void removePayloadProcessorsOutbound(String tenant) {
+        payloadProcessorsOutbound.remove(tenant);
+    }
+
+    public void removePayloadProcessorsInbound(String tenant) {
+        payloadProcessorsInbound.remove(tenant);
+    }
 }

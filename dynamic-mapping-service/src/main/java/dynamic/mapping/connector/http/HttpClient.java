@@ -97,8 +97,8 @@ public class HttpClient extends AConnectorClient {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE);

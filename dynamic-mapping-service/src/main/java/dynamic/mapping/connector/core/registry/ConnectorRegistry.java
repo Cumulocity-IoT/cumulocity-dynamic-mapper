@@ -22,7 +22,6 @@
 package dynamic.mapping.connector.core.registry;
 
 import dynamic.mapping.connector.core.ConnectorSpecification;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
@@ -35,19 +34,19 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @Slf4j
 public class ConnectorRegistry {
 
-    // Structure: Tenant, <Connector Ident, ConnectorInstance>
-    protected Map<String, Map<String, AConnectorClient>> connectorTenantMap = new HashMap<>();
-    // Structure: ConnectorType, <Property, PropertyDefinition>
-    protected Map<ConnectorType, ConnectorSpecification> connectorSpecificationMap = new HashMap<>();
+    // Structure: < Tenant, < ConnectorStatusEvent, ConnectorInstance > >
+    private Map<String, Map<String, AConnectorClient>> connectorTenantMap = new ConcurrentHashMap<>();
+    // Structure: < ConnectorType, < Property, PropertyDefinition > >
+    private Map<ConnectorType, ConnectorSpecification> connectorSpecificationMap = new ConcurrentHashMap<>();
 
-    // Structure: Tenant, <Connector Ident, ConnectorInstance>
-    @Getter
-    private Map<String, Map<String, ConnectorStatusEvent>> connectorStatusMap = new HashMap<>();
+    // Structure: < Tenant, < ConnectorIdentifier, connectorStatusEvent > >
+    private Map<String, Map<String, ConnectorStatusEvent>> connectorStatusMaps = new ConcurrentHashMap<>();
 
     public void registerConnector(ConnectorType connectorType, ConnectorSpecification specification) {
         connectorSpecificationMap.put(connectorType, specification);
@@ -145,11 +144,11 @@ public class ConnectorRegistry {
                 // to avoid memory leaks
                 client.setDispatcher(null);
                 client.submitDisconnect();
-                //client.disconnect();
+                // client.disconnect();
                 client.stopHousekeepingAndClose();
 
                 // store last connector status for monitoring
-                connectorStatusMap.get(tenant).put(identifier, client.getConnectorStatus());
+                connectorStatusMaps.get(tenant).put(identifier, client.getConnectorStatus());
                 connectorMap.remove(identifier);
             } else {
                 log.warn("Tenant {} - Client {} is not registered", tenant, identifier);
@@ -164,14 +163,22 @@ public class ConnectorRegistry {
             throw new ConnectorRegistryException("Tenant is missing!");
         if (identifier == null)
             throw new ConnectorRegistryException("Connector identifier is missing!");
-        if (connectorStatusMap.get(tenant) != null) {
-            connectorStatusMap.get(tenant).remove(identifier);
+        if (connectorStatusMaps.get(tenant) != null) {
+            connectorStatusMaps.get(tenant).remove(identifier);
         }
 
     }
 
     public HttpClient getHttpConnectorForTenant(String tenant) throws ConnectorRegistryException {
         return (HttpClient) getClientForTenant(tenant, HttpClient.HTTP_CONNECTOR_IDENTIFIER);
+    }
+
+    public Map<String, ConnectorStatusEvent> getConnectorStatusMap(String tenant) {
+        return connectorStatusMaps.get(tenant);
+    }
+
+    public void addConnectorStatusMap(String tenant, Map<String, ConnectorStatusEvent> map) {
+        connectorStatusMaps.put(tenant, map);
     }
 
 }

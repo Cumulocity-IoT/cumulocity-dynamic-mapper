@@ -91,7 +91,7 @@ public class C8YNotificationSubscriber {
     @Qualifier("virtThreadPool")
     private ExecutorService virtualThreadPool;
 
-    // structure: <tenant, <connectorIdentifier, asynchronousDispatcherOutbound>>
+    // Structure: <Tenant, < ConnectorIdentifier, DispatcherOutbound > >
     @Getter
     private Map<String, Map<String, DispatcherOutbound>> dispatcherOutboundMaps = new HashMap<>();
 
@@ -109,7 +109,7 @@ public class C8YNotificationSubscriber {
 
     private Map<String, Map<String, Mqtt3Client>> activePushConnections = new HashMap<>();
 
-    // structure: <tenant, <connectorIdentifier, tokenSeed>>
+    // Structure: <Tenant, < ConnectorIdentifier, TokenSeed > >
     private Map<String, Map<String, String>> deviceTokenPerConnector = new HashMap<>();
 
     public void addSubscriber(String tenant, String identifier, DispatcherOutbound dispatcherOutbound) {

@@ -141,13 +141,14 @@ public class BootstrapService {
         connectorRegistry.unregisterAllClientsForTenant(tenant);
 
         // Clean up configurations
-        configurationRegistry.getServiceConfigurations().remove(tenant);
-        configurationRegistry.getMappingServiceRepresentations().remove(tenant);
+        configurationRegistry.removeServiceConfiguration(tenant);
+        configurationRegistry.removeMappingServiceRepresentation(tenant);
+        configurationRegistry.removePayloadProcessorsInbound(tenant);
+        configurationRegistry.removePayloadProcessorsOutbound(tenant);
+        configurationRegistry.removeGraalsEngine(tenant);
+        
         mappingComponent.cleanMappingStatus(tenant);
-        configurationRegistry.getPayloadProcessorsInbound().remove(tenant);
-        configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
-        configurationRegistry.deleteGraalsEngine(tenant);
-
+        
         c8YAgent.deleteInboundExternalIdCache(tenant);
         c8YAgent.deleteInventoryCache(tenant);
     }
@@ -223,7 +224,7 @@ public class BootstrapService {
             }
         }
 
-        configurationRegistry.getServiceConfigurations().put(tenant, serviceConfig);
+        configurationRegistry.addServiceConfiguration(tenant, serviceConfig);
         return serviceConfig;
     }
 
@@ -254,7 +255,7 @@ public class BootstrapService {
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
                 .convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
 
-        configurationRegistry.getMappingServiceRepresentations().put(tenant, mappingServiceRepresentation);
+        configurationRegistry.addMappingServiceRepresentation(tenant, mappingServiceRepresentation);
 
         initializeMappingComponents(tenant);
     }
@@ -283,8 +284,8 @@ public class BootstrapService {
     }
 
     private void initializeConnectorRegistry(String tenant) {
-        if (connectorRegistry.getConnectorStatusMap().get(tenant) == null) {
-            connectorRegistry.getConnectorStatusMap().put(tenant, new HashMap<>());
+        if (connectorRegistry.getConnectorStatusMap(tenant) == null) {
+            connectorRegistry.addConnectorStatusMap(tenant, new ConcurrentHashMap<>());
         }
     }
 
