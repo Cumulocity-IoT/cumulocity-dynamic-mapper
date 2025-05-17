@@ -277,12 +277,12 @@ public class ConfigurationRegistry {
         return serviceConfigurations.get(tenant);
     }
 
-    public void removeServiceConfiguration(String tenant) {
-        serviceConfigurations.remove(tenant);
-    }
-
     public void addServiceConfiguration(String tenant, ServiceConfiguration configuration) {
         serviceConfigurations.put(tenant, configuration);
+    }
+
+    public void removeServiceConfiguration(String tenant) {
+        serviceConfigurations.remove(tenant);
     }
 
     public void addMappingServiceRepresentation(String tenant,
@@ -310,12 +310,12 @@ public class ConfigurationRegistry {
         extensibleProcessors.remove(tenant);
     }
 
-    public void removeMicroserviceCredentials(String tenant) {
-        microserviceCredentials.remove(tenant);
-    }
-
     public void addMicroserviceCredentials(String tenant, MicroserviceCredentials credentials) {
         microserviceCredentials.put(tenant, credentials);
+    }
+
+    public void removeMicroserviceCredentials(String tenant) {
+        microserviceCredentials.remove(tenant);
     }
 
     public void addPayloadProcessorInbound(String tenant, MappingType mappingType,
@@ -325,6 +325,10 @@ public class ConfigurationRegistry {
 
     public Map<MappingType, BaseProcessorInbound<?>> getPayloadProcessorsInbound(String tenant) {
         return payloadProcessorsInbound.get(tenant);
+    }
+
+    public void removePayloadProcessorsInbound(String tenant) {
+        payloadProcessorsInbound.remove(tenant);
     }
 
     public Map<MappingType, BaseProcessorOutbound<?>> getPayloadProcessorsOutbound(String tenant,
@@ -337,20 +341,8 @@ public class ConfigurationRegistry {
         payloadProcessorsOutbound.get(tenant).get(connectorIdentifier).put(mappingType, payloadProcessorOutbound);
     }
 
-    public void removePayloadProcessorOutbound(String tenant, String connectorIdentifier, MappingType mappingType) {
-        payloadProcessorsOutbound.get(tenant).get(connectorIdentifier).remove(mappingType);
-    }
-
-    public void removePayloadProcessorOutbound(String tenant, String connectorIdentifier) {
-        payloadProcessorsOutbound.get(tenant).remove(connectorIdentifier);
-    }
-
     public void removePayloadProcessorsOutbound(String tenant) {
         payloadProcessorsOutbound.remove(tenant);
-    }
-
-    public void removePayloadProcessorsInbound(String tenant) {
-        payloadProcessorsInbound.remove(tenant);
     }
 
 }

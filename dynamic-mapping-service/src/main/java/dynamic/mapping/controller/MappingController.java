@@ -121,7 +121,7 @@ public class MappingController {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Mapping with id " + id + " could not be found");
 
-            mappingComponent.deleteFromMappingCache(tenant, deletedMapping);
+            mappingComponent.removeFromMappingCaches(tenant, deletedMapping);
 
             if (!Direction.OUTBOUND.equals(deletedMapping.direction)) {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
