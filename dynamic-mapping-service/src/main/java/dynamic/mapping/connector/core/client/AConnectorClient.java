@@ -178,8 +178,17 @@ public abstract class AConnectorClient {
     @Setter
     public Boolean supportsMessageContext;
 
-    public static final String MQTT_3_1_1 = "3.1.1";
-    public static final String MQTT_5_0 = "5.0";
+	public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
+
+	public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
+
+	public static final String MQTT_PROTOCOL_WS = "ws://";
+
+	public static final String MQTT_PROTOCOL_WSS = "wss://";
+
+    public static final String MQTT_VERSION_3_1_1 = "3.1.1";
+
+    public static final String MQTT_VERSION_5_0 = "5.0";
 
     public abstract boolean initialize();
 
@@ -789,10 +798,10 @@ public abstract class AConnectorClient {
     private void updateDeploymentMap(List<String> mappingIds,
             Map<String, DeploymentMapEntry> mappingsDeployed,
             ConnectorConfiguration cleanedConfiguration) {
-        mappingIds.forEach(mappingIdent -> {
+        mappingIds.forEach(mappingIdentifier -> {
             DeploymentMapEntry mappingDeployed = mappingsDeployed.computeIfAbsent(
-                    mappingIdent,
-                    k -> new DeploymentMapEntry(mappingIdent));
+                    mappingIdentifier,
+                    k -> new DeploymentMapEntry(mappingIdentifier));
             mappingDeployed.getConnectors().add(cleanedConfiguration);
         });
     }
@@ -807,7 +816,7 @@ public abstract class AConnectorClient {
     }
 
     private Optional<Mapping> findActiveMappingInbound(Mapping mapping) {
-        Map<String, Mapping> cacheMappings = mappingComponent.getCacheMappingInbound().get(tenant);
+        Map<String, Mapping> cacheMappings = mappingComponent.getCacheMappingInbound(tenant);
         if (cacheMappings == null) {
             return Optional.empty();
         }

@@ -31,6 +31,7 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
+import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import lombok.extern.slf4j.Slf4j;
@@ -45,18 +46,18 @@ public class MQTTServiceClient extends MQTT3Client {
     public MQTTServiceClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("version",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, MQTT_3_1_1,
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, MQTT_VERSION_3_1_1,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>(MQTT_3_1_1, MQTT_3_1_1),
-                                new AbstractMap.SimpleEntry<String, String>(MQTT_3_1_1, MQTT_3_1_1)),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_3_1_1, MQTT_VERSION_3_1_1),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_5_0, MQTT_VERSION_5_0)),
                         null));
         configProps.put("protocol",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true, "mqtt://",
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true, AConnectorClient.MQTT_PROTOCOL_MQTT,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
-                                new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
-                                new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-                                new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTT, AConnectorClient.MQTT_PROTOCOL_MQTT),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTTS, AConnectorClient.MQTT_PROTOCOL_MQTTS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WS, AConnectorClient.MQTT_PROTOCOL_WS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WSS, AConnectorClient.MQTT_PROTOCOL_WSS)),
                         null));
         configProps.put("mqttHost",
                 new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true,

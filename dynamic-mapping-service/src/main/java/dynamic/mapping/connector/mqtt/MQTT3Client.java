@@ -81,24 +81,30 @@ public class MQTT3Client extends AConnectorClient {
     public MQTT3Client() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
-                new String[] { "mqtts://", "wss://" });
+                new String[] { AConnectorClient.MQTT_PROTOCOL_MQTTS, AConnectorClient.MQTT_PROTOCOL_WSS });
         ConnectorPropertyCondition useSelfSignedCertificateCondition = new ConnectorPropertyCondition(
                 "useSelfSignedCertificate", new String[] { "true" });
         ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol",
-                new String[] { "ws://", "wss://" });
+                new String[] { AConnectorClient.MQTT_PROTOCOL_WS, AConnectorClient.MQTT_PROTOCOL_WSS });
         configProps.put("version",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, MQTT_3_1_1,
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false,
+                        MQTT_VERSION_3_1_1,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>(MQTT_3_1_1, MQTT_3_1_1),
-                                new AbstractMap.SimpleEntry<String, String>(MQTT_3_1_1, MQTT_3_1_1)),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_3_1_1, MQTT_VERSION_3_1_1),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_5_0, MQTT_VERSION_5_0)),
                         null));
         configProps.put("protocol",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true,
+                        AConnectorClient.MQTT_PROTOCOL_MQTT,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
-                                new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
-                                new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-                                new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTT,
+                                        AConnectorClient.MQTT_PROTOCOL_MQTT),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTTS,
+                                        AConnectorClient.MQTT_PROTOCOL_MQTTS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WS,
+                                        AConnectorClient.MQTT_PROTOCOL_WS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WSS,
+                                        AConnectorClient.MQTT_PROTOCOL_WSS)),
                         null));
         configProps.put("mqttHost",
                 new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
@@ -282,12 +288,13 @@ public class MQTT3Client extends AConnectorClient {
         if (useSelfSignedCertificate) {
             partialBuilder = partialBuilder.sslConfig(sslConfig);
             log.debug("Tenant {} - Using certificate: {}", tenant, cert.getCertInPemFormat());
-        } else if ("mqtts://".equals(protocol) || "wss://".equals(protocol)) {
+        } else if (AConnectorClient.MQTT_PROTOCOL_MQTTS.equals(protocol)
+                || AConnectorClient.MQTT_PROTOCOL_WSS.equals(protocol)) {
             partialBuilder = partialBuilder.sslWithDefaultConfig();
         }
 
         // websocket configuration
-        if ("ws://".equals(protocol) || "wss://".equals(protocol)) {
+        if (AConnectorClient.MQTT_PROTOCOL_WS.equals(protocol) || AConnectorClient.MQTT_PROTOCOL_WSS.equals(protocol)) {
             partialBuilder = partialBuilder.webSocketWithDefaultConfig();
             String serverPath = (String) connectorConfiguration.getProperties().get("serverPath");
             if (serverPath != null) {

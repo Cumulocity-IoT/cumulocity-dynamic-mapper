@@ -145,16 +145,18 @@ public class BootstrapService {
         configurationRegistry.removeMappingServiceRepresentation(tenant);
         configurationRegistry.removePayloadProcessorsInbound(tenant);
         configurationRegistry.removePayloadProcessorsOutbound(tenant);
+        configurationRegistry.removeExtensibleProcessor(tenant);
         configurationRegistry.removeGraalsEngine(tenant);
+        configurationRegistry.removeMicroserviceCredentials(tenant);
         
-        mappingComponent.cleanMappingStatus(tenant);
+        mappingComponent.removeResources(tenant);
         
         c8YAgent.deleteInboundExternalIdCache(tenant);
         c8YAgent.deleteInventoryCache(tenant);
     }
 
     @EventListener
-    public void initialize(MicroserviceSubscriptionAddedEvent event) {
+    public void subscribeTenant(MicroserviceSubscriptionAddedEvent event) {
         String tenant = event.getCredentials().getTenant();
         log.info("Tenant {} - Microservice subscribed", tenant);
 
@@ -166,7 +168,7 @@ public class BootstrapService {
     }
 
     private void initializeTenantResources(String tenant, MicroserviceCredentials credentials) {
-        configurationRegistry.getMicroserviceCredentials().put(tenant, credentials);
+        configurationRegistry.addMicroserviceCredentials(tenant, credentials);
 
         ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
         initializeCaches(tenant, serviceConfig);
@@ -257,17 +259,17 @@ public class BootstrapService {
 
         configurationRegistry.addMappingServiceRepresentation(tenant, mappingServiceRepresentation);
 
-        initializeMappingComponents(tenant);
+        initializeResourcesMappingComponent(tenant);
     }
 
     private void initializeGraalsEngine(String tenant) {
         configurationRegistry.createGraalsEngine(tenant);
     }
 
-    private void initializeMappingComponents(String tenant) {
+    private void initializeResourcesMappingComponent(String tenant) {
         mappingComponent.initializeMappingStatus(tenant, false);
         mappingComponent.initializeDeploymentMap(tenant, false);
-        mappingComponent.initializeMappingCaches(tenant);
+        mappingComponent.initializeResources(tenant);
         mappingComponent.rebuildMappingOutboundCache(tenant);
         mappingComponent.rebuildMappingInboundCache(tenant);
     }

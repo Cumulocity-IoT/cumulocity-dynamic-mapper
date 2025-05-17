@@ -70,7 +70,6 @@ public class ConfigurationRegistry {
 
     private Map<String, Engine> graalsEngines = new ConcurrentHashMap<>();
 
-    @Getter
     private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
 
     // Structure: < Tenant, < MappingType, < MappingServiceRepresentation > >
@@ -79,7 +78,8 @@ public class ConfigurationRegistry {
     // Structure: < Tenant, < MappingType, ProcessorInbound>>
     private Map<String, Map<MappingType, BaseProcessorInbound<?>>> payloadProcessorsInbound = new ConcurrentHashMap<>();
 
-    // Structure: < Tenant, < ConnectorIdentifier, < MappingType, ProcessorOutbound > >>
+    // Structure: < Tenant, < ConnectorIdentifier, < MappingType, ProcessorOutbound
+    // > >>
     private Map<String, Map<String, Map<MappingType, BaseProcessorOutbound<?>>>> payloadProcessorsOutbound = new ConcurrentHashMap<>();
 
     // Structure: < Tenant, < ServiceConfiguration > >
@@ -167,8 +167,9 @@ public class ConfigurationRegistry {
             case MQTT:
                 // if version is not set, default to 3.1.1, as this property was introduced
                 // later. This will not break existing configuration
-                String version = ((String) connectorConfiguration.getProperties().getOrDefault("version", AConnectorClient.MQTT_3_1_1));
-                if (AConnectorClient.MQTT_3_1_1.equals(version)) {
+                String version = ((String) connectorConfiguration.getProperties().getOrDefault("version",
+                        AConnectorClient.MQTT_VERSION_3_1_1));
+                if (AConnectorClient.MQTT_VERSION_3_1_1.equals(version)) {
                     connectorClient = new MQTT3Client(this, connectorConfiguration,
                             null,
                             additionalSubscriptionIdTest, tenant);
@@ -309,12 +310,12 @@ public class ConfigurationRegistry {
         extensibleProcessors.remove(tenant);
     }
 
-    public void addMicroserviceCredential(String tenant, MicroserviceCredentials microserviceCredentials) {
-        this.microserviceCredentials.put(tenant, microserviceCredentials);
+    public void removeMicroserviceCredentials(String tenant) {
+        microserviceCredentials.remove(tenant);
     }
 
-    public void removeMicroserviceCredential(String tenant) {
-        microserviceCredentials.remove(tenant);
+    public void addMicroserviceCredentials(String tenant, MicroserviceCredentials credentials) {
+        microserviceCredentials.put(tenant, credentials);
     }
 
     public void addPayloadProcessorInbound(String tenant, MappingType mappingType,
@@ -351,4 +352,5 @@ public class ConfigurationRegistry {
     public void removePayloadProcessorsInbound(String tenant) {
         payloadProcessorsInbound.remove(tenant);
     }
+
 }

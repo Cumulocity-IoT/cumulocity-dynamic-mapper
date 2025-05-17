@@ -98,11 +98,11 @@ public class WatsonController {
         try {
             String tenant = contextService.getContext().getTenant();
             String processedText = textBody
-            .replace("\"[", "[")          // 1. replace "[ with [
-            .replace("]\"", "]")          // 2. replace ]" with ]
-            .replace("\\\\\"", "___\"")   // 3. replace \\\" with ___"
-            .replace("\\\"", "\"")        // 4. replace \" with "
-            .replace("___\"", "\"") ;     // 5. replace ___" with \"
+                    .replace("\"[", "[") // 1. replace "[ with [
+                    .replace("]\"", "]") // 2. replace ]" with ]
+                    .replace("\\\\\"", "___\"") // 3. replace \\\" with ___"
+                    .replace("\\\"", "\"") // 4. replace \" with "
+                    .replace("___\"", "\""); // 5. replace ___" with \"
             Mapping mapping = objectMapper.readValue(processedText, Mapping.class);
             log.info("Tenant {} - Adding mapping: {}", tenant, mapping.getMappingTopic());
             log.debug("Tenant {} - Adding mapping: {}", tenant, mapping);
@@ -118,9 +118,9 @@ public class WatsonController {
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).updateActiveSubscriptionInbound(createdMapping, true, false);
                 });
-                mappingComponent.deleteFromCacheMappingInbound(tenant, createdMapping);
+                mappingComponent.removeFromCacheMappingInbound(tenant, createdMapping);
                 mappingComponent.addToCacheMappingInbound(tenant, createdMapping);
-                mappingComponent.getCacheMappingInbound().get(tenant).put(createdMapping.id, mapping);
+                mappingComponent.addCacheMappingInbound(tenant, createdMapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(createdMapping);
         } catch (Exception ex) {

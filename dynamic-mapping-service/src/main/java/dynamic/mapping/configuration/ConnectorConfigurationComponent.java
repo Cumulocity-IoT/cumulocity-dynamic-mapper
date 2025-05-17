@@ -159,7 +159,7 @@ public class ConnectorConfigurationComponent {
             // later. This will not break existing configuration
             String version = ((String) configuration.getProperties().getOrDefault("version", null));
             if (version == null) {
-                configuration.getProperties().put("version", AConnectorClient.MQTT_3_1_1);
+                configuration.getProperties().put("version", AConnectorClient.MQTT_VERSION_3_1_1);
                 log.info("Tenant {} - Adding version attribute to old MQTT configuration", tenant);
             }
         }
