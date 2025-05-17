@@ -904,7 +904,7 @@ public class MappingComponent {
             MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                     .getMappingServiceRepresentation(tenant);
             // avoid sending empty monitoring events
-            log.info("Tenant {} - Saving deploymentMap, number deployments:{}", tenant,
+            log.info("Tenant {} - Saving deploymentMap, number deployments: {}", tenant,
                     deploymentMaps.get(tenant).size());
             Map<String, Object> map = new ConcurrentHashMap<String, Object>();
             Map<String, List<String>> deploymentMapPerTenant = deploymentMaps.get(tenant);

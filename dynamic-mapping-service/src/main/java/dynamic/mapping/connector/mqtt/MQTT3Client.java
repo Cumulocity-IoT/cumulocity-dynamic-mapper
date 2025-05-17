@@ -94,7 +94,7 @@ public class MQTT3Client extends AConnectorClient {
                                 new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_5_0, MQTT_VERSION_5_0)),
                         null));
         configProps.put("protocol",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, true,
                         AConnectorClient.MQTT_PROTOCOL_MQTT,
                         Map.ofEntries(
                                 new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTT,
@@ -243,7 +243,7 @@ public class MQTT3Client extends AConnectorClient {
                 return false;
             }
         }
-        log.info("Tenant {} - Phase 0: initializing connector {}, type:{} was successful", tenant,
+        log.info("Tenant {} - Phase 0: initializing connector {}, type: {} was successful", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;
@@ -251,7 +251,7 @@ public class MQTT3Client extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Phase I: connecting with {}, isConnected:{}, shouldConnect:{}",
+        log.info("Tenant {} - Phase I: connecting with {}, isConnected: {}, shouldConnect: {}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -259,7 +259,8 @@ public class MQTT3Client extends AConnectorClient {
 
         if (shouldConnect())
             updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
-        String protocol = (String) connectorConfiguration.getProperties().getOrDefault("protocol", false);
+        String protocol = (String) connectorConfiguration.getProperties().getOrDefault("protocol",
+                AConnectorClient.MQTT_PROTOCOL_MQTT);
         boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
 
@@ -324,23 +325,11 @@ public class MQTT3Client extends AConnectorClient {
                 })
                 .buildBlocking();
 
-        String configuredProtocol = "mqtt";
         String configuredServerPath = "";
         if (mqttClient.getConfig().getWebSocketConfig().isPresent()) {
-            if (mqttClient.getConfig().getSslConfig().isPresent()) {
-                configuredProtocol = "wss";
-            } else {
-                configuredProtocol = "ws";
-            }
             configuredServerPath = "/" + mqttClient.getConfig().getWebSocketConfig().get().getServerPath();
-        } else {
-            if (mqttClient.getConfig().getSslConfig().isPresent()) {
-                configuredProtocol = "mqtts";
-            } else {
-                configuredProtocol = "mqtt";
-            }
         }
-        String configuredUrl = String.format("%s://%s:%s%s", configuredProtocol, mqttClient.getConfig().getServerHost(),
+        String configuredUrl = String.format("%s//%s:%s%s", protocol, mqttClient.getConfig().getServerHost(),
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
         // Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
@@ -357,7 +346,7 @@ public class MQTT3Client extends AConnectorClient {
             while (!isConnected() && shouldConnect()) {
                 if (Thread.currentThread().isInterrupted())
                     return;
-                log.info("Tenant {} - Phase II: connecting with {}, shouldConnect:{}, server:{}", tenant,
+                log.info("Tenant {} - Phase II: connecting with {}, shouldConnect: {}, server: {}", tenant,
                         getConnectorName(),
                         shouldConnect(), configuredUrl);
                 if (!firstRun) {

@@ -111,7 +111,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
             }
             processingCache.put(substitution.pathTarget, processingCacheEntry);
             if (serviceConfiguration.logSubstitution || mapping.debug) {
-                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
                         tenant,
                         substitution.pathSource,
                         extractedSourceContent == null ? null : extractedSourceContent.toString(),
