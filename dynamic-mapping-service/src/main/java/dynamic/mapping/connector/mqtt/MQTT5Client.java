@@ -231,20 +231,20 @@ public class MQTT5Client extends AConnectorClient {
                 sslConfig = sslConfigBuilder.trustManagerFactory(tmf).protocols(expectedProtocols).build();
             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
                     | KeyManagementException e) {
-                log.error("Tenant {} - Connector {} - Error configuring socketFactory for TLS: ", tenant,
+                log.error("Tenant {} - {} - Error configuring socketFactory for TLS: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             } catch (Exception e) {
-                log.error("Tenant {} - Connector {} - Error initializing connector: ", tenant,
+                log.error("Tenant {} - {} - Error initializing connector: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             }
         }
-        log.info("Tenant {} - Phase 0: initializing connector {}, type: {} was successful", tenant,
+        log.info("Tenant {} - Phase 0: {} initialized, connectorType: {}", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;
@@ -252,7 +252,7 @@ public class MQTT5Client extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Phase I: connecting with {}, isConnected: {}, shouldConnect: {}",
+        log.info("Tenant {} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -260,7 +260,8 @@ public class MQTT5Client extends AConnectorClient {
 
         if (shouldConnect())
             updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
-        String protocol = (String) connectorConfiguration.getProperties().getOrDefault("protocol", AConnectorClient.MQTT_PROTOCOL_MQTT);
+        String protocol = (String) connectorConfiguration.getProperties().getOrDefault("protocol",
+                AConnectorClient.MQTT_PROTOCOL_MQTT);
         boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
 
@@ -289,7 +290,8 @@ public class MQTT5Client extends AConnectorClient {
         if (useSelfSignedCertificate) {
             partialBuilder = partialBuilder.sslConfig(sslConfig);
             log.debug("Tenant {} - Using certificate: {}", tenant, cert.getCertInPemFormat());
-        } else if (AConnectorClient.MQTT_PROTOCOL_MQTTS.equals(protocol) || AConnectorClient.MQTT_PROTOCOL_WSS.equals(protocol)) {
+        } else if (AConnectorClient.MQTT_PROTOCOL_MQTTS.equals(protocol)
+                || AConnectorClient.MQTT_PROTOCOL_WSS.equals(protocol)) {
             partialBuilder = partialBuilder.sslWithDefaultConfig();
         }
 
@@ -345,7 +347,7 @@ public class MQTT5Client extends AConnectorClient {
             while (!isConnected() && shouldConnect()) {
                 if (Thread.currentThread().isInterrupted())
                     return;
-                log.info("Tenant {} - Phase II: connecting with {}, shouldConnect: {}, server: {}", tenant,
+                log.info("Tenant {} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
                         getConnectorName(),
                         shouldConnect(), configuredUrl);
                 if (!firstRun) {
@@ -368,7 +370,7 @@ public class MQTT5Client extends AConnectorClient {
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Phase III, connected with {}", tenant,
+                    log.info("Tenant {} - Phase III: {} connected", tenant,
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);

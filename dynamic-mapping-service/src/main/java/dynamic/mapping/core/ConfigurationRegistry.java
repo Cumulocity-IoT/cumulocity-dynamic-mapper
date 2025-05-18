@@ -177,7 +177,7 @@ public class ConfigurationRegistry {
                             null,
                             additionalSubscriptionIdTest, tenant);
                 }
-                log.info("Tenant {} - Initializing MQTT {} Connector, identifier {}", tenant, version,
+                log.info("Tenant {} - Connector MQTT {} registered, identifier: {}", tenant, version,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -185,7 +185,7 @@ public class ConfigurationRegistry {
                 connectorClient = new MQTTServiceClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("Tenant {} - Initializing MQTTService Connector, identifier {}", tenant,
+                log.info("Tenant {} - Connector MQTTService Connector registered, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -193,7 +193,7 @@ public class ConfigurationRegistry {
                 connectorClient = new KafkaClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("Tenant {} - Initializing Kafka Connector, identifier {}", tenant,
+                log.info("Tenant {} - Connector Kafka Connector registered, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -201,7 +201,7 @@ public class ConfigurationRegistry {
                 connectorClient = new HttpClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("Tenant {} - Initializing HTTP Connector, identifier {}", tenant,
+                log.info("Tenant {} - Connector HTTP Connector registered, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -209,7 +209,7 @@ public class ConfigurationRegistry {
                 connectorClient = new WebHook(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("Tenant {} - Initializing WebHook Connector, identifier {}", tenant,
+                log.info("Tenant {} - Initializing WebHook Connector, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 

@@ -236,14 +236,14 @@ public class MQTT3Client extends AConnectorClient {
                 sendConnectorLifecycle();
                 return false;
             } catch (Exception e) {
-                log.error("Tenant {} - Connector {} - Error initializing connector: ", tenant,
+                log.error("Tenant {} - {} - Error initializing connector: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             }
         }
-        log.info("Tenant {} - Phase 0: initializing connector {}, type: {} was successful", tenant,
+        log.info("Tenant {} - Phase 0: {} initialized , connectorType: {}", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;
@@ -251,7 +251,7 @@ public class MQTT3Client extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Phase I: connecting with {}, isConnected: {}, shouldConnect: {}",
+        log.info("Tenant {} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -346,7 +346,7 @@ public class MQTT3Client extends AConnectorClient {
             while (!isConnected() && shouldConnect()) {
                 if (Thread.currentThread().isInterrupted())
                     return;
-                log.info("Tenant {} - Phase II: connecting with {}, shouldConnect: {}, server: {}", tenant,
+                log.info("Tenant {} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
                         getConnectorName(),
                         shouldConnect(), configuredUrl);
                 if (!firstRun) {
@@ -369,7 +369,7 @@ public class MQTT3Client extends AConnectorClient {
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Phase III, connected with {}", tenant,
+                    log.info("Tenant {} - Phase III: {} connected", tenant,
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
