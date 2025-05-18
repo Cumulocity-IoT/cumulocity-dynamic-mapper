@@ -179,13 +179,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                ExternalIDRepresentation resultInner = this.getInboundExternalIdCache(tenant)
+                ExternalIDRepresentation resultInner = inboundExternalIdCaches.get(tenant)
                         .getIdByExternalId(identity);
                 Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
                         .register(Metrics.globalRegistry).increment();
                 if (resultInner == null) {
                     resultInner = identityApi.resolveExternalId2GlobalId(identity, context);
-                    this.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
+                    inboundExternalIdCaches.get(tenant).putIdForExternalId(identity,
                             resultInner);
 
                 } else {
@@ -895,8 +895,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return inboundExternalIdCaches.remove(tenant);
     }
 
-    public InboundExternalIdCache getInboundExternalIdCache(String tenant) {
-        return inboundExternalIdCaches.get(tenant);
+    public Integer getInboundExternalIdCacheSize(String tenant) {
+        return (inboundExternalIdCaches.get(tenant) != null ? inboundExternalIdCaches.get(tenant).getCacheSize()
+                : 0);
     }
 
     public InventoryCache removeInventoryCache(String tenant) {

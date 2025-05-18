@@ -177,8 +177,12 @@ public class ConnectorRegistry {
         return connectorStatusMaps.get(tenant);
     }
 
-    public void addConnectorStatusMap(String tenant, Map<String, ConnectorStatusEvent> map) {
-        connectorStatusMaps.put(tenant, map);
+    public void initializeResources(String tenant) {
+        connectorStatusMaps.put(tenant, new ConcurrentHashMap<>());
+    }
+
+    public void removeResources(String tenant) {
+        connectorStatusMaps.remove(tenant);
     }
 
 }

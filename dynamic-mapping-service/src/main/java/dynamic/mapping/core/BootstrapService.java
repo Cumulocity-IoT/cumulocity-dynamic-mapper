@@ -112,6 +112,7 @@ public class BootstrapService {
         this.inventoryCacheSize = inventoryCacheSize;
         this.cacheInboundExternalIdRetentionStartMap = new ConcurrentHashMap<>();
         this.cacheInventoryRetentionStartMap = new ConcurrentHashMap<>();
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
     }
 
     @PreDestroy
@@ -151,6 +152,8 @@ public class BootstrapService {
 
         mappingComponent.removeResources(tenant);
 
+        connectorRegistry.removeResources(tenant);
+
         c8YAgent.removeInboundExternalIdCache(tenant);
         c8YAgent.removeInventoryCache(tenant);
     }
@@ -168,11 +171,20 @@ public class BootstrapService {
     }
 
     private void initializeTenantResources(String tenant, MicroserviceCredentials credentials) {
+        c8YAgent.createExtensibleProcessor(tenant);
+        c8YAgent.loadProcessorExtensions(tenant);
+
         configurationRegistry.addMicroserviceCredentials(tenant, credentials);
+        configurationRegistry.initializeResources(tenant);
+        configurationRegistry.createGraalsEngine(tenant);
+        
+        connectorRegistry.initializeResources(tenant);
 
         ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
         initializeCaches(tenant, serviceConfig);
-        initializeTimeZoneAndMappings(tenant);
+        initializeMappingServiceRepresentation(tenant);
+        initializeResourcesMappingComponent(tenant);
+
         // Wait for ALL connectors are successfully connected before handling Outbound
         // Mappings
         List<Future<?>> connectorTasks = initializeConnectors(tenant, serviceConfig);
@@ -185,10 +197,7 @@ public class BootstrapService {
                 }
             });
         }
-        virtualThreadPool.submit(() -> {
-            configurationRegistry.createGraalsEngine(tenant);
 
-        });
         handleOutboundMapping(tenant, serviceConfig);
     }
 
@@ -241,26 +250,17 @@ public class BootstrapService {
 
         c8YAgent.initializeInboundExternalIdCache(tenant, cacheSizeInbound);
         c8YAgent.initializeInventoryCache(tenant, cacheSizeInventory);
+
         cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
         cacheInventoryRetentionStartMap.put(tenant, Instant.now());
     }
 
-    private void initializeTimeZoneAndMappings(String tenant) {
-        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
-
+    private void initializeMappingServiceRepresentation(String tenant) {
         ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()
                 .initializeMappingServiceObject(tenant);
-
-        configurationRegistry.getC8yAgent().createExtensibleProcessor(tenant);
-        configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
-
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
                 .convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
-
         configurationRegistry.addMappingServiceRepresentation(tenant, mappingServiceRepresentation);
-
-        initializeResourcesMappingComponent(tenant);
-        configurationRegistry.initializeResources(tenant);
     }
 
     private void initializeResourcesMappingComponent(String tenant) {
@@ -273,19 +273,12 @@ public class BootstrapService {
 
     private List<Future<?>> initializeConnectors(String tenant, ServiceConfiguration serviceConfig) {
         try {
-            initializeConnectorRegistry(tenant);
             registerDefaultConnectors();
             return setupConnectorConfigurations(tenant, serviceConfig);
         } catch (Exception e) {
             log.error("Tenant {} - Error initializing connectors: {}", tenant, e.getMessage(), e);
         }
         return null;
-    }
-
-    private void initializeConnectorRegistry(String tenant) {
-        if (connectorRegistry.getConnectorStatusMap(tenant) == null) {
-            connectorRegistry.addConnectorStatusMap(tenant, new ConcurrentHashMap<>());
-        }
     }
 
     private void registerDefaultConnectors() throws ConnectorRegistryException, ConnectorException {
@@ -452,12 +445,12 @@ public class BootstrapService {
         int retentionDaysInbound = serviceConfig.getInboundExternalIdCacheRetention();
 
         if (shouldClearCacheInboundExternalId(cacheRetentionStartInbound, retentionDaysInbound)) {
-            int cacheSize = c8YAgent.getInboundExternalIdCache(tenant).getCacheSize();
+            int cacheSize = c8YAgent.getInboundExternalIdCacheSize(tenant);
             c8YAgent.clearInboundExternalIdCache(tenant, false, cacheSize);
             cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
 
             log.info("Tenant {} - Identity cache cleared. Old Size: {}, New size: {}",
-                    tenant, cacheSize, c8YAgent.getInboundExternalIdCache(tenant).getCacheSize());
+                    tenant, cacheSize, c8YAgent.getInboundExternalIdCacheSize(tenant));
         }
 
         Instant cacheRetentionStartInventory = cacheInventoryRetentionStartMap.get(tenant);
