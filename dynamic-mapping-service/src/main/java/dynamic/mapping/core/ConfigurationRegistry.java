@@ -162,7 +162,6 @@ public class ConfigurationRegistry {
             String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
         AConnectorClient connectorClient = null;
 
-        // Convert if statement to switch statement
         switch (connectorConfiguration.getConnectorType()) {
             case MQTT:
                 // if version is not set, default to 3.1.1, as this property was introduced
@@ -229,32 +228,20 @@ public class ConfigurationRegistry {
                 MappingType.CODE_BASED, new CodeBasedProcessorOutbound(this, connectorClient));
     }
 
-    public void initializePayloadProcessorsInbound(String tenant) {
-        if (!payloadProcessorsInbound.containsKey(tenant)) {
-            payloadProcessorsInbound.put(tenant, createPayloadProcessorsInbound(tenant));
-        }
+    public void initializeResources(String tenant) {
+        payloadProcessorsInbound.put(tenant, createPayloadProcessorsInbound(tenant));
+        payloadProcessorsOutbound.put(tenant, new ConcurrentHashMap<>());
     }
 
     public void initializePayloadProcessorsOutbound(AConnectorClient connectorClient) {
         Map<String, Map<MappingType, BaseProcessorOutbound<?>>> processorPerTenant = payloadProcessorsOutbound
                 .get(connectorClient.getTenant());
-        if (processorPerTenant == null) {
-            // log.info("Tenant {} - HIER III {} {}", connectorClient.getTenant(),
-            // processorPerTenant);
-            processorPerTenant = new ConcurrentHashMap<>();
-            payloadProcessorsOutbound.put(connectorClient.getTenant(), processorPerTenant);
-        }
-        // if (!processorPerTenant.containsKey(connectorClient.getConnectorIdent())) {
-        // log.info("Tenant {} - HIER VI {} {}", connectorClient.getTenant(),
-        // processorPerTenant);
         processorPerTenant.put(connectorClient.getConnectorIdentifier(),
                 createPayloadProcessorsOutbound(connectorClient));
-        // }
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {
-        MicroserviceCredentials ms = microserviceCredentials.get(tenant);
-        return ms;
+        return microserviceCredentials.get(tenant);
     }
 
     public void createGraalsEngine(String tenant) {

@@ -92,6 +92,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Map.entry;
@@ -104,9 +105,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     private EventApi eventApi;
-
-    @Autowired
-    private EventBinaryApi eventBinaryApi;
 
     @Autowired
     private InventoryFacade inventoryApi;
@@ -142,11 +140,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.extensionsComponent = extensionsComponent;
     }
 
-    @Getter
-    private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new HashMap<>();
+    private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new ConcurrentHashMap<>();
 
-    @Getter
-    private Map<String, InventoryCache> inventoryCaches = new HashMap<>();
+    private Map<String, InventoryCache> inventoryCaches = new ConcurrentHashMap<>();
 
     @Getter
     private ConfigurationRegistry configurationRegistry;
@@ -895,7 +891,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
     }
 
-    public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
+    public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {
         return inboundExternalIdCaches.remove(tenant);
     }
 
@@ -903,7 +899,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return inboundExternalIdCaches.get(tenant);
     }
 
-    public InventoryCache deleteInventoryCache(String tenant) {
+    public InventoryCache removeInventoryCache(String tenant) {
         return inventoryCaches.remove(tenant);
     }
 

@@ -80,12 +80,12 @@ public class BootstrapService {
     private final Map<String, Instant> cacheInboundExternalIdRetentionStartMap;
     private final Map<String, Instant> cacheInventoryRetentionStartMap;
 
-    @Qualifier("virtThreadPool")
-    private ExecutorService virtThreadPool;
+    @Qualifier("virtualThreadPool")
+    private ExecutorService virtualThreadPool;
 
     @Autowired
-    public void setVirtThreadPool(ExecutorService virtThreadPool) {
-        this.virtThreadPool = virtThreadPool;
+    public void setVirtualThreadPool(ExecutorService virtualThreadPool) {
+        this.virtualThreadPool = virtualThreadPool;
     }
 
     public BootstrapService(
@@ -148,11 +148,11 @@ public class BootstrapService {
         configurationRegistry.removeExtensibleProcessor(tenant);
         configurationRegistry.removeGraalsEngine(tenant);
         configurationRegistry.removeMicroserviceCredentials(tenant);
-        
+
         mappingComponent.removeResources(tenant);
-        
-        c8YAgent.deleteInboundExternalIdCache(tenant);
-        c8YAgent.deleteInventoryCache(tenant);
+
+        c8YAgent.removeInboundExternalIdCache(tenant);
+        c8YAgent.removeInventoryCache(tenant);
     }
 
     @EventListener
@@ -185,8 +185,9 @@ public class BootstrapService {
                 }
             });
         }
-        virtThreadPool.submit(() -> {
-            initializeGraalsEngine(tenant);
+        virtualThreadPool.submit(() -> {
+            configurationRegistry.createGraalsEngine(tenant);
+
         });
         handleOutboundMapping(tenant, serviceConfig);
     }
@@ -204,7 +205,6 @@ public class BootstrapService {
             serviceConfig.inboundExternalIdCacheRetention = 1;
             requiresSave = true;
         }
-
 
         if (serviceConfig.inventoryCacheSize == null || serviceConfig.inventoryCacheSize == 0) {
             serviceConfig.inventoryCacheSize = inventoryCacheSize;
@@ -260,10 +260,7 @@ public class BootstrapService {
         configurationRegistry.addMappingServiceRepresentation(tenant, mappingServiceRepresentation);
 
         initializeResourcesMappingComponent(tenant);
-    }
-
-    private void initializeGraalsEngine(String tenant) {
-        configurationRegistry.createGraalsEngine(tenant);
+        configurationRegistry.initializeResources(tenant);
     }
 
     private void initializeResourcesMappingComponent(String tenant) {
@@ -401,7 +398,8 @@ public class BootstrapService {
                 connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
                         additionalSubscriptionIdTest, tenant);
             } catch (ConnectorException e) {
-                log.error("Tenant {} - Error on creating connector {}", tenant, connectorConfiguration.getConnectorType(),
+                log.error("Tenant {} - Error on creating connector {}", tenant,
+                        connectorConfiguration.getConnectorType(),
                         e);
                 throw new ConnectorRegistryException(e.getMessage());
             }
@@ -409,7 +407,6 @@ public class BootstrapService {
             // initialize AsynchronousDispatcherInbound
             DispatcherInbound dispatcherInbound = new DispatcherInbound(configurationRegistry,
                     connectorClient);
-            configurationRegistry.initializePayloadProcessorsInbound(tenant);
             connectorClient.setDispatcher(dispatcherInbound);
             // Connection is done async, future is returned to wait for the connection if
             // needed

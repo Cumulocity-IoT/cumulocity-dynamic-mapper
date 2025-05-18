@@ -88,7 +88,7 @@ public class C8YNotificationSubscriber {
     }
 
     @Autowired
-    @Qualifier("virtThreadPool")
+    @Qualifier("virtualThreadPool")
     private ExecutorService virtualThreadPool;
 
     // Structure: <Tenant, < ConnectorIdentifier, DispatcherOutbound > >
