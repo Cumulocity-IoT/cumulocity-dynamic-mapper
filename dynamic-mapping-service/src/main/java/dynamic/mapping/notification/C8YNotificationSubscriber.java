@@ -147,8 +147,8 @@ public class C8YNotificationSubscriber {
         try {
             // Getting existing subscriptions
             deviceSubList = getNotificationSubscriptionForDevices(null, DEVICE_SUBSCRIPTION).get();
-            log.info("Tenant {} - Phase 0: initializing Notification 2.0, subscribing to devices", tenant);
-            log.debug("Tenant {} - Phase 0: initializing Notification 2.0, subscribing to devices {}", tenant,
+            log.info("Tenant {} - Phase II: initializing Notification 2.0, subscribing to devices", tenant);
+            log.debug("Tenant {} - Phase II: initializing Notification 2.0, subscribing to devices {}", tenant,
                     deviceSubList);
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
@@ -378,7 +378,7 @@ public class C8YNotificationSubscriber {
                         notificationSubscriptionRepresentation = subIt.next();
                         if (!"tenant".equals(notificationSubscriptionRepresentation.getContext())) {
                             log.info(
-                                    "Tenant {} - Phase 0: initializing Notification 2.0, subscription with ID {} retrieved, filter: {},{}",
+                                    "Tenant {} - Phase I: initializing Notification 2.0, subscription with ID {} retrieved, filter: {},{}",
                                     tenant,
                                     notificationSubscriptionRepresentation.getId().getValue(),
                                     notificationSubscriptionRepresentation.getSource(),
