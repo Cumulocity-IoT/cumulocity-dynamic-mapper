@@ -370,7 +370,7 @@ public class MQTT5Client extends AConnectorClient {
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Phase III: {} connected", tenant,
+                    log.info("Tenant {} - Phase III: {} connected, serverHost: {}", tenant, getConnectorName(),
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);

@@ -257,8 +257,6 @@ public class KafkaClient extends AConnectorClient {
             log.info("Tenant {} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
                     getConnectorName(),
                     shouldConnect(), bootstrapServers);
-            log.info("Tenant {} - Phase III: connected with {}", tenant,
-                    bootstrapServers);
             try {
                 // test if the mqtt connection is configured and enabled
                 if (shouldConnect()) {
@@ -271,6 +269,8 @@ public class KafkaClient extends AConnectorClient {
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
                     updateActiveSubscriptionsInbound(updatedMappings, true, true);
+                    log.info("Tenant {} - Phase III: {} connected, bootstrapServers: {}", tenant, getConnectorName(),
+                            bootstrapServers);
                 }
                 successful = true;
             } catch (Exception e) {
