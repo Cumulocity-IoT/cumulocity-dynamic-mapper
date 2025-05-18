@@ -174,6 +174,9 @@ public class BootstrapService {
         c8YAgent.createExtensibleProcessor(tenant);
         c8YAgent.loadProcessorExtensions(tenant);
 
+        ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
+        initializeCaches(tenant, serviceConfig);
+
         configurationRegistry.addMicroserviceCredentials(tenant, credentials);
         configurationRegistry.initializeResources(tenant);
         configurationRegistry.createGraalsEngine(tenant);
@@ -181,9 +184,6 @@ public class BootstrapService {
         
         connectorRegistry.initializeResources(tenant);
 
-        ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
-        initializeCaches(tenant, serviceConfig);
-        
         mappingComponent.initializeResources(tenant);
 
         // Wait for ALL connectors are successfully connected before handling Outbound
