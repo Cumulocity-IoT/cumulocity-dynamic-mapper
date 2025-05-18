@@ -178,13 +178,13 @@ public abstract class AConnectorClient {
     @Setter
     public Boolean supportsMessageContext;
 
-	public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
+    public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
 
-	public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
+    public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
 
-	public static final String MQTT_PROTOCOL_WS = "ws://";
+    public static final String MQTT_PROTOCOL_WS = "ws://";
 
-	public static final String MQTT_PROTOCOL_WSS = "wss://";
+    public static final String MQTT_PROTOCOL_WSS = "wss://";
 
     public static final String MQTT_VERSION_3_1_1 = "3.1.1";
 
@@ -336,14 +336,15 @@ public abstract class AConnectorClient {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<>();
             processInboundMappings(updatedMappings, updatedSubscriptionCache);
             // Update subscriptions only in case of a cleanSession
-            // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ... in case of cleanSession=false?
-            //if (cleanSession){
-                handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
+            // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ...
+            // in case of cleanSession=false?
+            // if (cleanSession){
+            handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
             // }
 
             activeSubscriptionsInbound = updatedSubscriptionCache;
-            log.info("Tenant {} - Updated subscriptions, active subscriptions: {}",
-                    tenant, getActiveSubscriptionsView().size());
+            log.info("Tenant {} - {} updated subscriptions, active subscriptions: {}",
+                    tenant, getConnectorName(), getActiveSubscriptionsView().size());
         }
     }
 
@@ -592,21 +593,21 @@ public abstract class AConnectorClient {
         Map<String, String> statusMap = createStatusMap();
         String message = "Connector status: " + connectorStatus.status;
         c8yAgent.createEvent(
-            message,
-            LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
-            DateTime.now(),
-            mappingServiceRepresentation,
-            tenant,
-            statusMap);
+                message,
+                LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
+                DateTime.now(),
+                mappingServiceRepresentation,
+                tenant,
+                statusMap);
+    }
+
+    private Map<String, String> createStatusMap() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String date = dateFormat.format(new Date());
+        String message = connectorStatus.getMessage();
+        if ("".equals(connectorStatus.getMessage())) {
+            message = "Connector status: " + connectorStatus.status;
         }
-        
-        private Map<String, String> createStatusMap() {
-            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String date = dateFormat.format(new Date());
-            String message =connectorStatus.getMessage(); 
-            if ("".equals(connectorStatus.getMessage())) {
-                message =  "Connector status: " + connectorStatus.status;
-            }
 
         return Map.ofEntries(
                 entry("status", connectorStatus.getStatus().name()),
