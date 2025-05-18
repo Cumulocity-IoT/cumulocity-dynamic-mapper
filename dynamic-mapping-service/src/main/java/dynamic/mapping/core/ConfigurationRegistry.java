@@ -32,6 +32,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ConnectorConfiguration;
@@ -238,6 +239,14 @@ public class ConfigurationRegistry {
                 .get(connectorClient.getTenant());
         processorPerTenant.put(connectorClient.getConnectorIdentifier(),
                 createPayloadProcessorsOutbound(connectorClient));
+    }
+
+    public void initializeMappingServiceRepresentation(String tenant) {
+        ManagedObjectRepresentation mappingServiceMOR = c8yAgent
+                .initializeMappingServiceObject(tenant);
+        MappingServiceRepresentation mappingServiceRepresentation = objectMapper
+                .convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
+        addMappingServiceRepresentation(tenant, mappingServiceRepresentation);
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {

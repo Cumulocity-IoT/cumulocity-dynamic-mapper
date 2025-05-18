@@ -130,7 +130,7 @@ public class BootstrapService {
         try {
             cleanupTenantResources(tenant);
         } catch (Exception e) {
-            log.error("Tenant {} - Error during unsubscription cleanup: {}", tenant, e.getMessage(), e);
+            log.error("Tenant {} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
         }
     }
 
@@ -177,13 +177,14 @@ public class BootstrapService {
         configurationRegistry.addMicroserviceCredentials(tenant, credentials);
         configurationRegistry.initializeResources(tenant);
         configurationRegistry.createGraalsEngine(tenant);
+        configurationRegistry.initializeMappingServiceRepresentation(tenant);
         
         connectorRegistry.initializeResources(tenant);
 
         ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
         initializeCaches(tenant, serviceConfig);
-        initializeMappingServiceRepresentation(tenant);
-        initializeResourcesMappingComponent(tenant);
+        
+        mappingComponent.initializeResources(tenant);
 
         // Wait for ALL connectors are successfully connected before handling Outbound
         // Mappings
@@ -253,22 +254,6 @@ public class BootstrapService {
 
         cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
         cacheInventoryRetentionStartMap.put(tenant, Instant.now());
-    }
-
-    private void initializeMappingServiceRepresentation(String tenant) {
-        ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()
-                .initializeMappingServiceObject(tenant);
-        MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
-                .convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
-        configurationRegistry.addMappingServiceRepresentation(tenant, mappingServiceRepresentation);
-    }
-
-    private void initializeResourcesMappingComponent(String tenant) {
-        mappingComponent.initializeMappingStatus(tenant, false);
-        mappingComponent.initializeDeploymentMap(tenant, false);
-        mappingComponent.initializeResources(tenant);
-        mappingComponent.rebuildMappingOutboundCache(tenant);
-        mappingComponent.rebuildMappingInboundCache(tenant);
     }
 
     private List<Future<?>> initializeConnectors(String tenant, ServiceConfiguration serviceConfig) {

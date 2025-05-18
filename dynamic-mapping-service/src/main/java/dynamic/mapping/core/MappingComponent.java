@@ -111,12 +111,20 @@ public class MappingComponent {
     // cache of inbound mappings stored in a tree used for resolving
     private Map<String, MappingTreeNode> resolverMappingInbound = new ConcurrentHashMap<>();
 
-    public void initializeResources(String tenant) {
+    private void createResources(String tenant) {
         cacheMappingInbound.put(tenant, new ConcurrentHashMap<>());
         cacheMappingOutbound.put(tenant, new ConcurrentHashMap<>());
         resolverMappingOutbound.put(tenant, new ConcurrentHashMap<>());
         resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
         deploymentMaps.put(tenant, new ConcurrentHashMap<>());
+    }
+
+    public void initializeResources(String tenant) {
+        createResources(tenant);
+        initializeMappingStatus(tenant, false);
+        initializeDeploymentMap(tenant, false);
+        rebuildMappingOutboundCache(tenant);
+        rebuildMappingInboundCache(tenant);
     }
 
     public void removeResources(String tenant) {
