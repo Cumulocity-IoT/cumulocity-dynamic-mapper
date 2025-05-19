@@ -48,6 +48,7 @@ import dynamic.mapping.connector.mqtt.MQTT3Client;
 import dynamic.mapping.connector.mqtt.MQTT5Client;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.connector.webhook.WebHook;
+import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
@@ -59,6 +60,7 @@ import dynamic.mapping.processor.inbound.JSONProcessorInbound;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.outbound.BaseProcessorOutbound;
 import dynamic.mapping.processor.outbound.CodeBasedProcessorOutbound;
+import dynamic.mapping.processor.outbound.DispatcherOutbound;
 import dynamic.mapping.processor.outbound.JSONProcessorOutbound;
 import dynamic.mapping.processor.processor.fixed.InternalProtobufProcessor;
 import lombok.Getter;
@@ -339,6 +341,23 @@ public class ConfigurationRegistry {
 
     public void removePayloadProcessorsOutbound(String tenant) {
         payloadProcessorsOutbound.remove(tenant);
+    }
+
+    public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration, AConnectorClient connectorClient) {
+        if (serviceConfiguration.isOutboundMappingEnabled()
+                && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
+            // initialize AsynchronousDispatcherOutbound
+            initializePayloadProcessorsOutbound(connectorClient);
+            DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
+                    this, connectorClient);
+            // Only initialize Connectors which are enabled
+            if (connectorClient.getConnectorConfiguration().isEnabled())
+                getNotificationSubscriber().addConnector(tenant,
+                        connectorClient.getConnectorIdentifier(),
+                        dispatcherOutbound);
+            // Subscriber must be new initialized for the new added connector
+            // configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        }
     }
 
 }

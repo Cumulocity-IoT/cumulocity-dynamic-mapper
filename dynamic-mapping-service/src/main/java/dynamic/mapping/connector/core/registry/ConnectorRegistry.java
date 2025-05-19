@@ -24,8 +24,13 @@ package dynamic.mapping.connector.core.registry;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.http.HttpClient;
+import dynamic.mapping.connector.kafka.KafkaClient;
+import dynamic.mapping.connector.mqtt.MQTT3Client;
+import dynamic.mapping.connector.mqtt.MQTTServiceClient;
+import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.core.ConnectorStatusEvent;
 
 import org.springframework.stereotype.Component;
@@ -47,10 +52,6 @@ public class ConnectorRegistry {
 
     // Structure: < Tenant, < ConnectorIdentifier, connectorStatusEvent > >
     private Map<String, Map<String, ConnectorStatusEvent>> connectorStatusMaps = new ConcurrentHashMap<>();
-
-    public void registerConnector(ConnectorType connectorType, ConnectorSpecification specification) {
-        connectorSpecificationMap.put(connectorType, specification);
-    }
 
     public ConnectorSpecification getConnectorSpecification(ConnectorType connectorType) {
         return connectorSpecificationMap.get(connectorType);
@@ -183,6 +184,15 @@ public class ConnectorRegistry {
 
     public void removeResources(String tenant) {
         connectorStatusMaps.remove(tenant);
+    }
+
+    public void registerConnectors() throws ConnectorRegistryException, ConnectorException {
+        connectorSpecificationMap.put(ConnectorType.MQTT, new MQTT3Client().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE,
+                new MQTTServiceClient().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.HTTP, new HttpClient().getConnectorSpecification());
     }
 
 }
