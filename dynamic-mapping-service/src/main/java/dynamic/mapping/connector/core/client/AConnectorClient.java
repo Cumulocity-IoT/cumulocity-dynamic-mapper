@@ -661,11 +661,11 @@ public abstract class AConnectorClient {
                     getConnectorIdentifier(),
                     closeException.getMessage(),
                     closeException);
-        }
-
-        if (closeMessage != null) {
-            log.info("Tenant {} - Connection lost: {}",
+        } else  if (closeMessage != null) {
+            log.info("Tenant {} - Connection lost: [{},{}], {}",
                     tenant,
+                    getConnectorName(),
+                    getConnectorIdentifier(),
                     closeMessage);
         }
     }
