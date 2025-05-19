@@ -347,6 +347,7 @@ public class MQTT5Client extends AConnectorClient {
                 return;
             loadConfiguration();
             var firstRun = true;
+            var mappingOutboundCacheRebuild = false;
             while (!isConnected() && shouldConnect()) {
                 if (Thread.currentThread().isInterrupted())
                     return;
@@ -376,9 +377,12 @@ public class MQTT5Client extends AConnectorClient {
                     log.info("Tenant {} - Phase III: {} connected, serverHost: {}", tenant, getConnectorName(),
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
+                    List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant,
+                            connectorId);
                     updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
-                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
+                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
+                            connectorId);
+                    mappingOutboundCacheRebuild = true;
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
@@ -393,35 +397,10 @@ public class MQTT5Client extends AConnectorClient {
                 firstRun = false;
             }
 
-            try {
-                // test if the mqtt connection is configured and enabled
-                if (shouldConnect()) {
-                    /*
-                     * try {
-                     * // is not working for broker.emqx.io
-                     * subscribe("$SYS/#", QOS.AT_LEAST_ONCE);
-                     * } catch (ConnectorException e) {
-                     * log.warn(
-                     * "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}"
-                     * ,
-                     * e.getMessage(), e);
-                     * }
-                     */
-                    mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
-                    // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
-                    // sync, the ActiveSubscriptionMappingInbound is build on the
-                    // previously used updatedMappings
-                }
-                successful = true;
-            } catch (Exception e) {
-                log.error("Tenant {} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
-                updateConnectorStatusToFailed(e);
-                sendConnectorLifecycle();
-                if (serviceConfiguration.logConnectorErrorInBackend) {
-                    log.error("Tenant {} - Stacktrace: ", tenant, e);
-                }
-                successful = false;
+            if (!mappingOutboundCacheRebuild) {
+                mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
             }
+            successful = true;
         }
     }
 

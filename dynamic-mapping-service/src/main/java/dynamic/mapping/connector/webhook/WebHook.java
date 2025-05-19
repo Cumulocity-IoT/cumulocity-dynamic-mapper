@@ -130,7 +130,8 @@ public class WebHook extends AConnectorClient {
         // ensure the client knows its identity even if configuration is set to null
         this.connectorName = connectorConfiguration.name;
         this.connectorIdentifier = connectorConfiguration.identifier;
-        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier, connectorType);
+        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+                connectorType);
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
         // this.connectorType = connectorConfiguration.connectorType;
@@ -235,6 +236,7 @@ public class WebHook extends AConnectorClient {
         while (!successful) {
             loadConfiguration();
             var firstRun = true;
+            var mappingOutboundCacheRebuild = false;
             while (!isConnected() && shouldConnect()) {
 
                 log.info("Tenant {} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
@@ -257,7 +259,9 @@ public class WebHook extends AConnectorClient {
                     log.info("Tenant {} - Phase III: {} connected", tenant, getConnectorName(),
                             baseUrl);
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
+                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
+                            connectorId);
+                    mappingOutboundCacheRebuild = true;
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
@@ -269,24 +273,10 @@ public class WebHook extends AConnectorClient {
                 firstRun = false;
             }
 
-            try {
-                // test if the mqtt connection is configured and enabled
-                if (shouldConnect()) {
-                    mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
-                    // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
-                    // sync, the ActiveSubscriptionMappingInbound is build on the
-                    // previously used updatedMappings
-                }
-                successful = true;
-            } catch (Exception e) {
-                log.error("Tenant {} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
-                updateConnectorStatusToFailed(e);
-                sendConnectorLifecycle();
-                if (serviceConfiguration.logConnectorErrorInBackend) {
-                    log.error("Tenant {} - Stacktrace: ", tenant, e);
-                }
-                successful = false;
+            if (!mappingOutboundCacheRebuild) {
+                mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
             }
+            successful = true;
         }
     }
 
