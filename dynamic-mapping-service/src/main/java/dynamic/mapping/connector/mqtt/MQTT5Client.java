@@ -58,6 +58,7 @@ import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
 import com.hivemq.client.mqtt.mqtt5.message.unsubscribe.Mqtt5Unsubscribe;
 
 import dynamic.mapping.configuration.ConnectorConfiguration;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.connector.core.ConnectorPropertyCondition;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
@@ -82,24 +83,30 @@ public class MQTT5Client extends AConnectorClient {
     public MQTT5Client() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
-                new String[] { "mqtts://", "wss://" });
+                new String[] { AConnectorClient.MQTT_PROTOCOL_MQTTS, AConnectorClient.MQTT_PROTOCOL_WSS });
         ConnectorPropertyCondition useSelfSignedCertificateCondition = new ConnectorPropertyCondition(
                 "useSelfSignedCertificate", new String[] { "true" });
         ConnectorPropertyCondition wsCondition = new ConnectorPropertyCondition("protocol",
-                new String[] { "ws://", "wss://" });
+                new String[] { AConnectorClient.MQTT_PROTOCOL_WS, AConnectorClient.MQTT_PROTOCOL_WSS });
         configProps.put("version",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "3.1.1",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false,
+                        MQTT_VERSION_3_1_1,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("3.1.1", "3.1.1"),
-                                new AbstractMap.SimpleEntry<String, String>("5.0", "5.0")),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_3_1_1, MQTT_VERSION_3_1_1),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_5_0, MQTT_VERSION_5_0)),
                         null));
         configProps.put("protocol",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, true,
+                        AConnectorClient.MQTT_PROTOCOL_MQTT,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
-                                new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
-                                new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-                                new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTT,
+                                        AConnectorClient.MQTT_PROTOCOL_MQTT),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTTS,
+                                        AConnectorClient.MQTT_PROTOCOL_MQTTS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WS,
+                                        AConnectorClient.MQTT_PROTOCOL_WS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WSS,
+                                        AConnectorClient.MQTT_PROTOCOL_WSS)),
                         null));
         configProps.put("mqttHost",
                 new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
@@ -154,6 +161,8 @@ public class MQTT5Client extends AConnectorClient {
         // ensure the client knows its identity even if configuration is set to null
         this.connectorName = connectorConfiguration.name;
         this.connectorIdentifier = connectorConfiguration.identifier;
+        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+                connectorType);
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
         // this.connectorType = connectorConfiguration.connectorType;
@@ -161,8 +170,8 @@ public class MQTT5Client extends AConnectorClient {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE, Qos.EXACTLY_ONCE);
@@ -225,20 +234,20 @@ public class MQTT5Client extends AConnectorClient {
                 sslConfig = sslConfigBuilder.trustManagerFactory(tmf).protocols(expectedProtocols).build();
             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
                     | KeyManagementException e) {
-                log.error("Tenant {} - Connector {} - Error configuring socketFactory for TLS: ", tenant,
+                log.error("Tenant {} - {} - Error configuring socketFactory for TLS: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             } catch (Exception e) {
-                log.error("Tenant {} - Connector {} - Error initializing connector: ", tenant,
+                log.error("Tenant {} - {} - Error initializing connector: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             }
         }
-        log.info("Tenant {} - Phase 0: initializing connector {}, type:{} was successful", tenant,
+        log.info("Tenant {} - Phase 0: {} initialized, connectorType: {}", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;
@@ -246,7 +255,7 @@ public class MQTT5Client extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Phase I: connecting with {}, isConnected:{}, shouldConnect:{}",
+        log.info("Tenant {} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -254,7 +263,8 @@ public class MQTT5Client extends AConnectorClient {
 
         if (shouldConnect())
             updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
-        String protocol = (String) connectorConfiguration.getProperties().getOrDefault("protocol", false);
+        String protocol = (String) connectorConfiguration.getProperties().getOrDefault("protocol",
+                AConnectorClient.MQTT_PROTOCOL_MQTT);
         boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
 
@@ -283,12 +293,13 @@ public class MQTT5Client extends AConnectorClient {
         if (useSelfSignedCertificate) {
             partialBuilder = partialBuilder.sslConfig(sslConfig);
             log.debug("Tenant {} - Using certificate: {}", tenant, cert.getCertInPemFormat());
-        } else if ("mqtts://".equals(protocol) || "wss://".equals(protocol)) {
+        } else if (AConnectorClient.MQTT_PROTOCOL_MQTTS.equals(protocol)
+                || AConnectorClient.MQTT_PROTOCOL_WSS.equals(protocol)) {
             partialBuilder = partialBuilder.sslWithDefaultConfig();
         }
 
         // websocket configuration
-        if ("ws://".equals(protocol) || "wss://".equals(protocol)) {
+        if (AConnectorClient.MQTT_PROTOCOL_WS.equals(protocol) || AConnectorClient.MQTT_PROTOCOL_WSS.equals(protocol)) {
             partialBuilder = partialBuilder.webSocketWithDefaultConfig();
             String serverPath = (String) connectorConfiguration.getProperties().get("serverPath");
             if (serverPath != null) {
@@ -318,23 +329,11 @@ public class MQTT5Client extends AConnectorClient {
                 })
                 .buildBlocking();
 
-        String configuredProtocol = "mqtt";
         String configuredServerPath = "";
         if (mqttClient.getConfig().getWebSocketConfig().isPresent()) {
-            if (mqttClient.getConfig().getSslConfig().isPresent()) {
-                configuredProtocol = "wss";
-            } else {
-                configuredProtocol = "ws";
-            }
             configuredServerPath = "/" + mqttClient.getConfig().getWebSocketConfig().get().getServerPath();
-        } else {
-            if (mqttClient.getConfig().getSslConfig().isPresent()) {
-                configuredProtocol = "mqtts";
-            } else {
-                configuredProtocol = "mqtt";
-            }
         }
-        String configuredUrl = String.format("%s://%s:%s%s", configuredProtocol, mqttClient.getConfig().getServerHost(),
+        String configuredUrl = String.format("%s//%s:%s%s", protocol, mqttClient.getConfig().getServerHost(),
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
         // Mqtt5AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
@@ -348,10 +347,11 @@ public class MQTT5Client extends AConnectorClient {
                 return;
             loadConfiguration();
             var firstRun = true;
+            var mappingOutboundCacheRebuild = false;
             while (!isConnected() && shouldConnect()) {
                 if (Thread.currentThread().isInterrupted())
                     return;
-                log.info("Tenant {} - Phase II: connecting with {}, shouldConnect:{}, server:{}", tenant,
+                log.info("Tenant {} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
                         getConnectorName(),
                         shouldConnect(), configuredUrl);
                 if (!firstRun) {
@@ -374,12 +374,15 @@ public class MQTT5Client extends AConnectorClient {
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Phase III, connected with {}", tenant,
+                    log.info("Tenant {} - Phase III: {} connected, serverHost: {}", tenant, getConnectorName(),
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+                    List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant,
+                            connectorId);
                     updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
-                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
+                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
+                            connectorId);
+                    mappingOutboundCacheRebuild = true;
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
@@ -394,35 +397,10 @@ public class MQTT5Client extends AConnectorClient {
                 firstRun = false;
             }
 
-            try {
-                // test if the mqtt connection is configured and enabled
-                if (shouldConnect()) {
-                    /*
-                     * try {
-                     * // is not working for broker.emqx.io
-                     * subscribe("$SYS/#", QOS.AT_LEAST_ONCE);
-                     * } catch (ConnectorException e) {
-                     * log.warn(
-                     * "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}"
-                     * ,
-                     * e.getMessage(), e);
-                     * }
-                     */
-                    mappingComponent.rebuildMappingOutboundCache(tenant);
-                    // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
-                    // sync, the ActiveSubscriptionMappingInbound is build on the
-                    // previously used updatedMappings
-                }
-                successful = true;
-            } catch (Exception e) {
-                log.error("Tenant {} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
-                updateConnectorStatusToFailed(e);
-                sendConnectorLifecycle();
-                if (serviceConfiguration.logConnectorErrorInBackend) {
-                    log.error("Tenant {} - Stacktrace: ", tenant, e);
-                }
-                successful = false;
+            if (!mappingOutboundCacheRebuild) {
+                mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
             }
+            successful = true;
         }
     }
 
@@ -487,9 +465,9 @@ public class MQTT5Client extends AConnectorClient {
                         e);
             }
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
             updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
-            List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
+            List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
             updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
                     mqttClient.getConfig().getServerHost());
@@ -503,7 +481,7 @@ public class MQTT5Client extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, Qos qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: [{}] for connector {}", tenant, topic, connectorName);
+        log.debug("Tenant {} - Subscribing on topic: [{}] for connector: {}", tenant, topic, connectorName);
         Qos usedQOS = qos;
         sendSubscriptionEvents(topic, "Subscribing");
         // Default to QoS=0 if not provided
@@ -525,11 +503,7 @@ public class MQTT5Client extends AConnectorClient {
         // We don't need to add a handler on subscribe using hive client
         Mqtt5AsyncClient asyncMqttClient = mqttClient.toAsync();
         asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal()))
-                .callback(publish -> {
-                    // Handle the received message here
-                    // You can call methods on your mqttCallback object
-                    mqttCallback.accept(publish);
-                })
+                .callback(mqttCallback)
                 .manualAcknowledgement(true)
                 .send()
                 .exceptionally(throwable -> {
@@ -545,14 +519,13 @@ public class MQTT5Client extends AConnectorClient {
         sendSubscriptionEvents(topic, "Unsubscribing");
         Mqtt5AsyncClient asyncMqttClient = mqttClient.toAsync();
         asyncMqttClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
-            log.info("Tenant {} - Successfully unsubscribed from topic: [{}] for connector {}", tenant, topic,
+            log.info("Tenant {} - Successfully unsubscribed from topic: [{}] for connector: {}", tenant, topic,
                     connectorName);
         }).exceptionally(throwable -> {
             log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
                     throwable.getMessage());
             return null;
         });
-        // mqttClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter(topic).build());
     }
 
     public void publishMEAO(ProcessingContext<?> context) {

@@ -51,6 +51,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.ConnectorSpecification;
@@ -91,6 +92,8 @@ public abstract class AConnectorClient {
     protected String connectorIdentifier;
 
     protected String connectorName;
+
+    protected ConnectorId connectorId;
 
     protected String additionalSubscriptionIdTest;
 
@@ -177,6 +180,18 @@ public abstract class AConnectorClient {
     @Getter
     @Setter
     public Boolean supportsMessageContext;
+
+    public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
+
+    public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
+
+    public static final String MQTT_PROTOCOL_WS = "ws://";
+
+    public static final String MQTT_PROTOCOL_WSS = "wss://";
+
+    public static final String MQTT_VERSION_3_1_1 = "3.1.1";
+
+    public static final String MQTT_VERSION_5_0 = "5.0";
 
     public abstract boolean initialize();
 
@@ -287,7 +302,7 @@ public abstract class AConnectorClient {
         connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
 
         serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+        configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
     }
 
     /**
@@ -324,14 +339,15 @@ public abstract class AConnectorClient {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<>();
             processInboundMappings(updatedMappings, updatedSubscriptionCache);
             // Update subscriptions only in case of a cleanSession
-            // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ... in case of cleanSession=false?
-            //if (cleanSession){
-                handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
+            // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ...
+            // in case of cleanSession=false?
+            // if (cleanSession){
+            handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
             // }
 
             activeSubscriptionsInbound = updatedSubscriptionCache;
-            log.info("Tenant {} - Updated subscriptions, active subscriptions: {}",
-                    tenant, getActiveSubscriptionsView().size());
+            log.info("Tenant {} - {} updated subscriptions, active subscriptions: {}",
+                    tenant, getConnectorName(), getActiveSubscriptionsView().size());
         }
     }
 
@@ -395,7 +411,7 @@ public abstract class AConnectorClient {
                     Qos qos = determineMaxQosInbound(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
-                        log.info("Tenant {} - Subscribed to topic:[{}] for connector {} with QoS {}",
+                        log.info("Tenant {} - Subscribed to topic:[{}] for connector: {}, QoS: {}",
                                 tenant, topic,
                                 connectorName, qos);
                     } catch (ConnectorException exp) {
@@ -479,7 +495,7 @@ public abstract class AConnectorClient {
                 // log.info("Tenant {} - Subscribing to topic: [{}], qos: {}",
                 // tenant, mapping.mappingTopic, mapping.qos);
                 subscribe(mapping.mappingTopic, mapping.qos);
-                log.info("Tenant {} - Subscribed to topic:[{}] for connector {} with QoS {}", tenant,
+                log.info("Tenant {} - Subscribed to topic:[{}] for connector: {}, QoS: {}", tenant,
                         mapping.mappingTopic,
                         connectorName, mapping.qos);// use qos from mapping
             } catch (ConnectorException exp) {
@@ -580,21 +596,21 @@ public abstract class AConnectorClient {
         Map<String, String> statusMap = createStatusMap();
         String message = "Connector status: " + connectorStatus.status;
         c8yAgent.createEvent(
-            message,
-            LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
-            DateTime.now(),
-            mappingServiceRepresentation,
-            tenant,
-            statusMap);
+                message,
+                LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
+                DateTime.now(),
+                mappingServiceRepresentation,
+                tenant,
+                statusMap);
+    }
+
+    private Map<String, String> createStatusMap() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String date = dateFormat.format(new Date());
+        String message = connectorStatus.getMessage();
+        if ("".equals(connectorStatus.getMessage())) {
+            message = "Connector status: " + connectorStatus.status;
         }
-        
-        private Map<String, String> createStatusMap() {
-            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String date = dateFormat.format(new Date());
-            String message =connectorStatus.getMessage(); 
-            if ("".equals(connectorStatus.getMessage())) {
-                message =  "Connector status: " + connectorStatus.status;
-            }
 
         return Map.ofEntries(
                 entry("status", connectorStatus.getStatus().name()),
@@ -645,11 +661,11 @@ public abstract class AConnectorClient {
                     getConnectorIdentifier(),
                     closeException.getMessage(),
                     closeException);
-        }
-
-        if (closeMessage != null) {
-            log.info("Tenant {} - Connection lost: {}",
+        } else  if (closeMessage != null) {
+            log.info("Tenant {} - Connection lost: [{},{}], {}",
                     tenant,
+                    getConnectorName(),
+                    getConnectorIdentifier(),
                     closeMessage);
         }
     }
@@ -786,10 +802,10 @@ public abstract class AConnectorClient {
     private void updateDeploymentMap(List<String> mappingIds,
             Map<String, DeploymentMapEntry> mappingsDeployed,
             ConnectorConfiguration cleanedConfiguration) {
-        mappingIds.forEach(mappingIdent -> {
+        mappingIds.forEach(mappingIdentifier -> {
             DeploymentMapEntry mappingDeployed = mappingsDeployed.computeIfAbsent(
-                    mappingIdent,
-                    k -> new DeploymentMapEntry(mappingIdent));
+                    mappingIdentifier,
+                    k -> new DeploymentMapEntry(mappingIdentifier));
             mappingDeployed.getConnectors().add(cleanedConfiguration);
         });
     }
@@ -804,7 +820,7 @@ public abstract class AConnectorClient {
     }
 
     private Optional<Mapping> findActiveMappingInbound(Mapping mapping) {
-        Map<String, Mapping> cacheMappings = mappingComponent.getCacheMappingInbound().get(tenant);
+        Map<String, Mapping> cacheMappings = mappingComponent.getCacheMappingInbound(tenant);
         if (cacheMappings == null) {
             return Optional.empty();
         }

@@ -60,7 +60,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
         this.supportsMessageContext = supportsMessageContext;
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
 

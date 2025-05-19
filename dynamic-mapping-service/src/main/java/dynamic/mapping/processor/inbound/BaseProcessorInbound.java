@@ -68,14 +68,14 @@ public abstract class BaseProcessorInbound<T> {
     public BaseProcessorInbound(ConfigurationRegistry configurationRegistry) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
 
     protected C8YAgent c8yAgent;
 
     protected ObjectMapper objectMapper;
 
-    protected ExecutorService virtThreadPool;
+    protected ExecutorService virtualThreadPool;
 
     public abstract T deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException;
@@ -175,7 +175,7 @@ public abstract class BaseProcessorInbound<T> {
             for (int i = 0; i < deviceEntries.size(); i++) {
                 // for (MappingSubstituteValue device : deviceEntries) {
                 int finalI = i;
-                contextFutureList.add(virtThreadPool.submit(() -> {
+                contextFutureList.add(virtualThreadPool.submit(() -> {
                     return getBuildProcessingContext(context, deviceEntries.get(finalI),
                             finalI, deviceEntries.size());
                 }));

@@ -35,9 +35,8 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
-import dynamic.mapping.connector.mqtt.MQTT3Client;
-import dynamic.mapping.connector.mqtt.MQTT5Client;
 import dynamic.mapping.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -160,7 +159,7 @@ public class ConnectorConfigurationComponent {
             // later. This will not break existing configuration
             String version = ((String) configuration.getProperties().getOrDefault("version", null));
             if (version == null) {
-                configuration.getProperties().put("version", "3.1.1");
+                configuration.getProperties().put("version", AConnectorClient.MQTT_VERSION_3_1_1);
                 log.info("Tenant {} - Adding version attribute to old MQTT configuration", tenant);
             }
         }

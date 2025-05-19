@@ -31,10 +31,12 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
+import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
@@ -45,18 +47,24 @@ public class MQTTServiceClient extends MQTT3Client {
     public MQTTServiceClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("version",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "3.1.1",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false,
+                        MQTT_VERSION_3_1_1,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("3.1.1", "3.1.1"),
-                                new AbstractMap.SimpleEntry<String, String>("5.0", "5.0")),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_3_1_1, MQTT_VERSION_3_1_1),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_5_0, MQTT_VERSION_5_0)),
                         null));
         configProps.put("protocol",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true, "mqtt://",
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true,
+                        AConnectorClient.MQTT_PROTOCOL_MQTT,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
-                                new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
-                                new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-                                new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTT,
+                                        AConnectorClient.MQTT_PROTOCOL_MQTT),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTTS,
+                                        AConnectorClient.MQTT_PROTOCOL_MQTTS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WS,
+                                        AConnectorClient.MQTT_PROTOCOL_WS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WSS,
+                                        AConnectorClient.MQTT_PROTOCOL_WSS)),
                         null));
         configProps.put("mqttHost",
                 new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true,
@@ -109,14 +117,16 @@ public class MQTTServiceClient extends MQTT3Client {
         // ensure the client knows its identity even if configuration is set to null
         this.connectorIdentifier = connectorConfiguration.identifier;
         this.connectorName = connectorConfiguration.name;
+        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+                connectorType);
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
@@ -148,7 +158,7 @@ public class MQTTServiceClient extends MQTT3Client {
                             mqttPort, null, null));
         } catch (Exception e) {
             log.error("Tenant {} - Connector {} - Can't parse mqttServiceUrl, using default. ", tenant,
-            getConnectorName(), e);
+                    getConnectorName(), e);
         }
     }
 

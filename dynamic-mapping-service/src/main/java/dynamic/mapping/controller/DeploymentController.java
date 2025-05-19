@@ -107,29 +107,29 @@ public class DeploymentController {
 
 	}
 
-	@PutMapping(value = "/defined/{mappingIdent}", consumes = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdent,
+	@PutMapping(value = "/defined/{mappingIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdentifier,
 			@Valid @RequestBody List<String> deployment) {
 		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Update deployment for mapping: {} : {}", tenant, mappingIdent, deployment);
+		log.info("Tenant {} - Update deployment for mapping: {} : {}", tenant, mappingIdentifier, deployment);
 		try {
-			mappingComponent.updateDeploymentMapEntry(tenant, mappingIdent, deployment);
+			mappingComponent.updateDeploymentMapEntry(tenant, mappingIdentifier, deployment);
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
-			log.error("Tenant {} - Error updating deployment for mapping: {}", tenant, mappingIdent, ex);
+			log.error("Tenant {} - Error updating deployment for mapping: {}", tenant, mappingIdentifier, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
 	}
 
-	@GetMapping(value = "/defined/{mappingIdent}", consumes = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<List<String>> getDeploymentMapEntry(@PathVariable String mappingIdent) {
+	@GetMapping(value = "/defined/{mappingIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<List<String>> getDeploymentMapEntry(@PathVariable String mappingIdentifier) {
 		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Get deployment for mapping: {}", tenant, mappingIdent);
+		log.info("Tenant {} - Get deployment for mapping: {}", tenant, mappingIdentifier);
 		try {
-			List<String> map = mappingComponent.getDeploymentMapEntry(tenant, mappingIdent);
+			List<String> map = mappingComponent.getDeploymentMapEntry(tenant, mappingIdentifier);
 			return new ResponseEntity<List<String>>(map, HttpStatus.OK);
 		} catch (Exception ex) {
-			log.error("Tenant {} - Error getting deployment for mapping: {}", tenant, mappingIdent, ex);
+			log.error("Tenant {} - Error getting deployment for mapping: {}", tenant, mappingIdentifier, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
 	}

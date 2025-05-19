@@ -21,7 +21,6 @@
 
 package dynamic.mapping.controller;
 
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,14 +28,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -46,6 +40,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
@@ -104,11 +99,11 @@ public class WatsonController {
         try {
             String tenant = contextService.getContext().getTenant();
             String processedText = textBody
-            .replace("\"[", "[")          // 1. replace "[ with [
-            .replace("]\"", "]")          // 2. replace ]" with ]
-            .replace("\\\\\"", "___\"")   // 3. replace \\\" with ___"
-            .replace("\\\"", "\"")        // 4. replace \" with "
-            .replace("___\"", "\"") ;     // 5. replace ___" with \"
+                    .replace("\"[", "[") // 1. replace "[ with [
+                    .replace("]\"", "]") // 2. replace ]" with ]
+                    .replace("\\\\\"", "___\"") // 3. replace \\\" with ___"
+                    .replace("\\\"", "\"") // 4. replace \" with "
+                    .replace("___\"", "\""); // 5. replace ___" with \"
             Mapping mapping = objectMapper.readValue(processedText, Mapping.class);
             log.info("Tenant {} - Adding mapping: {}", tenant, mapping.getMappingTopic());
             log.debug("Tenant {} - Adding mapping: {}", tenant, mapping);
@@ -116,7 +111,7 @@ public class WatsonController {
             mapping.active = false;
             final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);
             if (Direction.OUTBOUND.equals(createdMapping.direction)) {
-                mappingComponent.rebuildMappingOutboundCache(tenant);
+                mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
             } else {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.
@@ -124,9 +119,9 @@ public class WatsonController {
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).updateActiveSubscriptionInbound(createdMapping, true, false);
                 });
-                mappingComponent.deleteFromCacheMappingInbound(tenant, createdMapping);
+                mappingComponent.removeFromCacheMappingInbound(tenant, createdMapping);
                 mappingComponent.addToCacheMappingInbound(tenant, createdMapping);
-                mappingComponent.getCacheMappingInbound().get(tenant).put(createdMapping.id, mapping);
+                mappingComponent.addCacheMappingInbound(tenant, createdMapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(createdMapping);
         } catch (Exception ex) {
