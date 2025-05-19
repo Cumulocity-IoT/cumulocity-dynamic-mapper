@@ -101,8 +101,8 @@ public class App {
         return executor;
     }
 
-    @Bean("virtThreadPool")
-    public ExecutorService virtThreadPool() {
+    @Bean("virtualThreadPool")
+    public ExecutorService virtualThreadPool() {
         final ThreadFactory factory = Thread.ofVirtual().name("virtThread-", 0).factory();
         return Executors.newThreadPerTaskExecutor(factory);
     }

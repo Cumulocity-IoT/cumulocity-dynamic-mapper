@@ -92,6 +92,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Map.entry;
@@ -104,9 +105,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     private EventApi eventApi;
-
-    @Autowired
-    private EventBinaryApi eventBinaryApi;
 
     @Autowired
     private InventoryFacade inventoryApi;
@@ -142,11 +140,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.extensionsComponent = extensionsComponent;
     }
 
-    @Getter
-    private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new HashMap<>();
+    private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new ConcurrentHashMap<>();
 
-    @Getter
-    private Map<String, InventoryCache> inventoryCaches = new HashMap<>();
+    private Map<String, InventoryCache> inventoryCaches = new ConcurrentHashMap<>();
 
     @Getter
     private ConfigurationRegistry configurationRegistry;
@@ -183,13 +179,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                ExternalIDRepresentation resultInner = this.getInboundExternalIdCache(tenant)
+                ExternalIDRepresentation resultInner = inboundExternalIdCaches.get(tenant)
                         .getIdByExternalId(identity);
                 Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
                         .register(Metrics.globalRegistry).increment();
                 if (resultInner == null) {
                     resultInner = identityApi.resolveExternalId2GlobalId(identity, context);
-                    this.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
+                    inboundExternalIdCaches.get(tenant).putIdForExternalId(identity,
                             resultInner);
 
                 } else {
@@ -404,7 +400,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         API targetAPI = context.getMapping().getTargetAPI();
         AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
@@ -508,7 +504,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             throws ProcessingException {
         // StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         API targetAPI = context.getMapping().getTargetAPI();
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
@@ -641,7 +637,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void registerExtensionInProcessor(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
             boolean external)
             throws IOException {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
         extensibleProcessor.addExtension(tenant, new Extension(id, extensionName, external));
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
@@ -737,17 +733,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public Map<String, Extension> getProcessorExtensions(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
         return extensibleProcessor.getExtensions();
     }
 
     public Extension getProcessorExtension(String tenant, String extension) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
         return extensibleProcessor.getExtension(extension);
     }
 
     public Extension deleteProcessorExtension(String tenant, String extensionName) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
         for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
             if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
@@ -758,7 +754,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void reloadExtensions(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
         extensibleProcessor.deleteExtensions();
         loadProcessorExtensions(tenant);
     }
@@ -833,7 +829,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public void createExtensibleProcessor(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
-        configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
+        configurationRegistry.addExtensibleProcessor(tenant, extensibleProcessor);
         log.debug("Tenant {} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
 
         // check if managedObject for internal mapping extension exists
@@ -856,7 +852,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (configurationRegistry.getServiceConfigurations().get(tenant).sendNotificationLifecycle
+        if (configurationRegistry.getServiceConfiguration(tenant).sendNotificationLifecycle
                 && !(connectorStatus.equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -871,7 +867,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     entry("date", date));
             createEvent("Connector status: " + connectorStatus.name(),
                     LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE, DateTime.now(),
-                    configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+                    configurationRegistry.getMappingServiceRepresentation(tenant), tenant,
                     stMap);
         }
     }
@@ -895,15 +891,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
     }
 
-    public InboundExternalIdCache deleteInboundExternalIdCache(String tenant) {
+    public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {
         return inboundExternalIdCaches.remove(tenant);
     }
 
-    public InboundExternalIdCache getInboundExternalIdCache(String tenant) {
-        return inboundExternalIdCaches.get(tenant);
+    public Integer getInboundExternalIdCacheSize(String tenant) {
+        return (inboundExternalIdCaches.get(tenant) != null ? inboundExternalIdCaches.get(tenant).getCacheSize()
+                : 0);
     }
 
-    public InventoryCache deleteInventoryCache(String tenant) {
+    public InventoryCache removeInventoryCache(String tenant) {
         return inventoryCaches.remove(tenant);
     }
 
@@ -963,7 +960,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         final Map<String, Object> newMO = new HashMap<>();
         getInventoryCache(tenant).putMOforSource(deviceId, newMO);
 
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
         Map<String, Object> attrs = device.getAttrs();
 

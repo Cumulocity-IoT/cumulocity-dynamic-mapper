@@ -22,10 +22,10 @@
 package dynamic.mapping.controller;
 
 import java.util.AbstractMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import jakarta.validation.constraints.NotNull;
@@ -99,7 +99,7 @@ public class MonitoringController {
 			AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
 					connectorIdentifier);
 			ConnectorStatusEvent st = client.getConnectorStatus();
-			log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorIdentifier, st);
+			log.info("Tenant {} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
 			return new ResponseEntity<>(st, HttpStatus.OK);
 		} catch (ConnectorRegistryException e) {
 			throw new RuntimeException(e);
@@ -108,7 +108,7 @@ public class MonitoringController {
 
 	@GetMapping(value = "/status/connectors", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, ConnectorStatusEvent>> getConnectorsStatus() {
-		Map<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
+		Map<String, ConnectorStatusEvent> connectorsStatus = new ConcurrentHashMap<>();
 		String tenant = contextService.getContext().getTenant();
 		try {
 			// initialize list with all known connectors
@@ -119,7 +119,7 @@ public class MonitoringController {
 			}
 
 			// overwrite status with last remembered status of once enabled connectors
-			connectorsStatus.putAll(connectorRegistry.getConnectorStatusMap().get(tenant));
+			connectorsStatus.putAll(connectorRegistry.getConnectorStatusMap(tenant));
 			// overwrite with / add status of currently enabled connectors
 			if (connectorRegistry.getClientsForTenant(tenant) != null) {
 				for (AConnectorClient client : connectorRegistry.getClientsForTenant(tenant).values()) {
@@ -153,7 +153,7 @@ public class MonitoringController {
 	@GetMapping(value = "/tree", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
 		String tenant = contextService.getContext().getTenant();
-		MappingTreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
+		MappingTreeNode result = mappingComponent.getResolverMappingInbound(tenant);
 		log.info("Tenant {} - Get mapping tree", tenant);
 		return ResponseEntity.status(HttpStatus.OK).body(result);
 	}

@@ -42,7 +42,7 @@ import dynamic.mapping.processor.model.ProcessingResult;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class MQTTCallback implements Consumer<Mqtt3Publish> {
+public class MQTT3Callback implements Consumer<Mqtt3Publish> {
     static String TOPIC_LEVEL_SEPARATOR = String.valueOf(MqttTopic.TOPIC_LEVEL_SEPARATOR);
     private GenericMessageCallback genericMessageCallback;
     private String tenant;
@@ -52,7 +52,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
     private ServiceConfiguration serviceConfiguration;
     private ExecutorService virtualThreadPool;
 
-    MQTTCallback(String tenant, ConfigurationRegistry configurationRegistry, GenericMessageCallback callback,
+    MQTT3Callback(String tenant, ConfigurationRegistry configurationRegistry, GenericMessageCallback callback,
             String connectorIdentifier, String connectorName,
             boolean supportsMessageContext) {
         this.genericMessageCallback = callback;
@@ -60,7 +60,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
         this.supportsMessageContext = supportsMessageContext;
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
 

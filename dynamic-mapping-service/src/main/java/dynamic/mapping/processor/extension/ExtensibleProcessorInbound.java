@@ -118,12 +118,12 @@ public class ExtensibleProcessorInbound extends BaseProcessorInbound<byte[]> {
         for (Map.Entry<String, Extension> entryExtension : extensions.entrySet()) {
             String extensionKey = entryExtension.getKey();
             Extension extension = entryExtension.getValue();
-            log.info("Tenant {} - Extension {}:{} found contains: ", tenant, extensionKey,
+            log.info("Tenant {} - Extension {}: {} found contains: ", tenant, extensionKey,
                     extension.getName());
             for (Map.Entry<String, ExtensionEntry> entryExtensionEntry : extension.getExtensionEntries().entrySet()) {
                 String extensionEntryKey = entryExtensionEntry.getKey();
                 ExtensionEntry extensionEntry = entryExtensionEntry.getValue();
-                log.info("Tenant {} - ExtensionEntry {}:{} found : ", tenant, extensionEntryKey,
+                log.info("Tenant {} - ExtensionEntry {}: {} found : ", tenant, extensionEntryKey,
                         extensionEntry.getEventName());
             }
         }

@@ -31,55 +31,68 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
+import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.model.Qos;
 
 @Slf4j
-public class MQTTServiceClient extends MQTTClient {
+public class MQTTServiceClient extends MQTT3Client {
     public MQTTServiceClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
-
-        configProps.put("protocol",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, true, "mqtt://",
+        configProps.put("version",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false,
+                        MQTT_VERSION_3_1_1,
                         Map.ofEntries(
-                                new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
-                                new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
-                                new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-                                new AbstractMap.SimpleEntry<String, String>("wss://", "wss://")),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_3_1_1, MQTT_VERSION_3_1_1),
+                                new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_5_0, MQTT_VERSION_5_0)),
+                        null));
+        configProps.put("protocol",
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, true, true,
+                        AConnectorClient.MQTT_PROTOCOL_MQTT,
+                        Map.ofEntries(
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTT,
+                                        AConnectorClient.MQTT_PROTOCOL_MQTT),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTTS,
+                                        AConnectorClient.MQTT_PROTOCOL_MQTTS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WS,
+                                        AConnectorClient.MQTT_PROTOCOL_WS),
+                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WSS,
+                                        AConnectorClient.MQTT_PROTOCOL_WSS)),
                         null));
         configProps.put("mqttHost",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         "c8y-mqtt-service",
                         null, null));
         configProps.put("mqttPort",
-                new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, true, true, 2883, null,
+                new ConnectorProperty(null, true, 3, ConnectorPropertyType.NUMERIC_PROPERTY, true, true, 2883, null,
                         null));
         configProps.put("user",
-                new ConnectorProperty(null, true, 3, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null,
+                new ConnectorProperty(null, true, 4, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null,
                         null));
         configProps.put("password",
-                new ConnectorProperty(null, true, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true, null,
+                new ConnectorProperty(null, true, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true, null,
                         null, null));
         configProps.put("clientId",
-                new ConnectorProperty(null, true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 6, ConnectorPropertyType.ID_STRING_PROPERTY, true, true,
                         null, null, null));
         configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
+                new ConnectorProperty(null, false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
                         null));
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null,
-                        null));
-        configProps.put("nameCertificate",
                 new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null,
                         null));
+        configProps.put("nameCertificate",
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null,
+                        null));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
                         null));
         String name = "Cumulocity MQTT Service";
         String description = "Connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
@@ -104,14 +117,16 @@ public class MQTTServiceClient extends MQTTClient {
         // ensure the client knows its identity even if configuration is set to null
         this.connectorIdentifier = connectorConfiguration.identifier;
         this.connectorName = connectorConfiguration.name;
+        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+                connectorType);
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
@@ -143,7 +158,7 @@ public class MQTTServiceClient extends MQTTClient {
                             mqttPort, null, null));
         } catch (Exception e) {
             log.error("Tenant {} - Connector {} - Can't parse mqttServiceUrl, using default. ", tenant,
-            getConnectorName(), e);
+                    getConnectorName(), e);
         }
     }
 

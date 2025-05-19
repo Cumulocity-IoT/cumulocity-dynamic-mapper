@@ -121,11 +121,10 @@ public class DispatcherInbound implements GenericMessageCallback {
             this.resolvedMappings = resolvedMappings;
             this.mappingComponent = configurationRegistry.getMappingComponent();
             this.c8yAgent = configurationRegistry.getC8yAgent();
-            this.payloadProcessorsInbound = configurationRegistry.getPayloadProcessorsInbound()
-                    .get(message.getTenant());
+            this.payloadProcessorsInbound = configurationRegistry.getPayloadProcessorsInbound(message.getTenant());
             this.connectorMessage = message;
             this.objectMapper = configurationRegistry.getObjectMapper();
-            this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(message.getTenant());
+            this.serviceConfiguration = configurationRegistry.getServiceConfiguration(message.getTenant());
             this.inboundProcessingTimer = Timer.builder("dynmapper_inbound_processing_time")
                     .tag("tenant", connectorMessage.getTenant())
                     .tag("connector", connectorMessage.getConnectorIdentifier())
@@ -460,7 +459,7 @@ public class DispatcherInbound implements GenericMessageCallback {
     public ProcessingResult<?> processMessage(ConnectorMessage connectorMessage) {
         String topic = connectorMessage.getTopic();
         String tenant = connectorMessage.getTenant();
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         if (serviceConfiguration.logPayload) {
             if (connectorMessage.getPayload() != null) {
                 String payload = new String(connectorMessage.getPayload(), StandardCharsets.UTF_8);

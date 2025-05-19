@@ -23,10 +23,12 @@ package dynamic.mapping.notification.websocket;
 
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -46,18 +48,21 @@ public class CustomWebSocketClient extends WebSocketClient {
     private final NotificationCallback callback;
     private ScheduledExecutorService executorService = null;
     private String tenant;
-    private String connectorName;
+
+    @Getter
+    private ConnectorId connectorId;
+
     private ExecutorService virtualThreadPool;
     ServiceConfiguration serviceConfiguration;
 
     public CustomWebSocketClient(String tenant, ConfigurationRegistry configurationRegistry, URI serverUri,
-            NotificationCallback callback, String connectorName) {
+            NotificationCallback callback, ConnectorId connectorId) {
         super(serverUri);
         this.callback = callback;
-        this.connectorName = connectorName;
+        this.connectorId = connectorId;
         this.tenant = tenant;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
     }
 
     @Override
@@ -75,7 +80,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         if (serviceConfiguration.logPayload) {
             log.info(
                     "Tenant {} - INITIAL: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}",
-                    tenant, connectorName, notification.getApi(), notification.getOperation());
+                    tenant, connectorId.getName(), notification.getApi(), notification.getOperation());
         }
         ProcessingResult<?> processedResults = this.callback.onNotification(notification);
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
@@ -83,7 +88,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         if (serviceConfiguration.logPayload) {
             log.info(
                     "Tenant {} - WAIT_ON_RESULTS: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}, QoS mappings: {}",
-                    tenant, connectorName, notification.getApi(), notification.getOperation(), mappingQos);
+                    tenant, connectorId.getName(), notification.getApi(), notification.getOperation(), mappingQos);
         }
         if (mappingQos > 0 || timeout > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
