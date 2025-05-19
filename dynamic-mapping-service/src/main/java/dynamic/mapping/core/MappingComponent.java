@@ -59,6 +59,7 @@ import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.LoggingEventType;
@@ -123,8 +124,8 @@ public class MappingComponent {
         createResources(tenant);
         initializeMappingStatus(tenant, false);
         initializeDeploymentMap(tenant, false);
-        rebuildMappingOutboundCache(tenant);
-        rebuildMappingInboundCache(tenant);
+        rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
+        rebuildMappingInboundCache(tenant, ConnectorId.INTERNAL);
     }
 
     public void removeResources(String tenant) {
@@ -456,7 +457,7 @@ public class MappingComponent {
         removeDirtyMapping(tenant, mapping);
         // step 5. update caches
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            rebuildMappingOutboundCache(tenant);
+            rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
             removeFromCacheMappingInbound(tenant, mapping);
             addToCacheMappingInbound(tenant, mapping);
@@ -484,7 +485,7 @@ public class MappingComponent {
         removeDirtyMapping(tenant, mapping);
         // step 5. update caches
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            rebuildMappingOutboundCache(tenant);
+            rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
             removeFromCacheMappingInbound(tenant, mapping);
             addToCacheMappingInbound(tenant, mapping);
@@ -516,7 +517,7 @@ public class MappingComponent {
         removeDirtyMapping(tenant, mapping);
         // step 5. update caches
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            rebuildMappingOutboundCache(tenant);
+            rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
             removeFromCacheMappingInbound(tenant, mapping);
             addToCacheMappingInbound(tenant, mapping);
@@ -545,7 +546,7 @@ public class MappingComponent {
         removeDirtyMapping(tenant, mapping);
         // step 5. update caches
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            rebuildMappingOutboundCache(tenant);
+            rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
             removeFromCacheMappingInbound(tenant, mapping);
             addToCacheMappingInbound(tenant, mapping);
@@ -574,12 +575,12 @@ public class MappingComponent {
         }
     }
 
-    public List<Mapping> rebuildMappingOutboundCache(String tenant) {
+    public List<Mapping> rebuildMappingOutboundCache(String tenant, ConnectorId connectorId) {
         // only add outbound mappings to the cache
         List<Mapping> updatedMappings = getMappings(tenant, Direction.OUTBOUND).stream()
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        log.info("Tenant {} - Loaded mappings outbound: {}", tenant, updatedMappings.size());
+        log.info("Tenant {} - Loaded mappings outbound: {}, triggered by connector: {}", tenant, updatedMappings.size(), connectorId.getName());
 
         cacheMappingOutbound.replace(tenant, updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
@@ -727,8 +728,10 @@ public class MappingComponent {
         return in;
     }
 
-    private List<Mapping> rebuildMappingInboundCache(String tenant, List<Mapping> updatedMappings) {
-        log.info("Tenant {} - Loaded mappings inbound: {}", tenant, updatedMappings.size());
+    private List<Mapping> rebuildMappingInboundCache(String tenant, List<Mapping> updatedMappings,
+            ConnectorId connectorId) {
+        log.info("Tenant {} - Loaded mappings inbound: {}, triggered by connector: {}", tenant, updatedMappings.size(),
+                connectorId.getName());
         cacheMappingInbound.replace(tenant, updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // update mappings tree
@@ -736,11 +739,11 @@ public class MappingComponent {
         return updatedMappings;
     }
 
-    public List<Mapping> rebuildMappingInboundCache(String tenant) {
+    public List<Mapping> rebuildMappingInboundCache(String tenant, ConnectorId connectorId) {
         List<Mapping> updatedMappings = getMappings(tenant, Direction.INBOUND).stream()
                 .filter(m -> !Direction.OUTBOUND.equals(m.direction) || m.mappingTopic == null)
                 .collect(Collectors.toList());
-        return rebuildMappingInboundCache(tenant, updatedMappings);
+        return rebuildMappingInboundCache(tenant, updatedMappings, connectorId);
     }
 
     public void updateSourceTemplate(String tenant, String id, Integer index) throws Exception {
@@ -764,7 +767,7 @@ public class MappingComponent {
         removeDirtyMapping(tenant, mapping);
         // step 5. update caches
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            rebuildMappingOutboundCache(tenant);
+            rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
             removeFromCacheMappingInbound(tenant, mapping);
             addToCacheMappingInbound(tenant, mapping);
@@ -836,7 +839,7 @@ public class MappingComponent {
         removeDirtyMapping(tenant, mapping);
         // step 5. update caches
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            rebuildMappingOutboundCache(tenant);
+            rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
             removeFromCacheMappingInbound(tenant, mapping);
             addToCacheMappingInbound(tenant, mapping);

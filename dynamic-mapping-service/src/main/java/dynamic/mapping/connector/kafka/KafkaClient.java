@@ -57,6 +57,8 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
+import dynamic.mapping.configuration.ConnectorId;
+
 import java.io.IOException;
 import java.io.StringWriter;
 
@@ -154,6 +156,8 @@ public class KafkaClient extends AConnectorClient {
         // ensure the client knows its identity even if configuration is set to null
         this.connectorName = connectorConfiguration.name;
         this.connectorIdentifier = connectorConfiguration.identifier;
+        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+                connectorType);
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
         this.c8yAgent = configurationRegistry.getC8yAgent();
@@ -260,14 +264,14 @@ public class KafkaClient extends AConnectorClient {
             try {
                 // test if the mqtt connection is configured and enabled
                 if (shouldConnect()) {
-                    mappingComponent.rebuildMappingOutboundCache(tenant);
+                    mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
                     // previously used updatedMappings
                     kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
                     connectionState.setTrue();
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
                     updateActiveSubscriptionsInbound(updatedMappings, true, true);
                     log.info("Tenant {} - Phase III: {} connected, bootstrapServers: {}", tenant, getConnectorName(),
                             bootstrapServers);
@@ -313,7 +317,7 @@ public class KafkaClient extends AConnectorClient {
 
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+            List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
             updateActiveSubscriptionsInbound(updatedMappings, true, true);
             kafkaProducer.close();
             log.info("Tenant {} - Disconnected from from broker: {}", tenant, getConnectorName(),

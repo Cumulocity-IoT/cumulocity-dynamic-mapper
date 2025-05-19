@@ -58,6 +58,7 @@ import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
 import com.hivemq.client.mqtt.mqtt5.message.unsubscribe.Mqtt5Unsubscribe;
 
 import dynamic.mapping.configuration.ConnectorConfiguration;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.connector.core.ConnectorPropertyCondition;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
@@ -160,6 +161,8 @@ public class MQTT5Client extends AConnectorClient {
         // ensure the client knows its identity even if configuration is set to null
         this.connectorName = connectorConfiguration.name;
         this.connectorIdentifier = connectorConfiguration.identifier;
+        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+                connectorType);
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
         // this.connectorType = connectorConfiguration.connectorType;
@@ -373,9 +376,9 @@ public class MQTT5Client extends AConnectorClient {
                     log.info("Tenant {} - Phase III: {} connected, serverHost: {}", tenant, getConnectorName(),
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+                    List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
                     updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
-                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
+                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
@@ -404,7 +407,7 @@ public class MQTT5Client extends AConnectorClient {
                      * e.getMessage(), e);
                      * }
                      */
-                    mappingComponent.rebuildMappingOutboundCache(tenant);
+                    mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
                     // previously used updatedMappings
@@ -483,9 +486,9 @@ public class MQTT5Client extends AConnectorClient {
                         e);
             }
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
             updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
-            List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
+            List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
             updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
                     mqttClient.getConfig().getServerHost());

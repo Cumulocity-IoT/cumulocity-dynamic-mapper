@@ -40,6 +40,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
@@ -110,7 +111,7 @@ public class WatsonController {
             mapping.active = false;
             final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);
             if (Direction.OUTBOUND.equals(createdMapping.direction)) {
-                mappingComponent.rebuildMappingOutboundCache(tenant);
+                mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
             } else {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.

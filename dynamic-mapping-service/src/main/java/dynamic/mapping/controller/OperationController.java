@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import jakarta.validation.Valid;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.ConnectorException;
@@ -209,9 +210,8 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
-        mappingComponent.rebuildMappingOutboundCache(tenant);
-        List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-        List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
+        List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, ConnectorId.INTERNAL);
+        List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
 
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {

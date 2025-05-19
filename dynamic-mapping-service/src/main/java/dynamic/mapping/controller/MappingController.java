@@ -45,6 +45,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
@@ -152,7 +153,7 @@ public class MappingController {
             mapping.active = false;
             final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);
             if (Direction.OUTBOUND.equals(createdMapping.direction)) {
-                mappingComponent.rebuildMappingOutboundCache(tenant);
+                mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
             } else {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.
@@ -182,7 +183,7 @@ public class MappingController {
             log.info("Tenant {} - Update mapping: {}, {}", mapping, id);
             final Mapping updatedMapping = mappingComponent.updateMapping(tenant, mapping, false, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
-                mappingComponent.rebuildMappingOutboundCache(tenant);
+                mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
             } else {
                 Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {

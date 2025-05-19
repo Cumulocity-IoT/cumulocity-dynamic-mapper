@@ -43,6 +43,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
@@ -91,6 +92,8 @@ public class HttpClient extends AConnectorClient {
         // ensure the client knows its identity even if configuration is set to null
         this.connectorName = connectorConfiguration.name;
         this.connectorIdentifier = connectorConfiguration.identifier;
+        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+                connectorType);
         this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
                 connectorConfiguration.identifier);
         this.c8yAgent = configurationRegistry.getC8yAgent();
@@ -137,7 +140,7 @@ public class HttpClient extends AConnectorClient {
                 log.info("Tenant {} - Phase III: {} connected, http endpoint: {}", tenant, getConnectorName(),
                         path);
                 updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+                List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
                 updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
                 successful = true;
             } catch (Exception e) {
@@ -181,7 +184,7 @@ public class HttpClient extends AConnectorClient {
             });
 
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
             updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
             log.info("Tenant {} - {} disconnected, http endpoint: {}", tenant, getConnectorName(),
                     path);

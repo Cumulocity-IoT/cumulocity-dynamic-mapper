@@ -39,6 +39,8 @@ import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
+
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.model.API;
@@ -167,10 +169,12 @@ public class C8YNotificationSubscriber {
                                     + additionalSubscriptionIdTest;
                             String token = createToken(DEVICE_SUBSCRIPTION,
                                     tokenSeed);
-                            deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(), token);
-                            CustomWebSocketClient client = connect(token, dispatcherOutbound,
+                            ConnectorId connectorId = new ConnectorId(
                                     dispatcherOutbound.getConnectorClient().getConnectorName(),
                                     dispatcherOutbound.getConnectorClient().getConnectorIdentifier());
+                            deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(), token);
+                            CustomWebSocketClient client = connect(token, dispatcherOutbound,
+                                    connectorId);
                             deviceClientMap.get(tenant).put(
                                     dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
                                     client);
@@ -330,9 +334,11 @@ public class C8YNotificationSubscriber {
                                         dispatcherOutbound.getConnectorClient().getConnectorName());
                                 deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
                                         token);
-                                CustomWebSocketClient client = connect(token, dispatcherOutbound,
+                                ConnectorId connectorId = new ConnectorId(
                                         dispatcherOutbound.getConnectorClient().getConnectorName(),
                                         dispatcherOutbound.getConnectorClient().getConnectorIdentifier());
+                                CustomWebSocketClient client = connect(token, dispatcherOutbound,
+                                        connectorId);
                                 deviceClientMap.get(tenant).put(
                                         dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
                                         client);
@@ -590,8 +596,8 @@ public class C8YNotificationSubscriber {
         configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.DISCONNECTED, null);
     }
 
-    public CustomWebSocketClient connect(String token, NotificationCallback callback, String connectorName,
-            String connectorIdentifier)
+    public CustomWebSocketClient connect(String token, NotificationCallback callback,
+            ConnectorId connectorId)
             throws URISyntaxException {
         String tenant = subscriptionsService.getTenant();
         configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
@@ -599,7 +605,7 @@ public class C8YNotificationSubscriber {
             String baseUrl = this.baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
             final CustomWebSocketClient client = new CustomWebSocketClient(tenant, configurationRegistry, webSocketUrl,
-                    callback, connectorName, connectorIdentifier);
+                    callback, connectorId);
             client.setConnectionLostTimeout(30);
             client.connect();
             configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
@@ -661,13 +667,13 @@ public class C8YNotificationSubscriber {
                                         || deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                                     log.info(
                                             "Tenant {} - Trying to reconnect WebSocket device client linked to connector: {}",
-                                            tenant, deviceClient.getConnectorName());
+                                            tenant, deviceClient.getConnectorId().getName());
                                     initDeviceClient();
                                 } else if (deviceClient.getReadyState().equals(ReadyState.CLOSING)
                                         || deviceClient.getReadyState().equals(ReadyState.CLOSED)) {
                                     log.info(
                                             "Tenant {} - Trying to reconnect WebSocket device client linked to connector: {}",
-                                            tenant, deviceClient.getConnectorName());
+                                            tenant, deviceClient.getConnectorId().getName());
                                     deviceClient.reconnect();
                                 }
                             }

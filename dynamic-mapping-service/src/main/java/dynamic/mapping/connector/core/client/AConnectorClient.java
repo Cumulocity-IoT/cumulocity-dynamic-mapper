@@ -51,6 +51,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.ConnectorSpecification;
@@ -91,6 +92,8 @@ public abstract class AConnectorClient {
     protected String connectorIdentifier;
 
     protected String connectorName;
+
+    protected ConnectorId connectorId;
 
     protected String additionalSubscriptionIdTest;
 
