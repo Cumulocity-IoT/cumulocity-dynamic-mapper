@@ -52,7 +52,7 @@ public class InventoryCache {
 			}
 		});
 		Tags tag = Tags.of("tenant", tenant);
-		this.cacheSizeGauge = Gauge.builder("dynmapper_inbound_identity_cache_size", this.cache, Map::size)
+		this.cacheSizeGauge = Gauge.builder("dynmapper_inbound_inventory_cache_size", this.cache, Map::size)
 				.tags(tag)
 				.register(Metrics.globalRegistry);
 	}
