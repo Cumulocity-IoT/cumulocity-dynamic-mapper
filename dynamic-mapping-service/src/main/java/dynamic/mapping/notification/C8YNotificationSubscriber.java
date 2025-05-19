@@ -169,7 +169,8 @@ public class C8YNotificationSubscriber {
                                     tokenSeed);
                             deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(), token);
                             CustomWebSocketClient client = connect(token, dispatcherOutbound,
-                                    dispatcherOutbound.getConnectorClient().getConnectorName());
+                                    dispatcherOutbound.getConnectorClient().getConnectorName(),
+                                    dispatcherOutbound.getConnectorClient().getConnectorIdentifier());
                             deviceClientMap.get(tenant).put(
                                     dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
                                     client);
@@ -330,7 +331,8 @@ public class C8YNotificationSubscriber {
                                 deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
                                         token);
                                 CustomWebSocketClient client = connect(token, dispatcherOutbound,
-                                        dispatcherOutbound.getConnectorClient().getConnectorName());
+                                        dispatcherOutbound.getConnectorClient().getConnectorName(),
+                                        dispatcherOutbound.getConnectorClient().getConnectorIdentifier());
                                 deviceClientMap.get(tenant).put(
                                         dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
                                         client);
@@ -588,7 +590,8 @@ public class C8YNotificationSubscriber {
         configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.DISCONNECTED, null);
     }
 
-    public CustomWebSocketClient connect(String token, NotificationCallback callback, String connectorName)
+    public CustomWebSocketClient connect(String token, NotificationCallback callback, String connectorName,
+            String connectorIdentifier)
             throws URISyntaxException {
         String tenant = subscriptionsService.getTenant();
         configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
@@ -596,7 +599,7 @@ public class C8YNotificationSubscriber {
             String baseUrl = this.baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
             final CustomWebSocketClient client = new CustomWebSocketClient(tenant, configurationRegistry, webSocketUrl,
-                    callback, connectorName);
+                    callback, connectorName, connectorIdentifier);
             client.setConnectionLostTimeout(30);
             client.connect();
             configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
@@ -656,11 +659,15 @@ public class C8YNotificationSubscriber {
                             if (!deviceClient.isOpen()) {
                                 if (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) == 401
                                         || deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                                    log.info("Tenant {} - Trying to reconnect WebSocket device client... ", tenant);
+                                    log.info(
+                                            "Tenant {} - Trying to reconnect WebSocket device client linked to connector: {}",
+                                            tenant, deviceClient.getConnectorName());
                                     initDeviceClient();
                                 } else if (deviceClient.getReadyState().equals(ReadyState.CLOSING)
                                         || deviceClient.getReadyState().equals(ReadyState.CLOSED)) {
-                                    log.info("Tenant {} - Trying to reconnect WebSocket device client... ", tenant);
+                                    log.info(
+                                            "Tenant {} - Trying to reconnect WebSocket device client linked to connector: {}",
+                                            tenant, deviceClient.getConnectorName());
                                     deviceClient.reconnect();
                                 }
                             }

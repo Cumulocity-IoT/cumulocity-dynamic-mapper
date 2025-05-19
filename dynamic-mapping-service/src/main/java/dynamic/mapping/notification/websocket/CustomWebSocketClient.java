@@ -23,6 +23,7 @@ package dynamic.mapping.notification.websocket;
 
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.C8YRequest;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -46,15 +47,22 @@ public class CustomWebSocketClient extends WebSocketClient {
     private final NotificationCallback callback;
     private ScheduledExecutorService executorService = null;
     private String tenant;
+
+    @Getter
     private String connectorName;
+
+    @Getter
+    private String connectorIdentifier;
+
     private ExecutorService virtualThreadPool;
     ServiceConfiguration serviceConfiguration;
 
     public CustomWebSocketClient(String tenant, ConfigurationRegistry configurationRegistry, URI serverUri,
-            NotificationCallback callback, String connectorName) {
+            NotificationCallback callback, String connectorName, String connectorIdentifier) {
         super(serverUri);
         this.callback = callback;
         this.connectorName = connectorName;
+        this.connectorIdentifier = connectorIdentifier;
         this.tenant = tenant;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);

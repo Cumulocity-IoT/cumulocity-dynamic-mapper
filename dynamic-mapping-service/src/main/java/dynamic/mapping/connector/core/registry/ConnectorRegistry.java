@@ -47,6 +47,7 @@ public class ConnectorRegistry {
 
     // Structure: < Tenant, < ConnectorStatusEvent, ConnectorInstance > >
     private Map<String, Map<String, AConnectorClient>> connectorTenantMap = new ConcurrentHashMap<>();
+    
     // Structure: < ConnectorType, < Property, PropertyDefinition > >
     private Map<ConnectorType, ConnectorSpecification> connectorSpecificationMap = new ConcurrentHashMap<>();
 
