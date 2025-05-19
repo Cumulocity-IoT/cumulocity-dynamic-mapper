@@ -160,7 +160,7 @@ public class DispatcherOutbound implements NotificationCallback {
             // connectorClient.connectorConfiguration.name,
             // connectorClient.isConnected());
             if ("UPDATE".equals(notification.getOperation()) && notification.getApi().equals(API.OPERATION)) {
-                log.info("Tenant {} - Update Operation message for connector {} is received, ignoring it",
+                log.info("Tenant {} - Update Operation message for connector: {} is received, ignoring it",
                         tenant, connectorClient.getConnectorName());
                 return result;
             }

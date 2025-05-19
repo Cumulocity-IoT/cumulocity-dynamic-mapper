@@ -198,7 +198,7 @@ public class HttpClient extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, Qos qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: [{}] for connector {}", tenant, topic, connectorName);
+        log.debug("Tenant {} - Subscribing on topic: [{}] for connector: {}", tenant, topic, connectorName);
         sendSubscriptionEvents(topic, "Subscribing");
     }
 

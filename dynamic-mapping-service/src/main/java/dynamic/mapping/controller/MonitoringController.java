@@ -99,7 +99,7 @@ public class MonitoringController {
 			AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
 					connectorIdentifier);
 			ConnectorStatusEvent st = client.getConnectorStatus();
-			log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorIdentifier, st);
+			log.info("Tenant {} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
 			return new ResponseEntity<>(st, HttpStatus.OK);
 		} catch (ConnectorRegistryException e) {
 			throw new RuntimeException(e);
