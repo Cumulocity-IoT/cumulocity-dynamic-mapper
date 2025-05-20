@@ -102,7 +102,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), effectiveQos, mappingQos,
                     connectorIdentifier);
         }
-        if (effectiveQos > 0 || timeout > 0) {
+        if (effectiveQos > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
                 try {

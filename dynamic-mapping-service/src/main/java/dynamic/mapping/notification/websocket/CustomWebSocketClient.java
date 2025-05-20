@@ -90,7 +90,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                     "Tenant {} - WAIT_ON_RESULTS: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}, QoS mappings: {}",
                     tenant, connectorId.getName(), notification.getApi(), notification.getOperation(), mappingQos);
         }
-        if (mappingQos > 0 || timeout > 0) {
+        if (mappingQos > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
                 try {
