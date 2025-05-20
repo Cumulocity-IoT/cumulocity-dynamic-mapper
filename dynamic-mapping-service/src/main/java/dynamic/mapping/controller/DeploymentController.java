@@ -111,7 +111,7 @@ public class DeploymentController {
 	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdentifier,
 			@Valid @RequestBody List<String> deployment) {
 		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Update deployment for mapping: {} : {}", tenant, mappingIdentifier, deployment);
+		log.info("Tenant {} - Update deployment for mapping, mappingIdentifier: {}, deployment: {}", tenant, mappingIdentifier, deployment);
 		try {
 			mappingComponent.updateDeploymentMapEntry(tenant, mappingIdentifier, deployment);
 			return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -124,7 +124,7 @@ public class DeploymentController {
 	@GetMapping(value = "/defined/{mappingIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<String>> getDeploymentMapEntry(@PathVariable String mappingIdentifier) {
 		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Get deployment for mapping: {}", tenant, mappingIdentifier);
+		log.info("Tenant {} - Get deployment for mappingIdentifier: {}", tenant, mappingIdentifier);
 		try {
 			List<String> map = mappingComponent.getDeploymentMapEntry(tenant, mappingIdentifier);
 			return new ResponseEntity<List<String>>(map, HttpStatus.OK);

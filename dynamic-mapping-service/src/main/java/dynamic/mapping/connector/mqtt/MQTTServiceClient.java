@@ -47,7 +47,7 @@ public class MQTTServiceClient extends MQTT3Client {
     public MQTTServiceClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("version",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false,
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, false,
                         MQTT_VERSION_3_1_1,
                         Map.ofEntries(
                                 new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_3_1_1, MQTT_VERSION_3_1_1),
