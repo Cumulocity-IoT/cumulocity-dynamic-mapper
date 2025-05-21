@@ -165,13 +165,13 @@ public class OperationController {
     private ResponseEntity<?> handleAddSampleMappings(String tenant, Map<String, String> parameters)
             throws Exception {
         Direction direction = Direction.valueOf(parameters.get("direction"));
-        AtomicBoolean alreadyExits = new AtomicBoolean(false);
         if (direction.equals(Direction.INBOUND)) {
             String samples = serviceConfigurationComponent.getSampleMappingsInbound_01();
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
             List<Mapping> existingMappings = mappingComponent.getMappings(tenant, Direction.INBOUND);
             mappings.forEach(mapping -> {
+                AtomicBoolean alreadyExits = new AtomicBoolean(false);
                 existingMappings.forEach(existingMapping -> {
                     if(existingMapping.getIdentifier().equals(mapping.getIdentifier()))
                         alreadyExits.set(true);
@@ -187,6 +187,7 @@ public class OperationController {
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
             mappings.forEach(mapping -> {
+                AtomicBoolean alreadyExits = new AtomicBoolean(false);
                 existingMappings.forEach(existingMapping -> {
                     if(existingMapping.getIdentifier().equals(mapping.getIdentifier()))
                         alreadyExits.set(true);
