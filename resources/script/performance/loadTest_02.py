@@ -28,7 +28,7 @@ event_count = 0
 EVENT_NUM = 10  ### Total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
 TPS = 10
-TPS_PEROID = 1
+TPS_PERIOD = 1
 # batch_num = 5000
 BATCH_NUM = 1
 WORKERS = 2
@@ -79,7 +79,7 @@ def connect_mqtt():
 
 
 @sleep_and_retry
-@limits(calls=TPS, period=TPS_PEROID)
+@limits(calls=TPS, period=TPS_PERIOD)
 def publish(client, message, topic):
     global event_count
     result = client.publish(topic, message, qos=1)
@@ -158,7 +158,7 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
     return payload
 
 
-def create_mes_arry(mes_array, message):
+def create_mes_array(mes_array, message):
     if len(mes_array) != round(EVENT_NUM / BATCH_NUM):
         mes_array.append(message)
     else:
@@ -204,19 +204,19 @@ def create_tasks():
                 if ARRAY_MESSAGE:
                     message = create_payload(tid, event_type, meas_type)
                     if event_type == "geolocation" and meas_type == "dict":
-                        mes_array_geo_dict = create_mes_arry(
+                        mes_array_geo_dict = create_mes_array(
                             mes_array_geo_dict, message
                         )
                     elif event_type == "geolocation" and meas_type == "array":
-                        mes_array_geo_array = create_mes_arry(
+                        mes_array_geo_array = create_mes_array(
                             mes_array_geo_array, message
                         )
                     elif event_type == "gwCDMStatistics" and meas_type == "dict":
-                        mes_array_static_dict = create_mes_arry(
+                        mes_array_static_dict = create_mes_array(
                             mes_array_static_dict, message
                         )
                     elif event_type == "gwCDMStatistics" and meas_type == "array":
-                        mes_array_static_array = create_mes_arry(
+                        mes_array_static_array = create_mes_array(
                             mes_array_static_array, message
                         )
                 else:
