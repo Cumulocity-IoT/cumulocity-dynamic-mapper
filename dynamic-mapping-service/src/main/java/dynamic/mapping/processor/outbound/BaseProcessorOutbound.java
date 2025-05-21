@@ -233,9 +233,9 @@ public abstract class BaseProcessorOutbound<T> {
                     processingCache.size());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Payload was sent: {}, API: {}, numberDevices: {}", tenant,
-                    payloadTarget.jsonString(),
+            log.info("Tenant {} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     mapping.targetAPI,
+                    payloadTarget.jsonString(),
                     1);
         }
         return context;

@@ -279,9 +279,9 @@ public abstract class BaseProcessorInbound<T> {
                     context.getProcessingCacheSize());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Payload was sent: {}, API: {}, numberDevices: {}", tenant,
-                    payloadTarget.jsonString(),
+            log.info("Tenant {} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),
+                    payloadTarget.jsonString(),
                     size);
         }
         return context;
