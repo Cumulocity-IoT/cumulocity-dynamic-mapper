@@ -170,7 +170,7 @@ def create_mes_array(mes_array, message):
     return mes_array
 
 
-def clear_mes_arry(mes_array):
+def clear_mes_array(mes_array):
     logging.info('The last array')
     if mes_array:  # Only add to queue if the array is not empty
         task_queue.put(mes_array)
@@ -226,13 +226,13 @@ def create_tasks():
                     task_queue.put(message)
                     logging.info("Put a task")
                 if mes_array_geo_dict:
-                    clear_mes_arry(mes_array_geo_dict)
+                    clear_mes_array(mes_array_geo_dict)
                 if mes_array_geo_array:
-                    clear_mes_arry(mes_array_geo_array)
+                    clear_mes_array(mes_array_geo_array)
                 if mes_array_static_dict:
-                    clear_mes_arry(mes_array_static_dict)
+                    clear_mes_array(mes_array_static_dict)
                 if mes_array_static_array:
-                    clear_mes_arry(mes_array_static_array)
+                    clear_mes_array(mes_array_static_array)
 
 
 def consume_tasks(client):
