@@ -2,22 +2,64 @@ from threading import Thread
 import queue
 import paho.mqtt.client as mqtt_client
 import logging
-import time, random, json
+import os, time, random, json
 from ratelimit import limits, sleep_and_retry
 from datetime import datetime, timezone
+
 
 logger = logging.getLogger("")
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger.info("Logger was initialized")
+logger.info("Load test script started")
 
-broker = "broker.emqx.io"
-port = 8883
+
+# Helper function to get environment variable with a default value
+def get_env(key, default=None):
+    return os.environ.get(key, default)
+
+
+# Set broker from environment variable
+# Priority: MQTT_BROKER > C8Y_DOMAIN > default
+broker = get_env("MQTT_BROKER")
+if not broker:
+    # Fall back to C8Y_DOMAIN if available
+    c8y_domain = get_env("C8Y_DOMAIN")
+    if c8y_domain:
+        broker = c8y_domain
+    else:
+        broker = "broker.emqx.io"  # Default value
+
+# Set port from environment variable or use default
+try:
+    port = int(get_env("MQTT_PORT", 8883))
+except (ValueError, TypeError):
+    # If MQTT_PORT exists but is not a valid integer
+    port = 8883
+
+# Set username from environment variables
+# Priority: USERNAME > C8Y_TENANT/C8Y_USERNAME
+username = get_env("USERNAME")
+if not username:
+    c8y_tenant = get_env("C8Y_TENANT")
+    c8y_username = get_env("C8Y_USERNAME")
+    if c8y_tenant and c8y_username:
+        username = f"{c8y_tenant}/{c8y_username}"
+    else:
+        username = ""  # Default value
+
+# Set password from environment variable
+password = get_env("PASSWORD", "")  # Default to empty string
+
+# Log the configuration (without showing the password)
+logger.info(f"MQTT Configuration: broker={broker}, port={port}, username={username}")
+if password:
+    logger.info("Password is set")
+else:
+    logger.info("Password is not set")
+
 root_topic = "testmapper/"
 client_id = f"python-mqtt-{random.randint(0, 10)}"
-username = ""
-password = ""
 
 task_queue = queue.Queue()
 event_count = 0
@@ -41,6 +83,8 @@ diff_event_type = True
 event_type_list = ["geolocation", "gwCDMStatistics"]
 diff_meas_type = True
 device_num = EVENT_NUM  #### Total number of devices
+
+
 #####
 
 # ### Create record file
@@ -59,7 +103,7 @@ def create_capid(device_num):
 
 
 def connect_mqtt():
-    def on_connect(client, userdata, flags, rc):
+    def on_connect(client, userdata, flags, rc, properties=None):
         if rc == 0:
             print("Connected to MQTT Service!")
         else:
@@ -67,10 +111,15 @@ def connect_mqtt():
 
     client = mqtt_client.Client(
         client_id=client_id,
-        callback_api_version=mqtt_client.CallbackAPIVersion.VERSION1,
+        callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2,
     )
-    # client.username_pw_set(username, password)
-    #client.tls_set(ca_certs="gdroot-g2.crt")
+    # Only set username and password if both are provided and non-empty
+    if username and password and username.strip() != "" and password.strip() != "":
+        client.username_pw_set(username, password)
+        logger.info(f"Using authentication with username: {username}")
+    else:
+        logger.info("No authentication credentials provided, connecting anonymously")
+    # client.tls_set(ca_certs="gdroot-g2.crt")
     client.tls_set()
     client.tls_insecure_set(True)
     client.on_connect = on_connect
@@ -171,12 +220,12 @@ def create_mes_array(mes_array, message):
 
 
 def clear_mes_array(mes_array):
-    logging.info('The last array')
+    logging.info("The last array")
     if mes_array:  # Only add to queue if the array is not empty
         task_queue.put(mes_array)
-        logging.info('Put a task')
+        logging.info("Put a task")
     else:
-        logging.warning('Attempted to put empty array in queue, skipping...')
+        logging.warning("Attempted to put empty array in queue, skipping...")
     mes_array = []
 
 
@@ -238,7 +287,7 @@ def create_tasks():
 def consume_tasks(client):
     while True:
         new_task = task_queue.get()
-        logging.info('Get one task')
+        logging.info("Get one task")
 
         # Check if new_task is a list and not empty
         if isinstance(new_task, list):
@@ -252,17 +301,17 @@ def consume_tasks(client):
 
         payload = json.dumps(new_task)
 
-        if exa_payload['detail-type'] == 'geolocation':
-            if isinstance(exa_payload['detail']['measures'][0], dict):
-                topic = root_topic + 'geodict'
+        if exa_payload["detail-type"] == "geolocation":
+            if isinstance(exa_payload["detail"]["measures"][0], dict):
+                topic = root_topic + "geodict"
             else:
-                topic = root_topic + 'geoarray'
+                topic = root_topic + "geoarray"
         else:
-            if isinstance(exa_payload['detail']['measures'][0], dict):
-                topic = root_topic + 'gwdict'
+            if isinstance(exa_payload["detail"]["measures"][0], dict):
+                topic = root_topic + "gwdict"
             else:
-                topic = root_topic + 'gwarray'
-                
+                topic = root_topic + "gwarray"
+
         publish(client, payload, topic)
         task_queue.task_done()
         time.sleep(INTERVAL)
@@ -323,7 +372,7 @@ def main():
     finally:
         stop_time = datetime.now(timezone.utc).isoformat()[:-3] + "Z"
         print(f"Script stopped at {stop_time}")
-        
-        
+
+
 if __name__ == "__main__":
     main()
