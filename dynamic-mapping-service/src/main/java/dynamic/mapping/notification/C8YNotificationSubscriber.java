@@ -431,9 +431,10 @@ public class C8YNotificationSubscriber {
                     device.setId(notificationSubscriptionRepresentation.getSource().getId().getValue());
                     ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant,
                             notificationSubscriptionRepresentation.getSource().getId().getValue());
-                    if (mor != null)
+                    if (mor != null) {
                         device.setName(mor.getName());
-                    else
+                        device.setType(mor.getType());
+                    } else
                         log.warn("Tenant {} - Device in subscription with ID {} does not exists!", tenant,
                                 notificationSubscriptionRepresentation.getSource().getId().getValue());
                     devices.add(device);

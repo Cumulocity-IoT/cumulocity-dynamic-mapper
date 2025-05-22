@@ -38,12 +38,16 @@ public class Device {
 
     private String name;
 
+    private String type;
+
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Device)) return false;
         Device device = (Device) o;
-        return Objects.equals(id, device.id) && Objects.equals(name, device.name);
+        return Objects.equals(id, device.id);
     }
 
     @Override

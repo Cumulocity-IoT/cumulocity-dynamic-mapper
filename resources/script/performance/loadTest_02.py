@@ -32,10 +32,10 @@ if not broker:
 
 # Set port from environment variable or use default
 try:
-    port = int(get_env("MQTT_PORT", 8883))
+    port = int(get_env("MQTT_PORT", 9883))
 except (ValueError, TypeError):
     # If MQTT_PORT exists but is not a valid integer
-    port = 8883
+    port = 9883
 
 # Set username from environment variables
 # Priority: USERNAME > C8Y_TENANT/C8Y_USERNAME

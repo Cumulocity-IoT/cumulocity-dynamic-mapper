@@ -99,9 +99,9 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       filterable: true
     },
     {
-      header: 'Subscription Name',
-      name: 'subscriptionName',
-      path: 'subscriptionName',
+      header: 'Type',
+      name: 'type',
+      path: 'type',
       filterable: true
     }
   ];
