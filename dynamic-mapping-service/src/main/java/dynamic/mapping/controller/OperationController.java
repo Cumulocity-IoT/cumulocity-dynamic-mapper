@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import jakarta.validation.Valid;
 import dynamic.mapping.configuration.ConnectorConfiguration;
@@ -168,17 +169,33 @@ public class OperationController {
             String samples = serviceConfigurationComponent.getSampleMappingsInbound_01();
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
+            List<Mapping> existingMappings = mappingComponent.getMappings(tenant, Direction.INBOUND);
             mappings.forEach(mapping -> {
-                mapping.setActive(false);
-                mappingComponent.createMapping(tenant, mapping);
+                AtomicBoolean alreadyExits = new AtomicBoolean(false);
+                existingMappings.forEach(existingMapping -> {
+                    if(existingMapping.getIdentifier().equals(mapping.getIdentifier()))
+                        alreadyExits.set(true);
+                });
+                if(!alreadyExits.get()) {
+                    mapping.setActive(false);
+                    mappingComponent.createMapping(tenant, mapping);
+                }
             });
         } else {
+            List<Mapping> existingMappings = mappingComponent.getMappings(tenant, Direction.OUTBOUND);
             String samples = serviceConfigurationComponent.getSampleMappingsOutbound_01();
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
             mappings.forEach(mapping -> {
-                mapping.setActive(false);
-                mappingComponent.createMapping(tenant, mapping);
+                AtomicBoolean alreadyExits = new AtomicBoolean(false);
+                existingMappings.forEach(existingMapping -> {
+                    if(existingMapping.getIdentifier().equals(mapping.getIdentifier()))
+                        alreadyExits.set(true);
+                });
+                if(!alreadyExits.get()) {
+                    mapping.setActive(false);
+                    mappingComponent.createMapping(tenant, mapping);
+                }
             });
         }
         return ResponseEntity.status(HttpStatus.CREATED).build();
