@@ -112,6 +112,7 @@ export class SnoopExplorerComponent implements OnInit {
       this.alertService.success(
         `Update source template for mapping ${this.mapping.id}`
       );
+      this.mappingService.refreshMappings(this.mapping.direction);
     } else {
       this.alertService.warning(
         `Failed to update source template for mapping ${this.mapping.id}`
