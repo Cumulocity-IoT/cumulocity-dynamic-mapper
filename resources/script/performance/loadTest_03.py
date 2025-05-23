@@ -164,18 +164,17 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
 def queue_tasks():
     while True:
         if task_queue.qsize() < 10:
-            for item in range(EVENT_NUM):
-                tid = capid_list[item]
-                event_type = "geolocation"
-                message = create_payload(tid, event_type, "dict")
+            tid = random.choice(capid_list)
+            event_type = "geolocation"
+            message = create_payload(tid, event_type, "dict")
 
-                global message_create_count
-                message_create_count += 1
-                
-                logging.info("Queue message: " + str(message_create_count))
-                logging.debug(message)
-                task_queue.put(message)
-                logging.debug("Put a task")
+            global message_create_count
+            message_create_count += 1
+            
+            logging.info("Queue message: " + str(message_create_count))
+            logging.debug(message)
+            task_queue.put(message)
+            logging.debug("Put a task")
 
 
 def consume_tasks(client):
