@@ -66,26 +66,27 @@ event_count = 0
 
 
 #### Define test
-# load
-EVENT_NUM = 10  ### Total number of events and meas; also the number of device
+# parameter to control message format
+EVENT_NUM = 1  ### Total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
-TPS = 10
-TPS_PERIOD = 1
-# batch_num = 5000
-BATCH_NUM = 1
+# BATCH_NUM = 5000
+BATCH_NUM = 100
+
+# parameter to control load
+TPS = 10  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
+TPS_PERIOD = 1 # TPS_PERIOD defines the time window (in seconds) during which the TPS limit applies.
 WORKERS = 2
-INTERVAL = 0
+SLEEP_BETWEEN_ITERATIONS = 10
 
 # functional parameter
 diff_capid = True
 capid_list = []  # ["TID-987654-1234567890", "TID-987654-1234567891"]
 diff_event_type = True
+# event types
 event_type_list = ["geolocation", "gwCDMStatistics"]
 diff_meas_type = True
-device_num = EVENT_NUM  #### Total number of devices
+device_num = EVENT_NUM  # Total number of devices
 
-
-#####
 
 # ### Create record file
 # record_name = f'{str(event_num)}-messages-{str(workers)}-workers-array-mes-record.json'
@@ -228,7 +229,8 @@ def clear_mes_array(mes_array):
         logging.warning("Attempted to put empty array in queue, skipping...")
     mes_array = []
 
-
+## def create_mes_array(mes_array, message):
+# this is the task producer
 def create_tasks():
     while True:
         if task_queue.qsize() < BATCH_NUM / 10:
@@ -304,17 +306,21 @@ def consume_tasks(client):
         if exa_payload["detail-type"] == "geolocation":
             if isinstance(exa_payload["detail"]["measures"][0], dict):
                 topic = root_topic + "geodict"
+                # just send first item form the new_task list
+                payload = json.dumps(exa_payload)
             else:
                 topic = root_topic + "geoarray"
         else:
             if isinstance(exa_payload["detail"]["measures"][0], dict):
                 topic = root_topic + "gwdict"
+                # just send first item form the new_task list
+                payload = json.dumps(exa_payload)
             else:
                 topic = root_topic + "gwarray"
 
         publish(client, payload, topic)
         task_queue.task_done()
-        time.sleep(INTERVAL)
+        time.sleep(SLEEP_BETWEEN_ITERATIONS)
 
 
 def tps_timer(start_time):
