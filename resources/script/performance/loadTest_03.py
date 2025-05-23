@@ -73,7 +73,7 @@ ARRAY_MESSAGE = True
 BATCH_NUM = 100
 
 # parameter to control load
-TPS = 10  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
+TPS = 1000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
 WORKERS = 2
 SLEEP_BETWEEN_ITERATIONS = 1
 
@@ -213,17 +213,17 @@ def create_mes_array(mes_array, message):
     else:
         logging.debug(f"Created an array with {EVENT_NUM / BATCH_NUM} messages")
         task_queue.put(mes_array)
-        logging.info("Put a task")
+        logging.debug("Put a task")
         mes_array = []
         mes_array.append(message)
     return mes_array
 
 
 def clear_mes_array(mes_array):
-    logging.info("The last array")
+    logging.debug("The last array")
     if mes_array:  # Only add to queue if the array is not empty
         task_queue.put(mes_array)
-        logging.info("Put a task")
+        logging.debug("Put a task")
     else:
         logging.warning("Attempted to put empty array in queue, skipping...")
     mes_array = []
@@ -274,7 +274,7 @@ def create_tasks():
                     logging.debug("Created a message:")
                     logging.debug(message)
                     task_queue.put(message)
-                    logging.info("Put a task")
+                    logging.debug("Put a task")
                 if mes_array_geo_dict:
                     clear_mes_array(mes_array_geo_dict)
                 if mes_array_geo_array:
@@ -288,7 +288,7 @@ def create_tasks():
 def consume_tasks(client):
     while True:
         new_task = task_queue.get()
-        logging.info("Get one task")
+        logging.debuginfo("Get one task")
 
         # Check if new_task is a list and not empty
         if isinstance(new_task, list):
@@ -307,17 +307,8 @@ def consume_tasks(client):
                 topic = root_topic + "geodict"
                 # just send first item form the new_task list
                 payload = json.dumps(exa_payload)
-            else:
-                topic = root_topic + "geoarray"
-        else:
-            if isinstance(exa_payload["detail"]["measures"][0], dict):
-                topic = root_topic + "gwdict"
-                # just send first item form the new_task list
-                payload = json.dumps(exa_payload)
-            else:
-                topic = root_topic + "gwarray"
+                publish(client, payload, topic)
 
-        publish(client, payload, topic)
         task_queue.task_done()
         time.sleep(SLEEP_BETWEEN_ITERATIONS)
 
