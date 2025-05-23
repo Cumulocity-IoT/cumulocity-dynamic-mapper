@@ -18,6 +18,7 @@ logger.info("Load test script started")
 def get_env(key, default=None):
     return os.environ.get(key, default)
 
+
 # Set broker from environment variable
 # Priority: MQTT_BROKER > C8Y_DOMAIN > default
 broker = get_env("MQTT_BROKER")
@@ -61,16 +62,14 @@ root_topic = "testmapper/"
 client_id = f"python-mqtt-{random.randint(0, 10)}"
 
 task_queue = queue.Queue()
-event_count = 0
-message_count = 0
+message_create_count = 0
+message_publish_count = 0
 
 
 #### Define test
 # parameter to control message format
 EVENT_NUM = 3  #  total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
-# BATCH_NUM = 5000
-BATCH_NUM = 100
 
 # parameter to control load
 TPS = 1000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
@@ -85,6 +84,7 @@ diff_event_type = True
 event_type_list = ["geolocation", "gwCDMStatistics"]
 diff_meas_type = True
 device_num = EVENT_NUM  # Total number of devices
+
 
 def create_capid(device_num):
     for i in range(1, device_num + 1):
@@ -119,13 +119,13 @@ def connect_mqtt():
 @sleep_and_retry
 @limits(calls=TPS, period=1)
 def publish(client, message, topic):
-    global event_count
+    global message_publish_count
     result = client.publish(topic, message, qos=1)
     # result: [0, 1]
     status = result[0]
     if status == 0:
         print(f"Send `{message}` to topic `{topic}`")
-        event_count += 1
+        message_publish_count += 1
     else:
         print(f"Failed to send message to topic {topic}")
 
@@ -142,36 +142,37 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
         "detail": {
             "sensorAlternateId": cap_id,
             "capabilityAlternateId": event_type,
-            "measures": [],
+            "measures": [
+                {
+                    "latitude": random.uniform(-90, 90),
+                    "longitude": random.uniform(-180, 180),
+                    "elevation": random.uniform(0, 1000),
+                    "accuracy": round(random.uniform(0, 10), 2),
+                    "origin": "gps",
+                    "gatewayidentifier": "TID-GWID-436521",
+                    "_time": datetime.now(timezone.utc).isoformat(),
+                }
+            ],
         },
     }
-    payload["detail"]["measures"] = [
-        {
-            "latitude": random.uniform(-90, 90),
-            "longitude": random.uniform(-180, 180),
-            "elevation": random.uniform(0, 1000),
-            "accuracy": round(random.uniform(0, 10), 2),
-            "origin": "gps",
-            "gatewayidentifier": "TID-GWID-436521",
-            "_time": datetime.now(timezone.utc).isoformat(),
-        }
-    ]
+
     return payload
 
 
 ## def create_mes_array(mes_array, message):
 # this is the task producer
-def create_tasks():
+def queue_tasks():
     while True:
-        if task_queue.qsize() < BATCH_NUM / 10:
+        if task_queue.qsize() < 10:
             for item in range(EVENT_NUM):
                 tid = capid_list[item]
-
                 event_type = "geolocation"
                 message = create_payload(tid, event_type, "dict")
+
+                global message_create_count
+                message_create_count += 1
                 
-                global event_count
-                logging.info("Created a message: " + str(event_count))
+                logging.info("Queue message: " + str(message_create_count))
                 logging.debug(message)
                 task_queue.put(message)
                 logging.debug("Put a task")
@@ -182,15 +183,7 @@ def consume_tasks(client):
         new_task = task_queue.get()
         logging.debug("Get one task")
 
-        # Check if new_task is a list and not empty
-        if isinstance(new_task, list):
-            if not new_task:  # if list is empty
-                logging.warning("Received empty list in task queue, skipping...")
-                task_queue.task_done()
-                continue
-            exa_payload = new_task[0]
-        else:
-            exa_payload = new_task
+        exa_payload = new_task
 
         payload = json.dumps(new_task)
 
@@ -231,7 +224,8 @@ def run(start_time):
     logging.info("Timer thread created")
 
     client.loop_start()
-    create_tasks()
+    queue_tasks()
+
 
 def main():
     try:
