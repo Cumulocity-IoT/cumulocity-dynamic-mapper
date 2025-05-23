@@ -67,7 +67,7 @@ event_count = 0
 
 #### Define test
 # parameter to control message format
-EVENT_NUM = 1  ### Total number of events and meas; also the number of device
+EVENT_NUM = 3  ### Total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
 # BATCH_NUM = 5000
 BATCH_NUM = 100
@@ -76,7 +76,7 @@ BATCH_NUM = 100
 TPS = 10  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
 TPS_PERIOD = 1 # TPS_PERIOD defines the time window (in seconds) during which the TPS limit applies.
 WORKERS = 2
-SLEEP_BETWEEN_ITERATIONS = 10
+SLEEP_BETWEEN_ITERATIONS = 1
 
 # functional parameter
 diff_capid = True
@@ -149,7 +149,7 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
         "detail-type": event_type,
         "source": "myapp.orders",
         "account": "123451235123",
-        "time": datetime.now(timezone.utc).isoformat()[:-3] + "Z",
+        "time": datetime.now(timezone.utc).isoformat(),
         "region": "us-west-1",
         "detail": {
             "sensorAlternateId": cap_id,
@@ -167,7 +167,7 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
                     "accuracy": round(random.uniform(0, 10), 2),
                     "origin": "gps",
                     "gatewayidentifier": "TID-GWID-436521",
-                    "_time": datetime.now(timezone.utc).isoformat()[:-3] + "Z",
+                    "_time": datetime.now(timezone.utc).isoformat(),
                 }
             ]
         else:
@@ -178,7 +178,7 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
                 round(random.uniform(0, 10), 2),
                 "gps",
                 "TID-GWID-436521",
-                datetime.now(timezone.utc).isoformat()[:-3] + "Z",
+                datetime.now(timezone.utc).isoformat(),
             ]
     elif event_type == "gwCDMStatistics":
         if meas_type == "dict":
@@ -191,7 +191,7 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
                     "cntBattPlugged": random.randint(50, 500),
                     "cntBattLower10": random.randint(0, 20),
                     "isBattHealthy": "true",
-                    "_time": datetime.now(timezone.utc).isoformat()[:-3] + "Z",
+                    "_time": datetime.now(timezone.utc).isoformat(),
                 }
             ]
         else:
@@ -203,7 +203,7 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
                 random.randint(50, 500),
                 random.randint(0, 20),
                 "true",
-                datetime.now(timezone.utc).isoformat()[:-3] + "Z",
+                datetime.now(timezone.utc).isoformat(),
             ]
     return payload
 
@@ -376,7 +376,7 @@ def main():
         print("Shutting down gracefully...")
         # Cleanup code
     finally:
-        stop_time = datetime.now(timezone.utc).isoformat()[:-3] + "Z"
+        stop_time = datetime.now(timezone.utc).isoformat()
         print(f"Script stopped at {stop_time}")
 
 

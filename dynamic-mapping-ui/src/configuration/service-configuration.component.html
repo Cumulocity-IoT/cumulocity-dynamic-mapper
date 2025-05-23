@@ -21,7 +21,7 @@
 
 <c8y-title>Service configuration</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear inbound cache' | translate }}"
+  <button class="btn btn-link" title="{{ 'Clear external ID cache' | translate }}"
     (click)="clickedClearInboundExternalIdCache()">
     <i c8yIcon="clear"></i>
     {{ 'Clear inbound cache' | translate }}
@@ -33,13 +33,7 @@
     {{ 'Clear inventory cache' | translate }}
   </button>
 </c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Reconnect notification endpoint' | translate }}"
-    (click)="clickedReconnect2NotificationEndpoint()">
-    <i c8yIcon="disconnected"></i>
-    {{ 'Reconnect notification endpoint' | translate }}
-  </button>
-</c8y-action-bar-item>
+
 
 <div class="card card--fullpage">
   <div class="inner-scroll">
