@@ -59,7 +59,7 @@ else:
     logger.info("Password is not set")
 
 root_topic = "testmapper/"
-client_id = f"python-mqtt-{random.randint(0, 10)}"
+client_id = f"python-mqtt-{random.randint(0, 1000)}"
 
 task_queue = queue.Queue()
 message_create_count = 0
@@ -70,11 +70,11 @@ message_publish_count = 0
 # parameter to control message format
 EVENT_NUM = 10  #  total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
-QUEUE_SIZE = 1000  # the size of the queue
+QUEUE_SIZE = 40000  # the size of the queue
 
 # parameter to control load
 TPS = 1000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
-WORKERS = 5
+WORKERS = 10
 SLEEP_BETWEEN_ITERATIONS = 1
 
 # functional parameter
@@ -98,7 +98,6 @@ def connect_mqtt():
             print("Connected to MQTT Service!")
         else:
             print("Failed to connect, return code %d\n", rc)
-
     client = mqtt_client.Client(
         client_id=client_id,
         callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2,
@@ -117,15 +116,15 @@ def connect_mqtt():
     return client
 
 
-@sleep_and_retry
-@limits(calls=TPS, period=1)
+#@sleep_and_retry
+#@limits(calls=TPS, period=1)
 def publish(client, message, topic):
     global message_publish_count
-    result = client.publish(topic, message, qos=1)
+    result = client.publish(topic, message, qos=0)
     # result: [0, 1]
     status = result[0]
     if status == 0:
-        print(f"Send `{message}` to topic `{topic}`")
+        #print(f"Send `{message}` to topic `{topic}`")
         message_publish_count += 1
     else:
         print(f"Failed to send message to topic {topic}")
@@ -172,7 +171,7 @@ def queue_tasks():
             global message_create_count
             message_create_count += 1
             
-            logging.info("Queue message: " + str(message_create_count))
+           #logging.info("Queue message: " + str(message_create_count))
             logging.debug(message)
             task_queue.put(message)
             logging.debug("Put a task")
@@ -193,7 +192,7 @@ def consume_tasks(client):
         publish(client, payload, topic)
 
         task_queue.task_done()
-        time.sleep(SLEEP_BETWEEN_ITERATIONS)
+        #time.sleep(SLEEP_BETWEEN_ITERATIONS)
 
 
 def tps_timer(start_time):
@@ -224,8 +223,15 @@ def run(start_time):
     logging.info("Timer thread created")
 
     client.loop_start()
-    queue_tasks()
-
+    for i in range(2):
+        t = Thread(target=queue_tasks)
+        t.daemon = True
+        t.start()
+    while True:
+        time.sleep(1)
+        logging.info(f"Message created: {message_create_count}")
+        logging.info(f"Message published: {message_publish_count}")
+        logging.info(f"Queue size: {task_queue.qsize()}")
 
 def main():
     try:
