@@ -67,7 +67,7 @@ event_count = 0
 
 #### Define test
 # parameter to control message format
-EVENT_NUM = 3  ### Total number of events and meas; also the number of device
+EVENT_NUM = 3  #  total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
 # BATCH_NUM = 5000
 BATCH_NUM = 100
