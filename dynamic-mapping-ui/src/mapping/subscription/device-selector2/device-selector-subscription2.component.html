@@ -20,19 +20,20 @@
   -->
 
 <div class="flex-col flex-nowrap no-align-items fit-h col-md-8 col-md-offset-2 c8y-stepper--no-btns">
-  <div class="card">
-    <div class="card-header m-t-48 p-24 separator" style="justify-content: center">
+  <div class="card card--fullpage m-t-16">
+    <div class="card-header p-24 separator" style="justify-content: center">
       <h4 class="card-title">
         Select devices to subscribe to for outbound mappings
       </h4>
     </div>
-    <div class="card-block">
-      <c8y-device-grid [title]="'Devices'" [columns]="columns" [actionControls]="[]" 
-        (itemsSelect)="onItemsSelect($event)" [selectable]="true"
-        (onDeviceQueryStringChange)="onDeviceQueryStringChange($event)"
-        class="content-fullpage d-flex d-col border-top border-bottom"></c8y-device-grid>
+    <div class="card-inner-scroll fit-h">
+      <div class="card-block">
+        <c8y-device-grid [title]="'Devices'" [columns]="columns" [actionControls]="[]"
+          (itemsSelect)="onItemsSelect($event)" [selectable]="true"
+          (onDeviceQueryStringChange)="onDeviceQueryStringChange($event)"></c8y-device-grid>
+      </div>
     </div>
-    <div class="card-footer text-center">
+    <div class="card-footer d-block text-center">
       <div class="form-group">
         <button type="button" name="update" class="btn btn-primary" (click)="clickedUpdateSubscription()" translate>
           Save
