@@ -68,12 +68,12 @@ message_publish_count = 0
 
 #### Define test
 # parameter to control message format
-EVENT_NUM = 3  #  total number of events and meas; also the number of device
+EVENT_NUM = 10  #  total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
 
 # parameter to control load
 TPS = 1000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
-WORKERS = 2
+WORKERS = 5
 SLEEP_BETWEEN_ITERATIONS = 1
 
 # functional parameter
