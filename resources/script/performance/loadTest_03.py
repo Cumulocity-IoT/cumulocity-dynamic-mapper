@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger("")
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger.info("Load test script started")
 
@@ -17,7 +17,6 @@ logger.info("Load test script started")
 # Helper function to get environment variable with a default value
 def get_env(key, default=None):
     return os.environ.get(key, default)
-
 
 # Set broker from environment variable
 # Priority: MQTT_BROKER > C8Y_DOMAIN > default
@@ -63,6 +62,7 @@ client_id = f"python-mqtt-{random.randint(0, 10)}"
 
 task_queue = queue.Queue()
 event_count = 0
+message_count = 0
 
 
 #### Define test
@@ -85,17 +85,6 @@ diff_event_type = True
 event_type_list = ["geolocation", "gwCDMStatistics"]
 diff_meas_type = True
 device_num = EVENT_NUM  # Total number of devices
-
-
-# ### Create record file
-# record_name = f'{str(event_num)}-messages-{str(workers)}-workers-array-mes-record.json'
-# if os.path.exists(f'./{record_name}'):
-#     os.remove(f'./{record_name}')
-# with open(record_name, 'w') as f:
-#     f.write('[')
-# # record = open(record_name, 'w')
-# # record.write('[')
-
 
 def create_capid(device_num):
     for i in range(1, device_num + 1):
@@ -156,139 +145,42 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
             "measures": [],
         },
     }
-    if event_type == "geolocation":
-        if meas_type == "dict":
-            payload["detail"]["measures"] = [
-                {
-                    "latitude": random.uniform(-90, 90),
-                    "longitude": random.uniform(-180, 180),
-                    "elevation": random.uniform(0, 1000),
-                    "accuracy": round(random.uniform(0, 10), 2),
-                    "origin": "gps",
-                    "gatewayidentifier": "TID-GWID-436521",
-                    "_time": datetime.now(timezone.utc).isoformat(),
-                }
-            ]
-        else:
-            payload["detail"]["measures"] = [
-                random.uniform(-90, 90),
-                random.uniform(-180, 180),
-                random.uniform(0, 1000),
-                round(random.uniform(0, 10), 2),
-                "gps",
-                "TID-GWID-436521",
-                datetime.now(timezone.utc).isoformat(),
-            ]
-    elif event_type == "gwCDMStatistics":
-        if meas_type == "dict":
-            payload["detail"]["measures"] = [
-                {
-                    "tmsDvcTot": random.randint(0, 1108972),
-                    "cntApplicTot": random.randint(0, 6258),
-                    "cntCldCnctsPerDay": random.randint(0, 50),
-                    "enmCellTech": "lteCatM1",
-                    "cntBattPlugged": random.randint(50, 500),
-                    "cntBattLower10": random.randint(0, 20),
-                    "isBattHealthy": "true",
-                    "_time": datetime.now(timezone.utc).isoformat(),
-                }
-            ]
-        else:
-            payload["detail"]["measures"] = [
-                random.randint(0, 1108972),
-                random.randint(0, 6258),
-                random.randint(0, 50),
-                "lteCatM1",
-                random.randint(50, 500),
-                random.randint(0, 20),
-                "true",
-                datetime.now(timezone.utc).isoformat(),
-            ]
+    payload["detail"]["measures"] = [
+        {
+            "latitude": random.uniform(-90, 90),
+            "longitude": random.uniform(-180, 180),
+            "elevation": random.uniform(0, 1000),
+            "accuracy": round(random.uniform(0, 10), 2),
+            "origin": "gps",
+            "gatewayidentifier": "TID-GWID-436521",
+            "_time": datetime.now(timezone.utc).isoformat(),
+        }
+    ]
     return payload
 
-
-def create_mes_array(mes_array, message):
-    if len(mes_array) != round(EVENT_NUM / BATCH_NUM):
-        mes_array.append(message)
-    else:
-        logging.debug(f"Created an array with {EVENT_NUM / BATCH_NUM} messages")
-        task_queue.put(mes_array)
-        logging.debug("Put a task")
-        mes_array = []
-        mes_array.append(message)
-    return mes_array
-
-
-def clear_mes_array(mes_array):
-    logging.debug("The last array")
-    if mes_array:  # Only add to queue if the array is not empty
-        task_queue.put(mes_array)
-        logging.debug("Put a task")
-    else:
-        logging.warning("Attempted to put empty array in queue, skipping...")
-    mes_array = []
 
 ## def create_mes_array(mes_array, message):
 # this is the task producer
 def create_tasks():
     while True:
         if task_queue.qsize() < BATCH_NUM / 10:
-            mes_array_geo_dict = []
-            mes_array_geo_array = []
-            mes_array_static_dict = []
-            mes_array_static_array = []
             for item in range(EVENT_NUM):
-                if diff_capid:
-                    # tid = random.choice(capid_list)
-                    tid = capid_list[item]
-                else:
-                    tid = "TID-987654-1234567890"
-                if diff_event_type:
-                    event_type = random.choice(event_type_list)
-                else:
-                    event_type = "geolocation"
-                if diff_meas_type:
-                    meas_type = random.choice(["dict", "array"])
-                else:
-                    meas_type = "array"
-                if ARRAY_MESSAGE:
-                    message = create_payload(tid, event_type, meas_type)
-                    if event_type == "geolocation" and meas_type == "dict":
-                        mes_array_geo_dict = create_mes_array(
-                            mes_array_geo_dict, message
-                        )
-                    elif event_type == "geolocation" and meas_type == "array":
-                        mes_array_geo_array = create_mes_array(
-                            mes_array_geo_array, message
-                        )
-                    elif event_type == "gwCDMStatistics" and meas_type == "dict":
-                        mes_array_static_dict = create_mes_array(
-                            mes_array_static_dict, message
-                        )
-                    elif event_type == "gwCDMStatistics" and meas_type == "array":
-                        mes_array_static_array = create_mes_array(
-                            mes_array_static_array, message
-                        )
-                else:
-                    message = create_payload(tid, event_type, meas_type)
-                    logging.debug("Created a message:")
-                    logging.debug(message)
-                    task_queue.put(message)
-                    logging.debug("Put a task")
-                if mes_array_geo_dict:
-                    clear_mes_array(mes_array_geo_dict)
-                if mes_array_geo_array:
-                    clear_mes_array(mes_array_geo_array)
-                if mes_array_static_dict:
-                    clear_mes_array(mes_array_static_dict)
-                if mes_array_static_array:
-                    clear_mes_array(mes_array_static_array)
+                tid = capid_list[item]
+
+                event_type = "geolocation"
+                message = create_payload(tid, event_type, "dict")
+                
+                global event_count
+                logging.info("Created a message: " + str(event_count))
+                logging.debug(message)
+                task_queue.put(message)
+                logging.debug("Put a task")
 
 
 def consume_tasks(client):
     while True:
         new_task = task_queue.get()
-        logging.debuginfo("Get one task")
+        logging.debug("Get one task")
 
         # Check if new_task is a list and not empty
         if isinstance(new_task, list):
@@ -302,12 +194,10 @@ def consume_tasks(client):
 
         payload = json.dumps(new_task)
 
-        if exa_payload["detail-type"] == "geolocation":
-            if isinstance(exa_payload["detail"]["measures"][0], dict):
-                topic = root_topic + "geodict"
-                # just send first item form the new_task list
-                payload = json.dumps(exa_payload)
-                publish(client, payload, topic)
+        topic = root_topic + "geodict"
+        # just send first item form the new_task list
+        payload = json.dumps(exa_payload)
+        publish(client, payload, topic)
 
         task_queue.task_done()
         time.sleep(SLEEP_BETWEEN_ITERATIONS)
@@ -341,21 +231,7 @@ def run(start_time):
     logging.info("Timer thread created")
 
     client.loop_start()
-    # client.loop_forever()
     create_tasks()
-
-    # time.sleep(3)
-    # while not task_queue.empty():
-    #     pass
-
-    # client.loop_stop()
-
-    # #### Finish writing records
-    # with open(record_name, 'a') as f:
-    #     f.write(']')
-    # # record.write(']')
-    # # record.close()
-
 
 def main():
     try:
