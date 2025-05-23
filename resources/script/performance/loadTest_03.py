@@ -70,6 +70,7 @@ message_publish_count = 0
 # parameter to control message format
 EVENT_NUM = 3  #  total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
+QUEUE_SIZE = 1000  # the size of the queue
 
 # parameter to control load
 TPS = 1000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
@@ -163,7 +164,7 @@ def create_payload(cap_id: str, event_type: str, meas_type: str):
 # this is the task producer
 def queue_tasks():
     while True:
-        if task_queue.qsize() < 10:
+        if task_queue.qsize() < QUEUE_SIZE:
             tid = random.choice(capid_list)
             event_type = "geolocation"
             message = create_payload(tid, event_type, "dict")
