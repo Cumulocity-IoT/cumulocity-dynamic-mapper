@@ -25,7 +25,6 @@ import {
   Output,
   ViewEncapsulation
 } from '@angular/core';
-import { FormGroup, FormBuilder } from '@angular/forms';
 import { IIdentified } from '@c8y/client';
 
 @Component({

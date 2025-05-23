@@ -51,6 +51,7 @@ import { Subject } from 'rxjs';
 import { DeploymentMapEntry, SharedService, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { C8YNotificationSubscription, Device } from '../shared/mapping.model';
+import { GroupDeviceGridColumn } from '@c8y/ngx-components/device-grid';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
@@ -63,10 +64,12 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
 
   showConfigSubscription: boolean = false;
+  showConfigSubscription2: boolean = false;
 
   isConnectionToMQTTEstablished: boolean;
 
   subscription: C8YNotificationSubscription;
+  subscriptions: any[];
   devices: IIdentified[] = [];
   Direction = Direction;
 
@@ -136,15 +139,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     this.loadSubscriptions();
   }
 
-  async loadSubscriptions() {
-    this.subscription = await this.mappingService.getSubscriptions();
-    const subscriptionName = this.subscription.subscriptionName;
-    this.subscription?.devices.forEach (d => d['subscriptionName']= subscriptionName)
-  }
-
   ngOnInit() {
-    // console.log('ngOnInit');
-
     this.bulkActionControlSubscription.push({
       type: BuiltInActionType.Delete,
       callback: this.deleteSubscriptionBulkWithConfirmation.bind(this)
@@ -155,8 +150,18 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     });
   }
 
+  async loadSubscriptions() {
+    this.subscription = await this.mappingService.getSubscriptions();
+    this.subscriptions = this.subscription.devices;
+    this.subscriptionGrid?.reload();
+  }
+
   onDefineSubscription() {
     this.showConfigSubscription = !this.showConfigSubscription;
+  }
+
+  onDefineSubscription2() {
+    this.showConfigSubscription2 = !this.showConfigSubscription2;
   }
 
   async deleteSubscription(device: IIdentified) {
@@ -244,6 +249,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       );
     }
     this.showConfigSubscription = false;
+    this.showConfigSubscription2 = false;
   }
 
   async onReload() {
@@ -252,7 +258,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   private async reloadMappingsInBackend() {
     const response2 = await this.shareService.runOperation(
-    { operation: Operation.RELOAD_MAPPINGS}
+      { operation: Operation.RELOAD_MAPPINGS }
     );
     // console.log('Activate mapping response:', response2);
     if (response2.status < 300) {

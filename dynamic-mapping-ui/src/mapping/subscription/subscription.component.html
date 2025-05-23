@@ -26,6 +26,12 @@
     {{ 'Manage subscriptions' | translate }}
   </button>
 </c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Manage subscriptions (table)' | translate }}" (click)="onDefineSubscription2()">
+    <i c8yIcon="subscription"></i>
+    {{ 'Manage subscriptions (2)' | translate }}
+  </button>
+</c8y-action-bar-item>
 
 <div class="card" *ngIf="
     stepperConfiguration.direction === Direction.OUTBOUND &&
@@ -33,7 +39,7 @@
   ">
   <div class="card-block content-fullpage border-top border-bottom">
     <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false" [title]="titleSubscription | translate"
-      [columns]="columnsSubscriptions" [rows]="subscription?.devices" [pagination]="pagination"
+      [columns]="columnsSubscriptions" [rows]="subscriptions" [pagination]="pagination" 
       [actionControls]="actionControlSubscription" [bulkActionControls]="bulkActionControlSubscription">
       <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-mail'"
         [title]="'No subscriptions for devices exist.' | translate" [subtitle]="
@@ -53,5 +59,14 @@
     <d11r-device-selector-subscription *ngIf="showConfigSubscription" (cancel)="showConfigSubscription = false"
       (commit)="onCommitSubscriptions($event)" [deviceList]="subscription.devices">
     </d11r-device-selector-subscription>
+  </div>
+</div>
+
+
+<div [ngClass]="{ drawerOpen: showConfigSubscription2 }">
+  <div class="bottom-drawer">
+    <d11r-device-selector-subscription2 *ngIf="showConfigSubscription2" (cancel)="showConfigSubscription2 = false"
+      (commit)="onCommitSubscriptions($event)" [deviceList]="subscription.devices">
+    </d11r-device-selector-subscription2>
   </div>
 </div>
