@@ -123,11 +123,11 @@ public class MappingComponent {
         deploymentMaps.put(tenant, new ConcurrentHashMap<>());
         initializedMappingStatus.put(tenant, true);
         mappingStatusS.put(tenant, new ConcurrentHashMap<String, MappingStatus>());
+        initializeDeploymentMap(tenant, false);
     }
 
     public void initializeResources(String tenant) {
         initializeMappingStatus(tenant, false);
-        initializeDeploymentMap(tenant, false);
         rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         rebuildMappingInboundCache(tenant, ConnectorId.INTERNAL);
     }
