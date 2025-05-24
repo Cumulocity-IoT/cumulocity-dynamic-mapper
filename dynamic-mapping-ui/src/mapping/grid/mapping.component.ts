@@ -390,6 +390,15 @@ export class MappingComponent implements OnInit, OnDestroy {
         visible: true,
         gridTrackSize: '10%'
       },
+      {
+        name: 'identifier',
+        header: 'Identifier',
+        path: 'mapping.identifier',
+        filterable: false,
+        dataType: ColumnDataType.TextShort,
+        visible: false,
+        gridTrackSize: '0%'
+      },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? undefined
         : {
@@ -406,12 +415,6 @@ export class MappingComponent implements OnInit, OnDestroy {
           filterable: true
         }
         : undefined,
-      //  {
-      //   header: 'Publish topic sample',
-      //   name: 'publishTopicSample',
-      //   path: 'mapping.publishTopicSample',
-      //   filterable: true
-      // },
       {
         name: 'targetAPI',
         header: 'API',
@@ -953,7 +956,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   async onAddSampleMappings() {
     let response = await this.mappingService.addSampleMappings({ direction: this.stepperConfiguration.direction });
-    if(response.status == HttpStatusCode.Created) {
+    if (response.status == HttpStatusCode.Created) {
       this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
       this.mappingService.refreshMappings(this.stepperConfiguration.direction);
     }

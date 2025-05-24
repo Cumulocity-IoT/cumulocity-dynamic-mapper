@@ -271,7 +271,7 @@ public class DispatcherOutbound implements NotificationCallback {
             for (Mapping mapping : resolvedMappings) {
                 // Skip inactive mappings or mappings not deployed outbound
                 if (!mapping.getActive() ||
-                        !connectorClient.getMappingsDeployedOutbound().containsKey(mapping.identifier)) {
+                        !connectorClient.isMappingOutboundDeployed(mapping.identifier)) {
                     continue;
                 }
 

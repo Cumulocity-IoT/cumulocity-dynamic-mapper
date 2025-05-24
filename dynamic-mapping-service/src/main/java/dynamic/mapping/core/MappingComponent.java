@@ -90,6 +90,8 @@ public class MappingComponent {
     // Structure: < Tenant, < MappingIdentifier , MappingStatus > >
     private Map<String, Map<String, MappingStatus>> mappingStatusS = new ConcurrentHashMap<>();
 
+    // a mapping is added to the deploymentMap with its specified connectors that are defined in the second step of the stepper
+    // the deploymentMap contains active & inactive mappings. This distinction is handled in every connector in mappingsDeployedInbound
     // Structure: < Tenant, < MappingIdentifier, List of ConnectorIdentifier > >
     private Map<String, Map<String, List<String>>> deploymentMaps = new ConcurrentHashMap<>();
 

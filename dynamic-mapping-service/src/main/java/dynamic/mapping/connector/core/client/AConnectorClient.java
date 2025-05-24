@@ -146,20 +146,17 @@ public abstract class AConnectorClient {
 
     // keeps track how many active mappings use this topic as mappingTopic:
     // structure < mappingTopic, numberMappings >
-    public Map<String, MutableInt> activeSubscriptionsInbound = new HashMap<>();
+    protected Map<String, MutableInt> activeSubscriptionsInbound = new HashMap<>();
+
     // keeps track if a specific mapping is deployed in this connector:
     // a) is it active,
     // b) does it comply with the capabilities of the connector, i.e. supports
     // wildcards
     // structure < identifier, mapping >
-    @Getter
-    @Setter
-    private Map<String, Mapping> mappingsDeployedInbound = new ConcurrentHashMap<>();
+    protected Map<String, Mapping> mappingsDeployedInbound = new ConcurrentHashMap<>();
 
     // structure < identifier, mapping >
-    @Getter
-    @Setter
-    private Map<String, Mapping> mappingsDeployedOutbound = new ConcurrentHashMap<>();
+    protected Map<String, Mapping> mappingsDeployedOutbound = new ConcurrentHashMap<>();
 
     private Instant start = Instant.now();
 
@@ -317,7 +314,7 @@ public abstract class AConnectorClient {
      * This method is called when a mapping is created or an existing mapping is
      * updated.
      * It maintains a list of the active subscriptions for this connector.
-     * When a mapping id deleted or deactivated, then it is verified how many other
+     * When a mapping idd deleted or deactivated, then it is verified how many other
      * mapping use the same mappingTopic. If there are no other mapping using
      * the same mappingTopic the mappingTopic is unsubscribed.
      * Only inactive mappings can be updated except activation/deactivation.
@@ -330,7 +327,7 @@ public abstract class AConnectorClient {
      * Kafka, the mapping can't be activated for this connector
      **/
     public void updateActiveSubscriptionsInbound(List<Mapping> updatedMappings, boolean reset, boolean cleanSession) {
-        setMappingsDeployedInbound(new ConcurrentHashMap<>());
+        mappingsDeployedInbound = new ConcurrentHashMap<>();
         if (reset) {
             activeSubscriptionsInbound = new HashMap<>();
         }
@@ -359,8 +356,14 @@ public abstract class AConnectorClient {
         });
     }
 
+    /**
+     * Checks if the mapping is valid for deployment in this connector.
+     * It checks if the mapping contains wildcards and if the connector supports
+     * wildcards in the topic.
+     * It also checks if the mapping is active and deployed in this connector.
+     **/
     private boolean isValidMappingForDeployment(Mapping mapping) {
-        boolean containsWildcards = mapping.mappingTopic.matches(".*[#\\+].*");
+        boolean containsWildcards = mapping.mappingTopic.matches(".*[#+].*");
         boolean validDeployment = supportsWildcardsInTopic() || !containsWildcards;
 
         if (!validDeployment) {
@@ -374,12 +377,12 @@ public abstract class AConnectorClient {
                 deploymentMapEntry.contains(getConnectorIdentifier());
 
         // return validDeployment && mapping.getActive() && isDeployed;
-        return validDeployment && isDeployed;
+        return validDeployment && isDeployed && mapping.getActive();
     }
 
     private void updateSubscriptionCache(Mapping mapping, Map<String, MutableInt> subscriptionCache) {
         subscriptionCache.computeIfAbsent(mapping.mappingTopic, k -> new MutableInt(0)).increment();
-        getMappingsDeployedInbound().put(mapping.identifier, mapping);
+        mappingsDeployedInbound.put(mapping.identifier, mapping);
     }
 
     private void handleSubscriptionUpdates(Map<String, MutableInt> updatedSubscriptionCache,
@@ -486,7 +489,7 @@ public abstract class AConnectorClient {
     }
 
     private void handleActiveMapping(Mapping mapping, Boolean create) {
-        getMappingsDeployedInbound().put(mapping.identifier, mapping);
+        mappingsDeployedInbound.put(mapping.identifier, mapping);
         MutableInt subscriptionCount = getActiveSubscriptionsView().get(mapping.mappingTopic);
 
         if (create || subscriptionCount.intValue() == 0) {
@@ -521,7 +524,7 @@ public abstract class AConnectorClient {
                         tenant, mapping.mappingTopic, exp);
             }
         }
-        getMappingsDeployedInbound().remove(mapping.identifier);
+        mappingsDeployedInbound.remove(mapping.identifier);
     }
 
     public void deleteActiveSubscription(Mapping mapping) {
@@ -529,9 +532,9 @@ public abstract class AConnectorClient {
             if (getActiveSubscriptionsView().containsKey(mapping.mappingTopic) && isConnected()) {
                 handleInboundSubscriptionDeletion(mapping);
             }
-            getMappingsDeployedInbound().remove(mapping.identifier);
+            mappingsDeployedInbound.remove(mapping.identifier);
         } else {
-            getMappingsDeployedOutbound().remove(mapping.identifier);
+            mappingsDeployedOutbound.remove(mapping.identifier);
         }
     }
 
@@ -661,7 +664,7 @@ public abstract class AConnectorClient {
                     getConnectorIdentifier(),
                     closeException.getMessage(),
                     closeException);
-        } else  if (closeMessage != null) {
+        } else if (closeMessage != null) {
             log.info("Tenant {} - Connection lost: [{},{}], {}",
                     tenant,
                     getConnectorName(),
@@ -789,13 +792,13 @@ public abstract class AConnectorClient {
 
     private void collectInboundMappings(Map<String, DeploymentMapEntry> mappingsDeployed,
             ConnectorConfiguration cleanedConfiguration) {
-        List<String> subscribedMappingsInbound = new ArrayList<>(getMappingsDeployedInbound().keySet());
+        List<String> subscribedMappingsInbound = new ArrayList<>(mappingsDeployedInbound.keySet());
         updateDeploymentMap(subscribedMappingsInbound, mappingsDeployed, cleanedConfiguration);
     }
 
     private void collectOutboundMappings(Map<String, DeploymentMapEntry> mappingsDeployed,
             ConnectorConfiguration cleanedConfiguration) {
-        List<String> subscribedMappingsOutbound = new ArrayList<>(getMappingsDeployedOutbound().keySet());
+        List<String> subscribedMappingsOutbound = new ArrayList<>(mappingsDeployedOutbound.keySet());
         updateDeploymentMap(subscribedMappingsOutbound, mappingsDeployed, cleanedConfiguration);
     }
 
@@ -838,9 +841,9 @@ public abstract class AConnectorClient {
         boolean isDeployed = isDeployedInConnector(mapping);
 
         if (mapping.active && isDeployed) {
-            getMappingsDeployedOutbound().put(mapping.identifier, mapping);
+            mappingsDeployedOutbound.put(mapping.identifier, mapping);
         } else {
-            getMappingsDeployedOutbound().remove(mapping.identifier);
+            mappingsDeployedOutbound.remove(mapping.identifier);
         }
     }
 
@@ -850,11 +853,11 @@ public abstract class AConnectorClient {
     }
 
     public void updateActiveSubscriptionsOutbound(List<Mapping> updatedMappings) {
-        setMappingsDeployedOutbound(new ConcurrentHashMap<>());
+        mappingsDeployedOutbound = new ConcurrentHashMap<>();
 
         updatedMappings.stream()
                 .filter(mapping -> mapping.getActive() && isDeployedInConnector(mapping))
-                .forEach(mapping -> getMappingsDeployedOutbound().put(mapping.identifier, mapping));
+                .forEach(mapping -> mappingsDeployedOutbound.put(mapping.identifier, mapping));
     }
 
     // Event Logging Methods
@@ -1039,7 +1042,7 @@ public abstract class AConnectorClient {
         if (topic == null || topic.trim().isEmpty()) {
             throw new IllegalArgumentException("Topic cannot be null or empty");
         }
-        return topic.trim().replaceAll("\\s+", "_");
+        return topic.trim().replaceAll("\s+", "_");
     }
 
     /**
@@ -1095,7 +1098,7 @@ public abstract class AConnectorClient {
             return false;
         }
         try {
-            String[] parts = ip.split("\\.");
+            String[] parts = ip.split(".");
             if (parts.length != 4) {
                 return false;
             }
@@ -1119,4 +1122,13 @@ public abstract class AConnectorClient {
     }
 
     public abstract List<Direction> supportedDirections();
+
+    public boolean isMappingInboundDeployedInbound(String identifier) {
+        return mappingsDeployedInbound.containsKey(identifier);
+    }
+
+	public boolean isMappingOutboundDeployed(String identifier) {
+		return mappingsDeployedOutbound.containsKey(identifier);
+	}
+
 }
