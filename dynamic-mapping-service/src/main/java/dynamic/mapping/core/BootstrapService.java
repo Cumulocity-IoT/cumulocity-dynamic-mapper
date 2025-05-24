@@ -166,6 +166,9 @@ public class BootstrapService {
         c8YAgent.createExtensibleProcessor(tenant);
         c8YAgent.loadProcessorExtensions(tenant);
 
+        mappingComponent.createResources(tenant);
+
+
         ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
         initializeCaches(tenant, serviceConfig);
 
@@ -176,8 +179,7 @@ public class BootstrapService {
 
         connectorRegistry.initializeResources(tenant);
 
-        mappingComponent.initializeResources(tenant);
-
+        
         // Wait for ALL connectors are successfully connected before handling Outbound
         // Mappings
         List<Future<?>> connectorTasks = initializeConnectors(tenant, serviceConfig);
@@ -190,6 +192,9 @@ public class BootstrapService {
                 }
             });
         }
+        // only initialize mapping after all connectors are initialized
+        // and connected
+        mappingComponent.initializeResources(tenant);
 
         handleOutboundMapping(tenant, serviceConfig);
     }

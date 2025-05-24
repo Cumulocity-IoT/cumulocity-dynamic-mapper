@@ -90,8 +90,10 @@ public class MappingComponent {
     // Structure: < Tenant, < MappingIdentifier , MappingStatus > >
     private Map<String, Map<String, MappingStatus>> mappingStatusS = new ConcurrentHashMap<>();
 
-    // a mapping is added to the deploymentMap with its specified connectors that are defined in the second step of the stepper
-    // the deploymentMap contains active & inactive mappings. This distinction is handled in every connector in mappingsDeployedInbound
+    // a mapping is added to the deploymentMap with its specified connectors that
+    // are defined in the second step of the stepper
+    // the deploymentMap contains active & inactive mappings. This distinction is
+    // handled in every connector in mappingsDeployedInbound
     // Structure: < Tenant, < MappingIdentifier, List of ConnectorIdentifier > >
     private Map<String, Map<String, List<String>>> deploymentMaps = new ConcurrentHashMap<>();
 
@@ -113,16 +115,17 @@ public class MappingComponent {
     // cache of inbound mappings stored in a tree used for resolving
     private Map<String, MappingTreeNode> resolverMappingInbound = new ConcurrentHashMap<>();
 
-    private void createResources(String tenant) {
+    public void createResources(String tenant) {
         cacheMappingInbound.put(tenant, new ConcurrentHashMap<>());
         cacheMappingOutbound.put(tenant, new ConcurrentHashMap<>());
         resolverMappingOutbound.put(tenant, new ConcurrentHashMap<>());
         resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
         deploymentMaps.put(tenant, new ConcurrentHashMap<>());
+        initializedMappingStatus.put(tenant, true);
+        mappingStatusS.put(tenant, new ConcurrentHashMap<String, MappingStatus>());
     }
 
     public void initializeResources(String tenant) {
-        createResources(tenant);
         initializeMappingStatus(tenant, false);
         initializeDeploymentMap(tenant, false);
         rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
@@ -162,23 +165,21 @@ public class MappingComponent {
             mappingStatusS.get(tenant).put(MappingStatus.UNSPECIFIED_MAPPING_STATUS.identifier,
                     MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
-        initializedMappingStatus.put(tenant, true);
         resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
-        if (cacheMappingInbound.get(tenant) == null)
-            cacheMappingInbound.put(tenant, new ConcurrentHashMap<>());
-        if (cacheMappingOutbound.get(tenant) == null)
-            cacheMappingOutbound.put(tenant, new ConcurrentHashMap<>());
+
     }
 
     public void sendMappingStatus(String tenant) {
-        if (configurationRegistry.getServiceConfiguration(tenant).sendMappingStatus) {
+        boolean initialized = this.initializedMappingStatus != null
+                ? this.initializedMappingStatus.getOrDefault(tenant, false)
+                : false;
+        if (configurationRegistry.getServiceConfiguration(tenant).sendMappingStatus & initialized) {
             subscriptionsService.runForTenant(tenant, () -> {
-                boolean initialized = this.initializedMappingStatus.get(tenant);
                 Map<String, MappingStatus> statusMapping = mappingStatusS.get(tenant);
                 MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                         .getMappingServiceRepresentation(tenant);
                 // avoid sending empty monitoring events
-                if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null && initialized) {
+                if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null) {
                     log.debug("Tenant {} - Sending monitoring: {}", tenant, statusMapping.values().size());
                     Map<String, Object> service = new ConcurrentHashMap<String, Object>();
                     // Convert statusMapping values to a list for filtering
@@ -581,7 +582,8 @@ public class MappingComponent {
         List<Mapping> updatedMappings = getMappings(tenant, Direction.OUTBOUND).stream()
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        log.info("Tenant {} - Loaded mappings outbound: {}, triggered by connector: {}", tenant, updatedMappings.size(), connectorId.getName());
+        log.info("Tenant {} - Loaded mappings outbound: {}, triggered by connector: {}", tenant, updatedMappings.size(),
+                connectorId.getName());
 
         cacheMappingOutbound.replace(tenant, updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
