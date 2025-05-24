@@ -96,7 +96,7 @@ public class MQTT5Client extends AConnectorClient {
                                 new AbstractMap.SimpleEntry<String, String>(MQTT_VERSION_5_0, MQTT_VERSION_5_0)),
                         null));
         configProps.put("protocol",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, true,
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, false, false,
                         AConnectorClient.MQTT_PROTOCOL_MQTT,
                         Map.ofEntries(
                                 new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTT,
