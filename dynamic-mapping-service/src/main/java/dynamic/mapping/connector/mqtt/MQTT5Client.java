@@ -369,12 +369,12 @@ public class MQTT5Client extends AConnectorClient {
                     if (!ack.getReasonCode().equals(Mqtt5ConnAckReasonCode.SUCCESS)) {
 
                         throw new ConnectorException(
-                                String.format("Tenant %s - Error connecting to broker: %s. Error code: %s", tenant,
+                                String.format("Tenant %s - Error connecting to server: %s. Error code: %s", tenant,
                                         mqttClient.getConfig().getServerHost(), ack.getReasonCode().name()));
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Phase III: {} connected, serverHost: {}", tenant, getConnectorName(),
+                    log.info("Tenant {} - Phase III: {} connected: {}, serverHost: {}", tenant, getConnectorName(), isConnected(),
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant,

@@ -323,7 +323,7 @@ public class MQTT3Client extends AConnectorClient {
                         }
                     }
                 })
-                .addConnectedListener(connext -> {
+                .addConnectedListener(context -> {
                     connectionState.setTrue();
                 })
                 .buildBlocking();
@@ -348,8 +348,12 @@ public class MQTT3Client extends AConnectorClient {
             var firstRun = true;
             var mappingOutboundCacheRebuild = false;
             while (!isConnected() && shouldConnect()) {
-                if (Thread.currentThread().isInterrupted())
+                if (Thread.currentThread().isInterrupted()) {
+                    log.warn("Tenant {} - Phase II: {} interrupted, shouldConnect: {}, server: {}", tenant,
+                            getConnectorName(),
+                            shouldConnect(), configuredUrl);
                     return;
+                }
                 log.info("Tenant {} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
                         getConnectorName(),
                         shouldConnect(), configuredUrl);
@@ -357,6 +361,8 @@ public class MQTT3Client extends AConnectorClient {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
                     } catch (InterruptedException e) {
+                        log.error("Tenant {} - Phase II: {} error", tenant,
+                                e);
                         return;
                     }
                 }
@@ -368,17 +374,27 @@ public class MQTT3Client extends AConnectorClient {
                     if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
 
                         throw new ConnectorException(
-                                String.format("Tenant %s - Error connecting to broker: %s. Error code: %s", tenant,
-                                        mqttClient.getConfig().getServerHost(), ack.getReturnCode().name()));
+                                String.format("Tenant %s - Error connecting to server: %s. Error code: %s", tenant,
+                                        configuredUrl, ack.getReturnCode().name()));
                     }
 
                     connectionState.setTrue();
-                    log.info("Tenant {} - Phase III: {} connected, serverHost: {}", tenant, getConnectorName(),
-                            mqttClient.getConfig().getServerHost());
+                    log.info("Tenant {} - Phase III: {} connected: {}, server: {}", tenant, getConnectorName(),
+                            isConnected(),
+                            configuredUrl);
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
+                    log.info("Tenant {} - Phase 1111: {} connected: {}, server: {}", tenant, getConnectorName(),
+                            isConnected(),
+                            configuredUrl);
                     List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant,
                             connectorId);
+                    log.info("Tenant {} - Phase 2222: {} connected: {}, server: {} {}", tenant, getConnectorName(),
+                            isConnected(),
+                            configuredUrl, this);
                     updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
+                    log.info("Tenant {} - Phase 4444: {} connected: {}, server: {}", tenant, getConnectorName(),
+                            isConnected(),
+                            configuredUrl);
                     List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
                             connectorId);
                     mappingOutboundCacheRebuild = true;
@@ -387,8 +403,8 @@ public class MQTT3Client extends AConnectorClient {
                 } catch (Exception e) {
                     if (e instanceof InterruptedException || e instanceof RuntimeException)
                         return;
-                    log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
-                            mqttClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
+                    log.error("Tenant {} - Failed to connect to server {}, {}, {}, {}", tenant,
+                            configuredUrl, e.getMessage(), connectionState.booleanValue(),
                             mqttClient.getState().isConnected());
                     updateConnectorStatusToFailed(e);
                     sendConnectorLifecycle();

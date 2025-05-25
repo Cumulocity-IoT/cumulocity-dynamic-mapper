@@ -86,7 +86,7 @@ public class ProtobufMqttClient {
             // broker:"
             // + mqttClient.getConfig().getServerHost() + ". Error code: "
             // + ack.getReturnCode().name());
-            System.out.println("Error connecting to broker:"
+            System.out.println("Error connecting to server:"
                     + broker_host + ". Error code: "
                     + ack.getReturnCode().name());
         }
