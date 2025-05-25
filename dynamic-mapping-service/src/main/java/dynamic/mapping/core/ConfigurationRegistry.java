@@ -180,7 +180,7 @@ public class ConfigurationRegistry {
                             null,
                             additionalSubscriptionIdTest, tenant);
                 }
-                log.info("Tenant {} - Connector MQTT {} created, identifier: {}", tenant, version,
+                log.info("{} - Connector MQTT {} created, identifier: {}", tenant, version,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -188,7 +188,7 @@ public class ConfigurationRegistry {
                 connectorClient = new MQTTServiceClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("Tenant {} - Connector MQTTService Connector created, identifier: {}", tenant,
+                log.info("{} - Connector MQTTService Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -196,7 +196,7 @@ public class ConfigurationRegistry {
                 connectorClient = new KafkaClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("Tenant {} - Connector Kafka Connector created, identifier: {}", tenant,
+                log.info("{} - Connector Kafka Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -204,7 +204,7 @@ public class ConfigurationRegistry {
                 connectorClient = new HttpClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("Tenant {} - Connector HTTP Connector created, identifier: {}", tenant,
+                log.info("{} - Connector HTTP Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -212,12 +212,12 @@ public class ConfigurationRegistry {
                 connectorClient = new WebHook(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("Tenant {} - Connector WebHook created, identifier: {}", tenant,
+                log.info("{} - Connector WebHook created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
             default:
-                log.warn("Tenant {} - Unknown connector type: {}", tenant, connectorConfiguration.getConnectorType());
+                log.warn("{} - Unknown connector type: {}", tenant, connectorConfiguration.getConnectorType());
                 break;
         }
 

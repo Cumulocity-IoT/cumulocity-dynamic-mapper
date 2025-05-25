@@ -105,8 +105,8 @@ public class WatsonController {
                     .replace("\\\"", "\"") // 4. replace \" with "
                     .replace("___\"", "\""); // 5. replace ___" with \"
             Mapping mapping = objectMapper.readValue(processedText, Mapping.class);
-            log.info("Tenant {} - Adding mapping: {}", tenant, mapping.getMappingTopic());
-            log.debug("Tenant {} - Adding mapping: {}", tenant, mapping);
+            log.info("{} - Adding mapping: {}", tenant, mapping.getMappingTopic());
+            log.debug("{} - Adding mapping: {}", tenant, mapping);
             // new mapping should be disabled by default
             mapping.active = false;
             final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);

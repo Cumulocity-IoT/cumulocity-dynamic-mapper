@@ -232,7 +232,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                         try {
                             graalsContext.close();
                         } catch (Exception e) {
-                            log.warn("Tenant {} - Error closing GraalVM context: {}", tenant, e.getMessage());
+                            log.warn("{} - Error closing GraalVM context: {}", tenant, e.getMessage());
                         }
                     }
 
@@ -248,7 +248,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             if (!criticalExceptions.isEmpty()) {
                 Exception firstException = criticalExceptions.get(0);
                 if (criticalExceptions.size() > 1) {
-                    log.error("Tenant {} - Multiple critical exceptions occurred. First: {}",
+                    log.error("{} - Multiple critical exceptions occurred. First: {}",
                             tenant, firstException.getMessage());
                 }
                 throw new MappingProcessingException("Failed to process mappings", firstException);
@@ -302,7 +302,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             String errorMessage = String.format("Tenant %s - Failed to deserialize payload: %s",
                     tenant, e.getMessage());
             log.warn(errorMessage);
-            log.debug("Tenant {} - Deserialization error details:", tenant, e);
+            log.debug("{} - Deserialization error details:", tenant, e);
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
             mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -377,12 +377,12 @@ public class DispatcherInbound implements GenericMessageCallback {
                     ppLog = pp.toString();
                 }
                 log.info(
-                        "Tenant {} - Start processing message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
+                        "{} - Start processing message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal(), ppLog);
             } else {
                 log.info(
-                        "Tenant {} - Start processing message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
+                        "{} - Start processing message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorIdentifier(), mapping.getName(),
                         mapping.getQos().ordinal());
             }
@@ -401,15 +401,15 @@ public class DispatcherInbound implements GenericMessageCallback {
                     mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                     mappingStatus.snoopedTemplatesActive++;
 
-                    log.debug("Tenant {} - Adding snoopedTemplate to map: {},{},{}",
+                    log.debug("{} - Adding snoopedTemplate to map: {},{},{}",
                             tenant, mapping.mappingTopic, mapping.snoopedTemplates.size(), mapping.snoopStatus);
                     mappingComponent.addDirtyMapping(tenant, mapping);
                 } else {
-                    log.warn("Tenant {} - Message could NOT be serialized for snooping", tenant);
+                    log.warn("{} - Message could NOT be serialized for snooping", tenant);
                 }
             } catch (Exception e) {
-                log.warn("Tenant {} - Error during snooping: {}", tenant, e.getMessage());
-                log.debug("Tenant {} - Snooping error details:", tenant, e);
+                log.warn("{} - Error during snooping: {}", tenant, e.getMessage());
+                log.debug("{} - Snooping error details:", tenant, e);
             }
         }
 
@@ -463,7 +463,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         if (serviceConfiguration.logPayload) {
             if (connectorMessage.getPayload() != null) {
                 String payload = new String(connectorMessage.getPayload(), StandardCharsets.UTF_8);
-                log.info("Tenant {} - PROCESSING: message on topic: [{}], payload: {}", tenant, topic, payload);
+                log.info("{} - PROCESSING: message on topic: [{}], payload: {}", tenant, topic, payload);
             }
         }
 
@@ -492,7 +492,7 @@ public class DispatcherInbound implements GenericMessageCallback {
 
                 } catch (Exception e) {
                     log.warn(
-                            "Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
+                            "{} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
                             tenant, topic);
                     log.debug(e.getMessage(), e);
                     mappingStatusUnspecified.errors++;

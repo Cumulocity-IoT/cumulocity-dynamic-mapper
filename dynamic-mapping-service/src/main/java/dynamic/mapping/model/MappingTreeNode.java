@@ -55,7 +55,7 @@ import dynamic.mapping.util.Utils;;
 @Builder(toBuilder = true)
 public class MappingTreeNode {
     // Constants
-    private static final String TENANT_LOG_PREFIX = "Tenant {} - ";
+    private static final String TENANT_LOG_PREFIX = "{} - ";
 
     // Core properties
     @Builder.Default

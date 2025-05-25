@@ -96,7 +96,7 @@ public class MappingController {
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<Mapping>> getMappings(@RequestParam(required = false) Direction direction) {
         String tenant = contextService.getContext().getTenant();
-        log.debug("Tenant {} - Get mappings", tenant);
+        log.debug("{} - Get mappings", tenant);
         List<Mapping> result = mappingComponent.getMappings(tenant, direction);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
@@ -104,7 +104,7 @@ public class MappingController {
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> getMapping(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
-        log.debug("Tenant {} - Get mapping: {}", tenant, id);
+        log.debug("{} - Get mapping: {}", tenant, id);
         Mapping result = mappingComponent.getMapping(tenant, id);
         if (result == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
@@ -115,7 +115,7 @@ public class MappingController {
     @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteMapping(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
-        log.debug("Tenant {} - Delete mapping: {}", tenant, id);
+        log.debug("{} - Delete mapping: {}", tenant, id);
         try {
             final Mapping deletedMapping = mappingComponent.deleteMapping(tenant, id);
             if (deletedMapping == null)
@@ -133,10 +133,10 @@ public class MappingController {
                 });
             }
         } catch (Exception ex) {
-            log.error("Tenant {} - Exception deleting mapping: {}", tenant, id, ex);
+            log.error("{} - Exception deleting mapping: {}", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
-        log.info("Tenant {} - Mapping {} deleted", tenant, id);
+        log.info("{} - Mapping {} deleted", tenant, id);
 
         return ResponseEntity.status(HttpStatus.OK).body(id);
     }
@@ -147,8 +147,8 @@ public class MappingController {
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
             String tenant = contextService.getContext().getTenant();
-            log.info("Tenant {} - Create mapping: {}", tenant, mapping.getMappingTopic());
-            log.debug("Tenant {} - Create mapping: {}", tenant, mapping);
+            log.info("{} - Create mapping: {}", tenant, mapping.getMappingTopic());
+            log.debug("{} - Create mapping: {}", tenant, mapping);
             // new mapping should be disabled by default
             mapping.active = false;
             final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);
@@ -180,7 +180,7 @@ public class MappingController {
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         String tenant = contextService.getContext().getTenant();
         try {
-            log.info("Tenant {} - Update mapping: {}, {}", mapping, id);
+            log.info("{} - Update mapping: {}, {}", mapping, id);
             final Mapping updatedMapping = mappingComponent.updateMapping(tenant, mapping, false, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
@@ -196,7 +196,7 @@ public class MappingController {
             return ResponseEntity.status(HttpStatus.OK).body(mapping);
         } catch (Exception ex) {
             if (ex instanceof IllegalArgumentException) {
-                log.error("Tenant {} - Updating active mappings is not allowed", tenant, ex);
+                log.error("{} - Updating active mappings is not allowed", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
             } else if (ex instanceof RuntimeException)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());

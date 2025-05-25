@@ -42,11 +42,11 @@ public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<b
         try {
             byte[] payload = context.getPayload();
             if (payload == null) {
-                log.info("Tenant {} - Preparing new event failed, payload == null",
+                log.info("{} - Preparing new event failed, payload == null",
                         context.getTenant());
 
             } else {
-                log.info("Tenant {} - Preparing new event: {}", context.getTenant(),
+                log.info("{} - Preparing new event: {}", context.getTenant(),
                         new String(payload));
             }
             payloadProtobuf = CustomEventOuter.CustomEvent
@@ -70,7 +70,7 @@ public class ProcessorExtensionCustomEvent implements ProcessorExtensionSource<b
                         .toString(),
                 TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
 
-        log.info("Tenant {} - New event over protobuf: {}, {}, {}, {}", context.getTenant(),
+        log.info("{} - New event over protobuf: {}, {}, {}, {}", context.getTenant(),
                 payloadProtobuf.getTimestamp(),
                 payloadProtobuf.getTxt(), payloadProtobuf.getEventType(),
                 payloadProtobuf.getExternalId());

@@ -114,7 +114,7 @@ public class HttpClient extends AConnectorClient {
 
     public boolean initialize() {
         loadConfiguration();
-        log.info("Tenant {} - Phase 0: {} initialized, connectorType: {}", tenant,
+        log.info("{} - Phase 0: {} initialized, connectorType: {}", tenant,
                 getConnectorName(), getConnectorType());
         return true;
     }
@@ -122,7 +122,7 @@ public class HttpClient extends AConnectorClient {
     @Override
     public void connect() {
         String path = (String) connectorSpecification.getProperties().get("path").defaultValue;
-        log.info("Tenant {} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
+        log.info("{} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
@@ -137,14 +137,14 @@ public class HttpClient extends AConnectorClient {
             loadConfiguration();
             try {
                 connectionState.setTrue();
-                log.info("Tenant {} - Phase III: {} connected, http endpoint: {}", tenant, getConnectorName(),
+                log.info("{} - Phase III: {} connected, http endpoint: {}", tenant, getConnectorName(),
                         path);
                 updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                 List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
                 updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
                 successful = true;
             } catch (Exception e) {
-                log.error("Tenant {} - Phase III: {} connected, http endpoint {}, {}, {}", tenant, getConnectorName(),
+                log.error("{} - Phase III: {} connected, http endpoint {}, {}, {}", tenant, getConnectorName(),
                         path, e.getMessage(), connectionState.booleanValue());
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
@@ -171,7 +171,7 @@ public class HttpClient extends AConnectorClient {
         if (isConnected()) {
             String path = (String) connectorSpecification.getProperties().get("path").defaultValue;
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
-            log.info("Tenant {} - {} disconnecting, http endpoint: {}", tenant, getConnectorName(),
+            log.info("{} - {} disconnecting, http endpoint: {}", tenant, getConnectorName(),
                     path);
 
             activeSubscriptionsInbound.entrySet().forEach(entry -> {
@@ -186,7 +186,7 @@ public class HttpClient extends AConnectorClient {
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
             updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
-            log.info("Tenant {} - {} disconnected, http endpoint: {}", tenant, getConnectorName(),
+            log.info("{} - {} disconnected, http endpoint: {}", tenant, getConnectorName(),
                     path);
         }
     }
@@ -198,12 +198,12 @@ public class HttpClient extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, Qos qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: [{}] for connector: {}", tenant, topic, connectorName);
+        log.debug("{} - Subscribing on topic: [{}] for connector: {}", tenant, topic, connectorName);
         sendSubscriptionEvents(topic, "Subscribing");
     }
 
     public void unsubscribe(String topic) throws Exception {
-        log.debug("Tenant {} - Unsubscribing from topic: [{}]", tenant, topic);
+        log.debug("{} - Unsubscribing from topic: [{}]", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
     }
 

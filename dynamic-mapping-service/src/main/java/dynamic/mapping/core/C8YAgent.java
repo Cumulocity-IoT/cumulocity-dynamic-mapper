@@ -189,14 +189,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             resultInner);
 
                 } else {
-                    log.debug("Tenant {} - Cache hit for external ID {} -> {}", tenant, identity.getValue(),
+                    log.debug("{} - Cache hit for external ID {} -> {}", tenant, identity.getValue(),
                             resultInner.getManagedObject().getId().getValue());
                     Counter.builder("dynmapper_inbound_identity_cache_hits_total").tag("tenant", tenant)
                             .register(Metrics.globalRegistry).increment();
                 }
                 return resultInner;
             } catch (SDKException e) {
-                log.warn("Tenant {} - External ID {} not found", tenant, identity.getValue());
+                log.warn("{} - External ID {} not found", tenant, identity.getValue());
             }
             return null;
         });
@@ -214,7 +214,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             try {
                 return identityApi.resolveGlobalId2ExternalId(gid, idt, context);
             } catch (SDKException e) {
-                log.warn("Tenant {} - External ID type {} for {} not found", tenant, idt, gid.getValue());
+                log.warn("{} - External ID type {} for {} not found", tenant, idt, gid.getValue());
             }
             return null;
         });
@@ -232,11 +232,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     measurementRepresentation.setType(type);
                     measurementRepresentation.setSource(mor);
                     measurementRepresentation.setDateTime(dateTime);
-                    log.debug("Tenant {} - Creating Measurement {}", tenant, measurementRepresentation);
+                    log.debug("{} - Creating Measurement {}", tenant, measurementRepresentation);
                     MeasurementRepresentation mrn = measurementApi.create(measurementRepresentation);
                     measurementRepresentation.setId(mrn.getId());
                 } catch (SDKException e) {
-                    log.error("Tenant {} - Error creating Measurement", tenant, e);
+                    log.error("{} - Error creating Measurement", tenant, e);
                 }
             });
         });
@@ -286,7 +286,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             String tenant, String connectorName) {
         TrustedCertificateRepresentation result = subscriptionsService.callForTenant(tenant,
                 () -> {
-                    log.info("Tenant {} - Connector {} - Retrieving certificate {} ", tenant, connectorName,
+                    log.info("{} - Connector {} - Retrieving certificate {} ", tenant, connectorName,
                             certificateName);
                     TrustedCertificateRepresentation certResult = null;
                     try {
@@ -302,38 +302,38 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             certificatesList.addAll(certificatesResult.getCertificates());
                             nextUrl = certificatesResult.getNext();
                             next = certificatesResult.getCertificates().size() > 0;
-                            log.info("Tenant {} - Connector {} - Retrieved certificates {} - next {} - nextUrl {}",
+                            log.info("{} - Connector {} - Retrieved certificates {} - next {} - nextUrl {}",
                                     tenant,
                                     connectorName, certificatesList.size(), next, nextUrl);
                         }
                         for (int index = 0; index < certificatesList.size(); index++) {
                             TrustedCertificateRepresentation certificateIterate = certificatesList.get(index);
-                            log.info("Tenant {} - Found certificate with fingerprint: {} with name: {}", tenant,
+                            log.info("{} - Found certificate with fingerprint: {} with name: {}", tenant,
                                     certificateIterate.getFingerprint(),
                                     certificateIterate.getName());
                             if (certificateIterate.getName().equals(certificateName)
                                     && certificateIterate.getFingerprint().equals(fingerprint)) {
                                 certResult = certificateIterate;
-                                log.info("Tenant {} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
+                                log.info("{} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
                                         connectorName, certificateName, certificateIterate.getFingerprint());
                                 break;
                             }
                         }
                     } catch (Exception e) {
-                        log.error("Tenant {} - Connector {} - Error initializing connector: ", tenant,
+                        log.error("{} - Connector {} - Error initializing connector: ", tenant,
                                 connectorName, e);
                     }
                     return certResult;
                 });
         if (result != null) {
-            log.info("Tenant {} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
+            log.info("{} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
                     connectorName, certificateName, result.getFingerprint());
             StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
                     .append(result.getCertInPemFormat())
                     .append("\n").append("-----END CERTIFICATE-----");
             return new AConnectorClient.Certificate(result.getFingerprint(), cert.toString());
         } else {
-            log.info("Tenant {} - Connector {} - No certificate found!", tenant, connectorName);
+            log.info("{} - Connector {} - No certificate found!", tenant, connectorName);
             return null;
         }
     }
@@ -357,31 +357,31 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                     payload,
                                     EventRepresentation.class);
                             rt = eventApi.create(eventRepresentation);
-                            log.info("Tenant {} - SEND: event posted: {}", tenant, rt);
+                            log.info("{} - SEND: event posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.ALARM)) {
                             AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
                                     payload,
                                     AlarmRepresentation.class);
                             rt = alarmApi.create(alarmRepresentation);
-                            log.info("Tenant {} - SEND: alarm posted: {}", tenant, rt);
+                            log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
                             MeasurementRepresentation measurementRepresentation = jsonParser
                                     .parse(MeasurementRepresentation.class, payload);
                             rt = measurementApi.create(measurementRepresentation);
-                            log.info("Tenant {} - SEND: measurement posted: {}", tenant, rt);
+                            log.info("{} - SEND: measurement posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.OPERATION)) {
                             OperationRepresentation operationRepresentation = jsonParser
                                     .parse(OperationRepresentation.class, payload);
                             rt = deviceControlApi.create(operationRepresentation);
-                            log.info("Tenant {} - SEND: operation posted: {}", tenant, rt);
+                            log.info("{} - SEND: operation posted: {}", tenant, rt);
                         } else {
-                            log.error("Tenant {} - Not existing API!", tenant);
+                            log.error("{} - Not existing API!", tenant);
                         }
                     } catch (JsonProcessingException e) {
-                        log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload);
+                        log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload);
                         error.append("Could not map payload: " + targetAPI + "/" + payload);
                     } catch (SDKException s) {
-                        log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
+                        log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
                         error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
                     }
                     return rt;
@@ -448,9 +448,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - SEND: event posted: {}", tenant, rt);
+                            log.info("{} - SEND: event posted: {}", tenant, rt);
                         else
-                            log.info("Tenant {} - SEND: event posted with Id {}", tenant,
+                            log.info("{} - SEND: event posted with Id {}", tenant,
                                     ((EventRepresentation) rt).getId().getValue());
 
                     } else if (targetAPI.equals(API.ALARM)) {
@@ -459,33 +459,33 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 AlarmRepresentation.class);
                         rt = alarmApi.create(alarmRepresentation);
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - SEND: alarm posted: {}", tenant, rt);
+                            log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         else
-                            log.info("Tenant {} - SEND: alarm posted with Id {}", tenant,
+                            log.info("{} - SEND: alarm posted with Id {}", tenant,
                                     ((AlarmRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.MEASUREMENT)) {
                         MeasurementRepresentation measurementRepresentation = jsonParser
                                 .parse(MeasurementRepresentation.class, payload);
                         rt = measurementApi.create(measurementRepresentation);
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - SEND: measurement posted: {}", tenant, rt);
+                            log.info("{} - SEND: measurement posted: {}", tenant, rt);
                         else
-                            log.info("Tenant {} - SEND: measurement posted with Id {}", tenant,
+                            log.info("{} - SEND: measurement posted with Id {}", tenant,
                                     ((MeasurementRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.OPERATION)) {
                         OperationRepresentation operationRepresentation = jsonParser
                                 .parse(OperationRepresentation.class, payload);
                         rt = deviceControlApi.create(operationRepresentation);
-                        log.info("Tenant {} - SEND: operation posted: {}", tenant, rt);
+                        log.info("{} - SEND: operation posted: {}", tenant, rt);
                     } else {
-                        log.error("Tenant {} - Not existing API!", tenant);
+                        log.error("{} - Not existing API!", tenant);
                     }
                 } catch (JsonProcessingException e) {
-                    log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
+                    log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
                     // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
-                    log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
+                    log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
                     // error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload +
                     // "/" + s);
@@ -537,21 +537,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         mor = inventoryApi.create(mor, context);
                         // TODO Add/Update new managed object to IdentityCache
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - New device created: {}", tenant, mor);
+                            log.info("{} - New device created: {}", tenant, mor);
                         else
-                            log.info("Tenant {} - New device created with Id {}", tenant, mor.getId().getValue());
+                            log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
                         identityApi.create(mor, identity, context);
                     } else {
                         // Device exists - update needed
                         mor.setId(new GId(context.getSourceId()));
                         mor = inventoryApi.update(mor, context);
                         if (serviceConfiguration.logPayload)
-                            log.info("Tenant {} - Device updated: {}", tenant, mor);
+                            log.info("{} - Device updated: {}", tenant, mor);
                         else
-                            log.info("Tenant {} - Device {} updated.", tenant, mor.getId().getValue());
+                            log.info("{} - Device {} updated.", tenant, mor.getId().getValue());
                     }
                 } catch (SDKException s) {
-                    log.error("Tenant {} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(),
+                    log.error("{} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(),
                             s);
                     pe.set(new ProcessingException(
                             "Could not sent payload to c8y: " + targetAPI + "/" + currentRequest.getRequest(), s));
@@ -578,7 +578,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
             String extName = props.get("name").toString();
             boolean external = (Boolean) props.get("external");
-            log.debug("Tenant {} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
+            log.debug("{} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
                     extName);
             InputStream downloadInputStream = null;
             FileOutputStream outputStream = null;
@@ -593,7 +593,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     String canonicalPath = tempFile.getCanonicalPath();
                     String path = tempFile.getPath();
                     String pathWithProtocol = "file://".concat(tempFile.getPath());
-                    log.debug("Tenant {} - CanonicalPath: {}, Path: {}, PathWithProtocol: {}", tenant, canonicalPath,
+                    log.debug("{} - CanonicalPath: {}, Path: {}, PathWithProtocol: {}", tenant, canonicalPath,
                             path,
                             pathWithProtocol);
                     outputStream = new FileOutputStream(tempFile);
@@ -609,25 +609,25 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             external);
                 }
             } catch (IOException e) {
-                log.error("Tenant {} - IO Exception occurred when loading extension: ", tenant, e);
+                log.error("{} - IO Exception occurred when loading extension: ", tenant, e);
             } catch (SecurityException e) {
-                log.error("Tenant {} - Security Exception occurred when loading extension: ", tenant, e);
+                log.error("{} - Security Exception occurred when loading extension: ", tenant, e);
             } catch (IllegalArgumentException e) {
-                log.error("Tenant {} - Invalid argument Exception occurred when loading extension: ", tenant, e);
+                log.error("{} - Invalid argument Exception occurred when loading extension: ", tenant, e);
             } finally {
                 // Consider cleaning up resources here
                 if (downloadInputStream != null) {
                     try {
                         downloadInputStream.close();
                     } catch (IOException e) {
-                        log.warn("Tenant {} - Failed to close download stream", tenant, e);
+                        log.warn("{} - Failed to close download stream", tenant, e);
                     }
                 }
                 if (outputStream != null) {
                     try {
                         outputStream.close();
                     } catch (IOException e) {
-                        log.warn("Tenant {} - Failed to close output stream", tenant, e);
+                        log.warn("{} - Failed to close output stream", tenant, e);
                     }
                 }
             }
@@ -645,7 +645,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         try {
             in = new InputStreamReader(resourceAsStream);
         } catch (Exception e) {
-            log.error("Tenant {} - Registration file: {} missing, ignoring to load extensions from: {}", tenant,
+            log.error("{} - Registration file: {} missing, ignoring to load extensions from: {}", tenant,
                     resource,
                     (external ? "EXTERNAL" : "INTERNAL"));
             throw new IOException("Registration file: " + resource + " missing, ignoring to load extensions from:"
@@ -656,7 +656,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
         if (buffered != null)
             newExtensions.load(buffered);
-        log.debug("Tenant {} - Preparing to load extensions:" + newExtensions.toString(), tenant);
+        log.debug("{} - Preparing to load extensions:" + newExtensions.toString(), tenant);
 
         Enumeration<?> extensionEntries = newExtensions.propertyNames();
         while (extensionEntries.hasMoreElements()) {
@@ -683,7 +683,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         // springUtil.registerBean(key, clazz);
                         extensionEntry.setExtensionImplSource(extensionImpl);
                         extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE);
-                        log.debug("Tenant {} - Successfully registered extensionImplSource : {} for key: {}",
+                        log.debug("{} - Successfully registered extensionImplSource : {} for key: {}",
                                 tenant,
                                 newExtensions.getProperty(key),
                                 key);
@@ -696,7 +696,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         extensionEntry.setExtensionImplTarget(extensionImpl);
                         // overwrite type since it implements both
                         extensionEntry.setExtensionType(ExtensionType.EXTENSION_SOURCE_TARGET);
-                        log.debug("Tenant {} - Successfully registered extensionImplTarget : {} for key: {}",
+                        log.debug("{} - Successfully registered extensionImplTarget : {} for key: {}",
                                 tenant,
                                 newExtensions.getProperty(key),
                                 key);
@@ -747,7 +747,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
             if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
-                log.info("Tenant {} - Deleted extension: {} permanently!", tenant, extensionName);
+                log.info("{} - Deleted extension: {} permanently!", tenant, extensionName);
             }
         }
         return extensibleProcessor.deleteExtension(extensionName);
@@ -764,7 +764,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             try {
                 return inventoryApi.get(GId.asGId(deviceId));
             } catch (SDKException exception) {
-                log.warn("Tenant {} - Device with id {} not found!", tenant, deviceId);
+                log.warn("{} - Device with id {} not found!", tenant, deviceId);
             }
             return null;
         });
@@ -783,7 +783,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         op.setFailureReason(failureReason);
                     deviceControlApi.update(op);
                 } catch (SDKException exception) {
-                    log.error("Tenant {} - Operation with id {} could not be updated: {}", tenant,
+                    log.error("{} - Operation with id {} could not be updated: {}", tenant,
                             op.getDeviceId().getValue(),
                             exception.getLocalizedMessage());
                 }
@@ -800,7 +800,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
         if (mappingServiceIdRepresentation != null) {
             amo = inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
-            log.info("Tenant {} - Agent with external ID [{}] already exists {}", tenant,
+            log.info("{} - Agent with external ID [{}] already exists, sourceId: {}", tenant,
                     MappingServiceRepresentation.AGENT_ID,
                     amo.getId().getValue());
         } else {
@@ -817,12 +817,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             amo.setProperty(C8YAgent.MAPPING_FRAGMENT,
                     new ArrayList<>());
             amo = inventoryApi.create(amo, null);
-            log.info("Tenant {} - Agent has been created with ID {}", tenant, amo.getId());
+            log.info("{} - Agent has been created with ID {}", tenant, amo.getId());
             ExternalIDRepresentation externalAgentId = identityApi.create(amo,
                     new ID("c8y_Serial",
                             MappingServiceRepresentation.AGENT_ID),
                     null);
-            log.debug("Tenant {} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
+            log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
         }
         return amo;
     }
@@ -830,7 +830,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void createExtensibleProcessor(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
         configurationRegistry.addExtensibleProcessor(tenant, extensibleProcessor);
-        log.debug("Tenant {} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
+        log.debug("{} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
 
         // check if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();
@@ -846,7 +846,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         } else {
             ie = internalExtension.get(0);
         }
-        log.debug("Tenant {} - Internal extension: {} registered: {}", tenant,
+        log.debug("{} - Internal extension: {} registered: {}", tenant,
                 ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                 ie.getId().getValue(), ie);
     }
@@ -882,12 +882,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
-        log.info("Tenant {} - Initialize inboundExternalIdCache {}", tenant, inboundExternalIdCacheSize);
+        log.info("{} - Initialize inboundExternalIdCache {}", tenant, inboundExternalIdCacheSize);
         inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
     }
 
     public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
-        log.info("Tenant {} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
+        log.info("{} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
         inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
     }
 
@@ -1086,7 +1086,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 } else
                     binaryInfo.setName("file");
             }
-            log.info("Tenant {} - Uploading attachment with name {} and type {} to event {}", tenant,
+            log.info("{} - Uploading attachment with name {} and type {} to event {}", tenant,
                     binaryInfo.getName(), binaryInfo.getType(), eventId);
             if (overwrites) {
                 headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
@@ -1112,7 +1112,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
             return response.getStatusCode().value();
         } catch (Exception e) {
-            log.error("Tenant {} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(),
+            log.error("{} - Failed to upload attachment to event {}: ", contextService.getContext().getTenant(),
                     eventId, e);
             throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage(), e);
         }

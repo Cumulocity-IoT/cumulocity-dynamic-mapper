@@ -117,12 +117,12 @@ public class BootstrapService {
     @EventListener
     public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
         String tenant = event.getTenant();
-        log.info("Tenant {} - Microservice unsubscribed", tenant);
+        log.info("{} - Microservice unsubscribed", tenant);
 
         try {
             cleanTenantResources(tenant);
         } catch (Exception e) {
-            log.error("Tenant {} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
+            log.error("{} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
         }
     }
 
@@ -153,12 +153,12 @@ public class BootstrapService {
     @EventListener
     public void subscribeTenant(MicroserviceSubscriptionAddedEvent event) {
         String tenant = event.getCredentials().getTenant();
-        log.info("Tenant {} - Microservice subscribed", tenant);
+        log.info("{} - Microservice subscribed", tenant);
 
         try {
             initializeTenantResources(tenant, event.getCredentials());
         } catch (Exception e) {
-            log.error("Tenant {} - Initialization error: {}", tenant, e.getMessage(), e);
+            log.error("{} - Initialization error: {}", tenant, e.getMessage(), e);
         }
     }
 
@@ -187,7 +187,7 @@ public class BootstrapService {
                 try {
                     connectorTask.get();
                 } catch (InterruptedException | ExecutionException e) {
-                    log.error("Tenant {} - Error initializing  connector: {}", tenant, e.getMessage(), e);
+                    log.error("{} - Error initializing  connector: {}", tenant, e.getMessage(), e);
                 }
             });
         }
@@ -228,7 +228,7 @@ public class BootstrapService {
             try {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfig);
             } catch (JsonProcessingException e) {
-                log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage(), e);
+                log.error("{} - Error saving service configuration: {}", tenant, e.getMessage(), e);
             }
         }
 
@@ -257,7 +257,7 @@ public class BootstrapService {
             connectorRegistry.registerConnectors();
             return setupConnectorConfigurations(tenant, serviceConfig);
         } catch (Exception e) {
-            log.error("Tenant {} - Error initializing connectors: {}", tenant, e.getMessage(), e);
+            log.error("{} - Error initializing connectors: {}", tenant, e.getMessage(), e);
         }
         return null;
     }
@@ -329,7 +329,7 @@ public class BootstrapService {
     }
 
     private void handleOutboundMapping(String tenant, ServiceConfiguration serviceConfig) {
-        log.info("Tenant {} - Config mappingOutbound enabled: {}", tenant, serviceConfig.isOutboundMappingEnabled());
+        log.info("{} - Config mappingOutbound enabled: {}", tenant, serviceConfig.isOutboundMappingEnabled());
 
         if (!serviceConfig.isOutboundMappingEnabled()) {
             return;
@@ -347,7 +347,7 @@ public class BootstrapService {
             serviceConfig.setOutboundMappingEnabled(false);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfig);
         } catch (JsonProcessingException e) {
-            log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage(), e);
+            log.error("{} - Error saving service configuration: {}", tenant, e.getMessage(), e);
         }
     }
 
@@ -361,7 +361,7 @@ public class BootstrapService {
                 connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
                         additionalSubscriptionIdTest, tenant);
             } catch (ConnectorException e) {
-                log.error("Tenant {} - Error on creating connector {}", tenant,
+                log.error("{} - Error on creating connector {}", tenant,
                         connectorConfiguration.getConnectorType(),
                         e);
                 throw new ConnectorRegistryException(e.getMessage());
@@ -402,7 +402,7 @@ public class BootstrapService {
                 c8YAgent.clearInboundExternalIdCache(tenant, false, cacheSize);
                 cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
 
-                log.info("Tenant {} - Identity cache cleared. Old Size: {}, New size: {}",
+                log.info("{} - Identity cache cleared. Old Size: {}, New size: {}",
                         tenant, cacheSize, c8YAgent.getInboundExternalIdCacheSize(tenant));
             }
         }
@@ -417,7 +417,7 @@ public class BootstrapService {
                 c8YAgent.clearInventoryCache(tenant, false, cacheSize);
                 cacheInventoryRetentionStartMap.put(tenant, Instant.now());
 
-                log.info("Tenant {} - Inventory cache cleared. Old Size: {}, New size: {}",
+                log.info("{} - Inventory cache cleared. Old Size: {}, New size: {}",
                         tenant, cacheSize, c8YAgent.getInventoryCache(tenant).getCacheSize());
             }
         }

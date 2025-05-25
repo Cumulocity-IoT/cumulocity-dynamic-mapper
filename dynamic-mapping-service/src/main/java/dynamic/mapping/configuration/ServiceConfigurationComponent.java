@@ -280,10 +280,10 @@ public class ServiceConfigurationComponent {
                     rt = objectMapper.readValue(optionRepresentation.getValue(),
                             ServiceConfiguration.class);
                 }
-                log.debug("Tenant {} - Returning service configuration found: {}:", tenant, rt.logPayload);
-                log.debug("Tenant {} - Found connection configuration: {}", tenant, rt);
+                log.debug("{} - Returning service configuration found: {}:", tenant, rt.logPayload);
+                log.debug("{} - Found connection configuration: {}", tenant, rt);
             } catch (SDKException exception) {
-                log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
+                log.warn("{} - No configuration found, returning empty element!", tenant);
                 rt = initialize(tenant);
             } catch (Exception e) {
                 String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
@@ -306,7 +306,7 @@ public class ServiceConfigurationComponent {
         try {
             saveServiceConfiguration(tenant, configuration);
         } catch (JsonProcessingException e) {
-            log.warn("Tenant {} - failed to initializes ServiceConfiguration!", tenant);
+            log.warn("{} - failed to initializes ServiceConfiguration!", tenant);
             e.printStackTrace();
         }
         return configuration;

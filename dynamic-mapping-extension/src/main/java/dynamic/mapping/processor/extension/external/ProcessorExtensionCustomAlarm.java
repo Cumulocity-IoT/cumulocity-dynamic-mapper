@@ -88,7 +88,7 @@ public class ProcessorExtensionCustomAlarm
                             .toString(),
                     TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
 
-            log.info("Tenant {} - New alarm over json processor: {}, {}", context.getTenant(),
+            log.info("{} - New alarm over json processor: {}, {}", context.getTenant(),
                     jsonObject.get("time"), jsonObject.get("message"));
         } catch (Exception e) {
             throw new ProcessingException(e.getMessage());
@@ -109,7 +109,7 @@ public class ProcessorExtensionCustomAlarm
             getBuildProcessingContext(context, deviceEntries.get(i),
                     i, deviceEntries.size(), c8yAgent);
         }
-        log.info("Tenant {} - Completed context, processing sequentially, createNonExistingDevice: {}", tenant,
+        log.info("{} - Completed context, processing sequentially, createNonExistingDevice: {}", tenant,
                 mapping.createNonExistingDevice);
 
     }
@@ -140,7 +140,7 @@ public class ProcessorExtensionCustomAlarm
                     substitute = pathTargetSubstitute.get(last).clone();
                 }
                 log.warn(
-                        "Tenant {} - Processing pathTarget: '{}', repairStrategy: '{}'.",
+                        "{} - Processing pathTarget: '{}', repairStrategy: '{}'.",
                         tenant,
                         pathTarget, substitute.repairStrategy);
             }
@@ -195,11 +195,11 @@ public class ProcessorExtensionCustomAlarm
             }
             predecessor = newPredecessor;
         } else {
-            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
+            log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     context.getProcessingCacheSize());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
+            log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     mapping.targetAPI,
                     payloadTarget.jsonString(),
                     size);

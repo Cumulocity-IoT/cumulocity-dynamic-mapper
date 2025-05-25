@@ -112,7 +112,7 @@ public class ExtensionController {
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
         if (!userHasMappingAdminRole()) {
-            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");

@@ -54,7 +54,7 @@ public class ProcessorExtensionSourceCustomAlarm implements ProcessorExtensionSo
                     payloadProtobuf.getExternalId()
                             .toString(),
                     TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
-            log.info("Tenant {} - New alarm over protobuf: {}, {}, {}, {}, {}", context.getTenant(),
+            log.info("{} - New alarm over protobuf: {}, {}, {}, {}, {}", context.getTenant(),
                     payloadProtobuf.getTimestamp(),
                     payloadProtobuf.getTxt(), payloadProtobuf.getAlarmType(),
                     payloadProtobuf.getExternalId(), payloadProtobuf.getSeverity());

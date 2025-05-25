@@ -101,11 +101,11 @@ public class ConnectorConfigurationComponent {
                 final ConnectorConfiguration configuration = objectMapper.readValue(
                         optionRepresentation.getValue(),
                         ConnectorConfiguration.class);
-                log.debug("Tenant {} - Returning connection configuration found: {}:", tenant,
+                log.debug("{} - Returning connection configuration found: {}:", tenant,
                         configuration.getConnectorType());
                 rt = configuration;
             } catch (SDKException exception) {
-                log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
+                log.warn("{} - No configuration found, returning empty element!", tenant);
             } catch (Exception e) {
                 // String exceptionMsg = e.getCause() == null ? e.getMessage() :
                 // e.getCause().getMessage();
@@ -113,7 +113,7 @@ public class ConnectorConfigurationComponent {
                 // %s",
                 // identifier,
                 // exceptionMsg);
-                log.error("Tenant {} - Failed to convert configurator object {}", tenant, identifier, e);
+                log.error("{} - Failed to convert configurator object {}", tenant, identifier, e);
             }
             return rt;
         });
@@ -136,11 +136,11 @@ public class ConnectorConfigurationComponent {
                                 ConnectorConfiguration.class);
                         patchMQTTConfiguration(tenant, configuration);
                         connectorConfigurations.add(configuration);
-                        log.debug("Tenant {} - Connection configuration found: {}:", tenant,
+                        log.debug("{} - Connection configuration found: {}:", tenant,
                                 configuration.getConnectorType());
                     }
                 } catch (SDKException exception) {
-                    log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
+                    log.warn("{} - No configuration found, returning empty element!", tenant);
                 } catch (Exception e) {
                     String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
                     String msg = String.format("Failed to convert configurator object %s. Error: %s",
@@ -160,7 +160,7 @@ public class ConnectorConfigurationComponent {
             String version = ((String) configuration.getProperties().getOrDefault("version", null));
             if (version == null) {
                 configuration.getProperties().put("version", AConnectorClient.MQTT_VERSION_3_1_1);
-                log.info("Tenant {} - Adding version attribute to old MQTT configuration", tenant);
+                log.info("{} - Adding version attribute to old MQTT configuration", tenant);
             }
         }
     }
@@ -183,7 +183,7 @@ public class ConnectorConfigurationComponent {
                     ConnectorConfiguration.class);
 
             configuration.enabled = enabled;
-            log.debug("Tenant {} - Setting connection: {}:", tenant, configuration.enabled);
+            log.debug("{} - Setting connection: {}:", tenant, configuration.enabled);
             final String configurationJson = objectMapper.writeValueAsString(configuration);
             optionRepresentation.setCategory(Utils.OPTION_CATEGORY_CONFIGURATION);
             optionRepresentation.setKey(getConnectorOptionKey(identifier));
@@ -191,7 +191,7 @@ public class ConnectorConfigurationComponent {
             tenantOptionApi.save(optionRepresentation);
             return configuration;
         } catch (SDKException exception) {
-            log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
+            log.warn("{} - No configuration found, returning empty element!", tenant);
             // exception.printStackTrace();
         } catch (Exception e) {
             String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();

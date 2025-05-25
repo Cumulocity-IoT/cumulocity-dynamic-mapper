@@ -112,7 +112,7 @@ public class OperationController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> runOperation(@Valid @RequestBody ServiceOperation operation) {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Post operation: {}", tenant, operation);
+        log.info("{} - Post operation: {}", tenant, operation);
 
         try {
             Operation operationType = operation.getOperation();
@@ -157,7 +157,7 @@ public class OperationController {
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
         } catch (Exception ex) {
-            log.error("Tenant {} - Error running operation: {}", tenant, ex.getMessage(), ex);
+            log.error("{} - Error running operation: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
@@ -203,7 +203,7 @@ public class OperationController {
 
     private ResponseEntity<?> handleInitCodeTemplates(String tenant, Map<String, String> parameters) throws Exception {
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Init system code template", tenant);
+        log.debug("{} - Init system code template", tenant);
 
         // Initialize code templates from properties if not already set
         serviceConfigurationComponent.initCodeTemplates(serviceConfiguration, true);
@@ -212,7 +212,7 @@ public class OperationController {
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
         } catch (JsonProcessingException ex) {
-            log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+            log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
 
@@ -341,7 +341,7 @@ public class OperationController {
             try {
                 connectTask.get(10, TimeUnit.SECONDS);
             } catch (Exception e) {
-                log.error("Tenant {} - Error waiting for client to connect: {}", tenant, e.getMessage());
+                log.error("{} - Error waiting for client to connect: {}", tenant, e.getMessage());
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
             }
             configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
@@ -376,13 +376,13 @@ public class OperationController {
             Integer cacheSize = serviceConfigurationComponent
                     .getServiceConfiguration(tenant).inboundExternalIdCacheSize;
             configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
-            log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
+            log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("INVENTORY_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationComponent
                     .getServiceConfiguration(tenant).inventoryCacheSize;
             configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
-            log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
+            log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         }
 

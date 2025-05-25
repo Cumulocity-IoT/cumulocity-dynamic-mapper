@@ -82,7 +82,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
         String payload = toPrettyJsonString(payloadObject);
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.info("Tenant {} - Patched payload: {}", tenant, payload);
+            log.info("{} - Patched payload: {}", tenant, payload);
         }
 
         boolean substitutionTimeExists = false;
@@ -145,7 +145,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
                 context.setIgnoreFurtherProcessing(true);
                 log.info(
-                        "Tenant {} - Extraction of source in CodeBasedProcessorInbound.extractFromSource returned no result, payload: {}",
+                        "{} - Extraction of source in CodeBasedProcessorInbound.extractFromSource returned no result, payload: {}",
                         context.getTenant(),
                         jsonObject);
             } else { // Now use the copied objects
@@ -174,7 +174,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                 }
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
                     log.info(
-                            "Tenant {} - Extraction of source in CodeBasedProcessorInbound.extractFromSource returned {} results, payload: {} ",
+                            "{} - Extraction of source in CodeBasedProcessorInbound.extractFromSource returned {} results, payload: {} ",
                             context.getTenant(),
                             keySet == null ? 0 : keySet.size(), jsonObject);
                 }

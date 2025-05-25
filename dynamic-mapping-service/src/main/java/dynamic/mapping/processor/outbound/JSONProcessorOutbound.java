@@ -58,7 +58,7 @@ public class JSONProcessorOutbound extends BaseProcessorOutbound<Object> {
         String payloadAsString = toPrettyJsonString(payloadObject);
 
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.info("Tenant {} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
+            log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
                     payloadAsString,
                     serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
@@ -93,7 +93,7 @@ public class JSONProcessorOutbound extends BaseProcessorOutbound<Object> {
             processingCache.put(substitution.pathTarget, processingCacheEntry);
 
             if (context.getServiceConfiguration().logSubstitution || mapping.debug) {
-                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
+                log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
                         context.getTenant(),
                         substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
             }

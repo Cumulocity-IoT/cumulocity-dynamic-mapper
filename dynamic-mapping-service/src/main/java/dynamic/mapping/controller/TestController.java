@@ -98,7 +98,7 @@ public class TestController {
         String path = topic.getPath();
         List<? extends ProcessingContext<?>> result = null;
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Test payload: {}, {}, {}", tenant, path, method,
+        log.info("{} - Test payload: {}, {}, {}", tenant, path, method,
                 payload);
         try {
             boolean send = ("send").equals(method);
@@ -111,7 +111,7 @@ public class TestController {
             }
             return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
+            log.error("{} - Error transforming payload: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
         }
     }

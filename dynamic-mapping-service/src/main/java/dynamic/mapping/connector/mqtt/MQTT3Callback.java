@@ -84,7 +84,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                 .build();
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "Tenant {} - INITIAL: message on topic: [{}], QoS message: {}, connector: {},{}",
+                    "{} - INITIAL: message on topic: [{}], QoS message: {}, connector: {},{}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(),
                     connectorName, connectorIdentifier);
         }
@@ -98,7 +98,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
         int effectiveQos = Math.min(publishQos, mappingQos);
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "Tenant {} - WAIT_ON_RESULTS: message on topic: [{}], QoS message: {}, QoS effective: {}, QoS mappings: {}, connector {}",
+                    "{} - WAIT_ON_RESULTS: message on topic: [{}], QoS message: {}, QoS effective: {}, QoS mappings: {}, connector {}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), effectiveQos, mappingQos,
                     connectorIdentifier);
         }
@@ -135,7 +135,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                                 }
                                 hasErrors = true;
                                 log.error(
-                                        "Tenant {} - Error in processing context for topic: [{}], not sending ack to MQTT broker",
+                                        "{} - Error in processing context for topic: [{}], not sending ack to MQTT broker",
                                         tenant, topic);
                                 break;
                             }
@@ -145,13 +145,13 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                     if (!hasErrors) {
                         // No errors found, acknowledge the message
                         log.warn(
-                                "Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                                "{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
                     } else if (httpStatusCode < 500) {
                         // Errors found but not a server error, acknowledge the message
                         log.warn(
-                                "Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                                "{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
                     } else {
@@ -161,12 +161,12 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                 } catch (InterruptedException | ExecutionException e) {
                     // Processing failed, don't acknowledge to allow redelivery
                     // Thread.currentThread().interrupt();
-                    log.warn("Tenant {} - END: Was interrupted for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                    log.warn("{} - END: Was interrupted for MQTT message: topic: [{}], QoS: {}, connector: {}",
                             tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                 } catch (TimeoutException e) {
                     var cancelResult = processedResults.getProcessingResult().cancel(true);
                     log.warn(
-                            "Tenant {} - END: Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
+                            "{} - END: Processing timed out with: {} milliseconds, connector {}, result of cancelling: {}",
                             tenant, timeout, connectorIdentifier, cancelResult);
                 }
                 return null; // Proper return for Callable<Void>
@@ -176,7 +176,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
 
             // Acknowledge message with QoS=0
             if (serviceConfiguration.logPayload) {
-                log.info("Tenant {} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                log.info("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                         tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
             }
             mqttMessage.acknowledge();

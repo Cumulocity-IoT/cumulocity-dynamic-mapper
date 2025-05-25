@@ -99,7 +99,7 @@ public class MonitoringController {
 			AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
 					connectorIdentifier);
 			ConnectorStatusEvent st = client.getConnectorStatus();
-			log.info("Tenant {} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
+			log.info("{} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
 			return new ResponseEntity<>(st, HttpStatus.OK);
 		} catch (ConnectorRegistryException e) {
 			throw new RuntimeException(e);
@@ -127,7 +127,7 @@ public class MonitoringController {
 					connectorsStatus.put(client.getConnectorIdentifier(), st);
 				}
 			}
-			log.info("Tenant {} - Get status of connectors: {}", tenant, connectorsStatus);
+			log.info("{} - Get status of connectors: {}", tenant, connectorsStatus);
 			return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);
 		} catch (ConnectorRegistryException e) {
 			throw new RuntimeException(e);
@@ -138,7 +138,7 @@ public class MonitoringController {
 	public ResponseEntity<List<MappingStatus>> getMappingStatus() {
 		String tenant = contextService.getContext().getTenant();
 		List<MappingStatus> ms = mappingComponent.getMappingStatus(tenant);
-		log.info("Tenant {} - Get mapping status: {}", tenant, ms);
+		log.info("{} - Get mapping status: {}", tenant, ms);
 		return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	}
 
@@ -146,7 +146,7 @@ public class MonitoringController {
 	// public ResponseEntity<List<MappingStatus>> getMappingLoadingError() {
 	// 	String tenant = contextService.getContext().getTenant();
 	// 	List<MappingStatus> ms = mappingComponent.getMappingLoadingError(tenant);
-	// 	log.info("Tenant {} - Get mapping loadingError: {}", tenant, ms);
+	// 	log.info("{} - Get mapping loadingError: {}", tenant, ms);
 	// 	return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	// }
 
@@ -154,7 +154,7 @@ public class MonitoringController {
 	public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
 		String tenant = contextService.getContext().getTenant();
 		MappingTreeNode result = mappingComponent.getResolverMappingInbound(tenant);
-		log.info("Tenant {} - Get mapping tree", tenant);
+		log.info("{} - Get mapping tree", tenant);
 		return ResponseEntity.status(HttpStatus.OK).body(result);
 	}
 
@@ -170,7 +170,7 @@ public class MonitoringController {
 							entry.getValue().getValue()))
 					.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 
-			log.debug("Tenant {} - Getting active subscriptions!", tenant);
+			log.debug("{} - Getting active subscriptions!", tenant);
 			return ResponseEntity.status(HttpStatus.OK).body(result);
 		} catch (ConnectorRegistryException e) {
 			throw new RuntimeException(e);

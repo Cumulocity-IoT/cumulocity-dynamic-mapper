@@ -96,7 +96,7 @@ public abstract class BaseProcessorOutbound<T> {
             List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         } else {
-            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+            log.warn("{} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                     tenant);
         }
     }
@@ -132,7 +132,7 @@ public abstract class BaseProcessorOutbound<T> {
         }
         if (serviceConfiguration.logPayload || mapping.debug) {
             String patchedPayloadTarget = payloadTarget.jsonString();
-            log.info("Tenant {} - Patched payload: {}", tenant, patchedPayloadTarget);
+            log.info("{} - Patched payload: {}", tenant, patchedPayloadTarget);
         }
 
         String deviceSource = context.getSourceId();
@@ -167,7 +167,7 @@ public abstract class BaseProcessorOutbound<T> {
                     c.increment();
                 });
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                    log.info("Tenant {} - Resolved topic from {} to {}",
+                    log.info("{} - Resolved topic from {} to {}",
                             tenant, splitTopicInAsListOriginal, splitTopicInAsList);
                 }
 
@@ -217,23 +217,23 @@ public abstract class BaseProcessorOutbound<T> {
                 if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);
                 } else {
-                    log.warn("Tenant {} - Not sending message: connected {}, sendPayload {}", tenant,
+                    log.warn("{} - Not sending message: connected {}, sendPayload {}", tenant,
                             connectorClient.isConnected(), context.isSendPayload());
                 }
                 // var response = objectMapper.writeValueAsString(attocRequest);
                 // context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);
-                log.error("Tenant {} - Error during publishing outbound message: ", tenant, e);
+                log.error("{} - Error during publishing outbound message: ", tenant, e);
             }
             predecessor = newPredecessor;
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
-            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
+            log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     processingCache.size());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
+            log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     mapping.targetAPI,
                     payloadTarget.jsonString(),
                     1);
@@ -249,7 +249,7 @@ public abstract class BaseProcessorOutbound<T> {
             var expr = jsonata(ps);
             extractedSourceContent = expr.evaluate(payloadJsonNode);
         } catch (Exception e) {
-            log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
+            log.error("{} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
                     ps,
                     payloadAsString, e);
         }

@@ -110,7 +110,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                 if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
                     context.setIgnoreFurtherProcessing(true);
                     log.info(
-                            "Tenant {} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned no result, payload: {}",
+                            "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned no result, payload: {}",
                             context.getTenant(),
                             jsonObject);
                 } else { // Now use the copied objects
@@ -136,7 +136,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                     }
                     if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
                         log.info(
-                                "Tenant {} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned {} results, payload: {} ",
+                                "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned {} results, payload: {} ",
                                 context.getTenant(),
                                 keySet == null ? 0 : keySet.size(), jsonObject);
                     }

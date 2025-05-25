@@ -217,7 +217,7 @@ public abstract class AConnectorClient {
     public abstract void disconnect();
 
     /**
-     * Close the connection to broker and release all resources
+     * Close the connection to server and release all resources
      **/
     public abstract void close();
 
@@ -256,7 +256,7 @@ public abstract class AConnectorClient {
     // Core functionality methods
     public Future<?> submitInitialize() {
         if (initializeTask == null || initializeTask.isDone()) {
-            log.debug("Tenant {} - Initializing...", tenant);
+            log.debug("{} - Initializing...", tenant);
             initializeTask = virtualThreadPool.submit(this::initialize);
         }
         return initializeTask;
@@ -265,7 +265,7 @@ public abstract class AConnectorClient {
     public Future<?> submitConnect() {
         loadConfiguration();
         if (connectTask == null || connectTask.isDone()) {
-            log.debug("Tenant {} - Connecting...", tenant);
+            log.debug("{} - Connecting...", tenant);
             connectTask = virtualThreadPool.submit(this::connect);
         }
         return connectTask;
@@ -278,14 +278,14 @@ public abstract class AConnectorClient {
         }
 
         if (disconnectTask == null || disconnectTask.isDone()) {
-            log.debug("Tenant {} - Disconnecting...", tenant);
+            log.debug("{} - Disconnecting...", tenant);
             disconnectTask = virtualThreadPool.submit(this::disconnect);
         }
         return disconnectTask;
     }
 
     public void submitHousekeeping() {
-        log.debug("Tenant {} - Starting housekeeping...", tenant);
+        log.debug("{} - Starting housekeeping...", tenant);
         housekeepingExecutor.scheduleAtFixedRate(
                 this::runHousekeeping,
                 0,
@@ -343,7 +343,7 @@ public abstract class AConnectorClient {
             // }
 
             activeSubscriptionsInbound = updatedSubscriptionCache;
-            log.info("Tenant {} - {} updated subscriptions, active subscriptions: {}",
+            log.info("{} - Updated subscriptions for connector: {}, active subscriptions: {}",
                     tenant, getConnectorName(), getActiveSubscriptionsView().size());
         }
     }
@@ -367,7 +367,7 @@ public abstract class AConnectorClient {
         boolean validDeployment = supportsWildcardsInTopic() || !containsWildcards;
 
         if (!validDeployment) {
-            log.warn("Tenant {} - Mapping {} contains wildcards which are not supported by connector {}",
+            log.warn("{} - Mapping {} contains wildcards, not supported by connector {}",
                     tenant, mapping.getId(), connectorName);
             return false;
         }
@@ -398,10 +398,10 @@ public abstract class AConnectorClient {
                 .filter(topic -> !updatedSubscriptionCache.containsKey(topic))
                 .forEach(topic -> {
                     try {
-                        log.debug("Tenant {} - Unsubscribing from topic: [{}]", tenant, topic);
+                        log.debug("{} - Unsubscribing from topic: [{}]", tenant, topic);
                         unsubscribe(topic);
                     } catch (Exception exp) {
-                        log.error("Tenant {} - Error unsubscribing from topic: [{}]", tenant, topic, exp);
+                        log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, exp);
                     }
                 });
     }
@@ -414,11 +414,11 @@ public abstract class AConnectorClient {
                     Qos qos = determineMaxQosInbound(topic, updatedMappings);
                     try {
                         subscribe(topic, qos);
-                        log.info("Tenant {} - Subscribed to topic:[{}] for connector: {}, QoS: {}",
+                        log.info("{} - Subscribed to topic:[{}] for connector: {}, QoS: {}",
                                 tenant, topic,
                                 connectorName, qos);
                     } catch (ConnectorException exp) {
-                        log.error("Tenant {} - Error subscribing to topic:[{}]", tenant, topic, exp);
+                        log.error("{} - Error subscribing to topic:[{}]", tenant, topic, exp);
                     }
                 });
     }
@@ -469,7 +469,7 @@ public abstract class AConnectorClient {
                 boolean isDeployed = deploymentMapEntry != null &&
                         deploymentMapEntry.contains(getConnectorIdentifier());
                 if (isDeployed) {
-                    log.warn("Tenant {} - Mapping {} contains unsupported wildcards",
+                    log.warn("{} - Mapping {} contains unsupported wildcards",
                             tenant, mapping.getId());
                     result = false;
                 }
@@ -495,14 +495,14 @@ public abstract class AConnectorClient {
         if (create || subscriptionCount.intValue() == 0) {
             try {
 
-                // log.info("Tenant {} - Subscribing to topic: [{}], qos: {}",
+                // log.info("{} - Subscribing to topic: [{}], qos: {}",
                 // tenant, mapping.mappingTopic, mapping.qos);
                 subscribe(mapping.mappingTopic, mapping.qos);
-                log.info("Tenant {} - Subscribed to topic:[{}] for connector: {}, QoS: {}", tenant,
+                log.info("{} - Subscribed to topic:[{}] for connector: {}, QoS: {}", tenant,
                         mapping.mappingTopic,
                         connectorName, mapping.qos);// use qos from mapping
             } catch (ConnectorException exp) {
-                log.error("Tenant {} - Error subscribing to topic:[{}]",
+                log.error("{} - Error subscribing to topic:[{}]",
                         tenant, mapping.mappingTopic, exp);
             }
         }
@@ -515,12 +515,12 @@ public abstract class AConnectorClient {
 
         if (subscriptionCount.intValue() <= 0) {
             try {
-                log.info("Tenant {} - Unsubscribing from topic: [{}]",
+                log.info("{} - Unsubscribing from topic: [{}]",
                         tenant, mapping.mappingTopic);
                 unsubscribe(mapping.mappingTopic);
                 getActiveSubscriptionsInbound().remove(mapping.mappingTopic);
             } catch (Exception exp) {
-                log.error("Tenant {} - Error unsubscribing from topic: [{}]",
+                log.error("{} - Error unsubscribing from topic: [{}]",
                         tenant, mapping.mappingTopic, exp);
             }
         }
@@ -546,7 +546,7 @@ public abstract class AConnectorClient {
             try {
                 unsubscribe(mapping.mappingTopic);
             } catch (Exception e) {
-                log.error("Tenant {} - Error unsubscribing from topic: [{}]",
+                log.error("{} - Error unsubscribing from topic: [{}]",
                         tenant, mapping.mappingTopic, e);
             }
         }
@@ -658,14 +658,14 @@ public abstract class AConnectorClient {
 
     private void logConnectionLost(String closeMessage, Throwable closeException) {
         if (closeException != null) {
-            log.error("Tenant {} - Connection lost: [{},{}], {}",
+            log.error("{} - Connection lost: [{},{}], {}",
                     tenant,
                     getConnectorName(),
                     getConnectorIdentifier(),
                     closeException.getMessage(),
                     closeException);
         } else if (closeMessage != null) {
-            log.info("Tenant {} - Connection lost: [{},{}], {}",
+            log.info("{} - Connection lost: [{},{}], {}",
                     tenant,
                     getConnectorName(),
                     getConnectorIdentifier(),
@@ -681,7 +681,7 @@ public abstract class AConnectorClient {
             submitInitialize().get();
             return submitConnect();
         } catch (Exception e) {
-            log.error("Tenant {} - Error during reconnect: ", tenant, e);
+            log.error("{} - Error during reconnect: ", tenant, e);
         }
         return null;
     }
@@ -697,7 +697,7 @@ public abstract class AConnectorClient {
         try {
             performHousekeepingTasks();
         } catch (Exception ex) {
-            log.error("Tenant {} - Error during house keeping execution: ",
+            log.error("{} - Error during house keeping execution: ",
                     tenant,
                     ex);
         }
@@ -719,7 +719,7 @@ public abstract class AConnectorClient {
             String connectTaskStatus = getTaskStatus(connectTask);
             String initializeTaskStatus = getTaskStatus(initializeTask);
 
-            log.debug("Tenant {} - Status: connectTask: {}, initializeTask: {}, isConnected: {}",
+            log.debug("{} - Status: connectTask: {}, initializeTask: {}, isConnected: {}",
                     tenant,
                     connectTaskStatus,
                     initializeTaskStatus,
@@ -745,7 +745,7 @@ public abstract class AConnectorClient {
     public void stopHousekeepingAndClose() {
         List<Runnable> stoppedTasks = this.housekeepingExecutor.shutdownNow();
         close();
-        log.info("Tenant {} - Shutdown housekeepingTasks: {}",
+        log.info("{} - Shutdown housekeepingTasks: {}",
                 tenant,
                 stoppedTasks);
     }
@@ -766,7 +766,7 @@ public abstract class AConnectorClient {
         try {
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
-            log.error("Tenant {} - Error serializing payload: {}", tenant, e.getMessage());
+            log.error("{} - Error serializing payload: {}", tenant, e.getMessage());
             throw e;
         }
     }
@@ -862,21 +862,21 @@ public abstract class AConnectorClient {
 
     // Event Logging Methods
     protected void logEventProcessing(String eventType, String details) {
-        log.debug("Tenant {} - Processing {} event: {}", tenant, eventType, details);
+        log.debug("{} - Processing {} event: {}", tenant, eventType, details);
     }
 
     protected void logEventSuccess(String eventType, String details) {
-        log.info("Tenant {} - Successfully processed {} event: {}", tenant, eventType, details);
+        log.info("{} - Successfully processed {} event: {}", tenant, eventType, details);
     }
 
     protected void logEventError(String eventType, String details, Exception e) {
-        log.error("Tenant {} - Error processing {} event: {}", tenant, eventType, details, e);
+        log.error("{} - Error processing {} event: {}", tenant, eventType, details, e);
     }
 
     // Event Validation Methods
     protected boolean validateEventData(Object data, String eventType) {
         if (data == null) {
-            log.warn("Tenant {} - Received null data for {} event", tenant, eventType);
+            log.warn("{} - Received null data for {} event", tenant, eventType);
             return false;
         }
         return true;

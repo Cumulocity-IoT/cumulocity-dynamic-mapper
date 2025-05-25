@@ -121,9 +121,9 @@ public class DispatcherOutbound implements NotificationCallback {
         this.mappingComponent = configurationRegistry.getMappingComponent();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.connectorClient = connectorClient;
-        // log.info("Tenant {} - HIER I {} {}", connectorClient.getTenant(),
+        // log.info("{} - HIER I {} {}", connectorClient.getTenant(),
         // configurationRegistry.getPayloadProcessorsOutbound());
-        // log.info("Tenant {} - HIER II {} {}", connectorClient.getTenant(),
+        // log.info("{} - HIER II {} {}", connectorClient.getTenant(),
         // configurationRegistry.getPayloadProcessorsOutbound().get(connectorClient.getTenant()));
         this.payloadProcessorsOutbound = configurationRegistry.getPayloadProcessorsOutbound(connectorClient.getTenant(),
                 connectorClient.getConnectorIdentifier());
@@ -134,7 +134,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onOpen(URI serverUri) {
-        log.info("Tenant {} - Phase IV: Notification 2.0 connected over WebSocket, linked to connector: {}",
+        log.info("{} - Phase IV: Notification 2.0 connected over WebSocket, linked to connector: {}",
                 connectorClient.getTenant(), connectorClient.getConnectorName());
         notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 200);
     }
@@ -148,19 +148,19 @@ public class DispatcherOutbound implements NotificationCallback {
         // is not connected
         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
         if (!connectorClient.isConnected())
-            log.warn("Tenant {} - Notification message received but connector {} is not connected. Ignoring message..",
+            log.warn("{} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
-        // log.info("Tenant {} - Notification message received {}",
+        // log.info("{} - Notification message received {}",
         // tenant, operation);
         if (("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))
                 && connectorClient.isConnected()) {
-            // log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
+            // log.info("{} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
             // notification.getMessage(),
             // notification.getNotificationHeaders(),
             // connectorClient.connectorConfiguration.name,
             // connectorClient.isConnected());
             if ("UPDATE".equals(notification.getOperation()) && notification.getApi().equals(API.OPERATION)) {
-                log.info("Tenant {} - Update Operation message for connector: {} is received, ignoring it",
+                log.info("{} - Update Operation message for connector: {} is received, ignoring it",
                         tenant, connectorClient.getConnectorName());
                 return result;
             }
@@ -191,12 +191,12 @@ public class DispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onError(Throwable t) {
-        log.error("Tenant {} - We got an exception: ", connectorClient.getTenant(), t);
+        log.error("{} - We got an exception: ", connectorClient.getTenant(), t);
     }
 
     @Override
     public void onClose(int statusCode, String reason) {
-        log.info("Tenant {} - WebSocket connection closed", connectorClient.getTenant());
+        log.info("{} - WebSocket connection closed", connectorClient.getTenant());
         if (reason.contains("401"))
             notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 401);
         else
@@ -258,7 +258,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 try {
                     op = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
                 } catch (Exception e) {
-                    log.error("Tenant {} - Failed to parse operation representation: {}", tenant, e.getMessage());
+                    log.error("{} - Failed to parse operation representation: {}", tenant, e.getMessage());
                     throw new OperationParsingException("Failed to parse operation", e);
                 }
             }
@@ -288,7 +288,7 @@ public class DispatcherOutbound implements NotificationCallback {
                         c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
                         shouldAutoAcknowledge = true;
                     } catch (Exception e) {
-                        log.warn("Tenant {} - Failed to update operation status to EXECUTING: {}",
+                        log.warn("{} - Failed to update operation status to EXECUTING: {}",
                                 tenant, e.getMessage());
                         criticalExceptions.add(e);
                     }
@@ -354,7 +354,7 @@ public class DispatcherOutbound implements NotificationCallback {
                         try {
                             graalsContext.close();
                         } catch (Exception e) {
-                            log.warn("Tenant {} - Error closing GraalVM context: {}", tenant, e.getMessage());
+                            log.warn("{} - Error closing GraalVM context: {}", tenant, e.getMessage());
                         }
                     }
 
@@ -472,12 +472,12 @@ public class DispatcherOutbound implements NotificationCallback {
                 ServiceConfiguration serviceConfiguration) {
             if (serviceConfiguration.logPayload || mapping.debug) {
                 log.info(
-                        "Tenant {} - Start processing message on topic: [{}]  connector: {}, mapping : {}, wrapped message: {}",
+                        "{} - Start processing message on topic: [{}]  connector: {}, mapping : {}, wrapped message: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorName(), mapping.getName(),
                         context.getPayload().toString());
             } else {
                 log.info(
-                        "Tenant {} - Start processing message on topic: [{}]  connector: {}, mapping : {}, sendPayload: {}",
+                        "{} - Start processing message on topic: [{}]  connector: {}, mapping : {}, sendPayload: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorName(), mapping.getName(),
                         context.isSendPayload());
             }
@@ -496,14 +496,14 @@ public class DispatcherOutbound implements NotificationCallback {
                     mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                     mappingStatus.snoopedTemplatesActive++;
 
-                    log.debug("Tenant {} - Adding snoopedTemplate to map: {},{},{}",
+                    log.debug("{} - Adding snoopedTemplate to map: {},{},{}",
                             tenant, mapping.mappingTopic, mapping.snoopedTemplates.size(), mapping.snoopStatus);
                     mappingComponent.addDirtyMapping(tenant, mapping);
                 } else {
-                    log.warn("Tenant {} - Message could NOT be serialized for snooping, payload is null");
+                    log.warn("{} - Message could NOT be serialized for snooping, payload is null");
                 }
             } catch (Exception e) {
-                log.warn("Tenant {} - Error during snooping: {}", tenant, e.getMessage());
+                log.warn("{} - Error during snooping: {}", tenant, e.getMessage());
             }
         }
 
@@ -560,13 +560,13 @@ public class DispatcherOutbound implements NotificationCallback {
                             .collect(Collectors.joining("; "));
 
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, errorMessage);
-                    log.info("Tenant {} - Operation {} marked as FAILED", tenant, op.getId());
+                    log.info("{} - Operation {} marked as FAILED", tenant, op.getId());
                 } else {
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.SUCCESSFUL, null);
-                    log.info("Tenant {} - Operation {} marked as SUCCESSFUL", tenant, op.getId());
+                    log.info("{} - Operation {} marked as SUCCESSFUL", tenant, op.getId());
                 }
             } catch (Exception e) {
-                log.error("Tenant {} - Failed to update operation status: {}", tenant, e.getMessage());
+                log.error("{} - Failed to update operation status: {}", tenant, e.getMessage());
             }
         }
 
@@ -582,7 +582,7 @@ public class DispatcherOutbound implements NotificationCallback {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
-        log.info("Tenant {} - PROCESSING: C8Y message, API: {}, device: {}. connector: {}, payload: {}",
+        log.info("{} - PROCESSING: C8Y message, API: {}, device: {}. connector: {}, payload: {}",
                 tenant,
                 c8yMessage.getApi(), c8yMessage.getSourceId(),
                 connectorClient.getConnectorName(),
@@ -609,7 +609,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     }
                 }
             } catch (Exception e) {
-                log.warn("Tenant {} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
+                log.warn("{} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
                         tenant, e);
                 log.debug(e.getMessage(), tenant);
                 mappingStatusUnspecified.errors++;

@@ -70,14 +70,14 @@ public class DeviceSubscriptionController {
         try {
             List<Device> allChildDevices = null;
             for (Device managedObject : subscription.getDevices()) {
-                log.info("Tenant {} - Find all related Devices of Managed Object {}", managedObject.getId());
+                log.info("{} - Find all related Devices of Managed Object {}", managedObject.getId());
                 ManagedObjectRepresentation mor = c8yAgent
                         .getManagedObjectForId(contextService.getContext().getTenant(), managedObject.getId());
                 if (mor != null) {
                     allChildDevices = configurationRegistry.getNotificationSubscriber().findAllRelatedDevicesByMO(mor,
                             allChildDevices, false);
                 } else {
-                    log.warn("Tenant {} - Could not subscribe device with id {}. Device does not exists!", tenant,
+                    log.warn("{} - Could not subscribe device with id {}. Device does not exists!", tenant,
                             managedObject.getId());
                 }
             }
@@ -134,11 +134,11 @@ public class DeviceSubscriptionController {
                         allChildDevices = configurationRegistry.getNotificationSubscriber()
                                 .findAllRelatedDevicesByMO(mor, allChildDevices, false);
                     } catch (Exception e) {
-                        log.error("Tenant {} - Error creating subscriptions: ", tenant, e);
+                        log.error("{} - Error creating subscriptions: ", tenant, e);
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
                 } else {
-                    log.warn("Tenant {} - Could not subscribe device with id {}. Device does not exists!", tenant,
+                    log.warn("{} - Could not subscribe device with id {}. Device does not exists!", tenant,
                             device.getId());
                 }
             }
@@ -159,17 +159,17 @@ public class DeviceSubscriptionController {
                     try {
                         configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(mor);
                     } catch (Exception e) {
-                        log.error("Tenant {} - Error removing subscriptions: ", tenant, e);
+                        log.error("{} - Error removing subscriptions: ", tenant, e);
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
                 } else {
-                    log.warn("Tenant {} - Could not subscribe device with id {}. Device does not exists!", tenant,
+                    log.warn("{} - Could not subscribe device with id {}. Device does not exists!", tenant,
                             device.getId());
                 }
             }
 
         } catch (Exception e) {
-            log.error("Tenant {} - Error updating subscriptions: ", tenant, e);
+            log.error("{} - Error updating subscriptions: ", tenant, e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
         }
         return ResponseEntity.ok(subscription);

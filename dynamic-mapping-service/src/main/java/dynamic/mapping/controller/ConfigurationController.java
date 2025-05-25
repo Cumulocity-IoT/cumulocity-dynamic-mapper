@@ -114,7 +114,7 @@ public class ConfigurationController {
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Get feature", tenant);
+        log.debug("{} - Get feature", tenant);
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(serviceConfiguration.isOutboundMappingEnabled());
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
@@ -127,7 +127,7 @@ public class ConfigurationController {
     public ResponseEntity<List<ConnectorSpecification>> getConnectorSpecifications() {
         String tenant = contextService.getContext().getTenant();
         List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
-        log.info("Tenant {} - Get connector specifications", tenant);
+        log.info("{} - Get connector specifications", tenant);
         Map<ConnectorType, ConnectorSpecification> spec = connectorRegistry
                 .getConnectorSpecifications();
         // Iterate over all connectors
@@ -146,7 +146,7 @@ public class ConfigurationController {
         }
         // FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
-            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
@@ -155,7 +155,7 @@ public class ConfigurationController {
         ConnectorSpecification connectorSpecification = connectorRegistry
                 .getConnectorSpecification(configuration.connectorType);
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
-        log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
+        log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             // if (configuration.connectorType.equals(ConnectorType.INTERNAL_WEB_HOOK)) {
             // UserCredentials contextCredentials = contextService.getContext();
@@ -167,7 +167,7 @@ public class ConfigurationController {
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
-            log.error("Tenant {} - Error creating connector instance", tenant, ex);
+            log.error("{} - Error creating connector instance", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -176,7 +176,7 @@ public class ConfigurationController {
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(
             @RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
-        log.debug("Tenant {} - Get connector instances", tenant);
+        log.debug("{} - Get connector instances", tenant);
 
         try {
             // Convert wildcard pattern to regex pattern if name is provided
@@ -205,7 +205,7 @@ public class ConfigurationController {
             }
             return ResponseEntity.ok(modifiedConfigs);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error getting connector instances", tenant, ex);
+            log.error("{} - Error getting connector instances", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -213,7 +213,7 @@ public class ConfigurationController {
     @GetMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
-        log.debug("Tenant {} - Get connector instance: {}", tenant, identifier);
+        log.debug("{} - Get connector instance: {}", tenant, identifier);
     
         try {
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
@@ -235,10 +235,10 @@ public class ConfigurationController {
             return ResponseEntity.ok(modifiedConfig);
         } catch (ResponseStatusException ex) {
             // Re-throw ResponseStatusException as is
-            log.error("Tenant {} - Connector instance not found: {}", tenant, identifier);
+            log.error("{} - Connector instance not found: {}", tenant, identifier);
             throw ex;
         } catch (Exception ex) {
-            log.error("Tenant {} - Error getting connector instance: {}", tenant, identifier, ex);
+            log.error("{} - Error getting connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -246,10 +246,10 @@ public class ConfigurationController {
     @DeleteMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Delete connection instance {}", tenant, identifier);
+        log.info("{} - Delete connection instance {}", tenant, identifier);
         // FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
-            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
@@ -272,7 +272,7 @@ public class ConfigurationController {
             connectorRegistry.removeClientFromStatusMap(tenant, identifier);
             bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error deleting connector instance: {}", tenant, identifier, ex);
+            log.error("{} - Error deleting connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return ResponseEntity.status(HttpStatus.OK).body(identifier);
@@ -282,12 +282,12 @@ public class ConfigurationController {
     public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(@PathVariable String identifier,
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Update connection instance {}", tenant, identifier);
+        log.info("{} - Update connection instance {}", tenant, identifier);
         // make sure we are using the correct identifier
         configuration.identifier = identifier;
         // FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
-            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
@@ -300,7 +300,7 @@ public class ConfigurationController {
         // HttpConnector!");
         // }
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
-        log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
+        log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             // check if password filed was touched, e.g. != "****", then use password from
             // new payload, otherwise copy password from previously saved configuration
@@ -312,7 +312,7 @@ public class ConfigurationController {
                         && configuration.getProperties().get(property).equals("****")) {
                     // retrieve the existing value
                     log.info(
-                            "Tenant {} - Copy property {} from existing configuration, since it was not touched and is sensitive.",
+                            "{} - Copy property {} from existing configuration, since it was not touched and is sensitive.",
                             property);
                     configuration.getProperties().put(property,
                             originalConfiguration.getProperties().get(property));
@@ -323,7 +323,7 @@ public class ConfigurationController {
             // configuration.getIdent());
             // client.reconnect();
         } catch (Exception ex) {
-            log.error("Tenant {} - Error updating connector instance: {}", tenant, identifier, ex);
+            log.error("{} - Error updating connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
@@ -332,7 +332,7 @@ public class ConfigurationController {
     @GetMapping(value = "/service", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Get service configuration", tenant);
+        log.info("{} - Get service configuration", tenant);
 
         try {
             final ServiceConfiguration configuration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -342,7 +342,7 @@ public class ConfigurationController {
             // don't modify original copy
             return new ResponseEntity<ServiceConfiguration>(configuration, HttpStatus.OK);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error getting service configuration", tenant, ex);
+            log.error("{} - Error getting service configuration", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -354,13 +354,13 @@ public class ConfigurationController {
         ServiceConfiguration currentServiceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
         // don't modify original copy
-        log.info("Tenant {} - Update service configuration: {}", tenant, serviceConfiguration.toString());
+        log.info("{} - Update service configuration: {}", tenant, serviceConfiguration.toString());
         // existing code templates
         ServiceConfiguration mergeServiceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         Map<String, CodeTemplate> codeTemplates = mergeServiceConfiguration.getCodeTemplates();
         // FIXME This isn't working - use @PreAuthorize instead
         if (!userHasMappingAdminRole()) {
-            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
@@ -404,7 +404,7 @@ public class ConfigurationController {
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
-            log.error("Tenant {} - Error updating service configuration", tenant, ex);
+            log.error("{} - Error updating service configuration", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -413,7 +413,7 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> getCodeTemplate(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Get code template: {}", tenant, id);
+        log.debug("{} - Get code template: {}", tenant, id);
 
         Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
@@ -425,7 +425,7 @@ public class ConfigurationController {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
-                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+                log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
             }
         }
@@ -433,7 +433,7 @@ public class ConfigurationController {
         CodeTemplate result = codeTemplates.get(id);
         if (result == null) {
             // Template not found - return 404 Not Found
-            log.warn("Tenant {} - Code template with ID [{}] not found", tenant, id);
+            log.warn("{} - Code template with ID [{}] not found", tenant, id);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
             // Template exists - return it with 200 OK
@@ -445,7 +445,7 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Delete code template: {}", tenant, id);
+        log.debug("{} - Delete code template: {}", tenant, id);
 
         Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
@@ -457,7 +457,7 @@ public class ConfigurationController {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
-                log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+                log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
             }
         }
@@ -472,13 +472,13 @@ public class ConfigurationController {
             result = codeTemplates.remove(id);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error updating code template [{}]", tenant, id, ex);
+            log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
         if (result == null) {
             // Template not found - return 404 Not Found
-            log.warn("Tenant {} - Code template with ID [{}] not found", tenant, id);
+            log.warn("{} - Code template with ID [{}] not found", tenant, id);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
             // Template exists - return it with 200 OK
@@ -490,7 +490,7 @@ public class ConfigurationController {
     public ResponseEntity<Map<String, CodeTemplate>> getCodeTemplates() {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Get code templates", tenant);
+        log.debug("{} - Get code templates", tenant);
 
         Map<String, CodeTemplate> codeTemplates = getCodeTemplates(tenant, serviceConfiguration);
         return new ResponseEntity<>(codeTemplates, HttpStatus.OK);
@@ -508,9 +508,9 @@ public class ConfigurationController {
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            log.debug("Tenant {} - Updated code template", tenant);
+            log.debug("{} - Updated code template", tenant);
         } catch (Exception ex) {
-            log.error("Tenant {} - Error updating code template [{}]", tenant, id, ex);
+            log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         } finally {
             if (graalsContext != null) {
@@ -535,12 +535,12 @@ public class ConfigurationController {
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            log.debug("Tenant {} - Create code template", tenant);
+            log.debug("{} - Create code template", tenant);
         } catch (JsonProcessingException ex) {
-            log.error("Tenant {} - Error creating code template", tenant, ex);
+            log.error("{} - Error creating code template", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         } catch (Exception ex) {
-            log.error("Tenant {} - Error creating code template", tenant, ex);
+            log.error("{} - Error creating code template", tenant, ex);
             throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
         } finally {
             if (graalsContext != null) {
@@ -585,7 +585,7 @@ public class ConfigurationController {
                 serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
-                log.error("Tenant {} - Error saving service configuration with code templates", tenant, ex);
+                log.error("{} - Error saving service configuration with code templates", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
             }
         }

@@ -74,7 +74,7 @@ public class ProtobufMqttClient {
     private void testSendMeasurement() {
 
         String topic = "protobuf/measurement";
-        System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
+        System.out.println("Connecting to server: ssl://" + broker_host + ":" + broker_port);
         testClient.connect();
 
         System.out.println("Publishing message on topic:" + topic);
@@ -100,7 +100,7 @@ public class ProtobufMqttClient {
     private void testSendAlarm() {
 
         String topic = "protobuf/alarm";
-        System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
+        System.out.println("Connecting to server: ssl://" + broker_host + ":" + broker_port);
         testClient.connect();
 
         System.out.println("Publishing message on topic:" + topic);

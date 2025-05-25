@@ -74,11 +74,11 @@ public class ConnectorRegistry {
         } else {
             Map<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             if (connectorMap.get(client.getConnectorIdentifier()) == null) {
-                log.debug("Tenant {} - Adding new client with id {}...", tenant, client.getConnectorIdentifier());
+                log.debug("{} - Adding new client with id {}...", tenant, client.getConnectorIdentifier());
                 connectorMap.put(client.getConnectorIdentifier(), client);
                 connectorTenantMap.put(tenant, connectorMap);
             } else {
-                log.debug("Tenant {} - Client {} is already registered!", tenant, client.getConnectorIdentifier());
+                log.debug("{} - Client {} is already registered!", tenant, client.getConnectorIdentifier());
             }
         }
 
@@ -106,11 +106,11 @@ public class ConnectorRegistry {
             if (connectorMap.get(identifier) != null)
                 return connectorMap.get(identifier);
             else {
-                log.info("Tenant {} - No Client is registered for connector identifier {}", tenant, identifier);
+                log.info("{} - No Client is registered for connector identifier {}", tenant, identifier);
                 return null;
             }
         } else {
-            log.info("Tenant {} - No Client is registered!", tenant);
+            log.info("{} - No Client is registered!", tenant);
             return null;
         }
     }
@@ -153,10 +153,10 @@ public class ConnectorRegistry {
                 connectorStatusMaps.get(tenant).put(identifier, client.getConnectorStatus());
                 connectorMap.remove(identifier);
             } else {
-                log.warn("Tenant {} - Client {} is not registered", tenant, identifier);
+                log.warn("{} - Client {} is not registered", tenant, identifier);
             }
         } else {
-            log.warn("Tenant {} - Client {} is not registered", tenant, identifier);
+            log.warn("{} - Client {} is not registered", tenant, identifier);
         }
     }
 

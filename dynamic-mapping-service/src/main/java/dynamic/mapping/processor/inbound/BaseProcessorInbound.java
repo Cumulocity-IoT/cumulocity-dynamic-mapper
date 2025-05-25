@@ -123,7 +123,7 @@ public abstract class BaseProcessorInbound<T> {
             }
         } else {
             log.info(
-                    "Tenant {} - This message is not parsed by Base Inbound Processor, will be potentially parsed by extension due to custom format.",
+                    "{} - This message is not parsed by Base Inbound Processor, will be potentially parsed by extension due to custom format.",
                     tenant);
         }
     }
@@ -168,7 +168,7 @@ public abstract class BaseProcessorInbound<T> {
                 getBuildProcessingContext(context, deviceEntries.get(i),
                         i, deviceEntries.size());
             }
-            log.info("Tenant {} - Completed context, processing sequentially, createNonExistingDevice: {}", tenant,
+            log.info("{} - Completed context, processing sequentially, createNonExistingDevice: {}", tenant,
                     mapping.createNonExistingDevice);
         } else {
             List<Future<ProcessingContext<T>>> contextFutureList = new ArrayList<>();
@@ -183,14 +183,14 @@ public abstract class BaseProcessorInbound<T> {
             int j = 0;
             for (Future<ProcessingContext<T>> currentContext : contextFutureList) {
                 try {
-                    log.debug("Tenant {} - Waiting context is completed {}...", tenant, j);
+                    log.debug("{} - Waiting context is completed {}...", tenant, j);
                     currentContext.get(60, TimeUnit.SECONDS);
                     j++;
                 } catch (Exception e) {
-                    log.error("Tenant {} - Error waiting for result of Processing context", tenant, e);
+                    log.error("{} - Error waiting for result of Processing context", tenant, e);
                 }
             }
-            log.info("Tenant {} - Completed context, processing in parallel {} requests", tenant, j);
+            log.info("{} - Completed context, processing in parallel {} requests", tenant, j);
         }
     }
 
@@ -220,7 +220,7 @@ public abstract class BaseProcessorInbound<T> {
                     substitute = pathTargetSubstitute.get(last).clone();
                 }
                 log.warn(
-                        "Tenant {} - Processing pathTarget: '{}', repairStrategy: '{}'.",
+                        "{} - Processing pathTarget: '{}', repairStrategy: '{}'.",
                         tenant,
                         pathTarget, substitute.repairStrategy);
             }
@@ -275,11 +275,11 @@ public abstract class BaseProcessorInbound<T> {
             }
             predecessor = newPredecessor;
         } else {
-            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, context.getApi(),
+            log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, context.getApi(),
                     context.getProcessingCacheSize());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
+            log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),
                     payloadTarget.jsonString(),
                     size);
@@ -366,12 +366,12 @@ public abstract class BaseProcessorInbound<T> {
                 var expr = jsonata(mappingFilter);
                 Object extractedSourceContent = expr.evaluate(payloadObjectNode);
                 if (!isNodeTrue(extractedSourceContent)) {
-                    log.info("Tenant {} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter,
+                    log.info("{} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter,
                             payload);
                     context.setIgnoreFurtherProcessing(true);
                 }
             } catch (Exception e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", tenant, mappingFilter,
+                log.error("{} - Exception for: {}, {}: ", tenant, mappingFilter,
                         payload, e);
             }
         }

@@ -58,18 +58,18 @@ public class TopicConsumerCallback implements TopicConsumerListener {
 
     @Override
     public void onStarted() {
-        log.info("Tenant {} - Called method Called method 'onStarted'", tenant);
+        log.info("{} - Called method Called method 'onStarted'", tenant);
     }
 
     @Override
     public void onStoppedByErrorAndReconnecting(Exception error) {
-        log.error("Tenant {} - Called method 'onStoppedByErrorAndReconnecting'",tenant,  error);
+        log.error("{} - Called method 'onStoppedByErrorAndReconnecting'",tenant,  error);
 
     }
 
     @Override
     public void onStopped() {
-        log.info("Tenant {} - Called method 'onStopped'", tenant);
+        log.info("{} - Called method 'onStopped'", tenant);
     }
 
 }

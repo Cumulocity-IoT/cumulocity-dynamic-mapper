@@ -59,7 +59,7 @@ public class ExtensibleProcessorInbound extends BaseProcessorInbound<byte[]> {
         try {
             extension = getProcessorExtensionSource(context.getMapping().extension);
             if (extension == null) {
-                log.info("Tenant {} - extractFromSource ******* {}", tenant, this);
+                log.info("{} - extractFromSource ******* {}", tenant, this);
                 logExtensions(tenant);
                 String message = String.format("Tenant %s - Extension %s:%s could not be found!", tenant,
                         context.getMapping().extension.getExtensionName(),
@@ -114,16 +114,16 @@ public class ExtensibleProcessorInbound extends BaseProcessorInbound<byte[]> {
     }
 
     private void logExtensions(String tenant) {
-        log.info("Tenant {} - Logging content ...", tenant);
+        log.info("{} - Logging content ...", tenant);
         for (Map.Entry<String, Extension> entryExtension : extensions.entrySet()) {
             String extensionKey = entryExtension.getKey();
             Extension extension = entryExtension.getValue();
-            log.info("Tenant {} - Extension {}: {} found contains: ", tenant, extensionKey,
+            log.info("{} - Extension {}: {} found contains: ", tenant, extensionKey,
                     extension.getName());
             for (Map.Entry<String, ExtensionEntry> entryExtensionEntry : extension.getExtensionEntries().entrySet()) {
                 String extensionEntryKey = entryExtensionEntry.getKey();
                 ExtensionEntry extensionEntry = entryExtensionEntry.getValue();
-                log.info("Tenant {} - ExtensionEntry {}: {} found : ", tenant, extensionEntryKey,
+                log.info("{} - ExtensionEntry {}: {} found : ", tenant, extensionEntryKey,
                         extensionEntry.getEventName());
             }
         }
@@ -131,7 +131,7 @@ public class ExtensibleProcessorInbound extends BaseProcessorInbound<byte[]> {
 
     public void addExtensionEntry(String tenant, String extensionName, ExtensionEntry entry) {
         if (!extensions.containsKey(extensionName)) {
-            log.warn("Tenant {} - Cannot add extension entry. Create first an extension!", tenant);
+            log.warn("{} - Cannot add extension entry. Create first an extension!", tenant);
         } else {
             extensions.get(extensionName).getExtensionEntries().put(entry.getEventName(), entry);
         }
@@ -139,7 +139,7 @@ public class ExtensibleProcessorInbound extends BaseProcessorInbound<byte[]> {
 
     public void addExtension(String tenant, Extension extension) {
         if (extensions.containsKey(extension.getName())) {
-            log.warn("Tenant {} - Extension with this name {} already exits, override existing extension!", tenant,
+            log.warn("{} - Extension with this name {} already exits, override existing extension!", tenant,
                     extension.getName());
         }
         extensions.put(extension.getName(), extension);

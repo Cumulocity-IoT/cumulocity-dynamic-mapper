@@ -238,7 +238,7 @@ public class KafkaClient extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("Tenant {} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
+        log.info("{} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (shouldConnect())
@@ -258,7 +258,7 @@ public class KafkaClient extends AConnectorClient {
             defaultPropertiesProducer.put("sasl.mechanism", saslMechanism);
             defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
             defaultPropertiesProducer.put("group.id", groupId);
-            log.info("Tenant {} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
+            log.info("{} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
                     getConnectorName(),
                     shouldConnect(), bootstrapServers);
             try {
@@ -273,16 +273,16 @@ public class KafkaClient extends AConnectorClient {
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
                     updateActiveSubscriptionsInbound(updatedMappings, true, true);
-                    log.info("Tenant {} - Phase III: {} connected, bootstrapServers: {}", tenant, getConnectorName(),
+                    log.info("{} - Phase III: {} connected, bootstrapServers: {}", tenant, getConnectorName(),
                             bootstrapServers);
                 }
                 successful = true;
             } catch (Exception e) {
-                log.error("Tenant {} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
+                log.error("{} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 if (serviceConfiguration.logConnectorErrorInBackend) {
-                    log.error("Tenant {} - Stacktrace: ", tenant, e);
+                    log.error("{} - Stacktrace: ", tenant, e);
                 }
                 successful = false;
             }
@@ -298,7 +298,7 @@ public class KafkaClient extends AConnectorClient {
     public void disconnect() {
         if (isConnected()) {
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
-            log.info("Tenant {} - Disconnecting  connector {} from broker: {}", tenant, getConnectorName(),
+            log.info("{} - Disconnecting  connector {} from broker: {}", tenant, getConnectorName(),
                     bootstrapServers);
             activeSubscriptionsInbound.entrySet().forEach(entry -> {
                 // only unsubscribe if still active subscriptions exist
@@ -308,7 +308,7 @@ public class KafkaClient extends AConnectorClient {
                     try {
                         unsubscribe(topic);
                     } catch (Exception error) {
-                        log.error("Tenant {} - Error unsubscribing topic {} from broker: {}, error {}", tenant, topic,
+                        log.error("{} - Error unsubscribing topic {} from broker: {}, error {}", tenant, topic,
                                 getConnectorName(),
                                 error);
                     }
@@ -320,7 +320,7 @@ public class KafkaClient extends AConnectorClient {
             List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
             updateActiveSubscriptionsInbound(updatedMappings, true, true);
             kafkaProducer.close();
-            log.info("Tenant {} - Disconnected from from broker: {}", tenant, getConnectorName(),
+            log.info("{} - Disconnected from from broker: {}", tenant, getConnectorName(),
                     bootstrapServers);
         }
     }
@@ -370,7 +370,7 @@ public class KafkaClient extends AConnectorClient {
                         unsubscribe(mapIdent);
                         mappingsDeployedInbound.remove(map.identifier);
                         log.warn(
-                                "Tenant {} - Failed to subscribe to mappingTopic {} for mapping {} in connector {}!",
+                                "{} - Failed to subscribe to mappingTopic {} for mapping {} in connector {}!",
                                 tenant, map.mappingTopic, map, getConnectorName());
                     } catch (Exception e) {
                         // ignore interrupt
@@ -402,7 +402,7 @@ public class KafkaClient extends AConnectorClient {
         }
         kafkaProducer.send(new ProducerRecord<String, String>(context.getMapping().publishTopic, key, payload));
 
-        log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: [{}], {}", tenant, payload,
+        log.info("{} - Published outbound message: {} for mapping: {} on topic: [{}], {}", tenant, payload,
                 context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
     }
 
