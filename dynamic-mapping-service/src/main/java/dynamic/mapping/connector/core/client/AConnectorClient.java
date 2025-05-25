@@ -330,26 +330,28 @@ public abstract class AConnectorClient {
 
         log.info("Tenant {} - Phase 3333: {} connected: {} {} {}", tenant, getConnectorName(),
                 isConnected(), this);
-        // mappingsDeployedInbound = new ConcurrentHashMap<>();
-        // if (reset) {
-        //     activeSubscriptionsInbound = new HashMap<>();
-        // }
-        // log.info("Tenant {} - {} updating subscriptions, connected: {}",
-        //         tenant, getConnectorName(), isConnected());
-        // if (isConnected()) {
-        //     Map<String, MutableInt> updatedSubscriptionCache = new HashMap<>();
-        //     processInboundMappings(updatedMappings, updatedSubscriptionCache);
-        //     // Update subscriptions only in case of a cleanSession
-        //     // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ...
-        //     // in case of cleanSession=false?
-        //     // if (cleanSession){
-        //     handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
-        //     // }
+        mappingsDeployedInbound = new ConcurrentHashMap<>();
 
-        //     activeSubscriptionsInbound = updatedSubscriptionCache;
-        //     log.info("Tenant {} - {} updated subscriptions, active subscriptions: {}",
-        //             tenant, getConnectorName(), getActiveSubscriptionsView().size());
-        // }
+        if (reset) {
+            activeSubscriptionsInbound = new HashMap<>();
+        }
+        log.info("Tenant {} - {} updating subscriptions, connected: {}",
+                tenant, getConnectorName(), isConnected());
+        if (isConnected()) {
+            Map<String, MutableInt> updatedSubscriptionCache = new HashMap<>();
+            processInboundMappings(updatedMappings, updatedSubscriptionCache);
+            // Update subscriptions only in case of a cleanSession
+            // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ...
+            // in case of cleanSession=false?
+            if (cleanSession) {
+                handleSubscriptionUpdates(updatedSubscriptionCache, updatedMappings);
+            }
+
+            activeSubscriptionsInbound = updatedSubscriptionCache;
+            log.info("Tenant {} - {} updated subscriptions, active subscriptions: {}",
+                    tenant, getConnectorName(), getActiveSubscriptionsView().size());
+        }
+
     }
 
     private void processInboundMappings(List<Mapping> mappings, Map<String, MutableInt> subscriptionCache) {
