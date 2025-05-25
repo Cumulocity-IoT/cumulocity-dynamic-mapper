@@ -120,7 +120,7 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public void connect() {
+    public void doConnect() {
         String path = (String) connectorSpecification.getProperties().get("path").defaultValue;
         log.info("Tenant {} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
                 tenant, getConnectorName(), isConnected(),

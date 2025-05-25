@@ -237,7 +237,7 @@ public class KafkaClient extends AConnectorClient {
     }
 
     @Override
-    public void connect() {
+    public void doConnect() {
         log.info("Tenant {} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());

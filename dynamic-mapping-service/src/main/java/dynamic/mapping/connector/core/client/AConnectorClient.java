@@ -61,6 +61,7 @@ import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
+import dynamic.mapping.model.ThreadInfo;
 import dynamic.mapping.model.DeploymentMapEntry;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.LoggingEventType;
@@ -77,6 +78,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class AConnectorClient {
+
+    private static final Map<String, Map<String, ThreadInfo>> activeConnections = new ConcurrentHashMap<>();
 
     @Data
     @AllArgsConstructor
@@ -143,6 +146,7 @@ public abstract class AConnectorClient {
 
     private Future<?> initializeTask;
     private Future<?> disconnectTask;
+    private String threadKey;
 
     // keeps track how many active mappings use this topic as mappingTopic:
     // structure < mappingTopic, numberMappings >
@@ -193,11 +197,6 @@ public abstract class AConnectorClient {
     public abstract boolean initialize();
 
     public abstract Boolean supportsWildcardsInTopic();
-
-    /**
-     * Connect to the broker
-     **/
-    public abstract void connect();
 
     /**
      * This method if specifically for Kafka, since it does not have the concept of
@@ -328,6 +327,8 @@ public abstract class AConnectorClient {
      **/
     public void updateActiveSubscriptionsInbound(List<Mapping> updatedMappings, boolean reset, boolean cleanSession) {
 
+        ThreadInfo th = activeConnections.get(tenant).get(threadKey);
+        th.setCalled(true);
         log.info("Tenant {} - Phase 3333: {} connected: {} {} {}", tenant, getConnectorName(),
                 isConnected(), this);
         mappingsDeployedInbound = new ConcurrentHashMap<>();
@@ -1139,4 +1140,81 @@ public abstract class AConnectorClient {
         return mappingsDeployedOutbound.containsKey(identifier);
     }
 
+    private String generateThreadKey(Thread thread) {
+        return thread.getName() + "-" + thread.threadId() + "-" + System.identityHashCode(this);
+    }
+
+    // Static methods to access thread information
+    public static Map<String, ThreadInfo> getActiveConnections(String tenant) {
+        return new HashMap<>(activeConnections.get(tenant));
+    }
+
+    public static List<ThreadInfo> getLongRunningConnections(String tenant, long thresholdMs) {
+        long now = System.currentTimeMillis();
+        return activeConnections.get(tenant).values().stream()
+                .filter(info -> (now - info.getStartTime()) > thresholdMs)
+                .collect(Collectors.toList());
+    }
+
+    public static List<ThreadInfo> getVirtualThreadConnections(String tenant) {
+        return activeConnections.get(tenant).values().stream()
+                .filter(ThreadInfo::isVirtual)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Connect to the broker
+     */
+    public final void connect() {
+        Thread currentThread = Thread.currentThread();
+        threadKey = generateThreadKey(currentThread);
+
+        ThreadInfo threadInfo = new ThreadInfo(
+                currentThread.getName(),
+                currentThread.threadId(),
+                currentThread.isVirtual(),
+                System.currentTimeMillis(),
+                this.getClass().getSimpleName(),
+                getConnectorIdentifier(), // Implement this in subclasses,
+                getConnectorName(),
+                false
+        );
+
+        Map<String, ThreadInfo> tenantMap = activeConnections.computeIfAbsent(tenant,
+                k -> new ConcurrentHashMap<>());
+        tenantMap.put(threadKey, threadInfo);
+        activeConnections.putIfAbsent(tenant, tenantMap);
+        log.info("{} - Thread {} started connect() for {}, called: {}", tenant, currentThread.getName(), getConnectorName(), threadInfo.isCalled());
+
+        try {
+            doConnect(); // Call the actual implementation
+        } finally {
+            ThreadInfo th = activeConnections.get(tenant).remove(threadKey);
+            long duration = System.currentTimeMillis() - threadInfo.getStartTime();
+            log.info("{} - Thread {} finished connect() for {} after {}ms, called: {}",tenant,
+                    currentThread.getName(), getConnectorName(), duration, th.isCalled());
+        }
+    }
+
+    /**
+     * Actual connect implementation - to be implemented by subclasses
+     */
+    protected abstract void doConnect();
+
+    public static void logActiveConnections(String tenant) {
+        if (activeConnections.get(tenant).isEmpty()) {
+            log.info("{} - No active connector connections", tenant);
+            return;
+        }
+
+        log.info("Active connector connections: {}", activeConnections.size());
+        activeConnections.get(tenant).values().forEach(info -> {
+            long duration = System.currentTimeMillis() - info.getStartTime();
+            log.info("{} -  {} ({}): {} - {}ms", tenant,
+                    info.getThreadName(),
+                    info.isVirtual() ? "virtual" : "platform",
+                    info.getConnectorId(),
+                    duration);
+        });
+    }
 }

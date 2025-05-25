@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import jakarta.validation.constraints.NotNull;
@@ -40,6 +41,7 @@ import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.core.*;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -59,123 +61,129 @@ import dynamic.mapping.model.MappingStatus;
 @RestController
 public class MonitoringController {
 
-	@Autowired
-	ConnectorRegistry connectorRegistry;
+    @Autowired
+    ConnectorRegistry connectorRegistry;
 
-	@Autowired
-	MappingComponent mappingComponent;
+    @Autowired
+    MappingComponent mappingComponent;
 
-	@Autowired
-	ConnectorConfigurationComponent connectorConfigurationComponent;
+    @Autowired
+    ConnectorConfigurationComponent connectorConfigurationComponent;
 
-	@Autowired
-	ServiceConfigurationComponent serviceConfigurationComponent;
+    @Autowired
+    ServiceConfigurationComponent serviceConfigurationComponent;
 
-	@Autowired
-	BootstrapService bootstrapService;
+    @Autowired
+    BootstrapService bootstrapService;
 
-	@Autowired
-	C8YAgent c8YAgent;
+    @Autowired
+    C8YAgent c8YAgent;
 
-	@Autowired
-	private ContextService<UserCredentials> contextService;
+    @Autowired
+    private ContextService<UserCredentials> contextService;
 
-	@Value("${APP.externalExtensionsEnabled}")
-	private boolean externalExtensionsEnabled;
+    @Value("${APP.externalExtensionsEnabled}")
+    private boolean externalExtensionsEnabled;
 
-	@Value("${APP.userRolesEnabled}")
-	private Boolean userRolesEnabled;
+    @Value("${APP.userRolesEnabled}")
+    private Boolean userRolesEnabled;
 
-	@Value("${APP.mappingAdminRole}")
-	private String mappingAdminRole;
+    @Value("${APP.mappingAdminRole}")
+    private String mappingAdminRole;
 
-	@Value("${APP.mappingCreateRole}")
-	private String mappingCreateRole;
+    @Value("${APP.mappingCreateRole}")
+    private String mappingCreateRole;
 
-	@GetMapping(value = "/status/connector/{connectorIdentifier}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<ConnectorStatusEvent> getConnectorStatus(@PathVariable @NotNull String connectorIdentifier) {
-		try {
-			String tenant = contextService.getContext().getTenant();
-			AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-					connectorIdentifier);
-			ConnectorStatusEvent st = client.getConnectorStatus();
-			log.info("Tenant {} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
-			return new ResponseEntity<>(st, HttpStatus.OK);
-		} catch (ConnectorRegistryException e) {
-			throw new RuntimeException(e);
-		}
-	}
+    @Autowired
+    @Qualifier("virtualThreadPool")
+    private ExecutorService virtualThreadPool;
 
-	@GetMapping(value = "/status/connectors", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, ConnectorStatusEvent>> getConnectorsStatus() {
-		Map<String, ConnectorStatusEvent> connectorsStatus = new ConcurrentHashMap<>();
-		String tenant = contextService.getContext().getTenant();
-		try {
-			// initialize list with all known connectors
-			List<ConnectorConfiguration> configurationList = connectorConfigurationComponent.getConnectorConfigurations(
-					tenant);
-			for (ConnectorConfiguration conf : configurationList) {
-				connectorsStatus.put(conf.getIdentifier(), ConnectorStatusEvent.unknown(conf.name, conf.identifier));
-			}
+    @GetMapping(value = "/status/connector/{connectorIdentifier}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ConnectorStatusEvent> getConnectorStatus(@PathVariable @NotNull String connectorIdentifier) {
+        try {
+            String tenant = contextService.getContext().getTenant();
+            AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+                    connectorIdentifier);
+            ConnectorStatusEvent st = client.getConnectorStatus();
+            log.info("Tenant {} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
+            return new ResponseEntity<>(st, HttpStatus.OK);
+        } catch (ConnectorRegistryException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-			// overwrite status with last remembered status of once enabled connectors
-			connectorsStatus.putAll(connectorRegistry.getConnectorStatusMap(tenant));
-			// overwrite with / add status of currently enabled connectors
-			if (connectorRegistry.getClientsForTenant(tenant) != null) {
-				for (AConnectorClient client : connectorRegistry.getClientsForTenant(tenant).values()) {
-					ConnectorStatusEvent st = client.getConnectorStatus();
-					connectorsStatus.put(client.getConnectorIdentifier(), st);
-				}
-			}
-			log.info("Tenant {} - Get status of connectors: {}", tenant, connectorsStatus);
-			return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);
-		} catch (ConnectorRegistryException e) {
-			throw new RuntimeException(e);
-		}
-	}
+    @GetMapping(value = "/status/connectors", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, ConnectorStatusEvent>> getConnectorsStatus() {
+        Map<String, ConnectorStatusEvent> connectorsStatus = new ConcurrentHashMap<>();
+        String tenant = contextService.getContext().getTenant();
+        try {
+            // initialize list with all known connectors
+            List<ConnectorConfiguration> configurationList = connectorConfigurationComponent.getConnectorConfigurations(
+                    tenant);
+            for (ConnectorConfiguration conf : configurationList) {
+                connectorsStatus.put(conf.getIdentifier(), ConnectorStatusEvent.unknown(conf.name, conf.identifier));
+            }
 
-	@GetMapping(value = "/status/mapping/statistic", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<List<MappingStatus>> getMappingStatus() {
-		String tenant = contextService.getContext().getTenant();
-		List<MappingStatus> ms = mappingComponent.getMappingStatus(tenant);
-		log.info("Tenant {} - Get mapping status: {}", tenant, ms);
-		return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
-	}
+            // overwrite status with last remembered status of once enabled connectors
+            connectorsStatus.putAll(connectorRegistry.getConnectorStatusMap(tenant));
+            // overwrite with / add status of currently enabled connectors
+            if (connectorRegistry.getClientsForTenant(tenant) != null) {
+                for (AConnectorClient client : connectorRegistry.getClientsForTenant(tenant).values()) {
+                    ConnectorStatusEvent st = client.getConnectorStatus();
+                    connectorsStatus.put(client.getConnectorIdentifier(), st);
+                }
+            }
+            log.info("Tenant {} - Get status of connectors: {}", tenant, connectorsStatus);
+            return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);
+        } catch (ConnectorRegistryException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-    // @RequestMapping(value = "/status/mapping/error", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	// public ResponseEntity<List<MappingStatus>> getMappingLoadingError() {
-	// 	String tenant = contextService.getContext().getTenant();
-	// 	List<MappingStatus> ms = mappingComponent.getMappingLoadingError(tenant);
-	// 	log.info("Tenant {} - Get mapping loadingError: {}", tenant, ms);
-	// 	return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
-	// }
+    @GetMapping(value = "/status/mapping/statistic", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<MappingStatus>> getMappingStatus() {
+        String tenant = contextService.getContext().getTenant();
+        List<MappingStatus> ms = mappingComponent.getMappingStatus(tenant);
+        log.info("Tenant {} - Get mapping status: {}", tenant, ms);
+        return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
+    }
 
-	@GetMapping(value = "/tree", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
-		String tenant = contextService.getContext().getTenant();
-		MappingTreeNode result = mappingComponent.getResolverMappingInbound(tenant);
-		log.info("Tenant {} - Get mapping tree", tenant);
-		return ResponseEntity.status(HttpStatus.OK).body(result);
-	}
+    // @RequestMapping(value = "/status/mapping/error", method = RequestMethod.GET,
+    // produces = MediaType.APPLICATION_JSON_VALUE)
+    // public ResponseEntity<List<MappingStatus>> getMappingLoadingError() {
+    // String tenant = contextService.getContext().getTenant();
+    // List<MappingStatus> ms = mappingComponent.getMappingLoadingError(tenant);
+    // log.info("Tenant {} - Get mapping loadingError: {}", tenant, ms);
+    // return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
+    // }
 
-	@GetMapping(value = "/subscription/{connectorIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(@PathVariable @NotNull String connectorIdentifier) {
-		String tenant = contextService.getContext().getTenant();
-		AConnectorClient client = null;
-		try {
-			client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-			Map<String, MutableInt> as = client.getActiveSubscriptionsInbound();
-			Map<String, Integer> result = as.entrySet().stream()
-					.map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(),
-							entry.getValue().getValue()))
-					.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    @GetMapping(value = "/tree", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
+        String tenant = contextService.getContext().getTenant();
+        MappingTreeNode result = mappingComponent.getResolverMappingInbound(tenant);
+        log.info("Tenant {} - Get mapping tree", tenant);
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
 
-			log.debug("Tenant {} - Getting active subscriptions!", tenant);
-			return ResponseEntity.status(HttpStatus.OK).body(result);
-		} catch (ConnectorRegistryException e) {
-			throw new RuntimeException(e);
-		}
+    @GetMapping(value = "/subscription/{connectorIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(
+            @PathVariable @NotNull String connectorIdentifier) {
+        String tenant = contextService.getContext().getTenant();
+        AConnectorClient client = null;
+        try {
+            client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
+            Map<String, MutableInt> as = client.getActiveSubscriptionsInbound();
+            Map<String, Integer> result = as.entrySet().stream()
+                    .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(),
+                            entry.getValue().getValue()))
+                    .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 
-	}
+            log.debug("Tenant {} - Getting active subscriptions!", tenant);
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+        } catch (ConnectorRegistryException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
 
 }
