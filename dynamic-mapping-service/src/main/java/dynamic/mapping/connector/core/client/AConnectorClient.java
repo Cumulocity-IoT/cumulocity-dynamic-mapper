@@ -1177,22 +1177,26 @@ public abstract class AConnectorClient {
                 this.getClass().getSimpleName(),
                 getConnectorIdentifier(), // Implement this in subclasses,
                 getConnectorName(),
-                false
-        );
+                false);
 
         Map<String, ThreadInfo> tenantMap = activeConnections.computeIfAbsent(tenant,
                 k -> new ConcurrentHashMap<>());
         tenantMap.put(threadKey, threadInfo);
         activeConnections.putIfAbsent(tenant, tenantMap);
-        log.info("{} - Thread {} started connect() for {}, called: {}", tenant, currentThread.getName(), getConnectorName(), threadInfo.isCalled());
+        log.info("{} - Thread {} started connect() for {}, called: {}", tenant, currentThread.getName(),
+                getConnectorName(), threadInfo.isCalled());
 
         try {
             doConnect(); // Call the actual implementation
+        } catch (RuntimeException e) {
+            log.error("{} - Thread {} failed connect() for {} with exception: {}",
+                    tenant, currentThread.getName(), getConnectorName(), e.getMessage(), e);
+            throw e; // Re-throw to maintain original behavior
         } finally {
             ThreadInfo th = activeConnections.get(tenant).remove(threadKey);
             long duration = System.currentTimeMillis() - threadInfo.getStartTime();
-            log.info("{} - Thread {} finished connect() for {} after {}ms, called: {}",tenant,
-                    currentThread.getName(), getConnectorName(), duration, th.isCalled());
+            log.info("{} - Thread {} finished connect() for {} after {}ms, called: {}",
+                    tenant, currentThread.getName(), getConnectorName(), duration, th.isCalled());
         }
     }
 

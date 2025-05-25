@@ -94,6 +94,10 @@ public class MQTTServiceClient extends MQTT3Client {
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
                         null));
+
+        configProps.put("cleanSession",
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, true, null,
+                        null));
         String name = "Cumulocity MQTT Service";
         String description = "Connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
         connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE;

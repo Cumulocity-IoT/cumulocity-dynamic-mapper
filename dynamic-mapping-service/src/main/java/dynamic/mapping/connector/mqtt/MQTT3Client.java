@@ -401,8 +401,18 @@ public class MQTT3Client extends AConnectorClient {
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
-                    if (e instanceof InterruptedException || e instanceof RuntimeException)
-                        return;
+                    if (e instanceof InterruptedException || e instanceof RuntimeException) {
+                        log.warn("Tenant {} - Phase II: {} interrupted, shouldConnect: {}, server: {}", tenant,
+                                getConnectorName(),
+                                shouldConnect(), configuredUrl, e);
+                        log.error("EXCEPTION", e);
+                        if (e instanceof InterruptedException)
+                            Thread.currentThread().interrupt();
+                        if (mqttClient != null && mqttClient.getState().isConnected()) {
+                            mqttClient.disconnect();
+                            return;
+                        }
+                    }
                     log.error("Tenant {} - Failed to connect to server {}, {}, {}, {}", tenant,
                             configuredUrl, e.getMessage(), connectionState.booleanValue(),
                             mqttClient.getState().isConnected());
