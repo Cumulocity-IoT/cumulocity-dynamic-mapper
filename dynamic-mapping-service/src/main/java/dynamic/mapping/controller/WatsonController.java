@@ -119,8 +119,8 @@ public class WatsonController {
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).updateActiveSubscriptionInbound(createdMapping, true, false);
                 });
-                mappingComponent.removeFromCacheMappingInbound(tenant, createdMapping);
-                mappingComponent.addToCacheMappingInbound(tenant, createdMapping);
+                mappingComponent.removeFromMappingInboundResolver(tenant, createdMapping);
+                mappingComponent.addToMappingInboundResolver(tenant, createdMapping);
                 mappingComponent.addCacheMappingInbound(tenant, createdMapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(createdMapping);

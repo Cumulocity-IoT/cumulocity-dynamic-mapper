@@ -56,7 +56,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
     const systemCodeTemplate = codeTemplates[TemplateType.SYSTEM];
     const systemCodeTemplateDecoded = enc.decode(base64ToBytes(systemCodeTemplate.code));
     // Modify codeToRun to use arg0 instead of ctx
-    const codeToRun = `${mappingCodeTemplateDecoded}${Java_Types_Serialized}${systemCodeTemplateDecoded}${sharedCodeTemplateDecoded}return extractFromSource(arg0);`;
+    const codeToRun = `${mappingCodeTemplateDecoded}${Java_Types_Serialized}${systemCodeTemplateDecoded}${sharedCodeTemplateDecoded}\n return extractFromSource(arg0);`;
 
     let sourceId: any = await this.evaluateExpression(
       payload,
