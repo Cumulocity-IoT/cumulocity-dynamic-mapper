@@ -59,7 +59,7 @@ else:
     logger.info("Password is not set")
 
 root_topic = "testmapper/"
-client_id = f"python-mqtt-{random.randint(0, 1000)}"
+#client_id = f"python-mqtt-{random.randint(0, 1000)}"
 
 task_queue = queue.Queue()
 message_create_count = 0
@@ -70,12 +70,12 @@ message_publish_count = 0
 # parameter to control message format
 EVENT_NUM = 10  #  total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
-QUEUE_SIZE = 40000  # the size of the queue
+QUEUE_SIZE = 5000  # the size of the queue
 
 # parameter to control load
-TPS = 1000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
-WORKERS = 10
-SLEEP_BETWEEN_ITERATIONS = 1
+TPS = 2000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
+WORKERS = 30
+SLEEP_BETWEEN_ITERATIONS = 0
 
 # functional parameter
 diff_capid = True
@@ -98,6 +98,7 @@ def connect_mqtt():
             print("Connected to MQTT Service!")
         else:
             print("Failed to connect, return code %d\n", rc)
+    client_id = f"python-mqtt-{random.randint(0, 10000)}"
     client = mqtt_client.Client(
         client_id=client_id,
         callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2,
@@ -116,8 +117,8 @@ def connect_mqtt():
     return client
 
 
-#@sleep_and_retry
-#@limits(calls=TPS, period=1)
+@sleep_and_retry
+@limits(calls=TPS, period=1)
 def publish(client, message, topic):
     global message_publish_count
     result = client.publish(topic, message, qos=0)
@@ -207,10 +208,10 @@ def tps_timer(start_time):
 
 
 def run(start_time):
-    client = connect_mqtt()
     logging.info("MQTT client created")
     ### Threads for publishing messages
     for n in range(WORKERS):
+        client = connect_mqtt()
         t = Thread(target=consume_tasks, args=(client,))
         t.daemon = True
         t.start()
@@ -223,7 +224,7 @@ def run(start_time):
     logging.info("Timer thread created")
 
     client.loop_start()
-    for i in range(2):
+    for i in range(1):
         t = Thread(target=queue_tasks)
         t.daemon = True
         t.start()
