@@ -386,8 +386,12 @@ public class MQTT5Client extends AConnectorClient {
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
-                    if (e instanceof InterruptedException || e instanceof RuntimeException)
+                    if (e instanceof InterruptedException || e instanceof RuntimeException) {
+                        log.error("{} - Connector {} - Interrupted while connecting to server: {}, {}, {}, {}",
+                                tenant, getConnectorName(), mqttClient.getConfig().getServerHost(),
+                                e.getMessage(), connectionState.booleanValue(), mqttClient.getState().isConnected());
                         return;
+                    }
                     log.error("{} - Failed to connect to server {}, {}, {}, {}", tenant,
                             mqttClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
                             mqttClient.getState().isConnected());
