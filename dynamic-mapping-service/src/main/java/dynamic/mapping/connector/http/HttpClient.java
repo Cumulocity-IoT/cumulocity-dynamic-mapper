@@ -144,8 +144,8 @@ public class HttpClient extends AConnectorClient {
                 updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
                 successful = true;
             } catch (Exception e) {
-                log.error("{} - Phase III: {} connected, http endpoint {}, {}, {}", tenant, getConnectorName(),
-                        path, e.getMessage(), connectionState.booleanValue());
+                log.error("{} - Phase III: {} failed to connect to http endpoint {}, {}, {}", tenant, getConnectorName(),
+                        path, e.getMessage(), connectionState.booleanValue(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
             }

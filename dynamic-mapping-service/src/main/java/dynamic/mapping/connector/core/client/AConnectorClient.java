@@ -142,7 +142,7 @@ public abstract class AConnectorClient {
             .newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     private Future<?> initializeTask;
-    private Future<?> disconnectTask;
+    private CompletableFuture<Void> disconnectTask;
 
     // keeps track how many active mappings use this topic as mappingTopic:
     // structure < mappingTopic, numberMappings >
@@ -253,35 +253,64 @@ public abstract class AConnectorClient {
      **/
     public abstract void publishMEAO(ProcessingContext<?> context);
 
-    // Core functionality methods
-    public Future<?> submitInitialize() {
+    public CompletableFuture<Void> submitInitialize() {
         if (initializeTask == null || initializeTask.isDone()) {
             log.debug("{} - Initializing...", tenant);
-            initializeTask = virtualThreadPool.submit(this::initialize);
+            initializeTask = CompletableFuture
+                    .runAsync(this::initialize, virtualThreadPool)
+                    .whenComplete((result, throwable) -> {
+                        if (throwable != null) {
+                            log.error("{} - Initialization failed: {}", tenant, getConnectorName(), throwable);
+                            // Handle the exception (e.g., retry, notify, etc.)
+                        } else {
+                            log.debug("{} - Initialized successfully: {}", getConnectorName(), tenant);
+                        }
+                    });
         }
-        return initializeTask;
+        return (CompletableFuture<Void>) initializeTask;
     }
 
-    public Future<?> submitConnect() {
+    public CompletableFuture<Void> submitConnect() {
         loadConfiguration();
         if (connectTask == null || connectTask.isDone()) {
             log.debug("{} - Connecting...", tenant);
-            connectTask = virtualThreadPool.submit(this::connect);
+            connectTask = CompletableFuture
+                    .runAsync(this::connect, virtualThreadPool)
+                    .whenComplete((result, throwable) -> {
+                        if (throwable != null) {
+                            log.error("{} - Connection failed: {}", tenant, getConnectorName(), throwable);
+                            // Handle the exception (e.g., retry, notify, etc.)
+                        } else {
+                            log.debug("{} - Connected successfully: {}", getConnectorName(), tenant);
+                        }
+                    });
         }
-        return connectTask;
+        return (CompletableFuture<Void>) connectTask;
     }
 
-    public Future<?> submitDisconnect() {
+    public CompletableFuture<Void> submitDisconnect() {
         loadConfiguration();
+
+        // Cancel connect task if it's running
         if (connectTask != null && (!connectTask.isDone() || !connectTask.isCancelled())) {
+            log.debug("{} - Cancelling ongoing connection for: {}", tenant, getConnectorName());
             connectTask.cancel(true);
         }
 
         if (disconnectTask == null || disconnectTask.isDone()) {
             log.debug("{} - Disconnecting...", tenant);
-            disconnectTask = virtualThreadPool.submit(this::disconnect);
+            disconnectTask = CompletableFuture
+                    .runAsync(this::disconnect, virtualThreadPool)
+                    .whenComplete((result, throwable) -> {
+                        if (throwable != null) {
+                            log.error("{} - Disconnection failed: {}", tenant, getConnectorName(), throwable);
+                            // Handle the exception (e.g., cleanup, notify, etc.)
+                        } else {
+                            log.debug("{} - Disconnected successfully: {}", getConnectorName(), tenant);
+                        }
+                    });
         }
-        return disconnectTask;
+        return (CompletableFuture<Void>) disconnectTask;
     }
 
     public void submitHousekeeping() {
@@ -1127,8 +1156,8 @@ public abstract class AConnectorClient {
         return mappingsDeployedInbound.containsKey(identifier);
     }
 
-	public boolean isMappingOutboundDeployed(String identifier) {
-		return mappingsDeployedOutbound.containsKey(identifier);
-	}
+    public boolean isMappingOutboundDeployed(String identifier) {
+        return mappingsDeployedOutbound.containsKey(identifier);
+    }
 
 }

@@ -265,8 +265,8 @@ public class WebHook extends AConnectorClient {
                     updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
-                    log.error("{} - Error connecting to webHook: {}, {}, {}", tenant,
-                            baseUrl, e.getMessage(), connectionState.booleanValue());
+                    log.error("{} - Phase III: {} failed to connect to webHook: {}, {}, {}", tenant, getConnectorName(),
+                            baseUrl, e.getMessage(), connectionState.booleanValue(), e);
                     updateConnectorStatusToFailed(e);
                     sendConnectorLifecycle();
                 }

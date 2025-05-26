@@ -387,14 +387,14 @@ public class MQTT5Client extends AConnectorClient {
 
                 } catch (Exception e) {
                     if (e instanceof InterruptedException || e instanceof RuntimeException) {
-                        log.error("{} - Connector {} - Interrupted while connecting to server: {}, {}, {}, {}",
+                        log.error("{} - Phase III: {} interrupted while connecting to server: {}, {}, {}, {}",
                                 tenant, getConnectorName(), mqttClient.getConfig().getServerHost(),
-                                e.getMessage(), connectionState.booleanValue(), mqttClient.getState().isConnected());
+                                e.getMessage(), connectionState.booleanValue(), mqttClient.getState().isConnected(), e);
                         return;
                     }
-                    log.error("{} - Failed to connect to server {}, {}, {}, {}", tenant,
+                    log.error("{} - Phase III: {} failed to connect to server {}, {}, {}, {}", tenant,
                             mqttClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
-                            mqttClient.getState().isConnected());
+                            mqttClient.getState().isConnected(), e);
                     updateConnectorStatusToFailed(e);
                     sendConnectorLifecycle();
                 }
