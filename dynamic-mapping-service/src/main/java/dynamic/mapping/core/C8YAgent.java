@@ -93,6 +93,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Map.entry;
@@ -172,6 +173,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Value("${application.version}")
     private String version;
 
+    @Value("${APP.maxC8YConnections}")
+    private int maxConnections;
+
+    private Semaphore c8ySemaphore = new Semaphore(maxConnections, true);
+
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
             ProcessingContext<?> context) {
         if (identity.getType() == null) {
@@ -184,7 +190,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
                         .register(Metrics.globalRegistry).increment();
                 if (resultInner == null) {
-                    resultInner = identityApi.resolveExternalId2GlobalId(identity, context);
+                    resultInner = identityApi.resolveExternalId2GlobalId(identity, context, c8ySemaphore);
                     inboundExternalIdCaches.get(tenant).putIdForExternalId(identity,
                             resultInner);
 
@@ -212,7 +218,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         final String idt = idType;
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                return identityApi.resolveGlobalId2ExternalId(gid, idt, context);
+                return identityApi.resolveGlobalId2ExternalId(gid, idt, context, c8ySemaphore);
             } catch (SDKException e) {
                 log.warn("{} - External ID type {} for {} not found", tenant, idt, gid.getValue());
             }
@@ -233,8 +239,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     measurementRepresentation.setSource(mor);
                     measurementRepresentation.setDateTime(dateTime);
                     log.debug("{} - Creating Measurement {}", tenant, measurementRepresentation);
-                    MeasurementRepresentation mrn = measurementApi.create(measurementRepresentation);
-                    measurementRepresentation.setId(mrn.getId());
+                    MeasurementRepresentation mrn = null;
+                    try {
+                        c8ySemaphore.acquire();
+                        mrn = measurementApi.create(measurementRepresentation);
+                        measurementRepresentation.setId(mrn.getId());
+                    } catch (InterruptedException e) {
+                        log.error("{} - Failed to acquire semaphore for creating Measurement", tenant, e);
+                    } finally {
+                        c8ySemaphore.release();
+                    }
                 } catch (SDKException e) {
                     log.error("{} - Error creating Measurement", tenant, e);
                 }
@@ -255,7 +269,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 ar.setDateTime(alarmTime);
                 ar.setStatus("ACTIVE");
                 ar.setType(type);
-                return this.alarmApi.create(ar);
+                try {
+                    c8ySemaphore.acquire();
+                    ar = this.alarmApi.create(ar);
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for creating Alarm", tenant, e);
+                } finally {
+                    c8ySemaphore.release();
+                }
+                return ar;
             });
         });
         return alarmRepresentation;
@@ -277,7 +299,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 if (properties != null) {
                     er.setProperty(loggingType.getComponent(), properties);
                 }
-                this.eventApi.createAsync(er);
+                try {
+                    c8ySemaphore.acquire();
+                    this.eventApi.createAsync(er);
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for creating Event", tenant, e);
+                } finally {
+                    c8ySemaphore.release();
+                }
             });
         });
     }
@@ -408,40 +437,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 AbstractExtensibleRepresentation rt = null;
                 try {
                     if (targetAPI.equals(API.EVENT)) {
-                        // TODO Add Binary API when required fields are present
                         EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
                                 payload,
                                 EventRepresentation.class);
-
-                        // Add Attachment to Binary
-                        // String attName = null;
-                        // String attData = null;
-                        // String attType = null;
-                        // byte[] attDataBytes = null;
-                        // BinaryInfo binaryInfo = new BinaryInfo();
-                        // if(eventRepresentation.hasProperty("attachment_Name") &&
-                        // eventRepresentation.hasProperty("attachment_Type") &&
-                        // eventRepresentation.hasProperty("attachment_Data")) {
-                        // if (context.getMapping().eventWithAttachment) {
-                        // // attName =
-                        // String.valueOf(eventRepresentation.getProperty("attachment_Name"));
-                        // // attType =
-                        // String.valueOf(eventRepresentation.getProperty("attachment_Type"));
-                        // // attData =
-                        // String.valueOf(eventRepresentation.getProperty("attachment_Data"));
-                        // if (!attData.isEmpty())
-                        // attDataBytes =
-                        // Base64.getDecoder().decode(attData.getBytes(StandardCharsets.UTF_8));
-                        // // attDataBytes = attData.getBytes(StandardCharsets.UTF_8);
-                        // // eventRepresentation.removeProperty("attachment_Name");
-                        // // eventRepresentation.removeProperty("attachment_Type");
-                        // // eventRepresentation.removeProperty("attachment_Data");
-                        // if (!attName.isEmpty())
-                        // binaryInfo.setName(attName);
-                        // if (!attType.isEmpty())
-                        // binaryInfo.setType(attType);
-                        // }
-                        rt = eventApi.create(eventRepresentation);
+                        try {
+                            c8ySemaphore.acquire();
+                            rt = eventApi.create(eventRepresentation);
+                        } catch (InterruptedException e) {
+                            log.error("{} - Failed to acquire semaphore for creating Event", tenant, e);
+                        } finally {
+                            c8ySemaphore.release();
+                        }
                         GId eventId = ((EventRepresentation) rt).getId();
                         if (context.getMapping().eventWithAttachment) {
                             BinaryInfo binaryInfo = context.getBinaryInfo();
@@ -457,7 +463,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
                                 payload,
                                 AlarmRepresentation.class);
-                        rt = alarmApi.create(alarmRepresentation);
+                        try {
+                            c8ySemaphore.acquire();
+                            rt = alarmApi.create(alarmRepresentation);
+                        } catch (InterruptedException e) {
+                            log.error("{} - Failed to acquire semaphore for creating Alarm", tenant, e);
+                        } finally {
+                            c8ySemaphore.release();
+                        }
                         if (serviceConfiguration.logPayload)
                             log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         else
@@ -466,7 +479,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     } else if (targetAPI.equals(API.MEASUREMENT)) {
                         MeasurementRepresentation measurementRepresentation = jsonParser
                                 .parse(MeasurementRepresentation.class, payload);
-                        rt = measurementApi.create(measurementRepresentation);
+                        try {
+                            c8ySemaphore.acquire();
+                            rt = measurementApi.create(measurementRepresentation);
+                        } catch (InterruptedException e) {
+                            log.error("{} - Failed to acquire semaphore for creating Alarm", tenant, e);
+                        } finally {
+                            c8ySemaphore.release();
+                        }
                         if (serviceConfiguration.logPayload)
                             log.info("{} - SEND: measurement posted: {}", tenant, rt);
                         else
@@ -475,7 +495,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     } else if (targetAPI.equals(API.OPERATION)) {
                         OperationRepresentation operationRepresentation = jsonParser
                                 .parse(OperationRepresentation.class, payload);
-                        rt = deviceControlApi.create(operationRepresentation);
+                        try {
+                            c8ySemaphore.acquire();
+                            rt = deviceControlApi.create(operationRepresentation);
+                        } catch (InterruptedException e) {
+                            log.error("{} - Failed to acquire semaphore for creating Alarm", tenant, e);
+                        } finally {
+                            c8ySemaphore.release();
+                        }
                         log.info("{} - SEND: operation posted: {}", tenant, rt);
                     } else {
                         log.error("{} - Not existing API!", tenant);
@@ -533,18 +560,31 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         mor.set(new IsDevice());
                         // remove id
                         mor.setId(null);
-
-                        mor = inventoryApi.create(mor, context);
-                        // TODO Add/Update new managed object to IdentityCache
-                        if (serviceConfiguration.logPayload)
-                            log.info("{} - New device created: {}", tenant, mor);
-                        else
-                            log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
-                        identityApi.create(mor, identity, context);
+                        try {
+                            c8ySemaphore.acquire();
+                            mor = inventoryApi.create(mor, context);
+                            // TODO Add/Update new managed object to IdentityCache
+                            if (serviceConfiguration.logPayload)
+                                log.info("{} - New device created: {}", tenant, mor);
+                            else
+                                log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
+                            identityApi.create(mor, identity, context);
+                        } catch (InterruptedException e) {
+                            log.error("{} - Failed to acquire semaphore for creating Device", tenant, e);
+                        } finally {
+                            c8ySemaphore.release();
+                        }
                     } else {
                         // Device exists - update needed
                         mor.setId(new GId(context.getSourceId()));
-                        mor = inventoryApi.update(mor, context);
+                        try {
+                            c8ySemaphore.acquire();
+                            mor = inventoryApi.update(mor, context);
+                        } catch (InterruptedException e) {
+                            log.error("{} - Failed to acquire semaphore for updating Device", tenant, e);
+                        } finally {
+                            c8ySemaphore.release();
+                        }
                         if (serviceConfiguration.logPayload)
                             log.info("{} - Device updated: {}", tenant, mor);
                         else
@@ -1048,7 +1088,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             String serverUrl = clientProperties.getBaseURL() + "/event/events/" + eventId + "/binaries";
             RestTemplate restTemplate = new RestTemplate();
 
-            ResponseEntity<EventBinary> response;
+            ResponseEntity<EventBinary> response = null;
             byte[] attDataBytes = null;
             if (!binaryInfo.getData().isEmpty()) {
                 if (binaryInfo.getData().startsWith("data:") && binaryInfo.getType() == null
@@ -1102,8 +1142,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         .filename(binaryInfo.getName());
                 MultiValueMap<String, HttpEntity<?>> body = multipartBodyBuilder.build();
                 HttpEntity<MultiValueMap<String, HttpEntity<?>>> requestEntity = new HttpEntity<>(body, headers);
-
-                response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
+                try {
+                    c8ySemaphore.acquire();
+                    response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for uploading attachment to event {}: ", tenant, eventId, e);
+                } finally {
+                    c8ySemaphore.release();
+                }
             }
 
             if (response.getStatusCode().value() >= 300) {
