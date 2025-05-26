@@ -173,10 +173,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Value("${application.version}")
     private String version;
 
-    @Value("${APP.maxC8YConnections}")
-    private int maxConnections;
+    private Integer maxConnections = 100;
+    private Semaphore c8ySemaphore;
 
-    private Semaphore c8ySemaphore = new Semaphore(maxConnections, true);
+    public C8YAgent(@Value("#{new Integer('${APP.maxC8YConnections}')}") Integer maxConnections) {
+        this.maxConnections = maxConnections;
+        this.c8ySemaphore = new Semaphore(maxConnections, true);
+    }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
             ProcessingContext<?> context) {
