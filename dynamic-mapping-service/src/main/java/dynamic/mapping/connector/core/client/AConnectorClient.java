@@ -491,7 +491,8 @@ public abstract class AConnectorClient {
     public boolean updateActiveSubscriptionInbound(Mapping mapping, Boolean create, Boolean activationChanged) {
         boolean result = true;
         if (isConnected()) {
-            if (isValidMappingForDeployment(mapping)) {
+            // always ensure that a mapping can be deactivated
+            if (isValidMappingForDeployment(mapping) || (activationChanged && !mapping.active)) {
                 handleInboundSubscription(mapping, create, activationChanged);
             } else {
                 List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
