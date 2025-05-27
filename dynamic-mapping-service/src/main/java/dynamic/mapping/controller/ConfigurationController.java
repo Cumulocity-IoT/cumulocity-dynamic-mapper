@@ -443,6 +443,8 @@ public class ConfigurationController {
 
     @DeleteMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(@PathVariable String id) {
+        // TODO GRAALS_PERFOMEANCE update code source from templates in graalsCode cache
+
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("{} - Delete code template: {}", tenant, id);
@@ -499,6 +501,8 @@ public class ConfigurationController {
     @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateCodeTemplate(
             @PathVariable String id, @Valid @RequestBody CodeTemplate codeTemplate) {
+        // TODO GRAALS_PERFOMEANCE update code source from templates in graalsCode cache
+
         String tenant = contextService.getContext().getTenant();
         Context graalsContext = null;
         try {
@@ -523,6 +527,8 @@ public class ConfigurationController {
     @PostMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createCodeTemplate(
             @Valid @RequestBody CodeTemplate codeTemplate) {
+        // TODO GRAALS_PERFOMEANCE update code source from templates in graalsCode cache
+
         String tenant = contextService.getContext().getTenant();
         Context graalsContext = null;
         try {
