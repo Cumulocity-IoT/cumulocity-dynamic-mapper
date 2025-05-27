@@ -289,27 +289,6 @@ public class ConfigurationRegistry {
     }
 
     public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
-        if (hostAccess == null) {
-            // Create a custom HostAccess configuration
-            // SubstitutionContext public methods and basic collection operations
-            synchronized (this) {
-                // Create a HostAccess instance with the desired configuration
-                // Allow access to public members of accessible classes
-                // Allow array access for basic functionality
-                // Allow List operations
-                // Allow Map operations
-                hostAccess = HostAccess.newBuilder()
-                        // Allow access to public members of accessible classes
-                        .allowPublicAccess(true)
-                        // Allow array access for basic functionality
-                        .allowArrayAccess(true)
-                        // Allow List operations
-                        .allowListAccess(true)
-                        // Allow Map operations
-                        .allowMapAccess(true)
-                        .build();
-            }
-        }
         Engine eng = Engine.newBuilder()
                 .option("engine.WarnInterpreterOnly", "false")
                 .build();
@@ -452,6 +431,27 @@ public class ConfigurationRegistry {
     }
 
     public HostAccess getHostAccess() {
+        if (hostAccess == null) {
+            // Create a custom HostAccess configuration
+            // SubstitutionContext public methods and basic collection operations
+            synchronized (this) {
+                // Create a HostAccess instance with the desired configuration
+                // Allow access to public members of accessible classes
+                // Allow array access for basic functionality
+                // Allow List operations
+                // Allow Map operations
+                hostAccess = HostAccess.newBuilder()
+                        // Allow access to public members of accessible classes
+                        .allowPublicAccess(true)
+                        // Allow array access for basic functionality
+                        .allowArrayAccess(true)
+                        // Allow List operations
+                        .allowListAccess(true)
+                        // Allow Map operations
+                        .allowMapAccess(true)
+                        .build();
+            }
+        }
         return hostAccess;
     }
 
