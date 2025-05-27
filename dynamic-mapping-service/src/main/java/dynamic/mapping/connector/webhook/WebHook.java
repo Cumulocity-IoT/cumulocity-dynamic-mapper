@@ -262,7 +262,7 @@ public class WebHook extends AConnectorClient {
                     List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
                             connectorId);
                     mappingOutboundCacheRebuild = true;
-                    updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
+                    initializeSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
                     log.error("{} - Phase III: {} failed to connect to webHook: {}, {}, {}", tenant, getConnectorName(),
@@ -355,9 +355,9 @@ public class WebHook extends AConnectorClient {
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
+            initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
             List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
-            updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
+            initializeSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("{} - Disconnected from webHook endpoint II: {}", tenant,
                     baseUrl);
         }

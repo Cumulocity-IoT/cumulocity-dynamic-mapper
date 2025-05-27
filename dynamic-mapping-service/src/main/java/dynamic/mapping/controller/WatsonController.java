@@ -117,7 +117,7 @@ public class WatsonController {
                 // occur in all of them.
                 Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
-                    clients.get(connector).updateActiveSubscriptionInbound(createdMapping, true, false);
+                    clients.get(connector).updateSubscriptionForInbound(createdMapping, true, false);
                 });
                 mappingComponent.removeMappingInboundFromResolver(tenant, createdMapping);
                 mappingComponent.addMappingInboundToResolver(tenant, createdMapping);

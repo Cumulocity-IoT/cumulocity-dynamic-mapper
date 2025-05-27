@@ -272,7 +272,7 @@ public class KafkaClient extends AConnectorClient {
                     connectionState.setTrue();
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
-                    updateActiveSubscriptionsInbound(updatedMappings, true, true);
+                    initializeSubscriptionsInbound(updatedMappings, true, true);
                     log.info("{} - Phase III: {} connected, bootstrapServers: {}", tenant, getConnectorName(),
                             bootstrapServers);
                 }
@@ -300,7 +300,7 @@ public class KafkaClient extends AConnectorClient {
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
             log.info("{} - Disconnecting  connector {} from broker: {}", tenant, getConnectorName(),
                     bootstrapServers);
-            activeSubscriptionsInbound.entrySet().forEach(entry -> {
+            countSubscriptionsPerTopicInbound.entrySet().forEach(entry -> {
                 // only unsubscribe if still active subscriptions exist
                 String topic = entry.getKey();
                 MutableInt activeSubs = entry.getValue();
@@ -318,7 +318,7 @@ public class KafkaClient extends AConnectorClient {
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
-            updateActiveSubscriptionsInbound(updatedMappings, true, true);
+            initializeSubscriptionsInbound(updatedMappings, true, true);
             kafkaProducer.close();
             log.info("{} - Disconnected from from broker: {}", tenant, getConnectorName(),
                     bootstrapServers);

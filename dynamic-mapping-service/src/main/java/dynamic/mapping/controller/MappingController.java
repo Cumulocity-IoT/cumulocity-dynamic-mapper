@@ -159,7 +159,7 @@ public class MappingController {
                 // occur in all of them.
                 Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
-                    clients.get(connector).updateActiveSubscriptionInbound(createdMapping, true, false);
+                    clients.get(connector).updateSubscriptionForInbound(createdMapping, true, false);
                 });
                 mappingComponent.removeMappingInboundFromResolver(tenant, createdMapping);
                 mappingComponent.addMappingInboundToResolver(tenant, createdMapping);
@@ -187,7 +187,7 @@ public class MappingController {
             } else {
                 Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
-                    clients.get(connector).updateActiveSubscriptionInbound(updatedMapping, false, false);
+                    clients.get(connector).updateSubscriptionForInbound(updatedMapping, false, false);
                 });
                 mappingComponent.removeMappingInboundFromResolver(tenant, mapping);
                 mappingComponent.addMappingInboundToResolver(tenant, mapping);

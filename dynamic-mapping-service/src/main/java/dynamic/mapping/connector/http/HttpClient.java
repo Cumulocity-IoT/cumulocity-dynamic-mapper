@@ -141,7 +141,7 @@ public class HttpClient extends AConnectorClient {
                         path);
                 updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                 List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
-                updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
+                initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
                 successful = true;
             } catch (Exception e) {
                 log.error("{} - Phase III: {} failed to connect to http endpoint {}, {}, {}", tenant, getConnectorName(),
@@ -174,7 +174,7 @@ public class HttpClient extends AConnectorClient {
             log.info("{} - {} disconnecting, http endpoint: {}", tenant, getConnectorName(),
                     path);
 
-            activeSubscriptionsInbound.entrySet().forEach(entry -> {
+            countSubscriptionsPerTopicInbound.entrySet().forEach(entry -> {
                 // only unsubscribe if still active subscriptions exist
                 // String topic = entry.getKey();
                 MutableInt activeSubs = entry.getValue();
@@ -185,7 +185,7 @@ public class HttpClient extends AConnectorClient {
 
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true, true);
+            initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
             log.info("{} - {} disconnected, http endpoint: {}", tenant, getConnectorName(),
                     path);
         }

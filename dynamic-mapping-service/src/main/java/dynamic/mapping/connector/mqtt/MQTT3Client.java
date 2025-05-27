@@ -378,11 +378,11 @@ public class MQTT3Client extends AConnectorClient {
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant,
                             connectorId);
-                    updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
+                    initializeSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
                     List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
                             connectorId);
                     mappingOutboundCacheRebuild = true;
-                    updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
+                    initializeSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
                     if (e instanceof InterruptedException || e instanceof RuntimeException) {
@@ -447,7 +447,7 @@ public class MQTT3Client extends AConnectorClient {
                             : mqttClient.getConfig().getServerHost()));
             log.debug("{} - Disconnected from broker I: {}", tenant,
                     mqttClient.getConfig().getServerHost());
-            activeSubscriptionsInbound.entrySet().forEach(entry -> {
+            countSubscriptionsPerTopicInbound.entrySet().forEach(entry -> {
                 // only unsubscribe if still active subscriptions exist
                 String topic = entry.getKey();
                 MutableInt activeSubs = entry.getValue();
@@ -469,9 +469,9 @@ public class MQTT3Client extends AConnectorClient {
             }
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
-            updateActiveSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
+            initializeSubscriptionsInbound(updatedMappingsInbound, true, cleanSession);
             List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
-            updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
+            initializeSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("{} - Disconnected from MQTT broker II: {}", tenant,
                     mqttClient.getConfig().getServerHost());
         }

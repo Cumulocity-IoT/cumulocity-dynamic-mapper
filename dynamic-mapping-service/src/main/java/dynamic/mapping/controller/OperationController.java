@@ -233,8 +233,8 @@ public class OperationController {
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {
             // we always start with a cleanSession in case we reload the mappings
-            client.updateActiveSubscriptionsInbound(updatedMappingsInbound, false,true);
-            updatedMappingsOutbound.forEach(mapping -> client.updateActiveSubscriptionOutbound(mapping));
+            client.initializeSubscriptionsInbound(updatedMappingsInbound, false,true);
+            updatedMappingsOutbound.forEach(mapping -> client.updateSubscriptionForOutbound(mapping, false, false));
         });
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -253,8 +253,8 @@ public class OperationController {
 
     private ResponseEntity<?> handleActivateMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
-        Boolean activeBoolean = Boolean.parseBoolean(parameters.get("active"));
-        Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, id, activeBoolean);
+        Boolean activation = Boolean.parseBoolean(parameters.get("active"));
+        Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, id, activation);
         Map<String, AConnectorClient> connectorMap = connectorRegistry
                 .getClientsForTenant(tenant);
         // subscribe/unsubscribe respective mappingTopic of mapping only for
@@ -262,13 +262,13 @@ public class OperationController {
         Map<String, String> failed = new HashMap<>();
         for (AConnectorClient client : connectorMap.values()) {
             if (updatedMapping.direction == Direction.INBOUND) {
-                if (!client.updateActiveSubscriptionInbound(updatedMapping, false, true)) {
+                if (!client.updateSubscriptionForInbound(updatedMapping, false, true)) {
                     ConnectorConfiguration conf = client.getConnectorConfiguration();
                     failed.put(conf.getIdentifier(), conf.getName());
                 }
                 ;
             } else {
-                client.updateActiveSubscriptionOutbound(updatedMapping);
+                client.updateSubscriptionForOutbound(updatedMapping, false, true);
             }
         }
 
