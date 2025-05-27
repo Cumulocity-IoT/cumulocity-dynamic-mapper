@@ -59,6 +59,10 @@ else:
     logger.info("Password is not set")
 
 root_topic = "testmapper/"
+geodict_topic_code = "geodictCode"
+geodict_topic = "geodict"
+qos = 1
+
 #client_id = f"python-mqtt-{random.randint(0, 1000)}"
 
 task_queue = queue.Queue()
@@ -73,8 +77,8 @@ ARRAY_MESSAGE = True
 QUEUE_SIZE = 5000  # the size of the queue
 
 # parameter to control load
-TPS = 2000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
-WORKERS = 30
+TPS = 1000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
+WORKERS = 10
 SLEEP_BETWEEN_ITERATIONS = 0
 
 # functional parameter
@@ -112,6 +116,7 @@ def connect_mqtt():
     # client.tls_set(ca_certs="gdroot-g2.crt")
     client.tls_set()
     client.tls_insecure_set(True)
+    client.clean_session = True
     client.on_connect = on_connect
     client.connect(broker, port)
     return client
@@ -121,7 +126,7 @@ def connect_mqtt():
 @limits(calls=TPS, period=1)
 def publish(client, message, topic):
     global message_publish_count
-    result = client.publish(topic, message, qos=0)
+    result = client.publish(topic, message, qos=qos)
     # result: [0, 1]
     status = result[0]
     if status == 0:
@@ -187,7 +192,7 @@ def consume_tasks(client):
 
         payload = json.dumps(new_task)
 
-        topic = root_topic + "geodict"
+        topic = root_topic + geodict_topic
         # just send first item form the new_task list
         payload = json.dumps(exa_payload)
         publish(client, payload, topic)
