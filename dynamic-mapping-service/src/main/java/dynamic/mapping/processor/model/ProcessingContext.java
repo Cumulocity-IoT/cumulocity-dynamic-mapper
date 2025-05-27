@@ -40,6 +40,7 @@ import lombok.Setter;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
 @Getter
@@ -112,7 +113,13 @@ public class ProcessingContext<O> {
 
     private String sharedCode;
 
+    private Source sharedSource;
+
     private String systemCode;
+
+    private Source systemSource;
+
+    private Source mappingSource;
 
     private Value extractFromSourceFunc;
 

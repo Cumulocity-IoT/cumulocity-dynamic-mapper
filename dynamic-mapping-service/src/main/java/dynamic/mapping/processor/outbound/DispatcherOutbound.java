@@ -441,21 +441,6 @@ public class DispatcherOutbound implements NotificationCallback {
                             className.equals("java.util.HashMap"))
                     .build();
 
-            String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-            Value extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
-
-            if (extractFromSourceFunc == null) {
-                byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
-                String decodedCode = new String(decodedBytes);
-                String decodedCodeAdapted = decodedCode.replaceFirst(
-                        Mapping.EXTRACT_FROM_SOURCE,
-                        identifier);
-                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
-                        .buildLiteral();
-
-                graalsContext.eval(source);
-            }
-
             return graalsContext;
         }
 
