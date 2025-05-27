@@ -426,6 +426,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     .allowMapAccess(true)
                     .build();
             Context graalsContext = Context.newBuilder("js")
+                    .engine(graalsEngine)
                     .option("engine.WarnInterpreterOnly", "false")
                     .allowHostAccess(customHostAccess)
                     .allowHostClassLookup(className ->
