@@ -498,6 +498,10 @@ public class MappingComponent {
         if (active) {
             MappingStatus mappingStatus = getMappingStatus(tenant, mapping);
             mappingStatus.currentFailureCount = 0;
+            // TODO GRAALS_PERFOMEANCE add code source to graalsCode cache
+
+        } else {
+            // TODO GRAALS_PERFOMEANCE remove code source from graalsCode cache
         }
         return mapping;
     }

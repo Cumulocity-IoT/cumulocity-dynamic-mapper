@@ -70,6 +70,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ConfigurationRegistry {
+    // TODO GRAALS_PERFOMEANCE create cache for code graalsCode
 
     private Map<String, Engine> graalsEngines = new ConcurrentHashMap<>();
 
