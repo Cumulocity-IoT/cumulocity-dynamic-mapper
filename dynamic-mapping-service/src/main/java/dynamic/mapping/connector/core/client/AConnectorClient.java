@@ -366,6 +366,7 @@ public abstract class AConnectorClient {
             updatedMappings.forEach(mapping -> {
                 if (isMappingValidForDeployment(mapping) && mapping.active) {
                     updateSubscriptionCacheInbound(mapping, updatedCountSubscriptions);
+                    configurationRegistry.updateGraalsSourceMapping(tenant, mapping.id, mapping.getCode());
                 }
             });
             // Update subscriptions only in case of a cleanSession
