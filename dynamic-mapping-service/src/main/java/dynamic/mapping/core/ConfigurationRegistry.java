@@ -21,11 +21,13 @@
 
 package dynamic.mapping.core;
 
+import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.Source;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -39,6 +41,7 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 
@@ -49,6 +52,7 @@ import dynamic.mapping.connector.mqtt.MQTT5Client;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.connector.webhook.WebHook;
 import dynamic.mapping.model.Direction;
+import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
@@ -73,6 +77,15 @@ public class ConfigurationRegistry {
     // TODO GRAALS_PERFOMEANCE create cache for code graalsCode
 
     private Map<String, Engine> graalsEngines = new ConcurrentHashMap<>();
+
+    // Structure: < Tenant, Source>>
+    private Map<String, Source> graalsSourceShared = new ConcurrentHashMap<>();
+
+    // Structure: < Tenant, Source>>
+    private Map<String, Source> graalsSourceSystem = new ConcurrentHashMap<>();
+
+    // Structure: < Tenant, < MappingIdentifier, < Source > >
+    private Map<String, Map<String, Source>> graalsSourceMapping = new ConcurrentHashMap<>();
 
     private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
 
@@ -160,6 +173,22 @@ public class ConfigurationRegistry {
                 MappingType.PROTOBUF_INTERNAL, new InternalProtobufProcessor(this),
                 MappingType.EXTENSION_SOURCE, extensibleProcessor,
                 MappingType.EXTENSION_SOURCE_TARGET, extensibleProcessor);
+    }
+
+    public static Source decodeCode(String code, String sourceCodeFileName, boolean replaceIdentifier,
+            String mappingIdentifier) {
+        byte[] decodedCodeBytes = Base64.getDecoder().decode(code);
+        String decodedCode = new String(decodedCodeBytes);
+        if (replaceIdentifier) {
+            // replace the identifier in the code with the source file name
+            String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mappingIdentifier;
+            decodedCode = decodedCode.replaceFirst(
+                    Mapping.EXTRACT_FROM_SOURCE,
+                    identifier);
+        }
+        Source source = Source.newBuilder("js", decodedCode, sourceCodeFileName)
+                .buildLiteral();
+        return source;
     }
 
     public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
@@ -256,20 +285,56 @@ public class ConfigurationRegistry {
         return microserviceCredentials.get(tenant);
     }
 
-    public void createGraalsEngine(String tenant) {
+    public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
         Engine eng = Engine.newBuilder()
                 .option("engine.WarnInterpreterOnly", "false")
                 .build();
         ;
         graalsEngines.put(tenant, eng);
+        graalsSourceShared.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
+                .get(TemplateType.SHARED.name()).getCode(), "sharedCode.js", false, null));
+        graalsSourceSystem.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
+                .get(TemplateType.SYSTEM.name()).getCode(), "systemCode.js", false, null));
+        graalsSourceMapping.put(tenant, new ConcurrentHashMap<>());
     }
 
     public Engine getGraalsEngine(String tenant) {
         return graalsEngines.get(tenant);
     }
 
-    public void removeGraalsEngine(String tenant) {
+    public void updateGraalsSourceShared(String tenant, String code) {
+        graalsSourceShared.put(tenant, decodeCode(code, "sharedCode.js", false, null));
+    }
+
+    public Source getGraalsSourceShared(String tenant) {
+        return graalsSourceShared.get(tenant);
+    }
+
+    public void updateGraalsSourceSystem(String tenant, String code) {
+        graalsSourceSystem.put(tenant, decodeCode(code, "systemCode.js", false, null));
+    }
+
+    public Source getGraalsSourceSystem(String tenant) {
+        return graalsSourceSystem.get(tenant);
+    }
+
+    public void updateGraalsSourceMapping(String tenant, String mappingIdentifier, String code) {
+        graalsSourceMapping.get(tenant).put(mappingIdentifier, decodeCode(code, mappingIdentifier + ".js", true, mappingIdentifier));
+    }
+
+    public Source getGraalsSourceMapping(String tenant, String mappingIdentifier) {
+        return graalsSourceMapping.get(tenant).get(mappingIdentifier);
+    }
+
+    public void removeGraalsSourceMapping(String tenant, String mappingIdentifier) {
+        graalsSourceMapping.get(tenant).remove(mappingIdentifier);
+    }
+
+    public void removeGraalsResources(String tenant) {
         graalsEngines.remove(tenant);
+        graalsSourceShared.remove(tenant);
+        graalsSourceSystem.remove(tenant);
+        graalsSourceMapping.remove(tenant);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {
@@ -344,7 +409,8 @@ public class ConfigurationRegistry {
         payloadProcessorsOutbound.remove(tenant);
     }
 
-    public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration, AConnectorClient connectorClient) {
+    public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
+            AConnectorClient connectorClient) {
         if (serviceConfiguration.isOutboundMappingEnabled()
                 && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
             // initialize AsynchronousDispatcherOutbound

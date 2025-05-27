@@ -139,7 +139,7 @@ public class BootstrapService {
         configurationRegistry.removePayloadProcessorsInbound(tenant);
         configurationRegistry.removePayloadProcessorsOutbound(tenant);
         configurationRegistry.removeExtensibleProcessor(tenant);
-        configurationRegistry.removeGraalsEngine(tenant);
+        configurationRegistry.removeGraalsResources(tenant);
         configurationRegistry.removeMicroserviceCredentials(tenant);
 
         mappingComponent.removeResources(tenant);
@@ -167,12 +167,12 @@ public class BootstrapService {
         c8YAgent.loadProcessorExtensions(tenant);
 
         
-        ServiceConfiguration serviceConfig = initializeServiceConfiguration(tenant);
-        initializeCaches(tenant, serviceConfig);
+        ServiceConfiguration serviceConfiguration = initializeServiceConfiguration(tenant);
+        initializeCaches(tenant, serviceConfiguration);
         
         configurationRegistry.addMicroserviceCredentials(tenant, credentials);
         configurationRegistry.initializeResources(tenant);
-        configurationRegistry.createGraalsEngine(tenant);
+        configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMappingServiceRepresentation(tenant);
         
         mappingComponent.createResources(tenant);
@@ -181,7 +181,7 @@ public class BootstrapService {
 
         // Wait for ALL connectors are successfully connected before handling Outbound
         // Mappings
-        List<Future<?>> connectorTasks = initializeConnectors(tenant, serviceConfig);
+        List<Future<?>> connectorTasks = initializeConnectors(tenant, serviceConfiguration);
         if (connectorTasks != null) {
             connectorTasks.forEach(connectorTask -> {
                 try {
@@ -195,7 +195,7 @@ public class BootstrapService {
         // and connected
         mappingComponent.initializeResources(tenant);
 
-        handleOutboundMapping(tenant, serviceConfig);
+        handleOutboundMapping(tenant, serviceConfiguration);
     }
 
     private ServiceConfiguration initializeServiceConfiguration(String tenant) {
