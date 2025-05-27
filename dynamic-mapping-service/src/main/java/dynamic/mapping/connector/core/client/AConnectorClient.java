@@ -372,7 +372,7 @@ public abstract class AConnectorClient {
             // TODO: how do we maintain our internal caches activeSubscriptionsInbound, ...
             // in case of cleanSession=false?
             // if (cleanSession){
-            handleSubscriptionUpdates(updatedCountSubscriptions, updatedMappings);
+            handleSubscriptionUpdatesInbound(updatedCountSubscriptions, updatedMappings);
             // }
 
             countSubscriptionsPerTopicInbound = updatedCountSubscriptions;
@@ -410,7 +410,7 @@ public abstract class AConnectorClient {
         mappingsDeployedInbound.put(mapping.identifier, mapping);
     }
 
-    private void handleSubscriptionUpdates(Map<String, MutableInt> updatedSubscriptionCache,
+    private void handleSubscriptionUpdatesInbound(Map<String, MutableInt> updatedSubscriptionCache,
             List<Mapping> updatedMappings) {
         // Unsubscribe from unused topics
         unsubscribeUnusedTopics(updatedSubscriptionCache);
