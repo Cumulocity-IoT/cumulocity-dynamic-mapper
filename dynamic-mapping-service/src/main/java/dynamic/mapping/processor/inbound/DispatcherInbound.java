@@ -31,7 +31,6 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
-import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -48,7 +47,6 @@ import dynamic.mapping.processor.model.ProcessingResult;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -56,10 +54,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.Value;
 
 /**
  * AsynchronousDispatcherInbound

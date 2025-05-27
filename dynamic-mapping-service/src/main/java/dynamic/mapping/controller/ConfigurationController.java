@@ -24,7 +24,6 @@ package dynamic.mapping.controller;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
@@ -40,7 +39,6 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.core.*;
 
-import org.graalvm.polyglot.Context;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -64,7 +62,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.Feature;
-import dynamic.mapping.model.Mapping;
 
 @Slf4j
 @RequestMapping("/configuration")
@@ -505,7 +502,6 @@ public class ConfigurationController {
         // TODO GRAALS_PERFOMEANCE update code source from templates in graalsCode cache
 
         String tenant = contextService.getContext().getTenant();
-        Context graalsContext = null;
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
@@ -524,10 +520,6 @@ public class ConfigurationController {
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-        } finally {
-            if (graalsContext != null) {
-                graalsContext.close();
-            }
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
     }
@@ -538,7 +530,6 @@ public class ConfigurationController {
         // TODO GRAALS_PERFOMEANCE update code source from templates in graalsCode cache
 
         String tenant = contextService.getContext().getTenant();
-        Context graalsContext = null;
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
@@ -563,27 +554,8 @@ public class ConfigurationController {
         } catch (Exception ex) {
             log.error("{} - Error creating code template", tenant, ex);
             throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
-        } finally {
-            if (graalsContext != null) {
-                graalsContext.close();
-            }
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
-    }
-
-    public void cleanupNonServiceMembers(Context context) {
-        org.graalvm.polyglot.Value bindings = context.getBindings("js");
-
-        // Get all member keys
-        Set<String> members = bindings.getMemberKeys();
-
-        // Remove members that don't start with "service"
-        members.stream()
-                .filter(member -> !member.startsWith(Mapping.EXTRACT_FROM_SOURCE))
-                .forEach(member -> {
-                    log.debug("Removing member: {}", member);
-                    bindings.removeMember(member);
-                });
     }
 
     private boolean userHasMappingAdminRole() {
