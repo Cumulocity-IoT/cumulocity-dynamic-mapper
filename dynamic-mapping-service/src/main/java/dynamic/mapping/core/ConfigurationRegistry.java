@@ -434,7 +434,6 @@ public class ConfigurationRegistry {
         if (hostAccess == null) {
             // Create a custom HostAccess configuration
             // SubstitutionContext public methods and basic collection operations
-            synchronized (this) {
                 // Create a HostAccess instance with the desired configuration
                 // Allow access to public members of accessible classes
                 // Allow array access for basic functionality
@@ -450,7 +449,8 @@ public class ConfigurationRegistry {
                         // Allow Map operations
                         .allowMapAccess(true)
                         .build();
-            }
+                log.info("HostAccess created with public access, array access, list access, and map access enabled.");
+
         }
         return hostAccess;
     }

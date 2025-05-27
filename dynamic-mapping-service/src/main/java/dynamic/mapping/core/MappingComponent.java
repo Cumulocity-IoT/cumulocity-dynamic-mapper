@@ -791,6 +791,7 @@ public class MappingComponent {
             try (Context context = Context.newBuilder("js")
                     .engine(configurationRegistry.getGraalsEngine(tenant))
                     .logHandler(GRAALJS_LOG_HANDLER)
+                    .allowHostAccess(configurationRegistry.getHostAccess())
                     .allowAllAccess(true)
                     .build()) {
 
