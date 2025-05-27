@@ -318,16 +318,16 @@ public class ConfigurationRegistry {
         return graalsSourceSystem.get(tenant);
     }
 
-    public void updateGraalsSourceMapping(String tenant, String mappingIdentifier, String code) {
-        graalsSourceMapping.get(tenant).put(mappingIdentifier, decodeCode(code, mappingIdentifier + ".js", true, mappingIdentifier));
+    public void updateGraalsSourceMapping(String tenant, String mappingId, String code) {
+        graalsSourceMapping.get(tenant).put(mappingId, decodeCode(code, mappingId + ".js", true, mappingId));
     }
 
-    public Source getGraalsSourceMapping(String tenant, String mappingIdentifier) {
-        return graalsSourceMapping.get(tenant).get(mappingIdentifier);
+    public Source getGraalsSourceMapping(String tenant, String mappingId) {
+        return graalsSourceMapping.get(tenant).get(mappingId);
     }
 
-    public void removeGraalsSourceMapping(String tenant, String mappingIdentifier) {
-        graalsSourceMapping.get(tenant).remove(mappingIdentifier);
+    public void removeGraalsSourceMapping(String tenant, String mappingId) {
+        graalsSourceMapping.get(tenant).remove(mappingId);
     }
 
     public void removeGraalsResources(String tenant) {

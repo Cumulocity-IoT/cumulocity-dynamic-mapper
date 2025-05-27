@@ -112,8 +112,9 @@ public class DispatcherInbound implements GenericMessageCallback {
         Timer inboundProcessingTimer;
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
-        Engine graalsEngine;
         ExecutorService virtualThreadPool;
+        Engine graalsEngine;
+        ConfigurationRegistry configurationRegistry;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message, AConnectorClient connectorClient) {
@@ -134,7 +135,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
             this.graalsEngine = configurationRegistry.getGraalsEngine(message.getTenant());
             this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-
+            this.configurationRegistry = configurationRegistry;
         }
 
         @Override
@@ -193,10 +194,13 @@ public class DispatcherInbound implements GenericMessageCallback {
                         try {
                             graalsContext = setupGraalVMContext(mapping, serviceConfiguration);
                             context.setGraalsContext(graalsContext);
-                            context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                                    .get(TemplateType.SHARED.name()).getCode());
-                            context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                                    .get(TemplateType.SYSTEM.name()).getCode());
+                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
+                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
+                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
+                            // context.setSharedCode(serviceConfiguration.getCodeTemplates()
+                            //         .get(TemplateType.SHARED.name()).getCode());
+                            // context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                            //         .get(TemplateType.SYSTEM.name()).getCode());
                         } catch (Exception e) {
                             handleGraalVMError(tenant, mapping, e, context, mappingStatus);
                             processingResult.add(context);

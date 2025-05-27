@@ -21,6 +21,7 @@
 
 package dynamic.mapping.controller;
 
+import java.lang.runtime.TemplateRuntime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,7 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
-
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
@@ -214,12 +215,12 @@ public class ConfigurationController {
     public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.debug("{} - Get connector instance: {}", tenant, identifier);
-    
+
         try {
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
                     .getConnectorConfigurations(tenant);
             ConnectorConfiguration modifiedConfig = null;
-    
+
             // Remove sensitive data before sending to UI
             for (ConnectorConfiguration config : configurations) {
                 if (config.getIdentifier().equals(identifier)) {
@@ -444,6 +445,7 @@ public class ConfigurationController {
     @DeleteMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(@PathVariable String id) {
         // TODO GRAALS_PERFOMEANCE update code source from templates in graalsCode cache
+        // Nothing to do, as internal templates can't be deleted.
 
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -512,6 +514,13 @@ public class ConfigurationController {
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+            if (TemplateType.SHARED.equals(id)) {
+                // Update parsed source for shared code in cache
+                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.code);
+            } else if (TemplateType.SYSTEM.equals(id)) {
+                // Update parsed source for system code in cache
+                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.code);
+            }
             log.debug("{} - Updated code template", tenant);
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
@@ -541,6 +550,13 @@ public class ConfigurationController {
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+            if (TemplateType.SHARED.equals(codeTemplate.id)) {
+                // Update parsed source for shared code in cache
+                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.code);
+            } else if (TemplateType.SYSTEM.equals(codeTemplate.id)) {
+                // Update parsed source for system code in cache
+                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.code);
+            }
             log.debug("{} - Create code template", tenant);
         } catch (JsonProcessingException ex) {
             log.error("{} - Error creating code template", tenant, ex);
