@@ -324,7 +324,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     .build();
             Context graalsContext = Context.newBuilder("js")
                     .engine(graalsEngine)
-                    .option("engine.WarnInterpreterOnly", "false")
+                    //.option("engine.WarnInterpreterOnly", "false")
                     .allowHostAccess(customHostAccess)
                     .allowHostClassLookup(className ->
                     // Allow only the specific SubstitutionContext class
