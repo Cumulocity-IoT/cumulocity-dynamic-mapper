@@ -314,22 +314,10 @@ public class DispatcherInbound implements GenericMessageCallback {
 
         private Context setupGraalVMContext(Mapping mapping, ServiceConfiguration serviceConfiguration)
                 throws Exception {
-            // Create a custom HostAccess configuration
-            // SubstitutionContext public methods and basic collection operations
-            HostAccess customHostAccess = HostAccess.newBuilder()
-                    // Allow access to public members of accessible classes
-                    .allowPublicAccess(true)
-                    // Allow array access for basic functionality
-                    .allowArrayAccess(true)
-                    // Allow List operations
-                    .allowListAccess(true)
-                    // Allow Map operations
-                    .allowMapAccess(true)
-                    .build();
             Context graalsContext = Context.newBuilder("js")
                     .engine(graalsEngine)
                     //.option("engine.WarnInterpreterOnly", "false")
-                    .allowHostAccess(customHostAccess)
+                    .allowHostAccess(configurationRegistry.getHostAccess())
                     .allowHostClassLookup(className ->
                     // Allow only the specific SubstitutionContext class
                     className.equals("dynamic.mapping.processor.model.SubstitutionContext")

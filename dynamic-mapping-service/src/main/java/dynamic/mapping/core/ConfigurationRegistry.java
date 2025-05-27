@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -75,6 +76,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ConfigurationRegistry {
     // TODO GRAALS_PERFOMEANCE create cache for code graalsCode
+
+    private HostAccess hostAccess;
 
     private Map<String, Engine> graalsEngines = new ConcurrentHashMap<>();
 
@@ -286,10 +289,31 @@ public class ConfigurationRegistry {
     }
 
     public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
+        if (hostAccess == null) {
+            // Create a custom HostAccess configuration
+            // SubstitutionContext public methods and basic collection operations
+            synchronized (this) {
+                // Create a HostAccess instance with the desired configuration
+                // Allow access to public members of accessible classes
+                // Allow array access for basic functionality
+                // Allow List operations
+                // Allow Map operations
+                hostAccess = HostAccess.newBuilder()
+                        // Allow access to public members of accessible classes
+                        .allowPublicAccess(true)
+                        // Allow array access for basic functionality
+                        .allowArrayAccess(true)
+                        // Allow List operations
+                        .allowListAccess(true)
+                        // Allow Map operations
+                        .allowMapAccess(true)
+                        .build();
+            }
+        }
         Engine eng = Engine.newBuilder()
                 .option("engine.WarnInterpreterOnly", "false")
                 .build();
-        ;
+
         graalsEngines.put(tenant, eng);
         graalsSourceShared.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
                 .get(TemplateType.SHARED.name()).getCode(), "sharedCode.js", false, null));
@@ -425,6 +449,10 @@ public class ConfigurationRegistry {
             // Subscriber must be new initialized for the new added connector
             // configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         }
+    }
+
+    public HostAccess getHostAccess() {
+        return hostAccess;
     }
 
 }

@@ -221,7 +221,6 @@ public class DispatcherOutbound implements NotificationCallback {
         Counter outboundProcessingCounter;
         ConfigurationRegistry configurationRegistry;
 
-
         public MappingOutboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 MappingComponent mappingComponent,
                 Map<MappingType, BaseProcessorOutbound<T>> payloadProcessorsOutbound,
@@ -318,9 +317,9 @@ public class DispatcherOutbound implements NotificationCallback {
                             context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
                             context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
                             // context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                            //         .get(TemplateType.SHARED.name()).getCode());
+                            // .get(TemplateType.SHARED.name()).getCode());
                             // context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                            //         .get(TemplateType.SYSTEM.name()).getCode());
+                            // .get(TemplateType.SYSTEM.name()).getCode());
                         } catch (Exception e) {
                             handleGraalVMError(tenant, mapping, e, context, mappingStatus);
                             processingResult.add(context);
@@ -421,20 +420,10 @@ public class DispatcherOutbound implements NotificationCallback {
 
         private Context setupGraalVMContext(Mapping mapping, ServiceConfiguration serviceConfiguration)
                 throws Exception {
-            HostAccess customHostAccess = HostAccess.newBuilder()
-                    // Allow access to public members of accessible classes
-                    .allowPublicAccess(true)
-                    // Allow array access for basic functionality
-                    .allowArrayAccess(true)
-                    // Allow List operations
-                    .allowListAccess(true)
-                    // Allow Map operations
-                    .allowMapAccess(true)
-                    .build();
             Context graalsContext = Context.newBuilder("js")
                     .engine(graalsEngine)
-                    //.option("engine.WarnInterpreterOnly", "false")
-                    .allowHostAccess(customHostAccess)
+                    // .option("engine.WarnInterpreterOnly", "false")
+                    .allowHostAccess(configurationRegistry.getHostAccess())
                     .allowHostClassLookup(className ->
                     // Allow only the specific SubstitutionContext class
                     className.equals("dynamic.mapping.processor.model.SubstitutionContext")
