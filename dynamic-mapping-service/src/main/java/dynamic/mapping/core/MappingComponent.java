@@ -187,8 +187,8 @@ public class MappingComponent {
 
                     // Filter the list to keep only desired items
                     msList.removeIf(status -> !"UNSPECIFIED".equals(status.id) &&
-                            !containsMappingInboundCache(tenant, status.id) &&
-                            !containsMappingOutboundCache(tenant, status.id));
+                            !containsMappingInboundInCache(tenant, status.id) &&
+                            !containsMappingOutboundInCache(tenant, status.id));
 
                     // Convert filtered list to array
                     MappingStatus[] ms = msList.toArray(new MappingStatus[0]);
@@ -197,10 +197,10 @@ public class MappingComponent {
                     for (int index = 0; index < ms.length; index++) {
                         if ("UNSPECIFIED".equals(ms[index].id)) {
                             ms[index].name = "Unspecified";
-                        } else if (containsMappingInboundCache(tenant, ms[index].id)) {
-                            ms[index].name = getFromMappingInboundCache(tenant, ms[index].id).name;
-                        } else if (containsMappingOutboundCache(tenant, ms[index].id)) {
-                            ms[index].name = getFromMappingOutboundCache(tenant, ms[index].id).name;
+                        } else if (containsMappingInboundInCache(tenant, ms[index].id)) {
+                            ms[index].name = getMappingInboundFromCache(tenant, ms[index].id).name;
+                        } else if (containsMappingOutboundInCache(tenant, ms[index].id)) {
+                            ms[index].name = getMappingOutboundFromCache(tenant, ms[index].id).name;
                         }
                     }
                     service.put(C8YAgent.MAPPING_FRAGMENT, ms);
@@ -239,7 +239,7 @@ public class MappingComponent {
         mappingStatusS.get(tenant).remove(id);
     }
 
-    public void removeFromMappingInboundResolver(String tenant, Mapping mapping) {
+    public void removeMappingInboundFromResolver(String tenant, Mapping mapping) {
         try {
             resolverMappingInbound.get(tenant).deleteMapping(mapping);
         } catch (ResolveException e) {
@@ -446,10 +446,10 @@ public class MappingComponent {
         mapping.setDebug(debug);
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getFromMappingInboundCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         } else {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getFromMappingInboundCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -461,9 +461,9 @@ public class MappingComponent {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
-            removeFromMappingInboundResolver(tenant, mapping);
-            addToMappingInboundResolver(tenant, mapping);
-            addCacheMappingInbound(tenant, mapping.id, mapping);
+            removeMappingInboundFromResolver(tenant, mapping);
+            addMappingInboundToResolver(tenant, mapping);
+            addMappingInboundToCache(tenant, mapping.id, mapping);
         }
     }
 
@@ -474,9 +474,9 @@ public class MappingComponent {
         mapping.setActive(active);
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getFromMappingInboundCache(tenant, mappingId).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, mappingId).getSnoopedTemplates());
         } else {
-            mapping.setSnoopedTemplates(getFromMappingInboundCache(tenant, mappingId).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, mappingId).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -489,9 +489,9 @@ public class MappingComponent {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
-            removeFromMappingInboundResolver(tenant, mapping);
-            addToMappingInboundResolver(tenant, mapping);
-            addCacheMappingInbound(tenant, mapping.id, mapping);
+            removeMappingInboundFromResolver(tenant, mapping);
+            addMappingInboundToResolver(tenant, mapping);
+            addMappingInboundToCache(tenant, mapping.id, mapping);
         }
 
         // if mapping is activated reset currentFailureCount of mapping
@@ -509,7 +509,7 @@ public class MappingComponent {
         mapping.setFilterMapping(filterMapping);
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getFromMappingInboundCache(tenant, mappingId).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, mappingId).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -521,9 +521,9 @@ public class MappingComponent {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
-            removeFromMappingInboundResolver(tenant, mapping);
-            addToMappingInboundResolver(tenant, mapping);
-            addCacheMappingInbound(tenant, mapping.id, mapping);
+            removeMappingInboundFromResolver(tenant, mapping);
+            addMappingInboundToResolver(tenant, mapping);
+            addMappingInboundToCache(tenant, mapping.id, mapping);
         }
         return mapping;
     }
@@ -535,10 +535,10 @@ public class MappingComponent {
         mapping.setSnoopStatus(snoop);
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getFromMappingInboundCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         } else {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getFromMappingInboundCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -550,9 +550,9 @@ public class MappingComponent {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
-            removeFromMappingInboundResolver(tenant, mapping);
-            addToMappingInboundResolver(tenant, mapping);
-            addCacheMappingInbound(tenant, mapping.id, mapping);
+            removeMappingInboundFromResolver(tenant, mapping);
+            addMappingInboundToResolver(tenant, mapping);
+            addMappingInboundToCache(tenant, mapping.id, mapping);
         }
     }
 
@@ -569,7 +569,7 @@ public class MappingComponent {
         return configurationRegistry.getObjectMapper().convertValue(mor, MappingRepresentation.class);
     }
 
-    public void addToMappingInboundResolver(String tenant, Mapping mapping) {
+    public void addMappingInboundToResolver(String tenant, Mapping mapping) {
         try {
             resolverMappingInbound.get(tenant).addMapping(mapping);
         } catch (ResolveException e) {
@@ -703,9 +703,9 @@ public class MappingComponent {
         return false;
     }
 
-    public Mapping removeFromMappingCaches(String tenant, Mapping mapping) {
+    public Mapping removeFromMappingFromCaches(String tenant, Mapping mapping) {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            Mapping deletedMapping = removeFromMappingOutboundCache(tenant, mapping.id);
+            Mapping deletedMapping = removeMappingOutboundFromCache(tenant, mapping.id);
             log.info("{} - Preparing to delete {} {}", tenant, resolverMappingOutbound.get(tenant),
                     mapping.filterMapping);
 
@@ -713,8 +713,8 @@ public class MappingComponent {
             cmo.removeIf(m -> mapping.id.equals(m.id));
             return deletedMapping;
         } else {
-            Mapping deletedMapping = removeFromMappingInboundCache(tenant, mapping.id);
-            removeFromMappingInboundResolver(tenant, deletedMapping);
+            Mapping deletedMapping = removeMappingInboundFromCache(tenant, mapping.id);
+            removeMappingInboundFromResolver(tenant, deletedMapping);
             return deletedMapping;
         }
     }
@@ -757,10 +757,10 @@ public class MappingComponent {
         mapping.setSourceTemplate(newSourceTemplate);
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getFromMappingInboundCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         } else {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getFromMappingInboundCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -772,9 +772,9 @@ public class MappingComponent {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
-            removeFromMappingInboundResolver(tenant, mapping);
-            addToMappingInboundResolver(tenant, mapping);
-            addCacheMappingInbound(tenant, mapping.id, mapping);
+            removeMappingInboundFromResolver(tenant, mapping);
+            addMappingInboundToResolver(tenant, mapping);
+            addMappingInboundToCache(tenant, mapping.id, mapping);
         }
     }
 
@@ -844,9 +844,9 @@ public class MappingComponent {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         } else {
-            removeFromMappingInboundResolver(tenant, mapping);
-            addToMappingInboundResolver(tenant, mapping);
-            addCacheMappingInbound(tenant, mapping.id, mapping);
+            removeMappingInboundFromResolver(tenant, mapping);
+            addMappingInboundToResolver(tenant, mapping);
+            addMappingInboundToCache(tenant, mapping.id, mapping);
         }
         configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
                 LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
@@ -961,31 +961,31 @@ public class MappingComponent {
         return cacheMappingInbound.get(tenant);
     }
 
-    public void addCacheMappingInbound(String tenant, String id, Mapping mapping) {
+    public void addMappingInboundToCache(String tenant, String id, Mapping mapping) {
         cacheMappingInbound.get(tenant).put(id, mapping);
     }
 
-    private Mapping getFromMappingInboundCache(String tenant, String mappingId) {
+    private Mapping getMappingInboundFromCache(String tenant, String mappingId) {
         return cacheMappingInbound.get(tenant).get(mappingId);
     }
 
-    private Mapping getFromMappingOutboundCache(String tenant, String mappingId) {
+    private Mapping getMappingOutboundFromCache(String tenant, String mappingId) {
         return cacheMappingOutbound.get(tenant).get(mappingId);
     }
 
-    private Mapping removeFromMappingInboundCache(String tenant, String mappingId) {
+    private Mapping removeMappingInboundFromCache(String tenant, String mappingId) {
         return cacheMappingInbound.get(tenant).remove(mappingId);
     }
 
-    private Mapping removeFromMappingOutboundCache(String tenant, String mappingId) {
+    private Mapping removeMappingOutboundFromCache(String tenant, String mappingId) {
         return cacheMappingOutbound.get(tenant).remove(mappingId);
     }
 
-    private boolean containsMappingInboundCache(String tenant, String mappingId) {
+    private boolean containsMappingInboundInCache(String tenant, String mappingId) {
         return cacheMappingInbound.get(tenant).containsKey(mappingId);
     }
 
-    private boolean containsMappingOutboundCache(String tenant, String mappingId) {
+    private boolean containsMappingOutboundInCache(String tenant, String mappingId) {
         return cacheMappingOutbound.get(tenant).containsKey(mappingId);
     }
 
