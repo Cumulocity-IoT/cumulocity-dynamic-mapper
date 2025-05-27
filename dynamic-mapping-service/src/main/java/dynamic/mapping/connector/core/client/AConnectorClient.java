@@ -68,6 +68,7 @@ import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.inbound.DispatcherInbound;
+import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -366,7 +367,9 @@ public abstract class AConnectorClient {
             updatedMappings.forEach(mapping -> {
                 if (isMappingValidForDeployment(mapping) && mapping.active) {
                     updateSubscriptionCacheInbound(mapping, updatedCountSubscriptions);
-                    configurationRegistry.updateGraalsSourceMapping(tenant, mapping.id, mapping.getCode());
+                    if (mapping.mappingType.equals(MappingType.CODE_BASED)) {
+                        configurationRegistry.updateGraalsSourceMapping(tenant, mapping.id, mapping.getCode());
+                    }
                 }
             });
             // Update subscriptions only in case of a cleanSession
@@ -891,7 +894,12 @@ public abstract class AConnectorClient {
 
         updatedMappings.stream()
                 .filter(mapping -> mapping.getActive() && isDeployedInConnector(mapping))
-                .forEach(mapping -> mappingsDeployedOutbound.put(mapping.identifier, mapping));
+                .forEach(mapping -> {
+                    mappingsDeployedOutbound.put(mapping.identifier, mapping);
+                    if (mapping.mappingType.equals(MappingType.CODE_BASED)) {
+                        configurationRegistry.updateGraalsSourceMapping(tenant, mapping.id, mapping.getCode());
+                    }
+                });
     }
 
     // Event Logging Methods
