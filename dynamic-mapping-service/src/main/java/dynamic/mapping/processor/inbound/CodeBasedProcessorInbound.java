@@ -149,9 +149,9 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             };
             ((Map) jsonObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
 
-            String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.id;
+            String codeId = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.id;
             Value extractFromSourceFunc = graalsContext.getBindings("js")
-                    .getMember(identifier);
+                    .getMember(codeId);
             final Value result = extractFromSourceFunc
                     .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
                             payloadAsString));
