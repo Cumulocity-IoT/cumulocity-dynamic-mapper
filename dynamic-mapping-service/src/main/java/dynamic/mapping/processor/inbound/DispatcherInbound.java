@@ -113,7 +113,6 @@ public class DispatcherInbound implements GenericMessageCallback {
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
         ExecutorService virtualThreadPool;
-        Engine graalsEngine;
         ConfigurationRegistry configurationRegistry;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
@@ -133,7 +132,6 @@ public class DispatcherInbound implements GenericMessageCallback {
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
-            this.graalsEngine = configurationRegistry.getGraalsEngine(message.getTenant());
             this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
             this.configurationRegistry = configurationRegistry;
         }
@@ -192,7 +190,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     // Prepare GraalVM context if code exists
                     if (mapping.code != null) {
                         try {
-                            graalsContext = setupGraalVMContext(mapping, serviceConfiguration);
+                            graalsContext = setupGraalVMContext(configurationRegistry.getGraalsEngine(tenant));
                             context.setGraalsContext(graalsContext);
                             context.setSharedCode(serviceConfiguration.getCodeTemplates()
                                     .get(TemplateType.SHARED.name()).getCode());
@@ -310,7 +308,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
-        private Context setupGraalVMContext(Mapping mapping, ServiceConfiguration serviceConfiguration)
+        private Context setupGraalVMContext(Engine graalsEngine)
                 throws Exception {
             Context graalsContext = Context.newBuilder("js")
                     .engine(graalsEngine)
