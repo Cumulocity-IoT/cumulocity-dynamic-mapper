@@ -449,7 +449,7 @@ public class ConfigurationRegistry {
                         // Allow Map operations
                         .allowMapAccess(true)
                         .build();
-                log.info("HostAccess created with public access, array access, list access, and map access enabled.");
+                // log.info("HostAccess created with public access, array access, list access, and map access enabled.");
 
         }
         return hostAccess;
