@@ -61,7 +61,7 @@ else:
 root_topic = "testmapper/"
 geodict_topic_code = "geodictCode"
 geodict_topic = "geodict"
-qos = 1
+qos = 0
 
 #client_id = f"python-mqtt-{random.randint(0, 1000)}"
 
@@ -77,8 +77,8 @@ ARRAY_MESSAGE = True
 QUEUE_SIZE = 5000  # the size of the queue
 
 # parameter to control load
-TPS = 1000  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
-WORKERS = 10
+TPS = 500# TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
+WORKERS = 20
 SLEEP_BETWEEN_ITERATIONS = 0
 
 # functional parameter
@@ -192,7 +192,7 @@ def consume_tasks(client):
 
         payload = json.dumps(new_task)
 
-        topic = root_topic + geodict_topic
+        topic = root_topic + geodict_topic_code
         # just send first item form the new_task list
         payload = json.dumps(exa_payload)
         publish(client, payload, topic)
