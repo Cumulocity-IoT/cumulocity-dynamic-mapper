@@ -88,13 +88,13 @@
 			<artifactId>commons-collections4</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.graalvm.sdk</groupId>
-			<artifactId>graal-sdk</artifactId>
+			<groupId>org.graalvm.polyglot</groupId>
+			<artifactId>polyglot</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.graalvm.js</groupId>
+			<groupId>org.graalvm.polyglot</groupId>
 			<artifactId>js</artifactId>
-			<scope>runtime</scope>
+			<type>pom</type>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
