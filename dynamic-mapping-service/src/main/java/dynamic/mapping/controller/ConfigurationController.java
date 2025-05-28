@@ -33,7 +33,6 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
-import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
@@ -440,7 +439,7 @@ public class ConfigurationController {
 
     @DeleteMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(@PathVariable String id) {
-        // TODO GRAALS_PERFOMEANCE update code source from templates in graalsCode cache
+        // TODO GRAALS_PERFORMANCE update code source from templates in graalsCode cache
         // Nothing to do, as internal templates can't be deleted.
 
         String tenant = contextService.getContext().getTenant();
@@ -499,7 +498,7 @@ public class ConfigurationController {
     @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateCodeTemplate(
             @PathVariable String id, @Valid @RequestBody CodeTemplate codeTemplate) {
-        // TODO GRAALS_PERFOMEANCE update code source from templates in graalsCode cache
+        // TODO GRAALS_PERFORMANCE update code source from templates in graalsCode cache
 
         String tenant = contextService.getContext().getTenant();
         try {
@@ -527,7 +526,7 @@ public class ConfigurationController {
     @PostMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createCodeTemplate(
             @Valid @RequestBody CodeTemplate codeTemplate) {
-        // TODO GRAALS_PERFOMEANCE update code source from templates in graalsCode cache
+        // TODO GRAALS_PERFORMANCE update code source from templates in graalsCode cache
 
         String tenant = contextService.getContext().getTenant();
         try {

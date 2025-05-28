@@ -498,11 +498,11 @@ public class MappingComponent {
         if (active) {
             MappingStatus mappingStatus = getMappingStatus(tenant, mapping);
             mappingStatus.currentFailureCount = 0;
-            // TODO GRAALS_PERFOMEANCE add code source to graalsCode cache
+            // TODO GRAALS_PERFORMANCE add code source to graalsCode cache
 //            if(mapping.code != null)
 //                configurationRegistry.updateGraalsSourceMapping(tenant, mappingId, mapping.code);
         } else {
-            // TODO GRAALS_PERFOMEANCE remove code source from graalsCode cache
+            // TODO GRAALS_PERFORMANCE remove code source from graalsCode cache
 //            if(mapping.code != null)
 //                configurationRegistry.removeGraalsSourceMapping(tenant, mappingId);
 

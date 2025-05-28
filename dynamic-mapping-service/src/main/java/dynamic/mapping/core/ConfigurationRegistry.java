@@ -42,7 +42,6 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
-import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 
@@ -75,7 +74,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ConfigurationRegistry {
-    // TODO GRAALS_PERFOMEANCE create cache for code graalsCode
+    // TODO GRAALS_PERFORMANCE create cache for code graalsCode
 
     private HostAccess hostAccess;
 
