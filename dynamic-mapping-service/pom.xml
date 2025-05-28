@@ -204,7 +204,7 @@
                             <encoding>UTF-8</encoding>
                             <rpmSkip>true</rpmSkip>
                             <containerSkip>false</containerSkip>
-                            <jvmArgs>
+                            <!--<jvmArgs>
                                 <jvmArg>-XX:+UseG1GC</jvmArg>
                                 <jvmArg>-XX:+UseStringDeduplication</jvmArg>
                                 <jvmArg>-XX:MinHeapFreeRatio=25</jvmArg>
@@ -212,7 +212,7 @@
                                 <jvmArg>-XX:+UnlockExperimentalVMOptions</jvmArg>
                                 <jvmArg>-XX:+EnableJVMCI</jvmArg>
                                 <jvmArg>-XX:+UseJVMCICompiler</jvmArg>
-                            </jvmArgs>
+                            </jvmArgs>-->
                         </configuration>
                     </execution>
                 </executions>
