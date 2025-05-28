@@ -216,7 +216,6 @@ public class DispatcherOutbound implements NotificationCallback {
         ObjectMapper objectMapper;
         ServiceConfiguration serviceConfiguration;
         AConnectorClient connectorClient;
-        Engine graalsEngine;
         Timer outboundProcessingTimer;
         Counter outboundProcessingCounter;
         ConfigurationRegistry configurationRegistry;
@@ -240,7 +239,6 @@ public class DispatcherOutbound implements NotificationCallback {
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfiguration(c8yMessage.getTenant());
             this.payloadProcessorsOutbound = payloadProcessorsOutbound;
-            this.graalsEngine = configurationRegistry.getGraalsEngine(c8yMessage.getTenant());
             this.configurationRegistry = configurationRegistry;
         }
 
@@ -311,7 +309,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     // Prepare GraalVM context if code exists
                     if (mapping.code != null) {
                         try {
-                            graalsContext = setupGraalVMContext(mapping, serviceConfiguration);
+                            graalsContext = setupGraalVMContext(configurationRegistry.getGraalsEngine(c8yMessage.getTenant()));
                             context.setGraalsContext(graalsContext);
 //                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
 //                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
@@ -418,7 +416,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
         }
 
-        private Context setupGraalVMContext(Mapping mapping, ServiceConfiguration serviceConfiguration)
+        private Context setupGraalVMContext(Engine graalsEngine)
                 throws Exception {
             Context graalsContext = Context.newBuilder("js")
                     .engine(graalsEngine)
