@@ -205,10 +205,10 @@
                             <rpmSkip>true</rpmSkip>
                             <containerSkip>false</containerSkip>
                             <jvmArgs>
-                                <jvmArg>‑XX:+UseG1GC</jvmArg>
-                                <jvmArg>‑XX:+UseStringDeduplication</jvmArg>
-                                <jvmArg>‑XX:MinHeapFreeRatio=25</jvmArg>
-                                <jvmArg>‑XX:MaxHeapFreeRatio=75</jvmArg>
+                                <jvmArg>-XX:+UseG1GC</jvmArg>
+                                <jvmArg>-XX:+UseStringDeduplication</jvmArg>
+                                <jvmArg>-XX:MinHeapFreeRatio=25</jvmArg>
+                                <jvmArg>-XX:MaxHeapFreeRatio=75</jvmArg>
                                 <jvmArg>-XX:+UnlockExperimentalVMOptions</jvmArg>
                                 <jvmArg>-XX:+EnableJVMCI</jvmArg>
                                 <jvmArg>-XX:+UseJVMCICompiler</jvmArg>
