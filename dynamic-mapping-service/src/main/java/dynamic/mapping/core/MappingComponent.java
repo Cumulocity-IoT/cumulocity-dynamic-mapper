@@ -499,9 +499,11 @@ public class MappingComponent {
             MappingStatus mappingStatus = getMappingStatus(tenant, mapping);
             mappingStatus.currentFailureCount = 0;
             // TODO GRAALS_PERFOMEANCE add code source to graalsCode cache
-
+            configurationRegistry.updateGraalsSourceMapping(tenant, mappingId, mapping.code);
         } else {
             // TODO GRAALS_PERFOMEANCE remove code source from graalsCode cache
+            configurationRegistry.removeGraalsSourceMapping(tenant, mappingId);
+
         }
         return mapping;
     }
@@ -789,6 +791,7 @@ public class MappingComponent {
             try (Context context = Context.newBuilder("js")
                     .engine(configurationRegistry.getGraalsEngine(tenant))
                     .logHandler(GRAALJS_LOG_HANDLER)
+                    .allowHostAccess(configurationRegistry.getHostAccess())
                     .allowAllAccess(true)
                     .build()) {
 

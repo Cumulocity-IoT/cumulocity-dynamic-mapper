@@ -31,7 +31,6 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
-import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -48,7 +47,6 @@ import dynamic.mapping.processor.model.ProcessingResult;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -56,10 +54,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.Value;
 
 /**
  * AsynchronousDispatcherInbound
@@ -112,8 +107,9 @@ public class DispatcherInbound implements GenericMessageCallback {
         Timer inboundProcessingTimer;
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
-        Engine graalsEngine;
         ExecutorService virtualThreadPool;
+        Engine graalsEngine;
+        ConfigurationRegistry configurationRegistry;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message, AConnectorClient connectorClient) {
@@ -134,7 +130,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
             this.graalsEngine = configurationRegistry.getGraalsEngine(message.getTenant());
             this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-
+            this.configurationRegistry = configurationRegistry;
         }
 
         @Override
@@ -193,10 +189,13 @@ public class DispatcherInbound implements GenericMessageCallback {
                         try {
                             graalsContext = setupGraalVMContext(mapping, serviceConfiguration);
                             context.setGraalsContext(graalsContext);
-                            context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                                    .get(TemplateType.SHARED.name()).getCode());
-                            context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                                    .get(TemplateType.SYSTEM.name()).getCode());
+                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
+                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
+                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
+                            // context.setSharedCode(serviceConfiguration.getCodeTemplates()
+                            //         .get(TemplateType.SHARED.name()).getCode());
+                            // context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                            //         .get(TemplateType.SYSTEM.name()).getCode());
                         } catch (Exception e) {
                             handleGraalVMError(tenant, mapping, e, context, mappingStatus);
                             processingResult.add(context);
@@ -310,22 +309,10 @@ public class DispatcherInbound implements GenericMessageCallback {
 
         private Context setupGraalVMContext(Mapping mapping, ServiceConfiguration serviceConfiguration)
                 throws Exception {
-            // Create a custom HostAccess configuration
-            // SubstitutionContext public methods and basic collection operations
-            HostAccess customHostAccess = HostAccess.newBuilder()
-                    // Allow access to public members of accessible classes
-                    .allowPublicAccess(true)
-                    // Allow array access for basic functionality
-                    .allowArrayAccess(true)
-                    // Allow List operations
-                    .allowListAccess(true)
-                    // Allow Map operations
-                    .allowMapAccess(true)
-                    .build();
             Context graalsContext = Context.newBuilder("js")
                     .engine(graalsEngine)
                     //.option("engine.WarnInterpreterOnly", "false")
-                    .allowHostAccess(customHostAccess)
+                    .allowHostAccess(configurationRegistry.getHostAccess())
                     .allowHostClassLookup(className ->
                     // Allow only the specific SubstitutionContext class
                     className.equals("dynamic.mapping.processor.model.SubstitutionContext")
@@ -337,21 +324,6 @@ public class DispatcherInbound implements GenericMessageCallback {
                             || className.equals("java.util.ArrayList") ||
                             className.equals("java.util.HashMap"))
                     .build();
-
-            String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-            Value extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
-
-            if (extractFromSourceFunc == null) {
-                byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
-                String decodedCode = new String(decodedBytes);
-                String decodedCodeAdapted = decodedCode.replaceFirst(
-                        Mapping.EXTRACT_FROM_SOURCE,
-                        identifier);
-                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
-                        .buildLiteral();
-
-                graalsContext.eval(source);
-            }
 
             return graalsContext;
         }

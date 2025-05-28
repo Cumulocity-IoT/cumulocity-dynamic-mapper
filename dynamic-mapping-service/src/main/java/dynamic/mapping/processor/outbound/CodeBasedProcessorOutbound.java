@@ -63,36 +63,52 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
             if (mapping.code != null) {
                 Context graalsContext = context.getGraalsContext();
 
-                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-                Value extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
+                // String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                // Value extractFromSourceFunc =
+                // graalsContext.getBindings("js").getMember(identifier);
 
-                if (extractFromSourceFunc == null) {
-                    byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
-                    String decodedCode = new String(decodedBytes);
-                    String decodedCodeAdapted = decodedCode.replaceFirst(
-                            Mapping.EXTRACT_FROM_SOURCE,
-                            identifier);
-                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
-                            .buildLiteral();
-                    graalsContext.eval(source);
-                    extractFromSourceFunc = graalsContext.getBindings("js")
-                            .getMember(identifier);
+                // if (extractFromSourceFunc == null) {
+                // byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                // String decodedCode = new String(decodedBytes);
+                // String decodedCodeAdapted = decodedCode.replaceFirst(
+                // Mapping.EXTRACT_FROM_SOURCE,
+                // identifier);
+                // Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
+                // ".js")
+                // .buildLiteral();
+                // graalsContext.eval(source);
+                // extractFromSourceFunc = graalsContext.getBindings("js")
+                // .getMember(identifier);
+                // }
+
+                // if (context.getSharedCode() != null) {
+                // byte[] decodedSharedCodeBytes =
+                // Base64.getDecoder().decode(context.getSharedCode());
+                // String decodedSharedCode = new String(decodedSharedCodeBytes);
+                // Source sharedSource = Source.newBuilder("js", decodedSharedCode,
+                // "sharedCode.js")
+                // .buildLiteral();
+                // graalsContext.eval(sharedSource);
+                // }
+
+                // if (context.getSystemCode() != null) {
+                // byte[] decodedSystemCodeBytes =
+                // Base64.getDecoder().decode(context.getSystemCode());
+                // String decodedSystemCode = new String(decodedSystemCodeBytes);
+                // Source systemSource = Source.newBuilder("js", decodedSystemCode,
+                // "systemCode.js")
+                // .buildLiteral();
+                // graalsContext.eval(systemSource);
+                // }
+
+                if (context.getSystemSource() != null) {
+                    graalsContext.eval(context.getSystemSource());
                 }
-
-                if (context.getSharedCode() != null) {
-                    byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
-                    String decodedSharedCode = new String(decodedSharedCodeBytes);
-                    Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
-                            .buildLiteral();
-                    graalsContext.eval(sharedSource);
+                if (context.getSharedSource() != null) {
+                    graalsContext.eval(context.getSharedSource());
                 }
-
-                if (context.getSystemCode() != null) {
-                    byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
-                    String decodedSystemCode = new String(decodedSystemCodeBytes);
-                    Source systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
-                            .buildLiteral();
-                    graalsContext.eval(systemSource);
+                if (context.getMappingSource() != null) {
+                    graalsContext.eval(context.getMappingSource());
                 }
 
                 Map jsonObject = (Map) context.getPayload();
@@ -100,6 +116,9 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
 
                 Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
+                String codeId = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.id;
+                Value extractFromSourceFunc = graalsContext.getBindings("js")
+                        .getMember(codeId);
                 final Value result = extractFromSourceFunc
                         .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
                                 payloadAsString));
