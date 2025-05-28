@@ -639,21 +639,14 @@ export class MappingComponent implements OnInit, OnDestroy {
           mapping.active = false;
         }
       }
-      if (mapping.active) {
-        this.setStepperConfiguration(
-          mapping.mappingType,
-          this.stepperConfiguration.direction,
-          EditorMode.READ_ONLY,
-          mapping.mappingType == MappingType.CODE_BASED
-        );
-      } else {
-        this.setStepperConfiguration(
-          mapping.mappingType,
-          this.stepperConfiguration.direction,
-          EditorMode.UPDATE,
-          mapping.mappingType == MappingType.CODE_BASED
-        );
-      }
+
+      this.setStepperConfiguration(
+        mapping.mappingType,
+        this.stepperConfiguration.direction,
+        mapping.active ? EditorMode.READ_ONLY : EditorMode.UPDATE,
+        mapping.mappingType == MappingType.CODE_BASED
+      );
+
       // create deep copy of existing mapping, in case user cancels changes
       this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
 
@@ -687,7 +680,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       mapping.mappingType,
       mapping.direction,
       EditorMode.COPY,
-      mapping?.extension?.eventName == "GraalsCodeExtension"
+      mapping.mappingType == MappingType.CODE_BASED
     );
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
@@ -1005,10 +998,12 @@ export class MappingComponent implements OnInit, OnDestroy {
     editorMode: EditorMode,
     substitutionsAsCode: boolean
   ) {
-    // console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
-    // console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
-    this.stepperConfiguration =
-      MappingTypeDescriptionMap[mappingType].stepperConfiguration;
+    // console.log('DEBUG I', MappingTypeDescriptionMap);
+    // console.log('DEBUG II', MappingTypeDescriptionMap[mappingType]);
+    // this.stepperConfiguration =
+    //   { ...MappingTypeDescriptionMap[mappingType].stepperConfiguration };
+    // console.log('DEBUG III', this.stepperConfiguration);
+
     this.stepperConfiguration.direction = direction;
     this.stepperConfiguration.editorMode = editorMode;
     if (direction == Direction.OUTBOUND) {
@@ -1025,6 +1020,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.stepperConfiguration.allowTestSending = false;
       this.stepperConfiguration.allowTestTransformation = true;
     }
+    //console.log('DEBUG IV', this.stepperConfiguration, substitutionsAsCode);
+
   }
 
   ngOnDestroy() {
@@ -1042,7 +1039,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       { operation: Operation.RESET_DEPLOYMENT_MAP }
     );
 
-     const response2 = await this.sharedService.runOperation(
+    const response2 = await this.sharedService.runOperation(
       { operation: Operation.RELOAD_MAPPINGS }
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);

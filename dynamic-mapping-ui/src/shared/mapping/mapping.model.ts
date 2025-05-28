@@ -179,6 +179,7 @@ export const MappingTypeDescriptionMap: Record<
       [Direction.OUTBOUND]: { snoopSupported: true, directionSupported: true }
     },
     stepperConfiguration: {
+      showCodeEditor: false,
       showEditorSource: true,
       showEditorTarget: true,
       allowNoDefinedIdentifier: false,
@@ -203,6 +204,7 @@ export const MappingTypeDescriptionMap: Record<
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
     stepperConfiguration: {
+      showCodeEditor: false,
       showEditorSource: true,
       showEditorTarget: true,
       allowNoDefinedIdentifier: false,
@@ -221,6 +223,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
     stepperConfiguration: {
+      showCodeEditor: false,
       showEditorSource: true,
       showEditorTarget: true,
       allowNoDefinedIdentifier: false,
@@ -241,6 +244,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showProcessorExtensionsSource: false,
       showProcessorExtensionsInternal: true,
       allowDefiningSubstitutions: false,
+      showCodeEditor: false,
       showEditorSource: false,
       showEditorTarget: true,
       allowNoDefinedIdentifier: true,
@@ -260,6 +264,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showProcessorExtensionsSource: true,
       showProcessorExtensionsSourceTarget: false,
       allowDefiningSubstitutions: false,
+      showCodeEditor: false,
       showEditorSource: false,
       showEditorTarget: true,
       allowNoDefinedIdentifier: true,
