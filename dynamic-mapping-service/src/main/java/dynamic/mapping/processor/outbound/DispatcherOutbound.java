@@ -37,6 +37,7 @@ import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.model.Qos;
 import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.notification.websocket.NotificationCallback;
+import dynamic.mapping.processor.model.C8YMessage;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -52,7 +53,6 @@ import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.model.API;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.notification.websocket.Notification;
-import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 
 import org.graalvm.polyglot.Engine;

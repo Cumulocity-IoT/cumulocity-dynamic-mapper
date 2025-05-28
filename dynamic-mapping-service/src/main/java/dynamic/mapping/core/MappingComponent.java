@@ -70,7 +70,7 @@ import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.model.ResolveException;
 import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.model.ValidationError;
-import dynamic.mapping.processor.C8YMessage;
+import dynamic.mapping.processor.model.C8YMessage;
 
 @Slf4j
 @Component
