@@ -313,13 +313,13 @@ public class DispatcherOutbound implements NotificationCallback {
                         try {
                             graalsContext = setupGraalVMContext(mapping, serviceConfiguration);
                             context.setGraalsContext(graalsContext);
-                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
-                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
-                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
-                            // context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                            // .get(TemplateType.SHARED.name()).getCode());
-                            // context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                            // .get(TemplateType.SYSTEM.name()).getCode());
+//                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
+//                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
+//                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
+                             context.setSharedCode(serviceConfiguration.getCodeTemplates()
+                             .get(TemplateType.SHARED.name()).getCode());
+                             context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                             .get(TemplateType.SYSTEM.name()).getCode());
                         } catch (Exception e) {
                             handleGraalVMError(tenant, mapping, e, context, mappingStatus);
                             processingResult.add(context);

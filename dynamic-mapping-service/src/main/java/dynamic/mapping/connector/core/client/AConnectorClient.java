@@ -367,9 +367,9 @@ public abstract class AConnectorClient {
             updatedMappings.forEach(mapping -> {
                 if (isMappingValidForDeployment(mapping) && mapping.active) {
                     updateSubscriptionCacheInbound(mapping, updatedCountSubscriptions);
-                    if (mapping.mappingType.equals(MappingType.CODE_BASED)) {
-                        configurationRegistry.updateGraalsSourceMapping(tenant, mapping.id, mapping.getCode());
-                    }
+//                    if (mapping.mappingType.equals(MappingType.CODE_BASED)) {
+//                        configurationRegistry.updateGraalsSourceMapping(tenant, mapping.id, mapping.getCode());
+//                    }
                 }
             });
             // Update subscriptions only in case of a cleanSession
@@ -896,9 +896,9 @@ public abstract class AConnectorClient {
                 .filter(mapping -> mapping.getActive() && isDeployedInConnector(mapping))
                 .forEach(mapping -> {
                     mappingsDeployedOutbound.put(mapping.identifier, mapping);
-                    if (mapping.mappingType.equals(MappingType.CODE_BASED)) {
-                        configurationRegistry.updateGraalsSourceMapping(tenant, mapping.id, mapping.getCode());
-                    }
+//                    if (mapping.mappingType.equals(MappingType.CODE_BASED)) {
+//                        configurationRegistry.updateGraalsSourceMapping(tenant, mapping.id, mapping.getCode());
+//                    }
                 });
     }
 

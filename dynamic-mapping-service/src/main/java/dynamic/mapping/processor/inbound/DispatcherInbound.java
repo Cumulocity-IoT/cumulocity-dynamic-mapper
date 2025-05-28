@@ -23,6 +23,7 @@ package dynamic.mapping.processor.inbound;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.model.Qos;
@@ -47,6 +48,7 @@ import dynamic.mapping.processor.model.ProcessingResult;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -54,7 +56,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
 
 /**
  * AsynchronousDispatcherInbound
@@ -189,13 +194,10 @@ public class DispatcherInbound implements GenericMessageCallback {
                         try {
                             graalsContext = setupGraalVMContext(mapping, serviceConfiguration);
                             context.setGraalsContext(graalsContext);
-                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
-                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
-                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
-                            // context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                            //         .get(TemplateType.SHARED.name()).getCode());
-                            // context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                            //         .get(TemplateType.SYSTEM.name()).getCode());
+                            context.setSharedCode(serviceConfiguration.getCodeTemplates()
+                                    .get(TemplateType.SHARED.name()).getCode());
+                            context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                                    .get(TemplateType.SYSTEM.name()).getCode());
                         } catch (Exception e) {
                             handleGraalVMError(tenant, mapping, e, context, mappingStatus);
                             processingResult.add(context);
@@ -230,6 +232,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     if (graalsContext != null) {
                         try {
                             graalsContext.close();
+                            graalsContext = null;
                         } catch (Exception e) {
                             log.warn("{} - Error closing GraalVM context: {}", tenant, e.getMessage());
                         }
@@ -324,7 +327,6 @@ public class DispatcherInbound implements GenericMessageCallback {
                             || className.equals("java.util.ArrayList") ||
                             className.equals("java.util.HashMap"))
                     .build();
-
             return graalsContext;
         }
 
