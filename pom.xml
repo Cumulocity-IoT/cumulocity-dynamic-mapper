@@ -39,12 +39,12 @@
 		<c8y.version>2025.34.0</c8y.version>
 		<lombok.version>1.18.38</lombok.version>
 		<slf4j.version>2.0.17</slf4j.version>
-		<maven.compiler.source>21</maven.compiler.source>
-		<maven.compiler.target>21</maven.compiler.target>
-		<java.version>21</java.version>
+		<maven.compiler.source>24</maven.compiler.source>
+		<maven.compiler.target>24</maven.compiler.target>
+		<java.version>24</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<graalvm.version>23.1.7</graalvm.version>
-		<graalvm.js.version>23.1.7</graalvm.js.version>
+		<graalvm.polyglott.version>24.2.1</graalvm.polyglott.version>
+		<graalvm.js.version>24.2.1</graalvm.js.version>
 	</properties>
 	<repositories>
 		<repository>
@@ -52,7 +52,12 @@
 			<layout>default</layout>
 			<url>https://download.cumulocity.com/maven/repository</url>
 		</repository>
+		<repository>
+			<id>projectlombok.org</id>
+			<url>https://projectlombok.org/edge-releases</url>
+		</repository>
 	</repositories>
+
 	<pluginRepositories>
 		<pluginRepository>
 			<id>cumulocity</id>
@@ -155,6 +160,12 @@
 				<groupId>org.projectlombok</groupId>
 				<artifactId>lombok</artifactId>
 				<version>${lombok.version}</version>
+				<scope>provided</scope>
+
+				<!-- <groupId>org.projectlombok</groupId>
+				<artifactId>lombok</artifactId>
+				<version>edge-SNAPSHOT</version>
+				<scope>provided</scope> -->
 			</dependency>
 			<dependency>
 				<groupId>org.java-websocket</groupId>
@@ -199,7 +210,7 @@
 			<dependency>
 				<groupId>org.graalvm.polyglot</groupId>
 				<artifactId>polyglot</artifactId>
-				<version>${graalvm.js.version}</version>
+				<version>${graalvm.polyglott.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.graalvm.polyglot</groupId>

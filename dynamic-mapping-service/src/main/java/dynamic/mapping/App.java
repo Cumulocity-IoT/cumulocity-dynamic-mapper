@@ -170,9 +170,9 @@ public class App {
                 // gid is serialized using svenson
                 if (GId.class.isAssignableFrom(rawClass)) {
                     return new JsonSerializer<Object>() {
-                        @SneakyThrows
+                        @Override
                         public void serialize(Object value, final JsonGenerator gen,
-                                final SerializerProvider serializers) {
+                                final SerializerProvider serializers) throws IOException {
                             final GId representation = (GId) value;
                             gen.writeString(representation.getValue());
                         }
