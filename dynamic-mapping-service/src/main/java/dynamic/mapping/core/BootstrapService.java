@@ -110,8 +110,14 @@ public class BootstrapService {
     @PreDestroy
     public void destroy() {
         log.info("Shutting down mapper...");
-        subscriptionsService.runForEachTenant(
-                () -> configurationRegistry.getNotificationSubscriber().disconnect(subscriptionsService.getTenant()));
+        subscriptionsService.runForEachTenant(() -> {
+            try {
+                connectorRegistry.unregisterAllClientsForTenant(subscriptionsService.getTenant());
+            } catch (ConnectorRegistryException e) {
+                throw new RuntimeException(e);
+            }
+            configurationRegistry.getNotificationSubscriber().disconnect(subscriptionsService.getTenant());
+        });
     }
 
     @EventListener

@@ -323,7 +323,7 @@ public class MQTT3Client extends AConnectorClient {
                         }
                     }
                 })
-                .addConnectedListener(connext -> {
+                .addConnectedListener(context -> {
                     connectionState.setTrue();
                 })
                 .buildBlocking();
@@ -371,7 +371,6 @@ public class MQTT3Client extends AConnectorClient {
                                 String.format("Tenant %s - Error connecting to server: %s. Error code: %s", tenant,
                                         mqttClient.getConfig().getServerHost(), ack.getReturnCode().name()));
                     }
-
                     connectionState.setTrue();
                     log.info("{} - Phase III: {} connected, server: {}", tenant, getConnectorName(),
                             mqttClient.getConfig().getServerHost());
@@ -484,35 +483,37 @@ public class MQTT3Client extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, Qos qos) throws ConnectorException {
-        log.debug("{} - Subscribing on topic: [{}] for connector: {}", tenant, topic, connectorName);
-        Qos usedQOS = qos;
-        sendSubscriptionEvents(topic, "Subscribing");
-        // Default to QoS=0 if not provided
-        if (usedQOS.equals(null))
-            usedQOS = Qos.AT_MOST_ONCE;
-        else if (!supportedQOS.contains(qos)) {
-            // determine maximum supported QOS
-            usedQOS = Qos.AT_MOST_ONCE;
-            for (int i = 1; i < qos.ordinal(); i++) {
-                if (supportedQOS.contains(Qos.values()[i])) {
-                    usedQOS = Qos.values()[i];
+        if(isConnected()) {
+            log.debug("{} - Subscribing on topic: [{}] for connector: {}", tenant, topic, connectorName);
+            Qos usedQOS = qos;
+            sendSubscriptionEvents(topic, "Subscribing");
+            // Default to QoS=0 if not provided
+            if (usedQOS.equals(null))
+                usedQOS = Qos.AT_MOST_ONCE;
+            else if (!supportedQOS.contains(qos)) {
+                // determine maximum supported QOS
+                usedQOS = Qos.AT_MOST_ONCE;
+                for (int i = 1; i < qos.ordinal(); i++) {
+                    if (supportedQOS.contains(Qos.values()[i])) {
+                        usedQOS = Qos.values()[i];
+                    }
+                }
+                if (usedQOS.ordinal() < qos.ordinal()) {
+                    log.warn("{} - QOS {} is not supported. Using instead: {}", tenant, qos, usedQOS);
                 }
             }
-            if (usedQOS.ordinal() < qos.ordinal()) {
-                log.warn("{} - QOS {} is not supported. Using instead: {}", tenant, qos, usedQOS);
-            }
-        }
 
-        // We don't need to add a handler on subscribe using hive client
-        Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
-        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal()))
-                .callback(mqttCallback).manualAcknowledgement(true)
-                .send()
-                .exceptionally(throwable -> {
-                    log.error("{} - Failed to subscribe on topic {} with error: ", tenant, topic,
-                            throwable.getMessage());
-                    return null;
-                });
+            // We don't need to add a handler on subscribe using hive client
+            Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
+            asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal()))
+                    .callback(mqttCallback).manualAcknowledgement(true)
+                    .send()
+                    .exceptionally(throwable -> {
+                        log.error("{} - Failed to subscribe on topic {} with error: {}", tenant, topic,
+                                throwable.getMessage(), throwable);
+                        return null;
+                    });
+        }
 
     }
 
@@ -524,8 +525,8 @@ public class MQTT3Client extends AConnectorClient {
             log.info("{} - Successfully unsubscribed from topic: [{}] for connector: {}", tenant, topic,
                     connectorName);
         }).exceptionally(throwable -> {
-            log.error("{} - Failed to subscribe on topic {} with error: ", tenant, topic,
-                    throwable.getMessage());
+            log.error("{} - Failed to subscribe on topic {} with error: {}", tenant, topic,
+                    throwable.getMessage(), throwable);
             return null;
         });
         // mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
