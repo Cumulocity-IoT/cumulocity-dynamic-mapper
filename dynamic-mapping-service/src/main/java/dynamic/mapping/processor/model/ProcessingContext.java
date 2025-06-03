@@ -32,7 +32,7 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.BinaryInfo;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.QOS;
+import dynamic.mapping.model.Qos;
 import dynamic.mapping.processor.ProcessingException;
 import lombok.Builder;
 import lombok.Getter;
@@ -40,6 +40,7 @@ import lombok.Setter;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
 @Getter
@@ -60,7 +61,7 @@ public class ProcessingContext<O> {
 
     private API api;
     
-    private QOS qos;
+    private Qos qos;
 
     private String resolvedPublishTopic;
 
@@ -112,7 +113,13 @@ public class ProcessingContext<O> {
 
     private String sharedCode;
 
+    private Source sharedSource;
+
     private String systemCode;
+
+    private Source systemSource;
+
+    private Source mappingSource;
 
     private Value extractFromSourceFunc;
 

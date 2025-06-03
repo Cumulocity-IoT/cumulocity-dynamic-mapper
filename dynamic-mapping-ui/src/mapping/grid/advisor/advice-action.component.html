@@ -23,7 +23,7 @@
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'plus-circle'"></span>
   </ng-container>
-  <div class="p-24 modal-inner-scroll animated fadeIn">
+  <div class="p-24 animated fadeIn">
     <p class="text-center text-medium text-16 sticky-top bg-white">
       {{
       'The mapping snoops for messages. How would you like to continue?'
@@ -33,24 +33,37 @@
     <div class="p-t-24 p-b-24">
       <c8y-list-group class="separator-top">
         <c8y-li>
-          <c8y-li-radio name="mapping_type_group" title="{{ 'Continue snooping' }}"
-            (click)="onSelection(AdvisorAction.CONTINUE_SNOOPING)"></c8y-li-radio>
-          <span>{{ 'Continue snooping and wait for more templates ...' }}</span>
+          <label class="c8y-radio input-sm">
+            <input title="{{ 'Stop snooping' }}" type="radio" (change)="onSelection(AdvisorAction.CONTINUE_SNOOPING)"
+              [checked]="AdvisorAction.CONTINUE_SNOOPING == selectedAction">
+            <span></span>
+            <span>{{ 'Continue snooping
+              and wait for more templates ...'
+              }}</span>
+          </label>
         </c8y-li>
         <c8y-li>
-          <c8y-li-radio name="mapping_type_group" title="{{ 'Stop snooping' }}"
-            (click)="onSelection(AdvisorAction.STOP_SNOOPING_AND_EDIT)"></c8y-li-radio>
-          <span>{{ 'Stop snooping and edit mapping ...' }}</span>
+          <label class="c8y-radio input-sm">
+            <input title="{{ 'Stop snooping and edit' }}" type="radio"
+              (change)="onSelection(AdvisorAction.STOP_SNOOPING_AND_EDIT)"
+              [checked]="AdvisorAction.STOP_SNOOPING_AND_EDIT == selectedAction">
+            <span></span>
+            <span>{{ 'Stop snooping and edit mapping ...' }}</span>
+          </label>
         </c8y-li>
         <c8y-li>
-          <c8y-li-radio name="mapping_type_group" title="{{ 'Stop snooping' }}"
-            (click)="onSelection(AdvisorAction.EDIT)"></c8y-li-radio>
-          <span>{{ 'Continue snooping and edit mapping ...' }}</span>
+          <label class="c8y-radio input-sm">
+            <input title="{{ 'Continue snooping and edit' }}" type="radio" (change)="onSelection(AdvisorAction.EDIT)"
+              [checked]="AdvisorAction.EDIT == selectedAction">
+            <span></span><span>{{ 'Continue snooping and edit mapping ...' }}</span>
+          </label>
         </c8y-li>
         <c8y-li>
-          <c8y-li-radio name="mapping_type_group" title="{{ 'Stop snooping' }}"
-            (click)="onSelection(AdvisorAction.VIEW)"></c8y-li-radio>
-          <span>{{ 'Continue snooping and view mapping ...' }}</span>
+          <label class="c8y-radio input-sm">
+            <input title="{{ 'Stop snooping' }}" type="radio" (change)="onSelection(AdvisorAction.VIEW)"
+              [checked]="AdvisorAction.VIEW == selectedAction">
+            <span></span><span>{{ 'Continue snooping and view mapping ...' }}</span>
+          </label>
         </c8y-li>
       </c8y-list-group>
     </div>

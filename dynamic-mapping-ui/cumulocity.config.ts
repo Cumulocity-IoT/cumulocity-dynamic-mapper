@@ -100,6 +100,10 @@ export default {
         to: 'image/Dynamic_Mapper_Connector_Matrix.png'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_QoS_Matrix.png',
+        to: 'image/Dynamic_Mapper_QoS_Matrix.png'
+      },
+      {
         from: '../LICENSE',
         to: 'LICENSE.txt'
       },

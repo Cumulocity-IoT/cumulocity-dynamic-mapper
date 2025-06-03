@@ -85,7 +85,8 @@ let initializedMonaco = false;
   selector: 'd11r-mapping-stepper',
   templateUrl: 'mapping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
@@ -116,6 +117,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   codeFormly: FormGroup = new FormGroup({});
 
   codeTemplateDecoded: CodeTemplate;
+  mappingCode: any;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
   codeTemplates: CodeTemplateMap;
   templateId: TemplateType = undefined;
@@ -751,10 +753,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async onCommitButton() {
     this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
     this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
-    if (this.mapping.code || this.mapping['_code']) {
-      // this.mapping.code = btoa(this.mapping['_code']);
-      this.mapping.code = stringToBase64(this.mapping['_code']);
-      delete this.mapping['_code'];
+    if (this.mapping.code || this.mappingCode) {
+      this.mapping.code = stringToBase64(this.mappingCode);
+      //delete this.mappingCode;
     }
     if (this.mapping.mappingType == MappingType.CODE_BASED && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
       this.alertService.warning("Internal error in editor. Try again!");
@@ -828,7 +829,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.updateFilterExpressionResult(this.mapping.filterMapping);
       }
       if (this.mapping.code)
-        this.mapping['_code'] = base64ToString(this.mapping.code);
+        this.mappingCode = base64ToString(this.mapping.code);
       // console.log("Step index 1 - before", this.targetTemplate);
       if (this.stepperForward) {
         this.expandTemplates();
@@ -845,12 +846,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.updateTestingTemplate.emit(testMapping);
       // this.step == 'Select templates'
     } else if (index == STEP_TEST_MAPPING) {
-      if (this.mapping.code || this.mapping['_code']) {
+      if (this.mapping.code || this.mappingCode) {
         const testMapping = _.clone(this.mapping);
         testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
         testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-        // this.mapping.code = btoa(this.mapping['_code']);
-        testMapping.code = stringToBase64(this.mapping['_code']);
+        testMapping.code = stringToBase64(this.mappingCode);
         this.updateTestingTemplate.emit(testMapping);
       }
       // console.log("Step 4: onStepChange targetTemplate ", this.mapping.targetTemplate);
@@ -1215,11 +1215,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onValueCodeChange(value) {
     // console.log("code changed", value);
-    this.mapping['_code'] = value;
+    this.mappingCode = value;
   }
 
   onSelectCodeTemplate(): void {
-    this.mapping['_code'] = this.codeTemplatesDecoded.get(this.templateId).code;
+    this.mappingCode = this.codeTemplatesDecoded.get(this.templateId).code;
   }
 
   getCodeTemplateEntries(): { key: string; name: string, type: TemplateType }[] {
@@ -1242,7 +1242,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     modalRef.content.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
       // console.log('Configuration after edit:', editedConfiguration);
       if (codeTemplate) {
-        const code = stringToBase64(this.mapping['_code']);
+        const code = stringToBase64(this.mappingCode);
         const id = createCustomUuid();
         const templateType = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
         const response = await this.sharedService.createCodeTemplate({

@@ -30,6 +30,7 @@ public enum LoggingEventType {
     MAPPING_LOADING_ERROR_EVENT_TYPE("MAPPING_LOADING_ERROR_EVENT_TYPE", "d11r_mappingLoadingErrorEvent", "d11r_mapping"),
     STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE("STATUS_MAPPING_ACTIVATION_ERROR_EVENT_TYPE", "d11r_mappingActivationErrorEvent", "d11r_mapping"),
     STATUS_MAPPING_CHANGED_EVENT_TYPE("STATUS_MAPPING_CHANGED_EVENT_TYPE", "d11r_mappingChangedEvent", "d11r_mapping"),
+    STATUS_MAPPING_FAILURE_EVENT_TYPE("STATUS_MAPPING_FAILURE_EVENT_TYPE", "d11r_mappingFailureEvent", "d11r_mapping"),
     STATUS_NOTIFICATION_EVENT_TYPE("STATUS_NOTIFICATION_EVENT_TYPE", "d11r_notificationStatusEvent", "d11r_connector"),
     ALL("ALL", "ALL", "d11r_AnyComponent");
 

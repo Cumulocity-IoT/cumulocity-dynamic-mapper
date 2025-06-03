@@ -42,22 +42,22 @@ export const Java = {
 };
 
 // RepairStrategy enum
-export const RepairStrategy = {
-  DEFAULT: 'DEFAULT',
-  USE_FIRST_VALUE_OF_ARRAY: 'USE_FIRST_VALUE_OF_ARRAY',
-  USE_LAST_VALUE_OF_ARRAY: 'USE_LAST_VALUE_OF_ARRAY',
-  IGNORE: 'IGNORE',
-  REMOVE_IF_MISSING_OR_NULL: 'REMOVE_IF_MISSING_OR_NULL',
-  CREATE_IF_MISSING: 'CREATE_IF_MISSING'
+export enum RepairStrategy {
+  DEFAULT = 'DEFAULT',
+  USE_FIRST_VALUE_OF_ARRAY = 'USE_FIRST_VALUE_OF_ARRAY',
+  USE_LAST_VALUE_OF_ARRAY = 'USE_LAST_VALUE_OF_ARRAY',
+  IGNORE = 'IGNORE',
+  REMOVE_IF_MISSING_OR_NULL = 'REMOVE_IF_MISSING_OR_NULL',
+  CREATE_IF_MISSING = 'CREATE_IF_MISSING'
 };
 
 // TYPE enum (inside SubstituteValue in Java)
-export const TYPE = {
-  ARRAY: 'ARRAY',
-  IGNORE: 'IGNORE',
-  NUMBER: 'NUMBER',
-  OBJECT: 'OBJECT',
-  TEXTUAL: 'TEXTUAL'
+export enum TYPE {
+  ARRAY = 'ARRAY',
+  IGNORE = 'IGNORE',
+  NUMBER = 'NUMBER',
+  OBJECT = 'OBJECT',
+  TEXTUAL = 'TEXTUAL'
 };
 
 // SubstituteValue class
@@ -235,29 +235,4 @@ export class SubstitutionContext {
   getPayload() {
     return this.#payload;
   }
-
 }
-
-// export function tracePayload(ctx) {
-//   const sourceObject = JSON.parse(ctx.getPayload());
-//   for (var key in sourceObject) {
-//     console.log(`Payload key: ${key}, value: ${sourceObject[key]}`);
-//   }
-//   console.log(`Identifier sourceId: ${ctx.getC8YIdentifier()}`);
-//   console.log(`Identifier externalIdentifier: ${ctx.getExternalIdentifier()}`);
-//   console.log(`Identifier genericDeviceIdentifier: ${ctx.getGenericDeviceIdentifier()}`);
-// }
-
-// export function addSubstitution(result, key, value) {
-//   let map = result.getSubstitutions();
-//   let valuesList = map.get(key);
-
-//   // If the list doesn't exist for this key, create it
-//   if (valuesList === null || valuesList === undefined) {
-//       valuesList = new ArrayList();
-//       map.put(key, valuesList);
-//   }
-
-//   // Add the value to the list
-//   valuesList.add(value);
-// }

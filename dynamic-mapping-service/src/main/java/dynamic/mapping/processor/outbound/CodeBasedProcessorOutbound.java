@@ -64,7 +64,8 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                 Context graalsContext = context.getGraalsContext();
 
                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-                Value extractFromSourceFunc = graalsContext.getBindings("js").getMember(identifier);
+                Value extractFromSourceFunc =
+                        graalsContext.getBindings("js").getMember(identifier);
 
                 if (extractFromSourceFunc == null) {
                     byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
@@ -72,7 +73,8 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                     String decodedCodeAdapted = decodedCode.replaceFirst(
                             Mapping.EXTRACT_FROM_SOURCE,
                             identifier);
-                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier + ".js")
+                    Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
+                                    ".js")
                             .buildLiteral();
                     graalsContext.eval(source);
                     extractFromSourceFunc = graalsContext.getBindings("js")
@@ -80,20 +82,34 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                 }
 
                 if (context.getSharedCode() != null) {
-                    byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
+                    byte[] decodedSharedCodeBytes =
+                            Base64.getDecoder().decode(context.getSharedCode());
                     String decodedSharedCode = new String(decodedSharedCodeBytes);
-                    Source sharedSource = Source.newBuilder("js", decodedSharedCode, "sharedCode.js")
+                    Source sharedSource = Source.newBuilder("js", decodedSharedCode,
+                                    "sharedCode.js")
                             .buildLiteral();
                     graalsContext.eval(sharedSource);
                 }
 
                 if (context.getSystemCode() != null) {
-                    byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
+                    byte[] decodedSystemCodeBytes =
+                            Base64.getDecoder().decode(context.getSystemCode());
                     String decodedSystemCode = new String(decodedSystemCodeBytes);
-                    Source systemSource = Source.newBuilder("js", decodedSystemCode, "systemCode.js")
+                    Source systemSource = Source.newBuilder("js", decodedSystemCode,
+                                    "systemCode.js")
                             .buildLiteral();
                     graalsContext.eval(systemSource);
                 }
+
+//                if (context.getSystemSource() != null) {
+//                    graalsContext.eval(context.getSystemSource());
+//                }
+//                if (context.getSharedSource() != null) {
+//                    graalsContext.eval(context.getSharedSource());
+//                }
+//                if (context.getMappingSource() != null) {
+//                    graalsContext.eval(context.getMappingSource());
+//                }
 
                 Map jsonObject = (Map) context.getPayload();
                 String payloadAsString = Functions.string(context.getPayload(), false);
@@ -109,7 +125,8 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
 
                 if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
                     context.setIgnoreFurtherProcessing(true);
-                    log.info("Tenant {} - Ignoring payload over CodeBasedProcessorOutbound: {}, {}",
+                    log.info(
+                            "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned no result, payload: {}",
                             context.getTenant(),
                             jsonObject);
                 } else { // Now use the copied objects
@@ -133,10 +150,11 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                         }
                         processingCache.put(key, processingCacheEntry);
                     }
-
                     if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                        log.info("Tenant {} - New payload over CodeBasedProcessorOutbound: {}, {}", context.getTenant(),
-                                jsonObject);
+                        log.info(
+                                "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned {} results, payload: {} ",
+                                context.getTenant(),
+                                keySet == null ? 0 : keySet.size(), jsonObject);
                     }
                 }
 

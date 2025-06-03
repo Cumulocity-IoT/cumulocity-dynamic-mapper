@@ -21,7 +21,9 @@
 
 package dynamic.mapping.connector.core.client;
 
-public class ConnectorException extends Exception {
+import dynamic.mapping.core.SystemException;
+
+public class ConnectorException extends SystemException {
     public ConnectorException(String string) {
         super(string);
     }

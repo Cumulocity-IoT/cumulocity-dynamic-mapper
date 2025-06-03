@@ -34,7 +34,8 @@ import { TestingDeviceService } from './testing.service';
 @Component({
   selector: 'd11r-mapping-testing-grid',
   templateUrl: 'testing.component.html',
-  styleUrls: ['../../mapping/shared/mapping.style.css']
+  styleUrls: ['../../mapping/shared/mapping.style.css'],
+  standalone: false
 })
 export class TestingComponent {
   constructor(private service: TestingDeviceService) {

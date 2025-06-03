@@ -74,7 +74,7 @@ public class ProtobufMqttClient {
     private void testSendEvent() {
         String topic = "protobuf/event";
 
-        System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
+        System.out.println("Connecting to server: ssl://" + broker_host + ":" + broker_port);
 
         // testClient.connect();
         Mqtt3ConnAck ack = testClient.connectWith()
@@ -86,7 +86,7 @@ public class ProtobufMqttClient {
             // broker:"
             // + mqttClient.getConfig().getServerHost() + ". Error code: "
             // + ack.getReturnCode().name());
-            System.out.println("Error connecting to broker:"
+            System.out.println("Error connecting to server:"
                     + broker_host + ". Error code: "
                     + ack.getReturnCode().name());
         }

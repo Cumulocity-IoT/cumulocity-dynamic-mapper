@@ -80,7 +80,7 @@ public class SubstitutionEvaluation {
             List<SubstituteValue> processingCacheEntry,
             Object extractedSourceContent, Substitution substitution, Mapping mapping) {
         if (extractedSourceContent == null) {
-            SubstitutionEvaluation.log.warn("Tenant {} - Substitution {} not in message payload. Check your mapping {}", tenant,
+            SubstitutionEvaluation.log.warn("{} - Substitution {} not in message payload. Check your mapping {}", tenant,
                     substitution, mapping.getMappingTopic());
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
@@ -109,7 +109,7 @@ public class SubstitutionEvaluation {
             List<SubstituteValue> processingCacheEntry,
             Object extractedSourceContent, SubstituteValue substitutionValue , Mapping mapping) {
         if (extractedSourceContent == null) {
-            SubstitutionEvaluation.log.warn("Tenant {} - Substitution {} not in message payload. Check your mapping {}", tenant,
+            SubstitutionEvaluation.log.warn("{} - Substitution {} not in message payload. Check your mapping {}", tenant,
                     substitutionValue, mapping.getMappingTopic());
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,

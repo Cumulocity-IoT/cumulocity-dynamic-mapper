@@ -27,34 +27,33 @@
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Reconnect notification endpoint' | translate }}"
+    (click)="clickedReconnect2NotificationEndpoint()">
+    <i c8yIcon="disconnected"></i>
+    {{ 'Reconnect notification endpoint' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
 
-<c8y-help
-  src="/help/#connector"
-></c8y-help>
+<c8y-help src="/help/#connector"></c8y-help>
 
 <c8y-breadcrumb>
-  <c8y-breadcrumb-item
-    [icon]="'cog'"
-    [label]="'Configuration' | translate"
-    [path]="'sag-ps-pkg-dynamic-mapping/node3/serviceConfiguration'"
-  >
+  <c8y-breadcrumb-item [icon]="'cog'" [label]="'Configuration' | translate"
+    [path]="'sag-ps-pkg-dynamic-mapping/node3/serviceConfiguration'">
   </c8y-breadcrumb-item>
-  <c8y-breadcrumb-item
-    [icon]="''"
-    [label]="'Connectors' | translate"
-  ></c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [icon]="''" [label]="'Connectors' | translate"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
 
 <div class="card content-fullpage d-grid">
   <div class="card card--grid card--grid__inner-scroll">
     <div class="p-l-16 p-r-16">
-      <d11r-mapping-connector-configuration #connectorConfigurationBroker
-        [selectable]="false"></d11r-mapping-connector-configuration>
+      <d11r-mapping-connector-grid #connectorConfigurationBroker
+        [selectable]="false"></d11r-mapping-connector-grid>
     </div>
   </div>
 </div>

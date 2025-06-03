@@ -75,8 +75,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
 
         String payload = toPrettyJsonString(payloadObject);
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.debug("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
-                    mapping.debug, serviceConfiguration.logPayload || mapping.debug);
+            log.info("{} - Patched payload: {}", tenant, payload);
         }
 
         boolean substitutionTimeExists = false;
@@ -89,7 +88,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
                 var expr = jsonata(substitution.pathSource);
                 extractedSourceContent = expr.evaluate(payloadObject);
             } catch (Exception e) {
-                log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
+                log.error("{} - Exception for: {}, {}: ", tenant, substitution.pathSource,
                         payload, e);
             }
             /*
@@ -112,7 +111,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
             }
             processingCache.put(substitution.pathTarget, processingCacheEntry);
             if (serviceConfiguration.logSubstitution || mapping.debug) {
-                log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
                         tenant,
                         substitution.pathSource,
                         extractedSourceContent == null ? null : extractedSourceContent.toString(),

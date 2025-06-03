@@ -21,7 +21,8 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-  template: ' <span title="{{ context.value }}">{{ context.value }}</span> '
+  template: ' <span title="{{ context.value }}">{{ context.value }}</span> ',
+  standalone: false
 })
 export class NumberRendererComponent {
   constructor(public context: CellRendererContext) {

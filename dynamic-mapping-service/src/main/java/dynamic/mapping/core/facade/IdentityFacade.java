@@ -21,6 +21,7 @@
 
 package dynamic.mapping.core.facade;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,7 +36,10 @@ import com.cumulocity.sdk.client.identity.IdentityApi;
 import dynamic.mapping.core.mock.MockIdentity;
 import dynamic.mapping.processor.model.ProcessingContext;
 
+import java.util.concurrent.Semaphore;
+
 @Service
+@Slf4j
 public class IdentityFacade {
 
     public static final int PAGE_SIZE = 100;
@@ -58,24 +62,39 @@ public class IdentityFacade {
         }
     }
 
-    public ExternalIDRepresentation resolveExternalId2GlobalId(ID externalID, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveExternalId2GlobalId(ID externalID, ProcessingContext<?> context, Semaphore c8ySemaphore) {
         if (context == null || context.isSendPayload()) {
-            return identityApi.getExternalId(externalID);
+            try {
+                c8ySemaphore.acquire();
+                return identityApi.getExternalId(externalID);
+            } catch (InterruptedException e) {
+                log.error("Failed to acquire semaphore for resolving external ID to global ID", e);
+            } finally {
+                c8ySemaphore.release();
+            }
         } else {
             return identityMock.getExternalId(externalID);
         }
+        return null;
     }
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String externalIdType,
-            ProcessingContext<?> context) {
+            ProcessingContext<?> context, Semaphore c8ySemaphore) {
         if (context == null || context.isSendPayload()) {
             MutableObject<ExternalIDRepresentation> result = new MutableObject<ExternalIDRepresentation>(null);
-            ExternalIDCollection collection = identityApi.getExternalIdsOfGlobalId(gid);
-            for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
-                if (externalId.getType().equals(externalIdType)) {
-                    result.setValue(externalId);
-                    break;
+            try {
+                c8ySemaphore.acquire();
+                ExternalIDCollection collection = identityApi.getExternalIdsOfGlobalId(gid);
+                for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
+                    if (externalId.getType().equals(externalIdType)) {
+                        result.setValue(externalId);
+                        break;
+                    }
                 }
+            } catch (InterruptedException e) {
+                log.error("Failed to acquire semaphore for resolving external ID to global ID", e);
+            } finally {
+                c8ySemaphore.release();
             }
             return result.getValue();
         } else {

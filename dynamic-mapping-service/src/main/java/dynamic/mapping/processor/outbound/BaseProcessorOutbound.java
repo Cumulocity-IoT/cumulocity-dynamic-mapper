@@ -96,7 +96,7 @@ public abstract class BaseProcessorOutbound<T> {
             List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
             ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         } else {
-            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+            log.warn("{} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                     tenant);
         }
     }
@@ -132,8 +132,7 @@ public abstract class BaseProcessorOutbound<T> {
         }
         if (serviceConfiguration.logPayload || mapping.debug) {
             String patchedPayloadTarget = payloadTarget.jsonString();
-            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, patchedPayloadTarget,
-                    serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
+            log.info("{} - Patched payload: {}", tenant, patchedPayloadTarget);
         }
 
         String deviceSource = context.getSourceId();
@@ -158,11 +157,7 @@ public abstract class BaseProcessorOutbound<T> {
                 MutableInt c = new MutableInt(0);
                 // MutableInt index = new MutableInt(0);
                 String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
-                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                    log.info(
-                            "Tenant {} - Resolving topic: context.getTopic():{}, splitTopicInAsList:{}, topicLevels:{}",
-                            tenant, context.getTopic(), splitTopicInAsList, topicLevels);
-                }
+                String[] splitTopicInAsListOriginal = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
                 topicLevels.forEach(tl -> {
                     while (c.intValue() < splitTopicInAsList.length
                             && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0)) {
@@ -172,8 +167,8 @@ public abstract class BaseProcessorOutbound<T> {
                     c.increment();
                 });
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                    log.info("Tenant {} - Resolved topic: context.getTopic():{}, splitTopicInAsList:{}, topicLevels:{}",
-                            tenant, context.getTopic(), splitTopicInAsList, topicLevels);
+                    log.info("{} - Resolved topic from {} to {}",
+                            tenant, splitTopicInAsListOriginal, splitTopicInAsList);
                 }
 
                 StringBuffer resolvedPublishTopic = new StringBuffer();
@@ -208,7 +203,8 @@ public abstract class BaseProcessorOutbound<T> {
                     if (publishTopic != null && !publishTopic.equals(""))
                         context.setTopic(publishTopic);
                 } catch (Exception e) {
-                    // publishTopic is not defined or unknown, so we continue using the value defined in the mapping 
+                    // publishTopic is not defined or unknown, so we continue using the value
+                    // defined in the mapping
                 }
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
@@ -221,25 +217,25 @@ public abstract class BaseProcessorOutbound<T> {
                 if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);
                 } else {
-                    log.warn("Tenant {} - Not sending message: connected {}, sendPayload {}", tenant,
+                    log.warn("{} - Not sending message: connected {}, sendPayload {}", tenant,
                             connectorClient.isConnected(), context.isSendPayload());
                 }
                 // var response = objectMapper.writeValueAsString(attocRequest);
                 // context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);
-                log.error("Tenant {} - Error during publishing outbound message: ", tenant, e);
+                log.error("{} - Error during publishing outbound message: ", tenant, e);
             }
             predecessor = newPredecessor;
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
-            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
+            log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     processingCache.size());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-            log.info("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant,
-                    payloadTarget.jsonString(),
+            log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     mapping.targetAPI,
+                    payloadTarget.jsonString(),
                     1);
         }
         return context;
@@ -253,7 +249,7 @@ public abstract class BaseProcessorOutbound<T> {
             var expr = jsonata(ps);
             extractedSourceContent = expr.evaluate(payloadJsonNode);
         } catch (Exception e) {
-            log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
+            log.error("{} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
                     ps,
                     payloadAsString, e);
         }

@@ -98,7 +98,7 @@ public class HttpConnectorController {
         String tenant = contextService.getContext().getTenant();
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
 
-        log.debug("Tenant {} -  HTTPConnector message received. Topic: {}", tenant, fullPath);
+        log.debug("{} -  HTTPConnector message received. Topic: {}", tenant, fullPath);
         try {
             HttpClient connectorClient = connectorRegistry
                     .getHttpConnectorForTenant(tenant);
@@ -123,7 +123,7 @@ public class HttpConnectorController {
 
             return ResponseEntity.ok().build();
         } catch (Exception ex) {
-            log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
+            log.error("{} - Error transforming payload: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
         }
     }
@@ -136,7 +136,7 @@ public class HttpConnectorController {
 
         String tenant = securityUserDetails.getTenant();
         String user = securityUserDetails.getUsername();
-        log.warn("Tenant {} - User {} tried to access HTTPConnectorEndpoint but does not have the required '{}' role",
+        log.warn("{} - User {} tried to access HTTPConnectorEndpoint but does not have the required '{}' role",
                 tenant, user, this.mappingHttpConnectorRole);
         response.sendError(403, "Authenticated user does not have the required role: " + this.mappingHttpConnectorRole);
     }

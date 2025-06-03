@@ -34,14 +34,15 @@ import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { EditorMode } from '../shared/stepper.model';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
-import { StepperConfiguration, API, Direction, Mapping, QOS, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
+import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
 @Component({
   selector: 'd11r-mapping-properties',
   templateUrl: 'mapping-properties.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingStepPropertiesComponent
   implements OnInit, OnChanges, OnDestroy {
@@ -415,10 +416,18 @@ export class MappingStepPropertiesComponent
             type: 'select',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'QOS',
-              options: Object.values(QOS).map((key) => {
-                return { label: this.formatStringPipe.transform(key), value: key };
-              }),
+              label: 'QoS',
+              options: Object.values(Qos).filter(key => {
+                // When direction is OUTBOUND, only include AT_MOST_ONCE and AT_LEAST_ONCE
+                if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
+                  return key === Qos.AT_MOST_ONCE || key === Qos.AT_LEAST_ONCE;
+                }
+                // Otherwise, include all QoS options
+                return true;
+              }).
+                map((key) => {
+                  return { label: this.formatStringPipe.transform(key), value: key };
+                }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               required: true
@@ -463,9 +472,22 @@ export class MappingStepPropertiesComponent
             template: '<div class="form-group row" style="height:80px"></div>',
             hideExpression: (model) => model.useExternalId
           },
+          // {
+          //   className: 'col-lg-6',
+          //   template: '<div class="form-group row" style="height:80px"></div>'
+          // },
           {
             className: 'col-lg-6',
-            template: '<div class="form-group row" style="height:80px"></div>'
+            key: 'maxFailureCount',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Max failure count',
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description:
+                'Max failure count, if this is exceeded the mapping is automatically deactivated. A value of 0 means no limit. The failure count is reset to 0 if the mapping is reactivated.',
+            },
           }
         ]
       },
@@ -487,7 +509,7 @@ export class MappingStepPropertiesComponent
               hideLabel: true
             },
             hideExpression: () => !this.supportsMessageContext
-          }
+          },
         ]
       }
     ];

@@ -74,15 +74,16 @@ public class ProtobufMqttClient {
     private void testSendMeasurement() {
 
         String topic = "protobuf/measurement";
-        System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
+        System.out.println("Connecting to server: ssl://" + broker_host + ":" + broker_port);
         testClient.connect();
 
-        System.out.println("Publishing message on topic" + topic);
+        System.out.println("Publishing message on topic:" + topic);
 
         InternalCustomMeasurementOuter.InternalCustomMeasurement proto = InternalCustomMeasurement.newBuilder()
                 .setExternalIdType("c8y_Serial")
                 .setExternalId("berlin_01")
                 .setUnit("C")
+                .setTimestamp(System.currentTimeMillis())
                 .setMeasurementType("c8y_GenericMeasurement")
                 .setValue(99.7F)
                 .build();
@@ -99,10 +100,10 @@ public class ProtobufMqttClient {
     private void testSendAlarm() {
 
         String topic = "protobuf/alarm";
-        System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
+        System.out.println("Connecting to server: ssl://" + broker_host + ":" + broker_port);
         testClient.connect();
 
-        System.out.println("Publishing message on topic" + topic);
+        System.out.println("Publishing message on topic:" + topic);
 
         InternalCustomAlarmOuter.InternalCustomAlarm proto = InternalCustomAlarm.newBuilder()
                 .setExternalIdType("c8y_Serial")

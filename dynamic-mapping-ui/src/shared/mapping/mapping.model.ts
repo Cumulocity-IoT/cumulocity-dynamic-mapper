@@ -57,6 +57,7 @@ export interface Mapping {
   substitutions?: MappingSubstitution[];
   filterMapping?: string;
   filterInventory?: string;
+  maxFailureCount?: number;
   active: boolean;
   debug: boolean;
   tested: boolean;
@@ -70,7 +71,7 @@ export interface Mapping {
   snoopStatus: SnoopStatus;
   snoopedTemplates?: string[];
   extension?: ExtensionEntry;
-  qos: QOS;
+  qos: Qos;
   code?: string;
   lastUpdate: number;
 }
@@ -122,7 +123,7 @@ export enum ExtensionType {
   EXTENSION_SOURCE_TARGET = 'EXTENSION_SOURCE_TARGET',
 }
 
-export enum QOS {
+export enum Qos {
   AT_MOST_ONCE = 'AT_MOST_ONCE',
   AT_LEAST_ONCE = 'AT_LEAST_ONCE',
   EXACTLY_ONCE = 'EXACTLY_ONCE'
@@ -178,6 +179,7 @@ export const MappingTypeDescriptionMap: Record<
       [Direction.OUTBOUND]: { snoopSupported: true, directionSupported: true }
     },
     stepperConfiguration: {
+      showCodeEditor: false,
       showEditorSource: true,
       showEditorTarget: true,
       allowNoDefinedIdentifier: false,
@@ -202,6 +204,7 @@ export const MappingTypeDescriptionMap: Record<
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
     stepperConfiguration: {
+      showCodeEditor: false,
       showEditorSource: true,
       showEditorTarget: true,
       allowNoDefinedIdentifier: false,
@@ -220,6 +223,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
     stepperConfiguration: {
+      showCodeEditor: false,
       showEditorSource: true,
       showEditorTarget: true,
       allowNoDefinedIdentifier: false,
@@ -240,6 +244,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showProcessorExtensionsSource: false,
       showProcessorExtensionsInternal: true,
       allowDefiningSubstitutions: false,
+      showCodeEditor: false,
       showEditorSource: false,
       showEditorTarget: true,
       allowNoDefinedIdentifier: true,
@@ -259,6 +264,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       showProcessorExtensionsSource: true,
       showProcessorExtensionsSourceTarget: false,
       allowDefiningSubstitutions: false,
+      showCodeEditor: false,
       showEditorSource: false,
       showEditorTarget: true,
       allowNoDefinedIdentifier: true,

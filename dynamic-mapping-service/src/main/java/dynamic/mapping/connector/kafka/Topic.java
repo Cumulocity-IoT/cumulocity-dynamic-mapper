@@ -109,7 +109,7 @@ public class Topic implements AutoCloseable {
 					// just log ("Unexpected error while listener.onEvent() notification", e)
 					// don't corrupt the consuming loop because of
 					// an error in a listener
-					log.error("Tenant {} - Failed to process message on topic {} with error: ", topicConfig.getTenant(),
+					log.error("{} - Failed to process message on topic {} with error: ", topicConfig.getTenant(),
 							topicConfig.getTopic(),
 							error);
 				}

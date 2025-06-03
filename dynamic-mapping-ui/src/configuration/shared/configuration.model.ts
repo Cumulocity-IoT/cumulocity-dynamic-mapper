@@ -35,6 +35,7 @@ export interface ServiceConfiguration {
   inventoryCacheRetention: number;
   inventoryFragmentsToCache?: string[];
   codeTemplates?: any;
+  maxCPUTimeMS: number;
 }
 
 export enum TemplateType {

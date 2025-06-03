@@ -19,42 +19,58 @@
  *
  */
 
-package dynamic.mapping;
+ package dynamic.mapping;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.Properties;
-
-public class ClassLoaderTest {
-    
-
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-    
-
-      //  URL[] classLoaderUrls = new URL[]{new URL("file:///var/folders/4r/yw46h1sd3zxd348lws13d86r0000gn/T/mqtt.mapping.extension-1.015164594147540685846jar")};
-        //URL[] classLoaderUrls = new URL[]{new URL("file:///Users/ck/work/git/cumulocity-dynamic-mqtt-mapper/extension/target/mqtt.mapping.extension-1.0.jar")};
-    URL[] classLoaderUrls = new URL[]{new URL("file:///Users/ck/work/git/cumulocity-dynamic-mqtt-mapper/extension/target/mqtt-mapping-extension.jar")};
-    URLClassLoader classLoader = URLClassLoader.newInstance(classLoaderUrls);
-
-    InputStream resourceAsStream = classLoader.getResourceAsStream("extension.properties");
-    BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
-    Properties props = new Properties();
-    // try {
-        String line;
-        while ((line = buffered.readLine()) != null) {
-        System.out.println("---------------" + line);
-        }
-        if (buffered != null)
-            props.load(buffered);
-    // } catch (IOException io) {
-    //     io.printStackTrace();
-    // }
-    Class<?> clazz = classLoader.loadClass("dynamic.mapping.processor.protobuf.CustomEventOuter");
-    //Class<?> clazz = classLoader.loadClass("mqtt.Test");
-    System.out.println("Found:" + clazz.getName());
+ import java.io.BufferedReader;
+ import java.io.File;
+ import java.io.IOException;
+ import java.io.InputStream;
+ import java.io.InputStreamReader;
+ import java.net.URI;
+ import java.net.URL;
+ import java.net.URLClassLoader;
+ import java.util.Properties;
+ 
+ public class ClassLoaderTest {
+     
+     public static void main(String[] args) throws IOException, ClassNotFoundException {
+         // Create a File object and convert to URI, then to URL
+         File jarFile = new File("/Users/ck/work/git/cumulocity-dynamic-mqtt-mapper/extension/target/mqtt-mapping-extension.jar");
+         URL[] classLoaderUrls = new URL[]{jarFile.toURI().toURL()};
+         
+         // Alternative using URI directly (if you prefer)
+         // URL[] classLoaderUrls = new URL[]{URI.create("file:///Users/ck/work/git/cumulocity-dynamic-mqtt-mapper/extension/target/mqtt-mapping-extension.jar").toURL()};
+         
+         URLClassLoader classLoader = URLClassLoader.newInstance(classLoaderUrls);
+ 
+         InputStream resourceAsStream = classLoader.getResourceAsStream("extension.properties");
+         if (resourceAsStream == null) {
+             System.out.println("Resource 'extension.properties' not found");
+             return;
+         }
+         
+         BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
+         Properties props = new Properties();
+         
+         String line;
+         while ((line = buffered.readLine()) != null) {
+             System.out.println("---------------" + line);
+         }
+         
+         // Reset the stream to read from the beginning for properties loading
+         resourceAsStream = classLoader.getResourceAsStream("extension.properties");
+         if (resourceAsStream != null) {
+             props.load(resourceAsStream);
+         }
+         
+         try {
+             Class<?> clazz = classLoader.loadClass("dynamic.mapping.processor.protobuf.CustomEventOuter");
+             System.out.println("Found:" + clazz.getName());
+         } catch (ClassNotFoundException e) {
+             System.out.println("Class not found: " + e.getMessage());
+             throw e;
+         } finally {
+             classLoader.close(); // Close the class loader when done
+         }
+     }
  }
-}

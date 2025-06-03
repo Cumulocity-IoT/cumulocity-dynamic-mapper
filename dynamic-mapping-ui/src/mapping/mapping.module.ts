@@ -25,6 +25,7 @@ import {
   hookRoute,
   ModalModule
 } from '@c8y/ngx-components';
+import { DeviceGridModule, DeviceGridService } from '@c8y/ngx-components/device-grid';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-components/editor';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
@@ -55,6 +56,7 @@ import { DeviceSelectorSubscriptionComponent } from './subscription/device-selec
 import { MappingSubscriptionComponent } from './subscription/subscription.component';
 import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
+import { DeviceSelectorSubscription2Component } from './subscription/device-selector2/device-selector-subscription2.component';
 
 @NgModule({
   declarations: [
@@ -64,6 +66,7 @@ import { SubstitutionRendererComponent } from './substitution/substitution-grid.
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
     DeviceSelectorSubscriptionComponent,
+    DeviceSelectorSubscription2Component,
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,
@@ -78,7 +81,6 @@ import { SubstitutionRendererComponent } from './substitution/substitution-grid.
     MappingTypeComponent,
     MappingConnectorComponent,
     MappingSubscriptionComponent,
-    DeviceSelectorSubscriptionComponent,
     MappingIdCellRendererComponent,
     SnoopExplorerComponent,
     AdviceActionComponent,
@@ -95,10 +97,12 @@ import { SubstitutionRendererComponent } from './substitution/substitution-grid.
     SharedModule,
     ServiceConfigurationModule,
     EditorComponent,
+    DeviceGridModule,
     MonacoEditorMarkerValidatorDirective
   ],
   exports: [],
   providers: [
+    DeviceGridService,
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
       component: MappingComponent

@@ -181,7 +181,6 @@
                   </div>
                 </div>
               </div>
-              <!-- <div *ngIf="!(stepperConfiguration.showCodeEditor)"> -->
               <div>
                 <div class="row">
                   <formly-form [form]="filterFormly" [fields]="filterFormlyFields" [model]="filterModel"></formly-form>
@@ -473,7 +472,7 @@
             </div>
           </div>
           <div>
-            <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="mapping['_code']"
+            <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="mappingCode"
               (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
             </c8y-editor>
           </div>

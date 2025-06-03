@@ -139,7 +139,7 @@ export abstract class BaseProcessorInbound {
             );
           }
           console.warn(
-            `During the processing of this pathTarget: ${pathTarget} a repair strategy: ${substitute.repairStrategy} was used!`
+            `Processing pathTarget: ${pathTarget}, repairStrategy: ${substitute.repairStrategy}.`
           );
         }
         let identity;

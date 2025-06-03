@@ -21,10 +21,10 @@
 
 <c8y-title>Service configuration</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear inbound cache' | translate }}"
+  <button class="btn btn-link" title="{{ 'Clear external ID cache' | translate }}"
     (click)="clickedClearInboundExternalIdCache()">
     <i c8yIcon="clear"></i>
-    {{ 'Clear inbound cache' | translate }}
+    {{ 'Clear external ID cache' | translate }}
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
@@ -33,13 +33,7 @@
     {{ 'Clear inventory cache' | translate }}
   </button>
 </c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Reconnect notification endpoint' | translate }}"
-    (click)="clickedReconnect2NotificationEndpoint()">
-    <i c8yIcon="disconnected"></i>
-    {{ 'Reconnect notification endpoint' | translate }}
-  </button>
-</c8y-action-bar-item>
+
 
 <div class="card card--fullpage">
   <div class="inner-scroll">
@@ -272,6 +266,26 @@
                 [ngClass]="{ updated: editable2updated }">
                 <input class="form-control" name="inventoryFragmentsToCache" type="string"
                   formControlName="inventoryFragmentsToCache" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+
+
+
+          <c8y-li>
+            <c8y-li-icon icon="alarm1"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'MaxCPU time in milliseconds for JavaScript code' | translate }}</p>
+                <p>
+                  <small translate>Set the maxCPU time in milliseconds for JavaScript code, to avoid malicious code from starving the CPU</small>
+                </p>
+              </div>
+              <label class="editable m-l-auto" title="{{ ' maxCPU time in milliseconds ' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <input class="form-control" name="maxCPUTimeMS" type="number"
+                  formControlName="maxCPUTimeMS" />
                 <span></span>
               </label>
             </div>

@@ -59,7 +59,8 @@ import type { JSONPath } from 'immutable-json-patch'
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./jsoneditor.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() options;

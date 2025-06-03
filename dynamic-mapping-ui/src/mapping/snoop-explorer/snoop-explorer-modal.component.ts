@@ -30,7 +30,8 @@ import { HttpStatusCode } from '@angular/common/http';
   selector: 'd11r-snoop-explorer-modal',
   templateUrl: './snoop-explorer-modal.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class SnoopExplorerComponent implements OnInit {
   constructor(
@@ -111,6 +112,7 @@ export class SnoopExplorerComponent implements OnInit {
       this.alertService.success(
         `Update source template for mapping ${this.mapping.id}`
       );
+      this.mappingService.refreshMappings(this.mapping.direction);
     } else {
       this.alertService.warning(
         `Failed to update source template for mapping ${this.mapping.id}`

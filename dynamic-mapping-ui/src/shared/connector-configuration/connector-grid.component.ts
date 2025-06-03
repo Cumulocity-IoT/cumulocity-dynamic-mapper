@@ -33,10 +33,9 @@ import { ConnectorConfigurationModalComponent } from './edit/connector-configura
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
-import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.renderer.component';
 
 @Component({
-  selector: 'd11r-mapping-connector-configuration',
+  selector: 'd11r-mapping-connector-grid',
   styleUrls: ['./connector-grid.component.style.css'],
   templateUrl: 'connector-grid.component.html',
   encapsulation: ViewEncapsulation.None

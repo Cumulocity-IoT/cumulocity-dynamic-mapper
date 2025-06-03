@@ -88,13 +88,13 @@
 			<artifactId>commons-collections4</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.graalvm.sdk</groupId>
-			<artifactId>graal-sdk</artifactId>
+			<groupId>org.graalvm.polyglot</groupId>
+			<artifactId>polyglot</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.graalvm.js</groupId>
+			<groupId>org.graalvm.polyglot</groupId>
 			<artifactId>js</artifactId>
-			<scope>runtime</scope>
+			<type>pom</type>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -115,6 +115,23 @@
 		<sourceDirectory>../dynamic-mapping-service/src/main/java</sourceDirectory>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<parameters>true</parameters>
+					<proc>full</proc>
+					<!-- <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths> -->
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>build-helper-maven-plugin</artifactId>
 				<version>3.6.0</version>
@@ -133,10 +150,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!--
-			<plugin><artifactId>maven-compiler-plugin</artifactId><version>3.11.0</version><configuration><includes><include>dynamic/mapping/model/*.java</include><include>dynamic/mapping/processor/model/*.java</include><include>dynamic/mapping/processor/model/ProcessingContext.java</include><include>
-                                    dynamic/mapping/processor/extension/ProcessorExtension.java</include><include>
-			dynamic/mapping/processor/extension/ProcessorExtensionOutbound.java</include></includes></configuration></plugin> -->
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>3.4.2</version>

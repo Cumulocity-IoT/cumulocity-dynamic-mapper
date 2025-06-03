@@ -21,8 +21,7 @@ import * as _ from 'lodash';
 import { BaseProcessorOutbound } from '../base-processor-outbound.service';
 import { API, getGenericDeviceIdentifier, Mapping } from '../../../../shared';
 import {
-  evaluateWithArgs,
-  extractLineAndColumn,
+  evaluateWithArgsWebWorker,
   ProcessingContext,
   processSubstitute,
   SubstituteValue
@@ -33,6 +32,7 @@ import {
 } from '../../../shared/util';
 import { CodeTemplateMap, TemplateType } from '../../../../configuration';
 import { SubstitutionContext } from '../processor-js.model';
+import { Java_Types_Serialized } from '../processor-js-serialized.model';
 
 
 @Injectable({ providedIn: 'root' })
@@ -56,13 +56,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
     const systemCodeTemplate = codeTemplates[TemplateType.SYSTEM];
     const systemCodeTemplateDecoded = enc.decode(base64ToBytes(systemCodeTemplate.code));
     // Modify codeToRun to use arg0 instead of ctx
-    const codeToRun = `
-            ${mappingCodeTemplateDecoded};
-            ${sharedCodeTemplateDecoded};
-            ${systemCodeTemplateDecoded};
-            // Use arg0 which is the ctx parameter passed to the function
-            return extractFromSource(arg0);
-            `;
+    const codeToRun = `${mappingCodeTemplateDecoded}${Java_Types_Serialized}${systemCodeTemplateDecoded}${sharedCodeTemplateDecoded}\n return extractFromSource(arg0);`;
 
     let sourceId: any = await this.evaluateExpression(
       payload,
@@ -74,7 +68,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
       const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), JSON.stringify(context.payload));
 
       // Call our modified evaluateWithArgs
-      const evalResult = evaluateWithArgs(codeToRun, ctx);
+      const evalResult = await evaluateWithArgsWebWorker(codeToRun, ctx) as any;
 
       // Store logs in context if needed
       context.logs = evalResult.logs;
@@ -84,33 +78,33 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
         const error = evalResult.error;
         context.errors.push(error.message);
         console.error("Error during testing", error);
-        context.logs.push(error.stack);
+        context.logs.push(error.message);
         throw new Error(`Evaluation failed: ${error.message}`);
       }
 
       // Continue with successful result
       const result = evalResult.result;
-      const substitutions = result.getSubstitutions();
-      const keys = substitutions.keySet();
+      const substitutions = result['substitutions']['map'];
+      const keys = Object.keys(substitutions);
 
       for (const key of keys) {
-        const values = substitutions.get(key);
-        // console.log(`Key: ${key}, Value: ${value}`);
+        const values = substitutions[key];
         const processingCacheEntry: SubstituteValue[] = _.get(
           processingCache,
           key,
           []
         );
-        if (values != null && values.length > 0
-          && values.get(0).expandArray) {
+        if (values != null && values['items'] &&  values['items'].length > 0
+          && values['items'][0].expandArray) {
+
           // extracted result from sourcePayload is an array, so we potentially have to
           // iterate over the result, e.g. creating multiple devices
-          for (let i = 0; i < values.length; i++) {
-            const substitution = values[i];
+          for (let i = 0; i < values['items'].length; i++) {
+            const substitution = values['items'][i];
             processSubstitute(processingCacheEntry, substitution.value, substitution);
           }
         } else {
-          processSubstitute(processingCacheEntry, values.get(0).value, values.get(0));
+          processSubstitute(processingCacheEntry, values['items'][0].value, values['items'][0]);
         }
 
         processingCache.set(key, processingCacheEntry);

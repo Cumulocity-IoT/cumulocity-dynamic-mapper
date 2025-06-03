@@ -99,7 +99,7 @@ public class DeploymentController {
 				}
 			}
 
-			log.debug("Tenant {} - Get active subscriptions!", tenant);
+			log.debug("{} - Get active subscriptions!", tenant);
 			return ResponseEntity.status(HttpStatus.OK).body(mappingsDeployed);
 		} catch (ConnectorRegistryException e) {
 			throw new RuntimeException(e);
@@ -107,29 +107,29 @@ public class DeploymentController {
 
 	}
 
-	@PutMapping(value = "/defined/{mappingIdent}", consumes = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdent,
+	@PutMapping(value = "/defined/{mappingIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdentifier,
 			@Valid @RequestBody List<String> deployment) {
 		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Update deployment for mapping: {} : {}", tenant, mappingIdent, deployment);
+		log.info("{} - Update deployment for mapping, mappingIdentifier: {}, deployment: {}", tenant, mappingIdentifier, deployment);
 		try {
-			mappingComponent.updateDeploymentMapEntry(tenant, mappingIdent, deployment);
+			mappingComponent.updateDeploymentMapEntry(tenant, mappingIdentifier, deployment);
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
-			log.error("Tenant {} - Error updating deployment for mapping: {}", tenant, mappingIdent, ex);
+			log.error("{} - Error updating deployment for mapping: {}", tenant, mappingIdentifier, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
 	}
 
-	@GetMapping(value = "/defined/{mappingIdent}", consumes = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<List<String>> getDeploymentMapEntry(@PathVariable String mappingIdent) {
+	@GetMapping(value = "/defined/{mappingIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<List<String>> getDeploymentMapEntry(@PathVariable String mappingIdentifier) {
 		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Get deployment for mapping: {}", tenant, mappingIdent);
+		log.info("{} - Get deployment for mappingIdentifier: {}", tenant, mappingIdentifier);
 		try {
-			List<String> map = mappingComponent.getDeploymentMapEntry(tenant, mappingIdent);
+			List<String> map = mappingComponent.getDeploymentMapEntry(tenant, mappingIdentifier);
 			return new ResponseEntity<List<String>>(map, HttpStatus.OK);
 		} catch (Exception ex) {
-			log.error("Tenant {} - Error getting deployment for mapping: {}", tenant, mappingIdent, ex);
+			log.error("{} - Error getting deployment for mapping: {}", tenant, mappingIdentifier, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
 	}
@@ -137,12 +137,12 @@ public class DeploymentController {
 	@GetMapping(value = "/defined", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, List<String>>> getDeploymentMap() {
 		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Get complete deployment", tenant);
+		log.info("{} - Get complete deployment", tenant);
 		try {
 			Map<String, List<String>> map = mappingComponent.getDeploymentMap(tenant);
 			return new ResponseEntity<Map<String, List<String>>>(map, HttpStatus.OK);
 		} catch (Exception ex) {
-			log.error("Tenant {} - Error getting complete deployment!", tenant, ex);
+			log.error("{} - Error getting complete deployment!", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
 	}

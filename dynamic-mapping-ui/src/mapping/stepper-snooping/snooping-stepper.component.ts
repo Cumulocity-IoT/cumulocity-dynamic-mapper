@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { CdkStep } from '@angular/cdk/stepper';
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -47,9 +47,10 @@ const CONSTANTS = {
   selector: 'd11r-snooping-stepper',
   templateUrl: 'snooping-stepper.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
-export class SnoopingStepperComponent implements OnInit, OnDestroy {
+export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() deploymentMapEntry: DeploymentMapEntry;
@@ -66,20 +67,35 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   snoopedTemplateCounter = 0;
+
+  @ViewChild('stepper', { static: false })
+  stepper: C8yStepper;
+
   stepLabel: any;
   labels: StepperLabels = {
     next: 'Next',
     cancel: 'Cancel'
   };
+  stepperForward: boolean = true;
+  currentStepIndex: number;
 
   constructor(
     private alertService: AlertService,
   ) { }
 
 
+  ngAfterViewInit(): void {
+    this.currentStepIndex = 0;
+    if (!this.stepperConfiguration.advanceFromStepToEndStep && (this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex)) {
+      // Wrap changes in setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+      setTimeout(() => {
+        this.goToLastStep();
+        this.alertService.info('The other steps have been skipped for this mapping type!');
+      });
+    }
+  }
 
   ngOnInit(): void {
-    // Initial check for button state
   }
 
   ngOnDestroy(): void {
@@ -131,6 +147,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onStepChange(index: number): Promise<void> {
+    this.currentStepIndex = index;
     try {
       this.showSnoopingInfo();
     } catch (error) {
@@ -144,6 +161,17 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.handleError('Error moving to next step', error);
     }
+  }
+
+  private goToLastStep() {
+    // Mark all previous steps as completed
+    this.stepper.steps.forEach((step, index) => {
+      if (index < this.stepper.steps.length - 1) {
+        step.completed = true;
+      }
+    });
+    // Select the last step
+    this.stepper.selectedIndex = this.stepper.steps.length - 1;
   }
 
   private showSnoopingInfo(): void {

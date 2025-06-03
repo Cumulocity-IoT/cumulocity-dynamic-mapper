@@ -36,7 +36,8 @@ import { createCustomUuid, Mapping } from '../../shared';
   selector: 'd11r-mapping-import-extension',
   templateUrl: './import-modal.component.html',
   styleUrls: ['./import-modal.component.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class ImportMappingsComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;

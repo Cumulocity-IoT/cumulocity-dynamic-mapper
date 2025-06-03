@@ -77,7 +77,7 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtensionSo
                 unexpected = (Number) jsonObject.get("unexpected");
             }
 
-            log.info("Tenant {} - New measurement over json processor: {}, {}, {}, {}", context.getTenant(),
+            log.info("{} - New measurement over json processor: {}, {}, {}, {}", context.getTenant(),
                     jsonObject.get("time").toString(),
                     jsonObject.get("unit").toString(), jsonObject.get("temperature"),
                     unexpected);

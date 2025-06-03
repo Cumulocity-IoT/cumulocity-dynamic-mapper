@@ -46,7 +46,7 @@ import {
   MappingSubstitution,
   MappingType,
   Operation,
-  QOS,
+  Qos,
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
   getExternalTemplate,
@@ -80,7 +80,8 @@ import { TemplateType } from '../../configuration';
   selector: 'd11r-mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
   styleUrls: ['../shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid: DataGridComponent;
@@ -307,7 +308,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingService.getMappings(Direction.OUTBOUND)
         .then(async mappings => {
           const numberOutboundMappings = mappings.length;
-          
+
           try {
             const { devices } = await this.mappingService.getSubscriptions();
             if (devices.length === 0 && numberOutboundMappings > 0) {
@@ -389,6 +390,15 @@ export class MappingComponent implements OnInit, OnDestroy {
         visible: true,
         gridTrackSize: '10%'
       },
+      {
+        name: 'identifier',
+        header: 'Identifier',
+        path: 'mapping.identifier',
+        filterable: false,
+        dataType: ColumnDataType.TextShort,
+        visible: false,
+        gridTrackSize: '0%'
+      },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? undefined
         : {
@@ -405,12 +415,6 @@ export class MappingComponent implements OnInit, OnDestroy {
           filterable: true
         }
         : undefined,
-      //  {
-      //   header: 'Publish topic sample',
-      //   name: 'publishTopicSample',
-      //   path: 'mapping.publishTopicSample',
-      //   filterable: true
-      // },
       {
         name: 'targetAPI',
         header: 'API',
@@ -508,7 +512,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
-        qos: QOS.AT_LEAST_ONCE,
+        maxFailureCount: 0,
+        qos: Qos.AT_LEAST_ONCE,
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
@@ -517,7 +522,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
         snoopStatus: this.snoopStatus,
-        supportsMessageContext: this.substitutionsAsCode,
+        supportsMessageContext: this.substitutionsAsCode || false,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -536,7 +541,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         tested: false,
-        qos: QOS.AT_LEAST_ONCE,
+        maxFailureCount: 0,
+        qos: Qos.AT_LEAST_ONCE,
         filterMapping: this.snoopEnabled ? ' $exists(C8Y_FRAGMENT)' : undefined,
         substitutions: sub,
         useExternalId: false,
@@ -546,7 +552,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateOutbound : undefined,
         snoopStatus: this.snoopStatus,
-        supportsMessageContext: this.substitutionsAsCode,
+        supportsMessageContext: this.substitutionsAsCode || false,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -633,21 +639,14 @@ export class MappingComponent implements OnInit, OnDestroy {
           mapping.active = false;
         }
       }
-      if (mapping.active) {
-        this.setStepperConfiguration(
-          mapping.mappingType,
-          this.stepperConfiguration.direction,
-          EditorMode.READ_ONLY,
-          mapping.mappingType == MappingType.CODE_BASED
-        );
-      } else {
-        this.setStepperConfiguration(
-          mapping.mappingType,
-          this.stepperConfiguration.direction,
-          EditorMode.UPDATE,
-          mapping.mappingType == MappingType.CODE_BASED
-        );
-      }
+
+      this.setStepperConfiguration(
+        mapping.mappingType,
+        this.stepperConfiguration.direction,
+        mapping.active ? EditorMode.READ_ONLY : EditorMode.UPDATE,
+        mapping.mappingType == MappingType.CODE_BASED
+      );
+
       // create deep copy of existing mapping, in case user cancels changes
       this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
 
@@ -681,7 +680,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       mapping.mappingType,
       mapping.direction,
       EditorMode.COPY,
-      mapping?.extension?.eventName == "GraalsCodeExtension"
+      mapping.mappingType == MappingType.CODE_BASED
     );
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
@@ -826,56 +825,32 @@ export class MappingComponent implements OnInit, OnDestroy {
   async onCommitMapping(mapping: Mapping) {
     // test if new/updated mapping was committed or if cancel
     mapping.lastUpdate = Date.now();
-    // ('Changed mapping:', mapping);
-    if (
-      mapping.direction == Direction.INBOUND ||
-      // test if we can attach multiple outbound mappings to the same filterMapping
-      mapping.direction == Direction.OUTBOUND
-      //  && isFilterOutboundUnique(mapping, this.mappings)
-    ) {
-      if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
-        // console.log('Update existing mapping:', mapping);
-        try {
-          await this.mappingService.updateMapping(mapping);
-          this.alertService.success(gettext(`Mapping ${mapping.name} updated successfully`));
-        } catch (error) {
-          this.alertService.danger(
-            gettext(`Failed to updated mapping ${mapping.name}: `) + error.message
-          );
-        }
-        // this.activateMappings();
-      } else if (
-        this.stepperConfiguration.editorMode == EditorMode.CREATE ||
-        this.stepperConfiguration.editorMode == EditorMode.COPY
-      ) {
-        // new mapping
-        // console.log('Push new mapping:', mapping);
-        try {
-          await this.mappingService.createMapping(mapping);
-          this.alertService.success(gettext(`Mapping ${mapping.name} created successfully`));
-        } catch (error) {
-          this.alertService.danger(
-            gettext(`Failed to updated mapping ${mapping.name}: `) + error
-          );
-        }
-        // this.activateMappings();
-      }
-      this.isConnectionToMQTTEstablished = true;
-    } else {
-      if (mapping.direction == Direction.INBOUND) {
+    if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
+      // console.log('Update existing mapping:', mapping);
+      try {
+        await this.mappingService.updateMapping(mapping);
+        this.alertService.success(gettext(`Mapping ${mapping.name} updated successfully`));
+      } catch (error) {
         this.alertService.danger(
-          gettext(
-            `Topic is already used: ${mapping.mappingTopic}. Please use a different topic.`
-          )
+          gettext(`Failed to updated mapping ${mapping.name}: `) + error.message
         );
-      } else {
+      }
+    } else if (
+      this.stepperConfiguration.editorMode == EditorMode.CREATE ||
+      this.stepperConfiguration.editorMode == EditorMode.COPY
+    ) {
+      // new mapping
+      // console.log('Push new mapping:', mapping);
+      try {
+        await this.mappingService.createMapping(mapping);
+        this.alertService.success(gettext(`Mapping ${mapping.name} created successfully`));
+      } catch (error) {
         this.alertService.danger(
-          gettext(
-            `FilterMapping is already used: ${mapping.filterMapping}. Please use a different filter.`
-          )
+          gettext(`Failed to updated mapping ${mapping.name}: `) + error
         );
       }
     }
+    this.isConnectionToMQTTEstablished = true;
 
     this.mappingService.updateDefinedDeploymentMapEntry(
       this.deploymentMapEntry
@@ -883,6 +858,10 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;
+
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      this.alertService.info("For your outbound mapping to work, it requires an active subscription. Please create a subscription for this outbound mapping.");
+    }
   }
 
   async onReload() {
@@ -969,8 +948,11 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async onAddSampleMappings() {
-    this.mappingService.addSampleMappings({ direction: this.stepperConfiguration.direction });
-    this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
+    let response = await this.mappingService.addSampleMappings({ direction: this.stepperConfiguration.direction });
+    if (response.status == HttpStatusCode.Created) {
+      this.alertService.success(`Added sample mappings for ${this.stepperConfiguration.direction}`);
+      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    }
   }
 
   async onExportAll() {
@@ -1016,14 +998,21 @@ export class MappingComponent implements OnInit, OnDestroy {
     editorMode: EditorMode,
     substitutionsAsCode: boolean
   ) {
-    // console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
-    // console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
-    this.stepperConfiguration =
-      MappingTypeDescriptionMap[mappingType].stepperConfiguration;
+    // console.log('DEBUG I', MappingTypeDescriptionMap);
+    // console.log('DEBUG II', MappingTypeDescriptionMap[mappingType]);
+    // this.stepperConfiguration =
+    //   { ...MappingTypeDescriptionMap[mappingType].stepperConfiguration };
+    // console.log('DEBUG III', this.stepperConfiguration);
+
     this.stepperConfiguration.direction = direction;
     this.stepperConfiguration.editorMode = editorMode;
-    if (direction == Direction.OUTBOUND)
+    if (direction == Direction.OUTBOUND) {
       this.stepperConfiguration.allowTestSending = false;
+      // if snoop is enabled, then skip the first step selecting an connector
+      if (this.snoopStatus == SnoopStatus.ENABLED) {
+        this.stepperConfiguration.advanceFromStepToEndStep = 0;
+      }
+    }
 
     if (substitutionsAsCode) {
       delete this.stepperConfiguration.advanceFromStepToEndStep;
@@ -1031,6 +1020,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.stepperConfiguration.allowTestSending = false;
       this.stepperConfiguration.allowTestTransformation = true;
     }
+    //console.log('DEBUG IV', this.stepperConfiguration, substitutionsAsCode);
+
   }
 
   ngOnDestroy() {
@@ -1047,11 +1038,15 @@ export class MappingComponent implements OnInit, OnDestroy {
     const response1 = await this.sharedService.runOperation(
       { operation: Operation.RESET_DEPLOYMENT_MAP }
     );
+
+    const response2 = await this.sharedService.runOperation(
+      { operation: Operation.RELOAD_MAPPINGS }
+    );
     // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Reset deploymentMap.'));
+    if (response1.status === HttpStatusCode.Created && response2.status === HttpStatusCode.Created) {
+      this.alertService.success(gettext('Reset deployment cache.'));
     } else {
-      this.alertService.danger(gettext('Failed to reset deploymentMap!'));
+      this.alertService.danger(gettext('Failed to reset deployment cache!'));
     }
   }
 

@@ -31,8 +31,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
     <a
       class="interact"
       [title]="context.item.name"
-      *ngIf="context?.property?.callback; else router"
-      (click)="context.property.callback(context.item)"
+      *ngIf="context?.property['callback']; else router"
+      (click)="context.property['callback'](context.item)"
     >
       {{ context.item.name }}
     </a>
@@ -41,7 +41,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
         {{ context.item.name }}
       </a>
     </ng-template>
-  `
+  `,
+  standalone: false
 })
 export class ConnectorDetailCellRendererComponent {
   constructor(public context: CellRendererContext) { }

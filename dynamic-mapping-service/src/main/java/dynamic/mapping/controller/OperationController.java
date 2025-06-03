@@ -26,10 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import jakarta.validation.Valid;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.ConnectorException;
@@ -110,7 +112,7 @@ public class OperationController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> runOperation(@Valid @RequestBody ServiceOperation operation) {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Post operation: {}", tenant, operation);
+        log.info("{} - Post operation: {}", tenant, operation);
 
         try {
             Operation operationType = operation.getOperation();
@@ -155,7 +157,7 @@ public class OperationController {
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
         } catch (Exception ex) {
-            log.error("Tenant {} - Error running operation: {}", tenant, ex.getMessage(), ex);
+            log.error("{} - Error running operation: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
@@ -167,17 +169,33 @@ public class OperationController {
             String samples = serviceConfigurationComponent.getSampleMappingsInbound_01();
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
+            List<Mapping> existingMappings = mappingComponent.getMappings(tenant, Direction.INBOUND);
             mappings.forEach(mapping -> {
-                mapping.setActive(false);
-                mappingComponent.createMapping(tenant, mapping);
+                AtomicBoolean alreadyExits = new AtomicBoolean(false);
+                existingMappings.forEach(existingMapping -> {
+                    if(existingMapping.getIdentifier().equals(mapping.getIdentifier()))
+                        alreadyExits.set(true);
+                });
+                if(!alreadyExits.get()) {
+                    mapping.setActive(false);
+                    mappingComponent.createMapping(tenant, mapping);
+                }
             });
         } else {
+            List<Mapping> existingMappings = mappingComponent.getMappings(tenant, Direction.OUTBOUND);
             String samples = serviceConfigurationComponent.getSampleMappingsOutbound_01();
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
             mappings.forEach(mapping -> {
-                mapping.setActive(false);
-                mappingComponent.createMapping(tenant, mapping);
+                AtomicBoolean alreadyExits = new AtomicBoolean(false);
+                existingMappings.forEach(existingMapping -> {
+                    if(existingMapping.getIdentifier().equals(mapping.getIdentifier()))
+                        alreadyExits.set(true);
+                });
+                if(!alreadyExits.get()) {
+                    mapping.setActive(false);
+                    mappingComponent.createMapping(tenant, mapping);
+                }
             });
         }
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -185,16 +203,16 @@ public class OperationController {
 
     private ResponseEntity<?> handleInitCodeTemplates(String tenant, Map<String, String> parameters) throws Exception {
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
-        log.debug("Tenant {} - Init system code template", tenant);
+        log.debug("{} - Init system code template", tenant);
 
         // Initialize code templates from properties if not already set
         serviceConfigurationComponent.initCodeTemplates(serviceConfiguration, true);
 
         try {
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
-            configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
         } catch (JsonProcessingException ex) {
-            log.error("Tenant {} - Error saving service configuration with code templates: {}", tenant, ex);
+            log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
 
@@ -209,14 +227,14 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
-        mappingComponent.rebuildMappingOutboundCache(tenant);
-        List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
-        List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
+        List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, ConnectorId.INTERNAL);
+        List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
 
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {
-            client.updateActiveSubscriptionsInbound(updatedMappingsInbound, false);
-            updatedMappingsOutbound.forEach(mapping -> client.updateActiveSubscriptionOutbound(mapping));
+            // we always start with a cleanSession in case we reload the mappings
+            client.initializeSubscriptionsInbound(updatedMappingsInbound, false,true);
+            updatedMappingsOutbound.forEach(mapping -> client.updateSubscriptionForOutbound(mapping, false, false));
         });
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -235,8 +253,8 @@ public class OperationController {
 
     private ResponseEntity<?> handleActivateMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
-        Boolean activeBoolean = Boolean.parseBoolean(parameters.get("active"));
-        Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, id, activeBoolean);
+        Boolean activation = Boolean.parseBoolean(parameters.get("active"));
+        Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, id, activation);
         Map<String, AConnectorClient> connectorMap = connectorRegistry
                 .getClientsForTenant(tenant);
         // subscribe/unsubscribe respective mappingTopic of mapping only for
@@ -244,13 +262,13 @@ public class OperationController {
         Map<String, String> failed = new HashMap<>();
         for (AConnectorClient client : connectorMap.values()) {
             if (updatedMapping.direction == Direction.INBOUND) {
-                if (!client.updateActiveSubscriptionInbound(updatedMapping, false, true)) {
+                if (!client.updateSubscriptionForInbound(updatedMapping, false, true)) {
                     ConnectorConfiguration conf = client.getConnectorConfiguration();
                     failed.put(conf.getIdentifier(), conf.getName());
                 }
                 ;
             } else {
-                client.updateActiveSubscriptionOutbound(updatedMapping);
+                client.updateSubscriptionForOutbound(updatedMapping, false, true);
             }
         }
 
@@ -323,7 +341,7 @@ public class OperationController {
             try {
                 connectTask.get(10, TimeUnit.SECONDS);
             } catch (Exception e) {
-                log.error("Tenant {} - Error waiting for client to connect: {}", tenant, e.getMessage());
+                log.error("{} - Error waiting for client to connect: {}", tenant, e.getMessage());
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
             }
             configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
@@ -358,13 +376,13 @@ public class OperationController {
             Integer cacheSize = serviceConfigurationComponent
                     .getServiceConfiguration(tenant).inboundExternalIdCacheSize;
             configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
-            log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
+            log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("INVENTORY_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationComponent
                     .getServiceConfiguration(tenant).inventoryCacheSize;
             configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
-            log.info("Tenant {} - Cache cleared: {}", tenant, cacheId);
+            log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         }
 

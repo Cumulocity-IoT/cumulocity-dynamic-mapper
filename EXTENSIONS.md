@@ -8,22 +8,22 @@ In addition, a Callback must be implemented handling the message broker typical 
 
 Check out the [MQTTCallback](./dynamic-mapping-service/src/main/java/dynamic/mapping/connector/mqtt/MQTTCallback.java) as an example implementation.
 
-## Mapper Extensions
-In the folder [dynamic.mapping.processor.extension](./dynamic-mapping-service/src/main/java/dynamic/mapping/processor/extension) you can implement  the Interface `ProcessorExtension<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension.
-This needs to be packages in a ```jar``` file. The extension packaged as a ```jar``` you can upload this extension using the tab ```Processor Extension```, see [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf) for details.
-In order for the mapper backend (```dynamic-mapping-service```) to find your extension you need to add the properties file ```extension-external.properties```. The content could be as follows:
+## Mapper Extensions - general
+In the folder [dynamic.mapping.processor.extension](./dynamic-mapping-service/src/main/java/dynamic/mapping/processor/extension) you can implement  the Interface `ProcessorExtensionSource<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension. This needs to be packages in a `jar` file. <br>
+The extension packaged as a `jar` you can upload this extension using the tab `Processor Extension`, see [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf) for details.
+In order for the mapper backend (`dynamic-mapping-service`) to find your extension you need to add the properties file `extension-external.properties`. The content could be as follows:
 ```
 CustomEvent=external.extension.processor.dynamic.mapping.ProcessorExtensionCustomEvent
 CustomMeasurement=external.extension.processor.dynamic.mapping.ProcessorExtensionCustomMeasurement
 ```
 
 The steps required for an external extension are as follows. The extension:
-1. has to implement the interface <code>ProcessorExtension<O></code>
+1. has to implement the interface `ProcessorExtensionSource<O>`
 2. be registered in the properties file <code>dynamic-mapping-extension/src/main/resources/extension-external.properties</code>
-3. be developed/packed in the maven module <code>dynamic-mapping-extension</code>. **Not** in the maven module <code>dynamic-mapping-service</code>. This is reserved for internal extensions.
+3. be developed /packed in the maven module <code>dynamic-mapping-extension</code>. **Not** in the maven module <code>dynamic-mapping-service</code>. This is reserved for internal extensions.
 4. be uploaded through the Web UI.
 
-> **_NOTE:_** When you implement <code>ProcessorExtension<O></code> an additional <code>RepairStrategy.CREATE_IF_MISSING</code> can be used. This helps to address mapping cases, where you want to create a mapping that adapts to different structures of source payloads. It is used to create a node in the target if it doesn't exist and allows for using mapping with dynamic content. See [sample 25](./resources/script/mapping/sampleMapping/SampleMappings_06.pdf).
+> **_NOTE:_** When you implement `ProcessorExtensionSource<O>` an additional <code>RepairStrategy.CREATE_IF_MISSING</code> can be used. This helps to address mapping cases, where you want to create a mapping that adapts to different structures of source payloads. It is used to create a node in the target if it doesn't exist and allows for using mapping with dynamic content. See [sample 25](./resources/script/mapping/sampleMapping/SampleMappings_06.pdf).
 
 A sample how to build an extension is contained in the maven module [dynamic-mapping-extension](./dynamic-mapping-extension).
 The following diagram shows how the dispatcher handles messages with different format:
@@ -40,3 +40,56 @@ The following diagram gives an overview on the step to build and use your own ex
 <img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionSource_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
+
+## Mapper Extensions - portobuf
+
+To process your own Protobuf message, you always need to write a Java class.
+The workflow is as follows:
+
+1. Describe the structure of your Protobuf message in a proto file, for example:
+
+```
+package processor.protobuf;
+
+option java_package = "dynamic.mapping.processor.extension.external";
+option java_outer_classname = "CustomEventOuter";
+
+message CustomEvent {
+  int64 timestamp = 1;
+  string txt = 2;
+  string unit = 3;
+  string externalIdType = 4;
+  string externalId = 5;
+  string eventType = 6;
+}
+```
+
+2. Generate Java binding classes using the `protoc` compiler, resulting in `CustomEventOuter.java`
+Write your own extension in Java, for example `ProcessorExtensionCustomEvent.java`, by implementing the <code>ProcessorExtensionSource<byte[]></code> interface.
+
+The actual mapping consists of the following lines:
+```
+javaCopycontext.addSubstitution("time", new DateTime(
+        payloadProtobuf.getTimestamp())
+        .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+context.addSubstitution("text",
+        payloadProtobuf.getTxt(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+context.addSubstitution("type", 
+        payloadProtobuf.getEventType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+
+// as the mapping uses useExternalId we have to map the id to
+// _IDENTITY_.externalId
+context.addSubstitution(context.getMapping().getGenericDeviceIdentifier(),
+        payloadProtobuf.getExternalId()
+                .toString(),
+        TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+```
+3. Create a property file named extension-external.properties with the following information:
+
+```
+<YOUR_EVENT_NAME>=<FQN_NAME_EXTENSION_JAVA_CLASS>
+# For example: CustomEvent=dynamic.mapping.processor.extension.external.ProcessorExtensionCustomEvent
+```
+
+4. Package the class as a JAR file and upload it via the UI: Configuration -> Processor extension -> Add extension (button)
+5. To use the extension, select a mapping of type "Extension Source" and choose the extension uploaded in step 5 in the "Define Substitutions" section.

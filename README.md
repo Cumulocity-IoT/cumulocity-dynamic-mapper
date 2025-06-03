@@ -68,7 +68,7 @@ If you want to make changes to the code or configuration check out this [Build &
 ### Load Test
 
 In the resource section you find a test profil [jmeter_test_01.jmx](./resources/script/performance/jmeter_test_01.jmx) using the performance tool `jmeter` and an extension for MQTT: [emqx/mqtt-jmeter](https://github.com/emqx/mqtt-jmeter).
-This was used to run simple loadtest.
+This was used to run simple load test.
 
 ## Setup Sample mappings
 
@@ -80,6 +80,35 @@ You have to start it as follows:
 ```
 
 The mappings with inputs and substitutions are explained in the [sample document](./resources/script/mapping/sampleMapping/sampleMappings_02.html).
+
+## Security evaluation code-base mappings (JavaScript)
+
+For code-base mappings user defined JavaScript code is executed (evaluated) on the JVM in the Cumulocity microservice for this backend.
+This could pose potential security risks, therefore special configurations are applied to restrict the access from the JavaScript code (guest code) to the JVM and the java code (host code).
+The guest code runs in a [Sandbox](https://https://www.graalvm.org/latest/security-guide/sandboxing/) with a policy `SandboxPolicy.TRUSTED`. The Graals `Context` is build with the minimal access right to receive the required message payload an to return the list of substitutions.
+This was tested with te following JavaScript code snippets:
+* The test to access the environment variables in JavaScript returns an error:
+```
+// Log all environment variables via JavaScript
+console.log(process.env);    // <---- line 15
+```
+
+```
+2025-05-05T07:52:28.782Z  WARN 14 --- [  virtThread-18] d.m.processor.inbound.DispatcherInbound  : Tenant t2050305588 - Processing error: - Demo 4b - Code-Based for mapping: ReferenceError: process is not defined, line 15
+```
+
+* The test to access the environment variables over Java returns an error:
+```
+// Log all environment variables via Java
+const System = Java.type('java.lang.System');   // <---- line 19
+const env = System.getenv();
+console.log('Environment via JavaS', env);
+```
+
+```
+2025-05-05T08:03:11.587Z  WARN 14 --- [  virtThread-20] d.m.processor.inbound.DispatcherInbound  : Tenant t2050305588 - Processing error: - Demo 4b - Code-Based for mapping: TypeError: Access to host class java.lang.System is not allowed or does not exist., line 19
+```
+
 
 ---
 

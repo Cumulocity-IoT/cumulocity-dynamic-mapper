@@ -33,12 +33,14 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
-import java.util.Collections;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import dynamic.mapping.util.Utils;;
 
@@ -53,11 +55,13 @@ import dynamic.mapping.util.Utils;;
 @Builder(toBuilder = true)
 public class MappingTreeNode {
     // Constants
-    private static final String TENANT_LOG_PREFIX = "Tenant {} - ";
+    private static final String TENANT_LOG_PREFIX = "{} - ";
 
     // Core properties
     @Builder.Default
-    private final Map<String, List<MappingTreeNode>> childNodes = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, List<MappingTreeNode>> childNodes = new ConcurrentHashMap<>();
+    // private final Map<String, List<MappingTreeNode>> childNodes =
+    // Collections.synchronizedMap(new HashMap<>());
     private Mapping mapping;
     @Builder.Default
     private String nodeId = Utils.createCustomUuid();
@@ -68,7 +72,9 @@ public class MappingTreeNode {
     private String absolutePath;
     private String level;
     private String tenant;
-    private final Object treeModificationLock = new Object();
+    private final ReadWriteLock treeLock = new ReentrantReadWriteLock();
+    private final Lock readLock = treeLock.readLock();
+    private final Lock writeLock = treeLock.writeLock();
 
     // Helper class for context
     @Value
@@ -116,31 +122,45 @@ public class MappingTreeNode {
     }
 
     // Public API methods
+
     public List<Mapping> resolveMapping(String topic) throws ResolveException {
-        List<MappingTreeNode> resolvedMappings = resolveTopicPath(
-                Mapping.splitTopicIncludingSeparatorAsList(topic), 0);
-        return resolvedMappings.stream()
-                .filter(MappingTreeNode::isMappingNode)
-                .map(MappingTreeNode::getMapping)
-                .collect(Collectors.toList());
+        readLock.lock();
+        try {
+            List<MappingTreeNode> resolvedMappings = resolveTopicPath(
+                    Mapping.splitTopicIncludingSeparatorAsList(topic), 0);
+            return resolvedMappings.stream()
+                    .filter(MappingTreeNode::isMappingNode)
+                    .map(MappingTreeNode::getMapping)
+                    .collect(Collectors.toList());
+        } finally {
+            readLock.unlock();
+        }
     }
 
     public void addMapping(Mapping mapping) throws ResolveException {
-        synchronized (treeModificationLock) {
-            if (mapping != null) {
-                List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.mappingTopic);
-                addMapping(mapping, levels, 0);
-            }
+        if (mapping == null)
+            return;
+
+        writeLock.lock();
+        try {
+            List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.mappingTopic);
+            addMapping(mapping, levels, 0);
+        } finally {
+            writeLock.unlock();
         }
     }
 
     public void deleteMapping(Mapping mapping) throws ResolveException {
-        synchronized (treeModificationLock) {
-            if (mapping != null) {
-                List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.mappingTopic);
-                MutableInt branchingLevel = new MutableInt(0);
-                deleteMapping(mapping, levels, 0, branchingLevel);
-            }
+        if (mapping == null)
+            return;
+
+        writeLock.lock();
+        try {
+            List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.mappingTopic);
+            MutableInt branchingLevel = new MutableInt(0);
+            deleteMapping(mapping, levels, 0, branchingLevel);
+        } finally {
+            writeLock.unlock();
         }
     }
 

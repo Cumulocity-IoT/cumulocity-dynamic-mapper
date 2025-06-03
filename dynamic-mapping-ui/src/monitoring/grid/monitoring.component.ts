@@ -46,7 +46,8 @@ import { NameRendererComponent } from '../../mapping/renderer/name.renderer.comp
   selector: 'd11r-mapping-monitoring-grid',
   templateUrl: 'monitoring.component.html',
   styleUrls: ['../../mapping/shared/mapping.style.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
   mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
@@ -102,7 +103,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '12.5%'
+      gridTrackSize: '10%'
     },
     {
       header: '# Messages received',
@@ -111,7 +112,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '12.5%'
+      gridTrackSize: '10%'
     },
     {
       header: '# Snooped templates total',
@@ -120,7 +121,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '12.5%'
+      gridTrackSize: '10%'
     },
     {
       header: '# Snooped templates active',
@@ -129,7 +130,16 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '12.5%'
+      gridTrackSize: '10%'
+    },
+    {
+      header: '# Current failure count',
+      name: 'currentFailureCount',
+      path: 'currentFailureCount',
+      filterable: true,
+      dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
+      gridTrackSize: '10%'
     }
   ];
 
