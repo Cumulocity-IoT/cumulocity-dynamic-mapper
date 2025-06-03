@@ -80,6 +80,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MQTT5Client extends AConnectorClient {
+    private static final int KEEP_ALIVE = 60;
+
     public MQTT5Client() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
@@ -364,7 +366,7 @@ public class MQTT5Client extends AConnectorClient {
                 try {
                     Mqtt5ConnAck ack = mqttClient.connectWith()
                             .cleanStart(cleanSession != null ? cleanSession : true)
-                            .keepAlive(60)
+                            .keepAlive(KEEP_ALIVE)
                             .send();
                     if (!ack.getReasonCode().equals(Mqtt5ConnAckReasonCode.SUCCESS)) {
 

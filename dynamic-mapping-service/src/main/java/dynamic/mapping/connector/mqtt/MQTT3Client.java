@@ -79,6 +79,8 @@ import dynamic.mapping.core.ConnectorStatusEvent;
 
 @Slf4j
 public class MQTT3Client extends AConnectorClient {
+    private static final int KEEP_ALIVE = 60;
+
     public MQTT3Client() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("protocol",
@@ -363,7 +365,7 @@ public class MQTT3Client extends AConnectorClient {
                 try {
                     Mqtt3ConnAck ack = mqttClient.connectWith()
                             .cleanSession(cleanSession != null ? cleanSession : true)
-                            .keepAlive(60)
+                            .keepAlive(KEEP_ALIVE)
                             .send();
                     if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
 
