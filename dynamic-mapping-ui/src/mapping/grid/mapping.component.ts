@@ -49,17 +49,23 @@ import {
   Qos,
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
+  createCustomUuid,
   getExternalTemplate,
   nextIdAndPad,
-  createCustomUuid
+  DeploymentMapEntry,
+  ExtensionType,
+  LabelRendererComponent,
+  MappingTypeDescriptionMap,
+  SharedService,
+  StepperConfiguration
 } from '../../shared';
 
 import { HttpStatusCode } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Subject, filter, finalize, from, map, switchMap, take } from 'rxjs';
-import { DeploymentMapEntry, ExtensionType, LabelRendererComponent, MappingTypeDescriptionMap, SharedService, StepperConfiguration } from '../../shared';
+import { BehaviorSubject, Subject, filter, finalize, switchMap, take } from 'rxjs';
+import { TemplateType } from '../../configuration';
 import { MappingService } from '../core/mapping.service';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
 import { ImportMappingsComponent } from '../import/import-modal.component';
@@ -74,7 +80,6 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
-import { TemplateType } from '../../configuration';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -1000,25 +1005,28 @@ export class MappingComponent implements OnInit, OnDestroy {
   ) {
     // console.log('DEBUG I', MappingTypeDescriptionMap);
     // console.log('DEBUG II', MappingTypeDescriptionMap[mappingType]);
-    // this.stepperConfiguration =
-    //   { ...MappingTypeDescriptionMap[mappingType].stepperConfiguration };
     // console.log('DEBUG III', this.stepperConfiguration);
 
-    this.stepperConfiguration.direction = direction;
-    this.stepperConfiguration.editorMode = editorMode;
-    if (direction == Direction.OUTBOUND) {
-      this.stepperConfiguration.allowTestSending = false;
+    this.stepperConfiguration = {
+      ...MappingTypeDescriptionMap[mappingType].stepperConfiguration,
+      direction,
+      editorMode,
+      ...(direction === Direction.OUTBOUND && { allowTestSending: false }),
       // if snoop is enabled, then skip the first step selecting an connector
-      if (this.snoopStatus == SnoopStatus.ENABLED) {
-        this.stepperConfiguration.advanceFromStepToEndStep = 0;
-      }
-    }
+      ...(direction === Direction.OUTBOUND && this.snoopStatus === SnoopStatus.ENABLED && {
+        advanceFromStepToEndStep: 0
+      }),
+      ...(substitutionsAsCode && {
+        advanceFromStepToEndStep: undefined,
+        showCodeEditor: true,
+        allowTestSending: false,
+        allowTestTransformation: true
+      })
+    };
 
+    // Clean up undefined properties
     if (substitutionsAsCode) {
       delete this.stepperConfiguration.advanceFromStepToEndStep;
-      this.stepperConfiguration.showCodeEditor = true;
-      this.stepperConfiguration.allowTestSending = false;
-      this.stepperConfiguration.allowTestTransformation = true;
     }
     //console.log('DEBUG IV', this.stepperConfiguration, substitutionsAsCode);
 

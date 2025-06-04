@@ -195,13 +195,13 @@ public class DispatcherInbound implements GenericMessageCallback {
                         try {
                             contextSemaphore.acquire();
                             graalsContext = setupGraalVMContext(this.graalsEngine);
-//                            context.setGraalsContext(graalsContext);
+                            context.setGraalsContext(graalsContext);
 //                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
 //                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
 //                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
                             context.setSharedCode(serviceConfiguration.getCodeTemplates()
                                      .get(TemplateType.SHARED.name()).getCode());
-                             context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                            context.setSystemCode(serviceConfiguration.getCodeTemplates()
                                      .get(TemplateType.SYSTEM.name()).getCode());
                         } catch (Exception e) {
                             handleGraalVMError(tenant, mapping, e, context, mappingStatus);
