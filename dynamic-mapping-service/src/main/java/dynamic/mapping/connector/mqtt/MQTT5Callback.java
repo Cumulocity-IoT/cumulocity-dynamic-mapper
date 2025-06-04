@@ -135,7 +135,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                                 }
                                 hasErrors = true;
                                 log.error(
-                                        "{} - Error in processing context for topic: [{}], not sending ack to MQTT broker",
+                                        "{} - Error in processing context for topic: [{}]",
                                         tenant, topic);
                                 break;
                             }
@@ -151,7 +151,7 @@ public class MQTT5Callback implements Consumer<Mqtt5Publish> {
                     } else if (httpStatusCode < 500) {
                         // Errors found but not a server error, acknowledge the message
                         log.warn(
-                                "{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                                "{} - END: Sending manual ack due to non-Server error for MQTT message: topic: [{}], QoS: {}, connector: {}",
                                 tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
                         mqttMessage.acknowledge();
                     } else {
