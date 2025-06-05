@@ -174,7 +174,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private String version;
 
     private Integer maxConnections = 100;
-    private Semaphore c8ySemaphore;
+    @Getter
+    public Semaphore c8ySemaphore;
 
     public C8YAgent(@Value("#{new Integer('${APP.maxC8YConnections}')}") Integer maxConnections) {
         this.maxConnections = maxConnections;
