@@ -83,10 +83,11 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
         boolean substitutionTimeExists = false;
 
         if (mapping.code != null) {
-            Context graalsContext = context.getGraalsContext();
+
+            Context graalContext = context.getGraalContext();
 
             String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-            Value bindings = graalsContext.getBindings("js");
+            Value bindings = graalContext.getBindings("js");
 
             byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
             String decodedCode = new String(decodedBytes);
@@ -96,7 +97,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
                     ".js")
                     .buildLiteral();
-            graalsContext.eval(source);
+            graalContext.eval(source);
             Value sourceValue = bindings
                     .getMember(identifier);
 
@@ -106,7 +107,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                 Source sharedSource = Source.newBuilder("js", decodedSharedCode,
                         "sharedCode.js")
                         .buildLiteral();
-                graalsContext.eval(sharedSource);
+                graalContext.eval(sharedSource);
             }
 
             if (context.getSystemCode() != null) {
@@ -115,7 +116,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                 Source systemSource = Source.newBuilder("js", decodedSystemCode,
                         "systemCode.js")
                         .buildLiteral();
-                graalsContext.eval(systemSource);
+                graalContext.eval(systemSource);
             }
 
             Map jsonObject = (Map) context.getPayload();

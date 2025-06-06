@@ -497,11 +497,11 @@ public class MappingComponent {
         if (active) {
             MappingStatus mappingStatus = getMappingStatus(tenant, mapping);
             mappingStatus.currentFailureCount = 0;
-            // TODO GRAALS_PERFORMANCE add code source to graalsCode cache
+            // TODO GRAAL_PERFORMANCE add code source to graalCode cache
 //            if(mapping.code != null)
 //                configurationRegistry.updateGraalsSourceMapping(tenant, mappingId, mapping.code);
         } else {
-            // TODO GRAALS_PERFORMANCE remove code source from graalsCode cache
+            // TODO GRAAL_PERFORMANCE remove code source from graalCode cache
 //            if(mapping.code != null)
 //                configurationRegistry.removeGraalsSourceMapping(tenant, mappingId);
 
@@ -790,7 +790,7 @@ public class MappingComponent {
         if (mapping.code != null) {
             String globalIdentifier = "delete globalThis" + Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
             try (Context context = Context.newBuilder("js")
-                    .engine(configurationRegistry.getGraalsEngine(tenant))
+                    .engine(configurationRegistry.getGraalEngine(tenant))
                     .logHandler(GRAALJS_LOG_HANDLER)
                     .allowHostAccess(configurationRegistry.getHostAccess())
                     .allowAllAccess(true)

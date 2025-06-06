@@ -61,10 +61,10 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
             Mapping mapping = context.getMapping();
             String tenant = context.getTenant();
             if (mapping.code != null) {
-                Context graalsContext = context.getGraalsContext();
+                Context graalContext = context.getGraalContext();
 
                 String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-                Value bindings = graalsContext.getBindings("js");
+                Value bindings = graalContext.getBindings("js");
 
                 byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
                 String decodedCode = new String(decodedBytes);
@@ -74,7 +74,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                 Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
                         ".js")
                         .buildLiteral();
-                graalsContext.eval(source);
+                graalContext.eval(source);
                 Value sourceValue = bindings
                         .getMember(identifier);
 
@@ -84,7 +84,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                     Source sharedSource = Source.newBuilder("js", decodedSharedCode,
                             "sharedCode.js")
                             .buildLiteral();
-                    graalsContext.eval(sharedSource);
+                    graalContext.eval(sharedSource);
                 }
 
                 if (context.getSystemCode() != null) {
@@ -93,7 +93,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                     Source systemSource = Source.newBuilder("js", decodedSystemCode,
                             "systemCode.js")
                             .buildLiteral();
-                    graalsContext.eval(systemSource);
+                    graalContext.eval(systemSource);
                 }
 
                 Map jsonObject = (Map) context.getPayload();

@@ -74,20 +74,20 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ConfigurationRegistry {
-    // TODO GRAALS_PERFORMANCE create cache for code graalsCode
+    // TODO GRAAL_PERFORMANCE create cache for code graalCode
 
     private HostAccess hostAccess;
 
-    private Map<String, Engine> graalsEngines = new ConcurrentHashMap<>();
+    private Map<String, Engine> graalEngines = new ConcurrentHashMap<>();
 
 //    // Structure: < Tenant, Source>>
-//    private Map<String, Source> graalsSourceShared = new ConcurrentHashMap<>();
+//    private Map<String, Source> graalSourceShared = new ConcurrentHashMap<>();
 //
 //    // Structure: < Tenant, Source>>
-//    private Map<String, Source> graalsSourceSystem = new ConcurrentHashMap<>();
+//    private Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
 //
 //    // Structure: < Tenant, < MappingIdentifier, < Source > >
-//    private Map<String, Map<String, Source>> graalsSourceMapping = new ConcurrentHashMap<>();
+//    private Map<String, Map<String, Source>> graalSourceMapping = new ConcurrentHashMap<>();
 
     private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
 
@@ -292,51 +292,51 @@ public class ConfigurationRegistry {
                 .option("engine.WarnInterpreterOnly", "false")
                 .build();
 
-        graalsEngines.put(tenant, eng);
-        //graalsSourceShared.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
+        graalEngines.put(tenant, eng);
+        //graalSourceShared.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
         //        .get(TemplateType.SHARED.name()).getCode(), "sharedCode.js", false, null));
-        //graalsSourceSystem.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
+        //graalSourceSystem.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
         //        .get(TemplateType.SYSTEM.name()).getCode(), "systemCode.js", false, null));
-        //graalsSourceMapping.put(tenant, new ConcurrentHashMap<>());
+        //graalSourceMapping.put(tenant, new ConcurrentHashMap<>());
     }
 
-    public Engine getGraalsEngine(String tenant) {
-        return graalsEngines.get(tenant);
+    public Engine getGraalEngine(String tenant) {
+        return graalEngines.get(tenant);
     }
 
 //    public void updateGraalsSourceShared(String tenant, String code) {
-//        graalsSourceShared.put(tenant, decodeCode(code, "sharedCode.js", false, null));
+//        graalSourceShared.put(tenant, decodeCode(code, "sharedCode.js", false, null));
 //    }
 //
 //    public Source getGraalsSourceShared(String tenant) {
-//        return graalsSourceShared.get(tenant);
+//        return graalSourceShared.get(tenant);
 //    }
 //
 //    public void updateGraalsSourceSystem(String tenant, String code) {
-//        graalsSourceSystem.put(tenant, decodeCode(code, "systemCode.js", false, null));
+//        graalSourceSystem.put(tenant, decodeCode(code, "systemCode.js", false, null));
 //    }
 //
 //    public Source getGraalsSourceSystem(String tenant) {
-//        return graalsSourceSystem.get(tenant);
+//        return graalSourceSystem.get(tenant);
 //    }
 //
 //    public void updateGraalsSourceMapping(String tenant, String mappingId, String code) {
-//        graalsSourceMapping.get(tenant).put(mappingId, decodeCode(code, mappingId + ".js", true, mappingId));
+//        graalSourceMapping.get(tenant).put(mappingId, decodeCode(code, mappingId + ".js", true, mappingId));
 //    }
 //
 //    public Source getGraalsSourceMapping(String tenant, String mappingId) {
-//        return graalsSourceMapping.get(tenant).get(mappingId);
+//        return graalSourceMapping.get(tenant).get(mappingId);
 //    }
 //
 //    public void removeGraalsSourceMapping(String tenant, String mappingId) {
-//        graalsSourceMapping.get(tenant).remove(mappingId);
+//        graalSourceMapping.get(tenant).remove(mappingId);
 //    }
 
     public void removeGraalsResources(String tenant) {
-        graalsEngines.remove(tenant);
-//        graalsSourceShared.remove(tenant);
-//        graalsSourceSystem.remove(tenant);
-//        graalsSourceMapping.remove(tenant);
+        graalEngines.remove(tenant);
+//        graalSourceShared.remove(tenant);
+//        graalSourceSystem.remove(tenant);
+//        graalSourceMapping.remove(tenant);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {

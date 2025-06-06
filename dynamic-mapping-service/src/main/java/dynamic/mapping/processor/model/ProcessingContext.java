@@ -107,9 +107,9 @@ public class ProcessingContext<O> {
 
     private String sourceId;
 
-    private Engine graalsEngine;
+    private Engine graalEngine;
 
-    private Context graalsContext;
+    private Context graalContext;
 
     private String sharedCode;
 
