@@ -179,7 +179,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private Integer maxConnections = 100;
     private Semaphore c8ySemaphore;
-    private HashMap<String, Timer> c8yRequestTimerMap = new HashMap<>();
+    private Timer c8yRequestTimer = Timer.builder("dynmapper_c8y_request_processing_time")
+            .description("C8Y Request Processing time").register(Metrics.globalRegistry);
 
     public C8YAgent(@Value("#{new Integer('${C8Y.httpClient.pool.perHost}')}") Integer maxConnections) {
         this.maxConnections = maxConnections;
@@ -188,15 +189,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @PostConstruct
     private void init() {
-        subscriptionsService.runForEachTenant(() -> {
-            String tenant = subscriptionsService.getTenant();
-            Tags tag = Tags.of("tenant", tenant);
-            Gauge.builder("dynmapper_available_c8y_connections", this.c8ySemaphore, Semaphore::availablePermits).tags(tag)
+            Gauge.builder("dynmapper_available_c8y_connections", this.c8ySemaphore, Semaphore::availablePermits)
                     .register(Metrics.globalRegistry);
-            this.c8yRequestTimerMap.put(tenant, Timer.builder("dynmapper_c8y_request_processing_time")
-                    .tag("tenant", tenant)
-                    .description("C8Y Request Processing time").register(Metrics.globalRegistry));
-        });
 
     }
 
@@ -449,7 +443,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             throws ProcessingException {
         //log.info("{} - C8Y Connections available: {}", context.getTenant(),c8ySemaphore.availablePermits());
         String tenant = context.getTenant();
-        this.c8yRequestTimerMap.get(tenant);
+        //this.c8yRequestTimerMap.get(tenant);
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         C8YRequest currentRequest = context.getCurrentRequest();
@@ -548,7 +542,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         if (pe.get() != null) {
             throw pe.get();
         }
-        timer.stop(this.c8yRequestTimerMap.get(tenant));
+        timer.stop(this.c8yRequestTimer);
         return result;
     }
 
