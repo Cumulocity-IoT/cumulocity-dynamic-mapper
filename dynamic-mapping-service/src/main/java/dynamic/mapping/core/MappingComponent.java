@@ -445,11 +445,11 @@ public class MappingComponent {
         Mapping mapping = getMapping(tenant, id);
         mapping.setDebug(debug);
         if (Direction.INBOUND.equals(mapping.direction)) {
-            // step 2. retrieve collected snoopedTemplates
+            // step 2. retrieve collected snoopedTemplates from inbound cache
             mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         } else {
-            // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
+            // step 2. retrieve collected snoopedTemplates from outbound cache
+            mapping.setSnoopedTemplates(getMappingOutboundFromCache(tenant, id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove

@@ -114,7 +114,6 @@ public class DispatcherInbound implements GenericMessageCallback {
         Engine graalsEngine;
         ConfigurationRegistry configurationRegistry;
         Context.Builder graalsContextBuilder;
-        //Semaphore contextSemaphore = new Semaphore(MAX_CONCURRENT_CODE_CONTEXT, true);
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message, AConnectorClient connectorClient) {
