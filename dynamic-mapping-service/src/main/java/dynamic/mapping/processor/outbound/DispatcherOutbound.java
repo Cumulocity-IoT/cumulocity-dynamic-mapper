@@ -56,14 +56,10 @@ import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 
 import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.Value;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
