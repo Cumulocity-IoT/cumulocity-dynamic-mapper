@@ -87,10 +87,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
 
             String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
             Value bindings = graalsContext.getBindings("js");
-            // Value extractFromSourceFunc =
-            // bindings.getMember(identifier);
 
-            // if (extractFromSourceFunc == null) {
             byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
             String decodedCode = new String(decodedBytes);
             String decodedCodeAdapted = decodedCode.replaceFirst(
@@ -102,7 +99,6 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             graalsContext.eval(source);
             Value extractFromSourceFunc = bindings
                     .getMember(identifier);
-            // }
 
             if (context.getSharedCode() != null) {
                 byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
