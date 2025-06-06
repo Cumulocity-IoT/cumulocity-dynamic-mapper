@@ -115,7 +115,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         Engine graalsEngine;
         ConfigurationRegistry configurationRegistry;
         Context.Builder graalsContextBuilder;
-        Semaphore contextSemaphore = new Semaphore(MAX_CONCURRENT_CODE_CONTEXT, true);
+        //Semaphore contextSemaphore = new Semaphore(MAX_CONCURRENT_CODE_CONTEXT, true);
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message, AConnectorClient connectorClient) {
@@ -193,7 +193,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     // Prepare GraalVM context if code exists
                     if (mapping.code != null) {
                         try {
-                            contextSemaphore.acquire();
+                            //contextSemaphore.acquire();
                             graalsContext = setupGraalVMContext(this.graalsEngine);
                             context.setGraalsContext(graalsContext);
 //                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
@@ -242,7 +242,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                             log.warn("{} - Error closing GraalVM context: {}", tenant, e.getMessage());
                         }
                     }
-                    contextSemaphore.release();
+                    //contextSemaphore.release();
 
                     // Always add the context to results, even if processing failed
                     processingResult.add(context);

@@ -67,7 +67,10 @@ import dynamic.mapping.processor.extension.ProcessorExtensionTarget;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Tags;
+import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
@@ -175,10 +178,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private Integer maxConnections = 100;
     private Semaphore c8ySemaphore;
+    private Gauge connectionInUse;
 
-    public C8YAgent(@Value("#{new Integer('${APP.maxC8YConnections}')}") Integer maxConnections) {
+    public C8YAgent(@Value("#{new Integer('${C8Y.httpClient.pool.perHost}')}") Integer maxConnections) {
         this.maxConnections = maxConnections;
-        this.c8ySemaphore = new Semaphore(maxConnections, true);
+        this.c8ySemaphore = new Semaphore(maxConnections, false);
+    }
+
+    @PostConstruct
+    private void init() {
+        this.connectionInUse= Gauge.builder("dynmapper_available_c8yconnections", this.c8ySemaphore, Semaphore::availablePermits)
+                .register(Metrics.globalRegistry);
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
@@ -428,6 +438,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
             throws ProcessingException {
+        log.info("{} - C8Y Connections available: {}", context.getTenant(),c8ySemaphore.availablePermits());
         String tenant = context.getTenant();
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         C8YRequest currentRequest = context.getCurrentRequest();
