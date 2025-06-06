@@ -121,7 +121,7 @@ public class ProcessingContext<O> {
 
     private Source mappingSource;
 
-    private Value extractFromSourceFunc;
+    private Value sourceValue;
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();

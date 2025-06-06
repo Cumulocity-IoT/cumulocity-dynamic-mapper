@@ -75,7 +75,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                         ".js")
                         .buildLiteral();
                 graalsContext.eval(source);
-                Value extractFromSourceFunc = bindings
+                Value sourceValue = bindings
                         .getMember(identifier);
 
                 if (context.getSharedCode() != null) {
@@ -101,7 +101,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
 
                 Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
-                final Value result = extractFromSourceFunc
+                final Value result = sourceValue
                         .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
                                 payloadAsString));
 
