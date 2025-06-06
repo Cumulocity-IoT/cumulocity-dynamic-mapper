@@ -70,6 +70,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -178,7 +179,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private Integer maxConnections = 100;
     private Semaphore c8ySemaphore;
-    private Gauge connectionInUse;
+    private HashMap<String, Timer> c8yRequestTimerMap = new HashMap<>();
 
     public C8YAgent(@Value("#{new Integer('${C8Y.httpClient.pool.perHost}')}") Integer maxConnections) {
         this.maxConnections = maxConnections;
@@ -187,8 +188,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @PostConstruct
     private void init() {
-        this.connectionInUse= Gauge.builder("dynmapper_available_c8yconnections", this.c8ySemaphore, Semaphore::availablePermits)
-                .register(Metrics.globalRegistry);
+        subscriptionsService.runForEachTenant(() -> {
+            String tenant = subscriptionsService.getTenant();
+            Tags tag = Tags.of("tenant", tenant);
+            Gauge.builder("dynmapper_available_c8y_connections", this.c8ySemaphore, Semaphore::availablePermits).tags(tag)
+                    .register(Metrics.globalRegistry);
+            this.c8yRequestTimerMap.put(tenant, Timer.builder("dynmapper_c8y_request_processing_time")
+                    .tag("tenant", tenant)
+                    .description("C8Y Request Processing time").register(Metrics.globalRegistry));
+        });
+
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
@@ -438,8 +447,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
             throws ProcessingException {
-        log.info("{} - C8Y Connections available: {}", context.getTenant(),c8ySemaphore.availablePermits());
+        //log.info("{} - C8Y Connections available: {}", context.getTenant(),c8ySemaphore.availablePermits());
         String tenant = context.getTenant();
+        this.c8yRequestTimerMap.get(tenant);
+        Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
@@ -537,7 +548,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         if (pe.get() != null) {
             throw pe.get();
         }
-
+        timer.stop(this.c8yRequestTimerMap.get(tenant));
         return result;
     }
 
