@@ -69,6 +69,7 @@ public abstract class BaseProcessorInbound<T> {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.configurationRegistry = configurationRegistry;
     }
 
     protected C8YAgent c8yAgent;
@@ -76,6 +77,8 @@ public abstract class BaseProcessorInbound<T> {
     protected ObjectMapper objectMapper;
 
     protected ExecutorService virtualThreadPool;
+
+    protected ConfigurationRegistry configurationRegistry;
 
     public abstract T deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException;

@@ -54,6 +54,7 @@ import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
+import dynamic.mapping.processor.model.MappingType;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
@@ -123,6 +124,9 @@ public class MappingController {
                         "Mapping with id " + id + " could not be found");
 
             mappingComponent.removeFromMappingFromCaches(tenant, deletedMapping);
+            if (MappingType.CODE_BASED.equals(deletedMapping.mappingType)) {
+                mappingComponent.destroyValuePool(tenant, deletedMapping.id);
+            }
 
             if (!Direction.OUTBOUND.equals(deletedMapping.direction)) {
                 // FIXME Currently we create mappings in ALL connectors assuming they could

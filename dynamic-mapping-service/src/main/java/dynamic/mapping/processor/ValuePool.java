@@ -67,9 +67,9 @@ public class ValuePool {
     }
 
     /**
-     * Return a Value to the pool if there's space available
+     * Release a Value to the pool if there's space available
      */
-    public void returnValue(Value value) {
+    public void release(Value value) {
         if (value == null) {
             log.warn("Attempted to return null Value to pool");
             return;

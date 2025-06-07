@@ -185,6 +185,17 @@ public class MappingComponent {
                 });
     }
 
+    public void destroyValuePool(String tenant, String mappingId) {
+        ValuePool pool = configurationRegistry.getGraalValuePools(tenant).get(mappingId);
+        if (pool != null) {
+            pool.destroy();
+            configurationRegistry.getGraalValuePools(tenant).remove(mappingId);
+            log.info("{} - Destroyed value pool for mapping: {}", tenant, mappingId);
+        } else {
+            log.warn("{} - No value pool found for mapping: {}", tenant, mappingId);
+        }
+    }
+
     public void initializeMappingStatus(String tenant, boolean reset) {
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                 .getMappingServiceRepresentation(tenant);

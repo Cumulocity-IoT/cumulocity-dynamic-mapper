@@ -43,6 +43,7 @@ import dynamic.mapping.model.Mapping;
 import dynamic.mapping.processor.model.SubstituteValue.TYPE;
 import dynamic.mapping.processor.model.SubstituteValue;
 import dynamic.mapping.processor.ProcessingException;
+import dynamic.mapping.processor.ValuePool;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import dynamic.mapping.processor.model.SubstitutionContext;
@@ -81,14 +82,17 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
         }
 
         boolean substitutionTimeExists = false;
+        ValuePool pool = configurationRegistry.getGraalValuePools(tenant).get(mapping.id);
+        Value sourceValue = null;
+        try {
+            sourceValue = pool.borrow();
 
-        if (mapping.code != null) {
-            Value sourceValue = context.getSourceValue();
-            
             // Context graalContext = context.getGraalContext();
 
-            // The commented code block you provided is related to using GraalVM's polyglot capabilities to
-            // evaluate JavaScript code within a Java application. Here's a breakdown of what each part of the code
+            // The commented code block you provided is related to using GraalVM's polyglot
+            // capabilities to
+            // evaluate JavaScript code within a Java application. Here's a breakdown of
+            // what each part of the code
             // block is doing:
             // String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
             // Value bindings = graalContext.getBindings("js");
@@ -96,31 +100,33 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             // byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
             // String decodedCode = new String(decodedBytes);
             // String decodedCodeAdapted = decodedCode.replaceFirst(
-            //         Mapping.EXTRACT_FROM_SOURCE,
-            //         identifier);
+            // Mapping.EXTRACT_FROM_SOURCE,
+            // identifier);
             // Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
-            //         ".js")
-            //         .buildLiteral();
+            // ".js")
+            // .buildLiteral();
             // graalContext.eval(source);
             // Value sourceValue = bindings
-            //         .getMember(identifier);
+            // .getMember(identifier);
 
             // if (context.getSharedCode() != null) {
-            //     byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
-            //     String decodedSharedCode = new String(decodedSharedCodeBytes);
-            //     Source sharedSource = Source.newBuilder("js", decodedSharedCode,
-            //             "sharedCode.js")
-            //             .buildLiteral();
-            //     graalContext.eval(sharedSource);
+            // byte[] decodedSharedCodeBytes =
+            // Base64.getDecoder().decode(context.getSharedCode());
+            // String decodedSharedCode = new String(decodedSharedCodeBytes);
+            // Source sharedSource = Source.newBuilder("js", decodedSharedCode,
+            // "sharedCode.js")
+            // .buildLiteral();
+            // graalContext.eval(sharedSource);
             // }
 
             // if (context.getSystemCode() != null) {
-            //     byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
-            //     String decodedSystemCode = new String(decodedSystemCodeBytes);
-            //     Source systemSource = Source.newBuilder("js", decodedSystemCode,
-            //             "systemCode.js")
-            //             .buildLiteral();
-            //     graalContext.eval(systemSource);
+            // byte[] decodedSystemCodeBytes =
+            // Base64.getDecoder().decode(context.getSystemCode());
+            // String decodedSystemCode = new String(decodedSystemCodeBytes);
+            // Source systemSource = Source.newBuilder("js", decodedSystemCode,
+            // "systemCode.js")
+            // .buildLiteral();
+            // graalContext.eval(systemSource);
             // }
 
             Map jsonObject = (Map) context.getPayload();
@@ -180,7 +186,8 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                             keySet == null ? 0 : keySet.size(), jsonObject);
                 }
             }
-
+        } finally {
+            pool.release(sourceValue);
         }
 
         // no substitution for the time property exists, then use the system time
