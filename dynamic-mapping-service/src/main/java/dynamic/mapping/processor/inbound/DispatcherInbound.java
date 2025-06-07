@@ -189,26 +189,23 @@ public class DispatcherInbound implements GenericMessageCallback {
                     context = createFullContext(tenant, topic, mapping, payload, sendPayload, connectorMessage);
 
                     // Prepare GraalVM context if code exists
-                    if (mapping.code != null) {
-                        try {
-                            //contextSemaphore.acquire();
-                            // graalContext = createGraalContext(this.graalEngine);
-                            // context.setGraalContext(graalContext);
-//                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
-//                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
-//                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
-                            // context.setGraalEngine(graalEngine);
-                            // context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                            //          .get(TemplateType.SHARED.name()).getCode());
-                            // context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                            //          .get(TemplateType.SYSTEM.name()).getCode());
-                            
-                        } catch (Exception e) {
-                            handleGraalVMError(tenant, mapping, e, context, mappingStatus);
-                            processingResult.add(context);
-                            continue;
-                        }
-                    }
+                    // if (mapping.code != null) {
+                    //     try {
+                    //         contextSemaphore.acquire();
+                    //         graalContext = createGraalContext(this.graalEngine);
+                    //         context.setGraalContext(graalContext);
+                    //         context.setGraalEngine(graalEngine);
+                    //         context.setSharedCode(serviceConfiguration.getCodeTemplates()
+                    //                  .get(TemplateType.SHARED.name()).getCode());
+                    //         context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                    //                  .get(TemplateType.SYSTEM.name()).getCode());
+
+                    //     } catch (Exception e) {
+                    //         handleGraalVMError(tenant, mapping, e, context, mappingStatus);
+                    //         processingResult.add(context);
+                    //         continue;
+                    //     }
+                    // }
 
                     // Log message and increment counter
                     inboundProcessingCounter.increment();
@@ -316,38 +313,38 @@ public class DispatcherInbound implements GenericMessageCallback {
             mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
-        private Context createGraalContext(Engine graalEngine)
-                throws Exception {
-            if(graalContextBuilder == null)
-                graalContextBuilder = Context.newBuilder("js");
+        // private Context createGraalContext(Engine graalEngine)
+        //         throws Exception {
+        //     if(graalContextBuilder == null)
+        //         graalContextBuilder = Context.newBuilder("js");
 
-            Context graalContext = graalContextBuilder
-                    .engine(graalEngine)
-                    //.option("engine.WarnInterpreterOnly", "false")
-                    .allowHostAccess(configurationRegistry.getHostAccess())
-                    .allowHostClassLookup(className ->
-                    // Allow only the specific SubstitutionContext class
-                    className.equals("dynamic.mapping.processor.model.SubstitutionContext")
-                            || className.equals("dynamic.mapping.processor.model.SubstitutionResult")
-                            || className.equals("dynamic.mapping.processor.model.SubstituteValue")
-                            || className.equals("dynamic.mapping.processor.model.SubstituteValue$TYPE")
-                            || className.equals("dynamic.mapping.processor.model.RepairStrategy")
-                            // Allow base collection classes needed for return values
-                            || className.equals("java.util.ArrayList") ||
-                            className.equals("java.util.HashMap"))
-                    .build();
-            return graalContext;
-        }
+        //     Context graalContext = graalContextBuilder
+        //             .engine(graalEngine)
+        //             //.option("engine.WarnInterpreterOnly", "false")
+        //             .allowHostAccess(configurationRegistry.getHostAccess())
+        //             .allowHostClassLookup(className ->
+        //             // Allow only the specific SubstitutionContext class
+        //             className.equals("dynamic.mapping.processor.model.SubstitutionContext")
+        //                     || className.equals("dynamic.mapping.processor.model.SubstitutionResult")
+        //                     || className.equals("dynamic.mapping.processor.model.SubstituteValue")
+        //                     || className.equals("dynamic.mapping.processor.model.SubstituteValue$TYPE")
+        //                     || className.equals("dynamic.mapping.processor.model.RepairStrategy")
+        //                     // Allow base collection classes needed for return values
+        //                     || className.equals("java.util.ArrayList") ||
+        //                     className.equals("java.util.HashMap"))
+        //             .build();
+        //     return graalContext;
+        // }
 
-        private void handleGraalVMError(String tenant, Mapping mapping, Exception e,
-                ProcessingContext<?> context, MappingStatus mappingStatus) {
-            String errorMessage = String.format("Tenant %s - Failed to set up GraalVM context: %s",
-                    tenant, e.getMessage());
-            log.error(errorMessage, e);
-            context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.errors++;
-            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-        }
+        // private void handleGraalVMError(String tenant, Mapping mapping, Exception e,
+        //         ProcessingContext<?> context, MappingStatus mappingStatus) {
+        //     String errorMessage = String.format("Tenant %s - Failed to set up GraalVM context: %s",
+        //             tenant, e.getMessage());
+        //     log.error(errorMessage, e);
+        //     context.addError(new ProcessingException(errorMessage, e));
+        //     mappingStatus.errors++;
+        //     mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        // }
 
         private void logInboundMessageReceived(String tenant, Mapping mapping, ProcessingContext<?> context,
                 ServiceConfiguration serviceConfiguration) {

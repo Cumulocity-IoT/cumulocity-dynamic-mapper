@@ -54,11 +54,14 @@ public abstract class BaseProcessorOutbound<T> {
     public BaseProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.configurationRegistry = configurationRegistry;
     }
 
     protected C8YAgent c8yAgent;
 
     protected AConnectorClient connectorClient;
+
+    protected ConfigurationRegistry configurationRegistry;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
 

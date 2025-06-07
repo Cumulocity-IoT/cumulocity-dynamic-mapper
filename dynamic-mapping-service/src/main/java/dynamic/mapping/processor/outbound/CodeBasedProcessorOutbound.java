@@ -22,14 +22,11 @@
 package dynamic.mapping.processor.outbound;
 
 import java.util.ArrayList;
-import java.util.Base64;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
 import com.dashjoin.jsonata.Functions;
@@ -39,6 +36,7 @@ import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.Mapping;
 
 import dynamic.mapping.processor.ProcessingException;
+import dynamic.mapping.processor.ValuePool;
 import dynamic.mapping.processor.model.ProcessingContext;
 
 import dynamic.mapping.processor.model.SubstituteValue;
@@ -57,96 +55,101 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
     @Override
     public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
+        Value sourceValue = null;
+        Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
+        ValuePool pool = configurationRegistry.getGraalValuePools(tenant).get(mapping.id);
         try {
-            Mapping mapping = context.getMapping();
-            String tenant = context.getTenant();
-            if (mapping.code != null) {
-                Context graalContext = context.getGraalContext();
+            sourceValue = pool.borrow();
 
-                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-                Value bindings = graalContext.getBindings("js");
+            // Context graalContext = context.getGraalContext();
 
-                byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
-                String decodedCode = new String(decodedBytes);
-                String decodedCodeAdapted = decodedCode.replaceFirst(
-                        Mapping.EXTRACT_FROM_SOURCE,
-                        identifier);
-                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
-                        ".js")
-                        .buildLiteral();
-                graalContext.eval(source);
-                Value sourceValue = bindings
-                        .getMember(identifier);
+            // String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+            // Value bindings = graalContext.getBindings("js");
 
-                if (context.getSharedCode() != null) {
-                    byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
-                    String decodedSharedCode = new String(decodedSharedCodeBytes);
-                    Source sharedSource = Source.newBuilder("js", decodedSharedCode,
-                            "sharedCode.js")
-                            .buildLiteral();
-                    graalContext.eval(sharedSource);
-                }
+            // byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+            // String decodedCode = new String(decodedBytes);
+            // String decodedCodeAdapted = decodedCode.replaceFirst(
+            // Mapping.EXTRACT_FROM_SOURCE,
+            // identifier);
+            // Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
+            // ".js")
+            // .buildLiteral();
+            // graalContext.eval(source);
+            // Value sourceValue = bindings
+            // .getMember(identifier);
 
-                if (context.getSystemCode() != null) {
-                    byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
-                    String decodedSystemCode = new String(decodedSystemCodeBytes);
-                    Source systemSource = Source.newBuilder("js", decodedSystemCode,
-                            "systemCode.js")
-                            .buildLiteral();
-                    graalContext.eval(systemSource);
-                }
+            // if (context.getSharedCode() != null) {
+            // byte[] decodedSharedCodeBytes =
+            // Base64.getDecoder().decode(context.getSharedCode());
+            // String decodedSharedCode = new String(decodedSharedCodeBytes);
+            // Source sharedSource = Source.newBuilder("js", decodedSharedCode,
+            // "sharedCode.js")
+            // .buildLiteral();
+            // graalContext.eval(sharedSource);
+            // }
 
-                Map jsonObject = (Map) context.getPayload();
-                String payloadAsString = Functions.string(context.getPayload(), false);
+            // if (context.getSystemCode() != null) {
+            // byte[] decodedSystemCodeBytes =
+            // Base64.getDecoder().decode(context.getSystemCode());
+            // String decodedSystemCode = new String(decodedSystemCodeBytes);
+            // Source systemSource = Source.newBuilder("js", decodedSystemCode,
+            // "systemCode.js")
+            // .buildLiteral();
+            // graalContext.eval(systemSource);
+            // }
 
-                Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
+            Map jsonObject = (Map) context.getPayload();
+            String payloadAsString = Functions.string(context.getPayload(), false);
 
-                final Value result = sourceValue
-                        .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
-                                payloadAsString));
+            Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
-                // Convert the JavaScript result to Java objects before closing the context
-                final SubstitutionResult typedResult = result.as(SubstitutionResult.class);
+            final Value result = sourceValue
+                    .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
+                            payloadAsString));
 
-                if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
-                    context.setIgnoreFurtherProcessing(true);
-                    log.info(
-                            "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned no result, payload: {}",
-                            context.getTenant(),
-                            jsonObject);
-                } else { // Now use the copied objects
-                    Set<String> keySet = typedResult.getSubstitutions().keySet();
-                    for (String key : keySet) {
-                        List<SubstituteValue> processingCacheEntry = new ArrayList<>();
-                        List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
-                        if (values != null && values.size() > 0
-                                && values.get(0).expandArray) {
-                            // extracted result from sourcePayload is an array, so we potentially have to
-                            // iterate over the result, e.g. creating multiple devices
-                            for (SubstituteValue substitutionValue : values) {
-                                SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry,
-                                        substitutionValue.value,
-                                        substitutionValue, mapping);
-                            }
-                        } else if (values != null) {
+            // Convert the JavaScript result to Java objects before closing the context
+            final SubstitutionResult typedResult = result.as(SubstitutionResult.class);
+
+            if (typedResult == null || typedResult.substitutions == null || typedResult.substitutions.size() == 0) {
+                context.setIgnoreFurtherProcessing(true);
+                log.info(
+                        "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned no result, payload: {}",
+                        context.getTenant(),
+                        jsonObject);
+            } else { // Now use the copied objects
+                Set<String> keySet = typedResult.getSubstitutions().keySet();
+                for (String key : keySet) {
+                    List<SubstituteValue> processingCacheEntry = new ArrayList<>();
+                    List<SubstituteValue> values = typedResult.getSubstitutions().get(key);
+                    if (values != null && values.size() > 0
+                            && values.get(0).expandArray) {
+                        // extracted result from sourcePayload is an array, so we potentially have to
+                        // iterate over the result, e.g. creating multiple devices
+                        for (SubstituteValue substitutionValue : values) {
                             SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry,
-                                    values.getFirst().value,
-                                    values.getFirst(), mapping);
+                                    substitutionValue.value,
+                                    substitutionValue, mapping);
                         }
-                        processingCache.put(key, processingCacheEntry);
+                    } else if (values != null) {
+                        SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry,
+                                values.getFirst().value,
+                                values.getFirst(), mapping);
                     }
-                    if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                        log.info(
-                                "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned {} results, payload: {} ",
-                                context.getTenant(),
-                                keySet == null ? 0 : keySet.size(), jsonObject);
-                    }
+                    processingCache.put(key, processingCacheEntry);
                 }
-
+                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                    log.info(
+                            "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned {} results, payload: {} ",
+                            context.getTenant(),
+                            keySet == null ? 0 : keySet.size(), jsonObject);
+                }
             }
 
         } catch (Exception e) {
             throw new ProcessingException(e.getMessage());
+        } finally {
+            pool.release(sourceValue);
         }
     }
 }

@@ -107,21 +107,7 @@ public class ProcessingContext<O> {
 
     private String sourceId;
 
-    private Engine graalEngine;
-
-    private Context graalContext;
-
-    private String sharedCode;
-
-    private Source sharedSource;
-
-    private String systemCode;
-
-    private Source systemSource;
-
     private Source mappingSource;
-
-    private Value sourceValue;
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();
