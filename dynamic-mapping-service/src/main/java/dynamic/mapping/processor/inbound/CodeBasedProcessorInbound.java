@@ -26,8 +26,6 @@ import static dynamic.mapping.model.Substitution.toPrettyJsonString;
 import java.io.IOException;
 import java.util.*;
 
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
 import org.joda.time.DateTime;

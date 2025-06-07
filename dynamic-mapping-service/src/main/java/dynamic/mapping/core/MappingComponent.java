@@ -137,11 +137,12 @@ public class MappingComponent {
     }
 
     private void createValuePools(String tenant) {
+        configurationRegistry.initializeGraalValuePoolsForTenant(tenant);
         getMappings(tenant, null).stream()
                 .filter(m -> MappingType.CODE_BASED.equals(m.mappingType) && m.code != null)
                 .forEach(mapping -> {
                     configurationRegistry.getGraalValuePools(tenant).put(mapping.id,
-                            ValuePool.create(configurationRegistry.getGraalEngine(tenant),
+                            ValuePool.create(tenant, configurationRegistry.getGraalEngine(tenant),
                                     configurationRegistry.getHostAccess(),
                                     configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
                                             .get(TemplateType.SHARED.name()).getCode(),
@@ -556,7 +557,7 @@ public class MappingComponent {
             ValuePool pool = configurationRegistry.getGraalValuePools(tenant).get(mapping.id);
             if (pool == null) {
                 configurationRegistry.getGraalValuePools(tenant).put(mapping.id,
-                        ValuePool.create(configurationRegistry.getGraalEngine(tenant),
+                        ValuePool.create(tenant, configurationRegistry.getGraalEngine(tenant),
                                 configurationRegistry.getHostAccess(),
                                 configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
                                         .get(TemplateType.SHARED.name()).getCode(),
@@ -570,7 +571,7 @@ public class MappingComponent {
 
                 pool.destroy();
                 configurationRegistry.getGraalValuePools(tenant).put(mapping.id,
-                        ValuePool.create(configurationRegistry.getGraalEngine(tenant),
+                        ValuePool.create(tenant, configurationRegistry.getGraalEngine(tenant),
                                 configurationRegistry.getHostAccess(),
                                 configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
                                         .get(TemplateType.SHARED.name()).getCode(),

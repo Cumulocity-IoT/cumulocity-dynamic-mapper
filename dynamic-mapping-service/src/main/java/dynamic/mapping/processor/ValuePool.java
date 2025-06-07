@@ -12,22 +12,26 @@ import java.util.Base64;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class ValuePool {
 
-    private static final int MAX_POOL_VALUE_SIZE = 10; // You can adjust this value as needed
+    private static final int MAX_POOL_VALUE_SIZE = 150; // You can adjust this value as needed
 
-    private final BlockingQueue<Value> pool;
+    private final BlockingQueue<PooledValue> pool;
     private final AtomicInteger currentSize;
     private final Engine graalEngine;
     private final String sharedCode;
     private final String systemCode;
     private final Mapping mapping;
+    private final String tenant;
     private final HostAccess hostAccess;
+    private final Set<Context> createdContexts;
     private Context.Builder graalContextBuilder;
 
-    private ValuePool(Engine graalEngine, HostAccess hostAccess, String sharedCode, String systemCode,
+    private ValuePool(String tenant, Engine graalEngine, HostAccess hostAccess, String sharedCode, String systemCode,
             Mapping mapping) {
         this.pool = new LinkedBlockingQueue<>(MAX_POOL_VALUE_SIZE);
         this.currentSize = new AtomicInteger(0);
@@ -36,34 +40,58 @@ public class ValuePool {
         this.systemCode = systemCode;
         this.hostAccess = hostAccess;
         this.mapping = mapping;
+        this.tenant = tenant;
+        this.createdContexts = ConcurrentHashMap.newKeySet();
 
-        log.info("ValuePool initialized with max size: {}", MAX_POOL_VALUE_SIZE);
+        log.info("{} - ValuePool initialized with max size: {}", tenant, MAX_POOL_VALUE_SIZE);
+    }
+
+    /**
+     * Inner class to hold Value and its associated Context
+     */
+    private static class PooledValue {
+        private final Value value;
+        private final Context context;
+        
+        public PooledValue(Value value, Context context) {
+            this.value = value;
+            this.context = context;
+        }
+        
+        public Value getValue() {
+            return value;
+        }
+        
+        public Context getContext() {
+            return context;
+        }
     }
 
     /**
      * Factory method to create a ValuePool instance
      */
-    public static ValuePool create(Engine graalEngine, HostAccess hostAccess, String sharedCode, String systemCode,
+    public static ValuePool create(String tenant, Engine graalEngine, HostAccess hostAccess, String sharedCode,
+            String systemCode,
             Mapping mapping) {
-        log.debug("Creating new ValuePool with engine: {}", graalEngine);
-        return new ValuePool(graalEngine, hostAccess, sharedCode, systemCode, mapping);
+        log.debug("{} - Creating new ValuePool with engine: {}", tenant, graalEngine);
+        return new ValuePool(tenant, graalEngine, hostAccess, sharedCode, systemCode, mapping);
     }
 
     /**
      * Borrow a Value from the pool. If no Value is available, create a new one.
      */
     public Value borrow() {
-        Value value = pool.poll();
+        PooledValue pooledValue = pool.poll();
 
-        if (value == null) {
-            log.debug("No Value available in pool, creating new one");
-            value = createNewValue();
+        if (pooledValue == null) {
+            log.info("{} - No Value available in pool, creating new one", tenant);
+            pooledValue = createNewPooledValue();
         } else {
             currentSize.decrementAndGet();
-            log.debug("Borrowed Value from pool. Current pool size: {}", currentSize.get());
+            log.info("{} - Borrowed Value from pool. Current pool size: {}", tenant, currentSize.get());
         }
 
-        return value;
+        return pooledValue.getValue();
     }
 
     /**
@@ -71,22 +99,33 @@ public class ValuePool {
      */
     public void release(Value value) {
         if (value == null) {
-            log.warn("Attempted to return null Value to pool");
+            log.warn("{} - Attempted to return null Value to pool", tenant);
             return;
         }
 
-        if (currentSize.get() < MAX_POOL_VALUE_SIZE) {
-            boolean added = pool.offer(value);
+        // Find the context associated with this value
+        Context valueContext = null;
+        try {
+            valueContext = value.getContext();
+        } catch (Exception e) {
+            log.warn("{} - Could not get context from Value, discarding", tenant, e);
+            return;
+        }
+
+        // Only return to pool if we created this context and there's space
+        if (createdContexts.contains(valueContext) && currentSize.get() < MAX_POOL_VALUE_SIZE) {
+            PooledValue pooledValue = new PooledValue(value, valueContext);
+            boolean added = pool.offer(pooledValue);
             if (added) {
                 currentSize.incrementAndGet();
-                log.debug("Returned Value to pool. Current pool size: {}", currentSize.get());
+                log.info("{} - Returned Value to pool. Current pool size: {}", tenant, currentSize.get());
             } else {
-                log.warn("Failed to return Value to pool, closing context");
-                closeValueContext(value);
+                log.warn("{} - Failed to return Value to pool, closing context", tenant);
+                closeValueContext(valueContext);
             }
         } else {
-            log.debug("Pool is full, closing returned Value context");
-            closeValueContext(value);
+            log.debug("{} - Pool is full or context not managed by pool, closing returned Value context", tenant);
+            closeValueContext(valueContext);
         }
     }
 
@@ -94,15 +133,29 @@ public class ValuePool {
      * Invalidate the pool by closing all Value contexts and clearing the pool
      */
     public void destroy() {
-        log.info("Invalidating ValuePool, closing {} contexts", currentSize.get());
+        log.info("{} - Invalidating ValuePool, closing {} contexts", tenant, currentSize.get());
 
-        Value value;
-        while ((value = pool.poll()) != null) {
-            closeValueContext(value);
+        PooledValue pooledValue;
+        while ((pooledValue = pool.poll()) != null) {
+            closeValueContext(pooledValue.getContext());
             currentSize.decrementAndGet();
         }
 
-        log.info("ValuePool invalidated successfully");
+        // Close any remaining contexts we created
+        for (Context context : createdContexts) {
+            try {
+                context.close();
+                log.debug("{} - Closed remaining context during destroy", tenant);
+            } catch (IllegalStateException e) {
+                // Context was obtained via Context.get() or already closed
+                log.debug("{} - Context cannot be closed (not created by us or already closed)", tenant);
+            } catch (Exception e) {
+                log.warn("{} - Error closing remaining context during destroy", tenant, e);
+            }
+        }
+        createdContexts.clear();
+
+        log.info("{} - ValuePool invalidated successfully", tenant);
     }
 
     /**
@@ -120,13 +173,16 @@ public class ValuePool {
     }
 
     /**
-     * Create a new Value instance
+     * Create a new PooledValue instance
      */
-    private Value createNewValue() {
+    private PooledValue createNewPooledValue() {
         try {
-            log.debug("Creating new polyglot context and evaluating code");
+            log.debug("{} - Creating new polyglot context and evaluating code", tenant);
 
             Context graalContext = createGraalContext();
+            
+            // Track this context so we know we can close it
+            createdContexts.add(graalContext);
 
             String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
             Value bindings = graalContext.getBindings("js");
@@ -161,12 +217,12 @@ public class ValuePool {
                 graalContext.eval(systemSource);
             }
 
-            log.debug("Successfully created new Value");
-            return sourceValue;
+            log.debug("{} - Successfully created new PooledValue", tenant);
+            return new PooledValue(sourceValue, graalContext);
 
         } catch (Exception e) {
-            log.error("Failed to create new Value", e);
-            throw new RuntimeException("Failed to create polyglot Value", e);
+            log.error("{} - Failed to create new PooledValue", tenant, e);
+            throw new RuntimeException(String.format("%s - Failed to create polyglot Value", tenant), e);
         }
     }
 
@@ -194,16 +250,30 @@ public class ValuePool {
     }
 
     /**
-     * Safely close a Value's context
+     * Safely close a Value's context only if we created it
      */
-    private void closeValueContext(Value value) {
+    private void closeValueContext(Context context) {
+        if (context == null) {
+            return;
+        }
+        
         try {
-            if (value != null && value.getContext() != null) {
-                value.getContext().close();
-                log.debug("Successfully closed Value context");
+            // Only close contexts that we created and are tracking
+            if (createdContexts.contains(context)) {
+                context.close();
+                log.debug("{} - Successfully closed Value context", tenant);
+                createdContexts.remove(context);
+            } else {
+                log.debug("{} - Context not managed by this pool, skipping close", tenant);
             }
+        } catch (IllegalStateException e) {
+            // Context was obtained via Context.get() or already closed
+            log.debug("{} - Context cannot be closed (not created by us or already closed)", tenant);
+            createdContexts.remove(context);
         } catch (Exception e) {
-            log.error("Error closing Value context", e);
+            log.error("{} - Error closing Value context", tenant, e);
+            // Remove from tracking even if close failed
+            createdContexts.remove(context);
         }
     }
 }

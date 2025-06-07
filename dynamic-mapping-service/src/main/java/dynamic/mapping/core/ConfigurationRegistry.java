@@ -98,8 +98,8 @@ public class ConfigurationRegistry {
         return graalValuePools.get(tenant);
     }
 
-    public void setGraalValuePools(Map<String, Map<String, ValuePool>> graalValuePools) {
-        this.graalValuePools = graalValuePools;
+    public void initializeGraalValuePoolsForTenant(String tenant) {
+        graalValuePools.put(tenant, new ConcurrentHashMap<>());
     }
 
     private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
