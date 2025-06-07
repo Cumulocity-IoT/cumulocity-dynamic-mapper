@@ -33,6 +33,7 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
@@ -508,13 +509,19 @@ public class ConfigurationController {
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-//            if (TemplateType.SHARED.equals(id)) {
-//                // Update parsed source for shared code in cache
-//                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.code);
-//            } else if (TemplateType.SYSTEM.equals(id)) {
-//                // Update parsed source for system code in cache
-//                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.code);
-//            }
+            
+            // recreate all value pools for the mapping component for this tenant
+            if (TemplateType.SHARED.equals(id)) {
+                mappingComponent.recreateValuePools(tenant);
+            }
+
+            // if (TemplateType.SHARED.equals(id)) {
+            // // Update parsed source for shared code in cache
+            // configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.code);
+            // } else if (TemplateType.SYSTEM.equals(id)) {
+            // // Update parsed source for system code in cache
+            // configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.code);
+            // }
             log.debug("{} - Updated code template", tenant);
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
@@ -539,13 +546,13 @@ public class ConfigurationController {
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-//            if (TemplateType.SHARED.equals(codeTemplate.id)) {
-//                // Update parsed source for shared code in cache
-//                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.code);
-//            } else if (TemplateType.SYSTEM.equals(codeTemplate.id)) {
-//                // Update parsed source for system code in cache
-//                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.code);
-//            }
+            // if (TemplateType.SHARED.equals(codeTemplate.id)) {
+            // // Update parsed source for shared code in cache
+            // configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.code);
+            // } else if (TemplateType.SYSTEM.equals(codeTemplate.id)) {
+            // // Update parsed source for system code in cache
+            // configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.code);
+            // }
             log.debug("{} - Create code template", tenant);
         } catch (JsonProcessingException ex) {
             log.error("{} - Error creating code template", tenant, ex);

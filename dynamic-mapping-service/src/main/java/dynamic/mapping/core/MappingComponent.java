@@ -59,6 +59,7 @@ import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorId;
+import dynamic.mapping.configuration.TemplateType;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.LoggingEventType;
@@ -71,6 +72,8 @@ import dynamic.mapping.model.ResolveException;
 import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.model.ValidationError;
 import dynamic.mapping.processor.C8YMessage;
+import dynamic.mapping.processor.ValuePool;
+import dynamic.mapping.processor.model.MappingType;
 
 @Slf4j
 @Component
@@ -130,6 +133,30 @@ public class MappingComponent {
         initializeMappingStatus(tenant, false);
         rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
         rebuildMappingInboundCache(tenant, ConnectorId.INTERNAL);
+        createValuePools(tenant);
+    }
+
+    private void createValuePools(String tenant) {
+        getMappings(tenant, null).stream()
+                .filter(m -> MappingType.CODE_BASED.equals(m.mappingType) && m.code != null)
+                .forEach(mapping -> {
+                    configurationRegistry.getGraalValuePools(tenant).put(mapping.id,
+                            ValuePool.create(configurationRegistry.getGraalEngine(tenant),
+                                    configurationRegistry.getHostAccess(),
+                                    configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
+                                            .get(TemplateType.SHARED.name()).getCode(),
+                                    configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
+                                            .get(TemplateType.SYSTEM.name()).getCode(),
+                                    mapping));
+                    log.info("{} - Created value pools for mapping: {}", tenant,
+                            mapping.name);
+                });
+
+    }
+
+    public void recreateValuePools(String tenant) {
+        destroyValuePools(tenant);
+        createValuePools(tenant);
     }
 
     public void removeResources(String tenant) {
@@ -140,6 +167,22 @@ public class MappingComponent {
         mappingStatusS.remove(tenant);
         deploymentMaps.remove(tenant);
         initializedMappingStatus.remove(tenant);
+        destroyValuePools(tenant);
+    }
+
+    private void destroyValuePools(String tenant) {
+        getMappings(tenant, null).stream()
+                .filter(m -> MappingType.CODE_BASED.equals(m.mappingType) && m.code != null)
+                .forEach(mapping -> {
+                    ValuePool pool = configurationRegistry.getGraalValuePools(tenant).get(mapping.id);
+                    if (pool != null) {
+                        pool.destroy();
+                        configurationRegistry.getGraalValuePools(tenant).remove(mapping.id);
+                        log.info("{} - Destroyed value pool for mapping: {}", tenant, mapping.id);
+                    } else {
+                        log.warn("{} - No value pool found for mapping: {}", tenant, mapping.id);
+                    }
+                });
     }
 
     public void initializeMappingStatus(String tenant, boolean reset) {
@@ -497,13 +540,46 @@ public class MappingComponent {
         if (active) {
             MappingStatus mappingStatus = getMappingStatus(tenant, mapping);
             mappingStatus.currentFailureCount = 0;
+
+            // create value pool for mapping
+            ValuePool pool = configurationRegistry.getGraalValuePools(tenant).get(mapping.id);
+            if (pool == null) {
+                configurationRegistry.getGraalValuePools(tenant).put(mapping.id,
+                        ValuePool.create(configurationRegistry.getGraalEngine(tenant),
+                                configurationRegistry.getHostAccess(),
+                                configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
+                                        .get(TemplateType.SHARED.name()).getCode(),
+                                configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
+                                        .get(TemplateType.SYSTEM.name()).getCode(),
+                                mapping));
+            } else {
+                // if pool already exists, we can need to destroy the existing pool and create a
+                // new pool
+                log.warn("{} - ValuePool already exists for mapping: {}", tenant, mappingId);
+
+                pool.destroy();
+                configurationRegistry.getGraalValuePools(tenant).put(mapping.id,
+                        ValuePool.create(configurationRegistry.getGraalEngine(tenant),
+                                configurationRegistry.getHostAccess(),
+                                configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
+                                        .get(TemplateType.SHARED.name()).getCode(),
+                                configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
+                                        .get(TemplateType.SYSTEM.name()).getCode(),
+                                mapping));
+            }
             // TODO GRAAL_PERFORMANCE add code source to graalCode cache
-//            if(mapping.code != null)
-//                configurationRegistry.updateGraalsSourceMapping(tenant, mappingId, mapping.code);
+            // if(mapping.code != null)
+            // configurationRegistry.updateGraalSourceMapping(tenant, mappingId,
+            // mapping.code);
         } else {
+            // destroy value pool for mapping
+            ValuePool pool = configurationRegistry.getGraalValuePools(tenant).get(mapping.id);
+            if (pool != null) {
+                pool.destroy();
+            }
             // TODO GRAAL_PERFORMANCE remove code source from graalCode cache
-//            if(mapping.code != null)
-//                configurationRegistry.removeGraalsSourceMapping(tenant, mappingId);
+            // if(mapping.code != null)
+            // configurationRegistry.removeGraalSourceMapping(tenant, mappingId);
 
         }
         return mapping;

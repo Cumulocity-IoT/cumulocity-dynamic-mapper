@@ -55,6 +55,7 @@ import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
+import dynamic.mapping.processor.ValuePool;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.inbound.BaseProcessorInbound;
 import dynamic.mapping.processor.inbound.CodeBasedProcessorInbound;
@@ -80,14 +81,26 @@ public class ConfigurationRegistry {
 
     private Map<String, Engine> graalEngines = new ConcurrentHashMap<>();
 
-//    // Structure: < Tenant, Source>>
-//    private Map<String, Source> graalSourceShared = new ConcurrentHashMap<>();
-//
-//    // Structure: < Tenant, Source>>
-//    private Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
-//
-//    // Structure: < Tenant, < MappingIdentifier, < Source > >
-//    private Map<String, Map<String, Source>> graalSourceMapping = new ConcurrentHashMap<>();
+    // // Structure: < Tenant, Source>>
+    // private Map<String, Source> graalSourceShared = new ConcurrentHashMap<>();
+    //
+    // // Structure: < Tenant, Source>>
+    // private Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
+    //
+    // // Structure: < Tenant, < MappingIdentifier, < Source > >
+    // private Map<String, Map<String, Source>> graalSourceMapping = new
+    // ConcurrentHashMap<>();
+
+    // Structure: < Tenant, < MappingIdentifier, < ValuePool > >
+    private Map<String, Map<String, ValuePool>> graalValuePools = new ConcurrentHashMap<>();
+
+    public Map<String, ValuePool> getGraalValuePools(String tenant) {
+        return graalValuePools.get(tenant);
+    }
+
+    public void setGraalValuePools(Map<String, Map<String, ValuePool>> graalValuePools) {
+        this.graalValuePools = graalValuePools;
+    }
 
     private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
 
@@ -293,50 +306,56 @@ public class ConfigurationRegistry {
                 .build();
 
         graalEngines.put(tenant, eng);
-        //graalSourceShared.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
-        //        .get(TemplateType.SHARED.name()).getCode(), "sharedCode.js", false, null));
-        //graalSourceSystem.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
-        //        .get(TemplateType.SYSTEM.name()).getCode(), "systemCode.js", false, null));
-        //graalSourceMapping.put(tenant, new ConcurrentHashMap<>());
+        // graalSourceShared.put(tenant,
+        // decodeCode(serviceConfiguration.getCodeTemplates()
+        // .get(TemplateType.SHARED.name()).getCode(), "sharedCode.js", false, null));
+        // graalSourceSystem.put(tenant,
+        // decodeCode(serviceConfiguration.getCodeTemplates()
+        // .get(TemplateType.SYSTEM.name()).getCode(), "systemCode.js", false, null));
+        // graalSourceMapping.put(tenant, new ConcurrentHashMap<>());
     }
 
     public Engine getGraalEngine(String tenant) {
         return graalEngines.get(tenant);
     }
 
-//    public void updateGraalsSourceShared(String tenant, String code) {
-//        graalSourceShared.put(tenant, decodeCode(code, "sharedCode.js", false, null));
-//    }
-//
-//    public Source getGraalsSourceShared(String tenant) {
-//        return graalSourceShared.get(tenant);
-//    }
-//
-//    public void updateGraalsSourceSystem(String tenant, String code) {
-//        graalSourceSystem.put(tenant, decodeCode(code, "systemCode.js", false, null));
-//    }
-//
-//    public Source getGraalsSourceSystem(String tenant) {
-//        return graalSourceSystem.get(tenant);
-//    }
-//
-//    public void updateGraalsSourceMapping(String tenant, String mappingId, String code) {
-//        graalSourceMapping.get(tenant).put(mappingId, decodeCode(code, mappingId + ".js", true, mappingId));
-//    }
-//
-//    public Source getGraalsSourceMapping(String tenant, String mappingId) {
-//        return graalSourceMapping.get(tenant).get(mappingId);
-//    }
-//
-//    public void removeGraalsSourceMapping(String tenant, String mappingId) {
-//        graalSourceMapping.get(tenant).remove(mappingId);
-//    }
+    // public void updateGraalsSourceShared(String tenant, String code) {
+    // graalSourceShared.put(tenant, decodeCode(code, "sharedCode.js", false,
+    // null));
+    // }
+    //
+    // public Source getGraalsSourceShared(String tenant) {
+    // return graalSourceShared.get(tenant);
+    // }
+    //
+    // public void updateGraalsSourceSystem(String tenant, String code) {
+    // graalSourceSystem.put(tenant, decodeCode(code, "systemCode.js", false,
+    // null));
+    // }
+    //
+    // public Source getGraalsSourceSystem(String tenant) {
+    // return graalSourceSystem.get(tenant);
+    // }
+    //
+    // public void updateGraalsSourceMapping(String tenant, String mappingId, String
+    // code) {
+    // graalSourceMapping.get(tenant).put(mappingId, decodeCode(code, mappingId +
+    // ".js", true, mappingId));
+    // }
+    //
+    // public Source getGraalsSourceMapping(String tenant, String mappingId) {
+    // return graalSourceMapping.get(tenant).get(mappingId);
+    // }
+    //
+    // public void removeGraalsSourceMapping(String tenant, String mappingId) {
+    // graalSourceMapping.get(tenant).remove(mappingId);
+    // }
 
     public void removeGraalsResources(String tenant) {
         graalEngines.remove(tenant);
-//        graalSourceShared.remove(tenant);
-//        graalSourceSystem.remove(tenant);
-//        graalSourceMapping.remove(tenant);
+        // graalSourceShared.remove(tenant);
+        // graalSourceSystem.remove(tenant);
+        // graalSourceMapping.remove(tenant);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {
@@ -433,22 +452,23 @@ public class ConfigurationRegistry {
         if (hostAccess == null) {
             // Create a custom HostAccess configuration
             // SubstitutionContext public methods and basic collection operations
-                // Create a HostAccess instance with the desired configuration
-                // Allow access to public members of accessible classes
-                // Allow array access for basic functionality
-                // Allow List operations
-                // Allow Map operations
-                hostAccess = HostAccess.newBuilder()
-                        // Allow access to public members of accessible classes
-                        .allowPublicAccess(true)
-                        // Allow array access for basic functionality
-                        .allowArrayAccess(true)
-                        // Allow List operations
-                        .allowListAccess(true)
-                        // Allow Map operations
-                        .allowMapAccess(true)
-                        .build();
-                // log.info("HostAccess created with public access, array access, list access, and map access enabled.");
+            // Create a HostAccess instance with the desired configuration
+            // Allow access to public members of accessible classes
+            // Allow array access for basic functionality
+            // Allow List operations
+            // Allow Map operations
+            hostAccess = HostAccess.newBuilder()
+                    // Allow access to public members of accessible classes
+                    .allowPublicAccess(true)
+                    // Allow array access for basic functionality
+                    .allowArrayAccess(true)
+                    // Allow List operations
+                    .allowListAccess(true)
+                    // Allow Map operations
+                    .allowMapAccess(true)
+                    .build();
+            // log.info("HostAccess created with public access, array access, list access,
+            // and map access enabled.");
 
         }
         return hostAccess;

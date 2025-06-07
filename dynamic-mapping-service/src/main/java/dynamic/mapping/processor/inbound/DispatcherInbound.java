@@ -160,7 +160,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 }
 
                 MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
-                Context graalContext = null;
+                // Context graalContext = null;
 
                 // Create a basic context that includes identifying information even if
                 // processing fails
@@ -192,11 +192,12 @@ public class DispatcherInbound implements GenericMessageCallback {
                     if (mapping.code != null) {
                         try {
                             //contextSemaphore.acquire();
-                            graalContext = createGraalContext(this.graalEngine);
-                            context.setGraalContext(graalContext);
+                            // graalContext = createGraalContext(this.graalEngine);
+                            // context.setGraalContext(graalContext);
 //                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
 //                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
 //                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
+                            context.setGraalEngine(graalEngine);
                             context.setSharedCode(serviceConfiguration.getCodeTemplates()
                                      .get(TemplateType.SHARED.name()).getCode());
                             context.setSystemCode(serviceConfiguration.getCodeTemplates()
@@ -232,14 +233,14 @@ public class DispatcherInbound implements GenericMessageCallback {
                     criticalExceptions.add(e);
                 } finally {
                     // Clean up GraalVM context
-                    if (graalContext != null) {
-                        try {
-                            graalContext.close();
-                            graalContext = null;
-                        } catch (Exception e) {
-                            log.warn("{} - Error closing GraalVM context: {}", tenant, e.getMessage());
-                        }
-                    }
+                    // if (graalContext != null) {
+                    //     try {
+                    //         graalContext.close();
+                    //         graalContext = null;
+                    //     } catch (Exception e) {
+                    //         log.warn("{} - Error closing GraalVM context: {}", tenant, e.getMessage());
+                    //     }
+                    // }
                     //contextSemaphore.release();
 
                     // Always add the context to results, even if processing failed
