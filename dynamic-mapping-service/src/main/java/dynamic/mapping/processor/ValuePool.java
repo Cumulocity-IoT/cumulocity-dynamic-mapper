@@ -22,6 +22,7 @@ public class ValuePool {
 
     private final BlockingQueue<PooledValue> pool;
     private final AtomicInteger currentSize;
+    private final AtomicInteger idGenerator; // For generating unique IDs
     private final Engine graalEngine;
     private final String sharedCode;
     private final String systemCode;
@@ -29,12 +30,14 @@ public class ValuePool {
     private final String tenant;
     private final HostAccess hostAccess;
     private final Set<Context> createdContexts;
+    private final ConcurrentHashMap<Value, Integer> valueToIdMap; // Map Values to their IDs
     private Context.Builder graalContextBuilder;
 
     private ValuePool(String tenant, Engine graalEngine, HostAccess hostAccess, String sharedCode, String systemCode,
             Mapping mapping) {
         this.pool = new LinkedBlockingQueue<>(MAX_POOL_VALUE_SIZE);
         this.currentSize = new AtomicInteger(0);
+        this.idGenerator = new AtomicInteger(0);
         this.graalEngine = graalEngine;
         this.sharedCode = sharedCode;
         this.systemCode = systemCode;
@@ -42,6 +45,7 @@ public class ValuePool {
         this.mapping = mapping;
         this.tenant = tenant;
         this.createdContexts = ConcurrentHashMap.newKeySet();
+        this.valueToIdMap = new ConcurrentHashMap<>();
 
         log.info("{} - ValuePool initialized with max size: {}", tenant, MAX_POOL_VALUE_SIZE);
     }
@@ -52,18 +56,24 @@ public class ValuePool {
     private static class PooledValue {
         private final Value value;
         private final Context context;
-        
-        public PooledValue(Value value, Context context) {
+        private final int id;
+
+        public PooledValue(Value value, Context context, int id) {
             this.value = value;
             this.context = context;
+            this.id = id;
         }
-        
+
         public Value getValue() {
             return value;
         }
         
         public Context getContext() {
             return context;
+        }
+
+        public int getId() {
+            return id;
         }
     }
 
@@ -88,7 +98,8 @@ public class ValuePool {
             pooledValue = createNewPooledValue();
         } else {
             currentSize.decrementAndGet();
-            log.info("{} - Borrowed Value from pool. Current pool size: {}", tenant, currentSize.get());
+            log.info("{} - Borrowed Value [ID: {}] from pool. Current pool size: {}", 
+                     tenant, pooledValue.getId(), currentSize.get());
         }
 
         return pooledValue.getValue();
@@ -103,29 +114,38 @@ public class ValuePool {
             return;
         }
 
+        // Get the ID for this value
+        Integer valueId = valueToIdMap.get(value);
+        String idInfo = valueId != null ? " [ID: " + valueId + "]" : " [ID: unknown]";
+
         // Find the context associated with this value
         Context valueContext = null;
         try {
             valueContext = value.getContext();
         } catch (Exception e) {
-            log.warn("{} - Could not get context from Value, discarding", tenant, e);
+            log.warn("{} - Could not get context from Value{}, discarding", tenant, idInfo, e);
+            valueToIdMap.remove(value);
             return;
         }
 
         // Only return to pool if we created this context and there's space
         if (createdContexts.contains(valueContext) && currentSize.get() < MAX_POOL_VALUE_SIZE) {
-            PooledValue pooledValue = new PooledValue(value, valueContext);
+            PooledValue pooledValue = new PooledValue(value, valueContext, valueId != null ? valueId : -1);
             boolean added = pool.offer(pooledValue);
             if (added) {
                 currentSize.incrementAndGet();
-                log.info("{} - Returned Value to pool. Current pool size: {}", tenant, currentSize.get());
+                log.info("{} - Returned Value{} to pool. Current pool size: {}", 
+                         tenant, idInfo, currentSize.get());
             } else {
-                log.warn("{} - Failed to return Value to pool, closing context", tenant);
+                log.warn("{} - Failed to return Value{} to pool, closing context", tenant, idInfo);
                 closeValueContext(valueContext);
+                valueToIdMap.remove(value);
             }
         } else {
-            log.debug("{} - Pool is full or context not managed by pool, closing returned Value context", tenant);
+            log.debug("{} - Pool is full or context not managed by pool, closing returned Value{} context", 
+                      tenant, idInfo);
             closeValueContext(valueContext);
+            valueToIdMap.remove(value);
         }
     }
 
@@ -137,7 +157,9 @@ public class ValuePool {
 
         PooledValue pooledValue;
         while ((pooledValue = pool.poll()) != null) {
+            log.debug("{} - Closing PooledValue [ID: {}] during destroy", tenant, pooledValue.getId());
             closeValueContext(pooledValue.getContext());
+            valueToIdMap.remove(pooledValue.getValue());
             currentSize.decrementAndGet();
         }
 
@@ -154,6 +176,7 @@ public class ValuePool {
             }
         }
         createdContexts.clear();
+        valueToIdMap.clear();
 
         log.info("{} - ValuePool invalidated successfully", tenant);
     }
@@ -177,7 +200,8 @@ public class ValuePool {
      */
     private PooledValue createNewPooledValue() {
         try {
-            log.debug("{} - Creating new polyglot context and evaluating code", tenant);
+            int newId = idGenerator.incrementAndGet();
+            log.debug("{} - Creating new polyglot context and evaluating code [ID: {}]", tenant, newId);
 
             Context graalContext = createGraalContext();
             
@@ -217,8 +241,11 @@ public class ValuePool {
                 graalContext.eval(systemSource);
             }
 
-            log.debug("{} - Successfully created new PooledValue", tenant);
-            return new PooledValue(sourceValue, graalContext);
+            // Map the value to its ID for future reference
+            valueToIdMap.put(sourceValue, newId);
+
+            log.debug("{} - Successfully created new PooledValue [ID: {}]", tenant, newId);
+            return new PooledValue(sourceValue, graalContext, newId);
 
         } catch (Exception e) {
             log.error("{} - Failed to create new PooledValue", tenant, e);
@@ -226,8 +253,7 @@ public class ValuePool {
         }
     }
 
-    private Context createGraalContext()
-            throws Exception {
+    private Context createGraalContext() throws Exception {
         if (graalContextBuilder == null)
             graalContextBuilder = Context.newBuilder("js");
 
