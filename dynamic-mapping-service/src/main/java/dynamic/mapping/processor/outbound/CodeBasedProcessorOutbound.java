@@ -145,7 +145,10 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                             keySet == null ? 0 : keySet.size(), jsonObject);
                 }
             }
-
+        } catch (InterruptedException e) {
+            log.error("{} - Interrupted while processing mapping {}: {}", tenant, mapping.id, e.getMessage());
+            Thread.currentThread().interrupt();
+            throw new ProcessingException("Interrupted while processing mapping " + mapping.id + ": " + e.getMessage());
         } catch (Exception e) {
             throw new ProcessingException(e.getMessage());
         } finally {
