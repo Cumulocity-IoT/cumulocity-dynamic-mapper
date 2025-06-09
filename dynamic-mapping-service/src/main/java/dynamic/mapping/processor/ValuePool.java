@@ -19,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class ValuePool {
 
-    private static final int MAX_POOL_VALUE_SIZE = 150;
     private static final int MIN_POOL_VALUE_SIZE = 5; // Pre-populate with minimum values
     private static final long BORROW_TIMEOUT_MS = 5000; // 5 seconds timeout for borrowing
 
@@ -38,10 +37,11 @@ public class ValuePool {
     private final ConcurrentHashMap<Value, String> valueToThreadMap; // Track which thread created each value
     private Context.Builder graalContextBuilder;
     private volatile boolean destroyed = false;
+    private int maxPoolValueSize;
 
     private ValuePool(String tenant, Engine graalEngine, HostAccess hostAccess, String sharedCode, String systemCode,
-            Mapping mapping) {
-        this.pool = new LinkedBlockingQueue<>(MAX_POOL_VALUE_SIZE);
+            Mapping mapping, int maxPoolValueSize) {
+        this.pool = new LinkedBlockingQueue<>(maxPoolValueSize);
         this.currentSize = new AtomicInteger(0);
         this.totalCreated = new AtomicInteger(0);
         this.idGenerator = new AtomicInteger(0);
@@ -54,9 +54,10 @@ public class ValuePool {
         this.createdContexts = ConcurrentHashMap.newKeySet();
         this.valueToIdMap = new ConcurrentHashMap<>();
         this.valueToThreadMap = new ConcurrentHashMap<>();
+        this.maxPoolValueSize = maxPoolValueSize;
 
         log.info("{} - ValuePool initialized with max size: {}, min size: {}", 
-                 tenant, MAX_POOL_VALUE_SIZE, MIN_POOL_VALUE_SIZE);
+                 tenant, maxPoolValueSize, MIN_POOL_VALUE_SIZE);
         
         // Pre-populate the pool
         initializePool();
@@ -71,7 +72,7 @@ public class ValuePool {
         private final int id;
         private final String createdByThread;
 
-        public PooledValue(Value value, Context context, int id, String createdByThread) {
+        public PooledValue(Value value, Context context, int id, String createdByThread ){
             this.value = value;
             this.context = context;
             this.id = id;
@@ -99,9 +100,9 @@ public class ValuePool {
      * Factory method to create a ValuePool instance
      */
     public static ValuePool create(String tenant, Engine graalEngine, HostAccess hostAccess, String sharedCode,
-            String systemCode, Mapping mapping) {
+            String systemCode, Mapping mapping, int maxPoolValueSize) {
         log.debug("{} - Creating new ValuePool with engine: {}", tenant, graalEngine);
-        return new ValuePool(tenant, graalEngine, hostAccess, sharedCode, systemCode, mapping);
+        return new ValuePool(tenant, graalEngine, hostAccess, sharedCode, systemCode, mapping, maxPoolValueSize);
     }
 
     /**
@@ -134,7 +135,7 @@ public class ValuePool {
 
         if (pooledValue == null) {
             // Try to create a new one if we haven't reached the maximum total
-            if (totalCreated.get() < MAX_POOL_VALUE_SIZE * 2) { // Allow some overflow beyond pool size
+            if (totalCreated.get() < maxPoolValueSize * 2) { // Allow some overflow beyond pool size
                 log.info("{} - No Value available in pool, creating new one. Total created: {}", 
                          tenant, totalCreated.get());
                 pooledValue = createNewPooledValue();
@@ -178,7 +179,7 @@ public class ValuePool {
 
         if (pooledValue == null) {
             // Try to create a new one if we haven't reached the maximum total
-            if (totalCreated.get() < MAX_POOL_VALUE_SIZE * 2) {
+            if (totalCreated.get() < maxPoolValueSize * 2) {
                 log.info("{} - No Value available in pool, creating new one. Total created: {}", 
                          tenant, totalCreated.get());
                 pooledValue = createNewPooledValue();
@@ -231,7 +232,7 @@ public class ValuePool {
         }
 
         // Only return to pool if we created this context and there's space
-        if (createdContexts.contains(valueContext) && currentSize.get() < MAX_POOL_VALUE_SIZE) {
+        if (createdContexts.contains(valueContext) && currentSize.get() < maxPoolValueSize) {
             PooledValue pooledValue = new PooledValue(value, valueContext, valueId != null ? valueId : -1, 
                                                      borrowingThread != null ? borrowingThread : "unknown");
             boolean added = pool.offer(pooledValue);

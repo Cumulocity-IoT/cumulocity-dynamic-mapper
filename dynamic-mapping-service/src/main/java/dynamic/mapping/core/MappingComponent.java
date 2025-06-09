@@ -47,6 +47,7 @@ import org.graalvm.polyglot.Context;
 import org.joda.time.DateTime;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -57,6 +58,7 @@ import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorId;
 import dynamic.mapping.configuration.TemplateType;
@@ -80,6 +82,10 @@ import dynamic.mapping.processor.model.MappingType;
 public class MappingComponent {
 
     private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
+
+    @Value("${APP.maxPoolValueSize:450}")
+    @Getter
+    int maxPoolValueSize;
 
     @Autowired
     ConfigurationRegistry configurationRegistry;
@@ -148,7 +154,7 @@ public class MappingComponent {
                                             .get(TemplateType.SHARED.name()).getCode(),
                                     configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
                                             .get(TemplateType.SYSTEM.name()).getCode(),
-                                    mapping));
+                                    mapping, maxPoolValueSize));
                     log.info("{} - Created value pools for mapping: {}", tenant,
                             mapping.name);
                 });
@@ -563,7 +569,7 @@ public class MappingComponent {
                                         .get(TemplateType.SHARED.name()).getCode(),
                                 configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
                                         .get(TemplateType.SYSTEM.name()).getCode(),
-                                mapping));
+                                mapping, maxPoolValueSize));
             } else {
                 // if pool already exists, we can need to destroy the existing pool and create a
                 // new pool
@@ -577,7 +583,7 @@ public class MappingComponent {
                                         .get(TemplateType.SHARED.name()).getCode(),
                                 configurationRegistry.getServiceConfiguration(tenant).getCodeTemplates()
                                         .get(TemplateType.SYSTEM.name()).getCode(),
-                                mapping));
+                                mapping, maxPoolValueSize));
             }
             // TODO GRAAL_PERFORMANCE add code source to graalCode cache
             // if(mapping.code != null)
