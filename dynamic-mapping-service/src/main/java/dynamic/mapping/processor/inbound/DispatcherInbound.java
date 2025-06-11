@@ -53,7 +53,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
 
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Context;
@@ -112,10 +111,9 @@ public class DispatcherInbound implements GenericMessageCallback {
         Counter inboundProcessingCounter;
         AConnectorClient connectorClient;
         ExecutorService virtualThreadPool;
-        Engine graalsEngine;
+        Engine graalEngine;
         ConfigurationRegistry configurationRegistry;
-        Context.Builder graalsContextBuilder;
-        Semaphore contextSemaphore = new Semaphore(MAX_CONCURRENT_CODE_CONTEXT, true);
+        Context.Builder graalContextBuilder;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message, AConnectorClient connectorClient) {
@@ -134,7 +132,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                     .tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages")
                     .tag("connector", connectorMessage.getConnectorIdentifier()).register(Metrics.globalRegistry);
-            this.graalsEngine = configurationRegistry.getGraalsEngine(message.getTenant());
+            this.graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
             this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
             this.configurationRegistry = configurationRegistry;
         }
@@ -162,7 +160,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 }
 
                 MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
-                Context graalsContext = null;
+                Context graalContext = null;
 
                 // Create a basic context that includes identifying information even if
                 // processing fails
@@ -193,9 +191,9 @@ public class DispatcherInbound implements GenericMessageCallback {
                     // Prepare GraalVM context if code exists
                     if (mapping.code != null) {
                         try {
-                            contextSemaphore.acquire();
-                            graalsContext = setupGraalVMContext(this.graalsEngine);
-                            context.setGraalsContext(graalsContext);
+                            //contextSemaphore.acquire();
+                            graalContext = createGraalContext(this.graalEngine);
+                            context.setGraalContext(graalContext);
 //                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
 //                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
 //                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
@@ -234,15 +232,15 @@ public class DispatcherInbound implements GenericMessageCallback {
                     criticalExceptions.add(e);
                 } finally {
                     // Clean up GraalVM context
-                    if (graalsContext != null) {
+                    if (graalContext != null) {
                         try {
-                            graalsContext.close();
-                            graalsContext = null;
+                            graalContext.close();
+                            graalContext = null;
                         } catch (Exception e) {
                             log.warn("{} - Error closing GraalVM context: {}", tenant, e.getMessage());
                         }
                     }
-                    contextSemaphore.release();
+                    //contextSemaphore.release();
 
                     // Always add the context to results, even if processing failed
                     processingResult.add(context);
@@ -316,13 +314,13 @@ public class DispatcherInbound implements GenericMessageCallback {
             mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
-        private Context setupGraalVMContext(Engine graalsEngine)
+        private Context createGraalContext(Engine graalEngine)
                 throws Exception {
-            if(graalsContextBuilder == null)
-                graalsContextBuilder = Context.newBuilder("js");
+            if(graalContextBuilder == null)
+                graalContextBuilder = Context.newBuilder("js");
 
-            Context graalsContext = graalsContextBuilder
-                    .engine(graalsEngine)
+            Context graalContext = graalContextBuilder
+                    .engine(graalEngine)
                     //.option("engine.WarnInterpreterOnly", "false")
                     .allowHostAccess(configurationRegistry.getHostAccess())
                     .allowHostClassLookup(className ->
@@ -336,7 +334,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                             || className.equals("java.util.ArrayList") ||
                             className.equals("java.util.HashMap"))
                     .build();
-            return graalsContext;
+            return graalContext;
         }
 
         private void handleGraalVMError(String tenant, Mapping mapping, Exception e,

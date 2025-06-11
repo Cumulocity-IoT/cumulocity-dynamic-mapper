@@ -83,55 +83,41 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
         boolean substitutionTimeExists = false;
 
         if (mapping.code != null) {
-            Context graalsContext = context.getGraalsContext();
+
+            Context graalContext = context.getGraalContext();
 
             String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
-            Value extractFromSourceFunc =
-                    graalsContext.getBindings("js").getMember(identifier);
+            Value bindings = graalContext.getBindings("js");
 
-            if (extractFromSourceFunc == null) {
-                byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
-                String decodedCode = new String(decodedBytes);
-                String decodedCodeAdapted = decodedCode.replaceFirst(
-                        Mapping.EXTRACT_FROM_SOURCE,
-                        identifier);
-                Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
-                                ".js")
-                        .buildLiteral();
-                graalsContext.eval(source);
-                extractFromSourceFunc = graalsContext.getBindings("js")
-                        .getMember(identifier);
-            }
+            byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+            String decodedCode = new String(decodedBytes);
+            String decodedCodeAdapted = decodedCode.replaceFirst(
+                    Mapping.EXTRACT_FROM_SOURCE,
+                    identifier);
+            Source source = Source.newBuilder("js", decodedCodeAdapted, identifier +
+                    ".js")
+                    .buildLiteral();
+            graalContext.eval(source);
+            Value sourceValue = bindings
+                    .getMember(identifier);
 
             if (context.getSharedCode() != null) {
-                byte[] decodedSharedCodeBytes =
-                        Base64.getDecoder().decode(context.getSharedCode());
+                byte[] decodedSharedCodeBytes = Base64.getDecoder().decode(context.getSharedCode());
                 String decodedSharedCode = new String(decodedSharedCodeBytes);
                 Source sharedSource = Source.newBuilder("js", decodedSharedCode,
-                                "sharedCode.js")
+                        "sharedCode.js")
                         .buildLiteral();
-                graalsContext.eval(sharedSource);
+                graalContext.eval(sharedSource);
             }
 
             if (context.getSystemCode() != null) {
-                byte[] decodedSystemCodeBytes =
-                        Base64.getDecoder().decode(context.getSystemCode());
+                byte[] decodedSystemCodeBytes = Base64.getDecoder().decode(context.getSystemCode());
                 String decodedSystemCode = new String(decodedSystemCodeBytes);
                 Source systemSource = Source.newBuilder("js", decodedSystemCode,
-                                "systemCode.js")
+                        "systemCode.js")
                         .buildLiteral();
-                graalsContext.eval(systemSource);
+                graalContext.eval(systemSource);
             }
-
-//            if (context.getSystemSource() != null) {
-//                graalsContext.eval(context.getSystemSource());
-//            }
-//            if (context.getSharedSource() != null) {
-//                graalsContext.eval(context.getSharedSource());
-//            }
-//            if (context.getMappingSource() != null) {
-//                graalsContext.eval(context.getMappingSource());
-//            }
 
             Map jsonObject = (Map) context.getPayload();
             String payloadAsString = Functions.string(context.getPayload(), false);
@@ -146,7 +132,7 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
             };
             ((Map) jsonObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
 
-            final Value result = extractFromSourceFunc
+            final Value result = sourceValue
                     .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
                             payloadAsString));
 

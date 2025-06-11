@@ -445,11 +445,11 @@ public class MappingComponent {
         Mapping mapping = getMapping(tenant, id);
         mapping.setDebug(debug);
         if (Direction.INBOUND.equals(mapping.direction)) {
-            // step 2. retrieve collected snoopedTemplates
+            // step 2. retrieve collected snoopedTemplates from inbound cache
             mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         } else {
-            // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
+            // step 2. retrieve collected snoopedTemplates from outbound cache
+            mapping.setSnoopedTemplates(getMappingOutboundFromCache(tenant, id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -497,11 +497,11 @@ public class MappingComponent {
         if (active) {
             MappingStatus mappingStatus = getMappingStatus(tenant, mapping);
             mappingStatus.currentFailureCount = 0;
-            // TODO GRAALS_PERFORMANCE add code source to graalsCode cache
+            // TODO GRAAL_PERFORMANCE add code source to graalCode cache
 //            if(mapping.code != null)
 //                configurationRegistry.updateGraalsSourceMapping(tenant, mappingId, mapping.code);
         } else {
-            // TODO GRAALS_PERFORMANCE remove code source from graalsCode cache
+            // TODO GRAAL_PERFORMANCE remove code source from graalCode cache
 //            if(mapping.code != null)
 //                configurationRegistry.removeGraalsSourceMapping(tenant, mappingId);
 
@@ -790,7 +790,7 @@ public class MappingComponent {
         if (mapping.code != null) {
             String globalIdentifier = "delete globalThis" + Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
             try (Context context = Context.newBuilder("js")
-                    .engine(configurationRegistry.getGraalsEngine(tenant))
+                    .engine(configurationRegistry.getGraalEngine(tenant))
                     .logHandler(GRAALJS_LOG_HANDLER)
                     .allowHostAccess(configurationRegistry.getHostAccess())
                     .allowAllAccess(true)
