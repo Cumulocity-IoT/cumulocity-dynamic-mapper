@@ -107,9 +107,9 @@ public class ProcessingContext<O> {
 
     private String sourceId;
 
-    private Engine graalsEngine;
+    private Engine graalEngine;
 
-    private Context graalsContext;
+    private Context graalContext;
 
     private String sharedCode;
 
@@ -121,7 +121,7 @@ public class ProcessingContext<O> {
 
     private Source mappingSource;
 
-    private Value extractFromSourceFunc;
+    private Value sourceValue;
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();

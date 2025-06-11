@@ -56,14 +56,10 @@ import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 
 import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.Value;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -276,7 +272,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 }
 
                 MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
-                Context graalsContext = null;
+                Context graalContext = null;
 
                 // Create a basic context that includes identifying information even if
                 // processing fails
@@ -309,8 +305,8 @@ public class DispatcherOutbound implements NotificationCallback {
                     // Prepare GraalVM context if code exists
                     if (mapping.code != null) {
                         try {
-                            graalsContext = setupGraalVMContext(configurationRegistry.getGraalsEngine(c8yMessage.getTenant()));
-                            context.setGraalsContext(graalsContext);
+                            graalContext = createGraalContext(configurationRegistry.getGraalEngine(c8yMessage.getTenant()));
+                            context.setGraalContext(graalContext);
 //                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
 //                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
 //                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
@@ -353,9 +349,9 @@ public class DispatcherOutbound implements NotificationCallback {
                     mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
                 } finally {
                     // Clean up GraalVM context
-                    if (graalsContext != null) {
+                    if (graalContext != null) {
                         try {
-                            graalsContext.close();
+                            graalContext.close();
                         } catch (Exception e) {
                             log.warn("{} - Error closing GraalVM context: {}", tenant, e.getMessage());
                         }
@@ -416,10 +412,10 @@ public class DispatcherOutbound implements NotificationCallback {
 
         }
 
-        private Context setupGraalVMContext(Engine graalsEngine)
+        private Context createGraalContext(Engine graalEngine)
                 throws Exception {
-            Context graalsContext = Context.newBuilder("js")
-                    .engine(graalsEngine)
+            Context graalContext = Context.newBuilder("js")
+                    .engine(graalEngine)
                     // .option("engine.WarnInterpreterOnly", "false")
                     .allowHostAccess(configurationRegistry.getHostAccess())
                     .allowHostClassLookup(className ->
@@ -434,7 +430,7 @@ public class DispatcherOutbound implements NotificationCallback {
                             className.equals("java.util.HashMap"))
                     .build();
 
-            return graalsContext;
+            return graalContext;
         }
 
         private void handleGraalVMError(String tenant, Mapping mapping, Exception e,
