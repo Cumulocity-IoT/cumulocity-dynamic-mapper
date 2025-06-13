@@ -53,7 +53,8 @@ export class ConnectorConfigurationComponent {
     public connectorConfigurationService: ConnectorConfigurationService,
     public alertService: AlertService,
     private sharedService: SharedService,
-  ) { }
+  ) { 
+  }
 
   refresh() {
     this.connectorGrid.refresh();
@@ -73,5 +74,10 @@ export class ConnectorConfigurationComponent {
 
   async onConfigurationAdd() {
     this.connectorGrid.onConfigurationAdd();
+  }
+
+
+  async ngOnInit() {
+    this.feature = await this.sharedService.getFeatures();
   }
 }

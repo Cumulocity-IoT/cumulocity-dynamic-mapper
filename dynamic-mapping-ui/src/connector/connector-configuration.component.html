@@ -21,15 +21,15 @@
 
 <c8y-title>Connectors</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Add connector' | translate }}" (click)="onConfigurationAdd()">
+  <button class="btn btn-link" title="{{ 'Add connector' | translate }}" (click)="onConfigurationAdd()" [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="connected"></i>
     {{ 'Add connector' | translate }}
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Reconnect notification endpoint' | translate }}"
-    (click)="clickedReconnect2NotificationEndpoint()">
-    <i c8yIcon="disconnected"></i>
+    (click)="clickedReconnect2NotificationEndpoint()" [disabled]="!feature?.userHasMappingAdminRole">
+    <i c8yIcon="disconnected"></i> 
     {{ 'Reconnect notification endpoint' | translate }}
   </button>
 </c8y-action-bar-item>

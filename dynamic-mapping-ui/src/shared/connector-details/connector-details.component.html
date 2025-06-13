@@ -58,6 +58,7 @@
                   type="checkbox"
                   [checked]="configuration?.enabled"
                   (change)="onConfigurationToggle()"
+                  [disabled]="!feature?.userHasMappingAdminRole"
                 />
                 <span></span>Enabled / Disabled</label
               >
@@ -82,7 +83,7 @@
               class="btn btn-default"
               title="{{ 'Update connector' | translate }}"
               (click)="onConfigurationUpdate()"
-              [disabled]="configuration?.enabled"
+              [disabled]="configuration?.enabled || !feature?.userHasMappingAdminRole"
             >
               <i c8yIcon="pencil"></i>
               {{ 'Update connector' | translate }}

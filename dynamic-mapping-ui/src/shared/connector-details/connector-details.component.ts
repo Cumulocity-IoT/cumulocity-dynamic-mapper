@@ -29,6 +29,7 @@ import {
   ConnectorSpecification,
   ConnectorStatus,
   Direction,
+  Feature,
   LoggingEventType,
   LoggingEventTypeMap,
   Operation,
@@ -52,6 +53,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   specifications: ConnectorSpecification[] = [];
   statusLogs$: Observable<any[]>;
   configuration: ConnectorConfiguration;
+  feature: Feature;
   filterStatusLog = {
     connectorIdentifier: 'ALL',
     type: LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
@@ -60,6 +62,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   LoggingEventType = LoggingEventType;
   ConnectorType = ConnectorType;
   contextSubscription: Subscription;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -76,6 +79,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     // console.log('Running version', this.version);
     this.specifications = await this.connectorConfigurationService.getConnectorSpecifications();
+    this.feature = await this.sharedService.getFeatures();
     this.contextSubscription = this.route.data.pipe(
       takeUntil(this.destroy$),
       tap(({ connector }) => {
