@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -84,15 +85,6 @@ public class MappingController {
     @Autowired
     private ContextService<UserCredentials> contextService;
 
-    @Value("${APP.userRolesEnabled}")
-    private Boolean userRolesEnabled;
-
-    @Value("${APP.mappingAdminRole}")
-    private String mappingAdminRole;
-
-    @Value("${APP.mappingCreateRole}")
-    private String mappingCreateRole;
-
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<Mapping>> getMappings(@RequestParam(required = false) Direction direction) {
         String tenant = contextService.getContext().getTenant();
@@ -112,6 +104,7 @@ public class MappingController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
+    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
     @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteMapping(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
@@ -143,6 +136,7 @@ public class MappingController {
 
     // TODO We might need to add the connector ID here to correlate mappings to
     // exactly one connector
+    @PreAuthorize("hasAnyRole('ROLE_MAPPING_ADMIN', 'ROLE_MAPPING_CREATE')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
@@ -175,7 +169,7 @@ public class MappingController {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
-
+    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         String tenant = contextService.getContext().getTenant();

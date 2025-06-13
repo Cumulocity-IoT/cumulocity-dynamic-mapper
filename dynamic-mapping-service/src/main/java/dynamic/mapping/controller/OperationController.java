@@ -44,6 +44,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -93,15 +94,6 @@ public class OperationController {
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
 
-    @Value("${APP.userRolesEnabled}")
-    private Boolean userRolesEnabled;
-
-    @Value("${APP.mappingAdminRole}")
-    private String mappingAdminRole;
-
-    @Value("${APP.mappingCreateRole}")
-    private String mappingCreateRole;
-
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -109,6 +101,7 @@ public class OperationController {
         this.objectMapper = objectMapper;
     }
 
+    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> runOperation(@Valid @RequestBody ServiceOperation operation) {
         String tenant = contextService.getContext().getTenant();

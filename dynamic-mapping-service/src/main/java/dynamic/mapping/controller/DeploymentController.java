@@ -76,15 +76,6 @@ public class DeploymentController {
 	@Autowired
 	private ContextService<UserCredentials> contextService;
 
-	@Value("${APP.userRolesEnabled}")
-	private Boolean userRolesEnabled;
-
-	@Value("${APP.mappingAdminRole}")
-	private String mappingAdminRole;
-
-	@Value("${APP.mappingCreateRole}")
-	private String mappingCreateRole;
-
 	@GetMapping(value = "/effective",  consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, DeploymentMapEntry>> getMappingsDeployed() {
 		String tenant = contextService.getContext().getTenant();
