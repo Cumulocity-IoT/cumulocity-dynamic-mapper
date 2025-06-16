@@ -17,13 +17,13 @@
  *
  * @authors Christof Strack
  */
-import { Component, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   AlertService,
   CellRendererContext,
   gettext
 } from '@c8y/ngx-components';
-import { Direction, Operation, SharedService } from '../..';
+import { Direction, Feature, Operation, SharedService } from '../..';
 import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
 import { HttpStatusCode } from '@angular/common/http';
 
@@ -44,7 +44,7 @@ import { HttpStatusCode } from '@angular/common/http';
         <input
           type="checkbox"
           [checked]="context.value"
-          [disabled]="context.item.readOnly"
+          [disabled]="context.item.readOnly || !feature?.userHasMappingAdminRole"
           (change)="onConfigurationToggle()"
         />
         <span></span>
@@ -53,7 +53,7 @@ import { HttpStatusCode } from '@angular/common/http';
   `,
   standalone: false
 })
-export class StatusEnabledRendererComponent {
+export class StatusEnabledRendererComponent implements OnInit {
   constructor(
     public context: CellRendererContext,
     public alertService: AlertService,
@@ -61,6 +61,11 @@ export class StatusEnabledRendererComponent {
     private connectorConfigurationService: ConnectorConfigurationService
   ) {
     // console.log('Status', context, context.value);
+  }
+
+  feature: Feature;
+  async ngOnInit() {
+        this.feature = await this.sharedService.getFeatures();
   }
 
   async onConfigurationToggle() {
