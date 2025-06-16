@@ -57,7 +57,8 @@ import {
   LabelRendererComponent,
   MappingTypeDescriptionMap,
   SharedService,
-  StepperConfiguration
+  StepperConfiguration,
+  Feature
 } from '../../shared';
 
 import { HttpStatusCode } from '@angular/common/http';
@@ -150,6 +151,8 @@ export class MappingComponent implements OnInit, OnDestroy {
   bulkActionControls: BulkActionControl[] = [];
   codeTemplateInbound: string;
   codeTemplateOutbound: string;
+
+  feature: Feature;
 
   constructor(
     public mappingService: MappingService,
@@ -265,24 +268,30 @@ export class MappingComponent implements OnInit, OnDestroy {
           const activeMappings = this.mappingsEnriched$
             .getValue()
             ?.filter((m) => m.mapping.active);
-          const result = activeMappings?.some((m) =>
+          let result = activeMappings?.some((m) =>
             selectedItemIds?.includes(m.mapping.id)
           );
           // console.log('Selected mappings (showIf):', selectedItemIds);
-          return !result;
+          return !result && this.feature?.userHasMappingAdminRole;
         }
       },
       {
         type: 'ACTIVATE',
         text: 'Activate',
         icon: 'toggle-on',
-        callback: this.activateMappingBulk.bind(this)
+        callback: this.activateMappingBulk.bind(this),
+        showIf: (selectedItemIds: string[]) => {
+          return this.feature?.userHasMappingAdminRole;
+        }
       },
       {
         type: 'DEACTIVATE',
         text: 'Deactivate',
         icon: 'toggle-off',
-        callback: this.deactivateMappingBulk.bind(this)
+        callback: this.deactivateMappingBulk.bind(this),
+        showIf: (selectedItemIds: string[]) => {
+          return this.feature?.userHasMappingAdminRole;
+        }
       },
       {
         type: 'EXPORT',
@@ -332,6 +341,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           this.alertService.danger('Failed to fetch outbound mappings');
         });
     }
+    this.feature = await this.sharedService.getFeatures();
   }
 
   async editMessageFilter(m: MappingEnriched) {
