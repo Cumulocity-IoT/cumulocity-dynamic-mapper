@@ -59,7 +59,8 @@ import {
   SnoopStatus,
   StepperConfiguration,
   createCustomUuid,
-  MappingType
+  MappingType,
+  Feature
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
@@ -153,7 +154,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     removeModes: ['table'],
     mainMenuBar: true,
     navigationBar: false,
-    statusBar: true
+    statusBar: true,
+    readOnly: false,
+
   };
 
   editorOptionsSourceSubstitution = {
@@ -211,6 +214,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   currentStepIndex: number;
   codeEditorHelp = 'JavaScript for creating substitutions. Please do not change the methods signature <code>function extractFromSource(ctx)</code>. <br> Define substitutions: <code>Substitution(String key, Object value, String type, String repairStrategy)</code> <br> with <code>type</code>: <code>"ARRAY"</code>, <code>"IGNORE"</code>, <code>"NUMBER"</code>, <code>"OBJECT"</code>, <code>"TEXTUAL"</code> <br>and <code>repairStrategy</code>: <br><code>"DEFAULT"</code>, <code>"USE_FIRST_VALUE_OF_ARRAY"</code>, <code>"USE_LAST_VALUE_OF_ARRAY"</code>, <code>"IGNORE"</code>, <code>"REMOVE_IF_MISSING_OR_NULL"</code>,<code>"CREATE_IF_MISSING"</code>';
   targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
+  feature: Feature;
 
   constructor(
     public bsModalService: BsModalService,
@@ -221,8 +225,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     private elementRef: ElementRef
   ) { }
 
-  ngOnInit() {
+  async ngOnInit() {
     // console.log('mapping-stepper', this._deploymentMapEntry, this.deploymentMapEntry);
+    this.feature = await this.sharedService.getFeatures();
+    if (!this.feature?.userHasMappingAdminRole) {
+      this.editorOptionsSourceSubstitution.readOnly = true;
+      this.editorOptionsTargetSubstitution.readOnly = true;
+      this.editorOptionsSourceTemplate.readOnly = true;
+      this.editorOptionsTargetTemplate.readOnly = true;
+    }
     if (
       this.mapping.snoopStatus === SnoopStatus.NONE ||
       this.mapping.snoopStatus === SnoopStatus.STOPPED
@@ -292,7 +303,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               customWrapperClass: 'm-b-24',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                !this.stepperConfiguration.allowDefiningSubstitutions,
+                !this.stepperConfiguration.allowDefiningSubstitutions || !this.feature?.userHasMappingAdminRole,
               placeholder: '$exists(c8y_TemperatureMeasurement)',
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:

@@ -1,0 +1,7 @@
+/* Target the custom button when user has no admin role */
+.user-no-admin-role button[data-cy="custom"],
+.user-no-admin-role button[title="Confirm"] {
+  pointer-events: none !important;
+  opacity: var(--c8y-root-component-disabled-opacity) !important;
+  cursor: not-allowed !important;
+}
