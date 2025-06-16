@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   AlertService,
   CellRendererContext,
@@ -44,7 +44,7 @@ import { HttpStatusCode } from '@angular/common/http';
         <input
           type="checkbox"
           [checked]="context.value"
-          [disabled]="context.item.readOnly || !feature?.userHasMappingAdminRole"
+          [disabled]="isInputDisabled"
           (change)="onConfigurationToggle()"
         />
         <span></span>
@@ -58,14 +58,26 @@ export class StatusEnabledRendererComponent implements OnInit {
     public context: CellRendererContext,
     public alertService: AlertService,
     public sharedService: SharedService,
-    private connectorConfigurationService: ConnectorConfigurationService
+    private connectorConfigurationService: ConnectorConfigurationService,
+    private cdr: ChangeDetectorRef
   ) {
     // console.log('Status', context, context.value);
   }
 
   feature: Feature;
+  
   async ngOnInit() {
-        this.feature = await this.sharedService.getFeatures();
+    try {
+      this.feature = await this.sharedService.getFeatures();
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('Error loading features in component', error);
+    }
+  }
+
+  get isInputDisabled(): boolean {
+    const disabled = this.context.item.readOnly || !this.feature?.userHasMappingAdminRole;
+    return disabled;
   }
 
   async onConfigurationToggle() {

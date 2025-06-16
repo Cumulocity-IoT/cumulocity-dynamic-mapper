@@ -179,13 +179,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       {
         type: BuiltInActionType.Edit,
         callback: this.updateMapping.bind(this),
-        showIf: (item) => !item['mapping']['active']
+        showIf: (item) => (!item['mapping']['active'] && this.feature?.userHasMappingAdminRole)
       },
       {
         type: 'VIEW',
         icon: 'eye',
         callback: this.updateMapping.bind(this),
-        showIf: (item) => item['mapping']['active']
+        showIf: (item) => item['mapping']['active'] || !this.feature?.userHasMappingAdminRole
       },
       {
         text: 'Duplicate',

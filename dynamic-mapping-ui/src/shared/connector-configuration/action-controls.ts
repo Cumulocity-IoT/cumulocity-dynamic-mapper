@@ -26,12 +26,14 @@ import { StatusEnabledRendererComponent } from './renderer/status-enabled-render
 import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.renderer.component';
 
 export const ACTION_CONTROLS: ActionControlConfig[] = [
+  // Edit action for admin users on disabled connectors
   {
     type: BuiltInActionType.Edit,
     callbackName: 'onConfigurationUpdate',
     visibilityRules: [
       { type: 'enabled', value: false },
-      { type: 'readOnly', value: false }
+      { type: 'readOnly', value: false },
+      { type: 'userRole', value: true }
     ] as ActionVisibilityRule[]
   },
   {
@@ -39,20 +41,21 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
     icon: 'eye',
     callbackName: 'onConfigurationUpdate',
     visibilityRules: [
-      { type: 'enabled', value: true },
       { type: 'readOnly', value: false },
-      { type: 'connectorType' }
+      { type: 'connectorType' },
+      { type: 'userRole', value: 'viewLogic' } // Custom logic
     ] as ActionVisibilityRule[]
   },
   {
-    text: 'Duplicate',
     type: 'duplicate',
+    text: 'Duplicate',
     icon: 'duplicate',
     callbackName: 'onConfigurationCopy',
     visibilityRules: [
       { type: 'enabled', value: false },
       { type: 'readOnly', value: false },
-      { type: 'connectorType' }
+      { type: 'connectorType' },
+      { type: 'userRole', value: true } // Admin user
     ] as ActionVisibilityRule[]
   },
   {
@@ -61,67 +64,68 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
     visibilityRules: [
       { type: 'enabled', value: false },
       { type: 'readOnly', value: false },
-      { type: 'connectorType' }
+      { type: 'connectorType' },
+      { type: 'userRole', value: true } // Admin user
     ] as ActionVisibilityRule[]
   }
 ];
 
 export const GRID_COLUMNS: Column[] = [
-    {
-      name: 'identifier',
-      header: 'Identifier',
-      path: 'identifier',
-      filterable: false,
-      sortOrder: 'ASC',
-      visible: false,
-      gridTrackSize: '10%'
-    },
-    {
-      name: 'name',
-      header: 'Name',
-      path: 'name',
-      filterable: false,
-      sortOrder: 'ASC',
-      visible: true,
-      cellRendererComponent: ConnectorDetailCellRendererComponent,
-      gridTrackSize: '25%'
-    },
-    {
-      name: 'connectorType',
-      header: 'Type',
-      path: 'connectorType',
-      filterable: false,
-      sortOrder: 'ASC',
-      visible: true,
-      cellRendererComponent: LabelRendererComponent,
-      gridTrackSize: '15%'
-    },
-    {
-      name: 'supportedDirections',
-      header: 'Directions',
-      path: 'supportedDirections',
-      filterable: false,
-      sortOrder: 'ASC',
-      visible: true,
-      cellRendererComponent: LabelRendererComponent,
-      gridTrackSize: '10%'
-    },
-    {
-      name: 'status',
-      header: 'Status',
-      path: 'status',
-      filterable: false,
-      sortable: true,
-      cellRendererComponent: ConnectorStatusRendererComponent,
-      gridTrackSize: '17%'
-    },
-    {
-      name: 'enabled',
-      header: 'Enabled',
-      path: 'enabled',
-      filterable: false,
-      sortable: true,
-      cellRendererComponent: StatusEnabledRendererComponent,
-      gridTrackSize: '16%'
-    }
-  ] as Column[];
+  {
+    name: 'identifier',
+    header: 'Identifier',
+    path: 'identifier',
+    filterable: false,
+    sortOrder: 'ASC',
+    visible: false,
+    gridTrackSize: '10%'
+  },
+  {
+    name: 'name',
+    header: 'Name',
+    path: 'name',
+    filterable: false,
+    sortOrder: 'ASC',
+    visible: true,
+    cellRendererComponent: ConnectorDetailCellRendererComponent,
+    gridTrackSize: '25%'
+  },
+  {
+    name: 'connectorType',
+    header: 'Type',
+    path: 'connectorType',
+    filterable: false,
+    sortOrder: 'ASC',
+    visible: true,
+    cellRendererComponent: LabelRendererComponent,
+    gridTrackSize: '15%'
+  },
+  {
+    name: 'supportedDirections',
+    header: 'Directions',
+    path: 'supportedDirections',
+    filterable: false,
+    sortOrder: 'ASC',
+    visible: true,
+    cellRendererComponent: LabelRendererComponent,
+    gridTrackSize: '10%'
+  },
+  {
+    name: 'status',
+    header: 'Status',
+    path: 'status',
+    filterable: false,
+    sortable: true,
+    cellRendererComponent: ConnectorStatusRendererComponent,
+    gridTrackSize: '17%'
+  },
+  {
+    name: 'enabled',
+    header: 'Enabled',
+    path: 'enabled',
+    filterable: false,
+    sortable: true,
+    cellRendererComponent: StatusEnabledRendererComponent,
+    gridTrackSize: '16%'
+  }
+] as Column[];

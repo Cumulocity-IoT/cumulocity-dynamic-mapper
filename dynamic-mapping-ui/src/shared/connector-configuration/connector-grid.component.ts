@@ -27,12 +27,13 @@ import { cloneDeep } from 'lodash';
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
-import { DeploymentMapEntry, Direction } from '../mapping/mapping.model';
+import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
 import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
+import { SharedService } from '..';
 
 @Component({
   selector: 'd11r-mapping-connector-grid',
@@ -66,22 +67,25 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
 
   columns: Column[];
   actionControls: ActionControl[];
+  feature: Feature;
 
   constructor(
     private bsModalService: BsModalService,
     private connectorConfigurationService: ConnectorConfigurationService,
     private alertService: AlertService,
+    public sharedService: SharedService,
   ) {
 
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.initializeColumns();
     this.initializeActionControls();
     this.initializeSelection();
     this.initializeConfigurations();
     this.initializeSpecifications();
     this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
+    this.feature = await this.sharedService.getFeatures();
   }
 
   ngAfterViewInit(): void {
@@ -258,7 +262,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
 
   get shouldHideBulkActionsAndReadOnly(): boolean {
     //return this.selectable && this.readOnly;
-    return  this.readOnly;
+    return this.readOnly;
   }
 
   // Helper methods for showing modals
@@ -303,11 +307,18 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     return rules.every(rule => {
       switch (rule.type) {
         case 'enabled':
-          return item.enabled === rule.value;
+          return (item.enabled === rule.value);
         case 'readOnly':
-          return this.readOnly === rule.value;
+          return (this.readOnly === rule.value);
         case 'connectorType':
           return item.connectorType !== ConnectorType.HTTP;
+        case 'userRole':
+          const userHasAdminRole = this.feature?.userHasMappingAdminRole;
+          if (rule.value === 'viewLogic') {
+            // Show VIEW if: (admin + enabled) OR (non-admin + any status)
+            return (userHasAdminRole && item.enabled) || !userHasAdminRole;
+          }
+          return rule.value ? userHasAdminRole : !userHasAdminRole;
         default:
           return true;
       }
