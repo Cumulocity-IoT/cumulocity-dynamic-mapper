@@ -21,11 +21,11 @@
 
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, JsonEditorComponent, NODE1, NODE3 } from '../shared';
+import { Direction, Feature, JsonEditorComponent, NODE1, NODE3, SharedService } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-
+import { AlertService } from '@c8y/ngx-components';
 @Component({
   selector: 'd11r-landing',
   templateUrl: './landing.component.html',
@@ -35,6 +35,8 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 export class LandingComponent implements OnInit {
   constructor(
     private mappingService: MappingService,
+    public sharedService: SharedService,
+    public alertService: AlertService,
     private connectorConfigurationService: ConnectorConfigurationService,
     private sanitizer: DomSanitizer
   ) {
@@ -54,7 +56,9 @@ export class LandingComponent implements OnInit {
   linkSnoopProcess: string = '';
   linkSVG: SafeResourceUrl;
 
-  ngOnInit(): void {
+  feature: Feature;
+
+  async ngOnInit(): Promise<void> {
     this.linkSnoopProcess = '/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Snooping_Stepper_Process.svg';
     from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
       (mappings) => {
@@ -71,6 +75,13 @@ export class LandingComponent implements OnInit {
     ).subscribe((count) =>
       this.countConnector$.next(!count ? 'no' : count.length)
     );
+
+    this.feature = await this.sharedService.getFeatures();
+    if (this.feature?.userHasMappingAdminRole) {
+      this.alertService.warning(
+        "You don't have the role 'Mapping Admin' and therefore cannot create or edit mappings/connectors. Please contact your administrator."
+      );
+    }
   }
 
 }
