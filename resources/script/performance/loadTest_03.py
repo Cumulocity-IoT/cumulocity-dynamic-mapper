@@ -33,6 +33,7 @@ if not broker:
 # Set port from environment variable or use default
 try:
     port = int(get_env("MQTT_PORT", 9883))
+    logger.info(f"Port defined port={port}")
 except (ValueError, TypeError):
     # If MQTT_PORT exists but is not a valid integer
     port = 9883
@@ -40,8 +41,8 @@ except (ValueError, TypeError):
 # Set username from environment variables
 # Priority: USERNAME > C8Y_TENANT/C8Y_USERNAME
 username = get_env("USERNAME")
-if not username:
-    c8y_tenant = get_env("C8Y_TENANT")
+c8y_tenant = get_env("C8Y_TENANT")
+if c8y_tenant:
     c8y_username = get_env("C8Y_USERNAME")
     if c8y_tenant and c8y_username:
         username = f"{c8y_tenant}/{c8y_username}"
@@ -77,8 +78,8 @@ ARRAY_MESSAGE = True
 QUEUE_SIZE = 5000  # the size of the queue
 
 # parameter to control load
-TPS = 500# TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
-WORKERS = 20
+TPS = 5# TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
+WORKERS = 2
 SLEEP_BETWEEN_ITERATIONS = 0
 
 # functional parameter
