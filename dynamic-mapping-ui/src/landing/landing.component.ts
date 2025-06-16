@@ -77,7 +77,7 @@ export class LandingComponent implements OnInit {
     );
 
     this.feature = await this.sharedService.getFeatures();
-    if (this.feature?.userHasMappingAdminRole) {
+    if (!this.feature?.userHasMappingAdminRole) {
       this.alertService.warning(
         "You don't have the role 'Mapping Admin' and therefore cannot create or edit mappings/connectors. Please contact your administrator."
       );
