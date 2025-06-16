@@ -34,7 +34,7 @@ import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { EditorMode } from '../shared/stepper.model';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
-import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, MappingType, ExtensionType } from '../../shared';
+import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, MappingType, ExtensionType, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 
 @Component({
@@ -67,11 +67,13 @@ export class MappingStepPropertiesComponent
   filterMappingModel: any;
   filterInventoryModel: any;
   readOnlyHelp = ' To edit this mapping deactivate the mapping first in mapping list.';
+  feature: any;
 
 
   constructor(
     private formatStringPipe: FormatStringPipe,
     public mappingService: MappingService,
+    public sharedService: SharedService,
   ) { }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -83,7 +85,8 @@ export class MappingStepPropertiesComponent
     }
   }
 
-  ngOnInit() {
+  async ngOnInit() {
+    this.feature = await this.sharedService.getFeatures();
     // console.log('EditorMode', this.stepperConfiguration.editorMode, this.stepperConfiguration.editorMode !== EditorMode.CREATE);
     // set value for backward compatibility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
@@ -126,7 +129,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Mapping Name',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               required: true
             }
           },
@@ -139,7 +142,7 @@ export class MappingStepPropertiesComponent
               label: 'Mapping Topic',
               placeholder: 'The MappingTopic defines a key to which this mapping is bound. It is a kind of key to organize the mappings internally',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description: 'Mapping Topic',
               change: () => {
                 const newDerivedTopic = deriveSampleTopicFromTopic(
@@ -169,7 +172,7 @@ export class MappingStepPropertiesComponent
               label: 'Publish Topic',
               placeholder: 'Publish Topic ...',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               change: () => {
                 const newDerivedTopic = deriveSampleTopicFromTopic(
                   this.propertyFormly.get('publishTopic').value
@@ -192,7 +195,7 @@ export class MappingStepPropertiesComponent
               label: 'Filter Mapping',
               placeholder: 'custom_OperationFragment',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description:
                 'The filter has to be defined as boolean expression (JSONata), e.g. <code>$exists(<C8Y_FRAGMENT>)</code>',
               required:
@@ -222,7 +225,7 @@ export class MappingStepPropertiesComponent
               label: 'Filter Inventory',
               placeholder: `type = "lora_device_type`,
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description:
                 'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>',
               required:
@@ -253,7 +256,7 @@ export class MappingStepPropertiesComponent
               label: 'Mapping Topic Sample',
               placeholder: 'e.g. device/110',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description: `The Mapping Topic Sample name
               must have the same structure and number of
               levels as the MappingTopic. Wildcards, i.e. <code>+</code> in the Mapping Topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
@@ -271,7 +274,7 @@ export class MappingStepPropertiesComponent
               label: 'Publish Topic Sample',
               placeholder: 'e.g. device/110',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description: `The Publish Topic Sample name
               must have the same structure and number of
               levels as the PublishTopic. Wildcards, i.e. <code>+</code> in the PublishTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
@@ -302,7 +305,7 @@ export class MappingStepPropertiesComponent
                   return { label: this.formatStringPipe.transform(key), value: key };
                 }),
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               // eslint-disable-next-line @typescript-eslint/no-unused-vars
               change: (field: FormlyFieldConfig, event?: any) => {
                 // console.log(
@@ -327,7 +330,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Create device',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description:
                 'In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.',
               required: false,
@@ -347,7 +350,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Update Existing Device',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description: 'Update Existing Device.',
               required: false,
               switchMode: true,
@@ -367,7 +370,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Auto acknowledge',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description: 'Auto acknowledge outbound operation.',
               required: false,
               switchMode: true,
@@ -388,7 +391,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Event contains attachment',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description: 'Event contains attachment, e.g. image, ... that is stored separately.',
               required: false,
               switchMode: true,
@@ -429,7 +432,7 @@ export class MappingStepPropertiesComponent
                   return { label: this.formatStringPipe.transform(key), value: key };
                 }),
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               required: true
             }
           }
@@ -447,7 +450,7 @@ export class MappingStepPropertiesComponent
               label: 'Use external id',
               switchMode: true,
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description:
                 'If this is enabled then the device id is identified by its  external id which is looked up and translated using the externalIdType.',
               indeterminate: false,
@@ -462,7 +465,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'External Id type',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
             },
             hideExpression: (model) => !model.useExternalId
           },
@@ -484,7 +487,7 @@ export class MappingStepPropertiesComponent
             templateOptions: {
               label: 'Max failure count',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description:
                 'Max failure count, if this is exceeded the mapping is automatically deactivated. A value of 0 means no limit. The failure count is reset to 0 if the mapping is reactivated.',
             },
@@ -503,7 +506,7 @@ export class MappingStepPropertiesComponent
               switchMode: true,
               label: 'Use message context',
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.feature?.userHasMappingAdminRole,
               description:
                 'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
               hideLabel: true
