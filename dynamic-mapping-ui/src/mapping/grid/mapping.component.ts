@@ -18,6 +18,7 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectorRef,
   Component,
   OnDestroy,
   OnInit,
@@ -159,7 +160,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     public sharedService: SharedService,
     public alertService: AlertService,
     private bsModalService: BsModalService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
     // console.log('constructor');
     const href = this.router.url;
@@ -191,33 +193,35 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: 'Duplicate',
         type: 'DUPLICATE',
         icon: 'duplicate',
-        callback: this.copyMapping.bind(this)
+        callback: this.copyMapping.bind(this),
+        showIf: (item) => (this.feature?.userHasMappingAdminRole)
       },
       {
         type: BuiltInActionType.Delete,
         callback: this.deleteMappingWithConfirmation.bind(this),
-        showIf: (item) => !item['mapping']['active']
+        showIf: (item) => (!item['mapping']['active'] && this.feature?.userHasMappingAdminRole)
       },
       {
         type: 'APPLY_MAPPING_FILTER',
         text: 'Apply filter',
         icon: 'filter',
         callback: this.editMessageFilter.bind(this),
-        showIf: (item) => (item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) || item['mapping']['direction'] == Direction.OUTBOUND
+        showIf: (item) => ((item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) || 
+            item['mapping']['direction'] == Direction.OUTBOUND) && this.feature?.userHasMappingAdminRole
       },
       {
         type: 'ENABLE_DEBUG',
         text: 'Enable debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: (item) => !item['mapping']['debug']
+        showIf: (item) => !item['mapping']['debug'] && this.feature?.userHasMappingAdminRole
       },
       {
         type: 'ENABLE_DEBUG',
         text: 'Disable debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: (item) => item['mapping']['debug']
+        showIf: (item) => item['mapping']['debug'] && this.feature?.userHasMappingAdminRole
       },
       {
         type: 'ENABLE_SNOOPING',
@@ -227,7 +231,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: (item) =>
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && this.feature?.userHasMappingAdminRole
       },
       {
         type: 'DISABLE_SNOOPING',
@@ -239,7 +243,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           !(
             item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
             item['mapping']['snoopStatus'] === SnoopStatus.STOPPED
-          )
+          ) && this.feature?.userHasMappingAdminRole
       },
       {
         type: 'RESET_SNOOP',
@@ -250,7 +254,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.STARTED ||
             item['mapping']['snoopStatus'] === SnoopStatus.ENABLED ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && this.feature?.userHasMappingAdminRole
       },
       {
         type: 'EXPORT',
@@ -341,7 +345,12 @@ export class MappingComponent implements OnInit, OnDestroy {
           this.alertService.danger('Failed to fetch outbound mappings');
         });
     }
-    this.feature = await this.sharedService.getFeatures();
+    try {
+      this.feature = await this.sharedService.getFeatures();
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('Error loading features in component', error);
+    }
   }
 
   async editMessageFilter(m: MappingEnriched) {
