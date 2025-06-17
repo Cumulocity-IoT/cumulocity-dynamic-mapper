@@ -45,6 +45,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -101,7 +103,7 @@ public class OperationController {
         this.objectMapper = objectMapper;
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    //@PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> runOperation(@Valid @RequestBody ServiceOperation operation) {
         String tenant = contextService.getContext().getTenant();
@@ -112,39 +114,56 @@ public class OperationController {
             Map<String, String> parameters = operation.getParameter();
 
             switch (operationType) {
+                //TODO CREATE Role
                 case RELOAD_MAPPINGS:
                     return handleReloadMappings(tenant);
+                //TODO ADMIN Role
                 case CONNECT:
                     return handleConnect(tenant, parameters);
-                case DISCONNECT:
+                //TODO ADMIN Role
+                    case DISCONNECT:
                     return handleDisconnect(tenant, parameters);
-                case REFRESH_STATUS_MAPPING:
+                //TODO CREATE Role
+                    case REFRESH_STATUS_MAPPING:
                     return handleRefreshStatusMapping(tenant);
-                case RESET_STATUS_MAPPING:
+                //TODO ADMIN Role
+                    case RESET_STATUS_MAPPING:
                     return handleResetStatusMapping(tenant);
-                case RESET_DEPLOYMENT_MAP:
+                //TODO ADMIN Role
+                    case RESET_DEPLOYMENT_MAP:
                     return handleResetDeploymentMap(tenant);
-                case RELOAD_EXTENSIONS:
+                //TODO ADMIN Role
+                    case RELOAD_EXTENSIONS:
                     return handleReloadExtensions(tenant);
-                case ACTIVATE_MAPPING:
+                //TODO CREATE Role
+                    case ACTIVATE_MAPPING:
                     return handleActivateMapping(tenant, parameters);
-                case APPLY_MAPPING_FILTER:
+                //TODO CREATE Role
+                    case APPLY_MAPPING_FILTER:
                     return handleApplyMappingFilter(tenant, parameters);
-                case DEBUG_MAPPING:
+                //TODO CREATE Role
+                    case DEBUG_MAPPING:
                     return handleDebugMapping(tenant, parameters);
-                case SNOOP_MAPPING:
+                //TODO CREATE Role
+                    case SNOOP_MAPPING:
                     return handleSnoopMapping(tenant, parameters);
-                case SNOOP_RESET:
+                //TODO CREATE Role
+                    case SNOOP_RESET:
                     return handleSnoopReset(tenant, parameters);
-                case REFRESH_NOTIFICATIONS_SUBSCRIPTIONS:
+                //TODO ADMIN Role
+                    case REFRESH_NOTIFICATIONS_SUBSCRIPTIONS:
                     return handleRefreshNotifications(tenant);
-                case CLEAR_CACHE:
+                //TODO ADMIN Role
+                    case CLEAR_CACHE:
                     return handleClearCache(tenant, parameters);
-                case UPDATE_SNOOPED_TEMPLATE:
-                    return handleUpdateTemplate(tenant, parameters);
-                case ADD_SAMPLE_MAPPINGS:
+                //TODO CREATE Role
+                    case UPDATE_SNOOPED_TEMPLATE:
+                    return handleCopySnoopSourceTemplate(tenant, parameters);
+                //TODO CREATE Role
+                    case ADD_SAMPLE_MAPPINGS:
                     return handleAddSampleMappings(tenant, parameters);
-                case INIT_CODE_TEMPLATES:
+                //TODO ADMIN Role
+                    case INIT_CODE_TEMPLATES:
                     return handleInitCodeTemplates(tenant, parameters);
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
@@ -212,7 +231,7 @@ public class OperationController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    private ResponseEntity<?> handleUpdateTemplate(String tenant, Map<String, String> parameters) throws Exception {
+    private ResponseEntity<?> handleCopySnoopSourceTemplate(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
         Integer index = Integer.parseInt(parameters.get("index"));
         mappingComponent.updateSourceTemplate(tenant, id, index);
@@ -382,5 +401,23 @@ public class OperationController {
         String errorMsg = String.format("Tenant %s - Unknown cache: %s", tenant, cacheId);
         log.error(errorMsg);
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg);
+    }
+
+    private boolean userHasMappingAdminRole() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean hasUserRole = false;
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MAPPING_ADMIN"))) {
+            hasUserRole = true;
+        }
+        return hasUserRole;
+    }
+
+    private boolean userHasMappingCreateRole() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean hasUserRole = false;
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MAPPING_CREATE"))) {
+            hasUserRole = true;
+        }
+        return  userHasMappingAdminRole() || hasUserRole;
     }
 }
