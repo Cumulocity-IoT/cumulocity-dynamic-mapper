@@ -36,7 +36,7 @@ import {
 } from '..';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { FetchClient } from '@c8y/ngx-components/api';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration } from '../../configuration';
 import { ServiceOperation } from './shared.model';
 import { OptionsService } from '@c8y/ngx-components';
 

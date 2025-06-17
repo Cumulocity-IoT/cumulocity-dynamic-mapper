@@ -48,11 +48,11 @@
     {{ 'Delete' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Duplicate' | translate }}" (click)="onDuplicateCodeTemplate()"
-    [disabled]="codeTemplateDecoded?.templateType === TemplateType.SHARED || codeTemplateDecoded?.templateType === TemplateType.SYSTEM">
+    [disabled]="codeTemplateDecoded?.templateType === TemplateType.SHARED || codeTemplateDecoded?.templateType === TemplateType.SYSTEM || !feature?.userHasMappingAdminRole">
     <i c8yIcon="duplicate"></i>
     {{ 'Duplicate' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onResetSystemCodeTemplate()">
+  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onResetSystemCodeTemplate()" *ngIf="feature?.userHasMappingAdminRole">
     <i c8yIcon="reset"></i>
     {{ 'Reset system templates' | translate }}
   </button>
@@ -83,7 +83,7 @@
   <div class="card-footer">
     <div class="form-group p-l-24">
       <button type="button" name="save" class="btn btn-primary" (click)="onSaveCodeTemplate()"
-        [disabled]="codeTemplateDecoded?.readonly" translate>
+        [disabled]="codeTemplateDecoded?.readonly || !feature?.userHasMappingAdminRole" translate>
         Save
       </button>
     </div>

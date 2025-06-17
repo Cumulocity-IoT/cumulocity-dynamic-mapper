@@ -163,7 +163,7 @@ export class MappingService {
   async updateTemplate(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
       {
-        operation: Operation.UPDATE_SNOOPED_TEMPLATE,
+        operation: Operation.COPY_SNOOPED_SOURCE_TEMPLATE,
         parameter
       }
     );

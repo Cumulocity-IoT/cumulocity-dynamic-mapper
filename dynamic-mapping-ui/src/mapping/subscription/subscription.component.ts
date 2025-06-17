@@ -40,6 +40,7 @@ import {
   API,
   ConfirmationModalComponent,
   Direction,
+  Feature,
   MappingType,
   Operation
 } from '../../shared';
@@ -51,7 +52,6 @@ import { Subject } from 'rxjs';
 import { DeploymentMapEntry, SharedService, StepperConfiguration } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { C8YNotificationSubscription, Device } from '../shared/mapping.model';
-import { GroupDeviceGridColumn } from '@c8y/ngx-components/device-grid';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
@@ -119,6 +119,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   };
   actionControlSubscription: ActionControl[] = [];
   bulkActionControlSubscription: BulkActionControl[] = [];
+  feature: Feature;
 
   constructor(
     public mappingService: MappingService,
@@ -139,15 +140,18 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     this.loadSubscriptions();
   }
 
-  ngOnInit() {
-    this.bulkActionControlSubscription.push({
-      type: BuiltInActionType.Delete,
-      callback: this.deleteSubscriptionBulkWithConfirmation.bind(this)
-    });
-    this.actionControlSubscription.push({
-      type: BuiltInActionType.Delete,
-      callback: this.deleteSubscriptionWithConfirmation.bind(this)
-    });
+  async ngOnInit() {
+    this.feature = await this.shareService.getFeatures();
+    if (this.feature?.userHasMappingAdminRole) {
+      this.bulkActionControlSubscription.push({
+        type: BuiltInActionType.Delete,
+        callback: this.deleteSubscriptionBulkWithConfirmation.bind(this)
+      });
+      this.actionControlSubscription.push({
+        type: BuiltInActionType.Delete,
+        callback: this.deleteSubscriptionWithConfirmation.bind(this)
+      });
+    }
   }
 
   async loadSubscriptions() {

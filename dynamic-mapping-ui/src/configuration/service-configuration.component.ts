@@ -61,7 +61,7 @@ export class ServiceConfigurationComponent implements OnInit {
     private fb: FormBuilder
   ) { }
 
-  ngOnInit() {
+  async ngOnInit() {
     // console.log('Running version', this.version);
     this.serviceForm = this.fb.group({
       logPayload: new FormControl(''),
@@ -81,6 +81,7 @@ export class ServiceConfigurationComponent implements OnInit {
     });
 
     this.loadData();
+    this.feature = await this.sharedService.getFeatures();
   }
 
   async loadData(): Promise<void> {

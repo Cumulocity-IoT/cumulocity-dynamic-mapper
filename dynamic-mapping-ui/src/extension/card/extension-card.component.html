@@ -72,7 +72,7 @@
           <button
             (click)="delete()"
             title="{{ 'Delete' }}"
-            [disabled]="!external"
+            [disabled]="!external || !feature?.userHasMappingAdminRole"
           >
             <i c8yIcon="trash" class="m-r-4"></i>
             {{ 'Delete' | translate }}

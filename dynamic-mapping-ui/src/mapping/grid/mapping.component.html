@@ -45,7 +45,7 @@
     {{ 'Import mappings' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Reset deployment cache' | translate }}"
-    (click)="clickedResetDeploymentMapEndpoint()">
+    (click)="clickedResetDeploymentMapEndpoint()"  *ngIf="feature?.userHasMappingAdminRole">
     <i c8yIcon="erase"></i>
     {{ 'Reset deployment cache' | translate }}
   </button>

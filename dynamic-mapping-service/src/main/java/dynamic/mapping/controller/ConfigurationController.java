@@ -44,8 +44,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -59,7 +57,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -89,9 +86,6 @@ public class ConfigurationController {
     C8YAgent c8YAgent;
 
     @Autowired
-    private RoleService roleService;
-
-    @Autowired
     private ContextService<UserCredentials> contextService;
 
     @Autowired
@@ -108,8 +102,8 @@ public class ConfigurationController {
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(serviceConfiguration.isOutboundMappingEnabled());
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
-        feature.setUserHasMappingCreateRole(userHasMappingCreateRole());
-        feature.setUserHasMappingAdminRole(userHasMappingAdminRole());
+        feature.setUserHasMappingCreateRole(Utils.userHasMappingCreateRole());
+        feature.setUserHasMappingAdminRole(Utils.userHasMappingAdminRole());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
@@ -528,24 +522,6 @@ public class ConfigurationController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
-    }
-
-    private boolean userHasMappingAdminRole() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean hasUserRole = false;
-        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MAPPING_ADMIN"))) {
-            hasUserRole = true;
-        }
-        return hasUserRole;
-    }
-
-    private boolean userHasMappingCreateRole() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean hasUserRole = false;
-        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MAPPING_CREATE"))) {
-            hasUserRole = true;
-        }
-        return  userHasMappingAdminRole() || hasUserRole;
     }
 
     private Map<String, CodeTemplate> getCodeTemplates(String tenant, ServiceConfiguration serviceConfiguration) {

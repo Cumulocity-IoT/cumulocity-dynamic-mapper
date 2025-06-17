@@ -28,7 +28,7 @@ import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { FormGroup } from '@angular/forms';
-import { ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
+import { Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { BehaviorSubject } from 'rxjs';
 import { Router } from '@angular/router';
 import { HttpStatusCode } from '@angular/common/http';
@@ -62,6 +62,8 @@ export class CodeComponent implements OnInit {
     //  renderValidationDecorations: "on",
     language: 'javascript',
   };
+  feature: Feature;
+
 
   codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Define substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
 
@@ -69,10 +71,12 @@ export class CodeComponent implements OnInit {
     public bsModalService: BsModalService,
     private sharedService: SharedService,
     private alertService: AlertService,
-    private router: Router
+    private router: Router,
+
   ) { }
 
   async ngOnInit(): Promise<void> {
+
     const href = this.router.url;
     // First determine the template type based on URL
     if (href.match(/sag-ps-pkg-dynamic-mapping\/node3\/codeTemplate\/inbound/g)) {
@@ -95,6 +99,8 @@ export class CodeComponent implements OnInit {
     console.log("CodeTemplateEntries after init:", this.codeTemplateEntries);
 
     this.onSelectCodeTemplate();
+    this.feature = await this.sharedService.getFeatures();
+    
   }
 
   refresh() {
@@ -104,7 +110,7 @@ export class CodeComponent implements OnInit {
   async ngAfterViewInit(): Promise<void> {
     if (!initializedMonaco) {
       const monaco = await loadMonacoEditor();
-            monaco.languages.registerCompletionItemProvider('javascript', createCompletionProvider(monaco));
+      monaco.languages.registerCompletionItemProvider('javascript', createCompletionProvider(monaco));
       if (monaco) {
         initializedMonaco = true;
       }
@@ -149,7 +155,7 @@ export class CodeComponent implements OnInit {
 
   async onResetSystemCodeTemplate() {
     const response1 = await this.sharedService.runOperation(
-      { operation: Operation.INIT_CODE_TEMPLATES}
+      { operation: Operation.INIT_CODE_TEMPLATES }
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === HttpStatusCode.Created) {
@@ -215,7 +221,7 @@ export class CodeComponent implements OnInit {
       };
       const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
-      modalRef.content.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>)  => {
+      modalRef.content.closeSubject.subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
         // console.log('Configuration after edit:', editedConfiguration);
         if (codeTemplate) {
           this.codeTemplateDecoded.name = codeTemplate.name;
