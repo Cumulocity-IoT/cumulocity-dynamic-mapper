@@ -30,7 +30,7 @@ export default {
     description,
     license,
     version,
-    name: 'dynamic-mapping',
+    name: 'dynamic-mapper',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
       class: 'c8y-icon-dynamic-mapper'
