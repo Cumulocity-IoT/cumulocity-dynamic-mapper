@@ -22,7 +22,7 @@ Download the binaries from the latest release and upload them to your Cumulocity
 
 ## Permissions
 
-The solution defines one role:`ROLE_MAPPING_ADMIN` that must be assigned to the user accessing the Dynamic Mapping app.
+The solution defines one role:`ROLE_MAPPING_ADMIN` that must be assigned to the user accessing the Dynamic Mapper app.
 
 ### Microservice
 
@@ -63,7 +63,7 @@ The Web App is part of the community store and should be available directly in y
 </p>
 <br/>
 
-~~After successfully adding the plugin you need to refresh the Administration App by pressing F5 and you should see a new navigation entry "Dynamic Mapping"~~
+~~After successfully adding the plugin you need to refresh the Administration App by pressing F5 and you should see a new navigation entry "Dynamic Mapper"~~
 
 <p align="center">
  <img src="resources/image/Dynamic_Mapper_WebAppPlugin.png" style="width: 40%;" />

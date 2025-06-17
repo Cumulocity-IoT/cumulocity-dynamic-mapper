@@ -35,7 +35,7 @@ export class OverviewGuard implements CanActivate {
         .isAvailable(OverviewGuard.APPLICATION)
         .then((result) => {
           if (!(result && result.data)) {
-            console.error('Dynamic Mapping Microservice not subscribed!');
+            console.error('Dynamic Mapper Microservice not subscribed!');
           }
 
           return result && result.data;

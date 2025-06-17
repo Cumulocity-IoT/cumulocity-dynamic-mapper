@@ -1,4 +1,4 @@
-# Dynamic Mapping Service for Cumulocity
+# Dynamic Mapper Service for Cumulocity
 
 ## Overview
 
