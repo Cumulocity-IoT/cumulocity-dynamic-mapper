@@ -36,7 +36,9 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
+import com.cumulocity.sdk.client.SDKException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.ID;
@@ -167,6 +169,19 @@ public abstract class BaseProcessorInbound<T> {
                 // for (MappingSubstituteValue device : deviceEntries) {
                 getBuildProcessingContext(context, deviceEntries.get(i),
                         i, deviceEntries.size());
+                if(context.getCurrentRequest() != null && context.getCurrentRequest().hasError()) {
+                    Exception e = context.getCurrentRequest().getError();
+                    if (e instanceof ProcessingException &&
+                            e.getCause() != null &&
+                            e.getCause() instanceof SDKException &&
+                            ((SDKException) e.getCause()).getHttpStatus() == 422) {
+                        ID identity = new ID(mapping.externalIdType, deviceEntries.get(i).value.toString());
+                        c8yAgent.removeDeviceFromInboundExternalIdCache(tenant, identity);
+                        context.setSourceId(null);
+                        getBuildProcessingContext(context, deviceEntries.get(i),
+                                i, deviceEntries.size());
+                    }
+                }
             }
             log.info("{} - Completed context, processing sequentially, createNonExistingDevice: {}", tenant,
                     mapping.createNonExistingDevice);
@@ -253,7 +268,7 @@ public abstract class BaseProcessorInbound<T> {
                 context.getCurrentRequest().setResponse(response);
                 context.getCurrentRequest().setSourceId(attocDevice.getId().getValue());
             } catch (Exception e) {
-                context.getCurrentRequest().setError(e);
+                    context.getCurrentRequest().setError(e);
             }
             predecessor = newPredecessor;
         } else if (!context.getApi().equals(API.INVENTORY)) {

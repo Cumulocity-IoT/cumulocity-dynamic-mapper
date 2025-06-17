@@ -980,6 +980,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
+    public void removeDeviceFromInboundExternalIdCache(String tenant, ID identity) {
+        InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
+        if (inboundExternalIdCache != null) {
+            inboundExternalIdCache.removeIdForExternalId(identity);
+        }
+        log.info("{} - Removed device {} from InboundExternalIdCache", tenant, identity.getValue());
+    }
+
     public int getSizeInboundExternalIdCache(String tenant) {
         InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
         if (inboundExternalIdCache != null) {
