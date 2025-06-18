@@ -42,7 +42,7 @@ import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.c
 import { NameRendererComponent } from './renderer/name.renderer.component';
 import { QOSRendererComponent } from './renderer/qos.renderer.component';
 import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.renderer.component';
-import { StatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
+import { MappingStatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from './renderer/status.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
 import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
@@ -75,7 +75,7 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
-    StatusActivationRendererComponent,
+    MappingStatusActivationRendererComponent,
     LabelRendererComponent,
     NameRendererComponent,
     MappingTypeComponent,

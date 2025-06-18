@@ -22,7 +22,7 @@ import { BuiltInActionType, Column } from '@c8y/ngx-components';
 import { ActionControlConfig, ActionVisibilityRule } from './types'
 import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
 import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
-import { StatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
+import { ConnectorStatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
 import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.renderer.component';
 
 export const ACTION_CONTROLS: ActionControlConfig[] = [
@@ -125,7 +125,7 @@ export const GRID_COLUMNS: Column[] = [
     path: 'enabled',
     filterable: false,
     sortable: true,
-    cellRendererComponent: StatusEnabledRendererComponent,
+    cellRendererComponent: ConnectorStatusEnabledRendererComponent,
     gridTrackSize: '16%'
   }
 ] as Column[];

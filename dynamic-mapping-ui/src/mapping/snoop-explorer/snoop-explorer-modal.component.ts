@@ -18,10 +18,10 @@
  * @authors Christof Strack
  */
 
-import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { JsonEditorComponent, Mapping, MappingSubstitution, MappingEnriched } from '../../shared';
+import { JsonEditorComponent, Mapping, MappingSubstitution, MappingEnriched, SharedService, Feature } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { IFetchResponse } from '@c8y/client';
 import { HttpStatusCode } from '@angular/common/http';
@@ -36,7 +36,8 @@ import { HttpStatusCode } from '@angular/common/http';
 export class SnoopExplorerComponent implements OnInit {
   constructor(
     private mappingService: MappingService,
-    private alertService: AlertService
+    private alertService: AlertService, public sharedService: SharedService,
+    private cdr: ChangeDetectorRef
   ) { }
   @Input() enrichedMapping: MappingEnriched;
 
@@ -60,8 +61,9 @@ export class SnoopExplorerComponent implements OnInit {
     readOnly: true,
     statusBar: true
   };
+  feature: Feature;
 
-  ngOnInit(): void {
+  async ngOnInit() {
     this.mapping = this.enrichedMapping.mapping;
     this.onSelectSnoopedTemplate(0);
     this.index = 0;
@@ -69,6 +71,12 @@ export class SnoopExplorerComponent implements OnInit {
       ok: 'Delete templates',
       cancel: 'Close'
     };
+    try {
+      this.feature = await this.sharedService.getFeatures();
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('Error loading features in component', error);
+    }
   }
 
   onCancel() {

@@ -49,10 +49,13 @@
       {{ 'Cancel' }}
     </button>
     <button class="btn btn-primary" (click)="onResetSnoop()"
-      [disabled]="mapping.snoopedTemplates?.length === 0 || pending" [ngClass]="{ 'btn-pending': pending }">
+      [disabled]="mapping.snoopedTemplates?.length === 0 || pending || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)"
+      [ngClass]="{ 'btn-pending': pending }">
       {{ 'Delete templates' }}
     </button>
-    <button class="btn btn-primary" (click)="onUpdateSourceTemplate()" [ngClass]="{ 'btn-pending': pending }">
+    <button class="btn btn-primary" (click)="onUpdateSourceTemplate()"
+      [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole"
+      [ngClass]="{ 'btn-pending': pending }">
       {{ 'Set as source template' }}
     </button>
   </div>

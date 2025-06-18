@@ -75,7 +75,7 @@ import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
-import { StatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
+import { MappingStatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 import {
   PayloadWrapper
@@ -182,25 +182,25 @@ export class MappingComponent implements OnInit, OnDestroy {
       {
         type: BuiltInActionType.Edit,
         callback: this.updateMapping.bind(this),
-        showIf: (item) => (!item['mapping']['active'] && this.feature?.userHasMappingAdminRole)
+        showIf: (item) => (!item['mapping']['active'] && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)),
       },
       {
         type: 'VIEW',
         icon: 'eye',
         callback: this.updateMapping.bind(this),
-        showIf: (item) => item['mapping']['active'] || !this.feature?.userHasMappingAdminRole
+        showIf: (item) => item['mapping']['active'] || !(this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
       },
       {
         text: 'Duplicate',
         type: 'DUPLICATE',
         icon: 'duplicate',
         callback: this.copyMapping.bind(this),
-        showIf: (item) => (this.feature?.userHasMappingAdminRole)
+        showIf: (item) => (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) 
       },
       {
         type: BuiltInActionType.Delete,
         callback: this.deleteMappingWithConfirmation.bind(this),
-        showIf: (item) => (!item['mapping']['active'] && this.feature?.userHasMappingAdminRole)
+        showIf: (item) => (!item['mapping']['active'] && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole))
       },
       {
         type: 'APPLY_MAPPING_FILTER',
@@ -208,21 +208,21 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'filter',
         callback: this.editMessageFilter.bind(this),
         showIf: (item) => ((item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) ||
-          item['mapping']['direction'] == Direction.OUTBOUND) && this.feature?.userHasMappingAdminRole
+          item['mapping']['direction'] == Direction.OUTBOUND) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
       },
       {
         type: 'ENABLE_DEBUG',
         text: 'Enable debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: (item) => !item['mapping']['debug'] && this.feature?.userHasMappingAdminRole
+        showIf: (item) => !item['mapping']['debug'] && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
       },
       {
         type: 'ENABLE_DEBUG',
         text: 'Disable debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this),
-        showIf: (item) => item['mapping']['debug'] && this.feature?.userHasMappingAdminRole
+        showIf: (item) => item['mapping']['debug'] && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
       },
       {
         type: 'ENABLE_SNOOPING',
@@ -232,7 +232,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: (item) =>
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && this.feature?.userHasMappingAdminRole
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
       },
       {
         type: 'DISABLE_SNOOPING',
@@ -244,7 +244,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           !(
             item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
             item['mapping']['snoopStatus'] === SnoopStatus.STOPPED
-          ) && this.feature?.userHasMappingAdminRole
+          ) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
       },
       {
         type: 'RESET_SNOOP',
@@ -255,7 +255,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           item['snoopSupported'] &&
           (item['mapping']['snoopStatus'] === SnoopStatus.STARTED ||
             item['mapping']['snoopStatus'] === SnoopStatus.ENABLED ||
-            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && this.feature?.userHasMappingAdminRole
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED) && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole)
       },
       {
         type: 'EXPORT',
@@ -277,7 +277,7 @@ export class MappingComponent implements OnInit, OnDestroy {
             selectedItemIds?.includes(m.mapping.id)
           );
           // console.log('Selected mappings (showIf):', selectedItemIds);
-          return !result && this.feature?.userHasMappingAdminRole;
+          return !result && (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole);
         }
       },
       {
@@ -286,7 +286,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'toggle-on',
         callback: this.activateMappingBulk.bind(this),
         showIf: (selectedItemIds: string[]) => {
-          return this.feature?.userHasMappingAdminRole;
+          return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
         }
       },
       {
@@ -295,7 +295,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'toggle-off',
         callback: this.deactivateMappingBulk.bind(this),
         showIf: (selectedItemIds: string[]) => {
-          return this.feature?.userHasMappingAdminRole;
+          return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
         }
       },
       {
@@ -478,7 +478,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         path: 'mapping.active',
         filterable: false,
         sortable: true,
-        cellRendererComponent: StatusActivationRendererComponent,
+        cellRendererComponent: MappingStatusActivationRendererComponent,
         gridTrackSize: '9%'
       }
     ];

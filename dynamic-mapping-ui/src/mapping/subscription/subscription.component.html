@@ -37,7 +37,6 @@
     stepperConfiguration.direction === Direction.OUTBOUND &&
     subscription?.devices
   ">
-  {{ feature.userHasMappingAdminRole}} {{ feature.userHasMappingCreateRole }}
   <div class="card-block content-fullpage border-top border-bottom">
     <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false" [title]="titleSubscription | translate"
       [columns]="columnsSubscriptions" [rows]="subscriptions" [pagination]="pagination" 

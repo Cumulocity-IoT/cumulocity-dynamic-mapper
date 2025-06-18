@@ -128,7 +128,7 @@
                       <div class="d-flex j-c-between">
                         <button type="button" name="sample" class="btn btn-default" style="min-width: 65px"
                           (click)="onSampleTargetTemplatesButton()" translate title="Use Sample Target Templates"
-                          [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || !this.feature?.userHasMappingAdminRole">
+                          [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || ( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
                           <i c8yIcon="enter-right"></i>Reset to default
                         </button>
                       </div>
@@ -290,14 +290,14 @@
                   <div class="col-lg-3 col-lg-offset-1 p-l-48">
                     <button type="button" name="addSubstitution" class="btn btn-default btn-sm"
                       (click)="onAddSubstitution()" translate title="Add substitution"
-                      [disabled]="addSubstitutionDisabled() || !this.feature?.userHasMappingAdminRole">
+                      [disabled]="addSubstitutionDisabled() || ( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
                       <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution
                     </button>
                   </div>
                   <div class="col-lg-3 col-lg-offset-1">
                     <button type="button" name="updateSubstitution" class="btn btn-default btn-sm"
                       (click)="onUpdateSubstitution()" translate title="Update substitution"
-                      [disabled]="updateSubstitutionDisabled() || !this.feature?.userHasMappingAdminRole">
+                      [disabled]="updateSubstitutionDisabled() || ( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
                       <i c8yIcon="pencil"></i><span id="updateButton">&nbsp;Update substitution</span>
                     </button>
                   </div>
@@ -389,7 +389,7 @@
       </div>
       <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
         (onCustom)="onCommitButton()" (onCancel)="cancel.emit()" (onBack)="onBackStep($event)"
-        [disabled]="!feature?.userHasMappingAdminRole" [labels]="{ custom: 'Confirm' }">
+        [disabled]="( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)" [labels]="{ custom: 'Confirm' }">
       </c8y-stepper-buttons>
     </cdk-step>
     <ng-template #extensionTemplateSource let-form="form">

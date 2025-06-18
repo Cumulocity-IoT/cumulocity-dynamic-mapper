@@ -228,7 +228,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     // console.log('mapping-stepper', this._deploymentMapEntry, this.deploymentMapEntry);
     this.feature = await this.sharedService.getFeatures();
-    if (!this.feature?.userHasMappingAdminRole) {
+    if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
       this.editorOptionsSourceSubstitution.readOnly = true;
       this.editorOptionsTargetSubstitution.readOnly = true;
       this.editorOptionsSourceTemplate.readOnly = true;
@@ -265,8 +265,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       stepperConfiguration: this.stepperConfiguration,
       pathSource: '',
       pathTarget: '',
-      pathSourceIsExpression :false,
-      pathTargetIsExpression :false,
+      pathSourceIsExpression: false,
+      pathTargetIsExpression: false,
       repairStrategy: RepairStrategy.DEFAULT,
       expandArray: false,
       targetExpression: {
@@ -303,7 +303,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               customWrapperClass: 'm-b-24',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                !this.stepperConfiguration.allowDefiningSubstitutions || !this.feature?.userHasMappingAdminRole,
+                !this.stepperConfiguration.allowDefiningSubstitutions || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
               placeholder: '$exists(c8y_TemperatureMeasurement)',
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:

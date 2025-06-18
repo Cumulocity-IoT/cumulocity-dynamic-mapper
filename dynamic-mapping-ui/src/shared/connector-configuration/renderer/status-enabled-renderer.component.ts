@@ -53,7 +53,7 @@ import { HttpStatusCode } from '@angular/common/http';
   `,
   standalone: false
 })
-export class StatusEnabledRendererComponent implements OnInit {
+export class ConnectorStatusEnabledRendererComponent implements OnInit {
   constructor(
     public context: CellRendererContext,
     public alertService: AlertService,
