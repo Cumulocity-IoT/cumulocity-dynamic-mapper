@@ -61,7 +61,9 @@ export class LandingComponent implements OnInit {
   feature: Feature;
 
   async ngOnInit() {
+
     this.feature = this.route.snapshot.data['feature'];
+
     this.linkSnoopProcess = '/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Snooping_Stepper_Process.svg';
     from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
       (mappings) => {
@@ -79,9 +81,17 @@ export class LandingComponent implements OnInit {
       this.countConnector$.next(!count ? 'no' : count.length)
     );
 
-    if (!this.feature?.userHasMappingAdminRole) {
+    if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
       this.alertService.warning(
-        "You don't have the role 'Mapping Admin' and therefore cannot create or edit mappings/connectors. Please contact your administrator."
+        "You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator."
+      );
+    } else if (!this.feature?.userHasMappingAdminRole) {
+      this.alertService.warning(
+        "You don't have the role 'Dynamic Mapper Admin' and therefore cannot create or edit connectors. Please contact your administrator."
+      );
+    } else if (!this.feature?.userHasMappingCreateRole) {
+      this.alertService.warning(
+        "You don't have the role 'Dynamic Mapper User' and therefore cannot edit mappings. Please contact your administrator."
       );
     }
   }

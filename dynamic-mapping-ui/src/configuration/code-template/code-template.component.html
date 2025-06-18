@@ -36,14 +36,8 @@
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'right'">
-  <!-- <button class="btn btn-link" title="{{ 'Rename' | translate }}" (click)="onRenameCodeTemplate()"
-    [disabled]="codeTemplateDecoded?.internal">
-    <i c8yIcon="rename"></i>
-    {{ 'Rename' | translate }}
-  </button> -->
-
   <button class="btn btn-link" title="{{ 'Delete' | translate }}" (click)="onDeleteCodeTemplate()"
-    [disabled]="codeTemplateDecoded?.internal">
+    [disabled]="codeTemplateDecoded?.internal || feature?.userHasMappingAdminRole">
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
   </button>
@@ -52,7 +46,7 @@
     <i c8yIcon="duplicate"></i>
     {{ 'Duplicate' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onResetSystemCodeTemplate()" *ngIf="feature?.userHasMappingAdminRole">
+  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onResetSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="reset"></i>
     {{ 'Reset system templates' | translate }}
   </button>

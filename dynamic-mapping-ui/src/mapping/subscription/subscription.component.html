@@ -21,13 +21,13 @@
 
 <c8y-title translate>Subscription outbound</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription()" [disabled]="!feature?.userHasMappingAdminRole">
+  <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription()" [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="subscription"></i>
     {{ 'Manage subscriptions (device selection)' | translate }}
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Manage subscriptions (table)' | translate }}" (click)="onDefineSubscription2()" [disabled]="!feature?.userHasMappingAdminRole">
+  <button class="btn btn-link" title="{{ 'Manage subscriptions (table)' | translate }}" (click)="onDefineSubscription2()" [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="subscription"></i>
     {{ 'Manage subscriptions (device table )' | translate }}
   </button>
@@ -37,6 +37,7 @@
     stepperConfiguration.direction === Direction.OUTBOUND &&
     subscription?.devices
   ">
+  {{ feature.userHasMappingAdminRole}} {{ feature.userHasMappingCreateRole }}
   <div class="card-block content-fullpage border-top border-bottom">
     <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false" [title]="titleSubscription | translate"
       [columns]="columnsSubscriptions" [rows]="subscriptions" [pagination]="pagination" 

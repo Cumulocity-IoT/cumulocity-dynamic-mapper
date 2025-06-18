@@ -26,10 +26,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public class Utils  {
+    private static final String ROLE_DYNAMIC_MAPPER_ADMIN = "ROLE_DYNAMIC_MAPPER_ADMIN";
+    private static final String ROLE_DYNAMIC_MAPPER_CREATE = "ROLE_DYNAMIC_MAPPER_CREATE";
+
     static boolean userHasMappingAdminRole() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean hasUserRole = false;
-        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MAPPING_ADMIN"))) {
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(ROLE_DYNAMIC_MAPPER_ADMIN))) {
             hasUserRole = true;
         }
         return hasUserRole;
@@ -38,7 +41,7 @@ public class Utils  {
     static boolean userHasMappingCreateRole() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean hasUserRole = false;
-        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MAPPING_CREATE"))) {
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(ROLE_DYNAMIC_MAPPER_CREATE))) {
             hasUserRole = true;
         }
         return  userHasMappingAdminRole() || hasUserRole;

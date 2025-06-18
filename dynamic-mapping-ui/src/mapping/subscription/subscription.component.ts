@@ -143,7 +143,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.feature = this.route.snapshot.data['feature'];
-    if (this.feature?.userHasMappingAdminRole) {
+    if (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) {
       this.bulkActionControlSubscription.push({
         type: BuiltInActionType.Delete,
         callback: this.deleteSubscriptionBulkWithConfirmation.bind(this)

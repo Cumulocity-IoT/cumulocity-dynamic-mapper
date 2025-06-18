@@ -19,7 +19,7 @@
   ~
   -->
 <c8y-modal title="Edit connector configuration" (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels"
-  [disabled]="readOnly || !dynamicForm.valid" [headerClasses]="'modal-header dialog-header'">
+  [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" [headerClasses]="'modal-header dialog-header'">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'connected'"></span>
   </ng-container>
