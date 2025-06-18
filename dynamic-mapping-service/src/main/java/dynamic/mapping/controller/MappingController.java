@@ -104,7 +104,7 @@ public class MappingController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteMapping(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
@@ -136,7 +136,7 @@ public class MappingController {
 
     // TODO We might need to add the connector ID here to correlate mappings to
     // exactly one connector
-    @PreAuthorize("hasAnyRole('ROLE_MAPPING_ADMIN', 'ROLE_MAPPING_CREATE')")
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
@@ -169,7 +169,7 @@ public class MappingController {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         String tenant = contextService.getContext().getTenant();

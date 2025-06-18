@@ -99,7 +99,7 @@ public class ExtensionController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/{extensionName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
