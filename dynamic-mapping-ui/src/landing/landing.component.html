@@ -19,10 +19,37 @@
   ~
   -->
 <c8y-title>{{ 'Getting started' | translate }}</c8y-title>
-<div class="card">
+
+<a id="top"></a>
+<div class="text-right m-b-16">
+  <a href="#top" class="to-the-top" role="button" aria-label="Scroll to top">
+    <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+  </a>
+</div>
+
+<!-- Table of Contents -->
+<div>
   <div class="card-header">
+    <h3>{{ 'Topics that will help you getting started ...' | translate }}</h3>
+  </div>
+  <div class="card-block">
+    <ul class="text-16" style="list-style-type: decimal;">
+      <li><a href="#overview">{{ 'Overview of Dynamic Mapper' | translate }}</a></li>
+      <li><a href="#supported-connectors">{{ 'Which connectors are supported?' | translate }}</a></li>
+      <li><a href="#define-mapping">{{ 'How to define a mapping?' | translate }}</a></li>
+      <li><a href="#jsonata-substitution">{{ 'How to define a substitution using JSONata?' | translate }}</a></li>
+      <li><a href="#javascript-substitution">{{ 'How to define a substitution using JavaScript?' | translate }}</a></li>
+      <li><a href="#unknown-payload">{{ 'How to begin without knowing your source payload?' | translate }}</a></li>
+      <li><a href="#reliability-settings">{{ 'How do I use the reliability settings when processing mappings?' |
+          translate }}</a></li>
+      <li><a href="#access-control">{{ 'How can I restrict access to certain Dynamic Mapper features?' | translate
+          }}</a></li>
+    </ul>
+  </div>
+
+  <div class="card-header" id="overview">
     <h3>
-      {{ 'Overview' | translate }}
+      {{ 'Overview of Dynamic Mapper' | translate }}
     </h3>
   </div>
   <div class="card-block">
@@ -82,7 +109,7 @@
       </li>
     </ul>
   </div>
-  <div class="card-header">
+  <div class="card-header" id="supported-connectors">
     <h3>
       {{ 'Which connectors are supported?' | translate }}
     </h3>
@@ -93,7 +120,8 @@
     <img width="60%" class="m-l-48 m-b-48"
       src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Connector_Matrix.png" alt="Define substitutions" />
   </div>
-  <div class="card-header">
+
+  <div class="card-header" id="define-mapping">
     <h3>
       {{ 'How to define a mapping?' | translate }}
     </h3>
@@ -151,7 +179,8 @@
       src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png"
       alt="Define substitutions" />
     <div class="p-b-8"></div>
-    <div class="card-header">
+
+    <div class="card-header" id="jsonata-substitution">
       <h3>
         {{ 'How to define a substitution using JSONata?' | translate }}
       </h3>
@@ -198,7 +227,7 @@
         JSONata.</p>
     </div>
     <div class="p-b-8"></div>
-    <div class="card-header">
+    <div class="card-header" id="javascript-substitution">
       <h3>
         {{ 'How to define a substitution using JavaScript?' | translate }}
       </h3>
@@ -224,7 +253,7 @@
     </div>
   </div>
 
-  <div class="card-header">
+  <div class="card-header" id="unknown-payload">
     <h3>
       {{ 'How to begin without knowing your source payload?' | translate }}
     </h3>
@@ -271,25 +300,55 @@
       mode.</p>
   </div>
 
-  <div class="card-header">
+  <div class="card-header" id="reliability-settings">
     <h3>
       {{ 'How do I use the reliability settings when processing mappings?' | translate }}
     </h3>
   </div>
   <div class="card-block">
-    <div class="p-b-8 text-16"> In a mapping a QoS can be chosen. The following table shows the effect of the QoS when processing mappings depending on the connector (source of the message):</div>
-    <ul>
+    <div class="p-b-8 text-16"> In a mapping a QoS can be chosen. The following table shows the effect of the QoS when
+      processing mappings depending on the connector (source of the message):</div>
+    <ul class="p-b-8 text-16">
       <li><strong>HTTP Connector</strong>: Only supports basic QoS 0 (immediate response without guarantees)</li>
       <li><strong>MQTT</strong>: Most comprehensive support; handles all QoS levels (0-2) with varying acknowledgment
         behaviors</li>
       <li><strong>WebHook</strong>: Primarily outbound-focused with conditional acknowledgments based on QoS level</li>
       <li><strong>Kafka</strong>: Limited support with only QoS 0 for outbound operations</li>
     </ul>
-    <p>Generally, higher QoS levels (1-2) provide better delivery guarantees but aren't universally supported across all
+    <p class="p-b-8 text-16">Generally, higher QoS levels (1-2) provide better delivery guarantees but aren't universally supported across all
       connectors. MQTT offers the most complete implementation while other connectors have more limited QoS
       capabilities.</p>
     <br />
     <img width="70%" class="m-l-48 m-b-48" src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_QoS_Matrix.png"
       alt="Use QoS in mappings" />
+  </div>
+
+  <div class="card-header" id="access-control">
+    <h3>
+      {{ 'How can I restrict access to certain Dynamic Mapper features?' | translate }}
+    </h3>
+  </div>
+  <div class="card-block">
+    <div class="p-b-8 text-16">Dynamic Mapper uses role-based access control to restrict functionality. The following
+      table shows the permissions granted to each role:</div>
+    <ul class="p-b-8 text-16">
+      <li><strong>No role</strong>: Basic read-only access to mappings, connectors, and service configuration</li>
+      <li><strong>Create role</strong>: All read permissions plus full mapping management (create, edit, delete,
+        activate/deactivate, snoop/debug/filter)</li>
+      <li><strong>Admin role</strong>: Complete access including all Create role permissions plus connector management
+        and service configuration editing</li>
+    </ul>
+    <p><strong>Key distinctions:</strong></p>
+    <ul class="p-b-8 text-16">
+      <li>Only users with the <strong>Create role</strong> or higher can modify mappings</li>
+      <li>Only users with the <strong>Admin role</strong> can create, edit, delete, or activate/deactivate connectors
+      </li>
+      <li>Only users with the <strong>Admin role</strong> can edit service configuration settings</li>
+      <li>All roles can read mappings, connectors, and service configuration</li>
+    </ul>
+    <br />
+    <img width="70%" class="m-l-48 m-b-48"
+      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Roles_Permissions.png"
+      alt="Dynamic Mapper Roles and Permissions" />
   </div>
 </div>

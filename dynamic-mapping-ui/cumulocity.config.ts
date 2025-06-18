@@ -103,6 +103,10 @@ export default {
         from: '../resources/image/Dynamic_Mapper_QoS_Matrix.png',
         to: 'image/Dynamic_Mapper_QoS_Matrix.png'
       },
+            {
+        from: '../resources/image/Dynamic_Mapper_Roles_Permissions.png',
+        to: 'image/Dynamic_Mapper_Roles_Permissions.png'
+      },
       {
         from: '../LICENSE',
         to: 'LICENSE.txt'

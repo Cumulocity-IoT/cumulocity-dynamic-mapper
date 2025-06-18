@@ -1,4 +1,40 @@
 svg {
 	width: inherit;
 	height: inherit;
-  }
+}
+
+
+.to-the-top {
+	position: fixed;
+	right: 3rem;
+	bottom: 4rem;
+	z-index: 38;
+	font-size: 1.5rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0;
+	padding: 8px 20px 8px 12px;
+	width: auto;
+	height: auto;
+	border: 1px solid var(--c8y-brand-primary);
+	background-color: white;
+	color: var(--c8y-brand-primary);
+	text-align: center;
+	transition: all 0.4s ease;
+	cursor: pointer;
+}
+
+h1, .h1 {
+    font-size: 36px;
+}
+
+h1, h2, h3, h4 {
+    margin: 0 0 1em;
+    font-weight: 600;
+    line-height: 1.2;
+    font-family: "Euclid Square","Libre Franklin","Helvetica",Arial,sans-serif;
+    text-wrap: pretty;
+	text-transform: uppercase;
+}
+
