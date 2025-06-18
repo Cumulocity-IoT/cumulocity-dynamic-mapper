@@ -86,7 +86,7 @@ public class WatsonController {
         this.objectMapper = objectMapper;
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_MAPPING_ADMIN', 'ROLE_MAPPING_CREATE')")
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> createMapping(@RequestBody String textBody) {
         try {

@@ -61,7 +61,7 @@ public class DeviceSubscriptionController {
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
 
-    @PreAuthorize("hasAnyRole('ROLE_MAPPING_ADMIN', 'ROLE_MAPPING_CREATE')")
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<C8YNotificationSubscription> subscriptionCreate(
             @Valid @RequestBody C8YNotificationSubscription subscription) {
@@ -98,7 +98,7 @@ public class DeviceSubscriptionController {
         }
         return ResponseEntity.ok(subscription);
     }
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<C8YNotificationSubscription> subscriptionUpdate(
             @Valid @RequestBody C8YNotificationSubscription subscription) {
@@ -193,7 +193,7 @@ public class DeviceSubscriptionController {
         }
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @RequestMapping(value = "/{deviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionDelete(@PathVariable String deviceId) {
         String tenant = contextService.getContext().getTenant();

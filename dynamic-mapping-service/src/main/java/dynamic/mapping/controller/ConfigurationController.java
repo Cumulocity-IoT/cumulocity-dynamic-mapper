@@ -121,7 +121,7 @@ public class ConfigurationController {
         return ResponseEntity.ok(connectorConfigurations);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_MAPPING_ADMIN', 'ROLE_MAPPING_CREATE')")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PostMapping(value = "/connector/instance", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createConnectorConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
@@ -221,7 +221,7 @@ public class ConfigurationController {
         }
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
@@ -250,7 +250,7 @@ public class ConfigurationController {
         return ResponseEntity.status(HttpStatus.OK).body(identifier);
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PutMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(@PathVariable String identifier,
             @Valid @RequestBody ConnectorConfiguration configuration) {
@@ -313,7 +313,7 @@ public class ConfigurationController {
         }
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PutMapping(value = "/service", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateServiceConfiguration(
             @Valid @RequestBody ServiceConfiguration serviceConfiguration) {
@@ -401,7 +401,7 @@ public class ConfigurationController {
         }
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(@PathVariable String id) {
         // TODO GRAAL_PERFORMANCE update code source from templates in graalCode cache
@@ -460,7 +460,7 @@ public class ConfigurationController {
         return new ResponseEntity<>(codeTemplates, HttpStatus.OK);
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateCodeTemplate(
             @PathVariable String id, @Valid @RequestBody CodeTemplate codeTemplate) {
@@ -489,7 +489,7 @@ public class ConfigurationController {
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasRole('ROLE_MAPPING_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PostMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createCodeTemplate(
             @Valid @RequestBody CodeTemplate codeTemplate) {
