@@ -81,7 +81,7 @@ public class HttpConnectorController {
 
     @RequestMapping(value = { "/httpConnector",
             "/httpConnector/**" }, method = { RequestMethod.POST, RequestMethod.PUT }, consumes = MediaType.ALL_VALUE)
-    @PreAuthorize("hasRole('ROLE_MAPPING_HTTP_CONNECTOR_CREATE'))")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE'))")
     public ResponseEntity<?> processGenericMessage(HttpServletRequest request) {
         String tenant = contextService.getContext().getTenant();
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
