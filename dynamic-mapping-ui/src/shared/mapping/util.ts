@@ -17,7 +17,10 @@
  *
  * @authors Christof Strack
  */
-import { API, Direction, Mapping, MappingType } from './mapping.model';
+import { ResolveFn } from '@angular/router';
+import { API, Direction, Feature, Mapping, MappingType } from './mapping.model';
+import { SharedService } from '../service/shared.service';
+import { inject } from '@angular/core';
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -389,3 +392,8 @@ export function nextIdAndPad(id: number, padding: number): string {
 export const NODE1 = 'node1';
 export const NODE2 = 'node2';
 export const NODE3 = 'node3';
+
+export const featureResolver: ResolveFn<Feature> = async (route, state) => {
+  const sharedService = inject(SharedService);
+  return await sharedService.getFeatures();
+};

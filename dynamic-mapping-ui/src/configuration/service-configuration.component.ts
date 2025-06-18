@@ -25,6 +25,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -58,11 +59,13 @@ export class ServiceConfigurationComponent implements OnInit {
     public bsModalService: BsModalService,
     public alertService: AlertService,
     private sharedService: SharedService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private route: ActivatedRoute
   ) { }
 
   async ngOnInit() {
     // console.log('Running version', this.version);
+    this.feature = this.route.snapshot.data['feature'];
     this.serviceForm = this.fb.group({
       logPayload: new FormControl(''),
       logSubstitution: new FormControl(''),
@@ -79,9 +82,7 @@ export class ServiceConfigurationComponent implements OnInit {
       inventoryFragmentsToCache: new FormControl(''),
       maxCPUTimeMS: new FormControl('')
     });
-
     this.loadData();
-    this.feature = await this.sharedService.getFeatures();
   }
 
   async loadData(): Promise<void> {
@@ -108,7 +109,7 @@ export class ServiceConfigurationComponent implements OnInit {
         this.serviceConfiguration.inventoryCacheRetention,
       inventoryFragmentsToCache:
         this.serviceConfiguration.inventoryFragmentsToCache.join(","),
-        maxCPUTimeMS:
+      maxCPUTimeMS:
         this.serviceConfiguration.maxCPUTimeMS
     });
   }

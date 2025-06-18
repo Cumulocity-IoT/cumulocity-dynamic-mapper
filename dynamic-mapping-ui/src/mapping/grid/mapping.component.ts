@@ -63,7 +63,7 @@ import {
 } from '../../shared';
 
 import { HttpStatusCode } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject, filter, finalize, switchMap, take } from 'rxjs';
@@ -161,7 +161,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     public alertService: AlertService,
     private bsModalService: BsModalService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private route: ActivatedRoute
   ) {
     // console.log('constructor');
     const href = this.router.url;
@@ -177,6 +177,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     // console.log('ngOnInit');
+    this.feature = this.route.snapshot.data['feature'];
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
@@ -206,8 +207,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: 'Apply filter',
         icon: 'filter',
         callback: this.editMessageFilter.bind(this),
-        showIf: (item) => ((item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) || 
-            item['mapping']['direction'] == Direction.OUTBOUND) && this.feature?.userHasMappingAdminRole
+        showIf: (item) => ((item['mapping']['mappingType'] == MappingType.JSON && item['mapping']['direction'] == Direction.INBOUND) ||
+          item['mapping']['direction'] == Direction.OUTBOUND) && this.feature?.userHasMappingAdminRole
       },
       {
         type: 'ENABLE_DEBUG',
@@ -345,12 +346,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           this.alertService.danger('Failed to fetch outbound mappings');
         });
     }
-    try {
-      this.feature = await this.sharedService.getFeatures();
-      this.cdr.detectChanges();
-    } catch (error) {
-      console.error('Error loading features in component', error);
-    }
+
   }
 
   async editMessageFilter(m: MappingEnriched) {

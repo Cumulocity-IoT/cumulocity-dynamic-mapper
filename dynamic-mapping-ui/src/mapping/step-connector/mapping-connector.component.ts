@@ -50,7 +50,7 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
   @ViewChild(ConnectorGridComponent)
   connectorGrid!: ConnectorGridComponent;
   @Input() stepperConfiguration: StepperConfiguration;
-  @Input() directions : Direction[] = [Direction.INBOUND,Direction.OUTBOUND];
+  @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
   private _deploymentMapEntry: DeploymentMapEntry;
   @Input()
   get deploymentMapEntry(): DeploymentMapEntry {
@@ -72,7 +72,7 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
     private sharedService: SharedService,
     public bsModalService: BsModalService,
     public connectorConfigurationService: ConnectorConfigurationService
-  ) {}
+  ) { }
 
   async ngOnInit() {
     this.readOnly =

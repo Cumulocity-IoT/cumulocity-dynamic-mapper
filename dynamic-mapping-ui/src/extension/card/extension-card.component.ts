@@ -43,12 +43,12 @@ export class ExtensionCardComponent implements OnInit {
     private router: Router,
     private activatedRoute: ActivatedRoute,
     public bsModalService: BsModalService,
-	private sharedService: SharedService
-  ) {}
+    private sharedService: SharedService
+  ) { }
 
   async ngOnInit() {
     this.external = this.app?.['external'];
-	this.feature = await this.sharedService.getFeatures();
+    this.feature = await this.sharedService.getFeatures();
   }
 
   async detail() {
@@ -61,35 +61,33 @@ export class ExtensionCardComponent implements OnInit {
 
   async delete() {
     const initialState = {
-        title: 'Delete mapping extension',
-        message:
-          'You are about to delete a mapping extension. Do you want to proceed?',
-        labels: {
-          ok: 'Delete',
-          cancel: 'Cancel'
-        }
-      };
-      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-        ConfirmationModalComponent,
-        { initialState }
-      );
-      confirmDeletionModalRef.content.closeSubject.subscribe(
-        async (confirmation: boolean) => {
-          // console.log('Confirmation result:', confirmation);
-          if (confirmation) {
-            try {
-                await this.extensionService.deleteExtension(this.app);
-                this.appDeleted.emit();
-              } catch (ex) {
-                if (ex) {
-                  this.alertService.addServerFailure(ex);
-                }
-              }
+      title: 'Delete mapping extension',
+      message:
+        'You are about to delete a mapping extension. Do you want to proceed?',
+      labels: {
+        ok: 'Delete',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      ConfirmationModalComponent,
+      { initialState }
+    );
+    confirmDeletionModalRef.content.closeSubject.subscribe(
+      async (confirmation: boolean) => {
+        // console.log('Confirmation result:', confirmation);
+        if (confirmation) {
+          try {
+            await this.extensionService.deleteExtension(this.app);
+            this.appDeleted.emit();
+          } catch (ex) {
+            if (ex) {
+              this.alertService.addServerFailure(ex);
+            }
           }
-          confirmDeletionModalRef.hide();
         }
-      );
-
-
+        confirmDeletionModalRef.hide();
+      }
+    );
   }
 }

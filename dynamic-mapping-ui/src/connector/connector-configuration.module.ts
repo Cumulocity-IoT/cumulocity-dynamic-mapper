@@ -36,19 +36,20 @@ import { NODE3 } from '../shared/mapping/util';
   providers: [
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-            children: [
-              {
-                path: '',
-                pathMatch: 'full',
-                component: ConnectorConfigurationComponent
-              },
-              {
-                path: 'details/:identifier',
-                component: ConnectorDetailsComponent,
-                resolve: { connector: connectorResolver }
-              }
-            ]
+      children: [
+        {
+          path: '',
+          pathMatch: 'full',
+          component: ConnectorConfigurationComponent,
+          resolve: { connector: connectorResolver }
+        },
+        {
+          path: 'details/:identifier',
+          component: ConnectorDetailsComponent,
+          resolve: { connector: connectorResolver }
+        }
+      ]
     })
   ]
 })
-export class BrokerConnectorModule {}
+export class BrokerConnectorModule { }

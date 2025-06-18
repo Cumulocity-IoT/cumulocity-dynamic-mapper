@@ -31,7 +31,7 @@ import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ServiceConfigurationModule } from '../configuration';
-import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule } from '../shared';
+import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule, featureResolver } from '../shared';
 import { MappingFilterComponent } from './filter/mapping-filter.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingComponent } from './grid/mapping.component';
@@ -105,15 +105,24 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
     DeviceGridService,
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
-      component: MappingComponent
+      component: MappingComponent,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
-      component: MappingComponent
+      component: MappingComponent,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/subscriptionOutbound`,
-      component: MappingSubscriptionComponent
+      component: MappingSubscriptionComponent,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     {
       provide: FORMLY_CONFIG,

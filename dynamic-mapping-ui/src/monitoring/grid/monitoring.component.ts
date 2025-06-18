@@ -41,6 +41,7 @@ import { DirectionRendererComponent } from '../renderer/direction.renderer.compo
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { ConnectorConfigurationService } from '../../connector';
 import { NameRendererComponent } from '../../mapping/renderer/name.renderer.component';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
@@ -156,12 +157,13 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     public brokerConnectorService: ConnectorConfigurationService,
     public alertService: AlertService,
     public bsModalService: BsModalService,
-    private sharedService: SharedService
+    private sharedService: SharedService,
+    private route: ActivatedRoute
   ) { }
 
   async ngOnInit() {
     this.initializeMonitoringService();
-    this.feature = await this.sharedService.getFeatures();
+    this.feature = this.route.snapshot.data['feature'];
   }
 
   async refreshMappingStatus(): Promise<void> {

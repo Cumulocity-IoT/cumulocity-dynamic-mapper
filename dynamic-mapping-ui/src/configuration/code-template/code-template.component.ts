@@ -30,7 +30,7 @@ import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configura
 import { FormGroup } from '@angular/forms';
 import { Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { BehaviorSubject } from 'rxjs';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpStatusCode } from '@angular/common/http';
 import { createCompletionProvider } from '../../mapping/shared/stepper.model';
 
@@ -72,11 +72,13 @@ export class CodeComponent implements OnInit {
     private sharedService: SharedService,
     private alertService: AlertService,
     private router: Router,
+    private route: ActivatedRoute
 
   ) { }
 
   async ngOnInit(): Promise<void> {
 
+    this.feature = this.route.snapshot.data['feature'];
     const href = this.router.url;
     // First determine the template type based on URL
     if (href.match(/sag-ps-pkg-dynamic-mapping\/node3\/codeTemplate\/inbound/g)) {
@@ -99,8 +101,7 @@ export class CodeComponent implements OnInit {
     console.log("CodeTemplateEntries after init:", this.codeTemplateEntries);
 
     this.onSelectCodeTemplate();
-    this.feature = await this.sharedService.getFeatures();
-    
+
   }
 
   refresh() {

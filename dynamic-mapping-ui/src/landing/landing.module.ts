@@ -24,7 +24,7 @@ import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { MappingModule } from '../mapping/mapping.module';
-import { SharedModule } from '../shared';
+import { featureResolver, SharedModule } from '../shared';
 import { LandingComponent } from './landing.component';
 
 @NgModule({
@@ -41,13 +41,17 @@ import { LandingComponent } from './landing.component';
   providers: [
     hookRoute({
       path: 'sag-ps-pkg-dynamic-mapping/landing',
-      component: LandingComponent
+      component: LandingComponent, resolve: {
+        feature: featureResolver
+      }
     }),
     hookRoute({
       path: '',
       pathMatch: 'full',
-      component: LandingComponent
+      component: LandingComponent, resolve: {
+        feature: featureResolver
+      }
     })
   ]
 })
-export class LandingModule {}
+export class LandingModule { }

@@ -33,6 +33,7 @@ import {
 } from '../shared';
 import { ConnectorConfigurationService } from '../shared/service/connector-configuration.service';
 import { ConnectorGridComponent } from '../shared/connector-configuration/connector-grid.component';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'd11r-mapping-broker-connector',
@@ -53,7 +54,12 @@ export class ConnectorConfigurationComponent {
     public connectorConfigurationService: ConnectorConfigurationService,
     public alertService: AlertService,
     private sharedService: SharedService,
-  ) { 
+    private route: ActivatedRoute
+  ) {
+  }
+
+  async ngOnInit() {
+    this.feature = this.route.snapshot.data['feature'];
   }
 
   refresh() {
@@ -74,10 +80,5 @@ export class ConnectorConfigurationComponent {
 
   async onConfigurationAdd() {
     this.connectorGrid.onConfigurationAdd();
-  }
-
-
-  async ngOnInit() {
-    this.feature = await this.sharedService.getFeatures();
   }
 }

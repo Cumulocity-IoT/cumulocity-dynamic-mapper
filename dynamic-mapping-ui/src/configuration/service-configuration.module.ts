@@ -20,7 +20,7 @@
 
 import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute, hookTab } from '@c8y/ngx-components';
-import { NODE3, SharedModule } from '../shared';
+import { featureResolver, NODE3, SharedModule } from '../shared';
 import { ServiceConfigurationComponent } from './service-configuration.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { CodeComponent } from './code-template/code-template.component';
@@ -42,19 +42,32 @@ import { CodeTemplateTabFactory } from './code-template-tab.factory';
   providers: [
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
-      component: ServiceConfigurationComponent,
+      component: ServiceConfigurationComponent
+      ,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate/inbound`,
       component: CodeComponent,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate/outbound`,
       component: CodeComponent,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/codeTemplate/others`,
       component: CodeComponent,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     hookTab(CodeTemplateTabFactory)
   ]

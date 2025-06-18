@@ -45,7 +45,7 @@ import {
   Operation
 } from '../../shared';
 
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
@@ -126,7 +126,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     public shareService: SharedService,
     public alertService: AlertService,
     private bsModalService: BsModalService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     // console.log('constructor');
     const href = this.router.url;
@@ -140,8 +141,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     this.loadSubscriptions();
   }
 
-  async ngOnInit() {
-    this.feature = await this.shareService.getFeatures();
+  ngOnInit() {
+    this.feature = this.route.snapshot.data['feature'];
     if (this.feature?.userHasMappingAdminRole) {
       this.bulkActionControlSubscription.push({
         type: BuiltInActionType.Delete,

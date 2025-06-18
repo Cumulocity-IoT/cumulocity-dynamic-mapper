@@ -26,6 +26,7 @@ import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AlertService } from '@c8y/ngx-components';
+import { ActivatedRoute } from '@angular/router';
 @Component({
   selector: 'd11r-landing',
   templateUrl: './landing.component.html',
@@ -38,7 +39,8 @@ export class LandingComponent implements OnInit {
     public sharedService: SharedService,
     public alertService: AlertService,
     private connectorConfigurationService: ConnectorConfigurationService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private route: ActivatedRoute
   ) {
     this.linkSVG = this.sanitizer.bypassSecurityTrustUrl(
       'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
@@ -58,7 +60,8 @@ export class LandingComponent implements OnInit {
 
   feature: Feature;
 
-  async ngOnInit(): Promise<void> {
+  async ngOnInit() {
+    this.feature = this.route.snapshot.data['feature'];
     this.linkSnoopProcess = '/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Snooping_Stepper_Process.svg';
     from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
       (mappings) => {
@@ -76,7 +79,6 @@ export class LandingComponent implements OnInit {
       this.countConnector$.next(!count ? 'no' : count.length)
     );
 
-    this.feature = await this.sharedService.getFeatures();
     if (!this.feature?.userHasMappingAdminRole) {
       this.alertService.warning(
         "You don't have the role 'Mapping Admin' and therefore cannot create or edit mappings/connectors. Please contact your administrator."

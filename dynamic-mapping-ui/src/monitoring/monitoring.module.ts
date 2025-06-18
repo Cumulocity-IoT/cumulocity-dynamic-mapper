@@ -26,7 +26,7 @@ import { ServiceConfigurationModule } from '../configuration';
 import { NumberRendererComponent } from './renderer/number.renderer.component';
 import { DirectionRendererComponent } from './renderer/direction.renderer.component';
 import { MonitoringChartComponent } from './chart/chart.component';
-import { NODE2 } from '../shared/mapping/util';
+import { featureResolver, NODE2 } from '../shared/mapping/util';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { MappingServiceEventComponent } from './event/mapping-service-event.component';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
@@ -57,7 +57,9 @@ import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
   providers: [
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
-      component: MonitoringComponent
+      component: MonitoringComponent, resolve: {
+        feature: featureResolver
+      }
     }),
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/chart`,
@@ -70,4 +72,4 @@ import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
     hookNavigator(MonitoringNavigationFactory),
   ]
 })
-export class MonitoringModule {}
+export class MonitoringModule { }
