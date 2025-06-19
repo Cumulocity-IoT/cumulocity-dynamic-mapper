@@ -84,12 +84,12 @@
       <br />
       The rules of the mapping are applied and result in an transformed payload
       for any of the
-      <a href="https://cumulocity.com/docs/concepts/domain-model/">Cumulocity APIs</a><br />
+      <a href="https://cumulocity.com/docs/concepts/domain-model/" target="_blank">Cumulocity APIs</a><br />
       <br />
 
       For the other direction you can define an <b>outbound mapping</b>. At
       runtime it listens for changes of any of the core
-      <a href="https://cumulocity.com/docs/concepts/domain-model/">domain objects</a>.
+      <a href="https://cumulocity.com/docs/concepts/domain-model/" target="_blank">domain objects</a>.
       <br />
       <br />
       The following links help you find the resources in the Dynamic
@@ -315,7 +315,8 @@
       <li><strong>WebHook</strong>: Primarily outbound-focused with conditional acknowledgments based on QoS level</li>
       <li><strong>Kafka</strong>: Limited support with only QoS 0 for outbound operations</li>
     </ul>
-    <p class="p-b-8 text-16">Generally, higher QoS levels (1-2) provide better delivery guarantees but aren't universally supported across all
+    <p class="p-b-8 text-16">Generally, higher QoS levels (1-2) provide better delivery guarantees but aren't
+      universally supported across all
       connectors. MQTT offers the most complete implementation while other connectors have more limited QoS
       capabilities.</p>
     <br />
@@ -335,7 +336,8 @@
       <li><strong>No role</strong>: Basic read-only access to mappings, connectors, and service configuration</li>
       <li><strong>Create role</strong>: All read permissions plus full mapping management (create, edit, delete,
         activate/deactivate, snoop/debug/filter)</li>
-      <li><strong>Admin role</strong>: Complete access including all <strong>Create role</strong> permissions plus connector management
+      <li><strong>Admin role</strong>: Complete access including all <strong>Create role</strong> permissions plus
+        connector management
         and service configuration editing</li>
     </ul>
     <p><strong>Key distinctions:</strong></p>
