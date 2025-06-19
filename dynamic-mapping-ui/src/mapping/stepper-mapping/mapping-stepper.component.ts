@@ -227,13 +227,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     // console.log('mapping-stepper', this._deploymentMapEntry, this.deploymentMapEntry);
-    this.feature = await this.sharedService.getFeatures();
-    if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
-      this.editorOptionsSourceSubstitution.readOnly = true;
-      this.editorOptionsTargetSubstitution.readOnly = true;
-      this.editorOptionsSourceTemplate.readOnly = true;
-      this.editorOptionsTargetTemplate.readOnly = true;
-    }
     if (
       this.mapping.snoopStatus === SnoopStatus.NONE ||
       this.mapping.snoopStatus === SnoopStatus.STOPPED
@@ -289,6 +282,22 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       },
     };
 
+    this.initializeFormlyFields();
+
+    this.initializeCodeTemplates();
+    this.setTemplateForm();
+
+    this.feature = await this.sharedService.getFeatures();
+    if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
+      this.editorOptionsSourceSubstitution.readOnly = true;
+      this.editorOptionsTargetSubstitution.readOnly = true;
+      this.editorOptionsSourceTemplate.readOnly = true;
+      this.editorOptionsTargetTemplate.readOnly = true;
+    }
+  }
+
+
+  private initializeFormlyFields() {
     this.filterFormlyFields = [
       {
         fieldGroup: [
@@ -301,8 +310,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               label: 'Filter mapping',
               class: 'input-sm',
               customWrapperClass: 'm-b-24',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
               placeholder: '$exists(c8y_TemperatureMeasurement)',
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
@@ -322,10 +330,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             expressionProperties: {
               'templateOptions.class': (model) => {
-                if (
-                  model.pathSource == '' &&
-                  model.stepperConfiguration.allowDefiningSubstitutions
-                ) {
+                if (model.pathSource == '' &&
+                  model.stepperConfiguration.allowDefiningSubstitutions) {
                   return 'input-sm';
                 } else {
                   return 'input-sm';
@@ -363,8 +369,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               label: 'Source Expression',
               class: 'input-sm',
               customWrapperClass: 'm-b-24',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
@@ -385,10 +390,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             expressionProperties: {
               'templateOptions.class': (model) => {
-                if (
-                  model.pathSource == '' &&
-                  model.stepperConfiguration.allowDefiningSubstitutions
-                ) {
+                if (model.pathSource == '' &&
+                  model.stepperConfiguration.allowDefiningSubstitutions) {
                   return 'input-sm';
                 } else {
                   return 'input-sm';
@@ -417,8 +420,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             templateOptions: {
               label: 'Target Expression',
               customWrapperClass: 'm-b-24',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               description: `Use the same <a href="https://jsonata.org" target="_blank">JSONata</a>
               expressions as for the source template. In addition you can use <code>$</code> to merge the 
@@ -430,10 +432,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             expressionProperties: {
               'templateOptions.class': (model) => {
                 // console.log("Logging class:", t)
-                if (
-                  model.pathTarget == '' &&
-                  model.stepperConfiguration.allowDefiningSubstitutions
-                ) {
+                if (model.pathTarget == '' &&
+                  model.stepperConfiguration.allowDefiningSubstitutions) {
                   return 'input-sm';
                 } else {
                   return 'input-sm';
@@ -457,11 +457,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         ]
       }
     ];
-
-    this.initializeCodeTemplates();
-    this.setTemplateForm();
   }
-
 
   async initializeCodeTemplates() {
     this.codeTemplates = await this.sharedService.getCodeTemplates();
