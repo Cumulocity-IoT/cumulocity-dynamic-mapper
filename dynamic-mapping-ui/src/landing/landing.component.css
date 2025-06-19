@@ -39,3 +39,86 @@ h1, h2, h3, h4 {
 	text-transform: uppercase;
 }
 
+.landing-help {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.landing-section-header {
+  margin-top: 32px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 4px;
+}
+
+.landing-section-block {
+  margin-bottom: 32px;
+  padding-left: 8px;
+}
+
+.landing-section-spacer {
+  height: 24px;
+}
+
+.landing-list {
+  margin: 12px 0 12px 24px;
+  padding: 0;
+  font-size: 16px;
+}
+
+.landing-list--toc {
+  list-style-type: decimal;
+  margin-left: 32px;
+}
+
+.landing-list--numbered {
+  list-style-type: decimal;
+  margin-left: 32px;
+}
+
+.landing-text {
+  margin-bottom: 12px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.landing-image {
+  display: block;
+  margin: 24px auto 16px auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  background: #fafbfc;
+}
+
+.landing-image--small {
+  width: 30%;
+  min-width: 180px;
+  max-width: 300px;
+}
+
+.landing-image--medium {
+  width: 70%;
+  min-width: 320px;
+  max-width: 640px;
+}
+
+.landing-image--large {
+  width: 80%;
+  min-width: 400px;
+  max-width: 900px;
+}
+
+.landing-image-description {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin-top: -8px;
+  margin-bottom: 16px;
+}
+
+.table-width-80 {
+  width: 80%;
+  margin: 0 auto;
+}
