@@ -10,11 +10,12 @@ svg {
 	bottom: 4rem;
 	z-index: 38;
 	font-size: 1.5rem;
+	font-weight: 600;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	margin: 0;
-	padding: 8px 20px 8px 12px;
+	padding: 6px 18px 6px 10px;
 	width: auto;
 	height: auto;
 	border: 1px solid var(--c8y-brand-primary);
