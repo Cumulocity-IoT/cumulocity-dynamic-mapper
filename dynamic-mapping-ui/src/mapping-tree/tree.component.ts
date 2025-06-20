@@ -45,9 +45,9 @@ export class MappingTreeComponent implements OnInit {
     navigationBar: false,
     statusBar: false,
     readOnly: true,
-  };
+  } as const;
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.mappingTree$.next(this.route.snapshot.data['mappingTree']);
   }
 
@@ -55,9 +55,4 @@ export class MappingTreeComponent implements OnInit {
     this.mappingTree$.next(await this.service.loadMappingTree());
   }
 
-  //   ngAfterViewInit() {
-  //     setTimeout(async () => {
-  //       await this.loadMappingTree();
-  //     }, 0);
-  //   }
 }
