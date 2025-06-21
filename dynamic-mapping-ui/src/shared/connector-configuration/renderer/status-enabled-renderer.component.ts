@@ -100,6 +100,6 @@ export class ConnectorStatusEnabledRendererComponent implements OnInit {
     this.sharedService.refreshMappings(Direction.OUTBOUND);
   }
   reloadData(): void {
-    this.connectorConfigurationService.updateConnectorConfigurations();
+    this.connectorConfigurationService.refreshConfigurations();
   }
 }

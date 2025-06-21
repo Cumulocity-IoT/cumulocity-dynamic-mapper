@@ -114,7 +114,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   private initializeConfigurations(): void {
-    this.configurations$ = this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus().pipe(
+    this.configurations$ = this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
       map(configs => configs.filter(config =>
         config.supportedDirections?.some(dir => this.directions.includes(dir))
       ))
@@ -123,7 +123,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   private initializeSpecifications(): void {
-    from(this.connectorConfigurationService.getConnectorSpecifications())
+    from(this.connectorConfigurationService.getSpecifications())
       .pipe(take(1))
       .subscribe(specs => this.specifications = specs);
   }
@@ -197,7 +197,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   refresh(): void {
-    this.connectorConfigurationService.updateConnectorConfigurations();
+    this.connectorConfigurationService.refreshConfigurations();
   }
 
   async onConfigurationUpdate(config: ConnectorConfiguration): Promise<void> {
@@ -207,7 +207,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         editedConfiguration,
         'Updated successfully.',
         'Failed to update connector configuration',
-        config => this.connectorConfigurationService.updateConnectorConfiguration(config)
+        config => this.connectorConfigurationService.updateConfiguration(config)
       );
     });
   }
@@ -220,7 +220,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         editedConfiguration,
         'Created successfully.',
         'Failed to create connector configuration',
-        config => this.connectorConfigurationService.createConnectorConfiguration(config)
+        config => this.connectorConfigurationService.createConfiguration(config)
       );
     });
   }
@@ -233,7 +233,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
           config,
           'Deleted successfully.',
           'Failed to delete connector configuration',
-          config => this.connectorConfigurationService.deleteConnectorConfiguration(config.identifier)
+          config => this.connectorConfigurationService.deleteConfiguration(config.identifier)
         );
       }
       modalRef.hide();
@@ -251,7 +251,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         addedConfiguration,
         'Added successfully.',
         'Failed to create connector configuration',
-        config => this.connectorConfigurationService.createConnectorConfiguration(config)
+        config => this.connectorConfigurationService.createConfiguration(config)
       );
     });
   }

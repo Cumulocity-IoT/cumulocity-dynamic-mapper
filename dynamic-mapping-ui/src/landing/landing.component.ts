@@ -76,7 +76,7 @@ export class LandingComponent implements OnInit {
     );
 
     from(
-      this.connectorConfigurationService.getConnectorConfigurations()
+      this.connectorConfigurationService.getConfigurations()
     ).subscribe((count) =>
       this.countConnector$.next(!count ? 'no' : count.length)
     );

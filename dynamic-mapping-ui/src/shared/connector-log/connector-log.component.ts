@@ -60,9 +60,9 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     // console.log('Running version', this.version);
-    this.connectorStatusService.initConnectorLogsRealtime();
+    this.connectorStatusService.startConnectorStatusLogs();
     this.configurations$ =
-      this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus();
+      this.connectorConfigurationService.getConfigurationsWithStatus();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
     // Subscribe to logs to verify they're coming through
     this.statusLogs$.pipe(
@@ -80,5 +80,6 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+        this.connectorStatusService.stopConnectorStatusLogs();
   }
 }

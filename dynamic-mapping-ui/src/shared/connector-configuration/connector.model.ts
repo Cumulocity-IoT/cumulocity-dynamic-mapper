@@ -81,5 +81,5 @@ export interface ConnectorSpecification {
 export const connectorResolver: ResolveFn<ConnectorConfiguration> = (route) => {
   const connectorConfigurationService = inject(ConnectorConfigurationService);
   const identifier = route.paramMap.get('identifier');
-  return connectorConfigurationService.getConnectorConfiguration(identifier);
+  return connectorConfigurationService.getConfiguration(identifier);
 };

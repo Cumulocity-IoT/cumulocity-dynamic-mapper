@@ -17,285 +17,376 @@
  *
  * @authors Christof Strack
  */
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, OnDestroy } from '@angular/core';
 import { FetchClient, IFetchResponse } from '@c8y/client';
 import {
-  BASE_URL,
-  ConnectorConfiguration,
-  ConnectorSpecification,
-  ConnectorStatus,
-  ConnectorStatusEvent,
-  PATH_CONFIGURATION_CONNECTION_ENDPOINT,
-  PATH_STATUS_CONNECTORS_ENDPOINT,
-} from '..';
-
-import {
-  combineLatest,
-  from,
-  merge,
+  BehaviorSubject,
   Observable,
   Subject,
-  Subscription
+  Subscription,
+  combineLatest,
+  from,
+  of,
+  timer
 } from 'rxjs';
-import { map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import {
-  EventRealtimeService,
-  RealtimeSubjectService
-} from '@c8y/ngx-components';
+  map,
+  shareReplay,
+  switchMap,
+  catchError,
+  retry,
+  takeUntil,
+  startWith,
+  distinctUntilChanged
+} from 'rxjs/operators';
+import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT } from '..';
+import { RealtimeSubjectService, EventRealtimeService } from '@c8y/ngx-components';
+
+interface ConnectorConfigurationState {
+  configurations: ConnectorConfiguration[];
+  specifications: ConnectorSpecification[];
+  statusMap: { [identifier: string]: ConnectorStatusEvent };
+  isLoading: boolean;
+  error: string | null;
+}
 
 @Injectable({ providedIn: 'root' })
-export class ConnectorConfigurationService {
-  constructor(
-    private client: FetchClient,
-  ) {
-    this.eventRealtimeService = new EventRealtimeService(
-      inject(RealtimeSubjectService)
-    );
-    this.startConnectorConfigurations();
-    this.sharedConnectorConfigurations$ = this.connectorConfigurations$.pipe(
-      // tap(() => console.log('Further up I')),
-      // shareReplay(1),
-      // tap(() => console.log('Further up II')),
-      switchMap((configurations: ConnectorConfiguration[]) => {
-        // console.log('Further up III');
-        return combineLatest([
-          from([configurations]),
-          from(this.getConnectorStatus()),
-          from(this.getConnectorSpecifications()),
-        ]).pipe(
-          map(([configs, statusMap, specs]) => {
-            // console.log('Changes configs:', configs);
-            // console.log('Changes statusMap:', statusMap);
-            return configs.map((config) => ({
-              ...config,
-              status$: new Observable<ConnectorStatus>((observer) => {
-                if (statusMap[config.identifier]) {
-                  observer.next(statusMap[config.identifier].status);
-                }
-                return () => {}; // Cleanup function
-              }),
-              supportedDirections: specs.find(
-                connector => connector.connectorType === config.connectorType
-              )?.supportedDirections
-            }));
-          })
-        );
-      }),
-      shareReplay(1)
-    );
-  }
+export class ConnectorConfigurationService implements OnDestroy {
+  // Modern dependency injection
+  private readonly client = inject(FetchClient);
+  private readonly realtimeSubjectService = inject(RealtimeSubjectService);
 
-  private _connectorConfigurations: ConnectorConfiguration[];
-  private _connectorSpecifications: ConnectorSpecification[];
+  // Subscription management
+  private readonly destroy$ = new Subject<void>();
+  private subscriptions = new Subscription();
 
-  private triggerConfigurations$: Subject<string> = new Subject();
-
-  private initialized: boolean = false;
+  // Services
   private eventRealtimeService: EventRealtimeService;
-  private subscription: Subscription;
-  private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
-  private sharedConnectorConfigurations$: Observable<ConnectorConfiguration[]>;
 
-  resetCache() {
-    // console.log('Calling: BrokerConfigurationService.resetCache()');
-    this._connectorConfigurations = [];
-    this._connectorSpecifications = undefined;
+  // State management
+  private readonly state$ = new BehaviorSubject<ConnectorConfigurationState>({
+    configurations: [],
+    specifications: [],
+    statusMap: {},
+    isLoading: false,
+    error: null
+  });
+
+  // Triggers
+  private readonly refreshTrigger$ = new Subject<void>();
+
+  // Configuration
+  private readonly CONFIG = {
+    CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+    RETRY_ATTEMPTS: 3,
+    RETRY_DELAY: 1000
+  } as const;
+
+  // Cache
+  private specificationsCache: ConnectorSpecification[] | null = null;
+  private cacheTimestamp: number = 0;
+
+  // Public observables
+  readonly specifications$ = this.createSpecificationsStream();
+  readonly configurations$ = this.createConfigurationsStream();
+  readonly configurationsWithStatus$ = this.createConfigurationsWithStatusStream();
+
+  constructor() {
+    this.eventRealtimeService = new EventRealtimeService(
+      this.realtimeSubjectService
+    );
   }
 
-  startConnectorConfigurations() {
-    if (!this.initialized) {
-      this.initialized = true;
-      this.connectorConfigurations$ = merge(
-        from(this.getConnectorConfigurations()),
-        this.triggerConfigurations$.pipe(
-          switchMap(() => {
-            return from(this.getConnectorConfigurations());
-          })
-        )
-      ).pipe(
-        // tap(() => console.log('Something happened')),
-        shareReplay(1)
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.subscriptions.unsubscribe();
+    this.state$.complete();
+    this.refreshTrigger$.complete();
+    this.eventRealtimeService?.stop();
+  }
+
+  // Public API
+  getConfigurations(): Observable<ConnectorConfiguration[]> {
+    return this.configurations$;
+  }
+
+  getConfigurationsWithStatus(): Observable<ConnectorConfiguration[]> {
+    return this.configurationsWithStatus$;
+  }
+
+    // Public API
+  getSpecifications(): Observable<ConnectorSpecification[]> {
+    return this.specifications$;
+  }
+
+  refreshConfigurations(): void {
+    this.refreshTrigger$.next();
+  }
+
+  resetCache(): void {
+    this.specificationsCache = null;
+    this.cacheTimestamp = 0;
+    this.updateState({
+      specifications: [],
+      statusMap: {}
+    });
+  }
+
+  // CRUD Operations
+  async createConfiguration(configuration: ConnectorConfiguration): Promise<IFetchResponse> {
+    try {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
+        {
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(configuration),
+          method: 'POST'
+        }
       );
-      // this.testRealtime();
+
+      // Refresh configurations after successful creation
+      this.refreshConfigurations();
+
+      return response;
+    } catch (error) {
+      console.error('Failed to create connector configuration:', error);
+      throw error;
     }
   }
 
-  updateConnectorConfigurations() {
-    const n = Date.now();
-    this.triggerConfigurations$.next('refresh' + '/' + n);
-  }
-
-  stopConnectorConfigurations() {
-    if (this.subscription) this.subscription.unsubscribe();
-  }
-
-  async getConnectorSpecifications(): Promise<ConnectorSpecification[]> {
-    if (!this._connectorSpecifications) {
+  async updateConfiguration(configuration: ConnectorConfiguration): Promise<IFetchResponse> {
+    try {
       const response = await this.client.fetch(
-        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specifications`,
+        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${configuration.identifier}`,
         {
-          headers: {
-            accept: 'application/json'
-          },
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(configuration),
+          method: 'PUT'
+        }
+      );
+
+      this.refreshConfigurations();
+      return response;
+    } catch (error) {
+      console.error('Failed to update connector configuration:', error);
+      throw error;
+    }
+  }
+
+  async deleteConfiguration(identifier: string): Promise<IFetchResponse> {
+    if (!identifier?.trim()) {
+      throw new Error('Identifier is required');
+    }
+
+    try {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${identifier}`,
+        {
+          method: 'DELETE'
+        }
+      );
+
+      this.refreshConfigurations();
+      return response;
+    } catch (error) {
+      console.error('Failed to delete connector configuration:', error);
+      throw error;
+    }
+  }
+
+  async getConfiguration(identifier: string): Promise<ConnectorConfiguration> {
+    if (!identifier?.trim()) {
+      throw new Error('Identifier is required');
+    }
+
+    try {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${identifier}`,
+        {
+          headers: { accept: 'application/json' },
           method: 'GET'
         }
       );
-      this._connectorSpecifications = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Failed to get connector configuration ${identifier}:`, error);
+      throw error;
     }
-    return this._connectorSpecifications;
   }
 
-  async getConnectorStatus(): Promise<{
-    [identifier: string]: ConnectorStatusEvent;
-  }> {
+  // Private methods
+  private createConfigurationsStream(): Observable<ConnectorConfiguration[]> {
+    return this.refreshTrigger$.pipe(
+      startWith(null), // Initial load
+      switchMap(() => this.loadConfigurations()),
+      retry(this.CONFIG.RETRY_ATTEMPTS),
+      catchError(error => {
+        this.handleError('Failed to load configurations', error);
+        return of([]);
+      }),
+      distinctUntilChanged(),
+      shareReplay(1),
+      takeUntil(this.destroy$)
+    );
+  }
+
+  private createConfigurationsWithStatusStream(): Observable<ConnectorConfiguration[]> {
+    return combineLatest([
+      this.configurations$,
+      this.createStatusStream(),
+      this.createSpecificationsStream()
+    ]).pipe(
+      map(([configurations, statusMap, specifications]) =>
+        this.enrichConfigurationsWithStatus(configurations, statusMap, specifications)
+      ),
+      shareReplay(1),
+      takeUntil(this.destroy$)
+    );
+  }
+
+  private createStatusStream(): Observable<{ [identifier: string]: ConnectorStatusEvent }> {
+    return timer(0, 30000).pipe( // Poll every 30 seconds
+      switchMap(() => this.loadConnectorStatus()),
+      catchError(error => {
+        console.error('Failed to load connector status:', error);
+        return of({});
+      }),
+      takeUntil(this.destroy$)
+    );
+  }
+
+  private createSpecificationsStream(): Observable<ConnectorSpecification[]> {
+    return timer(0, this.CONFIG.CACHE_DURATION).pipe(
+      switchMap(() => this.loadSpecifications()),
+      catchError(error => {
+        console.error('Failed to load specifications:', error);
+        return of([]);
+      }),
+      takeUntil(this.destroy$)
+    );
+  }
+
+  private loadConfigurations(): Observable<ConnectorConfiguration[]> {
+    return from(this.fetchConfigurations()).pipe(
+      catchError(error => {
+        console.error('Failed to fetch configurations:', error);
+        return of([]);
+      })
+    );
+  }
+
+  private loadConnectorStatus(): Observable<{ [identifier: string]: ConnectorStatusEvent }> {
+    return from(this.fetchConnectorStatus()).pipe(
+      catchError(error => {
+        console.error('Failed to fetch connector status:', error);
+        return of({});
+      })
+    );
+  }
+
+  private loadSpecifications(): Observable<ConnectorSpecification[]> {
+    if (this.isSpecificationsCacheValid()) {
+      return of(this.specificationsCache!);
+    }
+
+    return from(this.fetchSpecifications()).pipe(
+      map(specs => {
+        this.specificationsCache = specs;
+        this.cacheTimestamp = Date.now();
+        return specs;
+      }),
+      catchError(error => {
+        console.error('Failed to fetch specifications:', error);
+        return of([]);
+      })
+    );
+  }
+
+  private async fetchConfigurations(): Promise<ConnectorConfiguration[]> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
+      {
+        headers: { accept: 'application/json' },
+        method: 'GET'
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+
+  private async fetchConnectorStatus(): Promise<{ [identifier: string]: ConnectorStatusEvent }> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_STATUS_CONNECTORS_ENDPOINT}`,
-      {
-        method: 'GET'
-      }
+      { method: 'GET' }
     );
-    const result = await response.json();
-    return result;
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
   }
 
-  async updateConnectorConfiguration(
-    configuration: ConnectorConfiguration
-  ): Promise<IFetchResponse> {
-    return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${configuration.identifier}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(configuration),
-        method: 'PUT'
-      }
-    );
-  }
-
-  async createConnectorConfiguration(
-    configuration: ConnectorConfiguration
-  ): Promise<IFetchResponse> {
-    return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(configuration),
-        method: 'POST'
-      }
-    );
-  }
-
-  async deleteConnectorConfiguration(identifier: string): Promise<IFetchResponse> {
-    return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${identifier}`,
-      {
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json'
-        },
-        method: 'DELETE'
-      }
-    );
-  }
-
-  async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
+  private async fetchSpecifications(): Promise<ConnectorSpecification[]> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specifications`,
       {
-        headers: {
-          accept: 'application/json'
-        },
+        headers: { accept: 'application/json' },
         method: 'GET'
       }
     );
-    this._connectorConfigurations = await response.json();
 
-    return this._connectorConfigurations;
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
   }
 
-  async getConnectorConfiguration(identifier: string): Promise<ConnectorConfiguration>{
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${identifier}`,
-      {
-        headers: {
-          accept: 'application/json'
-        },
-        method: 'GET'
-      }
-    );
-    const result = await response.json();
-
-    return result;
+  private enrichConfigurationsWithStatus(
+    configurations: ConnectorConfiguration[],
+    statusMap: { [identifier: string]: ConnectorStatusEvent },
+    specifications: ConnectorSpecification[]
+  ): ConnectorConfiguration[] {
+    return configurations.map(config => ({
+      ...config,
+      status: statusMap[config.identifier]?.status || ConnectorStatus.UNKNOWN,
+      supportedDirections: specifications.find(
+        spec => spec.connectorType === config.connectorType
+      )?.supportedDirections || []
+    }));
   }
 
-  getConnectorConfigurationsAsObservable(): Observable<ConnectorConfiguration[]> {
-    return this.connectorConfigurations$;
+  private isSpecificationsCacheValid(): boolean {
+    return this.specificationsCache !== null &&
+      (Date.now() - this.cacheTimestamp) < this.CONFIG.CACHE_DURATION;
   }
 
-  // private getConnectorStatusEvents(): Observable<ConnectorStatusEvent> {
-  //   // subscribe to event stream
-  //   this.eventRealtimeService.start();
-  //   return from(this.sharedService.getDynamicMappingServiceAgent()).pipe(
-  //     switchMap((agentId) => {
-  //       return concat(
-  //         this.eventRealtimeService.onAll$(agentId).pipe(
-  //           filter(
-  //             (p) =>
-  //               p['data']['type'] ==
-  //             LoggingEventTypeMap[LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE].type
-  //           ),
-  //           map((p) => {
-  //             const connectorFragment = p['data'][CONNECTOR_FRAGMENT];
-  //             return {
-  //               connectorIdentifier: connectorFragment.connectorIdentifier,
-  //               connectorName: connectorFragment.connectorName,
-  //               status: connectorFragment.status,
-  //               message: connectorFragment.message,
-  //               type: connectorFragment.type
-  //             };
-  //           }),
-  //           tap((p) => {
-  //             console.log('Status change connector original:', p);
-  //             this.updateConnectorConfigurations();
-  //           })
-  //         )
-  //       );
-  //     })
-  //   );
-  // }
-
-  private async testRealtime() {
-    console.log('Calling testRealtime');
-
-    const eventRealtimeService = new EventRealtimeService(
-      inject(RealtimeSubjectService)
-    );
-    eventRealtimeService.start();
-
-    eventRealtimeService
-      .onAll$('9262685372')
-      .pipe(
-        //  map((p) => p['data']),
-        // filter((p) => p['type'] == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE),
-        tap((p) => {
-          console.log('Status change connector simple:', p);
-        })
-      )
-      .subscribe();
+  private updateState(partialState: Partial<ConnectorConfigurationState>): void {
+    const currentState = this.state$.value;
+    this.state$.next({ ...currentState, ...partialState });
   }
 
-  private updateRealtimeConnectorStatus = async (p: object) => {
-    const payload = p['data']['data'];
-    console.log('Status change connector old fashin:', payload);
-  };
+  private handleError(message: string, error: unknown): void {
+    console.error(message, error);
 
-  getConnectorConfigurationsWithLiveStatus(): Observable<
-    ConnectorConfiguration[]
-  > {
-    // console.log('Further up 0');
-    return this.sharedConnectorConfigurations$;
+    const errorMessage = error instanceof Error
+      ? error.message
+      : 'Unknown error occurred';
+
+    this.updateState({
+      error: `${message}: ${errorMessage}`,
+      isLoading: false
+    });
   }
 }

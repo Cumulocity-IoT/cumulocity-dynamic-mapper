@@ -34,7 +34,7 @@
   <!-- <div class="card-block" style="max-height: 400px; overflow: auto"> -->
   <div class="card-block">
     <c8y-data-grid [configureColumnsEnabled]="false" [title]="'Mapping monitoring' | translate" [columns]="columns"
-      [rows]="(state$ | async)?.mappingStatuses" [pagination]="pagination" [actionControls]="actionControls">
+      [rows]="mappingStatus$ |async" [pagination]="pagination" [actionControls]="actionControls">
     </c8y-data-grid>
   </div>
 

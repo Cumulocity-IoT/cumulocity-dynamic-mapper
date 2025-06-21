@@ -75,7 +75,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   });
 
 
-  readonly mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
+  readonly mappingStatus$ = this.state$.pipe(
+    map(state => state.mappingStatuses))
   readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
   readonly error$ = this.state$.pipe(map(state => state.error));
 
@@ -233,7 +234,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     await this.monitoringService.startMonitoring();
 
     this.monitoringService
-      .getCurrentMappingStatus()
+      .getMappingStatus()
       .pipe(
         takeUntil(this.destroy$),
         catchError(error => {

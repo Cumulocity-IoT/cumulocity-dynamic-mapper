@@ -216,7 +216,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   private async initializeMonitoringService() {
     await this.monitoringService.startMonitoring();
     this.monitoringService
-      .getCurrentMappingStatus()
+      .getMappingStatus()
       .subscribe((status) => this.mappingStatus$.next(status));
   }
 
