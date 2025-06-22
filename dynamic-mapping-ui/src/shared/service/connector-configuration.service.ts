@@ -71,7 +71,7 @@ export class ConnectorConfigurationService implements OnDestroy {
   private readonly refreshTrigger$ = new Subject<void>();
 
   // Polling configuration
-  private readonly pollingInterval$ = new BehaviorSubject<number>(15000); // Default 15 seconds
+  private readonly pollingInterval$ = new BehaviorSubject<number>(60000); // Default 60 seconds
   private readonly AVAILABLE_INTERVALS: PollingInterval[] = [
     { label: '5 seconds', value: 5000, seconds: 5 },
     { label: '15 seconds', value: 15000, seconds: 15 },
@@ -130,7 +130,6 @@ export class ConnectorConfigurationService implements OnDestroy {
 
   // Polling configuration methods
   setPollingInterval(interval: number): void {
-
     console.log(`Setting polling interval to ${interval} ms`);
     this.pollingInterval$.next(interval);
   }
@@ -139,12 +138,7 @@ export class ConnectorConfigurationService implements OnDestroy {
     return [...this.AVAILABLE_INTERVALS];
   }
 
-
-  // getCurrentPollingInterval(): PollingInterval {
-  //   return this.AVAILABLE_INTERVALS.find(interval => interval.value === this.pollingInterval$.value);
-  // }
-
-    getCurrentPollingInterval(): number {
+  getCurrentPollingInterval(): number {
     return this.pollingInterval$.value;
   }
 
@@ -156,6 +150,7 @@ export class ConnectorConfigurationService implements OnDestroy {
 
   refreshConfigurations(): void {
     this.refreshTrigger$.next();
+    this.setPollingInterval(this.getCurrentPollingInterval());
   }
 
   resetCache(): void {
