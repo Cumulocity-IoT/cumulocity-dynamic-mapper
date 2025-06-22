@@ -570,5 +570,14 @@ export class MappingService {
       });
   }
 
-  async stopChangedMappingEvents() { }
+  async stopChangedMappingEvents() { 
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+      this.subscription = null;
+    }
+    if (this.eventRealtimeService) {
+      this.eventRealtimeService.stop();
+    }
+    // console.log('Stopped subscriptions:', this._agentId);
+  }
 }
