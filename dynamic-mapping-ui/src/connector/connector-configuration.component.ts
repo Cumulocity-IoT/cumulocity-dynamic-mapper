@@ -50,9 +50,7 @@ export class ConnectorConfigurationComponent {
   configurations: ConnectorConfiguration[];
 
   constructor(
-    public bsModalService: BsModalService,
-    public connectorConfigurationService: ConnectorConfigurationService,
-    public alertService: AlertService,
+    private alertService: AlertService,
     private sharedService: SharedService,
     private route: ActivatedRoute
   ) {

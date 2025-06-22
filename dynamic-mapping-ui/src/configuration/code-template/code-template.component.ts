@@ -68,7 +68,7 @@ export class CodeComponent implements OnInit {
   codeEditorHelp = `Shared code is evaluated across all mappings that utilize <b>Define substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
 
   constructor(
-    public bsModalService: BsModalService,
+    private bsModalService: BsModalService,
     private sharedService: SharedService,
     private alertService: AlertService,
     private router: Router,
@@ -153,7 +153,6 @@ export class CodeComponent implements OnInit {
     });
   }
 
-
   async onResetSystemCodeTemplate() {
     const response1 = await this.sharedService.runOperation(
       { operation: Operation.INIT_CODE_TEMPLATES }
@@ -165,7 +164,6 @@ export class CodeComponent implements OnInit {
       this.alertService.danger(gettext('Failed to reset system code template!'));
     }
   }
-
 
   async onSaveCodeTemplate() {
     if (this.codeTemplateDecoded) {
