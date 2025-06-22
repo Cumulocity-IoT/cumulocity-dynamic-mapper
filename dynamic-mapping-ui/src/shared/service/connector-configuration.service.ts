@@ -17,13 +17,12 @@
  *
  * @authors Christof Strack
  */
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, OnDestroy } from '@angular/core';
 import { FetchClient, IFetchResponse } from '@c8y/client';
 import {
   BehaviorSubject,
   Observable,
   Subject,
-  Subscription,
   combineLatest,
   from,
   of,
@@ -34,6 +33,7 @@ import {
   shareReplay,
   switchMap,
   catchError,
+  takeUntil,
   startWith,
   distinctUntilChanged,
 } from 'rxjs/operators';
@@ -48,12 +48,12 @@ interface ConnectorConfigurationState {
 }
 
 @Injectable({ providedIn: 'root' })
-export class ConnectorConfigurationService {
+export class ConnectorConfigurationService implements OnDestroy {
   // Modern dependency injection
   private readonly client = inject(FetchClient);
 
   // Subscription management
-  private subscriptions = new Subscription();
+  private readonly destroy$ = new Subject<void>();
 
   // State management
   private readonly state$ = new BehaviorSubject<ConnectorConfigurationState>({
@@ -81,6 +81,12 @@ export class ConnectorConfigurationService {
   private configurationsWithStatus$?: Observable<ConnectorConfiguration[]>;
   private specifications$?: Observable<ConnectorSpecification[]>;
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.state$.complete();
+    this.refreshTrigger$.complete();
+  }
 
   // Public API
   getConfigurations(): Observable<ConnectorConfiguration[]> {
@@ -214,7 +220,8 @@ export class ConnectorConfigurationService {
         return of([]);
       }),
       distinctUntilChanged(),
-      shareReplay(1)
+      shareReplay(1),
+      takeUntil(this.destroy$)
     );
   }
 
@@ -227,7 +234,8 @@ export class ConnectorConfigurationService {
       map(([configurations, statusMap, specifications]) =>
         this.enrichConfigurationsWithStatus(configurations, statusMap, specifications)
       ),
-      shareReplay(1)
+      shareReplay(1),
+      takeUntil(this.destroy$)
     );
   }
 
@@ -238,6 +246,7 @@ export class ConnectorConfigurationService {
         console.error('Failed to load connector status:', error);
         return of({});
       }),
+      takeUntil(this.destroy$)
     );
   }
 
@@ -248,6 +257,7 @@ export class ConnectorConfigurationService {
         console.error('Failed to load specifications:', error);
         return of([]);
       }),
+      takeUntil(this.destroy$)
     );
   }
 
