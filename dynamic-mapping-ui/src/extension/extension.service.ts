@@ -18,15 +18,14 @@
  * @authors Christof Strack
  */
 
-import { EventEmitter, Injectable } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import {
   IManagedObject,
-  IManagedObjectBinary,
   InventoryBinaryService,
-  InventoryService
-} from '@c8y/client';
-import { FetchClient, IFetchResponse } from '@c8y/client';
+  InventoryService,
+  FetchClient} from '@c8y/client';
+import { BehaviorSubject, forkJoin, from, map, Observable, Subject } from 'rxjs';
+
 import {
   BASE_URL,
   Extension,
@@ -34,153 +33,240 @@ import {
   PATH_EXTENSION_ENDPOINT,
   PROCESSOR_EXTENSION_TYPE
 } from '../shared';
-import * as _ from 'lodash';
-import { AlertService, gettext, ModalService } from '@c8y/ngx-components';
-import { BehaviorSubject, forkJoin, from, map, Observable } from 'rxjs';
-import { HttpStatusCode } from '@angular/common/http';
+import { FilesService, IFetchWithProgress } from '@c8y/ngx-components';
+import { Stream } from 'stream';
+
+interface ExtensionFilter {
+  pageSize: number;
+  withTotalPages: boolean;
+  fragmentType: string;
+}
 
 @Injectable({ providedIn: 'root' })
-export class ExtensionService {
-  appDeleted = new EventEmitter<IManagedObject>();
-  progress: BehaviorSubject<number> = new BehaviorSubject<number>(null);
+export class ExtensionService implements OnDestroy {
+  // Private subjects
+  readonly appDeleted$ = new Subject<IManagedObject>();
+
+  // Configuration
+  private readonly CONFIG = {
+    PAGE_SIZE: 100,
+    UPLOAD_PROGRESS_MAX: 95,
+    HTTP_TIMEOUT: 30000
+  } as const;
+
   constructor(
-    private client: FetchClient,
-    private modal: ModalService,
-    private alertService: AlertService,
-    private translateService: TranslateService,
-    private inventoryService: InventoryService,
-    private inventoryBinaryService: InventoryBinaryService
-  ) {}
+    private readonly client: FetchClient,
+    private readonly inventoryService: InventoryService,
+    private readonly fileService: FilesService,
+    private readonly inventoryBinaryService: InventoryBinaryService
+  ) { }
 
-  async getExtensions(extensionId: string): Promise<IManagedObject[]> {
-    const filter: object = {
-      pageSize: 100,
-      withTotalPages: true,
-      fragmentType: PROCESSOR_EXTENSION_TYPE
-    };
 
-    let result = [];
-    if (!extensionId) {
-      result = (await this.inventoryService.list(filter)).data;
-    } else {
-      result.push((await this.inventoryService.detail(extensionId)).data);
-    }
-    return result;
+  ngOnDestroy(): void {
+    this.appDeleted$.complete();
   }
 
-  async getProcessorExtensions(): Promise<Map<string,Extension>> {
-    const response: IFetchResponse = await this.client.fetch(
-      `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}`,
-      {
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json'
-        },
-        method: 'GET'
-      }
-    );
 
-    if (response.status != HttpStatusCode.Ok) {
-      return undefined;
+  async getProcessorExtensions(): Promise<Map<string, Extension>> {
+    try {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}`,
+        {
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/json'
+          },
+          method: 'GET'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return new Map(Object.entries(data || {}));
+    } catch (error) {
+      console.error('Failed to get processor extensions:', error);
+      throw new Error(`Failed to load processor extensions: ${error.message}`);
     }
-    return response.json();
   }
 
   async getProcessorExtension(name: string): Promise<Extension> {
-    const response: IFetchResponse = await this.client.fetch(
-      `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${name}`,
-      {
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json'
-        },
-        method: 'GET'
-      }
-    );
-
-    if (response.status != HttpStatusCode.Ok) {
-      return undefined;
+    if (!name?.trim()) {
+      throw new Error('Extension name is required');
     }
-    // let result =  (await response.json()) as string[];
-    return response.json();
+
+    try {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${encodeURIComponent(name)}`,
+        {
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/json'
+          },
+          method: 'GET'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Failed to get processor extension ${name}:`, error);
+      throw error;
+    }
   }
 
-  async deleteProcessorExtension(name: string): Promise<string> {
-    const response: IFetchResponse = await this.client.fetch(
-      `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${name}`,
-      {
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json'
-        },
-        method: 'DELETE'
-      }
-    );
-
-    if (response.status != HttpStatusCode.Ok) {
-      return undefined;
-    }
-    // let result =  (await response.json()) as string[];
-    return response.json();
-  }
-
-  getExtensionsEnriched(extensionId: string): Observable<IManagedObject[]> {
-    const listOfExtensionsInventory$ = from(this.getExtensions(extensionId));
+  getEnrichedProcessorExtensions(extensionId?: string): Observable<IManagedObject[]> {
+    const listOfExtensionsInventory$ = from(this.getProcessorExtensionAsMO(extensionId));
     const listOfExtensionsBackend$ = from(this.getProcessorExtensions());
 
     return forkJoin({
       inventory: listOfExtensionsInventory$,
       backend: listOfExtensionsBackend$
     }).pipe(
-      map(({ inventory, backend }) => {
-        return inventory.map((ext) => {
-          const backendExt = backend[ext['name']];
-          if (backendExt?.loaded) {
-            return {
-              ...ext,
-              loaded: backendExt.loaded,
-              external: backendExt.external,
-              extensionEntries: _.values(backendExt.extensionEntries)
-            };
-          } else {
-            return {
-              ...ext,
-              loaded: ExtensionStatus.UNKNOWN
-            };
-          }
-        });
-      })
+      map(({ inventory, backend }) => this.enrichProcessorExtensions(inventory, backend))
     );
   }
 
-  async deleteExtension(app: IManagedObject): Promise<void> {
-    await this.deleteProcessorExtension(app['name']);
-    this.alertService.success(gettext('Extension deleted.'));
-    this.appDeleted.emit(app);
+  async deleteProcessorExtension(app: IManagedObject): Promise<void> {
+    if (!app?.name) {
+      throw new Error('Invalid extension: missing name');
+    }
+
+    try {
+      await this.deleteExtensionFromBackend(app.name);
+      this.appDeleted$.next(app);
+    } catch (error) {
+      console.error(`Failed to delete extension ${app.name}:`, error);
+      throw error;
+    }
   }
 
-  updateUploadProgress(event): void {
-    if (event.lengthComputable) {
-      const currentProgress = this.progress.value;
-      this.progress.next(
-        currentProgress + (event.loaded / event.total) * (95 - currentProgress)
+  async cancelProcessorExtensionCreation(app: Partial<IManagedObject>): Promise<void> {
+    if (!app?.id) {
+      console.warn('Cannot cancel: invalid app object');
+      return;
+    }
+
+    try {
+      await this.inventoryBinaryService.delete(app);
+    } catch (error) {
+      console.error('Failed to cancel extension creation:', error);
+      throw error;
+    }
+  }
+
+  // Private helper methods
+
+  private async deleteExtensionFromBackend(name: string): Promise<void> {
+    if (!name?.trim()) {
+      throw new Error('Extension name is required');
+    }
+
+    try {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${encodeURIComponent(name)}`,
+        {
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/json'
+          },
+          method: 'DELETE'
+        }
       );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error(`Failed to delete processor extension ${name}:`, error);
+      throw error;
     }
   }
 
-  async uploadExtension(
-    archive: File,
-    app: Partial<IManagedObject>
-  ): Promise<IManagedObjectBinary> {
-    const result = (await this.inventoryBinaryService.create(archive, app))
-      .data;
+  private enrichProcessorExtensions(
+    inventory: IManagedObject[],
+    backend: Map<string, Extension>
+  ): IManagedObject[] {
+    return inventory.map((ext) => {
+      if (!ext?.name) {
+        console.warn('Extension missing name:', ext);
+        return {
+          ...ext,
+          loaded: ExtensionStatus.UNKNOWN
+        };
+      }
 
-    return result;
+      const backendExt = backend.get(ext.name);
+
+      if (backendExt?.loaded) {
+        return {
+          ...ext,
+          loaded: backendExt.loaded,
+          external: backendExt.external,
+          extensionEntries: Object.values(backendExt.extensionEntries || {})
+        };
+      }
+
+      return {
+        ...ext,
+        loaded: ExtensionStatus.UNKNOWN
+      };
+    });
   }
 
-  cancelExtensionCreation(app: Partial<IManagedObject>): void {
-    if (app) {
-      this.inventoryBinaryService.delete(app);
+
+  private async getProcessorExtensionAsMO(extensionId?: string): Promise<IManagedObject[]> {
+    try {
+      if (extensionId?.trim()) {
+        const result = await this.inventoryService.detail(extensionId);
+        return [result.data];
+      }
+
+      const filter: ExtensionFilter = {
+        pageSize: this.CONFIG.PAGE_SIZE,
+        withTotalPages: true,
+        fragmentType: PROCESSOR_EXTENSION_TYPE
+      };
+
+      const result = await this.inventoryService.list(filter);
+      return result.data || [];
+    } catch (error) {
+      console.error('Failed to get extensions:', error);
+      throw new Error(`Failed to load extensions: ${error.message}`);
     }
   }
+
+  uploadProcessorExtensionWithProgress$(file: Stream | Buffer | File | Blob, app: Partial<IManagedObject>): Observable<IFetchWithProgress> {
+    const uploadStartTimestamp = new Date().getTime();
+    const subject = new BehaviorSubject<IFetchWithProgress>({
+      percentage: 0,
+      totalBytes: null,
+      bufferedBytes: 0,
+      bytesPerSecond: 0
+    });
+    const onProgress = (event: ProgressEvent) => {
+      const eventTimestamp = new Date().getTime();
+      const duration = eventTimestamp - uploadStartTimestamp;
+      subject.next({
+        percentage: Math.round((event.loaded / event.total) * 100),
+        totalBytes: event.total,
+        bufferedBytes: event.loaded,
+        bytesPerSecond: Math.round(event.loaded / Math.round(duration / 1000))
+      });
+    };
+
+    const xhr = this.inventoryBinaryService.createWithProgress(file, onProgress, app);
+    const uploadPromise = this.inventoryBinaryService.getXMLHttpResponse(xhr);
+    uploadPromise.then(() => {
+      subject.complete();
+    });
+
+    return subject.asObservable();
+  }
+
 }

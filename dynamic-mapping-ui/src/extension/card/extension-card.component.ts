@@ -78,7 +78,7 @@ export class ExtensionCardComponent implements OnInit {
         // console.log('Confirmation result:', confirmation);
         if (confirmation) {
           try {
-            await this.extensionService.deleteExtension(this.app);
+            await this.extensionService.deleteProcessorExtension(this.app);
             this.appDeleted.emit();
           } catch (ex) {
             if (ex) {
