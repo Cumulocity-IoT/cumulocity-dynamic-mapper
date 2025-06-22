@@ -74,11 +74,11 @@ export class LandingComponent implements OnInit {
       (count) => this.countMappingOutbound$.next(!count ? 'no' : count.length)
     );
 
-    from(
-      this.connectorConfigurationService.getConfigurations()
-    ).subscribe((count) =>
-      this.countConnector$.next(!count ? 'no' : count.length)
-    );
+
+    this.connectorConfigurationService.getConfigurations()
+      .subscribe((count) =>
+        this.countConnector$.next(!count ? 'no' : count.length)
+      );
 
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
       this.alertService.warning(

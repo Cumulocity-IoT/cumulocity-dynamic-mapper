@@ -18,12 +18,13 @@
  * @authors Christof Strack
  */
 
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable } from '@angular/core';
 import {
   IManagedObject,
   InventoryBinaryService,
   InventoryService,
-  FetchClient} from '@c8y/client';
+  FetchClient
+} from '@c8y/client';
 import { BehaviorSubject, forkJoin, from, map, Observable, Subject } from 'rxjs';
 
 import {
@@ -33,7 +34,7 @@ import {
   PATH_EXTENSION_ENDPOINT,
   PROCESSOR_EXTENSION_TYPE
 } from '../shared';
-import { FilesService, IFetchWithProgress } from '@c8y/ngx-components';
+import { IFetchWithProgress } from '@c8y/ngx-components';
 import { Stream } from 'stream';
 
 interface ExtensionFilter {
@@ -43,7 +44,7 @@ interface ExtensionFilter {
 }
 
 @Injectable({ providedIn: 'root' })
-export class ExtensionService implements OnDestroy {
+export class ExtensionService {
   // Private subjects
   readonly appDeleted$ = new Subject<IManagedObject>();
 
@@ -57,15 +58,8 @@ export class ExtensionService implements OnDestroy {
   constructor(
     private readonly client: FetchClient,
     private readonly inventoryService: InventoryService,
-    private readonly fileService: FilesService,
     private readonly inventoryBinaryService: InventoryBinaryService
   ) { }
-
-
-  ngOnDestroy(): void {
-    this.appDeleted$.complete();
-  }
-
 
   async getProcessorExtensions(): Promise<Map<string, Extension>> {
     try {
@@ -139,7 +133,6 @@ export class ExtensionService implements OnDestroy {
 
     try {
       await this.deleteExtensionFromBackend(app.name);
-      this.appDeleted$.next(app);
     } catch (error) {
       console.error(`Failed to delete extension ${app.name}:`, error);
       throw error;

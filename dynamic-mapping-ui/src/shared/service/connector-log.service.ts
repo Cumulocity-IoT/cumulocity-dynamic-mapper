@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { inject, Injectable, OnDestroy } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { EventService } from '@c8y/client';
 import {
   CONNECTOR_FRAGMENT,
@@ -28,8 +28,8 @@ import {
   SharedService,
 } from '..';
 
-import { BehaviorSubject, combineLatest, firstValueFrom, from, merge, Observable, of, ReplaySubject, Subscription } from 'rxjs';
-import { catchError, filter, map, scan, shareReplay, switchMap, tap } from 'rxjs/operators';
+import { BehaviorSubject, from, merge, Observable, of, ReplaySubject, Subscription } from 'rxjs';
+import { catchError, filter, map, scan, shareReplay, switchMap } from 'rxjs/operators';
 import {
   EventRealtimeService,
   RealtimeSubjectService
@@ -38,7 +38,7 @@ import {
 @Injectable({
   providedIn: 'root'
 })
-export class ConnectorLogService implements OnDestroy {
+export class ConnectorLogService {
 
   private readonly eventService = inject(EventService);
   private readonly sharedService = inject(SharedService);
@@ -80,12 +80,6 @@ export class ConnectorLogService implements OnDestroy {
     new BehaviorSubject(this.RESET);
   private statusLogs$ = new ReplaySubject<ConnectorStatusEvent[]>(1);
 
-  ngOnDestroy(): void {
-    this.subscriptions.unsubscribe();
-    this.eventRealtimeService.stop();
-    this.statusLogs$.complete();
-    this.triggerLogs$.complete();
-  }
 
   getStatusLogs(): Observable<ConnectorStatusEvent[]> {
     return this.statusLogs$.asObservable();
@@ -114,6 +108,8 @@ export class ConnectorLogService implements OnDestroy {
 
     // Optionally reset state
     this.statusLogs$.next([]);
+    this.statusLogs$.complete();
+    this.triggerLogs$.complete();
   }
 
   updateStatusLogs(filter: {

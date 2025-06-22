@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { inject, Injectable, OnDestroy } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { FetchClient, IFetchResponse } from '@c8y/client';
 import {
   BehaviorSubject,
@@ -34,13 +34,10 @@ import {
   shareReplay,
   switchMap,
   catchError,
-  retry,
-  takeUntil,
   startWith,
-  distinctUntilChanged
+  distinctUntilChanged,
 } from 'rxjs/operators';
 import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT } from '..';
-import { RealtimeSubjectService, EventRealtimeService } from '@c8y/ngx-components';
 
 interface ConnectorConfigurationState {
   configurations: ConnectorConfiguration[];
@@ -51,17 +48,12 @@ interface ConnectorConfigurationState {
 }
 
 @Injectable({ providedIn: 'root' })
-export class ConnectorConfigurationService implements OnDestroy {
+export class ConnectorConfigurationService {
   // Modern dependency injection
   private readonly client = inject(FetchClient);
-  private readonly realtimeSubjectService = inject(RealtimeSubjectService);
 
   // Subscription management
-  private readonly destroy$ = new Subject<void>();
   private subscriptions = new Subscription();
-
-  // Services
-  private eventRealtimeService: EventRealtimeService;
 
   // State management
   private readonly state$ = new BehaviorSubject<ConnectorConfigurationState>({
@@ -78,7 +70,6 @@ export class ConnectorConfigurationService implements OnDestroy {
   // Configuration
   private readonly CONFIG = {
     CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
-    RETRY_ATTEMPTS: 3,
     RETRY_DELAY: 1000
   } as const;
 
@@ -86,37 +77,30 @@ export class ConnectorConfigurationService implements OnDestroy {
   private specificationsCache: ConnectorSpecification[] | null = null;
   private cacheTimestamp: number = 0;
 
-  // Public observables
-  readonly specifications$ = this.createSpecificationsStream();
-  readonly configurations$ = this.createConfigurationsStream();
-  readonly configurationsWithStatus$ = this.createConfigurationsWithStatusStream();
+  private configurations$?: Observable<ConnectorConfiguration[]>;
+  private configurationsWithStatus$?: Observable<ConnectorConfiguration[]>;
+  private specifications$?: Observable<ConnectorSpecification[]>;
 
-  constructor() {
-    this.eventRealtimeService = new EventRealtimeService(
-      this.realtimeSubjectService
-    );
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.subscriptions.unsubscribe();
-    this.state$.complete();
-    this.refreshTrigger$.complete();
-    this.eventRealtimeService?.stop();
-  }
 
   // Public API
   getConfigurations(): Observable<ConnectorConfiguration[]> {
+    if (!this.configurations$) {
+      this.configurations$ = this.createConfigurationsStream();
+    }
     return this.configurations$;
   }
 
   getConfigurationsWithStatus(): Observable<ConnectorConfiguration[]> {
+    if (!this.configurationsWithStatus$) {
+      this.configurationsWithStatus$ = this.createConfigurationsWithStatusStream();
+    }
     return this.configurationsWithStatus$;
   }
 
-    // Public API
   getSpecifications(): Observable<ConnectorSpecification[]> {
+    if (!this.specifications$) {
+      this.specifications$ = this.createSpecificationsStream();
+    }
     return this.specifications$;
   }
 
@@ -225,14 +209,12 @@ export class ConnectorConfigurationService implements OnDestroy {
     return this.refreshTrigger$.pipe(
       startWith(null), // Initial load
       switchMap(() => this.loadConfigurations()),
-      retry(this.CONFIG.RETRY_ATTEMPTS),
       catchError(error => {
         this.handleError('Failed to load configurations', error);
         return of([]);
       }),
       distinctUntilChanged(),
-      shareReplay(1),
-      takeUntil(this.destroy$)
+      shareReplay(1)
     );
   }
 
@@ -245,8 +227,7 @@ export class ConnectorConfigurationService implements OnDestroy {
       map(([configurations, statusMap, specifications]) =>
         this.enrichConfigurationsWithStatus(configurations, statusMap, specifications)
       ),
-      shareReplay(1),
-      takeUntil(this.destroy$)
+      shareReplay(1)
     );
   }
 
@@ -257,7 +238,6 @@ export class ConnectorConfigurationService implements OnDestroy {
         console.error('Failed to load connector status:', error);
         return of({});
       }),
-      takeUntil(this.destroy$)
     );
   }
 
@@ -268,7 +248,6 @@ export class ConnectorConfigurationService implements OnDestroy {
         console.error('Failed to load specifications:', error);
         return of([]);
       }),
-      takeUntil(this.destroy$)
     );
   }
 
@@ -389,4 +368,5 @@ export class ConnectorConfigurationService implements OnDestroy {
       isLoading: false
     });
   }
+
 }
