@@ -25,7 +25,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
   template: `<span
     [class]="
       'text-12 tag ' +
-      ((context.item?.status$) === 'CONNECTED'
+      ((context.item?.status) === 'CONNECTED'
         ? 'tag--success'
         : (context.item?.status) === 'FAILED'
           ? 'tag--danger'

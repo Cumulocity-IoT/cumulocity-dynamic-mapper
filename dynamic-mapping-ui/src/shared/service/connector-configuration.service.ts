@@ -36,8 +36,9 @@ import {
   takeUntil,
   startWith,
   distinctUntilChanged,
+  tap,
 } from 'rxjs/operators';
-import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT } from '..';
+import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT, PollingInterval } from '..';
 import { EventRealtimeService, RealtimeSubjectService } from '@c8y/ngx-components';
 
 interface ConnectorConfigurationState {
@@ -47,7 +48,6 @@ interface ConnectorConfigurationState {
   isLoading: boolean;
   error: string | null;
 }
-
 @Injectable({ providedIn: 'root' })
 export class ConnectorConfigurationService implements OnDestroy {
 
@@ -70,6 +70,15 @@ export class ConnectorConfigurationService implements OnDestroy {
   // Triggers
   private readonly refreshTrigger$ = new Subject<void>();
 
+  // Polling configuration
+  private readonly pollingInterval$ = new BehaviorSubject<number>(15000); // Default 15 seconds
+  private readonly AVAILABLE_INTERVALS: PollingInterval[] = [
+    { label: '5 seconds', value: 5000, seconds: 5 },
+    { label: '15 seconds', value: 15000, seconds: 15 },
+    { label: '30 seconds', value: 30000, seconds: 30 },
+    { label: '1 minute', value: 60000, seconds: 60 }
+  ];
+
   // Configuration
   private readonly CONFIG = {
     CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
@@ -83,6 +92,7 @@ export class ConnectorConfigurationService implements OnDestroy {
   private configurations$?: Observable<ConnectorConfiguration[]>;
   private configurationsWithStatus$?: Observable<ConnectorConfiguration[]>;
   private specifications$?: Observable<ConnectorSpecification[]>;
+
   constructor(
     private client: FetchClient,
   ) { }
@@ -93,6 +103,7 @@ export class ConnectorConfigurationService implements OnDestroy {
     this.destroy$.complete();
     this.state$.complete();
     this.refreshTrigger$.complete();
+    this.pollingInterval$.complete();
   }
 
   // Public API
@@ -115,6 +126,32 @@ export class ConnectorConfigurationService implements OnDestroy {
       this.specifications$ = this.createSpecificationsStream();
     }
     return this.specifications$;
+  }
+
+  // Polling configuration methods
+  setPollingInterval(interval: number): void {
+
+    console.log(`Setting polling interval to ${interval} ms`);
+    this.pollingInterval$.next(interval);
+  }
+
+  getAvailablePollingIntervals(): PollingInterval[] {
+    return [...this.AVAILABLE_INTERVALS];
+  }
+
+
+  // getCurrentPollingInterval(): PollingInterval {
+  //   return this.AVAILABLE_INTERVALS.find(interval => interval.value === this.pollingInterval$.value);
+  // }
+
+    getCurrentPollingInterval(): number {
+    return this.pollingInterval$.value;
+  }
+
+  getCurrentPollingIntervalLabel(): string {
+    const current = this.pollingInterval$.value;
+    const found = this.AVAILABLE_INTERVALS.find(interval => interval.value === current);
+    return found ? found.label : `${current / 1000} seconds`;
   }
 
   refreshConfigurations(): void {
@@ -230,31 +267,39 @@ export class ConnectorConfigurationService implements OnDestroy {
       shareReplay(1),
       takeUntil(this.destroy$)
     );
-
   }
 
   private createConfigurationsWithStatusStream(): Observable<ConnectorConfiguration[]> {
     return combineLatest([
-      this.configurations$,
+      this.getConfigurations(),
       this.createStatusStream(),
-      this.createSpecificationsStream()
+      this.getSpecifications()
     ]).pipe(
       map(([configurations, statusMap, specifications]) =>
         this.enrichConfigurationsWithStatus(configurations, statusMap, specifications)
       ),
-      // tap((configurations) => { console.log('Enriched configurations:', configurations) }),
       shareReplay(1),
       takeUntil(this.destroy$)
     );
   }
 
   private createStatusStream(): Observable<{ [identifier: string]: ConnectorStatusEvent }> {
-    return timer(0, 5000).pipe( // Poll every 30 seconds
+    // Don't cache the stream - let it be reactive to interval changes
+    return this.pollingInterval$.pipe(
+      switchMap(interval => {
+        console.log(`🔄 Creating status stream with ${interval}ms interval`);
+        return timer(0, interval).pipe(
+          tap(() => {
+            console.log(`⏰ Timer tick (${interval}ms) - loading connector status`);
+          })
+        );
+      }),
       switchMap(() => this.loadConnectorStatus()),
       catchError(error => {
         console.error('Failed to load connector status:', error);
         return of({});
       }),
+      shareReplay(1), // Share at this level, not in the cached stream
       takeUntil(this.destroy$)
     );
   }
@@ -359,13 +404,6 @@ export class ConnectorConfigurationService implements OnDestroy {
     return configurations.map(config => ({
       ...config,
       status: statusMap[config.identifier]?.status || ConnectorStatus.UNKNOWN,
-
-      // status$: new Observable<ConnectorStatus>((observer) => {
-      //   if (statusMap[config.identifier]) {
-      //     observer.next(statusMap[config.identifier].status);
-      //   }
-      //   return () => { }; // Cleanup function
-      // }),
       supportedDirections: specifications.find(
         spec => spec.connectorType === config.connectorType
       )?.supportedDirections || []
@@ -394,6 +432,4 @@ export class ConnectorConfigurationService implements OnDestroy {
       isLoading: false
     });
   }
-
-
 }

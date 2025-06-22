@@ -30,7 +30,7 @@ import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-lo
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
 import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
-import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
+import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingInterval } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
@@ -68,6 +68,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   columns: Column[];
   actionControls: ActionControl[];
   feature: Feature;
+  intervals: PollingInterval[];
+  currentPollingInterval: number;
 
   constructor(
     private bsModalService: BsModalService,
@@ -84,6 +86,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     this.initializeSelection();
     this.initializeConfigurations();
     this.initializeSpecifications();
+    this.intervals = this.connectorConfigurationService.getAvailablePollingIntervals();
+    this.currentPollingInterval = this.connectorConfigurationService.getCurrentPollingInterval();
+    console.log('Current Polling Interval:', this.currentPollingInterval);
     this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
     this.feature = await this.sharedService.getFeatures();
   }
@@ -93,6 +98,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
       setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
     }
   }
+
+  onPollingIntervalChange(): void {
+    this.connectorConfigurationService.setPollingInterval(this.currentPollingInterval);
+  }
+
   private initializeActionControls(): void {
     this.actionControls = ACTION_CONTROLS.map(control => ({
       ...control,

@@ -20,7 +20,6 @@
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, ViewChild } from '@angular/core';
 import { AlertService, gettext } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable } from 'rxjs';
 import packageJson from '../../package.json';
 import {

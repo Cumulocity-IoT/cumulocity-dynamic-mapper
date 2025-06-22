@@ -21,8 +21,9 @@
 
 <div class="">
   <c8y-data-grid [ngClass]="customClasses" #connectorGrid [title]="'Connectors'" [selectable]="selectable && !readOnly"
-    [columns]="columns" [selectionPrimaryKey]="'identifier'"[configureColumnsEnabled]="false" [rows]="configurations$ | async" [pagination]="pagination"
-    [actionControls]="actionControls" [showSearch]= "false" (itemsSelect)="onSelectionChanged($event)">
+    [columns]="columns" [selectionPrimaryKey]="'identifier'" [configureColumnsEnabled]="false"
+    [rows]="configurations$ | async" [pagination]="pagination" [actionControls]="actionControls" [showSearch]="false"
+    (itemsSelect)="onSelectionChanged($event)">
     <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-connected'" [title]="'No connectors exist.' | translate"
       [subtitle]="
   'Create your first connector.' | translate
@@ -30,6 +31,20 @@
     </c8y-ui-empty-state>
   </c8y-data-grid>
 </div>
+<c8y-action-bar-item [placement]="'left'">
+  <div class="d-flex">
+    <label class="m-r-8" style="margin-top:6px" id="listLabel">{{'Reload'}}</label>
+    <div class="c8y-select-wrapper" style="max-width: 180px">
+      <select aria-labelledby="listLabel" name="listLabel" class="form-control" [(ngModel)]="currentPollingInterval"
+        (ngModelChange)="onPollingIntervalChange()" required>
+        <option *ngFor="let item of intervals" [value]="item.value">
+          {{ item.label }}
+        </option>
+      </select>
+      <span></span>
+    </div>
+  </div>
+</c8y-action-bar-item>
 <div *ngIf="selectable">
   <label>Selected connectors for mapping</label>
   <div class="bg-level-1 p-t-2 p-b-2">

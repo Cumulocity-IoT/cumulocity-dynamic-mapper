@@ -67,7 +67,6 @@ export interface ConnectorConfiguration {
   name: string;
   properties: { [name: string]: any };
 }
-
 export interface ConnectorSpecification {
   name: string;
   description: string;
@@ -83,3 +82,9 @@ export const connectorResolver: ResolveFn<ConnectorConfiguration> = (route) => {
   const identifier = route.paramMap.get('identifier');
   return connectorConfigurationService.getConfiguration(identifier);
 };
+
+export interface PollingInterval {
+  label: string;
+  value: number;
+  seconds: number;
+}
