@@ -25,20 +25,20 @@ import { CellRendererContext } from '@c8y/ngx-components';
   template: `<span
     [class]="
       'text-12 tag ' +
-      ((context.item?.status$ | async) === 'CONNECTED'
+      ((context.item?.status$) === 'CONNECTED'
         ? 'tag--success'
-        : (context.item?.status$ | async) === 'FAILED'
+        : (context.item?.status) === 'FAILED'
           ? 'tag--danger'
           : 'tag--default')
     "
-    >{{ context.item?.status$ | async }}
+    >{{ context.item?.status }}
   </span> `,
   standalone: false
 })
 export class ConnectorStatusRendererComponent {
   constructor(public context: CellRendererContext) {
-    // console.log(   `Connector: ${context.item.name}`, context.item?.status$ | async);
+    // // console.log(   `Connector: ${context.item.name}`, context.item?.status$ | async);
     // const status$ = context.item?.status$;
-    // status$.subscribe( n => console.log(`Connector new status: ${n}`));
+    // status$?.subscribe( n => console.log(`Connector new status: ${n}`));
   }
 }

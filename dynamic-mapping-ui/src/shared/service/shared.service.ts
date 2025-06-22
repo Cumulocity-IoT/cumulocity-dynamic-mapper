@@ -22,7 +22,6 @@ import {
   IFetchResponse,
   IdentityService,
   IExternalIdentity,
-  ApplicationService
 } from '@c8y/client';
 import {
   AGENT_ID,
@@ -46,7 +45,6 @@ export class SharedService {
     private client: FetchClient,
     private identity: IdentityService,
     private option: OptionsService,
-    private application: ApplicationService,
 
   ) {
     // console.log('Option:', this.option, this.application, window.location);

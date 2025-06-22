@@ -21,7 +21,7 @@ import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewIni
 import { ActionControl, AlertService, Column, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, from, Observable, } from 'rxjs';
-import { map, take } from 'rxjs/operators';
+import { map, take, tap } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
@@ -102,7 +102,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     }));
   }
 
-
   private initializeColumns(): void {
     this.columns = GRID_COLUMNS.map(column => ({
       ...column,
@@ -117,7 +116,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     this.configurations$ = this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
       map(configs => configs.filter(config =>
         config.supportedDirections?.some(dir => this.directions.includes(dir))
-      ))
+      )),
+      // tap((configurations) => { console.log('Enriched configurations:', configurations) }),
     )
     this.setupConfigurationsSubscription();
   }

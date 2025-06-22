@@ -31,7 +31,6 @@ import {
   Operation,
   SharedService
 } from '../shared';
-import { ConnectorConfigurationService } from '../shared/service/connector-configuration.service';
 import { ConnectorGridComponent } from '../shared/connector-configuration/connector-grid.component';
 import { ActivatedRoute } from '@angular/router';
 

@@ -38,6 +38,7 @@ import {
   distinctUntilChanged,
 } from 'rxjs/operators';
 import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT } from '..';
+import { EventRealtimeService, RealtimeSubjectService } from '@c8y/ngx-components';
 
 interface ConnectorConfigurationState {
   configurations: ConnectorConfiguration[];
@@ -49,11 +50,13 @@ interface ConnectorConfigurationState {
 
 @Injectable({ providedIn: 'root' })
 export class ConnectorConfigurationService implements OnDestroy {
-  // Modern dependency injection
-  private readonly client = inject(FetchClient);
 
   // Subscription management
   private readonly destroy$ = new Subject<void>();
+
+  eventRealtimeService = new EventRealtimeService(
+    inject(RealtimeSubjectService)
+  );
 
   // State management
   private readonly state$ = new BehaviorSubject<ConnectorConfigurationState>({
@@ -80,8 +83,12 @@ export class ConnectorConfigurationService implements OnDestroy {
   private configurations$?: Observable<ConnectorConfiguration[]>;
   private configurationsWithStatus$?: Observable<ConnectorConfiguration[]>;
   private specifications$?: Observable<ConnectorSpecification[]>;
+  constructor(
+    private client: FetchClient,
+  ) { }
 
   ngOnDestroy(): void {
+    console.log('ConnectorConfigurationService destroyed');
     this.destroy$.next();
     this.destroy$.complete();
     this.state$.complete();
@@ -223,6 +230,7 @@ export class ConnectorConfigurationService implements OnDestroy {
       shareReplay(1),
       takeUntil(this.destroy$)
     );
+
   }
 
   private createConfigurationsWithStatusStream(): Observable<ConnectorConfiguration[]> {
@@ -234,13 +242,14 @@ export class ConnectorConfigurationService implements OnDestroy {
       map(([configurations, statusMap, specifications]) =>
         this.enrichConfigurationsWithStatus(configurations, statusMap, specifications)
       ),
+      // tap((configurations) => { console.log('Enriched configurations:', configurations) }),
       shareReplay(1),
       takeUntil(this.destroy$)
     );
   }
 
   private createStatusStream(): Observable<{ [identifier: string]: ConnectorStatusEvent }> {
-    return timer(0, 30000).pipe( // Poll every 30 seconds
+    return timer(0, 5000).pipe( // Poll every 30 seconds
       switchMap(() => this.loadConnectorStatus()),
       catchError(error => {
         console.error('Failed to load connector status:', error);
@@ -350,6 +359,13 @@ export class ConnectorConfigurationService implements OnDestroy {
     return configurations.map(config => ({
       ...config,
       status: statusMap[config.identifier]?.status || ConnectorStatus.UNKNOWN,
+
+      // status$: new Observable<ConnectorStatus>((observer) => {
+      //   if (statusMap[config.identifier]) {
+      //     observer.next(statusMap[config.identifier].status);
+      //   }
+      //   return () => { }; // Cleanup function
+      // }),
       supportedDirections: specifications.find(
         spec => spec.connectorType === config.connectorType
       )?.supportedDirections || []
@@ -378,5 +394,6 @@ export class ConnectorConfigurationService implements OnDestroy {
       isLoading: false
     });
   }
+
 
 }
