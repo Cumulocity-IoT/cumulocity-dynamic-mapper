@@ -28,7 +28,7 @@
       <c8y-form-group *ngIf="!isAppCreated; else appCreated" [hasError]="!!errorMessage" class="m-auto"
         style="max-width: 285px">
         <c8y-drop-area (dropped)="onFileDroppedEvent($event)" [accept]="'.jar'" [loading]="isLoading"
-          [maxAllowedFiles]="1" [message]="'Upload a *.jar file' | translate" [progress]="progress | async"
+          [maxAllowedFiles]="1" [message]="'Upload a *.jar file' | translate" [progress]="progress"
           class="drop-area">
         </c8y-drop-area>
         <c8y-messages>

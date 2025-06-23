@@ -63,6 +63,26 @@ import { C8YNotificationSubscription, Device } from '../shared/mapping.model';
 export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
 
+  constructor(
+    private mappingService: MappingService,
+    private shareService: SharedService,
+    private alertService: AlertService,
+    private bsModalService: BsModalService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {
+    // console.log('constructor');
+    const href = this.router.url;
+    this.stepperConfiguration.direction = href.match(
+      /sag-ps-pkg-dynamic-mapping\/node1\/mappings\/inbound/g
+    )
+      ? Direction.INBOUND
+      : Direction.OUTBOUND;
+
+    this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
+    this.loadSubscriptions();
+  }
+
   showConfigSubscription: boolean = false;
   showConfigSubscription2: boolean = false;
 
@@ -75,10 +95,10 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   stepperConfiguration: StepperConfiguration = {};
   titleMapping: string;
-  titleSubscription: string = 'Subscription devices mapping outbound';
+  readonly titleSubscription: string = 'Subscription devices mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
 
-  displayOptions: DisplayOptions = {
+  readonly displayOptions: DisplayOptions = {
     bordered: true,
     striped: true,
     filter: false,
@@ -113,35 +133,18 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   mappingType: MappingType;
   destroy$: Subject<boolean> = new Subject<boolean>();
 
-  pagination: Pagination = {
+  readonly pagination: Pagination = {
     pageSize: 30,
     currentPage: 1
   };
+
   actionControlSubscription: ActionControl[] = [];
   bulkActionControlSubscription: BulkActionControl[] = [];
   feature: Feature;
 
-  constructor(
-    public mappingService: MappingService,
-    public shareService: SharedService,
-    public alertService: AlertService,
-    private bsModalService: BsModalService,
-    private router: Router,
-    private route: ActivatedRoute
-  ) {
-    // console.log('constructor');
-    const href = this.router.url;
-    this.stepperConfiguration.direction = href.match(
-      /sag-ps-pkg-dynamic-mapping\/node1\/mappings\/inbound/g
-    )
-      ? Direction.INBOUND
-      : Direction.OUTBOUND;
 
-    this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
-    this.loadSubscriptions();
-  }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.feature = this.route.snapshot.data['feature'];
     if (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) {
       this.bulkActionControlSubscription.push({
@@ -155,21 +158,21 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     }
   }
 
-  async loadSubscriptions() {
+  async loadSubscriptions(): Promise<void> {
     this.subscription = await this.mappingService.getSubscriptions();
     this.subscriptions = this.subscription.devices;
     this.subscriptionGrid?.reload();
   }
 
-  onDefineSubscription() {
+  onDefineSubscription(): void {
     this.showConfigSubscription = !this.showConfigSubscription;
   }
 
-  onDefineSubscription2() {
+  onDefineSubscription2(): void {
     this.showConfigSubscription2 = !this.showConfigSubscription2;
   }
 
-  async deleteSubscription(device: IIdentified) {
+  async deleteSubscription(device: IIdentified): Promise<void> {
     // console.log('Delete device', device);
     try {
       await this.mappingService.deleteSubscriptions(device);
@@ -184,7 +187,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async deleteSubscriptionBulkWithConfirmation(ids: string[]) {
+  private async deleteSubscriptionBulkWithConfirmation(ids: string[]): Promise<void> {
     let continueDelete: boolean = false;
     for (let index = 0; index < ids.length; index++) {
       const device2Delete = this.subscription?.devices.find(
@@ -236,7 +239,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  async onCommitSubscriptions(deviceList: IIdentified[]) {
+  async onCommitSubscriptions(deviceList: IIdentified[]): Promise<void> {
     this.subscription = {
       api: API.ALL.name,
       devices: deviceList as Device[]
@@ -257,11 +260,11 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     this.showConfigSubscription2 = false;
   }
 
-  async onReload() {
+  async onReload(): Promise<void> {
     this.reloadMappingsInBackend();
   }
 
-  private async reloadMappingsInBackend() {
+  private async reloadMappingsInBackend(): Promise<void> {
     const response2 = await this.shareService.runOperation(
       { operation: Operation.RELOAD_MAPPINGS }
     );
@@ -274,7 +277,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
     this.mappingService.stopChangedMappingEvents();

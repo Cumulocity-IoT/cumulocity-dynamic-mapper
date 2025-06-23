@@ -21,7 +21,7 @@ import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewIni
 import { ActionControl, AlertService, Column, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, from, Observable, } from 'rxjs';
-import { map, take } from 'rxjs/operators';
+import { map, take, tap } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
@@ -30,7 +30,7 @@ import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-lo
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
 import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
-import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
+import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingInterval } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
@@ -68,6 +68,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   columns: Column[];
   actionControls: ActionControl[];
   feature: Feature;
+  intervals: PollingInterval[];
+  currentPollingInterval: number;
 
   constructor(
     private bsModalService: BsModalService,
@@ -84,6 +86,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     this.initializeSelection();
     this.initializeConfigurations();
     this.initializeSpecifications();
+    this.intervals = this.connectorConfigurationService.getAvailablePollingIntervals();
+    this.currentPollingInterval = this.connectorConfigurationService.getCurrentPollingInterval();
+    console.log('Current Polling Interval:', this.currentPollingInterval);
     this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
     this.feature = await this.sharedService.getFeatures();
   }
@@ -93,6 +98,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
       setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
     }
   }
+
+  onPollingIntervalChange(): void {
+    this.connectorConfigurationService.setPollingInterval(this.currentPollingInterval);
+  }
+
   private initializeActionControls(): void {
     this.actionControls = ACTION_CONTROLS.map(control => ({
       ...control,
@@ -101,7 +111,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         this.checkActionVisibility(item, control.visibilityRules)
     }));
   }
-
 
   private initializeColumns(): void {
     this.columns = GRID_COLUMNS.map(column => ({
@@ -114,16 +123,17 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   private initializeConfigurations(): void {
-    this.configurations$ = this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus().pipe(
+    this.configurations$ = this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
       map(configs => configs.filter(config =>
         config.supportedDirections?.some(dir => this.directions.includes(dir))
-      ))
+      )),
+      // tap((configurations) => { console.log('Enriched configurations:', configurations) }),
     )
     this.setupConfigurationsSubscription();
   }
 
   private initializeSpecifications(): void {
-    from(this.connectorConfigurationService.getConnectorSpecifications())
+    from(this.connectorConfigurationService.getSpecifications())
       .pipe(take(1))
       .subscribe(specs => this.specifications = specs);
   }
@@ -197,7 +207,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   refresh(): void {
-    this.connectorConfigurationService.updateConnectorConfigurations();
+    this.connectorConfigurationService.refreshConfigurations();
   }
 
   async onConfigurationUpdate(config: ConnectorConfiguration): Promise<void> {
@@ -207,7 +217,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         editedConfiguration,
         'Updated successfully.',
         'Failed to update connector configuration',
-        config => this.connectorConfigurationService.updateConnectorConfiguration(config)
+        config => this.connectorConfigurationService.updateConfiguration(config)
       );
     });
   }
@@ -220,7 +230,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         editedConfiguration,
         'Created successfully.',
         'Failed to create connector configuration',
-        config => this.connectorConfigurationService.createConnectorConfiguration(config)
+        config => this.connectorConfigurationService.createConfiguration(config)
       );
     });
   }
@@ -233,7 +243,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
           config,
           'Deleted successfully.',
           'Failed to delete connector configuration',
-          config => this.connectorConfigurationService.deleteConnectorConfiguration(config.identifier)
+          config => this.connectorConfigurationService.deleteConfiguration(config.identifier)
         );
       }
       modalRef.hide();
@@ -251,7 +261,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         addedConfiguration,
         'Added successfully.',
         'Failed to create connector configuration',
-        config => this.connectorConfigurationService.createConnectorConfiguration(config)
+        config => this.connectorConfigurationService.createConfiguration(config)
       );
     });
   }

@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { inject, Injectable } from '@angular/core';
-import { FetchClient, InventoryService, Realtime } from '@c8y/client';
+import { InventoryService } from '@c8y/client';
 import { BehaviorSubject, map, Observable, Subscription } from 'rxjs';
 import { MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
 import {
@@ -26,43 +26,92 @@ import {
   RealtimeSubjectService
 } from '@c8y/ngx-components';
 
+
+interface MonitoringState {
+  status: MappingStatus[];
+  error: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MonitoringService {
-  constructor(
-    private client: FetchClient,
-    private inventory: InventoryService,
-    private sharedService: SharedService
-  ) {
+
+  private readonly inventory = inject(InventoryService);
+  private readonly sharedService = inject(SharedService);
+  private readonly realtimeSubjectService = inject(RealtimeSubjectService);
+
+  constructor() {
     this.managedObjectRealtimeService = new ManagedObjectRealtimeService(
-      inject(RealtimeSubjectService)
+      this.realtimeSubjectService
     );
   }
 
-  private realtime: Realtime;
-  private subscription: Subscription;
-  private managedObjectRealtimeService: ManagedObjectRealtimeService;
-  private mappingStatus$ = new BehaviorSubject<MappingStatus[]>([]);
 
-  getCurrentMappingStatus(): Observable<MappingStatus[]> {
+  private managedObjectRealtimeService: ManagedObjectRealtimeService;
+  private state$ = new BehaviorSubject<MonitoringState>({
+    status: [],
+    error: null,
+  });
+  private mappingStatus$ = this.state$.pipe(map(state => state.status));
+  private subscriptions = new Subscription();
+  private isMonitoring = false;
+
+
+  getMappingStatus(): Observable<MappingStatus[]> {
     return this.mappingStatus$;
   }
 
+
   async startMonitoring(): Promise<void> {
-    const agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    // console.log('Start subscription for monitoring:', agentId);
+    if (this.isMonitoring) {
+      console.warn('Monitoring is already active');
+      return;
+    }
 
-    const { data } = await this.inventory.detail(agentId);
-    const monitoring: MappingStatus[] = data[MAPPING_FRAGMENT];
-    this.mappingStatus$.next(monitoring);
+    try {
+      this.isMonitoring = true;
+      const agentId = await this.sharedService.getDynamicMappingServiceAgent();
 
-    // subscribe to event stream
-    this.managedObjectRealtimeService.start();
-    this.subscription = this.managedObjectRealtimeService
-      .onAll$(agentId)
-      .pipe(map((p) => p['data'][MAPPING_FRAGMENT]))
-      .subscribe((m) => this.mappingStatus$.next(m));
+      if (!agentId) {
+        throw new Error('No mapping service agent found');
+      }
+
+      const { data } = await this.inventory.detail(agentId);
+
+      if (!data) {
+        throw new Error('No data received from inventory service');
+      }
+      const status: MappingStatus[] = data[MAPPING_FRAGMENT];
+      this.state$.next({ status: status, error: null });
+
+      // subscribe to event stream
+      this.managedObjectRealtimeService.start();
+      const realtimeSubscription = this.managedObjectRealtimeService
+        .onAll$(agentId)
+        .pipe(
+          map((update) => {
+            if (!update?.data) {
+              console.warn('Invalid realtime update received');
+              return [];
+            }
+            const mappingData = update.data[MAPPING_FRAGMENT];
+            return Array.isArray(mappingData) ? mappingData : [];
+          })
+        )
+        .subscribe((status) => this.state$.next({ status, error: null }));
+
+      this.subscriptions.add(realtimeSubscription);
+
+      // Continue with monitoring setup...
+    } catch (error) {
+      console.error('Failed to start monitoring:', error);
+      // Handle error appropriately (emit error state, show notification, etc.)
+      throw error; // Re-throw to let caller handle
+    }
   }
-  stopMonitoring() {
-    if (this.subscription) this.subscription.unsubscribe();
+
+  stopMonitoring(): void {
+    this.subscriptions.unsubscribe();
+    if (this.managedObjectRealtimeService) this.managedObjectRealtimeService.stop();
+    this.isMonitoring = false;
   }
 }

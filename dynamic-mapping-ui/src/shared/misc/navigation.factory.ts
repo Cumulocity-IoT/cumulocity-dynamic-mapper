@@ -149,7 +149,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       this.appName = cur.name;
     });
 
-    this.connectorConfigurationService.getConnectorConfigurationsAsObservable().subscribe(configs => {
+    this.connectorConfigurationService.getConfigurations().subscribe(configs => {
       let connectorsNavNode;
 
       connectorsNavNode = this.staticNodesStandalone['connectorNode'];

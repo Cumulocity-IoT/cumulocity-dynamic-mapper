@@ -34,6 +34,14 @@ import { ActivatedRoute } from '@angular/router';
   standalone: false
 })
 export class ServiceConfigurationComponent implements OnInit {
+
+  constructor(
+    private alertService: AlertService,
+    private sharedService: SharedService,
+    private fb: FormBuilder,
+    private route: ActivatedRoute
+  ) { }
+  
   version: string = packageJson.version;
   serviceForm: FormGroup;
   feature: Feature;
@@ -55,13 +63,7 @@ export class ServiceConfigurationComponent implements OnInit {
   };
   editable2updated: boolean = false;
 
-  constructor(
-    public bsModalService: BsModalService,
-    public alertService: AlertService,
-    private sharedService: SharedService,
-    private fb: FormBuilder,
-    private route: ActivatedRoute
-  ) { }
+
 
   async ngOnInit() {
     // console.log('Running version', this.version);
@@ -114,7 +116,6 @@ export class ServiceConfigurationComponent implements OnInit {
     });
   }
 
-
   async clickedClearInboundExternalIdCache() {
     const response1 = await this.sharedService.runOperation(
       {
@@ -142,8 +143,6 @@ export class ServiceConfigurationComponent implements OnInit {
       this.alertService.danger(gettext('Failed to clear cache!'));
     }
   }
-
-
 
   async clickedSaveServiceConfiguration() {
     const conf = this.serviceForm.value;

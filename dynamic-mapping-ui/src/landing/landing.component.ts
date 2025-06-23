@@ -21,7 +21,7 @@
 
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, Feature, JsonEditorComponent, NODE1, NODE3, SharedService } from '../shared';
+import { Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -36,8 +36,7 @@ import { ActivatedRoute } from '@angular/router';
 export class LandingComponent implements OnInit {
   constructor(
     private mappingService: MappingService,
-    public sharedService: SharedService,
-    public alertService: AlertService,
+    private alertService: AlertService,
     private connectorConfigurationService: ConnectorConfigurationService,
     private sanitizer: DomSanitizer,
     private route: ActivatedRoute
@@ -75,11 +74,11 @@ export class LandingComponent implements OnInit {
       (count) => this.countMappingOutbound$.next(!count ? 'no' : count.length)
     );
 
-    from(
-      this.connectorConfigurationService.getConnectorConfigurations()
-    ).subscribe((count) =>
-      this.countConnector$.next(!count ? 'no' : count.length)
-    );
+
+    this.connectorConfigurationService.getConfigurations()
+      .subscribe((count) =>
+        this.countConnector$.next(!count ? 'no' : count.length)
+      );
 
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
       this.alertService.warning(
