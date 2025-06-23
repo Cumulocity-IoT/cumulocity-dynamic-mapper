@@ -138,8 +138,12 @@ export class ConnectorConfigurationService implements OnDestroy {
     return [...this.AVAILABLE_INTERVALS];
   }
 
-  getCurrentPollingInterval(): number {
+  getCurrentPollingIntervalValue(): number {
     return this.pollingInterval$.value;
+  }
+
+  getCurrentPollingInterval(): PollingInterval {
+    return this.AVAILABLE_INTERVALS.find(item => item.value == this.pollingInterval$.value);
   }
 
   getCurrentPollingIntervalLabel(): string {
@@ -150,7 +154,7 @@ export class ConnectorConfigurationService implements OnDestroy {
 
   refreshConfigurations(): void {
     this.refreshTrigger$.next();
-    this.setPollingInterval(this.getCurrentPollingInterval());
+    this.setPollingInterval(this.getCurrentPollingIntervalValue());
   }
 
   resetCache(): void {

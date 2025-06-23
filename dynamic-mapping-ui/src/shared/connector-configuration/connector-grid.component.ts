@@ -17,11 +17,11 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation } from '@angular/core';
-import { ActionControl, AlertService, Column, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy } from '@angular/core';
+import { ActionControl, AlertService, Column, CountdownIntervalComponent, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, combineLatest, from, Observable, } from 'rxjs';
-import { map, take, tap } from 'rxjs/operators';
+import { BehaviorSubject, combineLatest, from, Observable, Subject, } from 'rxjs';
+import { filter, map, take, takeUntil, tap } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
@@ -34,6 +34,7 @@ import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingI
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
+import { Form, FormBuilder, FormGroup } from '@angular/forms';
 
 @Component({
   selector: 'd11r-mapping-connector-grid',
@@ -41,7 +42,7 @@ import { SharedService } from '..';
   templateUrl: 'connector-grid.component.html',
   encapsulation: ViewEncapsulation.None
 })
-export class ConnectorGridComponent implements OnInit, AfterViewInit {
+export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() selectable = true;
   @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
   @Input() readOnly = false;
@@ -50,6 +51,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
 
   @ViewChild('connectorGrid') connectorGrid: DataGridComponent;
+  @ViewChild(CountdownIntervalComponent)
+  countdownIntervalComponent: CountdownIntervalComponent;
+  toggleIntervalForm: FormGroup;
 
   selected: string[] = [];
   selected$ = new BehaviorSubject<string[]>([]);
@@ -58,6 +62,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   configurations: ConnectorConfiguration[] = [];
   configurations$: Observable<ConnectorConfiguration[]>;
   customClasses: string;
+
+  refreshInterval: 100;
 
   readonly LoggingEventType = LoggingEventType;
   readonly pagination: Pagination = {
@@ -70,15 +76,22 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   feature: Feature;
   intervals: PollingInterval[];
   currentPollingInterval: number;
+  autoRefreshSeconds$: BehaviorSubject<number> = new BehaviorSubject(0);
+  private destroy$: Subject<void> = new Subject<void>();
 
   constructor(
     private bsModalService: BsModalService,
     private connectorConfigurationService: ConnectorConfigurationService,
     private alertService: AlertService,
-    public sharedService: SharedService,
+    private sharedService: SharedService,
+    private fb: FormBuilder,
   ) {
-
+    // this.toggleIntervalForm = this.fb.group({
+    //   refreshInterval: [this.currentPollingInterval || ''] // Set initial value
+    // });
+    this.toggleIntervalForm = this.initForm();
   }
+
 
   async ngOnInit(): Promise<void> {
     this.initializeColumns();
@@ -87,20 +100,37 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     this.initializeConfigurations();
     this.initializeSpecifications();
     this.intervals = this.connectorConfigurationService.getAvailablePollingIntervals();
-    this.currentPollingInterval = this.connectorConfigurationService.getCurrentPollingInterval();
+    this.currentPollingInterval = this.connectorConfigurationService.getCurrentPollingIntervalValue();
     console.log('Current Polling Interval:', this.currentPollingInterval);
     this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
     this.feature = await this.sharedService.getFeatures();
+    this.toggleIntervalForm.get('refreshInterval')?.valueChanges.subscribe(value => {
+      this.currentPollingInterval = value;
+      this.onRefreshIntervalChange(value);
+    });
+    this.listenToRefreshIntervalChange();
+    this.startCountdown();
   }
 
   ngAfterViewInit(): void {
     if (this.selectable) {
       setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
     }
+    this.onRefreshIntervalToggleChange();
   }
 
-  onPollingIntervalChange(): void {
-    this.connectorConfigurationService.setPollingInterval(this.currentPollingInterval);
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  resetCountdown(): void {
+    this.countdownIntervalComponent?.reset();
+  }
+
+  private onRefreshIntervalChange(interval: number): void {
+    // const selectedValue = this.toggleIntervalForm.get('refreshInterval')?.value;
+    this.connectorConfigurationService.setPollingInterval(interval);
   }
 
   private initializeActionControls(): void {
@@ -334,4 +364,33 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
       }
     });
   }
+
+  private initForm() {
+    return this.fb.group({
+      refreshInterval: this.connectorConfigurationService.getCurrentPollingInterval().value
+    });
+  }
+
+  private startCountdown(): void {
+    console.log('Started')
+    this.countdownIntervalComponent.start();
+  }
+
+  onCountdownEnded() {
+    this.resetCountdown();
+  }
+
+  private onRefreshIntervalToggleChange(): void {
+    this.toggleIntervalForm
+      .get('refreshInterval')
+      .valueChanges.pipe(takeUntil(this.destroy$), filter(Boolean))
+      .subscribe(() => setTimeout(() => this.startCountdown()));
+  }
+  private listenToRefreshIntervalChange(): void {
+    this.toggleIntervalForm
+      .get('refreshInterval')
+      .valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.resetCountdown());
+  }
+
 }
