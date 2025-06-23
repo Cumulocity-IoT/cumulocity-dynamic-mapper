@@ -33,7 +33,7 @@
 </div>
 <c8y-action-bar-item [placement]="'left'">
   <div class="d-flex">
-    <label class="m-r-8" style="margin-top:6px" id="listLabel">{{'Reload'}}</label>
+    <label class="text-normal text-muted flex-no-shrink m-r-8" style="margin-top:6px" id="listLabel">{{'Auto refresh'}}</label>
     <div class="c8y-select-wrapper" style="max-width: 180px">
       <select aria-labelledby="listLabel" name="listLabel" class="form-control" [(ngModel)]="currentPollingInterval"
         (ngModelChange)="onPollingIntervalChange()" required>

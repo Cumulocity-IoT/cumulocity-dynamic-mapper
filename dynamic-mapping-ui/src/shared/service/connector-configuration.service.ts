@@ -130,7 +130,7 @@ export class ConnectorConfigurationService implements OnDestroy {
 
   // Polling configuration methods
   setPollingInterval(interval: number): void {
-    console.log(`Setting polling interval to ${interval} ms`);
+    // console.log(`Setting polling interval to ${interval} ms`);
     this.pollingInterval$.next(interval);
   }
 
@@ -282,11 +282,11 @@ export class ConnectorConfigurationService implements OnDestroy {
     // Don't cache the stream - let it be reactive to interval changes
     return this.pollingInterval$.pipe(
       switchMap(interval => {
-        console.log(`🔄 Creating status stream with ${interval}ms interval`);
+        // console.log(`🔄 Creating status stream with ${interval}ms interval`);
         return timer(0, interval).pipe(
-          tap(() => {
-            console.log(`⏰ Timer tick (${interval}ms) - loading connector status`);
-          })
+          // tap(() => {
+          //   console.log(`⏰ Timer tick (${interval}ms) - loading connector status`);
+          // })
         );
       }),
       switchMap(() => this.loadConnectorStatus()),
