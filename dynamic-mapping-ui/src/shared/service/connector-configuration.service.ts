@@ -37,6 +37,7 @@ import {
   startWith,
   distinctUntilChanged,
   tap,
+  takeWhile,
 } from 'rxjs/operators';
 import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT, PollingInterval } from '..';
 import { EventRealtimeService, RealtimeSubjectService } from '@c8y/ngx-components';
@@ -79,6 +80,9 @@ export class ConnectorConfigurationService implements OnDestroy {
     { label: '1 minute', value: 60000, seconds: 60 }
   ];
 
+  // Countdown state
+  private readonly nextTriggerCountdown$ = new BehaviorSubject<number>(0);
+
   // Configuration
   private readonly CONFIG = {
     CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
@@ -104,6 +108,7 @@ export class ConnectorConfigurationService implements OnDestroy {
     this.state$.complete();
     this.refreshTrigger$.complete();
     this.pollingInterval$.complete();
+    this.nextTriggerCountdown$.complete();
   }
 
   // Public API
@@ -126,6 +131,11 @@ export class ConnectorConfigurationService implements OnDestroy {
       this.specifications$ = this.createSpecificationsStream();
     }
     return this.specifications$;
+  }
+
+  // Countdown API
+  getNextTriggerCountdown(): Observable<number> {
+    return this.nextTriggerCountdown$.asObservable();
   }
 
   // Polling configuration methods
@@ -286,11 +296,38 @@ export class ConnectorConfigurationService implements OnDestroy {
     // Don't cache the stream - let it be reactive to interval changes
     return this.pollingInterval$.pipe(
       switchMap(interval => {
-        // console.log(`🔄 Creating status stream with ${interval}ms interval`);
+        console.log(`🔄 Creating status stream with ${interval}ms interval`);
+        let lastTriggerTime = Date.now();
+        let countdownSubscription: any = null;
+        
         return timer(0, interval).pipe(
-          // tap(() => {
-          //   console.log(`⏰ Timer tick (${interval}ms) - loading connector status`);
-          // })
+          tap(() => {
+            // Update the last trigger time
+            lastTriggerTime = Date.now();
+            console.log(`⏰ Timer triggered - loading connector status`);
+            
+            // Clean up previous countdown subscription
+            if (countdownSubscription) {
+              countdownSubscription.unsubscribe();
+            }
+            
+            // Start countdown for this cycle
+            countdownSubscription = timer(0, 1000).pipe(
+              map(() => {
+                const elapsed = Date.now() - lastTriggerTime;
+                const remaining = Math.max(0, Math.ceil((interval - elapsed) / 1000));
+                return remaining;
+              }),
+              tap(remaining => {
+                this.nextTriggerCountdown$.next(remaining * 1000);  // in ms
+                if (remaining > 0) {
+                  console.log(`⏰ Next trigger in: ${remaining} seconds`);
+                }
+              }),
+              takeWhile(remaining => remaining > 0, true), // Include the final 0
+              takeUntil(this.destroy$)
+            ).subscribe();
+          })
         );
       }),
       switchMap(() => this.loadConnectorStatus()),

@@ -54,14 +54,18 @@
         </label>
         <!-- {{toggleIntervalForm.value.refreshInterval}} -->
         <div class="input-group">
-          <label class="toggle-countdown"    
+          <!-- <label class="toggle-countdown"    
       placement="bottom" data-cy="c8y-alarms-interval-refresh--toggle-countdown">
-            <!-- <input type="checkbox" data-cy="c8y-alarms-interval-toggle" formControlName="intervalToggle"
-              (click)="trackUserClickOnIntervalToggle($event.target)" /> -->
+            <input type="checkbox" data-cy="c8y-alarms-interval-toggle" formControlName="intervalToggle"
+              (click)="trackUserClickOnIntervalToggle($event.target)" /> 
             <c8y-countdown-interval [countdownInterval]="toggleIntervalForm.value.refreshInterval"
               (countdownEnded)="onCountdownEnded()"></c8y-countdown-interval>
-            <!-- <i data-cy="c8y-alarms-interval-refresh--pause" c8yIcon="pause"></i> -->
-          </label>
+           <i data-cy="c8y-alarms-interval-refresh--pause" c8yIcon="pause"></i> 
+          </label> -->
+
+          <!-- <div>{{nextTriggerCountdown$| async}}</div> -->
+          <!-- <c8y-countdown-interval [countdownInterval]="nextTriggerCountdown$| async" -->
+          <c8y-countdown-interval [countdownInterval]="nextTriggerCountdown$| async" (countdownEnded)="onCountdownEnded()"></c8y-countdown-interval>
           <div class="c8y-select-wrapper" style="max-width: 180px">
             <select aria-labelledby="listLabel" name="listLabel" class="form-control" formControlName="refreshInterval"
               required>

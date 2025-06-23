@@ -62,6 +62,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   configurations: ConnectorConfiguration[] = [];
   configurations$: Observable<ConnectorConfiguration[]>;
   customClasses: string;
+  nextTriggerCountdown$: BehaviorSubject<number> = new BehaviorSubject(0);
 
   refreshInterval: 100;
 
@@ -76,7 +77,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   feature: Feature;
   intervals: PollingInterval[];
   currentPollingInterval: number;
-  autoRefreshSeconds$: BehaviorSubject<number> = new BehaviorSubject(0);
   private destroy$: Subject<void> = new Subject<void>();
 
   constructor(
@@ -108,7 +108,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       this.currentPollingInterval = value;
       this.onRefreshIntervalChange(value);
     });
-    this.listenToRefreshIntervalChange();
+
+    this.onRefreshIntervalToggleChange();
+    // Subscribe to countdown
     this.startCountdown();
   }
 
@@ -116,7 +118,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     if (this.selectable) {
       setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
     }
-    this.onRefreshIntervalToggleChange();
   }
 
   ngOnDestroy(): void {
@@ -126,6 +127,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
 
   resetCountdown(): void {
     this.countdownIntervalComponent?.reset();
+  }
+
+  startCountdown(): void {
+    this.nextTriggerCountdown$.next(this.currentPollingInterval);
+    this.countdownIntervalComponent.start();
   }
 
   private onRefreshIntervalChange(interval: number): void {
@@ -371,11 +377,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     });
   }
 
-  private startCountdown(): void {
-    console.log('Started')
-    this.countdownIntervalComponent.start();
-  }
-
   onCountdownEnded() {
     this.resetCountdown();
   }
@@ -384,13 +385,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     this.toggleIntervalForm
       .get('refreshInterval')
       .valueChanges.pipe(takeUntil(this.destroy$), filter(Boolean))
-      .subscribe(() => setTimeout(() => this.startCountdown()));
+      .subscribe(() => setTimeout(() => {
+        this.nextTriggerCountdown$.next(this.currentPollingInterval);
+        this.resetCountdown()
+      }));
   }
-  private listenToRefreshIntervalChange(): void {
-    this.toggleIntervalForm
-      .get('refreshInterval')
-      .valueChanges.pipe(takeUntil(this.destroy$))
-      .subscribe(() => this.resetCountdown());
-  }
-
 }
