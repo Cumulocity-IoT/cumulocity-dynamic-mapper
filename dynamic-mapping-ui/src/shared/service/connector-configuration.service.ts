@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { inject, Injectable, OnDestroy } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { FetchClient, IFetchResponse } from '@c8y/client';
 import {
   BehaviorSubject,
@@ -51,7 +51,7 @@ interface ConnectorConfigurationState {
   error: string | null;
 }
 @Injectable({ providedIn: 'root' })
-export class ConnectorConfigurationService implements OnDestroy {
+export class ConnectorConfigurationService {
 
   // Subscription management
   private readonly destroy$ = new Subject<void>();
@@ -107,7 +107,7 @@ export class ConnectorConfigurationService implements OnDestroy {
     private client: FetchClient,
   ) { }
 
-  ngOnDestroy(): void {
+  cleanUp(): void {
     console.log('ConnectorConfigurationService destroyed');
     this.destroy$.next();
     this.destroy$.complete();
