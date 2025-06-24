@@ -64,7 +64,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   customClasses: string;
   nextTriggerCountdown$: BehaviorSubject<number> = new BehaviorSubject(0);
 
-  refreshInterval: 100;
+  private shouldRefreshAutomatic: boolean = true;
 
   readonly LoggingEventType = LoggingEventType;
   readonly pagination: Pagination = {
@@ -86,12 +86,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     private sharedService: SharedService,
     private fb: FormBuilder,
   ) {
-    // this.toggleIntervalForm = this.fb.group({
-    //   refreshInterval: [this.currentPollingInterval || ''] // Set initial value
-    // });
     this.toggleIntervalForm = this.initForm();
   }
-
 
   async ngOnInit(): Promise<void> {
     this.initializeColumns();
@@ -110,14 +106,13 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     });
 
     this.onRefreshIntervalToggleChange();
-    // Subscribe to countdown
-    this.startCountdown();
   }
 
   ngAfterViewInit(): void {
     if (this.selectable) {
       setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
     }
+    setTimeout(() => this.startCountdown());
   }
 
   ngOnDestroy(): void {
@@ -126,12 +121,18 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   resetCountdown(): void {
+    console.log('resetCountdown', this.currentPollingInterval);
+
     this.countdownIntervalComponent?.reset();
   }
 
   startCountdown(): void {
     this.nextTriggerCountdown$.next(this.currentPollingInterval);
-    this.countdownIntervalComponent.start();
+    if (this.shouldRefreshAutomatic) {
+      this.countdownIntervalComponent.start();
+      this.connectorConfigurationService.startCountdown();
+    } 
+    console.log('CurrentPollingInterval', this.currentPollingInterval, this.shouldRefreshAutomatic);
   }
 
   private onRefreshIntervalChange(interval: number): void {
@@ -373,6 +374,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
 
   private initForm() {
     return this.fb.group({
+      intervalToggle: this.shouldRefreshAutomatic,
       refreshInterval: this.connectorConfigurationService.getCurrentPollingInterval().value
     });
   }
@@ -389,5 +391,16 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
         this.nextTriggerCountdown$.next(this.currentPollingInterval);
         this.resetCountdown()
       }));
+  }
+
+  trackUserClickOnIntervalToggle(target: EventTarget): void {
+    this.shouldRefreshAutomatic = (target as HTMLInputElement).checked;
+    this.connectorConfigurationService.toggleCountdown();
+    if (!this.shouldRefreshAutomatic) {
+      this.countdownIntervalComponent.stop();
+    } else {
+      this.countdownIntervalComponent.start()
+    }
+    console.log('ShouldRefreshAutomatic', this.shouldRefreshAutomatic)
   }
 }

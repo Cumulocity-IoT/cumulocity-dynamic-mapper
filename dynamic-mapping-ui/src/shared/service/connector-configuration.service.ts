@@ -23,6 +23,7 @@ import {
   BehaviorSubject,
   Observable,
   Subject,
+  Subscription,
   combineLatest,
   from,
   of,
@@ -79,6 +80,11 @@ export class ConnectorConfigurationService implements OnDestroy {
     { label: '30 seconds', value: 30000, seconds: 30 },
     { label: '1 minute', value: 60000, seconds: 60 }
   ];
+
+  private countdownSubscription: Subscription | null = null;
+  private isCountdownActive = true;
+  private lastTriggerTime = 0;
+  private currentInterval = 0;
 
   // Countdown state
   private readonly nextTriggerCountdown$ = new BehaviorSubject<number>(0);
@@ -174,6 +180,38 @@ export class ConnectorConfigurationService implements OnDestroy {
       specifications: [],
       statusMap: {}
     });
+  }
+
+  // Add these public methods to control countdown
+  startCountdown(): void {
+    if (this.isCountdownActive) {
+      console.log('⏸️ Countdown already active');
+      return;
+    }
+
+    this.isCountdownActive = true;
+    console.log('▶️ Starting countdown');
+
+    // Use the current interval and last trigger time to resume countdown
+    this.createCountdownSubscription();
+  }
+
+  stopCountdown(): void {
+    if (!this.isCountdownActive) {
+      console.log('⏸️ Countdown already stopped');
+      return;
+    }
+
+    this.isCountdownActive = false;
+    console.log('⏹️ Stopping countdown');
+
+    if (this.countdownSubscription) {
+      this.countdownSubscription.unsubscribe();
+      this.countdownSubscription = null;
+    }
+
+    // Optionally reset the countdown display
+    this.nextTriggerCountdown$.next(0);
   }
 
   // CRUD Operations
@@ -293,40 +331,20 @@ export class ConnectorConfigurationService implements OnDestroy {
   }
 
   private createStatusStream(): Observable<{ [identifier: string]: ConnectorStatusEvent }> {
-    // Don't cache the stream - let it be reactive to interval changes
     return this.pollingInterval$.pipe(
       switchMap(interval => {
-        console.log(`🔄 Creating status stream with ${interval}ms interval`);
-        let lastTriggerTime = Date.now();
-        let countdownSubscription: any = null;
-        
+        // console.log(`🔄 Creating status stream with ${interval}ms interval`);
+        this.currentInterval = interval;
+
         return timer(0, interval).pipe(
           tap(() => {
-            // Update the last trigger time
-            lastTriggerTime = Date.now();
+            this.lastTriggerTime = Date.now();
             console.log(`⏰ Timer triggered - loading connector status`);
-            
-            // Clean up previous countdown subscription
-            if (countdownSubscription) {
-              countdownSubscription.unsubscribe();
+
+            // Only start countdown if it should be active
+            if (this.isCountdownActive) {
+              this.restartCountdown();
             }
-            
-            // Start countdown for this cycle
-            countdownSubscription = timer(0, 1000).pipe(
-              map(() => {
-                const elapsed = Date.now() - lastTriggerTime;
-                const remaining = Math.max(0, Math.ceil((interval - elapsed) / 1000));
-                return remaining;
-              }),
-              tap(remaining => {
-                this.nextTriggerCountdown$.next(remaining * 1000);  // in ms
-                if (remaining > 0) {
-                  console.log(`⏰ Next trigger in: ${remaining} seconds`);
-                }
-              }),
-              takeWhile(remaining => remaining > 0, true), // Include the final 0
-              takeUntil(this.destroy$)
-            ).subscribe();
           })
         );
       }),
@@ -335,9 +353,58 @@ export class ConnectorConfigurationService implements OnDestroy {
         console.error('Failed to load connector status:', error);
         return of({});
       }),
-      shareReplay(1), // Share at this level, not in the cached stream
+      shareReplay(1),
       takeUntil(this.destroy$)
     );
+  }
+
+  private restartCountdown(): void {
+    // Clean up existing countdown
+    if (this.countdownSubscription) {
+      this.countdownSubscription.unsubscribe();
+    }
+
+    // Create new countdown subscription
+    this.createCountdownSubscription();
+  }
+
+  private createCountdownSubscription(): void {
+    if (!this.isCountdownActive || !this.currentInterval) {
+      return;
+    }
+
+    this.countdownSubscription = timer(0, 1000).pipe(
+      map(() => {
+        const elapsed = Date.now() - this.lastTriggerTime;
+        const remaining = Math.max(0, Math.ceil((this.currentInterval - elapsed) / 1000));
+        return remaining;
+      }),
+      tap(remaining => {
+        this.nextTriggerCountdown$.next(remaining * 1000); // in ms
+        // console.log(`⏰ Next trigger in: ${remaining} seconds`);
+      }),
+      takeWhile(remaining => remaining > 0, true), // Include the final 0
+      takeUntil(this.destroy$)
+    ).subscribe({
+      complete: () => {
+        // Countdown completed naturally
+        console.log('⏰ Countdown cycle completed');
+      }
+    });
+  }
+
+  // Optional: Method to check countdown status
+  isCountdownRunning(): boolean {
+    return this.isCountdownActive;
+  }
+
+  // Optional: Method to toggle countdown
+  toggleCountdown(): void {
+    if (this.isCountdownActive) {
+      this.stopCountdown();
+    } else {
+      this.startCountdown();
+    }
   }
 
   private createSpecificationsStream(): Observable<ConnectorSpecification[]> {
