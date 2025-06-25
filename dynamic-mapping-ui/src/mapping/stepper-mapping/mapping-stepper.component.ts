@@ -274,11 +274,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       },
     };
 
-    this.initializeFormlyFields();
-
-    this.initializeCodeTemplates();
-    this.setTemplateForm();
-
     this.feature = await this.sharedService.getFeatures();
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
       this.editorOptionsSourceSubstitution.readOnly = true;
@@ -286,6 +281,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.editorOptionsSourceTemplate.readOnly = true;
       this.editorOptionsTargetTemplate.readOnly = true;
     }
+    
+    this.initializeFormlyFields();
+
+    this.initializeCodeTemplates();
+    this.setTemplateForm();
+
   }
 
 
@@ -303,7 +304,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               class: 'input-sm',
               customWrapperClass: 'm-b-24',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                !this.stepperConfiguration.allowDefiningSubstitutions || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+                // !this.stepperConfiguration.allowDefiningSubstitutions,
+              !this.stepperConfiguration.allowDefiningSubstitutions || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
               placeholder: '$exists(c8y_TemperatureMeasurement)',
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
