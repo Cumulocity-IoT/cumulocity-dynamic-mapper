@@ -31,7 +31,8 @@
     <i c8yIcon="registry-editor"></i>
     {{ 'Add sample mappings' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reload mappings in service' | translate }}" (click)="onReload()">
+  <button class="btn btn-link" title="{{ 'Reload mappings in service' | translate }}"
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" (click)="onReload()">
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Reload mappings in service' | translate }}
   </button>
@@ -45,7 +46,8 @@
     {{ 'Import mappings' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Reset deployment cache' | translate }}"
-    (click)="clickedResetDeploymentMapEndpoint()"  [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+    (click)="clickedResetDeploymentMapEndpoint()"
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="erase"></i>
     {{ 'Reset deployment cache' | translate }}
   </button>

@@ -78,7 +78,7 @@ export class CodeComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
 
-    this.feature = this.route.snapshot.data['feature'];
+    this.feature = await this.route.snapshot.data['feature'];
     const href = this.router.url;
     // First determine the template type based on URL
     if (href.match(/sag-ps-pkg-dynamic-mapping\/node3\/codeTemplate\/inbound/g)) {

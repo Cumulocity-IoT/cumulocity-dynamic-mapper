@@ -37,7 +37,7 @@
 
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Delete' | translate }}" (click)="onDeleteCodeTemplate()"
-    [disabled]="codeTemplateDecoded?.internal || feature?.userHasMappingAdminRole">
+    [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
   </button>

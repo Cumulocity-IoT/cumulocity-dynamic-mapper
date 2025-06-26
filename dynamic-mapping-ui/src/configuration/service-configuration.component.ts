@@ -21,7 +21,6 @@ import { HttpStatusCode } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertService, gettext } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
 import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';

@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, ViewChild } from '@angular/core';
+import { Component, EventEmitter, OnInit, ViewChild } from '@angular/core';
 import {
   ActionControl,
   BulkActionControl,
@@ -30,6 +30,8 @@ import {
   ServerSideDataResult
 } from '@c8y/ngx-components';
 import { TestingDeviceService } from './testing.service';
+import { ActivatedRoute } from '@angular/router';
+import { Feature } from 'src/shared';
 
 @Component({
   selector: 'd11r-mapping-testing-grid',
@@ -37,8 +39,10 @@ import { TestingDeviceService } from './testing.service';
   styleUrls: ['../../mapping/shared/mapping.style.css'],
   standalone: false
 })
-export class TestingComponent {
-  constructor(private service: TestingDeviceService) {
+export class TestingComponent implements OnInit {
+  constructor(private service: TestingDeviceService,
+    private route: ActivatedRoute
+  ) {
     // we're setting up `serverSideDataCallback` to execute a method from this component with bound `this`
     this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
     // we're setting up `onRefreshClick` to be executed on refresh event
@@ -49,10 +53,16 @@ export class TestingComponent {
     this.columns = this.service.getColumns();
     this.pagination = this.service.getPagination();
     this.actionControls = this.service.getActionControls();
-    this.bulkActionControls = this.service.getBulkActionControls();
+  }
+  async ngOnInit(): Promise<void>  {
+    this.feature = await this.route.snapshot.data['feature'];
+    if ( this.feature?.userHasMappingAdminRole){
+      this.bulkActionControls = this.service.getBulkActionControls();
+    }
   }
   @ViewChild(DataGridComponent, { static: false })
   deviceGrid: DataGridComponent;
+  feature: Feature;
 
   loadMoreItemsLabel: string = 'Load more managed objects';
   loadingItemsLabel: string = 'Loading managed objects…';
@@ -62,7 +72,7 @@ export class TestingComponent {
     striped: true,
     filter: true,
     gridHeader: true,
-	hover:true
+    hover: true
   };
 
   columns: Column[];
