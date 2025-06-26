@@ -240,7 +240,7 @@ public abstract class BaseProcessorInbound<T> {
             }
 
             /*
-             * step 4 resolve externalIds to c8ySourceIds and create attroc devices
+             * step 4 resolve externalIds to c8ySourceIds and create adHoc devices
              */
             // check if the targetPath == externalId and we need to resolve an external id
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
