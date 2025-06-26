@@ -2,18 +2,19 @@
 
 ## Changes
 
-In this release 5.5.0 of the Cumulocity Dynamic Mapper there is a breaking change concerning the name of the roles and the enforcement of the permissions.
+In this release 5.5.0 of the Cumulocity Dynamic Mapper, there is a breaking change concerning the naming of roles and the enforcement of permissions for features.
 
 ### Name of the roles
-So far the following roles where used:
+The following roles have been renamed:
 
+**Previous roles:**
 ```
     ROLE_MAPPING_ADMIN
     ROLE_MAPPING_CREATE
     ROLE_MAPPING_HTTP_CONNECTOR_CREATE
 ```
 
-These have been renamed to:
+**New roles:**
 
 ```
     ROLE_MAPPER_ADMIN
@@ -21,15 +22,27 @@ These have been renamed to:
     ROLE_MAPPER_HTTP_CONNECTOR_CREATE
 ```
 
-### Enforcement of the permissions
-The permissions were not enforced. This is changes in the current release.
-This means if you don't assign any roles, the user will only be able to see/read information on mappings, Service configuration and connectors.
+### Permission Enforcement
+Permissions are now strictly enforced, whereas they were not enforced in previous versions.
+
+**Default permissions:**
+- Users without any assigned roles will have **read-only access** to:
+  - Mappings
+  - Service configuration
+  - Connectors
+
+**Enhanced permissions:**
+- To create, modify, or delete resources, users must be granted the appropriate roles listed above
+- Administrative functions require the `ROLE_MAPPER_ADMIN` role
+- Creating new mappings requires the `ROLE_MAPPER_CREATE` role
+- Creating HTTP connectors requires the `ROLE_MAPPER_HTTP_CONNECTOR_CREATE` role
+
 To be able to use more feature additional roles have to be granted:
      <div class="table-responsive table-width-80">
       <table class="table _table-striped">
         <thead class="thead-light">
           <tr>
-            <th style="width: 40%;">Dynamic Mapper Functionality</th>
+            <th style="width: 40%;">Dynamic Mapper Feature</th>
             <th class="text-center" style="width: 20%;">No role</th>
             <th class="text-center" style="width: 20%;">Create</th>
             <th class="text-center" style="width: 20%;">Admin</th>
@@ -105,3 +118,8 @@ To be able to use more feature additional roles have to be granted:
         </tbody>
       </table>
     </div>
+    
+### Migration Notes
+- Update any existing role assignments to use the new role names
+- Review user permissions and assign appropriate roles to maintain existing functionality
+- Users who previously had implicit access to create/modify features will need explicit role assignments
