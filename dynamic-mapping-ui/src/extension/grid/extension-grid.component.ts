@@ -146,7 +146,7 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
   }
 
   private loadExtensionsWithRetry(): Observable<IManagedObject[]> {
-    return this.extensionService.getExtensionsEnriched(undefined).pipe(
+    return this.extensionService.getEnrichedProcessorExtensions(undefined).pipe(
       retry(3),
       timeout(10000)
     );

@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -27,7 +27,7 @@ import {
   gettext,
   Pagination
 } from '@c8y/ngx-components';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, catchError, map, of, Subject, takeUntil } from 'rxjs';
 import {
   ConfirmationModalComponent,
   Feature,
@@ -39,9 +39,14 @@ import { MonitoringService } from '../shared/monitoring.service';
 import { NumberRendererComponent } from '../renderer/number.renderer.component';
 import { DirectionRendererComponent } from '../renderer/direction.renderer.component';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { ConnectorConfigurationService } from '../../connector';
 import { NameRendererComponent } from '../../mapping/renderer/name.renderer.component';
+import { ActivatedRoute } from '@angular/router';
 
+interface MonitoringComponentState {
+  mappingStatuses: MappingStatus[];
+  isLoading: boolean;
+  error: string | null;
+}
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
   templateUrl: 'monitoring.component.html',
@@ -50,9 +55,32 @@ import { NameRendererComponent } from '../../mapping/renderer/name.renderer.comp
   standalone: false
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
-  mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
 
-  displayOptions: DisplayOptions = {
+  // Modern Angular dependency injection
+  private readonly monitoringService = inject(MonitoringService);
+  private readonly alertService = inject(AlertService);
+  private readonly bsModalService = inject(BsModalService);
+  private readonly sharedService = inject(SharedService);
+  private readonly route = inject(ActivatedRoute);
+
+
+  // Subscription management
+  private readonly destroy$ = new Subject<void>();
+
+  // State management
+  readonly state$ = new BehaviorSubject<MonitoringComponentState>({
+    mappingStatuses: [],
+    isLoading: false,
+    error: null
+  });
+
+
+  readonly mappingStatus$ = this.state$.pipe(
+    map(state => state.mappingStatuses))
+  readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
+  readonly error$ = this.state$.pipe(map(state => state.error));
+
+  readonly displayOptions: DisplayOptions = {
     bordered: true,
     striped: true,
     filter: false,
@@ -60,7 +88,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     hover: true
   };
 
-  columns: Column[] = [
+  readonly columns: Column[] = [
     {
       name: 'name',
       header: 'Name',
@@ -141,76 +169,147 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '10%'
     }
-  ];
+  ] as const;
 
-  pagination: Pagination = {
+  readonly pagination: Pagination = {
     pageSize: 5,
     currentPage: 1
   };
-  feature: Feature;
 
+  feature: Feature;
   actionControls: ActionControl[] = [];
 
-  constructor(
-    public monitoringService: MonitoringService,
-    public brokerConnectorService: ConnectorConfigurationService,
-    public alertService: AlertService,
-    public bsModalService: BsModalService,
-    private sharedService: SharedService
-  ) { }
 
-  async ngOnInit() {
-    this.initializeMonitoringService();
-    this.feature = await this.sharedService.getFeatures();
+  async ngOnInit(): Promise<void> {
+    try {
+      this.updateState({ isLoading: true, error: null });
+
+      this.feature = this.route.snapshot.data['feature'];
+      await this.initializeMonitoringService();
+
+      this.updateState({ isLoading: false });
+    } catch (error) {
+      this.handleError('Failed to initialize monitoring', error);
+    }
   }
 
-  async refreshMappingStatus(): Promise<void> {
-    await this.sharedService.runOperation({ operation: Operation.REFRESH_STATUS_MAPPING });
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.monitoringService.stopMonitoring();
   }
 
-  private async initializeMonitoringService() {
+  async refreshStatisticsMapping(): Promise<void> {
+    try {
+      this.updateState({ isLoading: true, error: null });
+
+      await this.sharedService.runOperation({
+        operation: Operation.REFRESH_STATUS_MAPPING
+      });
+
+      this.alertService.success(
+        gettext('Mapping status refreshed successfully.')
+      );
+    } catch (error) {
+      this.handleError('Failed to refresh mapping status', error);
+    } finally {
+      this.updateState({ isLoading: false });
+    }
+  }
+
+  async resetStatisticsMapping(): Promise<void> {
+    const modalRef = this.showConfirmationModal();
+
+    modalRef.content.closeSubject
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(async (confirmed: boolean) => {
+        if (confirmed) {
+          await this.performReset();
+        }
+        modalRef.hide();
+      });
+  }
+
+  private async initializeMonitoringService(): Promise<void> {
     await this.monitoringService.startMonitoring();
-    this.monitoringService
-      .getCurrentMappingStatus()
-      .subscribe((status) => this.mappingStatus$.next(status));
-  }
 
-  async resetStatusMapping() {
+    this.monitoringService
+      .getMappingStatus()
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(error => {
+          this.handleError('Failed to get mapping status', error);
+          return of([]);
+        })
+      )
+      .subscribe(statuses => {
+        this.updateState({
+          mappingStatuses: statuses,
+          error: null
+        });
+      });
+  }
+  private showConfirmationModal(): BsModalRef {
     const initialState = {
       title: 'Reset mapping statistic',
-      message:
-        'You are about to delete the mapping statistic. Do you want to proceed?',
+      message: 'You are about to delete the mapping statistic. Do you want to proceed?',
       labels: {
         ok: 'Delete',
         cancel: 'Cancel'
       }
     };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+
+    return this.bsModalService.show(
       ConfirmationModalComponent,
       { initialState }
     );
+  }
 
-    confirmDeletionModalRef.content.closeSubject.subscribe(
-      async (result: boolean) => {
-        // console.log('Confirmation result:', result);
-        if (result) {
-          const res = await this.sharedService.runOperation(
-            { operation: Operation.RESET_STATUS_MAPPING }
-          );
-          if (res.status < 300) {
-            this.alertService.success(
-              gettext('Mapping statistic reset successfully.')
-            );
-          } else {
-            this.alertService.danger(gettext('Failed to reset statistic.'));
-          }
-        }
-        confirmDeletionModalRef.hide();
+  private async performReset(): Promise<void> {
+    try {
+      this.updateState({ isLoading: true });
+
+      const response = await this.sharedService.runOperation({
+        operation: Operation.RESET_STATISTICS_MAPPING
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        this.alertService.success(
+          gettext('Mapping statistic reset successfully.')
+        );
+      } else {
+        throw new Error(`Reset failed with status: ${response.status}`);
       }
-    );
+
+      await this.sharedService.runOperation({
+        operation: Operation.REFRESH_STATUS_MAPPING
+      });
+    } catch (error) {
+      this.handleError('Failed to reset mapping statistic', error);
+    } finally {
+      this.updateState({ isLoading: false });
+    }
   }
 
-  ngOnDestroy(): void {
-    this.monitoringService.stopMonitoring();
+
+  private updateState(partialState: Partial<MonitoringComponentState>): void {
+    const currentState = this.state$.value;
+    this.state$.next({ ...currentState, ...partialState });
   }
+
+  private handleError(message: string, error: unknown): void {
+    console.error(message, error);
+
+    const errorMessage = error instanceof Error
+      ? error.message
+      : 'Unknown error occurred';
+
+    this.updateState({
+      error: errorMessage,
+      isLoading: false
+    });
+
+    this.alertService.danger(gettext(message));
+  }
+
 }

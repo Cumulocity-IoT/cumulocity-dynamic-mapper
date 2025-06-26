@@ -17,10 +17,10 @@
  *
  * @authors Christof Strack
  */
-import { Component, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext } from '@c8y/ngx-components';
 import { MappingService } from '../core/mapping.service';
-import { Direction } from '../../shared';
+import { Direction, Feature, SharedService } from '../../shared';
 import { HttpStatusCode } from '@angular/common/http';
 
 /**
@@ -42,6 +42,8 @@ import { HttpStatusCode } from '@angular/common/http';
           type="checkbox"
           [checked]="context.value"
           (change)="activateMapping()"
+          [disabled]="!(feature?.userHasMappingAdminRole || feature?.userHasMappingCreateRole)"
+
         />
         <span></span>
         <span
@@ -57,13 +59,27 @@ import { HttpStatusCode } from '@angular/common/http';
   `,
   standalone: false
 })
-export class StatusActivationRendererComponent {
+
+export class MappingStatusActivationRendererComponent implements OnInit {
   constructor(
     public context: CellRendererContext,
     public alertService: AlertService,
-    public mappingService: MappingService
+    public mappingService: MappingService,
+    public sharedService: SharedService,
+    private cdr: ChangeDetectorRef
   ) {
     // console.log('Status', context, context.value);
+  }
+
+  feature: Feature;
+
+  async ngOnInit() {
+    try {
+      this.feature = await this.sharedService.getFeatures();
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('Error loading features in component', error);
+    }
   }
 
   async activateMapping() {

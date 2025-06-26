@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -85,15 +86,7 @@ public class WatsonController {
         this.objectMapper = objectMapper;
     }
 
-    @Value("${APP.userRolesEnabled}")
-    private Boolean userRolesEnabled;
-
-    @Value("${APP.mappingAdminRole}")
-    private String mappingAdminRole;
-
-    @Value("${APP.mappingCreateRole}")
-    private String mappingCreateRole;
-
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> createMapping(@RequestBody String textBody) {
         try {

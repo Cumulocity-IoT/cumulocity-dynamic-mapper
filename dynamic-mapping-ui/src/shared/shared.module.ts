@@ -33,7 +33,7 @@ import { ConnectorConfigurationModalComponent } from './connector-configuration/
 import { CheckedRendererComponent } from './connector-configuration/renderer/checked-renderer.component';
 import { ConnectorDetailCellRendererComponent } from './connector-configuration/renderer/connector-link.renderer.component';
 import { ConnectorStatusRendererComponent } from './connector-configuration/renderer/connector-status.renderer.component';
-import { StatusEnabledRendererComponent } from './connector-configuration/renderer/status-enabled-renderer.component';
+import { ConnectorStatusEnabledRendererComponent } from './connector-configuration/renderer/status-enabled-renderer.component';
 import { ConnectorDetailsComponent } from './connector-details/connector-details.component';
 import { ConnectorStatusComponent } from './connector-log/connector-log.component';
 import { JsonEditorComponent } from './component/editor/jsoneditor.component';
@@ -60,7 +60,7 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
     ConnectorGridComponent,
     ConnectorDetailsComponent,
     ConnectorConfigurationModalComponent,
-    StatusEnabledRendererComponent,
+    ConnectorStatusEnabledRendererComponent,
     ConnectorStatusRendererComponent,
     ConnectorDetailCellRendererComponent,
     WrapperCustomFormField,

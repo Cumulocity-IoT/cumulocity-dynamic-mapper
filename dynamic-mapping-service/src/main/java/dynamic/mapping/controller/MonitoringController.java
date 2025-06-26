@@ -83,15 +83,6 @@ public class MonitoringController {
 	@Value("${APP.externalExtensionsEnabled}")
 	private boolean externalExtensionsEnabled;
 
-	@Value("${APP.userRolesEnabled}")
-	private Boolean userRolesEnabled;
-
-	@Value("${APP.mappingAdminRole}")
-	private String mappingAdminRole;
-
-	@Value("${APP.mappingCreateRole}")
-	private String mappingCreateRole;
-
 	@GetMapping(value = "/status/connector/{connectorIdentifier}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ConnectorStatusEvent> getConnectorStatus(@PathVariable @NotNull String connectorIdentifier) {
 		try {

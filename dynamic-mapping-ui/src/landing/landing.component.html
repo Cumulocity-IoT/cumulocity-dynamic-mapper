@@ -19,277 +19,519 @@
   ~
   -->
 <c8y-title>{{ 'Getting started' | translate }}</c8y-title>
-<div class="card">
+
+<a id="top"></a>
+<div class="text-right m-b-16">
+  <a href="#top" class="to-the-top" role="button" aria-label="Scroll to top">
+    <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+  </a>
+</div>
+
+<!-- Table of Contents -->
+<div>
   <div class="card-header">
+    <h3>{{ 'Topics that will help you getting started ...' | translate }}</h3>
+  </div>
+  <div class="card-block">
+    <ul class="text-16" style="list-style-type: decimal;">
+      <li><a href="#overview">{{ 'Overview of Dynamic Mapper' | translate }}</a></li>
+      <li><a href="#supported-connectors">{{ 'Supported connectors' | translate }}</a></li>
+      <li><a href="#define-mapping">{{ 'Defining a mapping' | translate }}</a></li>
+      <li><a href="#jsonata-substitution">{{ 'Defining a substitution using JSONata' | translate }}</a></li>
+      <li><a href="#javascript-substitution">{{ 'Defining a substitution using JavaScript' | translate }}</a></li>
+      <li><a href="#unknown-payload">{{ 'Getting started without knowing your source payload' | translate }}</a></li>
+      <li><a href="#reliability-settings">{{ 'Using reliability settings in mappings' | translate }}</a></li>
+      <li><a href="#access-control">{{ 'Managing permissions for Dynamic Mapper features' | translate }}</a></li>
+    </ul>
+  </div>
+
+  <div class="card-header" id="overview">
     <h3>
-      {{ 'Overview' | translate }}
+      {{ 'Overview of Dynamic Mapper' | translate }}
     </h3>
   </div>
   <div class="card-block">
     <div class="p-b-8 text-16">
-      Using the Cumulocity Dynamic Mapper you are able to connect to almost
-      any message broker and map any payload to Cumulocity format.<br />
-      To do so you define a mapping in a intuitive graphical editor. During
-      operation, your custom payload is automatically converted <br />
-      to align with the Cumulocity IoT Domain Model, ensuring seamless
-      integration and data flow.
+      The Cumulocity Dynamic Mapper lets you connect to almost any message broker and map any payload to the Cumulocity
+      format.<br />
+      Define mappings using an intuitive graphical editor. During operation, your custom payloads are automatically
+      converted<br />
+      to match the Cumulocity IoT Domain Model, ensuring seamless integration and data flow.
       <br />
       The following links help you get started with the Dynamic Mapper:
     </div>
     <ul class="text-16">
       <li>
-        Detailed documentation for the
+        Find detailed documentation for the
         <a href="https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper" target="_blank">Dynamic Mapper</a>
-        can be found in the Git repository.
+        in the Git repository.
       </li>
       <li>
-        The mappings use JSONata, a Lightweight query and transformation
-        language for JSON data. Documentation can be found the
-        <a href="https://jsonata.org/" target="_blank">here</a>
+        Mappings use <a href="https://jsonata.org/" target="_blank">JSONata</a>, a lightweight query and transformation
+        language for JSON data.
       </li>
     </ul>
     <div class="p-b-8 text-16">
-      The most important resources you work with in the Mapper are:
-      <b>connectors</b> and <b>mappings</b>.
-      <br />
-      If you want to receive messages from an MQTT broker (Cumulocity MQTT
-      Service, Hive MQ, mosquitto, ...) you use an <b>inbound mapping</b>.
-      <br />
-      The rules of the mapping are applied and result in an transformed payload
-      for any of the
-      <a href="https://cumulocity.com/docs/concepts/domain-model/">Cumulocity APIs</a><br />
-      <br />
-
-      For the other direction you can define an <b>outbound mapping</b>. At
-      runtime it listens for changes of any of the core
-      <a href="https://cumulocity.com/docs/concepts/domain-model/">domain objects</a>.
-      <br />
-      <br />
-      The following links help you find the resources in the Dynamic
-      Mapper:
+      The main resources in the Mapper are: <b>connectors</b> and <b>mappings</b>.<br />
+      To receive messages from an MQTT broker (Cumulocity MQTT Service, Hive MQ, Mosquitto, etc.), use an <b>inbound
+        mapping</b>.<br />
+      Mapping rules are applied to transform the payload for any of the
+      <a href="https://cumulocity.com/docs/concepts/domain-model/" target="_blank">Cumulocity APIs</a>.<br /><br />
+      For outbound communication, define an <b>outbound mapping</b>. At runtime, it listens for changes to core
+      <a href="https://cumulocity.com/docs/concepts/domain-model/" target="_blank">domain objects</a>.<br /><br />
+      Use the following links to access resources in the Dynamic Mapper:
     </div>
     <ul class="text-16">
       <li>
-        Currently <b>{{ countMappingInbound$ | async }}</b>
+        <b>{{ countMappingInbound$ | async }}</b>
         <a [routerLink]="ROUTE_INBOUND"> inbound</a> and
         <b>{{ countMappingOutbound$ | async }}</b>
         <a [routerLink]="ROUTE_OUTBOUND"> outbound</a>
-        mappings are defined
+        mappings are currently defined.
       </li>
       <li>
-        Currently <b>{{ countConnector$ | async }}</b>
-        <a [routerLink]="ROUTE_CONNECTORS"> connectors</a> are defined
+        <b>{{ countConnector$ | async }}</b>
+        <a [routerLink]="ROUTE_CONNECTORS"> connectors</a> are currently defined.
       </li>
     </ul>
   </div>
-  <div class="card-header">
+  <div class="card-header" id="supported-connectors">
     <h3>
-      {{ 'Which connectors are supported?' | translate }}
+      {{ 'Supported connectors' | translate }}
     </h3>
   </div>
   <div class="card-block">
     <div class="p-b-8 text-16"> The mapper supports the following connectors and mappings:</div>
-    <br />
-    <img width="60%" class="m-l-48 m-b-48"
-      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Connector_Matrix.png" alt="Define substitutions" />
+    <!-- <br />
+    <img width="70%" class="m-l-48 m-b-48"
+      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Connector_Matrix.png" alt="Connector matrix" /> -->
+
+    <div class="table-responsive table-width-80">
+      <table class="table _table-striped">
+        <thead class="thead-light">
+          <tr>
+            <th style="width: 25%;">Connector</th>
+            <th class="text-center" style="width: 12%;">Direction: Inbound</th>
+            <th class="text-center" style="width: 12%;">Direction: Outbound</th>
+            <th class="text-center" style="width: 12%;">Supports Snoop</th>
+            <th class="text-center" style="width: 12%;">Supports JavaScript</th>
+            <th style="width: 27%;">Supported Mapping Types</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>HTTP Connector</strong><br><small class="text-muted">(only one instance exists)</small></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong><br><small class="text-muted">(JSON)</small></td>
+            <td>JSON, Hex, Protobuf, Extension</td>
+          </tr>
+          <tr class="table-light">
+            <td><strong>Webhook</strong><br><small class="text-muted">(including Cumulocity Rest API)</small></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong><br><small class="text-muted">(JSON)</small></td>
+            <td>JSON, Hex</td>
+          </tr>
+          <tr>
+            <td><strong>Cumulocity IoT MQTT</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong><br><small class="text-muted">(JSON)</small></td>
+            <td>JSON, Hex, Protobuf, Extension</td>
+          </tr>
+          <tr class="table-light">
+            <td><strong>Generic MQTT</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong><br><small class="text-muted">(JSON)</small></td>
+            <td>JSON, Hex, Protobuf, Extension</td>
+          </tr>
+          <tr>
+            <td><strong>Kafka</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td>JSON, Hex, Protobuf, Extension</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-  <div class="card-header">
+
+  <div class="card-header" id="define-mapping">
     <h3>
-      {{ 'How to define a mapping?' | translate }}
+      {{ 'Defining a mapping' | translate }}
     </h3>
   </div>
   <div class="card-block">
     <div class="p-b-8 text-16">
-      Mapping can use the json query and transformation language or use JavaScript to define a mapping and the
-      substitutions. <br />
-      The choice depends your the preference. Are you familiar with any of the two standards? Do you have
-      existing JavaScript code you want to reuse? <br />
-      <br />
-
-      The Dynamic Mapper offers you the choice to use different types of
-      mappings: JSON, Hex, Processor Extension. <br />
-      So before defining the actual mapping you have to choose which type of
-      mapping to use. <br />
-      In most cases this will be JSON if you want to map your custom JSON
-      payload from your device to the Cumulocity JSON format.<br />
-      You start the stepper by clicking on <b>Add mapping</b> to add a mapping
-      (Mapping -> Inbound Mapping -> Action Add mapping).<br />
-      In the modal dialog <b>Add mapping</b> you have the option to <b>Define substitutions as JavaScript</b> to start
-      with JavaScript.
-      <br />
-      <br />
+      Mappings can use the JSON query and transformation language (JSONata) or JavaScript to define substitutions.<br />
+      Choose the approach that best fits your experience or existing code.<br /><br />
+      The Dynamic Mapper supports different mapping types: JSON, Hex, Processor Extension.<br />
+      Before defining a mapping, select the appropriate type. In most cases, use JSON to map your custom device payload
+      to the Cumulocity JSON format.<br />
+      Start by clicking <b>Add mapping</b> (Mapping -> Inbound Mapping -> Action Add mapping).<br />
+      In the <b>Add mapping</b> dialog, you can choose <b>Define substitutions as JavaScript</b> to use
+      JavaScript.<br /><br />
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif"
-        alt="Define substitutions" />
+        alt="Mapping stepper animation" />
     </div>
     <div class="p-b-8 text-16">
-      The stepper leads you through the steps to define a mapping which uses JSONata for the substitutions:
+      The stepper guides you through these steps to define a mapping using JSONata for substitutions:
     </div>
     <ol class="text-16">
       <li>
-        Add or select an existing connector for your mapping, where payloads
-        could come from
+        Add or select an existing connector for your mapping (where payloads come from).
       </li>
       <li>
-        Define general settings, like the topic name this mapping should be
-        linked to
+        Define general settings, such as the topic name for this mapping.
       </li>
       <li>
-        Select or enter the template for the expected source payload. This is
-        used as the source path of an substitution in the next step
+        Select or enter the template for the expected source payload. This is used as the source path for substitutions.
       </li>
       <li>
-        Define substitution for copying content from the source to the target
-        payload. The will be applied later at runtime on the actual payload
+        Define substitutions for copying content from the source to the target payload. These will be applied at
+        runtime.
       </li>
       <li>
-        Test the mapping by applying the substitutions and save the mapping
+        Test the mapping by applying the substitutions and save the mapping.
       </li>
     </ol>
     <br />
     <img width="70%" class="m-l-48 m-b-48"
       src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png"
-      alt="Define substitutions" />
+      alt="Substitution stepper" />
     <div class="p-b-8"></div>
-    <div class="card-header">
+
+    <div class="card-header" id="jsonata-substitution">
       <h3>
-        {{ 'How to define a substitution using JSONata?' | translate }}
+        {{ 'Defining a substitution using JSONata' | translate }}
       </h3>
     </div>
     <div class="card-block">
       <div class="p-b-8 text-16">
-        A substitution is a rule copy content from the source payload (most of
-        the time your custom JSON payload) to the target payload ( Cumulocity
-        JSON payload).<br />
-        When defining the substitution templates for the source and target
-        payload are used.<br />
-        At runtime these rules are applied to the actual payload received from
-        your defined broker. Defining a substitution consists of the following
-        steps:
+        A substitution is a rule that copies content from the source payload (usually your custom JSON payload) to the
+        target payload (Cumulocity JSON payload).<br />
+        When defining substitutions, templates for the source and target payloads are used.<br />
+        At runtime, these rules are applied to the actual payload received from your broker. To define a substitution:
       </div>
       <br />
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif"
-        alt="Define substitutions" />
+        alt="Substitution animation" />
       <p class="image-description"><b>Description:</b> This animation shows the steps to define substitutions in a
         mapping.</p>
       <div class="p-b-8"></div>
       <ol class="p-b-8 text-16">
         <li>
-          Select an node in the source payload. In the screenshot below this is:
-          <code>_TOPIC_LEVEL_[1]</code>
+          Select a node in the source payload (e.g., <code>_TOPIC_LEVEL_[1]</code>).
         </li>
         <li>
-          Select an node in the target payload. In the screenshot below this is:
-          <code>source.id</code>
+          Select a node in the target payload (e.g., <code>source.id</code>).
         </li>
-        <li>Press Add substitution</li>
-        <li>The substitution is added to the table of existing substitutions</li>
+        <li>Press <b>Add substitution</b>.</li>
+        <li>The substitution is added to the table of existing substitutions.</li>
       </ol>
       <p class="p-b-8 text-16">
-        At runtime this substitution copies the value extracted at the path
-        <code>_TOPIC_LEVEL_[1]</code> to the target payload at path <code>source.id</code><br />
+        At runtime, this substitution copies the value at <code>_TOPIC_LEVEL_[1]</code> to <code>source.id</code> in the
+        target payload.<br />
       </p>
       <br />
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
-        alt="Define mapping" />
-      <p class="image-description"><b>Description:</b> This screenshot shows the step 4 to define substitutions using
+        alt="Substitution annotation" />
+      <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
         JSONata.</p>
     </div>
     <div class="p-b-8"></div>
-    <div class="card-header">
+    <div class="card-header" id="javascript-substitution">
       <h3>
-        {{ 'How to define a substitution using JavaScript?' | translate }}
+        {{ 'Defining a substitution using JavaScript' | translate }}
       </h3>
     </div>
     <div class="card-block">
       <div class="p-b-8 text-16">
-        In step 4, you can define the substitutions directly in the editor using JavaScript syntax.<br />
-        At runtime the JavaScript code is evaluated substitution and copies the value extracted to the target payload at
-        path.
+        In step 4, you can define substitutions directly in the editor using JavaScript syntax.<br />
+        At runtime, the JavaScript code is evaluated and copies the value to the target payload path.
       </div>
       <div class="p-b-8 text-16">
         <span class="text-primary">Note:</span>
-        The JavaScript editor is only shown when you select the option <code>Define substitutions as JavaScript</code>
-        is selected, when the mapping is created.
+        The JavaScript editor is only available if you select <code>Define substitutions as JavaScript</code> when
+        creating the mapping.
       </div>
       <br />
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png"
-        alt="Define substitutions using JavaScript" />
-      <p class="image-description"><b>Description:</b> This screenshot shows the step 4 to define substitutions using
+        alt="JavaScript substitution" />
+      <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
         JavaScript.</p>
       <div class="p-b-8"></div>
     </div>
   </div>
 
-  <div class="card-header">
+  <div class="card-header" id="unknown-payload">
     <h3>
-      {{ 'How to begin without knowing your source payload?' | translate }}
+      {{ 'Getting started without knowing your source payload' | translate }}
     </h3>
   </div>
   <div class="card-block">
     <div class="p-b-8 text-16">
-      When dealing with an unknown device payload, the initial step is to
-      capture and analyze the incoming data. <br />
-      This process, called snooping, records messages that can serve as source
-      templates for future mapping. <br />
-      To activate snooping for a specific mapping, select the
-      <b>Enable snooping</b> for this mapping option when choosing a mapping
-      type. <br />. You start the stepper by clicking on the action<b>Add mapping</b>
-      (Mapping -> Inbound Mapping -> Action Add mapping).<br />
-      <br />
-      The stepper guides you through two steps when you begin checking for new messages:
+      If you don't know the device payload, first capture and analyze incoming data.<br />
+      This process, called snooping, records messages that can serve as source templates for future mappings.<br />
+      To enable snooping for a mapping, select <b>Enable snooping</b> when choosing a mapping type.<br />
+      Start by clicking <b>Add mapping</b> (Mapping -> Inbound Mapping -> Action Add mapping).<br /><br />
+      The stepper guides you through these steps:
     </div>
     <ol class="text-16">
       <li>
-        Add or select an existing connector for your mapping, where messages are
-        snooped (recorded)
+        Add or select an existing connector for your mapping (messages are snooped/recorded).
       </li>
       <li>
-        Define general settings, like the topic name this mapping should be
-        linked to
+        Define general settings, such as the topic name for this mapping.
       </li>
     </ol>
     <br>
-
     <div>
       <img width="30%" class="m-l-48 m-b-48"
         src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"
-        alt="Snoop process" />
-      <p class="image-description"><b>Description:</b> Modal dialog to create amapping in snooping mode.</p>
+        alt="Snooping modal" />
+      <p class="image-description"><b>Description:</b> Modal dialog to create a mapping in snooping mode.</p>
     </div>
     <br />
     <br />
     <div>
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif"
-        alt="Define mapping" />
+        alt="Snooping stepper" />
     </div>
-    <p class="image-description"><b>Description:</b> This animation shows the steps for defining a mapping in snooping
+    <p class="image-description"><b>Description:</b> Animation showing the steps for defining a mapping in snooping
       mode.</p>
   </div>
 
-  <div class="card-header">
+  <div class="card-header" id="reliability-settings">
     <h3>
-      {{ 'How do I use the reliability settings when processing mappings?' | translate }}
+      {{ 'Using reliability settings in mappings' | translate }}
     </h3>
   </div>
   <div class="card-block">
-    <div class="p-b-8 text-16"> In a mapping a QoS can be chosen. The following table shows the effect of the QoS when processing mappings depending on the connector (source of the message):</div>
-    <ul>
-      <li><strong>HTTP Connector</strong>: Only supports basic QoS 0 (immediate response without guarantees)</li>
-      <li><strong>MQTT</strong>: Most comprehensive support; handles all QoS levels (0-2) with varying acknowledgment
-        behaviors</li>
-      <li><strong>WebHook</strong>: Primarily outbound-focused with conditional acknowledgments based on QoS level</li>
-      <li><strong>Kafka</strong>: Limited support with only QoS 0 for outbound operations</li>
+    <div class="p-b-8 text-16">
+      You can set a QoS (Quality of Service) level for a mapping. The table below shows the effect of QoS when
+      processing mappings, depending on the connector (message source):
+    </div>
+    <ul class="p-b-8 text-16">
+      <li><strong>HTTP Connector</strong>: Only supports QoS 0 (immediate response, no guarantees).</li>
+      <li><strong>MQTT</strong>: Supports all QoS levels (0-2) with varying acknowledgment behaviors.</li>
+      <li><strong>WebHook</strong>: Primarily outbound, with conditional acknowledgments based on QoS.</li>
+      <li><strong>Kafka</strong>: Limited to QoS 0 for outbound operations.</li>
     </ul>
-    <p>Generally, higher QoS levels (1-2) provide better delivery guarantees but aren't universally supported across all
-      connectors. MQTT offers the most complete implementation while other connectors have more limited QoS
-      capabilities.</p>
+    <p class="p-b-8 text-16">
+      Higher QoS levels (1-2) provide better delivery guarantees, but are not supported by all connectors. MQTT offers
+      the most complete QoS support.
+    </p>
     <br />
-    <img width="70%" class="m-l-48 m-b-48" src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_QoS_Matrix.png"
-      alt="Use QoS in mappings" />
+    <!-- <img width="80%" class="m-l-48 m-b-48" src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_QoS_Matrix.png"
+      alt="QoS matrix" /> -->
+
+    <div class="table-responsive table-width-80">
+      <table class="table ">
+        <thead class="thead-light">
+          <tr>
+            <th>Connector</th>
+            <th>QoS</th>
+            <th>Inbound</th>
+            <th>Outbound</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Http Connector group - grey background -->
+          <tr class="table-light">
+            <td rowspan="3" class="align-middle"><strong>Http Connector</strong></td>
+            <td class="text-center">0</td>
+            <td>Process asynchronous, send response directly after receiving message</td>
+            <td class="text-muted">not relevant</td>
+          </tr>
+          <tr class="table-light">
+            <td class="text-center">1</td>
+            <td class="text-muted">not supported</td>
+            <td class="text-muted">not relevant</td>
+          </tr>
+          <tr class="table-light">
+            <td class="text-center">2</td>
+            <td class="text-muted">not supported</td>
+            <td class="text-muted">not relevant</td>
+          </tr>
+
+          <!-- MQTT group - white background -->
+          <tr>
+            <td rowspan="3" class="align-middle"><strong>MQTT</strong></td>
+            <td class="text-center">0</td>
+            <td>ACKs are sent to broker directly after message received</td>
+            <td>Received as QoS 1 at Notification 2.0 but published as QoS 0</td>
+          </tr>
+          <tr>
+            <td class="text-center">1</td>
+            <td>ACKs are sent only when the message is successfully processed at C8Y</td>
+            <td>ACKs are sent only to Notification 2.0 when the message is successfully published to broker, published
+              as QoS 1</td>
+          </tr>
+          <tr>
+            <td class="text-center">2</td>
+            <td>Currently handled as QoS 1, no logic to check for de-duplication</td>
+            <td>Handled as QoS 1, published as QoS 2</td>
+          </tr>
+
+          <!-- WebHook group - grey background -->
+          <tr class="table-light">
+            <td rowspan="3" class="align-middle"><strong>WebHook</strong></td>
+            <td class="text-center">0</td>
+            <td class="text-muted">not relevant</td>
+            <td>Received as QoS 1, sending ack directly after receiving message</td>
+          </tr>
+          <tr class="table-light">
+            <td class="text-center">1</td>
+            <td class="text-muted">not relevant</td>
+            <td>Received as QoS 1, sending ack only when request was successful</td>
+          </tr>
+          <tr class="table-light">
+            <td class="text-center">2</td>
+            <td class="text-muted">not relevant</td>
+            <td>Received as QoS 1, sending ack only when request was successful</td>
+          </tr>
+
+          <!-- Kafka group - white background -->
+          <tr>
+            <td rowspan="3" class="align-middle"><strong>Kafka</strong></td>
+            <td class="text-center">0</td>
+            <td class="text-muted">not relevant</td>
+            <td>No acknowledgment (similar to MQTT QoS 0)</td>
+          </tr>
+          <tr>
+            <td class="text-center">1</td>
+            <td class="text-muted">not relevant</td>
+            <td class="text-muted">not supported</td>
+          </tr>
+          <tr>
+            <td class="text-center">2</td>
+            <td class="text-muted">not relevant</td>
+            <td class="text-muted">not supported</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card-header" id="access-control">
+    <h3>
+      {{ 'Managing permissions for Dynamic Mapper features' | translate }}
+    </h3>
+  </div>
+  <div class="card-block">
+    <div class="p-b-8 text-16">
+      Dynamic Mapper uses role-based access control. The table below shows the permissions for each role:
+    </div>
+    <ul class="p-b-8 text-16">
+      <li><strong>No role</strong>: Read-only access to mappings, connectors, and service configuration.</li>
+      <li><strong>Create role</strong>: All read permissions plus full mapping management (create, edit, delete,
+        activate/deactivate, snoop/debug/filter).</li>
+      <li><strong>Admin role</strong>: All <strong>Create role</strong> permissions plus connector management and
+        service configuration editing.</li>
+    </ul>
+    <p class="text-16">Key points:</p>
+    <ul class="p-b-8 text-16">
+      <li>Only users with <strong>Create role</strong> or higher can modify mappings.</li>
+      <li>Only users with <strong>Admin role</strong> can manage connectors or edit service configuration.</li>
+      <li>All roles can read mappings, connectors, and service configuration.</li>
+    </ul>
+
+    <!-- <img width="70%" class="m-l-48 m-b-48"
+      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Roles_Permissions.png" alt="Roles and permissions" /> -->
+
+    <div class="table-responsive table-width-80">
+      <table class="table _table-striped">
+        <thead class="thead-light">
+          <tr>
+            <th style="width: 40%;">Dynamic Mapper Feature</th>
+            <th class="text-center" style="width: 20%;">No role</th>
+            <th class="text-center" style="width: 20%;">Create</th>
+            <th class="text-center" style="width: 20%;">Admin</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Mapping Read</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr class="table-light">
+            <td><strong>Mapping Create/Edit</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Mapping Delete</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr class="table-light">
+            <td><strong>Mapping Activate/Deactivate</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Mapping Snoop/Debug/Filter</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr class="table-light">
+            <td><strong>Connector Read</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Connector Create/Edit</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr class="table-light">
+            <td><strong>Connector Delete</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Connector Activate/Deactivate</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr class="table-light">
+            <td><strong>Service Configuration Read</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Service Configuration Edit</strong></td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>

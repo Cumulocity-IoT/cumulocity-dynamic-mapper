@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import com.cumulocity.sdk.client.SDKException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.ID;
@@ -167,6 +168,19 @@ public abstract class BaseProcessorInbound<T> {
                 // for (MappingSubstituteValue device : deviceEntries) {
                 getBuildProcessingContext(context, deviceEntries.get(i),
                         i, deviceEntries.size());
+                if(context.getCurrentRequest() != null && context.getCurrentRequest().hasError()) {
+                    Exception e = context.getCurrentRequest().getError();
+                    if (e instanceof ProcessingException &&
+                            e.getCause() != null &&
+                            e.getCause() instanceof SDKException &&
+                            ((SDKException) e.getCause()).getHttpStatus() == 422) {
+                        ID identity = new ID(mapping.externalIdType, deviceEntries.get(i).value.toString());
+                        c8yAgent.removeDeviceFromInboundExternalIdCache(tenant, identity);
+                        context.setSourceId(null);
+                        getBuildProcessingContext(context, deviceEntries.get(i),
+                                i, deviceEntries.size());
+                    }
+                }
             }
             log.info("{} - Completed context, processing sequentially, createNonExistingDevice: {}", tenant,
                     mapping.createNonExistingDevice);
@@ -226,7 +240,7 @@ public abstract class BaseProcessorInbound<T> {
             }
 
             /*
-             * step 4 resolve externalIds to c8ySourceIds and create attroc devices
+             * step 4 resolve externalIds to c8ySourceIds and create adHoc devices
              */
             // check if the targetPath == externalId and we need to resolve an external id
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
@@ -247,17 +261,17 @@ public abstract class BaseProcessorInbound<T> {
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                         identity, context);
                 context.setSourceId(sourceId.getManagedObject().getId().getValue());
-                ManagedObjectRepresentation attocDevice = c8yAgent.upsertDevice(tenant,
+                ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(tenant,
                         identity, context);
-                var response = objectMapper.writeValueAsString(attocDevice);
+                var response = objectMapper.writeValueAsString(adHocDevice);
                 context.getCurrentRequest().setResponse(response);
-                context.getCurrentRequest().setSourceId(attocDevice.getId().getValue());
+                context.getCurrentRequest().setSourceId(adHocDevice.getId().getValue());
             } catch (Exception e) {
-                context.getCurrentRequest().setError(e);
+                    context.getCurrentRequest().setError(e);
             }
             predecessor = newPredecessor;
         } else if (!context.getApi().equals(API.INVENTORY)) {
-            AbstractExtensibleRepresentation attocRequest = null;
+            AbstractExtensibleRepresentation adHocRequest = null;
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor, RequestMethod.POST, device.value.toString(),
                             mapping.externalIdType,
@@ -266,7 +280,7 @@ public abstract class BaseProcessorInbound<T> {
             try {
                 if (context.isSendPayload()) {
                     c8yAgent.createMEAO(context);
-                    String response = objectMapper.writeValueAsString(attocRequest);
+                    String response = objectMapper.writeValueAsString(adHocRequest);
                     context.getCurrentRequest().setResponse(response);
                 }
 
@@ -299,7 +313,7 @@ public abstract class BaseProcessorInbound<T> {
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
                 if (resolvedSourceId == null) {
                     if (mapping.createNonExistingDevice) {
-                        sourceId.value = createAttocDevice(identity, context);
+                        sourceId.value = createAdHocDevice(identity, context);
                     }
                 } else {
                     sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
@@ -330,7 +344,7 @@ public abstract class BaseProcessorInbound<T> {
         }
     }
 
-    protected String createAttocDevice(ID identity, ProcessingContext<T> context) {
+    protected String createAdHocDevice(ID identity, ProcessingContext<T> context) {
         Map<String, Object> request = new HashMap<String, Object>();
         request.put("name",
                 "device_" + identity.getType() + "_" + identity.getValue());
@@ -344,12 +358,12 @@ public abstract class BaseProcessorInbound<T> {
                     new C8YRequest(predecessor,
                             context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH, null,
                             context.getMapping().externalIdType, requestString, null, API.INVENTORY, null));
-            ManagedObjectRepresentation attocDevice = c8yAgent.upsertDevice(context.getTenant(),
+            ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(context.getTenant(),
                     identity, context);
-            var response = objectMapper.writeValueAsString(attocDevice);
+            var response = objectMapper.writeValueAsString(adHocDevice);
             context.getCurrentRequest().setResponse(response);
-            context.getCurrentRequest().setSourceId(attocDevice.getId().getValue());
-            return attocDevice.getId().getValue();
+            context.getCurrentRequest().setSourceId(adHocDevice.getId().getValue());
+            return adHocDevice.getId().getValue();
         } catch (ProcessingException | JsonProcessingException e) {
             context.getCurrentRequest().setError(e);
         }

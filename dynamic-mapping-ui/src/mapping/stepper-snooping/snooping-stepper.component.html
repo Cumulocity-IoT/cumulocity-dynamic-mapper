@@ -19,10 +19,8 @@
   ~
   -->
 
-<c8y-stepper
-  class="d-col no-align-items fit-h c8y-stepper--no-btns a-i-center"
-  [disableDefaultIcons]="{ edit: true, done: false }"
-  [customClasses]="[
+<c8y-stepper class="d-col no-align-items fit-h c8y-stepper--no-btns a-i-center"
+  [disableDefaultIcons]="{ edit: true, done: false }" [customClasses]="[
     'col-xs-10',
     'col-sm-8',
     'm-t-24',
@@ -41,13 +39,9 @@
         <div class="col-lg-12">
           <h4 class="text-medium">
             <div class="text-center">
-              <span
-                *ngIf="stepperConfiguration.editorMode !== EditorMode.READ_ONLY"
-                >Select connector for snooping (at least one is required)</span
-              >
-              <div
-                *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY"
-              >
+              <span *ngIf="stepperConfiguration.editorMode !== EditorMode.READ_ONLY">Select connector for snooping (at
+                least one is required)</span>
+              <div *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY">
                 Selected connectors for snooping
                 <span class="label label-primary text-12">{{ 'Read Only' }}</span>
               </div>
@@ -58,41 +52,23 @@
     </div>
 
     <div class="col-xs-12 flex-grow no-gutter">
-      <d11r-mapping-connector
-        [stepperConfiguration]="stepperConfiguration"
-        [deploymentMapEntry]="deploymentMapEntry"
-        (deploymentMapEntryChange)="deploymentMapEntryChange($event)"
-      ></d11r-mapping-connector>
+      <d11r-mapping-connector [stepperConfiguration]="stepperConfiguration" [deploymentMapEntry]="deploymentMapEntry"
+        (deploymentMapEntryChange)="deploymentMapEntryChange($event)"></d11r-mapping-connector>
     </div>
-    <c8y-stepper-buttons
-      [disabled]="isButtonDisabled$ | async"
-      class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
-      (onCancel)="cancel.emit()"
-      (onNext)="onNextStep($event)"
-      [labels]="labels"
-    >
+    <c8y-stepper-buttons [disabled]="isButtonDisabled$ | async"
+      class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0" (onCancel)="cancel.emit()"
+      (onNext)="onNextStep($event)" [labels]="labels">
     </c8y-stepper-buttons>
   </cdk-step>
-  <cdk-step
-    label="Properties snooping"
-    state="final"
-    [stepControl]="propertyFormly"
-  >
+  <cdk-step label="Properties snooping" state="final" [stepControl]="propertyFormly">
     <div class="col-xs-12 flex-grow no-gutter">
-      <d11r-mapping-properties
-        [mapping]="mapping"
-        [supportsMessageContext]="supportsMessageContext"
-        [stepperConfiguration]="stepperConfiguration"
-        [propertyFormly]="propertyFormly"
-      >
+      <d11r-mapping-properties [mapping]="mapping" [supportsMessageContext]="supportsMessageContext"
+        [stepperConfiguration]="stepperConfiguration" [propertyFormly]="propertyFormly">
       </d11r-mapping-properties>
     </div>
-    <c8y-stepper-buttons
-      class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
-      (onCancel)="cancel.emit()"
-      (onCustom)="onCommitButton()"
-      [labels]="{ custom: 'Confirm' }"
-    >
+    <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+      (onCancel)="cancel.emit()" (onCustom)="onCommitButton()" [labels]="{ custom: 'Confirm' }"
+      [class.user-no-admin-or-create-role]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     </c8y-stepper-buttons>
   </cdk-step>
 </c8y-stepper>

@@ -163,7 +163,7 @@ export class MappingService {
   async updateTemplate(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
       {
-        operation: Operation.UPDATE_SNOOPED_TEMPLATE,
+        operation: Operation.COPY_SNOOPED_SOURCE_TEMPLATE,
         parameter
       }
     );
@@ -570,5 +570,14 @@ export class MappingService {
       });
   }
 
-  async stopChangedMappingEvents() { }
+  async stopChangedMappingEvents() { 
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+      this.subscription = null;
+    }
+    if (this.eventRealtimeService) {
+      this.eventRealtimeService.stop();
+    }
+    // console.log('Stopped subscriptions:', this._agentId);
+  }
 }

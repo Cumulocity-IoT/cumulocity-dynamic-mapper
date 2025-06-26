@@ -22,7 +22,6 @@ import {
   IFetchResponse,
   IdentityService,
   IExternalIdentity,
-  ApplicationService
 } from '@c8y/client';
 import {
   AGENT_ID,
@@ -36,7 +35,7 @@ import {
 } from '..';
 import { Subject, takeUntil, timer } from 'rxjs';
 import { FetchClient } from '@c8y/ngx-components/api';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration } from '../../configuration';
 import { ServiceOperation } from './shared.model';
 import { OptionsService } from '@c8y/ngx-components';
 
@@ -46,7 +45,6 @@ export class SharedService {
     private client: FetchClient,
     private identity: IdentityService,
     private option: OptionsService,
-    private application: ApplicationService,
 
   ) {
     // console.log('Option:', this.option, this.application, window.location);
@@ -55,7 +53,8 @@ export class SharedService {
   }
 
   private _agentId: string;
-  private _featurePromise: Promise<Feature>;
+  private _featurePromise: Promise<Feature> | null = null;
+  private _featureCache: Feature | null = null;
   reloadInbound$: Subject<void> = new Subject<void>();
   reloadOutbound$: Subject<void> = new Subject<void>();
   private _serviceConfiguration: ServiceConfiguration;
@@ -78,10 +77,29 @@ export class SharedService {
   }
 
   async getFeatures(): Promise<Feature> {
-    if (!this._featurePromise) {
-      this._featurePromise = this.fetchFeatures();
+
+    // Return cached result immediately if available
+    if (this._featureCache) {
+      return this._featureCache;
     }
-    return this._featurePromise;
+
+    // If already fetching, return the existing promise
+    if (this._featurePromise) {
+      return this._featurePromise;
+    }
+
+    // Start fetching
+    this._featurePromise = this.fetchFeatures();
+
+    try {
+      this._featureCache = await this._featurePromise;
+      return this._featureCache;
+    } catch (error) {
+      console.error('Error fetching features', error);
+      // Clear the promise on error so it can be retried
+      this._featurePromise = null;
+      throw error;
+    }
   }
 
   private async fetchFeatures(): Promise<Feature> {
@@ -91,8 +109,16 @@ export class SharedService {
         method: 'GET'
       }
     );
-    return await response.json();
+
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch features: ${response.status}`);
+    }
+
+    const features = await response.json();
+    return features;
   }
+
 
   refreshMappings(direction: Direction) {
     // delay the reload of mappings as the subscriptions are updated asynchronously. This can take a while

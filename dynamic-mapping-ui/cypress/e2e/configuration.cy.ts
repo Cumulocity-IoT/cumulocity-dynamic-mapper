@@ -15,7 +15,7 @@ describe('Specs for connector configuration', () => {
       '#navigator'
     );
     cy.get('[data-cy="Settings"]').should('exist').click();
-    cy.get('[data-cy="Dynamic Mapping"]')
+    cy.get('[data-cy="Dynamic Mapper"]')
       .should('exist')
       .should('be.visible')
       .click();

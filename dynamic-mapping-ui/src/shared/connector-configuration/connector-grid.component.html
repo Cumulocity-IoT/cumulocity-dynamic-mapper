@@ -21,20 +21,75 @@
 
 <div class="">
   <c8y-data-grid [ngClass]="customClasses" #connectorGrid [title]="'Connectors'" [selectable]="selectable && !readOnly"
-    [columns]="columns" [selectionPrimaryKey]="'identifier'"[configureColumnsEnabled]="false" [rows]="configurations$ | async" [pagination]="pagination"
-    [actionControls]="actionControls" [showSearch]= "false" (itemsSelect)="onSelectionChanged($event)">
+    [columns]="columns" [selectionPrimaryKey]="'identifier'" [configureColumnsEnabled]="false"
+    [rows]="configurations$ | async" [pagination]="pagination" [actionControls]="actionControls" [showSearch]="false"
+    (itemsSelect)="onSelectionChanged($event)">
     <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-connected'" [title]="'No connectors exist.' | translate"
       [subtitle]="
   'Create your first connector.' | translate
   " [horizontal]="true">
     </c8y-ui-empty-state>
   </c8y-data-grid>
-</div>
-<div *ngIf="selectable">
-  <label>Selected connectors for mapping</label>
-  <div class="bg-level-1 p-t-2 p-b-2">
-    <span class="text-12 label label-primary m-r-8"
-      *ngFor="let identifier of deploymentMapEntry?.connectors; let i = index">
-      {{ findNameByIdent(identifier) }}</span>
+  <!-- </div>
+<c8y-action-bar-item [placement]="'left'">
+  <div class="d-flex">
+    <label class="text-normal text-muted flex-no-shrink m-r-8" style="margin-top:6px" id="listLabel">{{'Auto refresh'}}</label>
+    <div class="c8y-select-wrapper" style="max-width: 180px">
+      <select aria-labelledby="listLabel" name="listLabel" class="form-control" [(ngModel)]="currentPollingInterval"
+        (ngModelChange)="onPollingIntervalChange()" required>
+        <option *ngFor="let item of intervals" [value]="item.value">
+          {{ item.label }}
+        </option>
+      </select>
+      <span></span>
+    </div>
   </div>
-</div>
+</c8y-action-bar-item> -->
+
+  <c8y-action-bar-item [placement]="'left'">
+    <form class="d-flex a-i-center fit-w fit-h" [formGroup]="toggleIntervalForm">
+      <div class="d-flex">
+        <label class="text-normal text-muted flex-no-shrink m-r-8" style="margin-top:6px" id="listLabel">
+          Auto refresh
+        </label>
+        <!-- {{toggleIntervalForm.value.refreshInterval}} -->
+        <div class="input-group">
+          <!-- <label class="toggle-countdown"    
+      placement="bottom" data-cy="c8y-alarms-interval-refresh--toggle-countdown">
+            <input type="checkbox" data-cy="c8y-alarms-interval-toggle" formControlName="intervalToggle"
+              (click)="trackUserClickOnIntervalToggle($event.target)" /> 
+            <c8y-countdown-interval [countdownInterval]="toggleIntervalForm.value.refreshInterval"
+              (countdownEnded)="onCountdownEnded()"></c8y-countdown-interval>
+           <i data-cy="c8y-alarms-interval-refresh--pause" c8yIcon="pause"></i> 
+          </label> -->
+
+          <!-- <div>{{nextTriggerCountdown$| async}}</div> -->
+          <!-- <c8y-countdown-interval [countdownInterval]="nextTriggerCountdown$| async" -->
+          <label class="toggle-countdown" placement="bottom" data-cy="c8y-alarms-interval-refresh--toggle-countdown">
+            <input type="checkbox" data-cy="c8y-alarms-interval-toggle" formControlName="intervalToggle"
+              (click)="trackUserClickOnIntervalToggle($event.target)" />
+            <c8y-countdown-interval [countdownInterval]="nextTriggerCountdown$| async"
+              (countdownEnded)="onCountdownEnded()"></c8y-countdown-interval>
+            <i data-cy="c8y-alarms-interval-refresh--pause" c8yIcon="pause"></i>
+          </label>
+          <div class="c8y-select-wrapper" style="max-width: 180px">
+            <select aria-labelledby="listLabel" name="listLabel" class="form-control" formControlName="refreshInterval"
+              required>
+              <option *ngFor="let item of intervals" [value]="item.value">
+                {{ item.label }}
+              </option>
+            </select>
+            <span></span>
+          </div>
+        </div>
+      </div>
+    </form>
+  </c8y-action-bar-item>
+  <div *ngIf="selectable">
+    <label>Selected connectors for mapping</label>
+    <div class="bg-level-1 p-t-2 p-b-2">
+      <span class="text-12 label label-primary m-r-8"
+        *ngFor="let identifier of deploymentMapEntry?.connectors; let i = index">
+        {{ findNameByIdent(identifier) }}</span>
+    </div>
+  </div>

@@ -21,15 +21,18 @@
 
 <c8y-title translate>{{'Mapping '}} {{ stepperConfiguration.direction| capitalCase}}</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="onAddMapping()">
+  <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="onAddMapping()"
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="plus-circle"></i>
     {{ 'Add mapping' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Install sample mapping' | translate }}" (click)="onAddSampleMappings()">
+  <button class="btn btn-link" title="{{ 'Install sample mapping' | translate }}" (click)="onAddSampleMappings()"
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="registry-editor"></i>
     {{ 'Add sample mappings' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reload mappings in service' | translate }}" (click)="onReload()">
+  <button class="btn btn-link" title="{{ 'Reload mappings in service' | translate }}"
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" (click)="onReload()">
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Reload mappings in service' | translate }}
   </button>
@@ -37,12 +40,14 @@
     <i c8yIcon="download"></i>
     {{ 'Export all mappings' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Import mappings' | translate }}" (click)="onImport()">
+  <button class="btn btn-link" title="{{ 'Import mappings' | translate }}" (click)="onImport()"
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="upload"></i>
     {{ 'Import mappings' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Reset deployment cache' | translate }}"
-    (click)="clickedResetDeploymentMapEndpoint()">
+    (click)="clickedResetDeploymentMapEndpoint()"
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="erase"></i>
     {{ 'Reset deployment cache' | translate }}
   </button>

@@ -17,22 +17,24 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation } from '@angular/core';
-import { ActionControl, AlertService, Column, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy } from '@angular/core';
+import { ActionControl, AlertService, Column, CountdownIntervalComponent, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, combineLatest, from, Observable, } from 'rxjs';
-import { map, take } from 'rxjs/operators';
+import { BehaviorSubject, combineLatest, from, Observable, Subject, } from 'rxjs';
+import { filter, map, take, takeUntil, tap } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
-import { DeploymentMapEntry, Direction } from '../mapping/mapping.model';
+import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
 import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
-import { ConnectorConfiguration, ConnectorSpecification, ConnectorType } from './connector.model';
+import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingInterval } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
+import { SharedService } from '..';
+import { Form, FormBuilder, FormGroup } from '@angular/forms';
 
 @Component({
   selector: 'd11r-mapping-connector-grid',
@@ -40,7 +42,7 @@ import { ActionVisibilityRule } from './types';
   templateUrl: 'connector-grid.component.html',
   encapsulation: ViewEncapsulation.None
 })
-export class ConnectorGridComponent implements OnInit, AfterViewInit {
+export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() selectable = true;
   @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
   @Input() readOnly = false;
@@ -49,6 +51,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
 
   @ViewChild('connectorGrid') connectorGrid: DataGridComponent;
+  @ViewChild(CountdownIntervalComponent)
+  countdownIntervalComponent: CountdownIntervalComponent;
+  toggleIntervalForm: FormGroup;
 
   selected: string[] = [];
   selected$ = new BehaviorSubject<string[]>([]);
@@ -57,6 +62,9 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   configurations: ConnectorConfiguration[] = [];
   configurations$: Observable<ConnectorConfiguration[]>;
   customClasses: string;
+  nextTriggerCountdown$: BehaviorSubject<number> = new BehaviorSubject(0);
+
+  private shouldRefreshAutomatic: boolean = true;
 
   readonly LoggingEventType = LoggingEventType;
   readonly pagination: Pagination = {
@@ -66,29 +74,72 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
 
   columns: Column[];
   actionControls: ActionControl[];
+  feature: Feature;
+  intervals: PollingInterval[];
+  currentPollingInterval: number;
+  private destroy$: Subject<void> = new Subject<void>();
 
   constructor(
     private bsModalService: BsModalService,
     private connectorConfigurationService: ConnectorConfigurationService,
     private alertService: AlertService,
+    private sharedService: SharedService,
+    private fb: FormBuilder,
   ) {
-
+    this.toggleIntervalForm = this.initForm();
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.initializeColumns();
     this.initializeActionControls();
     this.initializeSelection();
     this.initializeConfigurations();
     this.initializeSpecifications();
+    this.intervals = this.connectorConfigurationService.getAvailablePollingIntervals();
+    this.currentPollingInterval = this.connectorConfigurationService.getCurrentPollingIntervalValue();
+    console.log('Current Polling Interval:', this.currentPollingInterval);
     this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
+    this.feature = await this.sharedService.getFeatures();
+    this.toggleIntervalForm.get('refreshInterval')?.valueChanges.subscribe(value => {
+      this.currentPollingInterval = value;
+      this.onRefreshIntervalChange(value);
+    });
+
+    this.onRefreshIntervalToggleChange();
   }
 
   ngAfterViewInit(): void {
     if (this.selectable) {
       setTimeout(() => this.connectorGrid.setItemsSelected(this.selected, true), 0);
     }
+    setTimeout(() => this.startCountdown());
   }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  resetCountdown(): void {
+    console.log('resetCountdown', this.currentPollingInterval);
+
+    this.countdownIntervalComponent?.reset();
+  }
+
+  startCountdown(): void {
+    this.nextTriggerCountdown$.next(this.currentPollingInterval);
+    if (this.shouldRefreshAutomatic) {
+      this.countdownIntervalComponent.start();
+      this.connectorConfigurationService.startCountdown();
+    } 
+    console.log('CurrentPollingInterval', this.currentPollingInterval, this.shouldRefreshAutomatic);
+  }
+
+  private onRefreshIntervalChange(interval: number): void {
+    // const selectedValue = this.toggleIntervalForm.get('refreshInterval')?.value;
+    this.connectorConfigurationService.setPollingInterval(interval);
+  }
+
   private initializeActionControls(): void {
     this.actionControls = ACTION_CONTROLS.map(control => ({
       ...control,
@@ -97,7 +148,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         this.checkActionVisibility(item, control.visibilityRules)
     }));
   }
-
 
   private initializeColumns(): void {
     this.columns = GRID_COLUMNS.map(column => ({
@@ -110,16 +160,17 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   private initializeConfigurations(): void {
-    this.configurations$ = this.connectorConfigurationService.getConnectorConfigurationsWithLiveStatus().pipe(
+    this.configurations$ = this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
       map(configs => configs.filter(config =>
         config.supportedDirections?.some(dir => this.directions.includes(dir))
-      ))
+      )),
+      // tap((configurations) => { console.log('Enriched configurations:', configurations) }),
     )
     this.setupConfigurationsSubscription();
   }
 
   private initializeSpecifications(): void {
-    from(this.connectorConfigurationService.getConnectorSpecifications())
+    from(this.connectorConfigurationService.getSpecifications())
       .pipe(take(1))
       .subscribe(specs => this.specifications = specs);
   }
@@ -193,7 +244,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
   }
 
   refresh(): void {
-    this.connectorConfigurationService.updateConnectorConfigurations();
+    this.connectorConfigurationService.refreshConfigurations();
   }
 
   async onConfigurationUpdate(config: ConnectorConfiguration): Promise<void> {
@@ -203,7 +254,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         editedConfiguration,
         'Updated successfully.',
         'Failed to update connector configuration',
-        config => this.connectorConfigurationService.updateConnectorConfiguration(config)
+        config => this.connectorConfigurationService.updateConfiguration(config)
       );
     });
   }
@@ -216,7 +267,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         editedConfiguration,
         'Created successfully.',
         'Failed to create connector configuration',
-        config => this.connectorConfigurationService.createConnectorConfiguration(config)
+        config => this.connectorConfigurationService.createConfiguration(config)
       );
     });
   }
@@ -229,7 +280,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
           config,
           'Deleted successfully.',
           'Failed to delete connector configuration',
-          config => this.connectorConfigurationService.deleteConnectorConfiguration(config.identifier)
+          config => this.connectorConfigurationService.deleteConfiguration(config.identifier)
         );
       }
       modalRef.hide();
@@ -247,7 +298,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
         addedConfiguration,
         'Added successfully.',
         'Failed to create connector configuration',
-        config => this.connectorConfigurationService.createConnectorConfiguration(config)
+        config => this.connectorConfigurationService.createConfiguration(config)
       );
     });
   }
@@ -258,7 +309,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
 
   get shouldHideBulkActionsAndReadOnly(): boolean {
     //return this.selectable && this.readOnly;
-    return  this.readOnly;
+    return this.readOnly;
   }
 
   // Helper methods for showing modals
@@ -303,14 +354,53 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit {
     return rules.every(rule => {
       switch (rule.type) {
         case 'enabled':
-          return item.enabled === rule.value;
+          return (item.enabled === rule.value);
         case 'readOnly':
-          return this.readOnly === rule.value;
+          return (this.readOnly === rule.value);
         case 'connectorType':
           return item.connectorType !== ConnectorType.HTTP;
+        case 'userRole':
+          const userHasAdminRole = this.feature?.userHasMappingAdminRole;
+          if (rule.value === 'viewLogic') {
+            // Show VIEW if: (admin + enabled) OR (non-admin + any status)
+            return (userHasAdminRole && item.enabled) || !userHasAdminRole;
+          }
+          return rule.value ? userHasAdminRole : !userHasAdminRole;
         default:
           return true;
       }
     });
+  }
+
+  private initForm() {
+    return this.fb.group({
+      intervalToggle: this.shouldRefreshAutomatic,
+      refreshInterval: this.connectorConfigurationService.getCurrentPollingInterval().value
+    });
+  }
+
+  onCountdownEnded() {
+    this.resetCountdown();
+  }
+
+  private onRefreshIntervalToggleChange(): void {
+    this.toggleIntervalForm
+      .get('refreshInterval')
+      .valueChanges.pipe(takeUntil(this.destroy$), filter(Boolean))
+      .subscribe(() => setTimeout(() => {
+        this.nextTriggerCountdown$.next(this.currentPollingInterval);
+        this.resetCountdown()
+      }));
+  }
+
+  trackUserClickOnIntervalToggle(target: EventTarget): void {
+    this.shouldRefreshAutomatic = (target as HTMLInputElement).checked;
+    this.connectorConfigurationService.toggleCountdown();
+    if (!this.shouldRefreshAutomatic) {
+      this.countdownIntervalComponent.stop();
+    } else {
+      this.countdownIntervalComponent.start()
+    }
+    console.log('ShouldRefreshAutomatic', this.shouldRefreshAutomatic)
   }
 }

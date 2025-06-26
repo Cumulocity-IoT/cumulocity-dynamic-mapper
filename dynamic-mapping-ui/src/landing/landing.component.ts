@@ -21,11 +21,12 @@
 
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, JsonEditorComponent, NODE1, NODE3 } from '../shared';
+import { Direction, Feature, JsonEditorComponent, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-
+import { AlertService } from '@c8y/ngx-components';
+import { ActivatedRoute } from '@angular/router';
 @Component({
   selector: 'd11r-landing',
   templateUrl: './landing.component.html',
@@ -35,8 +36,10 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 export class LandingComponent implements OnInit {
   constructor(
     private mappingService: MappingService,
+    private alertService: AlertService,
     private connectorConfigurationService: ConnectorConfigurationService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private route: ActivatedRoute
   ) {
     this.linkSVG = this.sanitizer.bypassSecurityTrustUrl(
       'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
@@ -54,7 +57,12 @@ export class LandingComponent implements OnInit {
   linkSnoopProcess: string = '';
   linkSVG: SafeResourceUrl;
 
-  ngOnInit(): void {
+  feature: Feature;
+
+  async ngOnInit() {
+
+    this.feature = this.route.snapshot.data['feature'];
+
     this.linkSnoopProcess = '/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Snooping_Stepper_Process.svg';
     from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
       (mappings) => {
@@ -66,11 +74,25 @@ export class LandingComponent implements OnInit {
       (count) => this.countMappingOutbound$.next(!count ? 'no' : count.length)
     );
 
-    from(
-      this.connectorConfigurationService.getConnectorConfigurations()
-    ).subscribe((count) =>
-      this.countConnector$.next(!count ? 'no' : count.length)
-    );
+
+    this.connectorConfigurationService.getConfigurations()
+      .subscribe((count) =>
+        this.countConnector$.next(!count ? 'no' : count.length)
+      );
+
+    if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
+      this.alertService.warning(
+        "You don't have any Dynamic Mapper permissions and therefore can only view mappings/connectors. Please contact your administrator."
+      );
+    } else if (!this.feature?.userHasMappingAdminRole) {
+      this.alertService.warning(
+        "You don't have the role 'Dynamic Mapper Admin' and therefore cannot create or edit connectors. Please contact your administrator."
+      );
+    } else if (!this.feature?.userHasMappingCreateRole) {
+      this.alertService.warning(
+        "You don't have the role 'Dynamic Mapper User' and therefore cannot edit mappings. Please contact your administrator."
+      );
+    }
   }
 
 }

@@ -31,7 +31,7 @@ import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ServiceConfigurationModule } from '../configuration';
-import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule } from '../shared';
+import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule, featureResolver } from '../shared';
 import { MappingFilterComponent } from './filter/mapping-filter.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingComponent } from './grid/mapping.component';
@@ -42,7 +42,7 @@ import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.c
 import { NameRendererComponent } from './renderer/name.renderer.component';
 import { QOSRendererComponent } from './renderer/qos.renderer.component';
 import { SnoopedTemplateRendererComponent } from './renderer/snooped-template.renderer.component';
-import { StatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
+import { MappingStatusActivationRendererComponent } from './renderer/status-activation.renderer.component';
 import { StatusRendererComponent } from './renderer/status.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
 import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
@@ -75,7 +75,7 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
-    StatusActivationRendererComponent,
+    MappingStatusActivationRendererComponent,
     LabelRendererComponent,
     NameRendererComponent,
     MappingTypeComponent,
@@ -105,15 +105,24 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
     DeviceGridService,
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
-      component: MappingComponent
+      component: MappingComponent,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
-      component: MappingComponent
+      component: MappingComponent,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/subscriptionOutbound`,
-      component: MappingSubscriptionComponent
+      component: MappingSubscriptionComponent,
+      resolve: {
+        feature: featureResolver
+      }
     }),
     {
       provide: FORMLY_CONFIG,

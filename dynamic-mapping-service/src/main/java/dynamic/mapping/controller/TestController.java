@@ -82,15 +82,6 @@ public class TestController {
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
 
-    @Value("${APP.userRolesEnabled}")
-    private Boolean userRolesEnabled;
-
-    @Value("${APP.mappingAdminRole}")
-    private String mappingAdminRole;
-
-    @Value("${APP.mappingCreateRole}")
-    private String mappingCreateRole;
-
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<? extends ProcessingContext<?>>> forwardPayload(@PathVariable String method,
             @RequestParam URI topic, @RequestParam String connectorIdentifier,

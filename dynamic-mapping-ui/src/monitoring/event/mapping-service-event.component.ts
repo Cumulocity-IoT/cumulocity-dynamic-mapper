@@ -29,6 +29,21 @@ import {
 } from '../../shared';
 import { EventService, IEvent, IResultList } from '@c8y/client';
 
+interface EventFilter {
+  pageSize: number;
+  withTotalPages: boolean;
+  source?: string;
+  type?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+interface ComponentState {
+  events: IResultList<IEvent> | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
 @Component({
   selector: 'd11r-mapping-service-event',
   templateUrl: 'mapping-service-event.component.html',
@@ -38,30 +53,31 @@ import { EventService, IEvent, IResultList } from '@c8y/client';
 })
 export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
-  baseFilter = {
+  constructor(
+    private eventService: EventService,
+    private sharedService: SharedService
+  ) { }
+
+  readonly baseFilter = {
     pageSize: 1000,
     withTotalPages: true,
     // type: LOCATION_UPDATE_EVENT_TYPE
   };
 
-  pagination: Pagination = {
+  readonly pagination: Pagination = {
     pageSize: 5,
     currentPage: 1
   };
+
   events$: Observable<IResultList<IEvent>>;
   LoggingEventTypeMap = LoggingEventTypeMap;
-  filterMappingServiceEvent = {type:'ALL'};
+  filterMappingServiceEvent = { type: 'ALL' };
   filterSubject$ = new BehaviorSubject<void>(null);
   destroy$ = new Subject<void>();
   reload$ = new Subject<void>();
 
-  constructor(
-    public eventService: EventService,
-    public alertService: AlertService,
-    private sharedService: SharedService
-  ) { }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.events$ = this.filterSubject$.pipe(
       switchMap(() => from(this.sharedService.getDynamicMappingServiceAgent())),
       switchMap((mappingServiceId) =>
@@ -80,8 +96,8 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.reload$.complete();
   }
 
-  onFilterMappingServiceEventSelect(event) {
-    if (event == 'ALL'){
+  onFilterMappingServiceEventSelect(event): void {
+    if (event == 'ALL') {
       delete this.baseFilter['type'];
     } else {
       this.baseFilter['type'] = LoggingEventTypeMap[event].type;
@@ -89,12 +105,12 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.filterSubject$.next();
   }
 
-  onDateFromChange(date) {
+  onDateFromChange(date): void {
     this.baseFilter['dateFrom'] = date.toISOString();
     this.filterSubject$.next();
   }
 
-  onDateToChange(date) {
+  onDateToChange(date): void {
     this.baseFilter['dateTo'] = date.toISOString();
     this.filterSubject$.next();
   }

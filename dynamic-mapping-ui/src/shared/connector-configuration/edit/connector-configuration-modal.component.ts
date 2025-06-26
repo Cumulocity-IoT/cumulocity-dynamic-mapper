@@ -28,8 +28,10 @@ import {
   ConnectorPropertyType,
   ConnectorSpecification,
   ConnectorType,
+  Feature,
   FormatStringPipe,
-  nextIdAndPad
+  nextIdAndPad,
+  SharedService
 } from '../..';
 
 interface PropertyEntry {
@@ -65,13 +67,16 @@ export class ConnectorConfigurationModalComponent implements OnInit {
     [ConnectorPropertyType.OPTION_PROPERTY, this.createOptionField.bind(this)],
     [ConnectorPropertyType.STRING_LARGE_PROPERTY, this.createLargeStringField.bind(this)]
   ]);
+  feature: Feature;
 
   constructor(
     private cd: ChangeDetectorRef,
-    private formatStringPipe: FormatStringPipe
+    private formatStringPipe: FormatStringPipe,
+    private sharedService: SharedService
   ) { }
 
-  ngOnInit(): void {
+  async ngOnInit() {
+    this.feature = await this.sharedService.getFeatures();
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
     this.readOnly = this.configuration.enabled;

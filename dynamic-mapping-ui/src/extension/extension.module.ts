@@ -32,7 +32,6 @@ import { extensionResolver } from './share/extension.model';
 @NgModule({
   declarations: [
     ExtensionGridComponent,
-    ExtensionCardComponent,
     AddExtensionComponent,
     ExtensionCardComponent,
     ExtensionPropertiesComponent

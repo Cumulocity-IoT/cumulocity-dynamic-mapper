@@ -32,6 +32,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,9 +73,6 @@ public class ExtensionController {
     C8YAgent c8YAgent;
 
     @Autowired
-    private RoleService roleService;
-
-    @Autowired
     private ContextService<UserCredentials> contextService;
 
     @Autowired
@@ -80,15 +80,6 @@ public class ExtensionController {
 
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
-
-    @Value("${APP.userRolesEnabled}")
-    private Boolean userRolesEnabled;
-
-    @Value("${APP.mappingAdminRole}")
-    private String mappingAdminRole;
-
-    @Value("${APP.mappingCreateRole}")
-    private String mappingCreateRole;
 
     @GetMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
@@ -108,15 +99,10 @@ public class ExtensionController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/{extensionName}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
-        if (!userHasMappingAdminRole()) {
-            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
-                    tenant);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Insufficient Permission, user does not have required permission to access this API");
-        }
         Extension result = configurationRegistry.getC8yAgent().deleteProcessorExtension(tenant, extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -124,8 +110,5 @@ public class ExtensionController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    private boolean userHasMappingAdminRole() {
-        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mappingAdminRole));
-    }
 
 }

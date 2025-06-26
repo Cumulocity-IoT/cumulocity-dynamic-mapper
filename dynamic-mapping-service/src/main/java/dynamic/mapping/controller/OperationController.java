@@ -93,15 +93,6 @@ public class OperationController {
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
 
-    @Value("${APP.userRolesEnabled}")
-    private Boolean userRolesEnabled;
-
-    @Value("${APP.mappingAdminRole}")
-    private String mappingAdminRole;
-
-    @Value("${APP.mappingCreateRole}")
-    private String mappingCreateRole;
-
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -119,39 +110,124 @@ public class OperationController {
             Map<String, String> parameters = operation.getParameter();
 
             switch (operationType) {
+                // TODO CREATE Role
                 case RELOAD_MAPPINGS:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to reload mappings");
+                    }
                     return handleReloadMappings(tenant);
+                // TODO ADMIN Role (implemented in UI)
                 case CONNECT:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to connect to connector");
+                    }
                     return handleConnect(tenant, parameters);
+                // TODO ADMIN Role (implemented in UI)
                 case DISCONNECT:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to disconnect from connector");
+                    }
                     return handleDisconnect(tenant, parameters);
+                // TODO CREATE Role
                 case REFRESH_STATUS_MAPPING:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to refresh status mappings");
+                    }
                     return handleRefreshStatusMapping(tenant);
-                case RESET_STATUS_MAPPING:
-                    return handleResetStatusMapping(tenant);
+                // TODO ADMIN Role
+                case RESET_STATISTICS_MAPPING:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to reset status mapping");
+                    }
+                    return handleResetStatisticsMapping(tenant);
+                // TODO ADMIN Role (implemented in UI)
                 case RESET_DEPLOYMENT_MAP:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to reset deployment map");
+                    }
                     return handleResetDeploymentMap(tenant);
+                // TODO ADMIN Role (implemented in UI)
                 case RELOAD_EXTENSIONS:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to reload extensions");
+                    }
                     return handleReloadExtensions(tenant);
+                // TODO CREATE Role
                 case ACTIVATE_MAPPING:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to activate mappings");
+                    }
                     return handleActivateMapping(tenant, parameters);
+                // TODO CREATE Role
                 case APPLY_MAPPING_FILTER:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to apply mapping filter");
+                    }
                     return handleApplyMappingFilter(tenant, parameters);
+                // TODO CREATE Role
                 case DEBUG_MAPPING:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to debug mappings");
+                    }
                     return handleDebugMapping(tenant, parameters);
+                // TODO CREATE Role
                 case SNOOP_MAPPING:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to snoop mappings");
+                    }
                     return handleSnoopMapping(tenant, parameters);
+                // TODO CREATE Role
                 case SNOOP_RESET:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to reset snoop");
+                    }
                     return handleSnoopReset(tenant, parameters);
+                // TODO ADMIN Role
                 case REFRESH_NOTIFICATIONS_SUBSCRIPTIONS:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to refresh notifications subscriptions");
+                    }
                     return handleRefreshNotifications(tenant);
+                // TODO ADMIN Role (implemented in UI)
                 case CLEAR_CACHE:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to clear cache");
+                    }
                     return handleClearCache(tenant, parameters);
-                case UPDATE_SNOOPED_TEMPLATE:
-                    return handleUpdateTemplate(tenant, parameters);
+                // TODO CREATE Role
+                case COPY_SNOOPED_SOURCE_TEMPLATE:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to copy snooped source template");
+                    }
+                    return handleCopySnoopedSourceTemplate(tenant, parameters);
+                // TODO CREATE Role
                 case ADD_SAMPLE_MAPPINGS:
+                    if (!Utils.userHasMappingCreateRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to add sample mappings");
+                    }
                     return handleAddSampleMappings(tenant, parameters);
+                // TODO ADMIN Role
                 case INIT_CODE_TEMPLATES:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to initialize code templates");
+                    }
                     return handleInitCodeTemplates(tenant, parameters);
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
@@ -173,10 +249,10 @@ public class OperationController {
             mappings.forEach(mapping -> {
                 AtomicBoolean alreadyExits = new AtomicBoolean(false);
                 existingMappings.forEach(existingMapping -> {
-                    if(existingMapping.getIdentifier().equals(mapping.getIdentifier()))
+                    if (existingMapping.getIdentifier().equals(mapping.getIdentifier()))
                         alreadyExits.set(true);
                 });
-                if(!alreadyExits.get()) {
+                if (!alreadyExits.get()) {
                     mapping.setActive(false);
                     mappingComponent.createMapping(tenant, mapping);
                 }
@@ -189,10 +265,10 @@ public class OperationController {
             mappings.forEach(mapping -> {
                 AtomicBoolean alreadyExits = new AtomicBoolean(false);
                 existingMappings.forEach(existingMapping -> {
-                    if(existingMapping.getIdentifier().equals(mapping.getIdentifier()))
+                    if (existingMapping.getIdentifier().equals(mapping.getIdentifier()))
                         alreadyExits.set(true);
                 });
-                if(!alreadyExits.get()) {
+                if (!alreadyExits.get()) {
                     mapping.setActive(false);
                     mappingComponent.createMapping(tenant, mapping);
                 }
@@ -219,7 +295,8 @@ public class OperationController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    private ResponseEntity<?> handleUpdateTemplate(String tenant, Map<String, String> parameters) throws Exception {
+    private ResponseEntity<?> handleCopySnoopedSourceTemplate(String tenant, Map<String, String> parameters)
+            throws Exception {
         String id = parameters.get("id");
         Integer index = Integer.parseInt(parameters.get("index"));
         mappingComponent.updateSourceTemplate(tenant, id, index);
@@ -227,13 +304,15 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
-        List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, ConnectorId.INTERNAL);
-        List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
+        List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant,
+                ConnectorId.INTERNAL);
+        List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
+                ConnectorId.INTERNAL);
 
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {
             // we always start with a cleanSession in case we reload the mappings
-            client.initializeSubscriptionsInbound(updatedMappingsInbound, false,true);
+            client.initializeSubscriptionsInbound(updatedMappingsInbound, false, true);
             updatedMappingsOutbound.forEach(mapping -> client.updateSubscriptionForOutbound(mapping, false, false));
         });
 
@@ -297,7 +376,7 @@ public class OperationController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    private ResponseEntity<?> handleResetStatusMapping(String tenant) throws Exception {
+    private ResponseEntity<?> handleResetStatisticsMapping(String tenant) throws Exception {
         mappingComponent.initializeMappingStatus(tenant, true);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -390,4 +469,5 @@ public class OperationController {
         log.error(errorMsg);
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errorMsg);
     }
+
 }

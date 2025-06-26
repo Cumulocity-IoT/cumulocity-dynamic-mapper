@@ -20,7 +20,6 @@
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, ViewChild } from '@angular/core';
 import { AlertService, gettext } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
 import { Observable } from 'rxjs';
 import packageJson from '../../package.json';
 import {
@@ -31,8 +30,8 @@ import {
   Operation,
   SharedService
 } from '../shared';
-import { ConnectorConfigurationService } from '../shared/service/connector-configuration.service';
 import { ConnectorGridComponent } from '../shared/connector-configuration/connector-grid.component';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'd11r-mapping-broker-connector',
@@ -49,11 +48,15 @@ export class ConnectorConfigurationComponent {
   configurations: ConnectorConfiguration[];
 
   constructor(
-    public bsModalService: BsModalService,
-    public connectorConfigurationService: ConnectorConfigurationService,
-    public alertService: AlertService,
+    private alertService: AlertService,
     private sharedService: SharedService,
-  ) { }
+    private route: ActivatedRoute
+  ) {
+  }
+
+  async ngOnInit() {
+    this.feature = this.route.snapshot.data['feature'];
+  }
 
   refresh() {
     this.connectorGrid.refresh();

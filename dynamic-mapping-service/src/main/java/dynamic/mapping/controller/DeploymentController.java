@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -76,15 +77,6 @@ public class DeploymentController {
 	@Autowired
 	private ContextService<UserCredentials> contextService;
 
-	@Value("${APP.userRolesEnabled}")
-	private Boolean userRolesEnabled;
-
-	@Value("${APP.mappingAdminRole}")
-	private String mappingAdminRole;
-
-	@Value("${APP.mappingCreateRole}")
-	private String mappingCreateRole;
-
 	@GetMapping(value = "/effective",  consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, DeploymentMapEntry>> getMappingsDeployed() {
 		String tenant = contextService.getContext().getTenant();
@@ -107,6 +99,7 @@ public class DeploymentController {
 
 	}
 
+	@PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
 	@PutMapping(value = "/defined/{mappingIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdentifier,
 			@Valid @RequestBody List<String> deployment) {

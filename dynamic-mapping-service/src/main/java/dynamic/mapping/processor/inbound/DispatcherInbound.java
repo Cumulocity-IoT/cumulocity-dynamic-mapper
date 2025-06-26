@@ -89,8 +89,6 @@ public class DispatcherInbound implements GenericMessageCallback {
 
     private ConfigurationRegistry configurationRegistry;
 
-    private static final int MAX_CONCURRENT_CODE_CONTEXT = 100;
-
     public DispatcherInbound(ConfigurationRegistry configurationRegistry,
             AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;

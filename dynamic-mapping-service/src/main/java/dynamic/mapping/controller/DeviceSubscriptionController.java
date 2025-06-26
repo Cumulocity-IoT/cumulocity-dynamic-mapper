@@ -36,6 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -60,6 +61,7 @@ public class DeviceSubscriptionController {
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
 
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<C8YNotificationSubscription> subscriptionCreate(
             @Valid @RequestBody C8YNotificationSubscription subscription) {
@@ -96,7 +98,7 @@ public class DeviceSubscriptionController {
         }
         return ResponseEntity.ok(subscription);
     }
-
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<C8YNotificationSubscription> subscriptionUpdate(
             @Valid @RequestBody C8YNotificationSubscription subscription) {
@@ -191,6 +193,7 @@ public class DeviceSubscriptionController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @RequestMapping(value = "/{deviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionDelete(@PathVariable String deviceId) {
         String tenant = contextService.getContext().getTenant();

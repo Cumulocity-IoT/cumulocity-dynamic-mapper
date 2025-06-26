@@ -27,10 +27,12 @@ import {
   ConnectorType,
   DeploymentMapEntry,
   Direction,
+  Feature,
   Mapping,
-  SAMPLE_TEMPLATES_C8Y, SnoopStatus,
+  SAMPLE_TEMPLATES_C8Y, SharedService, SnoopStatus,
   StepperConfiguration
 } from '../../shared';
+import { STEP_STATE } from '@angular/cdk/stepper';
 import { EditorMode } from '../shared/stepper.model';
 
 interface StepperLabels {
@@ -46,11 +48,14 @@ const CONSTANTS = {
 @Component({
   selector: 'd11r-snooping-stepper',
   templateUrl: 'snooping-stepper.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../shared/mapping.style.css', 'snooping-stepper.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: false
 })
 export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewInit {
+  getState(): any {
+    return STEP_STATE.ERROR
+  }
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() deploymentMapEntry: DeploymentMapEntry;
@@ -78,9 +83,11 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
   };
   stepperForward: boolean = true;
   currentStepIndex: number;
+  feature: Feature;
 
   constructor(
     private alertService: AlertService,
+    public sharedService: SharedService,
   ) { }
 
 
@@ -95,7 +102,10 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
     }
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    this.feature = await this.sharedService.getFeatures();
+    this.propertyFormly.setErrors({ validationError: { message: 'You do not have permission to change this mapping.' } });
+
   }
 
   ngOnDestroy(): void {

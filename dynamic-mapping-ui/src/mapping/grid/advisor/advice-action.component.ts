@@ -26,7 +26,7 @@ import {
 } from '@angular/core';
 import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { Mapping, MappingEnriched } from '../../../shared';
+import { Feature, Mapping, MappingEnriched, SharedService } from '../../../shared';
 import { AdvisorAction } from '../../shared/stepper.model';
 
 @Component({
@@ -41,14 +41,17 @@ export class AdviceActionComponent implements OnInit, OnDestroy {
   closeSubject: Subject<string> = new Subject();
   labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
-  selectedAction: AdvisorAction ;
+  selectedAction: AdvisorAction;
   valid: boolean = false;
   AdvisorAction = AdvisorAction;
 
-  constructor() {}
+  feature: Feature;
 
-  ngOnInit(): void {
+  constructor(private sharedService: SharedService,) { }
+
+  async ngOnInit(): Promise<void> {
     this.closeSubject = new Subject();
+    this.feature = await this.sharedService.getFeatures();
   }
 
   onDismiss() {
@@ -63,7 +66,7 @@ export class AdviceActionComponent implements OnInit, OnDestroy {
 
   onSelection(t) {
     this.selectedAction = t;
-    this.valid = true;
+    this.valid = this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
   }
 
   ngOnDestroy() {

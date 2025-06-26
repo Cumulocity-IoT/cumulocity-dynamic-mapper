@@ -41,34 +41,35 @@ import { EditorMode } from '../shared/stepper.model';
   encapsulation: ViewEncapsulation.None,
   standalone: false
 })
-export class SubstitutionRendererComponent  {
+export class SubstitutionRendererComponent {
   @Input()
   mapping: Mapping;
   @Input()
   settings: any;
-  
+
   @Output() selectSub = new EventEmitter<number>();
   @Output() deleteSub = new EventEmitter<number>();
   @Output() editSub = new EventEmitter<number>();
-  
-  id = Math.floor(Math.random() * 1000000);
-  definesDeviceIdentifier = definesDeviceIdentifier;
-  EditorMode = EditorMode;
-  substitutions: MappingSubstitution[] = [];
-  substitutionTemplateHelp = 'Substitutions defining the device identifier are marked with an <code>*</code>. Before adding a substitution target and source property in templates have to be selected.';
 
   constructor(
     private elementRef: ElementRef,
     private bsModalService: BsModalService
-  ) {}
+  ) { }
 
-  onSubstitutionSelect(index: number) {
+  readonly id = Math.floor(Math.random() * 1000000);
+  readonly definesDeviceIdentifier = definesDeviceIdentifier;
+  readonly EditorMode = EditorMode;
+  readonly substitutionTemplateHelp = 'Substitutions defining the device identifier are marked with an <code>*</code>. Before adding a substitution target and source property in templates have to be selected.';
+  substitutions: MappingSubstitution[] = [];
+
+
+  onSubstitutionSelect(index: number) : void {
     // console.log('Selected substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
     this.selectSub.emit(index);
   }
 
-  scrollToSubstitution(i: number) {
+  scrollToSubstitution(i: number) : void {
     let ix = i;
     ix++;
     if (!ix || ix < 0 || ix >= this.substitutions.length) {
@@ -80,13 +81,13 @@ export class SubstitutionRendererComponent  {
       .scrollIntoView();
   }
 
-  onSubstitutionEdit(index: number) {
+  onSubstitutionEdit(index: number) : void {
     // console.log('Delete substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
     this.editSub.emit(index);
   }
 
-  onSubstitutionDelete(index: number) {
+  onSubstitutionDelete(index: number) : void {
     const initialState = {
       title: 'Delete substitution',
       message:

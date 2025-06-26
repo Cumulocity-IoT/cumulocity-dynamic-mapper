@@ -18,13 +18,13 @@
  * @authors Christof Strack
  */
 
-import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { JsonEditorComponent, Mapping, MappingSubstitution, MappingEnriched } from '../../shared';
+import { JsonEditorComponent, Mapping, MappingSubstitution, MappingEnriched, SharedService, Feature } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { IFetchResponse } from '@c8y/client';
 import { HttpStatusCode } from '@angular/common/http';
+import { BsModalRef } from 'ngx-bootstrap/modal';
 
 @Component({
   selector: 'd11r-snoop-explorer-modal',
@@ -33,17 +33,19 @@ import { HttpStatusCode } from '@angular/common/http';
   encapsulation: ViewEncapsulation.None,
   standalone: false
 })
-export class SnoopExplorerComponent implements OnInit {
+export class SnoopExplorerComponent implements OnInit, OnDestroy {
   constructor(
     private mappingService: MappingService,
-    private alertService: AlertService
+    private alertService: AlertService, public sharedService: SharedService,
+    private cdr: ChangeDetectorRef
   ) { }
+
   @Input() enrichedMapping: MappingEnriched;
 
   @ViewChild('editorGeneral', { static: false })
   editorGeneral: JsonEditorComponent;
-
-  @ViewChild('modal', { static: false }) private modal;
+  @ViewChild('modal', { static: false })
+  private modal: any;
 
   pending: boolean = false;
   mapping: Mapping;
@@ -60,65 +62,140 @@ export class SnoopExplorerComponent implements OnInit {
     readOnly: true,
     statusBar: true
   };
+  feature: Feature;
+  private readonly destroy$ = new Subject<void>();
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    try {
+      this.validateInputs();
+      this.initializeComponent();
+      this.feature = await this.sharedService.getFeatures();
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('Error initializing snoop explorer:', error);
+      this.alertService.danger('Failed to initialize component');
+    }
+  }
+
+  private validateInputs(): void {
+    if (!this.enrichedMapping?.mapping) {
+      throw new Error('Invalid enriched mapping provided');
+    }
+
     this.mapping = this.enrichedMapping.mapping;
-    this.onSelectSnoopedTemplate(0);
+
+    if (!this.mapping.snoopedTemplates?.length) {
+      throw new Error('No snooped templates available');
+    }
+  }
+
+  private initializeComponent(): void {
     this.index = 0;
     this.labels = {
       ok: 'Delete templates',
       cancel: 'Close'
     };
+    this.onSelectSnoopedTemplate(0);
   }
 
-  onCancel() {
-    this.modal._dismiss();
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.closeSubject.complete();
   }
 
-  async onSelectSnoopedTemplate(index: any) {
-    this.index = index;
-    this.template = JSON.parse(this.mapping.snoopedTemplates[index]);
+  onCancel(): void {
+    this.modal?._dismiss();
   }
 
-  async onResetSnoop() {
-    // console.log('Clicked onResetSnoop!');
-    this.pending = true;
-    const result: IFetchResponse = await this.mappingService.resetSnoop({
-      id: this.mapping.id
-    });
-    this.pending = false;
-    if (result.status == HttpStatusCode.Created) {
-      this.alertService.success(
-        `Reset snooping for mapping ${this.mapping.id}`
-      );
-    } else {
-      this.alertService.warning(
-        `Failed to reset snooping for mapping ${this.mapping.id}`
-      );
-      this.pending = false;
+  onSelectSnoopedTemplate(index: number): void {
+    if (!this.isValidTemplateIndex(index)) {
+      console.error('Invalid template index:', index);
+      return;
     }
-    this.modal._dismiss();
+
+    try {
+      this.index = index;
+      const templateString = this.mapping.snoopedTemplates[index];
+
+      if (!templateString) {
+        console.warn('Empty template at index:', index);
+        this.template = {};
+        return;
+      }
+
+      this.template = JSON.parse(templateString);
+    } catch (error) {
+      console.error('Failed to parse template JSON:', error);
+      this.alertService.warning('Invalid template format');
+      this.template = {};
+    }
+  }
+
+  private isValidTemplateIndex(index: number): boolean {
+    return typeof index === 'number' &&
+      index >= 0 &&
+      index < (this.mapping?.snoopedTemplates?.length || 0);
+  }
+
+  async onResetSnoop(): Promise<void> {
+    if (this.pending) return;
+
+    try {
+      this.pending = true;
+      const result = await this.mappingService.resetSnoop({
+        id: this.mapping.id
+      });
+
+      if (result.status === HttpStatusCode.Created) {
+        this.alertService.success(
+          `Reset snooping for mapping ${this.mapping.id}`
+        );
+      } else {
+        this.alertService.warning(
+          `Failed to reset snooping for mapping ${this.mapping.id}`
+        );
+      }
+    } catch (error) {
+      console.error('Error resetting snoop:', error);
+      this.alertService.danger(
+        `Error resetting snooping for mapping ${this.mapping.id}`
+      );
+    } finally {
+      this.pending = false;
+      this.modal._dismiss();
+    }
   }
 
 
-  async onUpdateSourceTemplate() {
-    this.pending = true;
-    const result: IFetchResponse = await this.mappingService.updateTemplate({
-      id: this.mapping.id,
-      index: this.index
-    });
-    this.pending = false;
-    if (result.status == HttpStatusCode.Created) {
-      this.alertService.success(
-        `Update source template for mapping ${this.mapping.id}`
+  async onUpdateSourceTemplate(): Promise<void> {
+    if (this.pending) return;
+
+    try {
+      this.pending = true;
+      const result = await this.mappingService.updateTemplate({
+        id: this.mapping.id,
+        index: this.index
+      });
+
+      if (result.status === HttpStatusCode.Created) {
+        this.alertService.success(
+          `Updated source template for mapping ${this.mapping.id}`
+        );
+        this.mappingService.refreshMappings(this.mapping.direction);
+      } else {
+        this.alertService.warning(
+          `Failed to update source template for mapping ${this.mapping.id}`
+        );
+      }
+    } catch (error) {
+      console.error('Error updating source template:', error);
+      this.alertService.danger(
+        `Error updating source template for mapping ${this.mapping.id}`
       );
-      this.mappingService.refreshMappings(this.mapping.direction);
-    } else {
-      this.alertService.warning(
-        `Failed to update source template for mapping ${this.mapping.id}`
-      );
+    } finally {
       this.pending = false;
+      this.modal._dismiss();
     }
-    this.modal._dismiss();
   }
 }

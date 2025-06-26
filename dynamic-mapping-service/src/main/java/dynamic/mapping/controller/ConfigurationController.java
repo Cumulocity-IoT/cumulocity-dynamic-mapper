@@ -43,6 +43,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -56,7 +57,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -86,9 +86,6 @@ public class ConfigurationController {
     C8YAgent c8YAgent;
 
     @Autowired
-    private RoleService roleService;
-
-    @Autowired
     private ContextService<UserCredentials> contextService;
 
     @Autowired
@@ -96,15 +93,6 @@ public class ConfigurationController {
 
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
-
-    @Value("${APP.userRolesEnabled}")
-    private Boolean userRolesEnabled;
-
-    @Value("${APP.mappingAdminRole}")
-    private String mappingAdminRole;
-
-    @Value("${APP.mappingCreateRole}")
-    private String mappingCreateRole;
 
     @GetMapping(value = "/feature", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
@@ -114,8 +102,8 @@ public class ConfigurationController {
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(serviceConfiguration.isOutboundMappingEnabled());
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
-        feature.setUserHasMappingCreateRole(userHasMappingCreateRole());
-        feature.setUserHasMappingAdminRole(userHasMappingAdminRole());
+        feature.setUserHasMappingCreateRole(Utils.userHasMappingCreateRole());
+        feature.setUserHasMappingAdminRole(Utils.userHasMappingAdminRole());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
@@ -133,19 +121,13 @@ public class ConfigurationController {
         return ResponseEntity.ok(connectorConfigurations);
     }
 
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PostMapping(value = "/connector/instance", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createConnectorConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
         if (configuration.connectorType.equals(ConnectorType.HTTP)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't create a HttpConnector!");
-        }
-        // FIXME This isn't working - use @PreAuthorize instead
-        if (!userHasMappingAdminRole()) {
-            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
-                    tenant);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Insufficient Permission, user does not have required permission to access this API");
         }
         // Remove sensitive data before printing to log
         ConnectorSpecification connectorSpecification = connectorRegistry
@@ -239,17 +221,11 @@ public class ConfigurationController {
         }
     }
 
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Delete connection instance {}", tenant, identifier);
-        // FIXME This isn't working - use @PreAuthorize instead
-        if (!userHasMappingAdminRole()) {
-            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
-                    tenant);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Insufficient Permission, user does not have required permission to access this API");
-        }
         try {
             ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(identifier,
                     tenant);
@@ -274,6 +250,7 @@ public class ConfigurationController {
         return ResponseEntity.status(HttpStatus.OK).body(identifier);
     }
 
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PutMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(@PathVariable String identifier,
             @Valid @RequestBody ConnectorConfiguration configuration) {
@@ -281,13 +258,6 @@ public class ConfigurationController {
         log.info("{} - Update connection instance {}", tenant, identifier);
         // make sure we are using the correct identifier
         configuration.identifier = identifier;
-        // FIXME This isn't working - use @PreAuthorize instead
-        if (!userHasMappingAdminRole()) {
-            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
-                    tenant);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Insufficient Permission, user does not have required permission to access this API");
-        }
         // Remove sensitive data before printing to log
         ConnectorSpecification connectorSpecification = connectorRegistry
                 .getConnectorSpecification(configuration.connectorType);
@@ -343,6 +313,7 @@ public class ConfigurationController {
         }
     }
 
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PutMapping(value = "/service", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateServiceConfiguration(
             @Valid @RequestBody ServiceConfiguration serviceConfiguration) {
@@ -354,13 +325,6 @@ public class ConfigurationController {
         // existing code templates
         ServiceConfiguration mergeServiceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         Map<String, CodeTemplate> codeTemplates = mergeServiceConfiguration.getCodeTemplates();
-        // FIXME This isn't working - use @PreAuthorize instead
-        if (!userHasMappingAdminRole()) {
-            log.error("{} - Insufficient Permission, user does not have required permission to access this API",
-                    tenant);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Insufficient Permission, user does not have required permission to access this API");
-        }
 
         try {
             serviceConfiguration.setCodeTemplates(codeTemplates);
@@ -437,6 +401,7 @@ public class ConfigurationController {
         }
     }
 
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(@PathVariable String id) {
         // TODO GRAAL_PERFORMANCE update code source from templates in graalCode cache
@@ -495,6 +460,7 @@ public class ConfigurationController {
         return new ResponseEntity<>(codeTemplates, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateCodeTemplate(
             @PathVariable String id, @Valid @RequestBody CodeTemplate codeTemplate) {
@@ -523,6 +489,7 @@ public class ConfigurationController {
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PostMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createCodeTemplate(
             @Valid @RequestBody CodeTemplate codeTemplate) {
@@ -555,15 +522,6 @@ public class ConfigurationController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
-    }
-
-    private boolean userHasMappingAdminRole() {
-        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mappingAdminRole));
-    }
-
-    private boolean userHasMappingCreateRole() {
-        return !userRolesEnabled || userHasMappingAdminRole()
-                || (userRolesEnabled && roleService.getUserRoles().contains(mappingCreateRole));
     }
 
     private Map<String, CodeTemplate> getCodeTemplates(String tenant, ServiceConfiguration serviceConfiguration) {

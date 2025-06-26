@@ -23,7 +23,7 @@ import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { connectorResolver, SharedModule, ConnectorDetailsComponent } from '../shared';
 import { ConnectorConfigurationComponent } from './connector-configuration.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { NODE3 } from '../shared/mapping/util';
+import { featureResolver, NODE3 } from '../shared/mapping/util';
 
 @NgModule({
   declarations: [ConnectorConfigurationComponent],
@@ -36,19 +36,20 @@ import { NODE3 } from '../shared/mapping/util';
   providers: [
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-            children: [
-              {
-                path: '',
-                pathMatch: 'full',
-                component: ConnectorConfigurationComponent
-              },
-              {
-                path: 'details/:identifier',
-                component: ConnectorDetailsComponent,
-                resolve: { connector: connectorResolver }
-              }
-            ]
+      children: [
+        {
+          path: '',
+          pathMatch: 'full',
+          component: ConnectorConfigurationComponent,
+          resolve: { feature: featureResolver }
+        },
+        {
+          path: 'details/:identifier',
+          component: ConnectorDetailsComponent,
+          resolve: { connector: connectorResolver, feature: featureResolver  }
+        }
+      ]
     })
   ]
 })
-export class BrokerConnectorModule {}
+export class BrokerConnectorModule { }

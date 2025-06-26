@@ -21,10 +21,10 @@ import { HttpStatusCode } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertService, gettext } from '@c8y/ngx-components';
-import { BsModalService } from 'ngx-bootstrap/modal';
 import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -33,6 +33,14 @@ import { ServiceConfiguration } from './shared/configuration.model';
   standalone: false
 })
 export class ServiceConfigurationComponent implements OnInit {
+
+  constructor(
+    private alertService: AlertService,
+    private sharedService: SharedService,
+    private fb: FormBuilder,
+    private route: ActivatedRoute
+  ) { }
+  
   version: string = packageJson.version;
   serviceForm: FormGroup;
   feature: Feature;
@@ -54,15 +62,11 @@ export class ServiceConfigurationComponent implements OnInit {
   };
   editable2updated: boolean = false;
 
-  constructor(
-    public bsModalService: BsModalService,
-    public alertService: AlertService,
-    private sharedService: SharedService,
-    private fb: FormBuilder
-  ) { }
 
-  ngOnInit() {
+
+  async ngOnInit() {
     // console.log('Running version', this.version);
+    this.feature = this.route.snapshot.data['feature'];
     this.serviceForm = this.fb.group({
       logPayload: new FormControl(''),
       logSubstitution: new FormControl(''),
@@ -79,7 +83,6 @@ export class ServiceConfigurationComponent implements OnInit {
       inventoryFragmentsToCache: new FormControl(''),
       maxCPUTimeMS: new FormControl('')
     });
-
     this.loadData();
   }
 
@@ -107,11 +110,10 @@ export class ServiceConfigurationComponent implements OnInit {
         this.serviceConfiguration.inventoryCacheRetention,
       inventoryFragmentsToCache:
         this.serviceConfiguration.inventoryFragmentsToCache.join(","),
-        maxCPUTimeMS:
+      maxCPUTimeMS:
         this.serviceConfiguration.maxCPUTimeMS
     });
   }
-
 
   async clickedClearInboundExternalIdCache() {
     const response1 = await this.sharedService.runOperation(
@@ -141,8 +143,6 @@ export class ServiceConfigurationComponent implements OnInit {
     }
   }
 
-
-
   async clickedSaveServiceConfiguration() {
     const conf = this.serviceForm.value;
     // trim the separated fragments
@@ -151,7 +151,7 @@ export class ServiceConfigurationComponent implements OnInit {
       .map(fragment => fragment.trim())
       .filter(fragment => fragment.length > 0);
     const response = await this.sharedService.updateServiceConfiguration(conf);
-    if (response.status < 300) {
+    if (response.status >= 200 && response.status < 300) {
       this.alertService.success(gettext('Update successful'));
     } else {
       this.alertService.danger(

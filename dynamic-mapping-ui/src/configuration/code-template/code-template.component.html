@@ -36,23 +36,17 @@
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'right'">
-  <!-- <button class="btn btn-link" title="{{ 'Rename' | translate }}" (click)="onRenameCodeTemplate()"
-    [disabled]="codeTemplateDecoded?.internal">
-    <i c8yIcon="rename"></i>
-    {{ 'Rename' | translate }}
-  </button> -->
-
   <button class="btn btn-link" title="{{ 'Delete' | translate }}" (click)="onDeleteCodeTemplate()"
-    [disabled]="codeTemplateDecoded?.internal">
+    [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Duplicate' | translate }}" (click)="onDuplicateCodeTemplate()"
-    [disabled]="codeTemplateDecoded?.templateType === TemplateType.SHARED || codeTemplateDecoded?.templateType === TemplateType.SYSTEM">
+    [disabled]="codeTemplateDecoded?.templateType === TemplateType.SHARED || codeTemplateDecoded?.templateType === TemplateType.SYSTEM || !feature?.userHasMappingAdminRole">
     <i c8yIcon="duplicate"></i>
     {{ 'Duplicate' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onResetSystemCodeTemplate()">
+  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onResetSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="reset"></i>
     {{ 'Reset system templates' | translate }}
   </button>
@@ -83,7 +77,7 @@
   <div class="card-footer">
     <div class="form-group p-l-24">
       <button type="button" name="save" class="btn btn-primary" (click)="onSaveCodeTemplate()"
-        [disabled]="codeTemplateDecoded?.readonly" translate>
+        [disabled]="codeTemplateDecoded?.readonly || !feature?.userHasMappingAdminRole" translate>
         Save
       </button>
     </div>

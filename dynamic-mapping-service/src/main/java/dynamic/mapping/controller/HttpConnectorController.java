@@ -79,21 +79,9 @@ public class HttpConnectorController {
     @Autowired
     private ContextService<UserCredentials> contextService;
 
-    @Value("${APP.userRolesEnabled}")
-    private Boolean userRolesEnabled;
-
-    @Value("${APP.mappingAdminRole}")
-    private String mappingAdminRole;
-
-    @Value("${APP.mappingCreateRole}")
-    private String mappingCreateRole;
-
-    @Value("${APP.mappingHttpConnectorRole}")
-    private String mappingHttpConnectorRole;
-
     @RequestMapping(value = { "/httpConnector",
             "/httpConnector/**" }, method = { RequestMethod.POST, RequestMethod.PUT }, consumes = MediaType.ALL_VALUE)
-    @PreAuthorize("hasRole(@environment.getProperty('APP.mappingHttpConnectorRole'))")
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE')")
     public ResponseEntity<?> processGenericMessage(HttpServletRequest request) {
         String tenant = contextService.getContext().getTenant();
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
@@ -136,9 +124,9 @@ public class HttpConnectorController {
 
         String tenant = securityUserDetails.getTenant();
         String user = securityUserDetails.getUsername();
-        log.warn("{} - User {} tried to access HTTPConnectorEndpoint but does not have the required '{}' role",
-                tenant, user, this.mappingHttpConnectorRole);
-        response.sendError(403, "Authenticated user does not have the required role: " + this.mappingHttpConnectorRole);
+        log.warn("{} - User {} tried to access HTTPConnectorEndpoint but does not have the required 'ROLE_MAPPING_HTTP_CONNECTOR_CREATE' role",
+                tenant, user);
+        response.sendError(403, "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE");
     }
 
     private byte[] readBody(HttpServletRequest request) throws IOException {
