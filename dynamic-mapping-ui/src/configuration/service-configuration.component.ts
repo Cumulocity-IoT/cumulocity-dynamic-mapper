@@ -151,7 +151,7 @@ export class ServiceConfigurationComponent implements OnInit {
       .map(fragment => fragment.trim())
       .filter(fragment => fragment.length > 0);
     const response = await this.sharedService.updateServiceConfiguration(conf);
-    if (response.status < 300) {
+    if (response.status >= 200 && response.status < 300) {
       this.alertService.success(gettext('Update successful'));
     } else {
       this.alertService.danger(

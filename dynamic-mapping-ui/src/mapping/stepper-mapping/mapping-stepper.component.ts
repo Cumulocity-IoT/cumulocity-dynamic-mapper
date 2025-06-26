@@ -1256,7 +1256,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           templateType, code, internal: false, readonly: false, defaultTemplate: false
         });
         this.codeTemplates = await this.sharedService.getCodeTemplates();
-        if (response.status < 300) {
+        if (response.status >= 200 && response.status < 300) {
           this.alertService.success(gettext('Added new code template.'));
         } else {
           this.alertService.danger(

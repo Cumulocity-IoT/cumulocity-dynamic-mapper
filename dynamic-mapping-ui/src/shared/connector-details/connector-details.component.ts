@@ -140,7 +140,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
           await this.connectorConfigurationService.updateConfiguration(
             clonedConfiguration
           );
-        if (response.status < 300) {
+        if (response.status >= 200 && response.status < 300) {
           this.alertService.success(gettext('Updated successfully.'));
         } else {
           this.alertService.danger(

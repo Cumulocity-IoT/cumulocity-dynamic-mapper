@@ -273,13 +273,17 @@ export class MonitoringComponent implements OnInit, OnDestroy {
         operation: Operation.RESET_STATUS_MAPPING
       });
 
-      if (response.status < 300) {
+      if (response.status >= 200 && response.status < 300) {
         this.alertService.success(
           gettext('Mapping statistic reset successfully.')
         );
       } else {
         throw new Error(`Reset failed with status: ${response.status}`);
       }
+
+      await this.sharedService.runOperation({
+        operation: Operation.REFRESH_STATUS_MAPPING
+      });
     } catch (error) {
       this.handleError('Failed to reset mapping statistic', error);
     } finally {
