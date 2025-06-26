@@ -199,7 +199,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     this.monitoringService.stopMonitoring();
   }
 
-  async refreshMappingStatus(): Promise<void> {
+  async refreshStatisticsMapping(): Promise<void> {
     try {
       this.updateState({ isLoading: true, error: null });
 
@@ -217,7 +217,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     }
   }
 
-  async resetStatusMapping(): Promise<void> {
+  async resetStatisticsMapping(): Promise<void> {
     const modalRef = this.showConfirmationModal();
 
     modalRef.content.closeSubject
@@ -270,7 +270,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       this.updateState({ isLoading: true });
 
       const response = await this.sharedService.runOperation({
-        operation: Operation.RESET_STATUS_MAPPING
+        operation: Operation.RESET_STATISTICS_MAPPING
       });
 
       if (response.status >= 200 && response.status < 300) {

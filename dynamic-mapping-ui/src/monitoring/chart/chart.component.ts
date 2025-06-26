@@ -35,7 +35,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   constructor(
     private el: ElementRef,
     public monitoringService: MonitoringService
-  ) {}
+  ) { }
 
   mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
   echartOptions: EChartsOption;
@@ -167,7 +167,12 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
       },
       legend: {
         data: ['Inbound', 'Outbound'],
-        align: 'left'
+        align: 'left',
+        textStyle: {
+          fontSize: this.fontSize,
+          color: this.textColor,
+          fontFamily: this.fontFamily
+        }
       },
       tooltip: {},
       grid: {
@@ -175,7 +180,12 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
       },
       xAxis: {
         type: 'value',
-        boundaryGap: [0, 0.01]
+        boundaryGap: [0, 0.01],
+        axisLabel: {
+          fontSize: this.fontSize,
+          color: this.textColor,
+          fontFamily: this.fontFamily
+        }
       },
       yAxis: {
         axisTick: {
@@ -186,6 +196,11 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
         silent: false,
         splitLine: {
           show: true
+        },
+        axisLabel: {
+          fontSize: this.fontSize,
+          color: this.textColor,
+          fontFamily: this.fontFamily
         }
       },
       series: [
@@ -193,7 +208,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
           name: 'Inbound',
           color: CHART_COLORS.green,
           type: 'bar',
-          data: data[0]
+          data: data[0],
           //   animationDelay: (idx) => idx * 10 + 100
         },
         {

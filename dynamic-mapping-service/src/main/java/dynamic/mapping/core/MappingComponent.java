@@ -157,15 +157,17 @@ public class MappingComponent {
                 mappingStatus.put(ms.identifier, ms);
             });
             mappingStatusS.put(tenant, mappingStatus);
+            resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
         } else {
-            mappingStatusS.put(tenant, new ConcurrentHashMap<String, MappingStatus>());
-
+            Map<String, MappingStatus> map = mappingStatusS.get(tenant);
+            if (map != null) {
+                map.clear();
+            }
         }
         if (!mappingStatusS.get(tenant).containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
             mappingStatusS.get(tenant).put(MappingStatus.UNSPECIFIED_MAPPING_STATUS.identifier,
                     MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
-        resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
 
     }
 

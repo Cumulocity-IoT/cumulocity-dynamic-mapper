@@ -220,7 +220,7 @@ public abstract class BaseProcessorOutbound<T> {
                     log.warn("{} - Not sending message: connected {}, sendPayload {}", tenant,
                             connectorClient.isConnected(), context.isSendPayload());
                 }
-                // var response = objectMapper.writeValueAsString(attocRequest);
+                // var response = objectMapper.writeValueAsString(adHocRequest);
                 // context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);

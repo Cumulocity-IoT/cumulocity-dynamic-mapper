@@ -139,12 +139,12 @@ public class OperationController {
                     }
                     return handleRefreshStatusMapping(tenant);
                 // TODO ADMIN Role
-                case RESET_STATUS_MAPPING:
+                case RESET_STATISTICS_MAPPING:
                     if (!Utils.userHasMappingAdminRole()) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                                 "User does not have permission to reset status mapping");
                     }
-                    return handleResetStatusMapping(tenant);
+                    return handleResetStatisticsMapping(tenant);
                 // TODO ADMIN Role (implemented in UI)
                 case RESET_DEPLOYMENT_MAP:
                     if (!Utils.userHasMappingAdminRole()) {
@@ -376,7 +376,7 @@ public class OperationController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    private ResponseEntity<?> handleResetStatusMapping(String tenant) throws Exception {
+    private ResponseEntity<?> handleResetStatisticsMapping(String tenant) throws Exception {
         mappingComponent.initializeMappingStatus(tenant, true);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
