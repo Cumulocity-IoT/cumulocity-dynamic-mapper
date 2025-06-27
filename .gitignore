@@ -38,18 +38,18 @@ attic/*
 
 .factorypath
 set.sh
-dynamic-mapping-ui/.env
+dynamic-mapper-ui/.env
 .flattened-pom.xml
 dist
 node_modules
 .angular
-dynamic-mapping-ui/cypress.env.js
-dynamic-mapping-ui/cypress/videos
-dynamic-mapping-ui/cypress/screenshots
-dynamic-mapping-ui/cypress/fixtures/mqttConnectionPostRequest.json
-dynamic-mapping-service/src/main/configuration/dynamic-mapping-service-logging.xml
+dynamic-mapper-ui/cypress.env.js
+dynamic-mapper-ui/cypress/videos
+dynamic-mapper-ui/cypress/screenshots
+dynamic-mapper-ui/cypress/fixtures/mqttConnectionPostRequest.json
+dynamic-mapper-service/src/main/configuration/dynamic-mapper-service-logging.xml
 JSONata4Java/dependency-reduced-pom.xml
-dynamic-mapping-ui/node_modules_tmp/
+dynamic-mapper-ui/node_modules_tmp/
 .vscode/launch.json
 .env
 setEnv.sh
