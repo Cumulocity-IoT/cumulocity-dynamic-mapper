@@ -22,32 +22,33 @@ import { Pipe, PipeTransform } from "@angular/core";
 
 // filter-json.pipe.ts
 @Pipe({
-    name: 'filterJson'
-  })
-  export class FilterJsonPipe implements PipeTransform {
-    transform(value: any, excludedProperties: string[] = [], exclude: boolean = false): any {
-      if (!value) return value;
-  
-      if (!excludedProperties.length) {
-        return value;
-      }
-  
-      const filteredObject: any = {};
-      
-      Object.keys(value).forEach(key => {
-        if (exclude) {
-          // Exclude mode: only add if key is not in excludedProperties
-          if (!excludedProperties.includes(key)) {
-            filteredObject[key] = value[key];
-          }
-        } else {
-          // Include mode: only add if key is in excludedProperties
-          if (excludedProperties.includes(key)) {
-            filteredObject[key] = value[key];
-          }
-        }
-      });
-  
-      return filteredObject;
+  name: 'filterJson',
+  standalone: false
+})
+export class FilterJsonPipe implements PipeTransform {
+  transform(value: any, excludedProperties: string[] = [], exclude: boolean = false): any {
+    if (!value) return value;
+
+    if (!excludedProperties.length) {
+      return value;
     }
+
+    const filteredObject: any = {};
+
+    Object.keys(value).forEach(key => {
+      if (exclude) {
+        // Exclude mode: only add if key is not in excludedProperties
+        if (!excludedProperties.includes(key)) {
+          filteredObject[key] = value[key];
+        }
+      } else {
+        // Include mode: only add if key is in excludedProperties
+        if (excludedProperties.includes(key)) {
+          filteredObject[key] = value[key];
+        }
+      }
+    });
+
+    return filteredObject;
   }
+}

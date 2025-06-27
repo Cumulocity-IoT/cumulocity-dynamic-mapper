@@ -21,7 +21,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'camelCase'
+  name: 'camelCase',
+  standalone: false
 })
 export class CamelCasePipe implements PipeTransform {
   transform(value: string): string {
