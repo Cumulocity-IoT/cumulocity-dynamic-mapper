@@ -21,20 +21,20 @@
 
 package dynamic.mapper.connector.core;
 
+import java.util.List;
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.model.Direction;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-
-import jakarta.validation.constraints.NotNull;
-
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Data
@@ -42,26 +42,32 @@ import java.util.Map;
 @AllArgsConstructor
 public class ConnectorSpecification implements Cloneable {
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The name of the connector", example = "MQTT Connector")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public String name;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A description of the connector", example = "This is the MQTT Connector with the following features...")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public String description;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The type of the Connector", example = "MQTT")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public ConnectorType connectorType;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A map of properties the connector needs to establish a connection. The key is the property name and the value is the property specification", example = "{ \"protocol\": { \"description\": \"The protocol to use\", \"required\": true, \"order\": 1, \"type\": \"STRING\", \"readonly\": false } }")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public Map<String, ConnectorProperty> properties;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if the connector supports message context. If true, the connector can handle additional metadata in messages.", example = "true")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public boolean supportsMessageContext;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A List to define if the connector support INBOUND and OUTBOUND mappings or both.", example = "[ \"INBOUND\", \"OUTBOUND\"] ")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
     public List<Direction> supportedDirections;

@@ -25,7 +25,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.Serializable;
@@ -34,14 +34,26 @@ import java.util.ArrayList;
 @Getter
 @Setter
 @NoArgsConstructor
+@Schema(description = "Deployment entry showing which connectors a mapping is deployed to")
 public class DeploymentMapEntry implements Serializable {
+	
 	public DeploymentMapEntry(String identifier) {
 		this.identifier = identifier;
 		this.connectors = new ArrayList<>();
 	}
 
+	@Schema(
+		requiredMode = Schema.RequiredMode.REQUIRED,
+		description = "Generated identifier for the mapping",
+		example = "l19zjk"
+	)
 	@NotNull
 	public String identifier;
+
+	@Schema(
+		requiredMode = Schema.RequiredMode.REQUIRED,
+		description = "List of connector configurations where this mapping is deployed"
+	)
 	@NotNull
 	public ArrayList<ConnectorConfiguration> connectors;
 }

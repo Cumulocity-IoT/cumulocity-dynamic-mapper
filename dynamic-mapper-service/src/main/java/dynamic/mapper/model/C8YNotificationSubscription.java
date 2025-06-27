@@ -21,22 +21,49 @@
 
 package dynamic.mapper.model;
 
+import java.util.List;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import jakarta.validation.constraints.NotNull;
-import java.util.List;
-
 @Getter
 @Setter
 @NoArgsConstructor
+@Schema(description = "Cumulocity IoT notification subscription configuration for outbound mappings")
 public class C8YNotificationSubscription {
 
+    @Schema(
+        requiredMode = Schema.RequiredMode.REQUIRED,
+        description = "Cumulocity IoT API type to subscribe to for notifications",
+        implementation = API.class,
+        example = "MEASUREMENT"
+    )
     @NotNull
     private API api;
 
+    @Schema(
+        description = "Optional name for the subscription to help identify it",
+        example = "temperature-sensors"
+    )
     private String subscriptionName;
 
+    @Schema(
+        description = "List of devices to include in the subscription. Child devices will be automatically discovered and included.",
+        example = """
+        [
+          {
+            "id": "12345",
+            "name": "Temperature Sensor 01"
+          },
+          {
+            "id": "12346", 
+            "name": "Temperature Sensor 02"
+          }
+        ]
+        """
+    )
     private List<Device> devices;
 }

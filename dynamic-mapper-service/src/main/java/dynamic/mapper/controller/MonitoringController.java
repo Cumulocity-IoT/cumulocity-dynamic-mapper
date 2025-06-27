@@ -54,9 +54,18 @@ import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.model.MappingStatus;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @Slf4j
 @RequestMapping("/monitoring")
 @RestController
+@Tag(name = "Monitoring Controller", description = "API for monitoring connector status, mapping statistics, and system health")
 public class MonitoringController {
 
 	@Autowired
@@ -83,6 +92,31 @@ public class MonitoringController {
 	@Value("${APP.externalExtensionsEnabled}")
 	private boolean externalExtensionsEnabled;
 
+	@Operation(
+		summary = "Get connector status", 
+		description = "Retrieves the current status of a specific connector including connection state, last update time, and any error messages.",
+		parameters = {
+			@Parameter(
+				name = "connectorIdentifier", 
+				description = "The unique identifier of the connector", 
+				required = true,
+				example = "l19zjk",
+				schema = @Schema(type = "string")
+			)
+		}
+	)
+	@ApiResponses(value = {
+		@ApiResponse(
+			responseCode = "200", 
+			description = "Connector status retrieved successfully", 
+			content = @Content(
+				mediaType = "application/json", 
+				schema = @Schema(implementation = ConnectorStatusEvent.class)
+			)
+		),
+		@ApiResponse(responseCode = "404", description = "Connector not found", content = @Content),
+		@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
 	@GetMapping(value = "/status/connector/{connectorIdentifier}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ConnectorStatusEvent> getConnectorStatus(@PathVariable @NotNull String connectorIdentifier) {
 		try {
@@ -97,6 +131,24 @@ public class MonitoringController {
 		}
 	}
 
+	@Operation(
+		summary = "Get all connectors status", 
+		description = "Retrieves the status of all connectors for the current tenant. Returns a map with connector identifiers as keys and their status information as values. Includes both enabled and disabled connectors."
+	)
+@ApiResponses(value = {
+    @ApiResponse(
+        responseCode = "200", 
+        description = "Connectors status retrieved successfully", 
+        content = @Content(
+            mediaType = "application/json", 
+            schema = @Schema(
+                type = "object",
+                description = "Map of connector identifiers to their status"
+            )
+        )
+    ),
+    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+})
 	@GetMapping(value = "/status/connectors", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, ConnectorStatusEvent>> getConnectorsStatus() {
 		Map<String, ConnectorStatusEvent> connectorsStatus = new ConcurrentHashMap<>();
@@ -125,6 +177,25 @@ public class MonitoringController {
 		}
 	}
 
+	@Operation(
+		summary = "Get mapping statistics", 
+		description = "Retrieves statistics for all mappings including message counts, error counts, snooping status, and loading errors. Useful for monitoring mapping performance and health."
+	)
+	@ApiResponses(value = {
+		@ApiResponse(
+			responseCode = "200", 
+			description = "Mapping statistics retrieved successfully", 
+			content = @Content(
+				mediaType = "application/json", 
+				schema = @Schema(
+					type = "array",
+					description = "List of mapping statistics",
+					implementation = MappingStatus.class
+				)
+			)
+		),
+		@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
 	@GetMapping(value = "/status/mapping/statistic", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<MappingStatus>> getMappingStatus() {
 		String tenant = contextService.getContext().getTenant();
@@ -141,6 +212,21 @@ public class MonitoringController {
 	// 	return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	// }
 
+	@Operation(
+		summary = "Get inbound mapping tree", 
+		description = "Retrieves the hierarchical tree structure of inbound mappings organized by topic patterns. This shows how incoming messages are routed to different mappings based on topic matching."
+	)
+	@ApiResponses(value = {
+		@ApiResponse(
+			responseCode = "200", 
+			description = "Mapping tree retrieved successfully", 
+			content = @Content(
+				mediaType = "application/json", 
+				schema = @Schema(implementation = MappingTreeNode.class)
+			)
+		),
+		@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
 	@GetMapping(value = "/tree", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
 		String tenant = contextService.getContext().getTenant();
@@ -149,6 +235,34 @@ public class MonitoringController {
 		return ResponseEntity.status(HttpStatus.OK).body(result);
 	}
 
+	@Operation(
+		summary = "Get active subscriptions for connector", 
+		description = "Retrieves the active topic subscriptions for a specific connector with the count of mappings per topic. This helps monitor which topics are being subscribed to and how many mappings are listening to each topic.",
+		parameters = {
+			@Parameter(
+				name = "connectorIdentifier", 
+				description = "The unique identifier of the connector", 
+				required = true,
+				example = "l19zjk",
+				schema = @Schema(type = "string")
+			)
+		}
+	)
+	@ApiResponses(value = {
+		@ApiResponse(
+			responseCode = "200", 
+			description = "Active subscriptions retrieved successfully", 
+			content = @Content(
+				mediaType = "application/json", 
+				schema = @Schema(
+					type = "object",
+					description = "Map of topic patterns to subscription counts"
+				)
+			)
+		),
+		@ApiResponse(responseCode = "404", description = "Connector not found", content = @Content),
+		@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
 	@GetMapping(value = "/subscription/{connectorIdentifier}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(@PathVariable @NotNull String connectorIdentifier) {
 		String tenant = contextService.getContext().getTenant();

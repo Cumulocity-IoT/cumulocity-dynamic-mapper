@@ -27,19 +27,26 @@ import lombok.ToString;
 
 import jakarta.validation.constraints.NotNull;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 @Getter
 @Setter
+@Schema(description = "Feature flags for the dynamic mapping service")
 @ToString()
 public class Feature {
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if outbound mapping is enabled or not", example = "true")
     @NotNull
     public boolean outputMappingEnabled;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if external extensions are enabled or not", example = "true")
     @NotNull
     public boolean externalExtensionsEnabled;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the logged in user has the CREATE Role", example = "true")
     @NotNull
     public boolean userHasMappingCreateRole;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag to check if the logged in user has the ADMIN Role", example = "true")
     @NotNull
     public boolean userHasMappingAdminRole;
 }

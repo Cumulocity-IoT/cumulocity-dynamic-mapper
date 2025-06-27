@@ -25,17 +25,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.cumulocity.microservice.security.service.SecurityUserDetails;
-import jakarta.servlet.http.HttpServletRequest;
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
-import dynamic.mapper.connector.core.callback.ConnectorMessage;
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.connector.http.HttpClient;
-import dynamic.mapper.core.*;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -51,11 +41,33 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
+import com.cumulocity.microservice.security.service.SecurityUserDetails;
 
+import dynamic.mapper.configuration.ConnectorConfigurationComponent;
+import dynamic.mapper.configuration.ServiceConfigurationComponent;
+import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.connector.http.HttpClient;
+import dynamic.mapper.core.BootstrapService;
+import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.MappingComponent;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
+@Tag(name = "HTTP Connector Controller", description = "HTTP endpoint for receiving data from external systems via HTTP/HTTPS. Acts as a webhook receiver that processes incoming messages and routes them through the dynamic mapping system.")
 public class HttpConnectorController {
 
     @Autowired
@@ -79,10 +91,126 @@ public class HttpConnectorController {
     @Autowired
     private ContextService<UserCredentials> contextService;
 
-    @RequestMapping(value = { "/httpConnector",
-            "/httpConnector/**" }, method = { RequestMethod.POST, RequestMethod.PUT }, consumes = MediaType.ALL_VALUE)
+    @Operation(
+        summary = "Process HTTP connector message",
+        description = """
+            Receives HTTP messages from external systems and processes them through the dynamic mapping system. 
+            This endpoint acts as a webhook receiver that can handle various payload formats (JSON, XML, plain text, binary).
+            The path after '/httpConnector' is used as the topic for mapping resolution.
+            
+            **Path Examples:**
+            - POST /httpConnector/sensors/temperature → topic: 'sensors/temperature'
+            - PUT /httpConnector/devices/device001/data → topic: 'devices/device001/data'
+            - POST /httpConnector → topic: '' (empty, root level)
+            
+            **Security:** Requires ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE role.
+            """,
+        requestBody = @RequestBody(
+            description = "Message payload in any format (JSON, XML, plain text, binary)",
+            required = false,
+            content = {
+                @Content(
+                    mediaType = "application/json",
+                    examples = @ExampleObject(
+                        name = "JSON Sensor Data",
+                        description = "Typical IoT sensor data",
+                        value = """
+                        {
+                          "deviceId": "sensor001",
+                          "temperature": 23.5,
+                          "humidity": 65.2,
+                          "timestamp": "2024-01-15T14:30:00Z"
+                        }
+                        """
+                    )
+                ),
+                @Content(
+                    mediaType = "application/xml",
+                    examples = @ExampleObject(
+                        name = "XML Device Status",
+                        description = "Device status in XML format",
+                        value = """
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <device>
+                          <id>device001</id>
+                          <status>online</status>
+                          <battery>85</battery>
+                        </device>
+                        """
+                    )
+                ),
+                @Content(
+                    mediaType = "text/plain",
+                    examples = @ExampleObject(
+                        name = "CSV Data",
+                        description = "Simple CSV format",
+                        value = "sensor001,23.5,65.2,2024-01-15T14:30:00Z"
+                    )
+                ),
+                @Content(
+                    mediaType = "application/octet-stream",
+                    examples = @ExampleObject(
+                        name = "Binary Data",
+                        description = "Binary payload (e.g., protobuf, custom binary format)"
+                    )
+                )
+            }
+        ),
+        parameters = {
+            @Parameter(
+                name = "path",
+                description = "Dynamic path that becomes the topic for mapping resolution. Everything after '/httpConnector' is used as the topic.",
+                example = "sensors/temperature/data",
+                schema = @Schema(type = "string")
+            )
+        }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Message processed successfully",
+            content = @Content(mediaType = "application/json")
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - error processing the message",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    type = "object",
+                    description = "Error details"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - insufficient permissions or missing required role ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = """
+                    {
+                      "error": "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content
+        )
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    @RequestMapping(
+        value = { "/httpConnector", "/httpConnector/**" }, 
+        method = { RequestMethod.POST, RequestMethod.PUT }, 
+        consumes = MediaType.ALL_VALUE
+    )
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE')")
-    public ResponseEntity<?> processGenericMessage(HttpServletRequest request) {
+    public ResponseEntity<?> processGenericMessage(
+            @Parameter(hidden = true) HttpServletRequest request) {
         String tenant = contextService.getContext().getTenant();
         String fullPath = request.getRequestURI().substring(request.getContextPath().length());
 

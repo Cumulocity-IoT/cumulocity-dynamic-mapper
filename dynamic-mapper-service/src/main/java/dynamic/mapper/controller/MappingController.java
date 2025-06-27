@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -58,10 +57,20 @@ import dynamic.mapper.model.Mapping;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+
 @Slf4j
 @RequestMapping("/mapping")
-
 @RestController
+@Tag(name = "Mapping Controller", description = "API for managing dynamic mappings between external systems and Cumulocity IoT")
 public class MappingController {
 
     @Autowired
@@ -85,14 +94,62 @@ public class MappingController {
     @Autowired
     private ContextService<UserCredentials> contextService;
 
+    @Operation(
+        summary = "Get all mappings", 
+        description = "Retrieves all mappings for the current tenant. Optionally filter by direction (INBOUND/OUTBOUND).",
+        parameters = {
+            @Parameter(
+                name = "direction", 
+                description = "Filter mappings by direction", 
+                required = false,
+                schema = @Schema(implementation = Direction.class)
+            )
+        }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "List of mappings retrieved successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                array = @ArraySchema(schema = @Schema(implementation = Mapping.class))
+            )
+        ),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<Mapping>> getMappings(@RequestParam(required = false) Direction direction) {
+    public ResponseEntity<List<Mapping>> getMappings(
+            @RequestParam(required = false) Direction direction) {
         String tenant = contextService.getContext().getTenant();
         log.debug("{} - Get mappings", tenant);
         List<Mapping> result = mappingComponent.getMappings(tenant, direction);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
+    @Operation(
+        summary = "Get a specific mapping", 
+        description = "Retrieves a mapping by its unique identifier.",
+        parameters = {
+            @Parameter(
+                name = "id", 
+                description = "The unique identifier of the mapping", 
+                required = true,
+                schema = @Schema(type = "string")
+            )
+        }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Mapping found and retrieved successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = Mapping.class)
+            )
+        ),
+        @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> getMapping(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
@@ -104,6 +161,32 @@ public class MappingController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
+    @Operation(
+        summary = "Delete a mapping", 
+        description = "Deletes a mapping by its unique identifier. This will also remove all associated subscriptions and cache entries.",
+        parameters = {
+            @Parameter(
+                name = "id", 
+                description = "The unique identifier of the mapping to delete", 
+                required = true,
+                schema = @Schema(type = "string")
+            )
+        }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Mapping deleted successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(type = "string", description = "The ID of the deleted mapping")
+            )
+        ),
+        @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
+        @ApiResponse(responseCode = "406", description = "Mapping could not be deleted due to business constraints", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions to delete mapping", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteMapping(@PathVariable String id) {
@@ -134,11 +217,35 @@ public class MappingController {
         return ResponseEntity.status(HttpStatus.OK).body(id);
     }
 
+    @Operation(
+        summary = "Create a new mapping", 
+        description = "Creates a new mapping configuration. The mapping will be created in disabled state by default and needs to be activated separately. For INBOUND mappings, subscriptions will be created across all connectors. For OUTBOUND mappings, the outbound cache will be rebuilt."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Mapping created successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = Mapping.class)
+            )
+        ),
+        @ApiResponse(responseCode = "400", description = "Invalid mapping configuration or JSON processing error", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions to create mapping", content = @Content),
+        @ApiResponse(responseCode = "409", description = "Mapping already exists or conflicts with existing configuration", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     // TODO We might need to add the connector ID here to correlate mappings to
     // exactly one connector
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
+    public ResponseEntity<Mapping> createMapping(
+            @Parameter(
+                description = "The mapping configuration to create", 
+                required = true,
+                content = @Content(schema = @Schema(implementation = Mapping.class))
+            )
+            @Valid @RequestBody Mapping mapping) {
         try {
             String tenant = contextService.getContext().getTenant();
             log.info("{} - Create mapping: {}", tenant, mapping.getMappingTopic());
@@ -169,12 +276,48 @@ public class MappingController {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
+
+    @Operation(
+        summary = "Update an existing mapping", 
+        description = "Updates an existing mapping configuration. Note that active mappings cannot be updated - they must be deactivated first. For INBOUND mappings, subscriptions will be updated across all connectors. For OUTBOUND mappings, the outbound cache will be rebuilt.",
+        parameters = {
+            @Parameter(
+                name = "id", 
+                description = "The unique identifier of the mapping to update", 
+                required = true,
+                schema = @Schema(type = "string")
+            )
+        }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Mapping updated successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = Mapping.class)
+            )
+        ),
+        @ApiResponse(responseCode = "400", description = "Invalid mapping configuration or JSON processing error", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions to update mapping", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
+        @ApiResponse(responseCode = "406", description = "Active mappings cannot be updated", content = @Content),
+        @ApiResponse(responseCode = "409", description = "Mapping conflicts with existing configuration", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
+    public ResponseEntity<Mapping> updateMapping(
+            @PathVariable String id,
+            @Parameter(
+                description = "The updated mapping configuration", 
+                required = true,
+                content = @Content(schema = @Schema(implementation = Mapping.class))
+            )
+            @Valid @RequestBody Mapping mapping) {
         String tenant = contextService.getContext().getTenant();
         try {
-            log.info("{} - Update mapping: {}, {}", mapping, id);
+            log.info("{} - Update mapping: {}, {}", tenant, mapping, id);
             final Mapping updatedMapping = mappingComponent.updateMapping(tenant, mapping, false, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);

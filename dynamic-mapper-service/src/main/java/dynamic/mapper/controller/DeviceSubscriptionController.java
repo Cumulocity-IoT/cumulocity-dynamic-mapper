@@ -44,9 +44,19 @@ import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @Slf4j
 @RequestMapping("/subscription")
 @RestController
+@Tag(name = "Device Subscription Controller", description = "API for managing Cumulocity IoT notification subscriptions for outbound mappings. Handles device subscriptions for real-time notifications when device data changes.")
 public class DeviceSubscriptionController {
 
     @Autowired
@@ -61,6 +71,74 @@ public class DeviceSubscriptionController {
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
 
+    @Operation(
+        summary = "Create device notification subscription",
+        description = """
+            Creates notification subscriptions for specified devices to enable outbound mapping functionality. 
+            When devices are subscribed, the system will receive real-time notifications about changes to the devices
+            and can trigger outbound mappings accordingly.
+            
+            **Prerequisites:**
+            - Outbound mapping must be enabled in service configuration
+            - User must have CREATE or ADMIN role
+            
+            **Behavior:**
+            - Automatically discovers and includes all child devices
+            - Creates subscriptions for all specified API types
+            - Returns the subscription with all included devices
+            """,
+        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Subscription configuration with devices and API types",
+            required = true,
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = C8YNotificationSubscription.class),
+                examples = @ExampleObject(
+                    name = "Device Subscription",
+                    description = "Subscribe to measurements for specific devices",
+                    value = """
+                    {
+                      "api": "MEASUREMENT",
+                      "subscriptionName": "temperature-sensors",
+                      "devices": [
+                        {
+                          "id": "12345",
+                          "name": "Temperature Sensor 01"
+                        },
+                        {
+                          "id": "12346",
+                          "name": "Temperature Sensor 02"
+                        }
+                      ]
+                    }
+                    """
+                )
+            )
+        )
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Subscription created successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = C8YNotificationSubscription.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Forbidden - insufficient permissions",
+            content = @Content
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Outbound mapping is disabled",
+            content = @Content(
+                mediaType = "application/json"
+            )
+        ),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<C8YNotificationSubscription> subscriptionCreate(
@@ -98,6 +176,63 @@ public class DeviceSubscriptionController {
         }
         return ResponseEntity.ok(subscription);
     }
+
+    @Operation(
+        summary = "Update device notification subscription",
+        description = """
+            Updates an existing notification subscription by comparing the new device list with the current subscriptions.
+            
+            **Update Logic:**
+            1. Devices in new list but not in current subscriptions → Subscribe
+            2. Devices in current subscriptions but not in new list → Unsubscribe  
+            3. Devices in both lists → No change
+            
+            **Prerequisites:**
+            - Outbound mapping must be enabled in service configuration
+            - User must have CREATE or ADMIN role
+            """,
+        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Updated subscription configuration",
+            required = true,
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = C8YNotificationSubscription.class),
+                examples = @ExampleObject(
+                    name = "Updated Subscription",
+                    description = "Modified device list for subscription",
+                    value = """
+                    {
+                      "api": "MEASUREMENT",
+                      "subscriptionName": "temperature-sensors",
+                      "devices": [
+                        {
+                          "id": "12345",
+                          "name": "Temperature Sensor 01"
+                        },
+                        {
+                          "id": "12347",
+                          "name": "Temperature Sensor 03"
+                        }
+                      ]
+                    }
+                    """
+                )
+            )
+        )
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Subscription updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = C8YNotificationSubscription.class)
+            )
+        ),
+        @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Outbound mapping is disabled", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<C8YNotificationSubscription> subscriptionUpdate(
@@ -107,17 +242,9 @@ public class DeviceSubscriptionController {
         if (!serviceConfiguration.isOutboundMappingEnabled())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
-            // List<NotificationSubscriptionRepresentation> deviceSubscriptions =
-            // c8yApiSubscriber.getNotificationSubscriptions(null, null).get();
             C8YNotificationSubscription c8ySubscription = configurationRegistry.getNotificationSubscriber()
-                    .getDeviceSubscriptions(tenant,
-                            null, null);
-            // 3 cases -
-            // 1. Device exists in subscription and active subscription --> Do nothing
-            // 2. Device exists in subscription and does not have an active subscription -->
-            // create subscription
-            // 3. Device exists not in subscription and does have an active subscription -->
-            // delete subscription
+                    .getDeviceSubscriptions(tenant, null, null);
+            
             List<Device> toBeRemovedSub = new ArrayList<>();
             List<Device> toBeCreatedSub = new ArrayList<>();
 
@@ -127,12 +254,12 @@ public class DeviceSubscriptionController {
             subscription.getDevices().forEach(device -> toBeRemovedSub.removeIf(x -> x.getId().equals(device.getId())));
             c8ySubscription.getDevices()
                     .forEach(entity -> toBeCreatedSub.removeIf(x -> x.getId().equals(entity.getId())));
+            
             List<Device> allChildDevices = null;
             for (Device device : toBeCreatedSub) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
-                        // Creates subscription for each connector
                         allChildDevices = configurationRegistry.getNotificationSubscriber()
                                 .findAllRelatedDevicesByMO(mor, allChildDevices, false);
                     } catch (Exception e) {
@@ -144,9 +271,9 @@ public class DeviceSubscriptionController {
                             device.getId());
                 }
             }
+            
             if (allChildDevices != null) {
                 for (Device childDevice : allChildDevices) {
-                    // Creates subscription for each connector
                     ManagedObjectRepresentation childDeviceMor = c8yAgent.getManagedObjectForId(tenant,
                             childDevice.getId());
                     configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor,
@@ -177,8 +304,41 @@ public class DeviceSubscriptionController {
         return ResponseEntity.ok(subscription);
     }
 
+    @Operation(
+        summary = "Get device notification subscriptions",
+        description = "Retrieves current notification subscriptions, optionally filtered by device ID or subscription name. Shows which devices are currently subscribed for outbound notifications.",
+        parameters = {
+            @Parameter(
+                name = "deviceId",
+                description = "Filter subscriptions by specific device ID",
+                required = false,
+                example = "12345",
+                schema = @Schema(type = "string")
+            ),
+            @Parameter(
+                name = "subscriptionName",
+                description = "Filter subscriptions by subscription name",
+                required = false,
+                example = "temperature-sensors",
+                schema = @Schema(type = "string")
+            )
+        }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Subscriptions retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = C8YNotificationSubscription.class)
+            )
+        ),
+        @ApiResponse(responseCode = "404", description = "Outbound mapping is disabled", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<C8YNotificationSubscription> subscriptionsGet(@RequestParam(required = false) String deviceId,
+    public ResponseEntity<C8YNotificationSubscription> subscriptionsGet(
+            @RequestParam(required = false) String deviceId,
             @RequestParam(required = false) String subscriptionName) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -193,8 +353,33 @@ public class DeviceSubscriptionController {
         }
     }
 
+    @Operation(
+        summary = "Delete device notification subscription",
+        description = "Removes notification subscription for a specific device. The device will no longer trigger outbound mappings when its data changes.",
+        parameters = {
+            @Parameter(
+                name = "deviceId",
+                description = "ID of the device to unsubscribe",
+                required = true,
+                example = "12345",
+                schema = @Schema(type = "string")
+            )
+        }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Subscription deleted successfully", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions", content = @Content),
+        @ApiResponse(
+            responseCode = "404", 
+            description = "Device not found or outbound mapping is disabled",
+            content = @Content(
+                mediaType = "application/json"
+            )
+        ),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
-    @RequestMapping(value = "/{deviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @DeleteMapping(value = "/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionDelete(@PathVariable String deviceId) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);

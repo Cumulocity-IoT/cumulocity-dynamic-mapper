@@ -30,9 +30,12 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 @Getter
 @Setter
 @ToString()
+@Schema(description = "Processor extension configuration providing custom data transformation capabilities")
 public class Extension implements Serializable {
 
     public Extension() {
@@ -50,18 +53,43 @@ public class Extension implements Serializable {
         this.external = external;
     }
 
+    @Schema(
+        requiredMode = Schema.RequiredMode.REQUIRED,
+        description = "Unique identifier for the extension",
+        example = "custom-json-processor"
+    )
     @NotNull
     public String id;
 
+    @Schema(
+        requiredMode = Schema.RequiredMode.REQUIRED,
+        description = "Loading status of the extension",
+        implementation = ExtensionStatus.class,
+        example = "LOADED"
+    )
     @NotNull
     public ExtensionStatus loaded;
 
+    @Schema(
+        requiredMode = Schema.RequiredMode.REQUIRED,
+        description = "Display name of the extension",
+        example = "Custom JSON Processor"
+    )
     @NotNull
     public String name;
 
+    @Schema(
+        requiredMode = Schema.RequiredMode.REQUIRED,
+        description = "Whether this is an external extension (true) or built-in extension (false)",
+        example = "true"
+    )
     @NotNull
     public boolean external;
 
+    @Schema(
+        requiredMode = Schema.RequiredMode.REQUIRED,
+        description = "Map of available extension entry points and their configurations"
+    )
     @NotNull
     public Map<String, ExtensionEntry> extensionEntries;
 }
