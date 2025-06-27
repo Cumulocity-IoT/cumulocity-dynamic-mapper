@@ -27,23 +27,31 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import jakarta.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import lombok.Data;
 
 @Data
+@Schema(description = "Connector status information including connection state and last update time")
 public class ConnectorStatusEvent implements Serializable {
+	
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Display name of the connector", example = "MQTT Production Connector")
 	@NotNull
 	public String connectorName;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Unique identifier of the connector", example = "l19zjk")
 	@NotNull
 	public String connectorIdentifier;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Current status of the connector", implementation = ConnectorStatus.class, example = "CONNECTED")
 	@NotNull
 	public ConnectorStatus status;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Status message or error description", example = "Successfully connected to broker")
 	@NotNull
 	public String message;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Timestamp of last status update", example = "2024-01-15 14:30:25")
 	@NotNull
 	public String date;
 
