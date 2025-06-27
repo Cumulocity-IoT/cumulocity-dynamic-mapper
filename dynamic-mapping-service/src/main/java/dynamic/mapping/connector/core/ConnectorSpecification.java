@@ -53,22 +53,22 @@ public class ConnectorSpecification implements Cloneable {
 	@JsonSetter(nulls = Nulls.SKIP)
 	public String description;
 
-	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The type of the Connector", example = "ConnectorType.MQTT")
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The type of the Connector", example = "MQTT")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public ConnectorType connectorType;
 
-	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A map of properties the connector needs to establish a connection. The key is the property name and the value is the property specification")
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A map of properties the connector needs to establish a connection. The key is the property name and the value is the property specification", example = "{ \"protocol\": { \"description\": \"The protocol to use\", \"required\": true, \"order\": 1, \"type\": \"STRING\", \"readonly\": false } }")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public Map<String, ConnectorProperty> properties;
 
-	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if the connector supports message context. If true, the connector can handle additional metadata in messages.")
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if the connector supports message context. If true, the connector can handle additional metadata in messages.", example = "true")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	public boolean supportsMessageContext;
 
-	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A List to define if the connector support INBOUND and OUTBOUND mappings or both.", example = "List.of(Direction.INBOUND, Direction.OUTBOUND)")
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A List to define if the connector support INBOUND and OUTBOUND mappings or both.", example = "[ \"INBOUND\", \"OUTBOUND\"] ")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
     public List<Direction> supportedDirections;

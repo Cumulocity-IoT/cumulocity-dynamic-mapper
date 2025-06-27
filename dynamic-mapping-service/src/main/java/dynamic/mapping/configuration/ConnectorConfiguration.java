@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.ConnectorType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.ToString;
 
@@ -44,24 +45,29 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
 		super();
 	}
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A unique identifier to identify the connector", example = "o5rhgj4g")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	@JsonProperty("identifier")
 	public String identifier;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The type of a connector. Must be one of MQTT, CUMULOCITY_MQTT_SERVICE, KAFKA, HTTP, WEB_HOOK", example = "MQTT")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	@JsonProperty("connectorType")
 	public ConnectorType connectorType;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag if the connector is enabled or not", example = "false")
 	@NotNull
 	@JsonProperty("enabled")
 	public boolean enabled;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A meaningful name of the connector", example = "MQTT Connector")
 	@NotNull
 	@JsonProperty("name")
 	public String name;
 
+	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The properties of the connector used to establish a connection", example = "{ \"protocol\": \"mqtt://\", \"mqttHost\": \"mqtt.example.com\" , \"mqttPort\": 1883, \"clientId\": \"dynamic_mapper_client1\" }")
 	@NotNull
 	@JsonProperty("properties")
 	public Map<String, Object> properties = new HashMap<>();
