@@ -39,7 +39,6 @@ import { ConnectorStatusComponent } from './connector-log/connector-log.componen
 import { JsonEditorComponent } from './component/editor/jsoneditor.component';
 import { CamelCasePipe } from './misc/camel-case.pipe';
 import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
-import { DisableDirective } from './misc/disable.directive';
 import { FilterJsonPipe } from './misc/filter-json.pipe';
 import { FormatStringPipe } from './misc/format-string.pipe';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -55,7 +54,6 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
     Base64DecodePipe,
     CapitalizeCasePipe,
     FormatStringPipe,
-    DisableDirective,
     ConnectorStatusComponent,
     ConnectorGridComponent,
     ConnectorDetailsComponent,
@@ -82,7 +80,6 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
     FilterJsonPipe,
     Base64DecodePipe,
     CapitalizeCasePipe,
-    DisableDirective,
     FormatStringPipe,
     ConnectorStatusComponent,
     ConnectorGridComponent,

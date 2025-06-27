@@ -40,7 +40,8 @@ import { Form, FormBuilder, FormGroup } from '@angular/forms';
   selector: 'd11r-mapping-connector-grid',
   styleUrls: ['./connector-grid.component.style.css'],
   templateUrl: 'connector-grid.component.html',
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  standalone: false
 })
 export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() selectable = true;

@@ -21,7 +21,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'base64decode'
+  name: 'base64decode',
+  standalone: false
 })
 export class Base64DecodePipe implements PipeTransform {
   transform(value: string): string {
