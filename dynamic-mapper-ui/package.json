@@ -2,7 +2,7 @@
   "name": "dynamic-mapper",
   "version": "5.5.0",
   "author": "christof.strack@cumulocity.com, stefan.witschel@cumulocity.com",
-  "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.The plugin support both directions: inbound/outbound. Currently MQTT is supported ",
+  "description": "Cumulocity Dynamic Mapper UI to map data from any data source to Cumulocity and vice-versa in a zero-code/low-code way.",
   "repository": {
     "type": "git",
     "url": "git@github.com:Cumulocity-IoT/cumulocity-dynamic-mapper.git"
