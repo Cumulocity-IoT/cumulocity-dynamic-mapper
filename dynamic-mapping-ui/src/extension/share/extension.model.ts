@@ -34,5 +34,5 @@ export enum ERROR_TYPE {
 export const extensionResolver: ResolveFn<IManagedObject[]> = (route) => {
   const extensionService = inject(ExtensionService);
   const id = route.paramMap.get('id');
-  return extensionService.getExtensionsEnriched(id);
+  return extensionService.getEnrichedProcessorExtensions(id);
 };

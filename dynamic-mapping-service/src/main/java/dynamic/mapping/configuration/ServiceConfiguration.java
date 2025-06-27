@@ -21,6 +21,7 @@
 
 package dynamic.mapping.configuration;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.ArrayList;
@@ -59,46 +60,57 @@ public class ServiceConfiguration implements Cloneable {
         this.maxCPUTimeMS = 5000;  // 5 seconds
     }
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if payload should be logged", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean logPayload;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if substitutions should be logged", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean logSubstitution;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if stack traces of connectors should logged", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean logConnectorErrorInBackend;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if the connector lifecycle should be sent as an event", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean sendConnectorLifecycle;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if the mapping status should be sent as an event", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean sendMappingStatus;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if the mapping subscriptions to connectors should be sent as an event", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean sendSubscriptionEvents;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if the notification lifecycle of devices should be sent as an event", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean sendNotificationLifecycle;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if external extensions are enabled or not", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean externalExtensionEnabled;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A flag to define if outbound mapping is enabled or not", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean outboundMappingEnabled;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The size of the Inbound External ID Cache", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public Integer inboundExternalIdCacheSize;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The retention in days", example = "true")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public Integer inboundExternalIdCacheRetention;

@@ -1,0 +1,2686 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Cumulocity Dynamic Mapper",
+    "description" : "This API exposes endpoints to manage resources for the Cumulocity Dynamic Mapper.",
+    "termsOfService" : "https://raw.githubusercontent.com/Cumulocity-IoT/cumulocity-dynamic-mapper/refs/heads/main/LICENSE",
+    "contact" : {
+      "name" : "Christof Strack, Stefan Witschel",
+      "url" : "https://www.cumulocity.com"
+    },
+    "license" : {
+      "name" : " Apache License",
+      "url" : "https://raw.githubusercontent.com/Cumulocity-IoT/cumulocity-dynamic-mapper/refs/heads/main/LICENSE"
+    },
+    "version" : "5.0.0"
+  },
+  "externalDocs" : {
+    "description" : "Additional Documentation",
+    "url" : "https://cumulocity.com/docs/"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8080",
+    "description" : "Generated server url"
+  } ],
+  "paths" : {
+    "/httpConnector" : {
+      "put" : {
+        "tags" : [ "http-connector-controller" ],
+        "operationId" : "processGenericMessage_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "http-connector-controller" ],
+        "operationId" : "processGenericMessage",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/httpConnector/**" : {
+      "put" : {
+        "tags" : [ "http-connector-controller" ],
+        "operationId" : "processGenericMessage_3",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "http-connector-controller" ],
+        "operationId" : "processGenericMessage_2",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/subscription" : {
+      "get" : {
+        "tags" : [ "device-subscription-controller" ],
+        "operationId" : "subscriptionsGet",
+        "parameters" : [ {
+          "name" : "deviceId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "subscriptionName",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/C8YNotificationSubscription"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "device-subscription-controller" ],
+        "operationId" : "subscriptionUpdate",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/C8YNotificationSubscription"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/C8YNotificationSubscription"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "device-subscription-controller" ],
+        "operationId" : "subscriptionCreate",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/C8YNotificationSubscription"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/C8YNotificationSubscription"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mapping/{id}" : {
+      "get" : {
+        "tags" : [ "mapping-controller" ],
+        "operationId" : "getMapping",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Mapping"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "mapping-controller" ],
+        "operationId" : "updateMapping",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Mapping"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Mapping"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "mapping-controller" ],
+        "operationId" : "deleteMapping",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deployment/defined/{mappingIdentifier}" : {
+      "get" : {
+        "tags" : [ "deployment-controller" ],
+        "operationId" : "getDeploymentMapEntry",
+        "parameters" : [ {
+          "name" : "mappingIdentifier",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "deployment-controller" ],
+        "operationId" : "updateDeploymentMapEntry",
+        "parameters" : [ {
+          "name" : "mappingIdentifier",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "enum" : [ "100 CONTINUE", "101 SWITCHING_PROTOCOLS", "102 PROCESSING", "103 EARLY_HINTS", "103 CHECKPOINT", "200 OK", "201 CREATED", "202 ACCEPTED", "203 NON_AUTHORITATIVE_INFORMATION", "204 NO_CONTENT", "205 RESET_CONTENT", "206 PARTIAL_CONTENT", "207 MULTI_STATUS", "208 ALREADY_REPORTED", "226 IM_USED", "300 MULTIPLE_CHOICES", "301 MOVED_PERMANENTLY", "302 FOUND", "302 MOVED_TEMPORARILY", "303 SEE_OTHER", "304 NOT_MODIFIED", "305 USE_PROXY", "307 TEMPORARY_REDIRECT", "308 PERMANENT_REDIRECT", "400 BAD_REQUEST", "401 UNAUTHORIZED", "402 PAYMENT_REQUIRED", "403 FORBIDDEN", "404 NOT_FOUND", "405 METHOD_NOT_ALLOWED", "406 NOT_ACCEPTABLE", "407 PROXY_AUTHENTICATION_REQUIRED", "408 REQUEST_TIMEOUT", "409 CONFLICT", "410 GONE", "411 LENGTH_REQUIRED", "412 PRECONDITION_FAILED", "413 PAYLOAD_TOO_LARGE", "413 REQUEST_ENTITY_TOO_LARGE", "414 URI_TOO_LONG", "414 REQUEST_URI_TOO_LONG", "415 UNSUPPORTED_MEDIA_TYPE", "416 REQUESTED_RANGE_NOT_SATISFIABLE", "417 EXPECTATION_FAILED", "418 I_AM_A_TEAPOT", "419 INSUFFICIENT_SPACE_ON_RESOURCE", "420 METHOD_FAILURE", "421 DESTINATION_LOCKED", "422 UNPROCESSABLE_ENTITY", "423 LOCKED", "424 FAILED_DEPENDENCY", "425 TOO_EARLY", "426 UPGRADE_REQUIRED", "428 PRECONDITION_REQUIRED", "429 TOO_MANY_REQUESTS", "431 REQUEST_HEADER_FIELDS_TOO_LARGE", "451 UNAVAILABLE_FOR_LEGAL_REASONS", "500 INTERNAL_SERVER_ERROR", "501 NOT_IMPLEMENTED", "502 BAD_GATEWAY", "503 SERVICE_UNAVAILABLE", "504 GATEWAY_TIMEOUT", "505 HTTP_VERSION_NOT_SUPPORTED", "506 VARIANT_ALSO_NEGOTIATES", "507 INSUFFICIENT_STORAGE", "508 LOOP_DETECTED", "509 BANDWIDTH_LIMIT_EXCEEDED", "510 NOT_EXTENDED", "511 NETWORK_AUTHENTICATION_REQUIRED" ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/configuration/service" : {
+      "get" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Liefert die Service-Konfiguration",
+        "description" : "Gibt die Service-Konfiguration des aktuellen Tenants zurück.",
+        "operationId" : "getServiceConfiguration",
+        "responses" : {
+          "200" : {
+            "description" : "Service-Konfiguration gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ServiceConfiguration"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Service-Konfiguration nicht gefunden"
+          },
+          "500" : {
+            "description" : "Interner Serverfehler"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Aktualisiert die Service-Konfiguration",
+        "description" : "Aktualisiert die Service-Konfiguration des aktuellen Tenants.",
+        "operationId" : "updateServiceConfiguration",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ServiceConfiguration"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Service-Konfiguration erfolgreich aktualisiert"
+          },
+          "500" : {
+            "description" : "Interner Serverfehler"
+          }
+        }
+      }
+    },
+    "/configuration/connector/instance/{identifier}" : {
+      "get" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Get a connector configuration",
+        "description" : "Returns the connector configuration for the given ID.",
+        "operationId" : "getConnectionConfiguration",
+        "parameters" : [ {
+          "name" : "identifier",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Connector configuration found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConnectorConfiguration"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Connector configuration not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Update a connector configuration",
+        "description" : "Updates the connector configuration for the given ID.",
+        "operationId" : "updateConnectionConfiguration",
+        "parameters" : [ {
+          "name" : "identifier",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectorConfiguration"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Connector configuration updated successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConnectorConfiguration"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Delete a connector configuration",
+        "description" : "Deletes the connector configuration for the given ID.",
+        "operationId" : "deleteConnectionConfiguration",
+        "parameters" : [ {
+          "name" : "identifier",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Connector configuration deleted successfully"
+          },
+          "400" : {
+            "description" : "Connector is enabled or cannot be deleted"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/code/{id}" : {
+      "get" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Liefert ein Code-Template",
+        "description" : "Gibt das Code-Template für die angegebene ID zurück.",
+        "operationId" : "getCodeTemplate",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Code-Template gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeTemplate"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Code-Template nicht gefunden"
+          },
+          "500" : {
+            "description" : "Interner Serverfehler"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Update a code template",
+        "description" : "Updates the code template for the given ID.",
+        "operationId" : "updateCodeTemplate",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CodeTemplate"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Code template updated successfully"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Delete a code template",
+        "description" : "Deletes the code template for the given ID.",
+        "operationId" : "deleteCodeTemplate",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Code template deleted successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeTemplate"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "Deletion of internal templates is not allowed"
+          },
+          "404" : {
+            "description" : "Code template not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/webhook/echo/**" : {
+      "post" : {
+        "tags" : [ "test-controller" ],
+        "operationId" : "echoInput",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/watson/mapping" : {
+      "post" : {
+        "tags" : [ "watson-controller" ],
+        "operationId" : "createMapping",
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Mapping"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/{method}" : {
+      "post" : {
+        "tags" : [ "test-controller" ],
+        "operationId" : "forwardPayload",
+        "parameters" : [ {
+          "name" : "method",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "topic",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uri"
+          }
+        }, {
+          "name" : "connectorIdentifier",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : {
+                  "type" : "object"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ProcessingContextObject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/operation" : {
+      "post" : {
+        "tags" : [ "operation-controller" ],
+        "operationId" : "runOperation",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ServiceOperation"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mapping" : {
+      "get" : {
+        "tags" : [ "mapping-controller" ],
+        "operationId" : "getMappings",
+        "parameters" : [ {
+          "name" : "direction",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Mapping"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "mapping-controller" ],
+        "operationId" : "createMapping_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Mapping"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Mapping"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/configuration/connector/instance" : {
+      "get" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Get all connector configurations",
+        "description" : "Returns a list of all connector configurations. Optionally, filter by name.",
+        "operationId" : "getConnectionConfigurations",
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of connector configurations",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConnectorConfiguration"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Create a new connector configuration",
+        "description" : "Creates a new connector configuration for the specified type.",
+        "operationId" : "createConnectorConfiguration",
+        "requestBody" : {
+          "description" : "Connector configuration to be created",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectorConfiguration"
+              },
+              "example" : {
+                "identifier" : "o5rhgj4g",
+                "connectorType" : "MQTT",
+                "name" : "MQTT Connector",
+                "description" : "This is a MQTT Connector",
+                "enabled" : false,
+                "properties" : {
+                  "protocol" : "mqtt://",
+                  "mqttHost" : "mqtt.example.com",
+                  "mqttPort" : 1883,
+                  "clientId" : "dynamic_mapper_client1"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Connector configuration created successfully",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "enum" : [ "100 CONTINUE", "101 SWITCHING_PROTOCOLS", "102 PROCESSING", "103 EARLY_HINTS", "103 CHECKPOINT", "200 OK", "201 CREATED", "202 ACCEPTED", "203 NON_AUTHORITATIVE_INFORMATION", "204 NO_CONTENT", "205 RESET_CONTENT", "206 PARTIAL_CONTENT", "207 MULTI_STATUS", "208 ALREADY_REPORTED", "226 IM_USED", "300 MULTIPLE_CHOICES", "301 MOVED_PERMANENTLY", "302 FOUND", "302 MOVED_TEMPORARILY", "303 SEE_OTHER", "304 NOT_MODIFIED", "305 USE_PROXY", "307 TEMPORARY_REDIRECT", "308 PERMANENT_REDIRECT", "400 BAD_REQUEST", "401 UNAUTHORIZED", "402 PAYMENT_REQUIRED", "403 FORBIDDEN", "404 NOT_FOUND", "405 METHOD_NOT_ALLOWED", "406 NOT_ACCEPTABLE", "407 PROXY_AUTHENTICATION_REQUIRED", "408 REQUEST_TIMEOUT", "409 CONFLICT", "410 GONE", "411 LENGTH_REQUIRED", "412 PRECONDITION_FAILED", "413 PAYLOAD_TOO_LARGE", "413 REQUEST_ENTITY_TOO_LARGE", "414 URI_TOO_LONG", "414 REQUEST_URI_TOO_LONG", "415 UNSUPPORTED_MEDIA_TYPE", "416 REQUESTED_RANGE_NOT_SATISFIABLE", "417 EXPECTATION_FAILED", "418 I_AM_A_TEAPOT", "419 INSUFFICIENT_SPACE_ON_RESOURCE", "420 METHOD_FAILURE", "421 DESTINATION_LOCKED", "422 UNPROCESSABLE_ENTITY", "423 LOCKED", "424 FAILED_DEPENDENCY", "425 TOO_EARLY", "426 UPGRADE_REQUIRED", "428 PRECONDITION_REQUIRED", "429 TOO_MANY_REQUESTS", "431 REQUEST_HEADER_FIELDS_TOO_LARGE", "451 UNAVAILABLE_FOR_LEGAL_REASONS", "500 INTERNAL_SERVER_ERROR", "501 NOT_IMPLEMENTED", "502 BAD_GATEWAY", "503 SERVICE_UNAVAILABLE", "504 GATEWAY_TIMEOUT", "505 HTTP_VERSION_NOT_SUPPORTED", "506 VARIANT_ALSO_NEGOTIATES", "507 INSUFFICIENT_STORAGE", "508 LOOP_DETECTED", "509 BANDWIDTH_LIMIT_EXCEEDED", "510 NOT_EXTENDED", "511 NETWORK_AUTHENTICATION_REQUIRED" ]
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request or unsupported connector type"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/code" : {
+      "get" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Get all code templates",
+        "description" : "Returns all code templates for the current tenant.",
+        "operationId" : "getCodeTemplates",
+        "responses" : {
+          "200" : {
+            "description" : "List of code templates",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeTemplate"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Create a new code template",
+        "description" : "Creates a new code template for the current tenant.",
+        "operationId" : "createCodeTemplate",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CodeTemplate"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Code template created successfully"
+          },
+          "409" : {
+            "description" : "Template with this ID already exists"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/webhook" : {
+      "get" : {
+        "tags" : [ "test-controller" ],
+        "operationId" : "echoHealth",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/monitoring/tree" : {
+      "get" : {
+        "tags" : [ "monitoring-controller" ],
+        "operationId" : "getInboundMappingTree",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MappingTreeNode"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/monitoring/subscription/{connectorIdentifier}" : {
+      "get" : {
+        "tags" : [ "monitoring-controller" ],
+        "operationId" : "getActiveSubscriptions",
+        "parameters" : [ {
+          "name" : "connectorIdentifier",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "type" : "integer",
+                    "format" : "int32"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/monitoring/status/mapping/statistic" : {
+      "get" : {
+        "tags" : [ "monitoring-controller" ],
+        "operationId" : "getMappingStatus",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MappingStatus"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/monitoring/status/connectors" : {
+      "get" : {
+        "tags" : [ "monitoring-controller" ],
+        "operationId" : "getConnectorsStatus",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "$ref" : "#/components/schemas/ConnectorStatusEvent"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/monitoring/status/connector/{connectorIdentifier}" : {
+      "get" : {
+        "tags" : [ "monitoring-controller" ],
+        "operationId" : "getConnectorStatus",
+        "parameters" : [ {
+          "name" : "connectorIdentifier",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConnectorStatusEvent"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/extension" : {
+      "get" : {
+        "tags" : [ "extension-controller" ],
+        "operationId" : "getProcessorExtensions",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "$ref" : "#/components/schemas/Extension"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/extension/{extensionName}" : {
+      "get" : {
+        "tags" : [ "extension-controller" ],
+        "operationId" : "getProcessorExtension",
+        "parameters" : [ {
+          "name" : "extensionName",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Extension"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "extension-controller" ],
+        "operationId" : "deleteProcessorExtension",
+        "parameters" : [ {
+          "name" : "extensionName",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Extension"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deployment/effective" : {
+      "get" : {
+        "tags" : [ "deployment-controller" ],
+        "operationId" : "getMappingsDeployed",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "$ref" : "#/components/schemas/DeploymentMapEntry"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deployment/defined" : {
+      "get" : {
+        "tags" : [ "deployment-controller" ],
+        "operationId" : "getDeploymentMap",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "type" : "array",
+                    "items" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/configuration/feature" : {
+      "get" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Get the feature flags for the dynamic mapper service",
+        "description" : "Returns features with an indication if some functionality is available or not. This is useful if you want to check for example if outbound Mapping is possible on a tenant or not.",
+        "operationId" : "getFeatures",
+        "responses" : {
+          "200" : {
+            "description" : "Feature flags retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Feature"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/connector/specifications" : {
+      "get" : {
+        "tags" : [ "configuration-controller" ],
+        "summary" : "Get connectors with their specifications",
+        "description" : "Returns all available connector specifications.",
+        "operationId" : "getConnectorSpecifications",
+        "responses" : {
+          "200" : {
+            "description" : "Connector specifications retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConnectorSpecification"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/subscription/{deviceId}" : {
+      "delete" : {
+        "tags" : [ "device-subscription-controller" ],
+        "operationId" : "subscriptionDelete",
+        "parameters" : [ {
+          "name" : "deviceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "C8YNotificationSubscription" : {
+        "type" : "object",
+        "properties" : {
+          "api" : {
+            "type" : "string",
+            "enum" : [ "ALARM", "ALARM_WITH_CHILDREN", "EVENT", "EVENT_WITH_CHILDREN", "MEASUREMENT", "INVENTORY", "OPERATION", "EMPTY", "ALL" ]
+          },
+          "subscriptionName" : {
+            "type" : "string"
+          },
+          "devices" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Device"
+            }
+          }
+        },
+        "required" : [ "api" ]
+      },
+      "Device" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id" ]
+      },
+      "ExtensionEntry" : {
+        "type" : "object",
+        "properties" : {
+          "extensionName" : {
+            "type" : "string"
+          },
+          "eventName" : {
+            "type" : "string"
+          },
+          "fqnClassName" : {
+            "type" : "string"
+          },
+          "loaded" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "extensionType" : {
+            "type" : "string",
+            "enum" : [ "EXTENSION_SOURCE", "EXTENSION_SOURCE_TARGET" ]
+          }
+        },
+        "required" : [ "eventName", "extensionName", "extensionType", "fqnClassName", "loaded", "message" ]
+      },
+      "Mapping" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "identifier" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "publishTopic" : {
+            "type" : "string"
+          },
+          "publishTopicSample" : {
+            "type" : "string"
+          },
+          "mappingTopic" : {
+            "type" : "string"
+          },
+          "mappingTopicSample" : {
+            "type" : "string"
+          },
+          "targetAPI" : {
+            "type" : "string",
+            "enum" : [ "ALARM", "ALARM_WITH_CHILDREN", "EVENT", "EVENT_WITH_CHILDREN", "MEASUREMENT", "INVENTORY", "OPERATION", "EMPTY", "ALL" ]
+          },
+          "direction" : {
+            "type" : "string",
+            "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ]
+          },
+          "sourceTemplate" : {
+            "type" : "string"
+          },
+          "targetTemplate" : {
+            "type" : "string"
+          },
+          "mappingType" : {
+            "type" : "string",
+            "enum" : [ "JSON", "FLAT_FILE", "HEX", "PROTOBUF_INTERNAL", "EXTENSION_SOURCE", "EXTENSION_SOURCE_TARGET", "CODE_BASED" ]
+          },
+          "substitutions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Substitution"
+            }
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "debug" : {
+            "type" : "boolean"
+          },
+          "tested" : {
+            "type" : "boolean"
+          },
+          "supportsMessageContext" : {
+            "type" : "boolean"
+          },
+          "eventWithAttachment" : {
+            "type" : "boolean"
+          },
+          "createNonExistingDevice" : {
+            "type" : "boolean"
+          },
+          "updateExistingDevice" : {
+            "type" : "boolean"
+          },
+          "autoAckOperation" : {
+            "type" : "boolean"
+          },
+          "useExternalId" : {
+            "type" : "boolean"
+          },
+          "externalIdType" : {
+            "type" : "string"
+          },
+          "snoopStatus" : {
+            "type" : "string",
+            "enum" : [ "NONE", "ENABLED", "STARTED", "STOPPED" ]
+          },
+          "snoopedTemplates" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "extension" : {
+            "$ref" : "#/components/schemas/ExtensionEntry"
+          },
+          "filterMapping" : {
+            "type" : "string"
+          },
+          "filterInventory" : {
+            "type" : "string"
+          },
+          "maxFailureCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "qos" : {
+            "type" : "string",
+            "enum" : [ "AT_MOST_ONCE", "AT_LEAST_ONCE", "EXACTLY_ONCE" ]
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "lastUpdate" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "active", "debug", "direction", "id", "identifier", "lastUpdate", "mappingType", "maxFailureCount", "name", "qos", "snoopStatus", "snoopedTemplates", "sourceTemplate", "substitutions", "supportsMessageContext", "targetAPI", "targetTemplate", "tested", "useExternalId" ]
+      },
+      "Substitution" : {
+        "type" : "object",
+        "properties" : {
+          "pathSource" : {
+            "type" : "string"
+          },
+          "pathTarget" : {
+            "type" : "string"
+          },
+          "repairStrategy" : {
+            "type" : "string",
+            "enum" : [ "DEFAULT", "USE_FIRST_VALUE_OF_ARRAY", "USE_LAST_VALUE_OF_ARRAY", "IGNORE", "REMOVE_IF_MISSING_OR_NULL", "CREATE_IF_MISSING" ]
+          },
+          "expandArray" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "pathSource", "pathTarget", "repairStrategy" ]
+      },
+      "CodeTemplate" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "templateType" : {
+            "type" : "string",
+            "enum" : [ "INBOUND", "OUTBOUND", "SHARED", "SYSTEM" ]
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "internal" : {
+            "type" : "boolean"
+          },
+          "readonly" : {
+            "type" : "boolean"
+          },
+          "defaultTemplate" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "code", "defaultTemplate", "description", "id", "internal", "name", "readonly", "templateType" ]
+      },
+      "ServiceConfiguration" : {
+        "type" : "object",
+        "properties" : {
+          "logPayload" : {
+            "type" : "boolean"
+          },
+          "logSubstitution" : {
+            "type" : "boolean"
+          },
+          "logConnectorErrorInBackend" : {
+            "type" : "boolean"
+          },
+          "sendConnectorLifecycle" : {
+            "type" : "boolean"
+          },
+          "sendMappingStatus" : {
+            "type" : "boolean"
+          },
+          "sendSubscriptionEvents" : {
+            "type" : "boolean"
+          },
+          "sendNotificationLifecycle" : {
+            "type" : "boolean"
+          },
+          "externalExtensionEnabled" : {
+            "type" : "boolean"
+          },
+          "outboundMappingEnabled" : {
+            "type" : "boolean"
+          },
+          "inboundExternalIdCacheSize" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "inboundExternalIdCacheRetention" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "inventoryCacheSize" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "inventoryCacheRetention" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "inventoryFragmentsToCache" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "maxCPUTimeMS" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "codeTemplates" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/CodeTemplate"
+            }
+          }
+        },
+        "required" : [ "externalExtensionEnabled", "inboundExternalIdCacheRetention", "inboundExternalIdCacheSize", "inventoryCacheRetention", "inventoryCacheSize", "inventoryFragmentsToCache", "logConnectorErrorInBackend", "logPayload", "logSubstitution", "maxCPUTimeMS", "outboundMappingEnabled", "sendConnectorLifecycle", "sendMappingStatus", "sendNotificationLifecycle", "sendSubscriptionEvents" ]
+      },
+      "ConnectorConfiguration" : {
+        "type" : "object",
+        "properties" : {
+          "identifier" : {
+            "type" : "string",
+            "description" : "A unique identifier to identify the connector",
+            "example" : "o5rhgj4g"
+          },
+          "connectorType" : {
+            "type" : "string",
+            "description" : "The type of a connector. Must be one of MQTT, CUMULOCITY_MQTT_SERVICE, KAFKA, HTTP, WEB_HOOK",
+            "enum" : [ "MQTT", "CUMULOCITY_MQTT_SERVICE", "KAFKA", "HTTP", "WEB_HOOK" ],
+            "example" : "MQTT"
+          },
+          "enabled" : {
+            "type" : "boolean",
+            "description" : "Flag if the connector is enabled or not",
+            "example" : false
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "A meaningful name of the connector",
+            "example" : "MQTT Connector"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "description" : "The properties of the connector used to establish a connection",
+            "example" : {
+              "protocol" : "mqtt://",
+              "mqttHost" : "mqtt.example.com",
+              "mqttPort" : 1883,
+              "clientId" : "dynamic_mapper_client1"
+            }
+          }
+        },
+        "required" : [ "connectorType", "enabled", "identifier", "name", "properties" ]
+      },
+      "BinaryInfo" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ByteSequence" : {
+        "type" : "object"
+      },
+      "C8YRequest" : {
+        "type" : "object",
+        "properties" : {
+          "predecessor" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "method" : {
+            "type" : "string",
+            "enum" : [ "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE" ]
+          },
+          "sourceId" : {
+            "type" : "string"
+          },
+          "externalIdType" : {
+            "type" : "string"
+          },
+          "request" : {
+            "type" : "string"
+          },
+          "response" : {
+            "type" : "string"
+          },
+          "targetAPI" : {
+            "type" : "string",
+            "enum" : [ "ALARM", "ALARM_WITH_CHILDREN", "EVENT", "EVENT_WITH_CHILDREN", "MEASUREMENT", "INVENTORY", "OPERATION", "EMPTY", "ALL" ]
+          },
+          "error" : {
+            "type" : "object",
+            "properties" : {
+              "cause" : {
+                "type" : "object",
+                "properties" : {
+                  "stackTrace" : {
+                    "type" : "array",
+                    "items" : {
+                      "type" : "object",
+                      "properties" : {
+                        "classLoaderName" : {
+                          "type" : "string"
+                        },
+                        "moduleName" : {
+                          "type" : "string"
+                        },
+                        "moduleVersion" : {
+                          "type" : "string"
+                        },
+                        "methodName" : {
+                          "type" : "string"
+                        },
+                        "fileName" : {
+                          "type" : "string"
+                        },
+                        "lineNumber" : {
+                          "type" : "integer",
+                          "format" : "int32"
+                        },
+                        "className" : {
+                          "type" : "string"
+                        },
+                        "nativeMethod" : {
+                          "type" : "boolean"
+                        }
+                      }
+                    }
+                  },
+                  "message" : {
+                    "type" : "string"
+                  },
+                  "localizedMessage" : {
+                    "type" : "string"
+                  }
+                }
+              },
+              "stackTrace" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "classLoaderName" : {
+                      "type" : "string"
+                    },
+                    "moduleName" : {
+                      "type" : "string"
+                    },
+                    "moduleVersion" : {
+                      "type" : "string"
+                    },
+                    "methodName" : {
+                      "type" : "string"
+                    },
+                    "fileName" : {
+                      "type" : "string"
+                    },
+                    "lineNumber" : {
+                      "type" : "integer",
+                      "format" : "int32"
+                    },
+                    "className" : {
+                      "type" : "string"
+                    },
+                    "nativeMethod" : {
+                      "type" : "boolean"
+                    }
+                  }
+                }
+              },
+              "message" : {
+                "type" : "string"
+              },
+              "suppressed" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "stackTrace" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "object",
+                        "properties" : {
+                          "classLoaderName" : {
+                            "type" : "string"
+                          },
+                          "moduleName" : {
+                            "type" : "string"
+                          },
+                          "moduleVersion" : {
+                            "type" : "string"
+                          },
+                          "methodName" : {
+                            "type" : "string"
+                          },
+                          "fileName" : {
+                            "type" : "string"
+                          },
+                          "lineNumber" : {
+                            "type" : "integer",
+                            "format" : "int32"
+                          },
+                          "className" : {
+                            "type" : "string"
+                          },
+                          "nativeMethod" : {
+                            "type" : "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "message" : {
+                      "type" : "string"
+                    },
+                    "localizedMessage" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              },
+              "localizedMessage" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      },
+      "Context" : {
+        "type" : "object",
+        "properties" : {
+          "engine" : {
+            "$ref" : "#/components/schemas/Engine"
+          },
+          "polyglotBindings" : {
+            "$ref" : "#/components/schemas/Value"
+          }
+        }
+      },
+      "Engine" : {
+        "type" : "object",
+        "properties" : {
+          "version" : {
+            "type" : "string"
+          },
+          "options" : {
+            "$ref" : "#/components/schemas/OptionDescriptors"
+          },
+          "languages" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/Language"
+            }
+          },
+          "instruments" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/Instrument"
+            }
+          },
+          "cachedSources" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Source"
+            },
+            "uniqueItems" : true
+          },
+          "implementationName" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Instrument" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          },
+          "options" : {
+            "$ref" : "#/components/schemas/OptionDescriptors"
+          },
+          "website" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Language" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          },
+          "options" : {
+            "$ref" : "#/components/schemas/OptionDescriptors"
+          },
+          "website" : {
+            "type" : "string"
+          },
+          "interactive" : {
+            "type" : "boolean"
+          },
+          "defaultMimeType" : {
+            "type" : "string"
+          },
+          "mimeTypes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "uniqueItems" : true
+          },
+          "implementationName" : {
+            "type" : "string"
+          }
+        }
+      },
+      "OptionDescriptors" : {
+        "type" : "object"
+      },
+      "ProcessingContextObject" : {
+        "type" : "object",
+        "properties" : {
+          "mapping" : {
+            "$ref" : "#/components/schemas/Mapping"
+          },
+          "topic" : {
+            "type" : "string"
+          },
+          "api" : {
+            "type" : "string",
+            "enum" : [ "ALARM", "ALARM_WITH_CHILDREN", "EVENT", "EVENT_WITH_CHILDREN", "MEASUREMENT", "INVENTORY", "OPERATION", "EMPTY", "ALL" ]
+          },
+          "qos" : {
+            "type" : "string",
+            "enum" : [ "AT_MOST_ONCE", "AT_LEAST_ONCE", "EXACTLY_ONCE" ]
+          },
+          "resolvedPublishTopic" : {
+            "type" : "string"
+          },
+          "payload" : {
+            "type" : "object"
+          },
+          "rawPayload" : {
+            "type" : "object"
+          },
+          "requests" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/C8YRequest"
+            }
+          },
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "cause" : {
+                  "type" : "object",
+                  "properties" : {
+                    "stackTrace" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "object",
+                        "properties" : {
+                          "classLoaderName" : {
+                            "type" : "string"
+                          },
+                          "moduleName" : {
+                            "type" : "string"
+                          },
+                          "moduleVersion" : {
+                            "type" : "string"
+                          },
+                          "methodName" : {
+                            "type" : "string"
+                          },
+                          "fileName" : {
+                            "type" : "string"
+                          },
+                          "lineNumber" : {
+                            "type" : "integer",
+                            "format" : "int32"
+                          },
+                          "className" : {
+                            "type" : "string"
+                          },
+                          "nativeMethod" : {
+                            "type" : "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "message" : {
+                      "type" : "string"
+                    },
+                    "localizedMessage" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "stackTrace" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "classLoaderName" : {
+                        "type" : "string"
+                      },
+                      "moduleName" : {
+                        "type" : "string"
+                      },
+                      "moduleVersion" : {
+                        "type" : "string"
+                      },
+                      "methodName" : {
+                        "type" : "string"
+                      },
+                      "fileName" : {
+                        "type" : "string"
+                      },
+                      "lineNumber" : {
+                        "type" : "integer",
+                        "format" : "int32"
+                      },
+                      "className" : {
+                        "type" : "string"
+                      },
+                      "nativeMethod" : {
+                        "type" : "boolean"
+                      }
+                    }
+                  }
+                },
+                "message" : {
+                  "type" : "string"
+                },
+                "suppressed" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "stackTrace" : {
+                        "type" : "array",
+                        "items" : {
+                          "type" : "object",
+                          "properties" : {
+                            "classLoaderName" : {
+                              "type" : "string"
+                            },
+                            "moduleName" : {
+                              "type" : "string"
+                            },
+                            "moduleVersion" : {
+                              "type" : "string"
+                            },
+                            "methodName" : {
+                              "type" : "string"
+                            },
+                            "fileName" : {
+                              "type" : "string"
+                            },
+                            "lineNumber" : {
+                              "type" : "integer",
+                              "format" : "int32"
+                            },
+                            "className" : {
+                              "type" : "string"
+                            },
+                            "nativeMethod" : {
+                              "type" : "boolean"
+                            }
+                          }
+                        }
+                      },
+                      "message" : {
+                        "type" : "string"
+                      },
+                      "localizedMessage" : {
+                        "type" : "string"
+                      }
+                    }
+                  }
+                },
+                "localizedMessage" : {
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "processingType" : {
+            "type" : "string",
+            "enum" : [ "UNDEFINED", "ONE_DEVICE_ONE_VALUE", "ONE_DEVICE_MULTIPLE_VALUE", "MULTIPLE_DEVICE_ONE_VALUE", "MULTIPLE_DEVICE_MULTIPLE_VALUE" ]
+          },
+          "mappingType" : {
+            "type" : "string",
+            "enum" : [ "JSON", "FLAT_FILE", "HEX", "PROTOBUF_INTERNAL", "EXTENSION_SOURCE", "EXTENSION_SOURCE_TARGET", "CODE_BASED" ]
+          },
+          "processingCache" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/components/schemas/SubstituteValue"
+              }
+            }
+          },
+          "sendPayload" : {
+            "type" : "boolean"
+          },
+          "needsRepair" : {
+            "type" : "boolean"
+          },
+          "tenant" : {
+            "type" : "string"
+          },
+          "serviceConfiguration" : {
+            "$ref" : "#/components/schemas/ServiceConfiguration"
+          },
+          "supportsMessageContext" : {
+            "type" : "boolean"
+          },
+          "ignoreFurtherProcessing" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string",
+            "format" : "byte"
+          },
+          "sourceId" : {
+            "type" : "string"
+          },
+          "graalEngine" : {
+            "$ref" : "#/components/schemas/Engine"
+          },
+          "graalContext" : {
+            "$ref" : "#/components/schemas/Context"
+          },
+          "sharedCode" : {
+            "type" : "string"
+          },
+          "sharedSource" : {
+            "$ref" : "#/components/schemas/Source"
+          },
+          "systemCode" : {
+            "type" : "string"
+          },
+          "systemSource" : {
+            "$ref" : "#/components/schemas/Source"
+          },
+          "mappingSource" : {
+            "$ref" : "#/components/schemas/Source"
+          },
+          "sourceValue" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "binaryInfo" : {
+            "$ref" : "#/components/schemas/BinaryInfo"
+          },
+          "currentRequest" : {
+            "$ref" : "#/components/schemas/C8YRequest"
+          },
+          "pathsTargetForDeviceIdentifiers" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "deviceEntries" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SubstituteValue"
+            }
+          },
+          "pathTargets" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "uniqueItems" : true
+          },
+          "processingCacheSize" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "Source" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "length" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "bytes" : {
+            "$ref" : "#/components/schemas/ByteSequence"
+          },
+          "inputStream" : {
+            "type" : "object",
+            "deprecated" : true
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "language" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string",
+            "format" : "url"
+          },
+          "uri" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "reader" : {
+            "type" : "object"
+          },
+          "internal" : {
+            "type" : "boolean"
+          },
+          "mimeType" : {
+            "type" : "string"
+          },
+          "interactive" : {
+            "type" : "boolean"
+          },
+          "lineCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "characters" : {
+            "type" : "object",
+            "properties" : {
+              "empty" : {
+                "type" : "boolean"
+              }
+            }
+          }
+        }
+      },
+      "SourceSection" : {
+        "type" : "object",
+        "properties" : {
+          "source" : {
+            "$ref" : "#/components/schemas/Source"
+          },
+          "endLine" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "endColumn" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "startLine" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "charIndex" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "startColumn" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "charLength" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "charEndIndex" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "code" : {
+            "type" : "object",
+            "deprecated" : true,
+            "properties" : {
+              "empty" : {
+                "type" : "boolean"
+              }
+            }
+          },
+          "characters" : {
+            "type" : "object",
+            "properties" : {
+              "empty" : {
+                "type" : "boolean"
+              }
+            }
+          },
+          "available" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "SubstituteValue" : {
+        "type" : "object",
+        "properties" : {
+          "value" : {
+            "type" : "object"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "ARRAY", "IGNORE", "NUMBER", "OBJECT", "TEXTUAL" ]
+          },
+          "repairStrategy" : {
+            "type" : "string",
+            "enum" : [ "DEFAULT", "USE_FIRST_VALUE_OF_ARRAY", "USE_LAST_VALUE_OF_ARRAY", "IGNORE", "REMOVE_IF_MISSING_OR_NULL", "CREATE_IF_MISSING" ]
+          },
+          "expandArray" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "Value" : {
+        "type" : "object",
+        "properties" : {
+          "context" : {
+            "$ref" : "#/components/schemas/Context"
+          },
+          "iterator" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "null" : {
+            "type" : "boolean"
+          },
+          "number" : {
+            "type" : "boolean"
+          },
+          "boolean" : {
+            "type" : "boolean"
+          },
+          "iteratorNextElement" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "hashKeysIterator" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "metaQualifiedName" : {
+            "type" : "string"
+          },
+          "hashValuesIterator" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "nativePointer" : {
+            "type" : "boolean"
+          },
+          "hostObject" : {
+            "type" : "boolean"
+          },
+          "metaObject" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "metaSimpleName" : {
+            "type" : "string"
+          },
+          "metaParents" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "sourceLocation" : {
+            "$ref" : "#/components/schemas/SourceSection"
+          },
+          "bufferSize" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "bufferWritable" : {
+            "type" : "boolean"
+          },
+          "exception" : {
+            "type" : "boolean"
+          },
+          "hashEntriesIterator" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "string" : {
+            "type" : "boolean"
+          },
+          "date" : {
+            "type" : "boolean"
+          },
+          "duration" : {
+            "type" : "boolean"
+          },
+          "time" : {
+            "type" : "boolean"
+          },
+          "timeZone" : {
+            "type" : "boolean"
+          },
+          "proxyObject" : {
+            "type" : "boolean"
+          },
+          "hashSize" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "arraySize" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "memberKeys" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "uniqueItems" : true
+          },
+          "instant" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ServiceOperation" : {
+        "type" : "object",
+        "properties" : {
+          "tenant" : {
+            "type" : "string"
+          },
+          "operation" : {
+            "type" : "string",
+            "enum" : [ "ACTIVATE_MAPPING", "CONNECT", "DISCONNECT", "REFRESH_STATUS_MAPPING", "RELOAD_EXTENSIONS", "RELOAD_MAPPINGS", "RESET_STATUS_MAPPING", "REFRESH_NOTIFICATIONS_SUBSCRIPTIONS", "DEBUG_MAPPING", "SNOOP_MAPPING", "SNOOP_RESET", "RESET_DEPLOYMENT_MAP", "CLEAR_CACHE", "APPLY_MAPPING_FILTER", "COPY_SNOOPED_SOURCE_TEMPLATE", "INIT_CODE_TEMPLATES", "ADD_SAMPLE_MAPPINGS" ]
+          },
+          "parameter" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "operation" ]
+      },
+      "MappingTreeNode" : {
+        "type" : "object",
+        "properties" : {
+          "childNodes" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/components/schemas/MappingTreeNode"
+              }
+            }
+          },
+          "mapping" : {
+            "$ref" : "#/components/schemas/Mapping"
+          },
+          "nodeId" : {
+            "type" : "string"
+          },
+          "mappingNode" : {
+            "type" : "boolean"
+          },
+          "depthIndex" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "parentNode" : {
+            "$ref" : "#/components/schemas/MappingTreeNode"
+          },
+          "absolutePath" : {
+            "type" : "string"
+          },
+          "level" : {
+            "type" : "string"
+          },
+          "tenant" : {
+            "type" : "string"
+          },
+          "treeLock" : {
+            "type" : "object"
+          },
+          "readLock" : {
+            "type" : "object"
+          },
+          "writeLock" : {
+            "type" : "object"
+          },
+          "parentOptional" : {
+            "$ref" : "#/components/schemas/MappingTreeNode"
+          },
+          "mappingOptional" : {
+            "$ref" : "#/components/schemas/Mapping"
+          }
+        }
+      },
+      "MappingStatus" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "identifier" : {
+            "type" : "string"
+          },
+          "direction" : {
+            "type" : "string",
+            "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ]
+          },
+          "mappingTopic" : {
+            "type" : "string"
+          },
+          "publishTopic" : {
+            "type" : "string"
+          },
+          "messagesReceived" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "errors" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "currentFailureCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "snoopedTemplatesActive" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "snoopedTemplatesTotal" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "loadingError" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "currentFailureCount", "direction", "errors", "id", "identifier", "loadingError", "mappingTopic", "messagesReceived", "name", "publishTopic", "snoopedTemplatesActive", "snoopedTemplatesTotal" ]
+      },
+      "ConnectorStatusEvent" : {
+        "type" : "object",
+        "properties" : {
+          "connectorName" : {
+            "type" : "string"
+          },
+          "connectorIdentifier" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "UNKNOWN", "CONFIGURED", "ENABLED", "CONNECTING", "CONNECTED", "DISCONNECTED", "DISCONNECTING", "FAILED" ]
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "date" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "connectorIdentifier", "connectorName", "date", "message", "status" ]
+      },
+      "Extension" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "loaded" : {
+            "type" : "string",
+            "enum" : [ "COMPLETE", "PARTIALLY", "NOT_LOADED", "UNKNOWN" ]
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "external" : {
+            "type" : "boolean"
+          },
+          "extensionEntries" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/ExtensionEntry"
+            }
+          }
+        },
+        "required" : [ "extensionEntries", "external", "id", "loaded", "name" ]
+      },
+      "DeploymentMapEntry" : {
+        "type" : "object",
+        "properties" : {
+          "identifier" : {
+            "type" : "string"
+          },
+          "connectors" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConnectorConfiguration"
+            }
+          }
+        },
+        "required" : [ "connectors", "identifier" ]
+      },
+      "Feature" : {
+        "type" : "object",
+        "description" : "Feature flags for the dynamic mapping service",
+        "properties" : {
+          "outputMappingEnabled" : {
+            "type" : "boolean",
+            "description" : "Flag to check if outbound mapping is enabled or not",
+            "example" : true
+          },
+          "externalExtensionsEnabled" : {
+            "type" : "boolean",
+            "description" : "Flag to check if external extensions are enabled or not",
+            "example" : true
+          },
+          "userHasMappingCreateRole" : {
+            "type" : "boolean",
+            "description" : "Flag to check if the logged in user has the CREATE Role",
+            "example" : true
+          },
+          "userHasMappingAdminRole" : {
+            "type" : "boolean",
+            "description" : "Flag to check if the logged in user has the ADMIN Role",
+            "example" : true
+          }
+        },
+        "required" : [ "externalExtensionsEnabled", "outputMappingEnabled", "userHasMappingAdminRole", "userHasMappingCreateRole" ]
+      },
+      "ConnectorProperty" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string",
+            "description" : "Property description",
+            "example" : "MQTT Connector"
+          },
+          "required" : {
+            "type" : "boolean",
+            "description" : "Flag if the property is required or not",
+            "example" : true
+          },
+          "order" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "The order number starting from 0",
+            "example" : 1
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "The type of the property",
+            "enum" : [ "ID_STRING_PROPERTY", "STRING_PROPERTY", "SENSITIVE_STRING_PROPERTY", "NUMERIC_PROPERTY", "BOOLEAN_PROPERTY", "OPTION_PROPERTY", "STRING_LARGE_PROPERTY" ],
+            "example" : "ConnectorPropertyType.STRING"
+          },
+          "readonly" : {
+            "type" : "boolean",
+            "description" : "Flag if the property is readonly",
+            "example" : true
+          },
+          "hidden" : {
+            "type" : "boolean",
+            "description" : "Flag if the property is hidden",
+            "example" : false
+          },
+          "defaultValue" : {
+            "type" : "object",
+            "description" : "Default Value of the property",
+            "example" : 2883
+          },
+          "options" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "description" : "A map of additional options for a selection box",
+            "example" : "Map.ofEntries(\n                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTT,\n                                        AConnectorClient.MQTT_PROTOCOL_MQTT),\n                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_MQTTS,\n                                        AConnectorClient.MQTT_PROTOCOL_MQTTS),\n                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WS,\n                                        AConnectorClient.MQTT_PROTOCOL_WS),\n                                new AbstractMap.SimpleEntry<String, String>(AConnectorClient.MQTT_PROTOCOL_WSS,\n                                        AConnectorClient.MQTT_PROTOCOL_WSS)),"
+          },
+          "condition" : {
+            "$ref" : "#/components/schemas/ConnectorPropertyCondition",
+            "description" : "A condition when the selected property should be enabled or not"
+          }
+        },
+        "required" : [ "hidden", "order", "readonly", "required", "type" ]
+      },
+      "ConnectorPropertyCondition" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string",
+            "description" : "The key of the property",
+            "example" : "protocol"
+          },
+          "anyOf" : {
+            "type" : "array",
+            "description" : "The values the property should have",
+            "example" : "{ AConnectorClient.MQTT_PROTOCOL_MQTTS, AConnectorClient.MQTT_PROTOCOL_WSS }",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "anyOf", "key" ]
+      },
+      "ConnectorSpecification" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "The name of the connector",
+            "example" : "MQTT Connector"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "A description of the connector",
+            "example" : "This is the MQTT Connector with the following features..."
+          },
+          "connectorType" : {
+            "type" : "string",
+            "description" : "The type of the Connector",
+            "enum" : [ "MQTT", "CUMULOCITY_MQTT_SERVICE", "KAFKA", "HTTP", "WEB_HOOK" ],
+            "example" : "MQTT"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/ConnectorProperty"
+            },
+            "description" : "A map of properties the connector needs to establish a connection. The key is the property name and the value is the property specification",
+            "example" : {
+              "protocol" : {
+                "description" : "The protocol to use",
+                "required" : true,
+                "order" : 1,
+                "type" : "STRING",
+                "readonly" : false
+              }
+            }
+          },
+          "supportsMessageContext" : {
+            "type" : "boolean",
+            "description" : "A flag to define if the connector supports message context. If true, the connector can handle additional metadata in messages.",
+            "example" : true
+          },
+          "supportedDirections" : {
+            "type" : "array",
+            "description" : "A List to define if the connector support INBOUND and OUTBOUND mappings or both.",
+            "example" : [ "INBOUND", "OUTBOUND" ],
+            "items" : {
+              "type" : "string",
+              "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ]
+            }
+          }
+        },
+        "required" : [ "connectorType", "description", "name", "properties", "supportedDirections", "supportsMessageContext" ]
+      }
+    }
+  }
+}

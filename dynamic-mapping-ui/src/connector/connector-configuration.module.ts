@@ -41,7 +41,7 @@ import { featureResolver, NODE3 } from '../shared/mapping/util';
           path: '',
           pathMatch: 'full',
           component: ConnectorConfigurationComponent,
-          resolve: { connector: connectorResolver, feature: featureResolver }
+          resolve: { feature: featureResolver }
         },
         {
           path: 'details/:identifier',

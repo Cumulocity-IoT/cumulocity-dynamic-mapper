@@ -21,7 +21,7 @@ import * as _ from 'lodash';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
+import { firstValueFrom, Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
 import {
   ConnectorConfiguration,
@@ -50,7 +50,7 @@ import { HttpStatusCode } from '@angular/common/http';
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
   monitorings$: Observable<ConnectorStatus>;
-  specifications: ConnectorSpecification[] = [];
+  specifications$: Observable<ConnectorSpecification[]>;
   statusLogs$: Observable<any[]>;
   configuration: ConnectorConfiguration;
   feature: Feature;
@@ -78,7 +78,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     // console.log('Running version', this.version);
-    this.specifications = await this.connectorConfigurationService.getConnectorSpecifications();
+    this.specifications$ = this.connectorConfigurationService.getSpecifications();
     this.feature = await this.sharedService.getFeatures();
     this.contextSubscription = this.route.data.pipe(
       takeUntil(this.destroy$),
@@ -91,7 +91,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
         this.filterStatusLog.connectorIdentifier = connector.identifier;
         this.updateStatusLogs();
       });
-    this.connectorStatusService.initConnectorLogsRealtime();
+    this.connectorStatusService.startConnectorStatusLogs();
     this.statusLogs$ = this.connectorStatusService.getStatusLogs();
     // Subscribe to logs to verify they're coming through
     this.statusLogs$.pipe(
@@ -110,11 +110,12 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
 
   async onConfigurationUpdate() {
 
+    const specifications = await firstValueFrom(this.specifications$);
     const configuration = _.clone(this.configuration);
     const initialState = {
       add: false,
       configuration: configuration,
-      specifications: this.specifications,
+      specifications: specifications,
       readOnly: configuration.enabled
     };
     const modalRef = this.bsModalService.show(
@@ -136,7 +137,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
           properties: editedConfiguration.properties
         };
         const response =
-          await this.connectorConfigurationService.updateConnectorConfiguration(
+          await this.connectorConfigurationService.updateConfiguration(
             clonedConfiguration
           );
         if (response.status < 300) {
@@ -162,9 +163,9 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     // console.log('Details toggle activation to broker', response1);
     if (response1.status === HttpStatusCode.Created) {
       // if (response1.status === HttpStatusCode.Created && response2.status === HttpStatusCode.Created) {
-        Promise.resolve().then(() => {
-          this.configuration.enabled = !this.configuration.enabled;
-        });
+      Promise.resolve().then(() => {
+        this.configuration.enabled = !this.configuration.enabled;
+      });
       this.alertService.success(gettext('Connection updated successfully.'));
     } else {
       this.alertService.danger(gettext('Failed to establish connection!'));
@@ -175,11 +176,12 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   }
 
   reloadData(): void {
-    this.connectorConfigurationService.updateConnectorConfigurations();
+    this.connectorConfigurationService.refreshConfigurations();
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    this.connectorStatusService.stopConnectorStatusLogs();
   }
 }

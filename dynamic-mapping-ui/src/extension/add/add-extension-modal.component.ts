@@ -27,14 +27,15 @@ import {
   ApplicationService,
   IApplication,
   IManagedObject,
-  IManagedObjectBinary
 } from '@c8y/client';
 import {
   AlertService,
   DropAreaComponent,
+  gettext,
+  IFetchWithProgress,
   ModalLabels
 } from '@c8y/ngx-components';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { ERROR_MESSAGES } from '../share/extension.constants';
 import { ExtensionService } from '../extension.service';
 
@@ -50,7 +51,9 @@ export class AddExtensionComponent implements OnDestroy {
 
   isLoading: boolean;
   isAppCreated: boolean;
-  createdApp: Partial<IManagedObject>;
+  app: Partial<IManagedObject>;
+  uploadProgress: IFetchWithProgress | null = null;
+  progress$: Subject<number> = new Subject<number>();
   errorMessage: string;
   private uploadCanceled: boolean = false;
   closeSubject: Subject<boolean> = new Subject();
@@ -60,15 +63,12 @@ export class AddExtensionComponent implements OnDestroy {
     private extensionService: ExtensionService,
     private alertService: AlertService,
     private applicationService: ApplicationService
-  ) {}
+  ) { }
 
   ngOnDestroy(): void {
     this.closeSubject.complete();
   }
 
-  get progress(): BehaviorSubject<number> {
-    return this.extensionService.progress;
-  }
 
   onFileDroppedEvent(event) {
     if (event && event.length > 0) {
@@ -81,30 +81,65 @@ export class AddExtensionComponent implements OnDestroy {
   async onFile(file: File) {
     this.isLoading = true;
     this.errorMessage = null;
-    this.progress.next(0);
+    this.progress$.next(0); // Reset progress
     const nameUpload = file.name.split('.').slice(0, -1).join('.');
-    // constant PROCESSOR_EXTENSION_TYPE
+
     try {
-      this.createdApp = {
+      this.app = {
         d11r_processorExtension: {
           name: nameUpload,
           external: true
         },
         name: nameUpload
       };
-      this.createdApp = await this.uploadExtension(file, this.createdApp);
+
+      const progress: Observable<IFetchWithProgress> = this.extensionService.uploadProcessorExtensionWithProgress$(file, this.app);
       this.isAppCreated = true;
+
+      // Subscribe to the progress Observable
+      progress.subscribe(
+        {
+          next: (uploadProgress) => {
+            // Only emit the percentage to progress$ Subject
+            this.progress$.next(Math.round(uploadProgress.percentage));
+          },
+          error: (error) => {
+            // Handle errors
+            this.isLoading = false;
+            this.progress$.next(0); // Reset progress on error
+            this.extensionService.cancelProcessorExtensionCreation(this.app);
+            this.app = null;
+            this.dropAreaComponent.onDelete();
+
+            this.errorMessage = ERROR_MESSAGES[error.message];
+            if (!this.errorMessage && !this.uploadCanceled) {
+              this.alertService.addServerFailure(error);
+            }
+          },
+          complete: () => {
+            // Handle successful completion
+            this.isLoading = false;
+            this.progress$.next(100); // Set to 100% on completion
+            this.alertService.success(gettext('Processor extension uploaded successfully.'));
+
+            // Optional: Reset progress after a delay
+            setTimeout(() => this.progress$.next(0), 2000);
+          }
+        }
+      );
+
     } catch (ex) {
-      this.extensionService.cancelExtensionCreation(this.createdApp);
-      this.createdApp = null;
+      // Handle synchronous errors
+      this.isLoading = false;
+      this.progress$.next(0); // Reset progress on error
+      this.extensionService.cancelProcessorExtensionCreation(this.app);
+      this.app = null;
       this.dropAreaComponent.onDelete();
       this.errorMessage = ERROR_MESSAGES[ex.message];
       if (!this.errorMessage && !this.uploadCanceled) {
         this.alertService.addServerFailure(ex);
       }
     }
-    this.progress.next(100);
-    this.isLoading = false;
   }
 
   getHref(app: IApplication): string {
@@ -124,14 +159,8 @@ export class AddExtensionComponent implements OnDestroy {
 
   private cancelFileUpload() {
     this.uploadCanceled = true;
-    this.extensionService.cancelExtensionCreation(this.createdApp);
-    this.createdApp = null;
+    this.extensionService.cancelProcessorExtensionCreation(this.app);
+    this.app = null;
   }
 
-  async uploadExtension(
-    file: File,
-    app: Partial<IManagedObject>
-  ): Promise<IManagedObjectBinary> {
-    return this.extensionService.uploadExtension(file, app);
-  }
 }

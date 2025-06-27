@@ -30,7 +30,7 @@ import {
 } from '@angular/core';
 import * as _ from 'lodash';
 import { AlertService } from '@c8y/ngx-components';
-import { BehaviorSubject, Subscription } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import {
   ConfirmationModalComponent,
   Direction,
@@ -66,19 +66,20 @@ interface TestResult {
   standalone: false
 })
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
-  @Input() mapping: Mapping;
-  @Input() stepperConfiguration: StepperConfiguration;
-  @Input() updateTestingTemplate: EventEmitter<any>;
+  @Input() mapping!: Mapping;
+  @Input() stepperConfiguration!: StepperConfiguration;
+  @Input() updateTestingTemplate!: EventEmitter<any>;
   @Output() testResult: EventEmitter<boolean> = new EventEmitter<boolean>();
 
-  @ViewChild('editorTestingPayload') editorTestingPayload: JsonEditorComponent;
-  @ViewChild('editorTestingRequest') editorTestingRequest: JsonEditorComponent;
-  @ViewChild('editorTestingResponse') editorTestingResponse: JsonEditorComponent;
+  @ViewChild('editorTestingPayload') editorTestingPayload!: JsonEditorComponent;
+  @ViewChild('editorTestingRequest') editorTestingRequest!: JsonEditorComponent;
+  @ViewChild('editorTestingResponse') editorTestingResponse!: JsonEditorComponent;
 
   readonly Direction = Direction;
   readonly MappingType = MappingType;
 
-  private subscription: Subscription;
+  private destroy$ = new BehaviorSubject<void>(undefined);
+
   private readonly defaultEditorOptions = {
     mode: 'tree',
     removeModes: ['text', 'table'],
@@ -86,24 +87,24 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     navigationBar: false,
     statusBar: false,
     readOnly: true
-  };
+  } as const;
 
-  testContext: ProcessingContext;
+  testContext!: ProcessingContext;
   testingModel: TestingModel = { results: [], selectedResult: -1 };
-  testMapping: Mapping;
+  testMapping!: Mapping;
   sourceTemplate: any;
-  sourceSystem: string;
-  targetSystem: string;
+  sourceSystem!: string;
+  targetSystem!: string;
   selectedResult$ = new BehaviorSubject<number>(0);
   editorOptionsTesting = this.defaultEditorOptions;
-  ignoreErrorNonExisting: boolean = false;
+  ignoreErrorNonExisting = false;
 
   constructor(
-    private mappingService: MappingService,
-    private alertService: AlertService,
-    private elementRef: ElementRef,
-    private bsModalService: BsModalService,
-  ) { }
+    private readonly mappingService: MappingService,
+    private readonly alertService: AlertService,
+    private readonly elementRef: ElementRef,
+    private readonly bsModalService: BsModalService,
+  ) {}
 
   ngOnInit(): void {
     this.initializeMapping();
@@ -111,67 +112,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
     this.selectedResult$.complete();
   }
 
-  private initializeMapping(): void {
-    this.mapping.direction = this.mapping.direction || Direction.INBOUND;
-    this.setSystemDirections();
-  }
-
-  private setSystemDirections(): void {
-    const isInbound = this.mapping.direction === Direction.INBOUND;
-    this.targetSystem = isInbound ? 'Cumulocity' : 'Broker';
-    this.sourceSystem = !isInbound ? 'Cumulocity' : 'Broker';
-  }
-
-  private setupSubscriptions(): void {
-    this.subscription = this.updateTestingTemplate.subscribe(
-      this.handleTestMappingUpdate.bind(this)
-    );
-  }
-
-  private async handleTestMappingUpdate(testMapping: any): Promise<void> {
-    try {
-      this.testMapping = testMapping;
-
-      this.sourceTemplate = JSON.parse(testMapping.sourceTemplate);
-
-      if (testMapping.direction === Direction.OUTBOUND) {
-        patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
-        sortObjectKeys(this.sourceTemplate);
-      }
-
-      await this.initializeTestContext(testMapping);
-    } catch (error) {
-      await this.handleError('Failed to update test mapping', error);
-    }
-  }
-
-  private async initializeTestContext(testMapping: any): Promise<void> {
-    this.testContext = this.mappingService.initializeContext(testMapping);
-
-    if (this.isEditorAvailable()) {
-      await this.setupEditor();
-    }
-  }
-
-  private isEditorAvailable(): boolean {
-    return !!this.elementRef.nativeElement.querySelector('#editorTestingRequest');
-  }
-
-  private async setupEditor(): Promise<void> {
-    const schema = getSchema(
-      this.mapping.targetAPI,
-      this.mapping.direction,
-      true,
-      true
-    );
-
-    this.editorTestingRequest?.setSchema(schema);
-    this.resetTestingModel();
-  }
+  // --- Public API ---
 
   async onTestTransformation(): Promise<void> {
     await this.executeTest(false);
@@ -202,14 +148,68 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async executeTest(sendPayload: boolean): Promise<void> {
+  disableTestSending(): boolean {
+    return !this.stepperConfiguration.allowTestSending ||
+      this.testingModel.results.length === 0 ||
+      !this.testMapping.useExternalId;
+  }
+
+  // --- Private methods ---
+
+  private initializeMapping(): void {
+    this.mapping.direction = this.mapping.direction ?? Direction.INBOUND;
+    this.setSystemDirections();
+  }
+
+  private setSystemDirections(): void {
+    const isInbound = this.mapping.direction === Direction.INBOUND;
+    this.targetSystem = isInbound ? 'Cumulocity' : 'Broker';
+    this.sourceSystem = !isInbound ? 'Cumulocity' : 'Broker';
+  }
+
+  private setupSubscriptions(): void {
+    this.updateTestingTemplate
+      .pipe()
+      .subscribe(this.handleTestMappingUpdate.bind(this));
+  }
+
+  private async handleTestMappingUpdate(testMapping: Mapping): Promise<void> {
     try {
-      const result = await this.performTestExecution(sendPayload);
-      this.handleTestResult(result, sendPayload);
-      this.onNextTestResult();
+      this.testMapping = testMapping;
+      this.sourceTemplate = JSON.parse(testMapping.sourceTemplate);
+
+      if (testMapping.direction === Direction.OUTBOUND) {
+        patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
+        sortObjectKeys(this.sourceTemplate);
+      }
+
+      await this.initializeTestContext(testMapping);
     } catch (error) {
-      this.handleError(error.message, error);
+      await this.handleError('Failed to update test mapping', error);
     }
+  }
+
+  private async initializeTestContext(testMapping: Mapping): Promise<void> {
+    this.testContext = this.mappingService.initializeContext(testMapping);
+
+    if (this.isEditorAvailable()) {
+      await this.setupEditor();
+    }
+  }
+
+  private isEditorAvailable(): boolean {
+    return !!this.elementRef.nativeElement.querySelector('#editorTestingRequest');
+  }
+
+  private async setupEditor(): Promise<void> {
+    const schema = getSchema(
+      this.mapping.targetAPI,
+      this.mapping.direction,
+      true,
+      true
+    );
+    this.editorTestingRequest?.setSchema(schema);
+    this.resetTestingModel();
   }
 
   private resetTestingModel(): void {
@@ -267,32 +267,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.testingModel.errorMsg = undefined;
   }
 
-  private async handleError(message: string, error: any): Promise<void> {
-    //console.error(message, error);
-    let result = false;
-    if (error['possibleIgnoreErrorNonExisting']) {
-      const initialState = {
-        title: `Ignore error non existing device`,
-        message: `The testing resulted in an error, that the referenced device does not exit! Would you like to test again and ignore this error?`,
-        labels: {
-          ok: 'Ignore',
-          cancel: 'Cancel'
-        }
-      };
-      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-        ConfirmationModalComponent,
-        { initialState }
-      );
-
-      result = await confirmDeletionModalRef.content.closeSubject.toPromise();
-      if (result) {
-        this.testMapping.createNonExistingDevice = true;
-        await this.initializeTestContext(this.testMapping)
-      } else {
-      }
-    } else {
-      const m = message || error.message;
-      this.alertService.danger(`${m}`);
+  private async executeTest(sendPayload: boolean): Promise<void> {
+    try {
+      const result = await this.performTestExecution(sendPayload);
+      this.handleTestResult(result, sendPayload);
+      this.onNextTestResult();
+    } catch (error) {
+      await this.handleError('Test execution failed', error);
     }
   }
 
@@ -310,7 +291,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     // Collect all errors
     const requestErrors = this.collectRequestErrors();
-    const contextErrors = this.testContext.errors || [];
+    const contextErrors = this.testContext.errors ?? [];
 
     return {
       success: requestErrors.length === 0 && contextErrors.length === 0,
@@ -319,7 +300,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private collectRequestErrors(): string[] {
-    return (this.testContext.requests || [])
+    return (this.testContext.requests ?? [])
       .filter(request => request?.error)
       .map(request => request.error);
   }
@@ -336,7 +317,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private handleTestFailure(errors: string[]): void {
-    // this.alertService.warning('Test of mapping failed!');
     errors.forEach(error => {
       this.alertService.danger(error);
     });
@@ -354,7 +334,30 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
   }
 
-  disableTestSending(): boolean {
-    return !this.stepperConfiguration.allowTestSending || this.testingModel.results.length == 0 || !this.testMapping.useExternalId;
+  private async handleError(message: string, error: unknown): Promise<void> {
+    let result = false;
+    if (typeof error === 'object' && error && 'possibleIgnoreErrorNonExisting' in error) {
+      const initialState = {
+        title: `Ignore error non existing device`,
+        message: `The testing resulted in an error, that the referenced device does not exist! Would you like to test again and ignore this error?`,
+        labels: {
+          ok: 'Ignore',
+          cancel: 'Cancel'
+        }
+      } as const;
+      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+        ConfirmationModalComponent,
+        { initialState }
+      );
+
+      result = await confirmDeletionModalRef.content.closeSubject.toPromise();
+      if (result) {
+        this.testMapping.createNonExistingDevice = true;
+        await this.initializeTestContext(this.testMapping);
+      }
+    } else {
+      const m = message || (error instanceof Error ? error.message : String(error));
+      this.alertService.danger(`${m}`);
+    }
   }
 }
