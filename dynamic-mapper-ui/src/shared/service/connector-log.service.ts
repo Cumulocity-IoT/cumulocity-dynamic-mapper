@@ -50,7 +50,6 @@ export class ConnectorLogService {
     );
   }
 
-  private subscriptions = new Subscription();
   private eventRealtimeService: EventRealtimeService;
 
   private agentId$: Observable<string> = from(
@@ -101,8 +100,6 @@ export class ConnectorLogService {
   }
 
   stopConnectorStatusLogs(): void {
-    this.subscriptions.unsubscribe();
-    this.subscriptions = new Subscription(); // Reset for potential restart
     this.eventRealtimeService.stop();
     this.isInitialized = false;
 
@@ -149,8 +146,6 @@ export class ConnectorLogService {
     const subscription = this.combineEventStreams().subscribe(events => {
       this.statusLogs$.next(events);
     });
-
-    this.subscriptions.add(subscription);
   }
 
   private combineEventStreams(): Observable<ConnectorStatusEvent[]> {

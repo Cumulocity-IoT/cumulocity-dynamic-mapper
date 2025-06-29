@@ -65,7 +65,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
 
   // Subscription management
-  private readonly destroy$ = new Subject<void>();
+  private destroy$;
 
   // State management
   readonly state$ = new BehaviorSubject<MonitoringComponentState>({
@@ -232,6 +232,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
   private async initializeMonitoringService(): Promise<void> {
     await this.monitoringService.startMonitoring();
+    this.destroy$ = new Subject<void>();
 
     this.monitoringService
       .getMappingStatus()

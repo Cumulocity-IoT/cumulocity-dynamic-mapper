@@ -28,7 +28,6 @@ import {
 import {
   Observable,
   Subject,
-  Subscription,
   combineLatest,
   filter,
   map,
@@ -93,7 +92,6 @@ export class MappingService {
     this.initializeMappingsEnriched();
   }
   private eventRealtimeService: EventRealtimeService;
-  private subscription: Subscription;
   private updateMappingEnriched$: Subject<MappingEnriched> = new Subject();
   queriesUtil: QueriesUtil;
   private _agentId: string;
@@ -551,7 +549,7 @@ export class MappingService {
 
     // subscribe to event stream
     this.eventRealtimeService.start();
-    this.subscription = this.eventRealtimeService
+    this.eventRealtimeService
       .onAll$(this._agentId)
       .pipe(
         map((p) => p['data']),
@@ -571,13 +569,8 @@ export class MappingService {
   }
 
   async stopChangedMappingEvents() { 
-    if (this.subscription) {
-      this.subscription.unsubscribe();
-      this.subscription = null;
-    }
     if (this.eventRealtimeService) {
       this.eventRealtimeService.stop();
     }
-    // console.log('Stopped subscriptions:', this._agentId);
   }
 }

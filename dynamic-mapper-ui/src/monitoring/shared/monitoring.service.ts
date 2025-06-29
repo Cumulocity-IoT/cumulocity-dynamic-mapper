@@ -52,7 +52,6 @@ export class MonitoringService {
     error: null,
   });
   private mappingStatus$ = this.state$.pipe(map(state => state.status));
-  private subscriptions = new Subscription();
   private isMonitoring = false;
 
 
@@ -99,7 +98,6 @@ export class MonitoringService {
         )
         .subscribe((status) => this.state$.next({ status, error: null }));
 
-      this.subscriptions.add(realtimeSubscription);
 
       // Continue with monitoring setup...
     } catch (error) {
@@ -110,7 +108,6 @@ export class MonitoringService {
   }
 
   stopMonitoring(): void {
-    this.subscriptions.unsubscribe();
     if (this.managedObjectRealtimeService) this.managedObjectRealtimeService.stop();
     this.isMonitoring = false;
   }
