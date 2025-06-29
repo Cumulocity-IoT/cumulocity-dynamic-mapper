@@ -153,7 +153,7 @@ export class CodeComponent implements OnInit {
     });
   }
 
-  async onResetSystemCodeTemplate() {
+  async onInitSystemCodeTemplate() {
     const response1 = await this.sharedService.runOperation(
       { operation: Operation.INIT_CODE_TEMPLATES }
     );

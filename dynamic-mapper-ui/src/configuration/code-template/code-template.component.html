@@ -46,9 +46,9 @@
     <i c8yIcon="duplicate"></i>
     {{ 'Duplicate' | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onResetSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
+  <button class="btn btn-link" title="{{ 'Reset' | translate }}" (click)="onInitSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="reset"></i>
-    {{ 'Reset system templates' | translate }}
+    {{ 'Init system templates' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
     <i c8yIcon="refresh"></i>
