@@ -274,6 +274,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       },
     };
 
+    this.setTemplateForm();
+
     this.feature = await this.sharedService.getFeatures();
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
       this.editorOptionsSourceSubstitution.readOnly = true;
@@ -285,7 +287,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.initializeFormlyFields();
 
     this.initializeCodeTemplates();
-    this.setTemplateForm();
 
   }
 
