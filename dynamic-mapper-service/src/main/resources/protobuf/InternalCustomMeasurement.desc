@@ -1,7 +1,7 @@
 
-ï¿½
-StaticCustomMeasurement.protoprocessor.protobuf"ï¿½
-StaticCustomMeasurement
+á
+InternalCustomMeasurement.protoprocessor.protobuf"Õ
+InternalCustomMeasurement
 	timestamp (R	timestamp
 value (Rvalue
 unit (	Runit&
@@ -9,5 +9,5 @@
 
 externalId (	R
 externalId(
-measurementType (	RmeasurementTypeBF
-&dynamic.mapping.processor.processor.fixedBStaticCustomMeasurementOuterbproto3
+measurementType (	RmeasurementTypeBJ
+(dynamic.mapper.processor.processor.fixedBInternalCustomMeasurementOuterbproto3

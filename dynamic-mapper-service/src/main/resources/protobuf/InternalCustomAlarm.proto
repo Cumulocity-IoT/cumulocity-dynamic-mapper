@@ -4,7 +4,8 @@ package processor.protobuf;
 option java_package = "dynamic.mapper.processor.extension.internal";
 option java_outer_classname = "InternalCustomAlarmOuter";
 
-message InternalCustomAlarm {
+
+ message InternalCustomAlarm {
   int64 timestamp = 1;
   string txt = 2;
   string unit = 3;
