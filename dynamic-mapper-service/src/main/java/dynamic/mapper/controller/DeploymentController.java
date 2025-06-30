@@ -125,7 +125,7 @@ public class DeploymentController {
 					    "identifier": "l19zjk",
 					    "connectors": [
 					      {
-					        "identifier": "mqtt-connector-01",
+					        "identifier": "as9zjk",
 					        "name": "MQTT Production Connector",
 					        "enabled": true,
 					        "connectorType": "MQTT"
@@ -136,7 +136,7 @@ public class DeploymentController {
 					    "identifier": "m23abc",
 					    "connectors": [
 					      {
-					        "identifier": "http-connector",
+					        "identifier": "n67zjk",
 					        "name": "HTTP Connector",
 					        "enabled": true,
 					        "connectorType": "HTTP"
