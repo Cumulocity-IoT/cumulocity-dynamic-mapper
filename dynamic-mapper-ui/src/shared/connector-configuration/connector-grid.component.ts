@@ -21,7 +21,7 @@ import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewIni
 import { ActionControl, AlertService, Column, CountdownIntervalComponent, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, from, Observable, Subject, } from 'rxjs';
-import { filter, map, take, takeUntil, tap } from 'rxjs/operators';
+import { filter, map, take, takeUntil } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
@@ -34,7 +34,7 @@ import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingI
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
-import { Form, FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup } from '@angular/forms';
 
 @Component({
   selector: 'd11r-mapping-connector-grid',
@@ -98,7 +98,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     this.initializeSpecifications();
     this.intervals = this.connectorConfigurationService.getAvailablePollingIntervals();
     this.currentPollingInterval = this.connectorConfigurationService.getCurrentPollingIntervalValue();
-    console.log('Current Polling Interval:', this.currentPollingInterval);
+    // console.log('Current Polling Interval:', this.currentPollingInterval);
     this.customClasses = this.shouldHideBulkActionsAndReadOnly ? 'hide-bulk-actions' : '';
     this.feature = await this.sharedService.getFeatures();
     this.toggleIntervalForm.get('refreshInterval')?.valueChanges.subscribe(value => {

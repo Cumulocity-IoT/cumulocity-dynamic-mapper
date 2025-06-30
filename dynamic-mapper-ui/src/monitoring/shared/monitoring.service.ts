@@ -19,7 +19,7 @@
  */
 import { inject, Injectable } from '@angular/core';
 import { InventoryService } from '@c8y/client';
-import { BehaviorSubject, map, Observable, Subscription } from 'rxjs';
+import { BehaviorSubject, map, Observable, Subject, Subscription, takeUntil } from 'rxjs';
 import { MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
 import {
   ManagedObjectRealtimeService,
@@ -53,6 +53,7 @@ export class MonitoringService {
   });
   private mappingStatus$ = this.state$.pipe(map(state => state.status));
   private isMonitoring = false;
+  private unsubscribe$ = new Subject<void>();
 
 
   getMappingStatus(): Observable<MappingStatus[]> {
@@ -84,7 +85,7 @@ export class MonitoringService {
 
       // subscribe to event stream
       this.managedObjectRealtimeService.start();
-      const realtimeSubscription = this.managedObjectRealtimeService
+      this.managedObjectRealtimeService
         .onAll$(agentId)
         .pipe(
           map((update) => {
@@ -94,7 +95,8 @@ export class MonitoringService {
             }
             const mappingData = update.data[MAPPING_FRAGMENT];
             return Array.isArray(mappingData) ? mappingData : [];
-          })
+          }),
+          takeUntil(this.unsubscribe$)
         )
         .subscribe((status) => this.state$.next({ status, error: null }));
 
@@ -110,5 +112,7 @@ export class MonitoringService {
   stopMonitoring(): void {
     if (this.managedObjectRealtimeService) this.managedObjectRealtimeService.stop();
     this.isMonitoring = false;
+    this.unsubscribe$.next();
+    this.unsubscribe$.complete();
   }
 }

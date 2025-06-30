@@ -33,7 +33,8 @@ import {
   map,
   shareReplay,
   switchMap,
-  take
+  take,
+  takeUntil
 } from 'rxjs';
 import {
   BASE_URL,
@@ -105,6 +106,8 @@ export class MappingService {
 
   reloadInbound$: Subject<void>; // = new Subject<void>();
   reloadOutbound$: Subject<void>; // = new Subject<void>();
+
+  private unsubscribe$ = new Subject<void>();
 
   async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
     return await this.sharedService.runOperation(
@@ -560,7 +563,8 @@ export class MappingService {
           (payload) =>
             payload['type'] ==
             LoggingEventTypeMap[LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE].type
-        )
+        ),
+        takeUntil(this.unsubscribe$)
       )
       .subscribe(() => {
         this.reloadInbound$.next();
@@ -568,9 +572,11 @@ export class MappingService {
       });
   }
 
-  async stopChangedMappingEvents() { 
+  async stopChangedMappingEvents() {
     if (this.eventRealtimeService) {
       this.eventRealtimeService.stop();
+      this.unsubscribe$.next();
+      this.unsubscribe$.complete();
     }
   }
 }

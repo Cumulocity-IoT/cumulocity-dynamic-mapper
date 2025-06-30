@@ -28,8 +28,8 @@ import {
   SharedService,
 } from '..';
 
-import { BehaviorSubject, from, merge, Observable, of, ReplaySubject, Subscription } from 'rxjs';
-import { catchError, filter, map, scan, shareReplay, switchMap } from 'rxjs/operators';
+import { BehaviorSubject, from, merge, Observable, of, ReplaySubject, Subject, Subscription } from 'rxjs';
+import { catchError, filter, map, scan, shareReplay, switchMap, takeUntil } from 'rxjs/operators';
 import {
   EventRealtimeService,
   RealtimeSubjectService
@@ -43,6 +43,8 @@ export class ConnectorLogService {
   private readonly eventService = inject(EventService);
   private readonly sharedService = inject(SharedService);
   private readonly realtimeSubjectService = inject(RealtimeSubjectService);
+  // Subscription management
+  private readonly unsubscribe$ = new Subject<void>();
 
   constructor() {
     this.eventRealtimeService = new EventRealtimeService(
@@ -102,6 +104,8 @@ export class ConnectorLogService {
   stopConnectorStatusLogs(): void {
     this.eventRealtimeService.stop();
     this.isInitialized = false;
+    this.unsubscribe$.next();
+    this.unsubscribe$.complete();
 
     // Optionally reset state
     this.statusLogs$.next([]);
@@ -264,7 +268,8 @@ export class ConnectorLogService {
       filter((event): event is ConnectorStatusEvent => event !== null),
       // Apply filtering based on current filter state
       filter(event => this.matchesCurrentFilter(event)),
-      map(event => [event])
+      map(event => [event]),
+      takeUntil(this.unsubscribe$)
     );
   }
 

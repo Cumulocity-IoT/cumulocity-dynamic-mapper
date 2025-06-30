@@ -41,7 +41,6 @@ import {
   takeWhile,
 } from 'rxjs/operators';
 import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT, PollingInterval } from '..';
-import { EventRealtimeService, RealtimeSubjectService } from '@c8y/ngx-components';
 
 interface ConnectorConfigurationState {
   configurations: ConnectorConfiguration[];
@@ -55,10 +54,6 @@ export class ConnectorConfigurationService {
 
   // Subscription management
   private readonly destroy$ = new Subject<void>();
-
-  eventRealtimeService = new EventRealtimeService(
-    inject(RealtimeSubjectService)
-  );
 
   // State management
   private readonly state$ = new BehaviorSubject<ConnectorConfigurationState>({
@@ -185,7 +180,7 @@ export class ConnectorConfigurationService {
   // Add these public methods to control countdown
   startCountdown(): void {
     if (this.isCountdownActive) {
-      console.log('⏸️ Countdown already active');
+      // console.log('⏸️ Countdown already active');
       return;
     }
 
@@ -310,6 +305,7 @@ export class ConnectorConfigurationService {
         this.handleError('Failed to load configurations', error);
         return of([]);
       }),
+      tap( configs => console.log ("Configuration", configs)),
       distinctUntilChanged(),
       shareReplay(1),
       takeUntil(this.destroy$)
@@ -339,7 +335,7 @@ export class ConnectorConfigurationService {
         return timer(0, interval).pipe(
           tap(() => {
             this.lastTriggerTime = Date.now();
-            console.log(`⏰ Timer triggered - loading connector status`);
+            // console.log(`⏰ Timer triggered - loading connector status`);
 
             // Only start countdown if it should be active
             if (this.isCountdownActive) {
