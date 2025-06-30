@@ -67,7 +67,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.info.License;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -76,12 +78,45 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
 @RequestMapping("/configuration")
 @RestController
-@SecurityScheme(type = SecuritySchemeType.HTTP, name = "basicAuth", in = SecuritySchemeIn.HEADER)
-@OpenAPIDefinition(info = @Info(title = "Dynamic Mapper API", version = "v1"), security = { @SecurityRequirement(name = "basicAuth")})
+@SecurityScheme(
+    type = SecuritySchemeType.HTTP, 
+    name = "basicAuth", 
+    scheme = "basic",
+    in = SecuritySchemeIn.HEADER,
+    description = "Basic Authentication using Cumulocity IoT credentials"
+)
+@OpenAPIDefinition(
+    info = @Info(
+        title = "Dynamic Mapper Configuration API", 
+        version = "v1.0",
+        description = """
+            REST API for managing Dynamic Mapper configurations including connectors, mappings, 
+            service settings, and code templates. The Dynamic Mapper enables bi-directional 
+            data transformation between external systems and Cumulocity IoT.
+            
+            **Key Features:**
+            - Connector management (MQTT, HTTP, TCP, etc.)
+            - Service configuration and feature flags
+            - Code template management for custom processing
+            - Multi-tenant support with role-based access control
+            """,
+        contact = @Contact(
+            name = "Cumulocity Dynamic Mapper Team",
+            email = "support@cumulocity.com"
+        ),
+        license = @License(
+            name = "Apache 2.0",
+            url = "https://www.apache.org/licenses/LICENSE-2.0"
+        )
+    ), 
+    security = { @SecurityRequirement(name = "basicAuth") }
+)
+@Tag(name = "Configuration Management", description = "Core configuration endpoints for connectors, service settings, and code templates")
 public class ConfigurationController {
 
     @Autowired
@@ -111,10 +146,30 @@ public class ConfigurationController {
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
 
-    @Operation(summary = "Get the feature flags for the dynamic mapper service", description = "Returns features with an indication if some functionality is available or not. This is useful if you want to check for example if outbound Mapping is possible on a tenant or not.", tags = {})
-    @ApiResponses( value = {
-            @ApiResponse(responseCode = "200", description = "Feature flags retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Feature.class))),
-            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)})
+    @Operation(
+        summary = "Get feature flags", 
+        description = """
+            Returns feature flags indicating which functionality is available for the current tenant and user.
+            This is useful for UI applications to conditionally enable/disable features.
+            
+            **Feature Flags:**
+            - `outputMappingEnabled`: Whether outbound mapping is available
+            - `externalExtensionsEnabled`: Whether external processor extensions are supported
+            - `userHasMappingCreateRole`: Whether user can create/modify mappings
+            - `userHasMappingAdminRole`: Whether user has administrative privileges
+            """
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Feature flags retrieved successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = Feature.class)
+            )
+        ),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @GetMapping(value = "/feature", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
@@ -128,10 +183,24 @@ public class ConfigurationController {
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
-    @Operation(summary = "Get connectors with their specifications", description = "Returns all available connector specifications.")
-    @ApiResponses( value = {
-            @ApiResponse(responseCode = "200", description = "Connector specifications retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ConnectorSpecification.class)))),
-            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)})
+    @Operation(
+        summary = "Get connector specifications", 
+        description = """
+            Returns all available connector specifications with their supported properties and capabilities.
+            Use this endpoint to discover which connector types are available and their configuration requirements.
+            """
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Connector specifications retrieved successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                array = @ArraySchema(schema = @Schema(implementation = ConnectorSpecification.class))
+            )
+        ),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
     @GetMapping(value = "/connector/specifications", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorSpecification>> getConnectorSpecifications() {
         String tenant = contextService.getContext().getTenant();
@@ -146,20 +215,55 @@ public class ConfigurationController {
         return ResponseEntity.ok(connectorConfigurations);
     }
 
-    @Operation(summary = "Create a new connector configuration", description = "Creates a new connector configuration for the specified type. Required role: `ROLE_DYNAMIC_MAPPER_ADMIN`")
+    @Operation(
+        summary = "Create connector configuration", 
+        description = """
+            Creates a new connector configuration for the specified type. The connector will be created 
+            in disabled state and must be explicitly enabled through a separate operation.
+            
+            **Note:** HTTP connectors cannot be created through this endpoint as they are system-managed.
+            
+            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            """
+    )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Connector configuration created successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid request or unsupported connector type", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PostMapping(value = "/connector/instance", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> createConnectorConfiguration(@io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Connector configuration to be created", required = true,
-            content = @Content(mediaType = "application/json",
-                    schema = @Schema(implementation = ConnectorConfiguration.class),
-                    examples = @ExampleObject(value = "{ \"identifier\": \"o5rhgj4g\", \"connectorType\": \"MQTT\", \"name\": \"MQTT Connector\", \"description\": \"This is a MQTT Connector\", \"enabled\": false, \"properties\": { \"protocol\": \"mqtt://\", \"mqttHost\": \"mqtt.example.com\" , \"mqttPort\": 1883, \"clientId\": \"dynamic_mapper_client1\" } }")))
-            @Valid @RequestBody ConnectorConfiguration configuration) {
+    public ResponseEntity<HttpStatus> createConnectorConfiguration(
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Connector configuration to be created",
+            required = true,
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ConnectorConfiguration.class),
+                examples = @ExampleObject(
+                    name = "MQTT Connector",
+                    description = "Example MQTT connector configuration",
+                    value = """
+                    {
+                      "identifier": "mqtt-prod-01",
+                      "connectorType": "MQTT",
+                      "name": "Production MQTT Broker",
+                      "description": "Connection to production MQTT broker",
+                      "enabled": false,
+                      "properties": {
+                        "mqttHost": "mqtt.example.com",
+                        "mqttPort": 1883,
+                        "clientId": "dynamic_mapper_client1",
+                        "username": "mqtt_user",
+                        "password": "mqtt_password"
+                      }
+                    }
+                    """
+                )
+            )
+        )
+        @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
         if (configuration.connectorType.equals(ConnectorType.HTTP)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't create a HttpConnector!");
@@ -170,13 +274,6 @@ public class ConfigurationController {
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
-            // if (configuration.connectorType.equals(ConnectorType.INTERNAL_WEB_HOOK)) {
-            // UserCredentials contextCredentials = contextService.getContext();
-            // String user = (String) contextCredentials.getUsername();
-            // String password = (String) contextCredentials.getPassword();
-            // configuration.getProperties().put("user", user);
-            // configuration.getProperties().put("password", password);
-            // }
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
@@ -185,13 +282,31 @@ public class ConfigurationController {
         }
     }
 
-    @Operation(summary = "Get all connector configurations", description = "Returns a list of all connector configurations. Optionally, filter by name.")
+    @Operation(
+        summary = "Get connector configurations", 
+        description = """
+            Returns a list of all connector configurations for the current tenant. 
+            Sensitive properties (passwords, tokens) are masked in the response.
+            Optionally filter results by name using wildcards (* supported).
+            """
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "List of connector configurations", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ConnectorConfiguration.class)))),
+        @ApiResponse(
+            responseCode = "200", 
+            description = "List of connector configurations", 
+            content = @Content(
+                mediaType = "application/json", 
+                array = @ArraySchema(schema = @Schema(implementation = ConnectorConfiguration.class))
+            )
+        ),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @GetMapping(value = "/connector/instance", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations(
+            @Parameter(
+                description = "Filter by connector name (wildcards * supported)", 
+                example = "mqtt*"
+            )
             @RequestParam(required = false) String name) {
         String tenant = contextService.getContext().getTenant();
         log.debug("{} - Get connector instances", tenant);
@@ -228,14 +343,26 @@ public class ConfigurationController {
         }
     }
 
-    @Operation(summary = "Get a connector configuration", description = "Returns the connector configuration for the given ID.")
+    @Operation(
+        summary = "Get connector configuration", 
+        description = "Returns the connector configuration for the given identifier. Sensitive properties are masked in the response."
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Connector configuration found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConnectorConfiguration.class))),
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Connector configuration found", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = ConnectorConfiguration.class)
+            )
+        ),
         @ApiResponse(responseCode = "404", description = "Connector configuration not found", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @GetMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(@Parameter(description = "The identifier of the connector") @PathVariable String identifier) {
+    public ResponseEntity<ConnectorConfiguration> getConnectionConfiguration(
+            @Parameter(description = "The unique identifier of the connector", example = "mqtt-prod-01") 
+            @PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.debug("{} - Get connector instance: {}", tenant, identifier);
 
@@ -267,15 +394,29 @@ public class ConfigurationController {
         }
     }
 
-    @Operation(summary = "Delete a connector configuration", description = "Deletes the connector configuration for the given ID. Required role: `ROLE_DYNAMIC_MAPPER_ADMIN`. The connector must be disabled before it can be deleted.")
+    @Operation(
+        summary = "Delete connector configuration", 
+        description = """
+            Deletes the connector configuration for the given identifier. 
+            
+            **Prerequisites:**
+            - The connector must be disabled before it can be deleted
+            - HTTP connectors cannot be deleted as they are system-managed
+            
+            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            """
+    )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Connector configuration deleted successfully", content = @Content),
         @ApiResponse(responseCode = "400", description = "Connector is enabled or cannot be deleted", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> deleteConnectionConfiguration(@Parameter(description = "The identifier of the connector") @PathVariable String identifier) {
+    public ResponseEntity<String> deleteConnectionConfiguration(
+            @Parameter(description = "The unique identifier of the connector", example = "mqtt-prod-01") 
+            @PathVariable String identifier) {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Delete connection instance {}", tenant, identifier);
         try {
@@ -288,8 +429,6 @@ public class ConfigurationController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't delete a HttpConnector!");
             }
             // make sure the connector is disconnected before it is deleted.
-            // if (connectorRegistry.getClientForTenant(tenant, identifier) != null &&
-            // connectorRegistry.getClientForTenant(tenant, identifier).isConnected())
             bootstrapService.disableConnector(tenant, identifier);
             connectorConfigurationComponent.deleteConnectorConfiguration(identifier);
             mappingComponent.removeConnectorFromDeploymentMap(tenant, identifier);
@@ -302,20 +441,64 @@ public class ConfigurationController {
         return ResponseEntity.status(HttpStatus.OK).body(identifier);
     }
 
-    @Operation(summary = "Update a connector configuration", description = "Updates the connector configuration for the given ID. Required role: `ROLE_DYNAMIC_MAPPER_ADMIN`")
+    @Operation(
+        summary = "Update connector configuration", 
+        description = """
+            Updates the connector configuration for the given identifier.
+            
+            **Sensitive Properties:** Properties marked as sensitive (like passwords) can be:
+            - Updated by providing new values
+            - Left unchanged by sending "****" as the value
+            
+            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            """
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Connector configuration updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConnectorConfiguration.class))),
+        @ApiResponse(
+            responseCode = "201", 
+            description = "Connector configuration updated successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = ConnectorConfiguration.class)
+            )
+        ),
         @ApiResponse(responseCode = "400", description = "Invalid request or unsupported connector type", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
-    @PutMapping(value = "/connector/instance/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(@Parameter(description = "The identifier of the connector") @PathVariable String identifier,
-                                                                                @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                                                                                        description = "Connector configuration to be update", required = true,
-                                                                                        content = @Content(mediaType = "application/json",
-                                                                                                schema = @Schema(implementation = ConnectorConfiguration.class),
-                                                                                                examples = @ExampleObject(value = "{ \"identifier\": \"o5rhgj4g\", \"connectorType\": \"MQTT\", \"name\": \"MQTT Connector\", \"description\": \"This is a MQTT Connector\", \"enabled\": false, \"properties\": { \"protocol\": \"mqtt://\", \"mqttHost\": \"mqtt.example.com\" , \"mqttPort\": 1883, \"clientId\": \"dynamic_mapper_client1\" } }")))
+    @PutMapping(value = "/connector/instance/{identifier}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(
+            @Parameter(description = "The unique identifier of the connector", example = "mqtt-prod-01") 
+            @PathVariable String identifier,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                description = "Updated connector configuration",
+                required = true,
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ConnectorConfiguration.class),
+                    examples = @ExampleObject(
+                        name = "Updated MQTT Connector",
+                        description = "Example update with masked password",
+                        value = """
+                        {
+                          "identifier": "mqtt-prod-01",
+                          "connectorType": "MQTT",
+                          "name": "Production MQTT Broker",
+                          "description": "Updated connection to production MQTT broker",
+                          "enabled": true,
+                          "properties": {
+                            "mqttHost": "new-mqtt.example.com",
+                            "mqttPort": 1883,
+                            "clientId": "dynamic_mapper_client1",
+                            "username": "new_mqtt_user",
+                            "password": "****"
+                          }
+                        }
+                        """
+                    )
+                )
+            )
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Update connection instance {}", tenant, identifier);
@@ -324,10 +507,6 @@ public class ConfigurationController {
         // Remove sensitive data before printing to log
         ConnectorSpecification connectorSpecification = connectorRegistry
                 .getConnectorSpecification(configuration.connectorType);
-        // if (connectorSpecification.connectorType.equals(ConnectorType.HTTP)) {
-        // throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't change a
-        // HttpConnector!");
-        // }
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
@@ -342,15 +521,12 @@ public class ConfigurationController {
                     // retrieve the existing value
                     log.info(
                             "{} - Copy property {} from existing configuration, since it was not touched and is sensitive.",
-                            property);
+                            tenant, property);
                     configuration.getProperties().put(property,
                             originalConfiguration.getProperties().get(property));
                 }
             }
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-            // AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-            // configuration.getIdent());
-            // client.reconnect();
         } catch (Exception ex) {
             log.error("{} - Error updating connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -358,10 +534,20 @@ public class ConfigurationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
     }
 
-    @Operation(summary = "Get Service Configuration", description = "Retrieves the service configuration for tenant of the authenticated user.")
+    @Operation(
+        summary = "Get service configuration", 
+        description = "Retrieves the service configuration for the current tenant including feature flags, cache settings, and operational parameters."
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Service confíguration found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ServiceConfiguration.class))),
-        @ApiResponse(responseCode = "404", description = "Service confíguration not found", content = @Content),
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Service configuration retrieved successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = ServiceConfiguration.class)
+            )
+        ),
+        @ApiResponse(responseCode = "404", description = "Service configuration not found", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @GetMapping(value = "/service", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -374,7 +560,6 @@ public class ConfigurationController {
             if (configuration == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Service connection not available");
             }
-            // don't modify original copy
             return new ResponseEntity<ServiceConfiguration>(configuration, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("{} - Error getting service configuration", tenant, ex);
@@ -382,10 +567,21 @@ public class ConfigurationController {
         }
     }
 
-    @Operation(summary = "Update the service configuration", description = "Updates the service configuration of the current tenant.")
+    @Operation(
+        summary = "Update service configuration", 
+        description = """
+            Updates the service configuration for the current tenant.
+            
+            **Important:** Changing outbound mapping settings will affect notification subscriptions
+            and may trigger connector reconnections.
+            
+            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            """
+    )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Service configuration updated successfully", content = @Content),
-        @ApiResponse(responseCode = "400", description = "Provided service configuration is not valid", content = @Content),
+        @ApiResponse(responseCode = "400", description = "Invalid service configuration", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
@@ -395,7 +591,6 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration currentServiceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
-        // don't modify original copy
         log.info("{} - Update service configuration: {}", tenant, serviceConfiguration.toString());
         // existing code templates
         ServiceConfiguration mergeServiceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -444,14 +639,26 @@ public class ConfigurationController {
         }
     }
 
-    @Operation(summary = "Get a code template", description = "Returns the code template for the given ID.")
+    @Operation(
+        summary = "Get code template", 
+        description = "Returns the code template for the given ID. Code templates provide reusable JavaScript code for custom processing in mappings."
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Code template found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CodeTemplate.class))),
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Code template found", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = CodeTemplate.class)
+            )
+        ),
         @ApiResponse(responseCode = "404", description = "Code template not found", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @GetMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<CodeTemplate> getCodeTemplate(@PathVariable String id) {
+    public ResponseEntity<CodeTemplate> getCodeTemplate(
+            @Parameter(description = "The unique ID of the code template", example = "shared") 
+            @PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("{} - Get code template: {}", tenant, id);
@@ -482,19 +689,35 @@ public class ConfigurationController {
         }
     }
 
-    @Operation(summary = "Delete a code template", description = "Deletes the code template for the given ID.")
+    @Operation(
+        summary = "Delete code template", 
+        description = """
+            Deletes the code template for the given ID.
+            
+            **Note:** Internal (system) templates cannot be deleted.
+            
+            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            """
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Code template deleted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CodeTemplate.class))),
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Code template deleted successfully", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = CodeTemplate.class)
+            )
+        ),
         @ApiResponse(responseCode = "406", description = "Deletion of internal templates is not allowed", content = @Content),
         @ApiResponse(responseCode = "404", description = "Code template not found", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @DeleteMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<CodeTemplate> deleteCodeTemplate(@PathVariable String id) {
-        // TODO GRAAL_PERFORMANCE update code source from templates in graalCode cache
-        // Nothing to do, as internal templates can't be deleted.
-
+    public ResponseEntity<CodeTemplate> deleteCodeTemplate(
+            @Parameter(description = "The unique ID of the code template", example = "custom-template") 
+            @PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("{} - Delete code template: {}", tenant, id);
@@ -538,9 +761,22 @@ public class ConfigurationController {
         }
     }
 
-    @Operation(summary = "Get all code templates", description = "Returns all code templates for the current tenant.")
+    @Operation(
+        summary = "Get all code templates", 
+        description = "Returns all code templates for the current tenant including both system and custom templates."
+    )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "List of code templates", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CodeTemplate.class))),
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Code templates retrieved successfully", 
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    type = "object",
+                    description = "Map of template IDs to CodeTemplate objects"
+                )
+            )
+        ),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -553,17 +789,25 @@ public class ConfigurationController {
         return new ResponseEntity<>(codeTemplates, HttpStatus.OK);
     }
 
-    @Operation(summary = "Update a code template", description = "Updates the code template for the given ID.")
+    @Operation(
+        summary = "Update code template", 
+        description = """
+            Updates the code template for the given ID with new JavaScript code.
+            
+            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            """
+    )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Code template updated successfully", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
-    @PutMapping(value = "/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/code/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> updateCodeTemplate(
-            @PathVariable String id, @Valid @RequestBody CodeTemplate codeTemplate) {
-        // TODO GRAAL_PERFORMANCE update code source from templates in graalCode cache
-
+            @Parameter(description = "The unique ID of the code template", example = "custom-template") 
+            @PathVariable String id, 
+            @Valid @RequestBody CodeTemplate codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -572,13 +816,6 @@ public class ConfigurationController {
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-//            if (TemplateType.SHARED.equals(id)) {
-//                // Update parsed source for shared code in cache
-//                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.code);
-//            } else if (TemplateType.SYSTEM.equals(id)) {
-//                // Update parsed source for system code in cache
-//                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.code);
-//            }
             log.debug("{} - Updated code template", tenant);
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
@@ -587,18 +824,24 @@ public class ConfigurationController {
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Create a new code template", description = "Creates a new code template for the current tenant.")
+    @Operation(
+        summary = "Create code template", 
+        description = """
+            Creates a new code template for the current tenant.
+            
+            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            """
+    )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Code template created successfully", content = @Content),
         @ApiResponse(responseCode = "409", description = "Template with this ID already exists", content = @Content),
+        @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
-    @PostMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/code", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createCodeTemplate(
             @Valid @RequestBody CodeTemplate codeTemplate) {
-        // TODO GRAAL_PERFORMANCE update code source from templates in graalCode cache
-
         String tenant = contextService.getContext().getTenant();
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -610,13 +853,6 @@ public class ConfigurationController {
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-//            if (TemplateType.SHARED.equals(codeTemplate.id)) {
-//                // Update parsed source for shared code in cache
-//                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.code);
-//            } else if (TemplateType.SYSTEM.equals(codeTemplate.id)) {
-//                // Update parsed source for system code in cache
-//                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.code);
-//            }
             log.debug("{} - Create code template", tenant);
         } catch (JsonProcessingException ex) {
             log.error("{} - Error creating code template", tenant, ex);
@@ -645,5 +881,4 @@ public class ConfigurationController {
         }
         return codeTemplates;
     }
-
 }
