@@ -85,7 +85,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Slf4j
 @RequestMapping("/operation")
 @RestController
-@Tag(name = "Operation Controller", description = "API for executing various administrative and operational tasks on the dynamic mapping service")
+@Tag(name = "Operation Controller", description = "API for executing various administrative and operational tasks on the dynamic mapper service")
 public class OperationController {
 
     @Autowired
@@ -124,7 +124,33 @@ public class OperationController {
 
     @io.swagger.v3.oas.annotations.Operation(
         summary = "Execute a service operation", 
-        description = "Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.",
+        description = """
+        Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.
+        
+        **Please note:** Each operation may have specific requirements and permissions. Ensure that the user has the necessary roles to perform the requested operation.
+        `ROLE_DYNAMIC_MAPPER_CREATE` Operations:
+        - `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.
+        - `ACTIVATE_MAPPING`: Activates or deactivates a mapping.
+        - `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.
+        - `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.
+        - `SNOOP_MAPPING`: Enables or disables snooping for a mapping.
+        - `SNOOP_RESET`: Resets snooping for a mapping.
+        - `REFRESH_STATUS_MAPPING`: Refreshes the status of all mappings.
+        - `ADD_SAMPLE_MAPPINGS`: Adds sample mappings for inbound or outbound direction.
+        - `COPY_SNOOPED_SOURCE_TEMPLATE`: Copies the source template from a snooped mapping.
+        
+        
+        `ROLE_DYNAMIC_MAPPER_ADMIN` Operations:
+        - `CONNECT`: Connects a specific connector.
+        - `DISCONNECT`: Disconnects a specific connector.
+        - `RESET_STATISTICS_MAPPING`: Resets statistics for all mappings.
+        - `RESET_DEPLOYMENT_MAP`: Resets the deployment map for the current tenant.
+        - `RELOAD_EXTENSIONS`: Reloads all extensions for the current tenant.
+        - `REFRESH_NOTIFICATIONS_SUBSCRIPTIONS`: Refreshes notification subscriptions for the current tenant.
+        - `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, inventory cache).
+        - `INIT_CODE_TEMPLATES`: Initializes code templates for the current tenant.
+        
+        """,
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Service operation to execute with parameters",
             required = true,

@@ -92,7 +92,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 )
 @OpenAPIDefinition(
     info = @Info(
-        title = "Dynamic Mapper Configuration API", 
+        title = "Dynamic Mapper API",
         version = "v1.0",
         description = """
             REST API for managing Dynamic Mapper configurations including connectors, mappings, 
@@ -223,7 +223,7 @@ public class ConfigurationController {
             
             **Note:** HTTP connectors cannot be created through this endpoint as they are system-managed.
             
-            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """
     )
     @ApiResponses(value = {
@@ -403,7 +403,7 @@ public class ConfigurationController {
             - The connector must be disabled before it can be deleted
             - HTTP connectors cannot be deleted as they are system-managed
             
-            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """
     )
     @ApiResponses(value = {
@@ -450,7 +450,7 @@ public class ConfigurationController {
             - Updated by providing new values
             - Left unchanged by sending "****" as the value
             
-            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """
     )
     @ApiResponses(value = {
@@ -575,7 +575,7 @@ public class ConfigurationController {
             **Important:** Changing outbound mapping settings will affect notification subscriptions
             and may trigger connector reconnections.
             
-            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """
     )
     @ApiResponses(value = {
@@ -696,7 +696,7 @@ public class ConfigurationController {
             
             **Note:** Internal (system) templates cannot be deleted.
             
-            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """
     )
     @ApiResponses(value = {
@@ -794,7 +794,7 @@ public class ConfigurationController {
         description = """
             Updates the code template for the given ID with new JavaScript code.
             
-            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """
     )
     @ApiResponses(value = {
@@ -829,7 +829,7 @@ public class ConfigurationController {
         description = """
             Creates a new code template for the current tenant.
             
-            **Required Role:** `ROLE_DYNAMIC_MAPPER_ADMIN`
+            **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """
     )
     @ApiResponses(value = {

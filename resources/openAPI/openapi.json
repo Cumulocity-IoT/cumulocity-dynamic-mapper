@@ -1,0 +1,3495 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Cumulocity Dynamic Mapper",
+    "description" : "This API exposes endpoints to manage resources for the Cumulocity Dynamic Mapper.",
+    "termsOfService" : "https://raw.githubusercontent.com/Cumulocity-IoT/cumulocity-dynamic-mapper/refs/heads/main/LICENSE",
+    "contact" : {
+      "name" : "Christof Strack, Stefan Witschel",
+      "url" : "https://www.cumulocity.com"
+    },
+    "license" : {
+      "name" : " Apache License",
+      "url" : "https://raw.githubusercontent.com/Cumulocity-IoT/cumulocity-dynamic-mapper/refs/heads/main/LICENSE"
+    },
+    "version" : "5.0.0"
+  },
+  "externalDocs" : {
+    "description" : "Additional Documentation",
+    "url" : "https://cumulocity.com/docs/"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8080",
+    "description" : "Generated server url"
+  } ],
+  "tags" : [ {
+    "name" : "Extension Controller",
+    "description" : "API for managing processor extensions that provide custom data transformation capabilities"
+  }, {
+    "name" : "Device Subscription Controller",
+    "description" : "API for managing Cumulocity IoT notification subscriptions for outbound mappings. Handles device subscriptions for real-time notifications when device data changes."
+  }, {
+    "name" : "Operation Controller",
+    "description" : "API for executing various administrative and operational tasks on the dynamic mapper service"
+  }, {
+    "name" : "Monitoring Controller",
+    "description" : "API for monitoring connector status, mapping statistics, and system health"
+  }, {
+    "name" : "Deployment Controller",
+    "description" : "API for managing mapping deployments across connectors. Controls which mappings are active on which connectors and provides visibility into the current deployment state."
+  }, {
+    "name" : "Mapping Controller",
+    "description" : "API for managing dynamic mappings between external systems and Cumulocity IoT"
+  }, {
+    "name" : "HTTP Connector Controller",
+    "description" : "HTTP endpoint for receiving data from external systems via HTTP/HTTPS. Acts as a webhook receiver that processes incoming messages and routes them through the dynamic mapping system."
+  }, {
+    "name" : "Configuration Controller",
+    "description" : "API for managing Controller, their configurations and service settings."
+  } ],
+  "paths" : {
+    "/httpConnector" : {
+      "put" : {
+        "tags" : [ "HTTP Connector Controller" ],
+        "summary" : "Process HTTP connector message",
+        "description" : "Receives HTTP messages from external systems and processes them through the dynamic mapping system.\nThis endpoint acts as a webhook receiver that can handle various payload formats (JSON, XML, plain text, binary).\nThe path after '/httpConnector' is used as the topic for mapping resolution.\n\n**Path Examples:**\n- POST /httpConnector/sensors/temperature → topic: 'sensors/temperature'\n- PUT /httpConnector/devices/device001/data → topic: 'devices/device001/data'\n- POST /httpConnector → topic: '' (empty, root level)\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE role.\n",
+        "operationId" : "processGenericMessage_1",
+        "parameters" : [ {
+          "name" : "path",
+          "in" : "query",
+          "description" : "Dynamic path that becomes the topic for mapping resolution. Everything after '/httpConnector' is used as the topic.",
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "sensors/temperature/data"
+        } ],
+        "requestBody" : {
+          "description" : "Message payload in any format (JSON, XML, plain text, binary)",
+          "content" : {
+            "application/json" : {
+              "examples" : {
+                "JSON Sensor Data" : {
+                  "description" : "Typical IoT sensor data",
+                  "value" : {
+                    "deviceId" : "sensor001",
+                    "temperature" : 23.5,
+                    "humidity" : 65.2,
+                    "timestamp" : "2024-01-15T14:30:00Z"
+                  }
+                }
+              }
+            },
+            "application/xml" : {
+              "examples" : {
+                "XML Device Status" : {
+                  "description" : "Device status in XML format",
+                  "value" : "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<device>\n  <id>device001</id>\n  <status>online</status>\n  <battery>85</battery>\n</device>\n"
+                }
+              }
+            },
+            "text/plain" : {
+              "examples" : {
+                "CSV Data" : {
+                  "description" : "Simple CSV format",
+                  "value" : "sensor001,23.5,65.2,2024-01-15T14:30:00Z"
+                }
+              }
+            },
+            "application/octet-stream" : {
+              "examples" : {
+                "Binary Data" : {
+                  "description" : "Binary payload (e.g., protobuf, custom binary format)"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Message processed successfully",
+            "content" : {
+              "application/json" : { }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - error processing the message",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Error details"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions or missing required role ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE",
+            "content" : {
+              "application/json" : {
+                "example" : {
+                  "error" : "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "HTTP Connector Controller" ],
+        "summary" : "Process HTTP connector message",
+        "description" : "Receives HTTP messages from external systems and processes them through the dynamic mapping system.\nThis endpoint acts as a webhook receiver that can handle various payload formats (JSON, XML, plain text, binary).\nThe path after '/httpConnector' is used as the topic for mapping resolution.\n\n**Path Examples:**\n- POST /httpConnector/sensors/temperature → topic: 'sensors/temperature'\n- PUT /httpConnector/devices/device001/data → topic: 'devices/device001/data'\n- POST /httpConnector → topic: '' (empty, root level)\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE role.\n",
+        "operationId" : "processGenericMessage",
+        "parameters" : [ {
+          "name" : "path",
+          "in" : "query",
+          "description" : "Dynamic path that becomes the topic for mapping resolution. Everything after '/httpConnector' is used as the topic.",
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "sensors/temperature/data"
+        } ],
+        "requestBody" : {
+          "description" : "Message payload in any format (JSON, XML, plain text, binary)",
+          "content" : {
+            "application/json" : {
+              "examples" : {
+                "JSON Sensor Data" : {
+                  "description" : "Typical IoT sensor data",
+                  "value" : {
+                    "deviceId" : "sensor001",
+                    "temperature" : 23.5,
+                    "humidity" : 65.2,
+                    "timestamp" : "2024-01-15T14:30:00Z"
+                  }
+                }
+              }
+            },
+            "application/xml" : {
+              "examples" : {
+                "XML Device Status" : {
+                  "description" : "Device status in XML format",
+                  "value" : "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<device>\n  <id>device001</id>\n  <status>online</status>\n  <battery>85</battery>\n</device>\n"
+                }
+              }
+            },
+            "text/plain" : {
+              "examples" : {
+                "CSV Data" : {
+                  "description" : "Simple CSV format",
+                  "value" : "sensor001,23.5,65.2,2024-01-15T14:30:00Z"
+                }
+              }
+            },
+            "application/octet-stream" : {
+              "examples" : {
+                "Binary Data" : {
+                  "description" : "Binary payload (e.g., protobuf, custom binary format)"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Message processed successfully",
+            "content" : {
+              "application/json" : { }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - error processing the message",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Error details"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions or missing required role ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE",
+            "content" : {
+              "application/json" : {
+                "example" : {
+                  "error" : "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/httpConnector/**" : {
+      "put" : {
+        "tags" : [ "HTTP Connector Controller" ],
+        "summary" : "Process HTTP connector message",
+        "description" : "Receives HTTP messages from external systems and processes them through the dynamic mapping system.\nThis endpoint acts as a webhook receiver that can handle various payload formats (JSON, XML, plain text, binary).\nThe path after '/httpConnector' is used as the topic for mapping resolution.\n\n**Path Examples:**\n- POST /httpConnector/sensors/temperature → topic: 'sensors/temperature'\n- PUT /httpConnector/devices/device001/data → topic: 'devices/device001/data'\n- POST /httpConnector → topic: '' (empty, root level)\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE role.\n",
+        "operationId" : "processGenericMessage_3",
+        "parameters" : [ {
+          "name" : "path",
+          "in" : "query",
+          "description" : "Dynamic path that becomes the topic for mapping resolution. Everything after '/httpConnector' is used as the topic.",
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "sensors/temperature/data"
+        } ],
+        "requestBody" : {
+          "description" : "Message payload in any format (JSON, XML, plain text, binary)",
+          "content" : {
+            "application/json" : {
+              "examples" : {
+                "JSON Sensor Data" : {
+                  "description" : "Typical IoT sensor data",
+                  "value" : {
+                    "deviceId" : "sensor001",
+                    "temperature" : 23.5,
+                    "humidity" : 65.2,
+                    "timestamp" : "2024-01-15T14:30:00Z"
+                  }
+                }
+              }
+            },
+            "application/xml" : {
+              "examples" : {
+                "XML Device Status" : {
+                  "description" : "Device status in XML format",
+                  "value" : "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<device>\n  <id>device001</id>\n  <status>online</status>\n  <battery>85</battery>\n</device>\n"
+                }
+              }
+            },
+            "text/plain" : {
+              "examples" : {
+                "CSV Data" : {
+                  "description" : "Simple CSV format",
+                  "value" : "sensor001,23.5,65.2,2024-01-15T14:30:00Z"
+                }
+              }
+            },
+            "application/octet-stream" : {
+              "examples" : {
+                "Binary Data" : {
+                  "description" : "Binary payload (e.g., protobuf, custom binary format)"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Message processed successfully",
+            "content" : {
+              "application/json" : { }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - error processing the message",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Error details"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions or missing required role ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE",
+            "content" : {
+              "application/json" : {
+                "example" : {
+                  "error" : "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "HTTP Connector Controller" ],
+        "summary" : "Process HTTP connector message",
+        "description" : "Receives HTTP messages from external systems and processes them through the dynamic mapping system.\nThis endpoint acts as a webhook receiver that can handle various payload formats (JSON, XML, plain text, binary).\nThe path after '/httpConnector' is used as the topic for mapping resolution.\n\n**Path Examples:**\n- POST /httpConnector/sensors/temperature → topic: 'sensors/temperature'\n- PUT /httpConnector/devices/device001/data → topic: 'devices/device001/data'\n- POST /httpConnector → topic: '' (empty, root level)\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE role.\n",
+        "operationId" : "processGenericMessage_2",
+        "parameters" : [ {
+          "name" : "path",
+          "in" : "query",
+          "description" : "Dynamic path that becomes the topic for mapping resolution. Everything after '/httpConnector' is used as the topic.",
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "sensors/temperature/data"
+        } ],
+        "requestBody" : {
+          "description" : "Message payload in any format (JSON, XML, plain text, binary)",
+          "content" : {
+            "application/json" : {
+              "examples" : {
+                "JSON Sensor Data" : {
+                  "description" : "Typical IoT sensor data",
+                  "value" : {
+                    "deviceId" : "sensor001",
+                    "temperature" : 23.5,
+                    "humidity" : 65.2,
+                    "timestamp" : "2024-01-15T14:30:00Z"
+                  }
+                }
+              }
+            },
+            "application/xml" : {
+              "examples" : {
+                "XML Device Status" : {
+                  "description" : "Device status in XML format",
+                  "value" : "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<device>\n  <id>device001</id>\n  <status>online</status>\n  <battery>85</battery>\n</device>\n"
+                }
+              }
+            },
+            "text/plain" : {
+              "examples" : {
+                "CSV Data" : {
+                  "description" : "Simple CSV format",
+                  "value" : "sensor001,23.5,65.2,2024-01-15T14:30:00Z"
+                }
+              }
+            },
+            "application/octet-stream" : {
+              "examples" : {
+                "Binary Data" : {
+                  "description" : "Binary payload (e.g., protobuf, custom binary format)"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Message processed successfully",
+            "content" : {
+              "application/json" : { }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - error processing the message",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Error details"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions or missing required role ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE",
+            "content" : {
+              "application/json" : {
+                "example" : {
+                  "error" : "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/subscription" : {
+      "get" : {
+        "tags" : [ "Device Subscription Controller" ],
+        "summary" : "Get device notification subscriptions",
+        "description" : "Retrieves current notification subscriptions, optionally filtered by device ID or subscription name. Shows which devices are currently subscribed for outbound notifications.\n",
+        "operationId" : "subscriptionsGet",
+        "parameters" : [ {
+          "name" : "deviceId",
+          "in" : "query",
+          "description" : "Filter subscriptions by specific device ID",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : 12345
+        }, {
+          "name" : "subscriptionName",
+          "in" : "query",
+          "description" : "Filter subscriptions by subscription name",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "temperature-sensors"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Subscriptions retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/C8YNotificationSubscription"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Outbound mapping is disabled"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Device Subscription Controller" ],
+        "summary" : "Update device notification subscription",
+        "description" : "Updates an existing notification subscription by comparing the new device list with the current subscriptions.\n\n**Update Logic:**\n1. Devices in new list but not in current subscriptions → Subscribe\n2. Devices in current subscriptions but not in new list → Unsubscribe\n3. Devices in both lists → No change\n\n**Prerequisites:**\n- Outbound mapping must be enabled in service configuration\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.\n",
+        "operationId" : "subscriptionUpdate",
+        "requestBody" : {
+          "description" : "Updated subscription configuration",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/C8YNotificationSubscription"
+              },
+              "examples" : {
+                "Updated Subscription" : {
+                  "description" : "Modified device list for subscription",
+                  "value" : {
+                    "api" : "MEASUREMENT",
+                    "subscriptionName" : "temperature-sensors",
+                    "devices" : [ {
+                      "id" : "12345",
+                      "name" : "Temperature Sensor 01"
+                    }, {
+                      "id" : "12347",
+                      "name" : "Temperature Sensor 03"
+                    } ]
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Subscription updated successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/C8YNotificationSubscription"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions"
+          },
+          "404" : {
+            "description" : "Outbound mapping is disabled"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Device Subscription Controller" ],
+        "summary" : "Create device notification subscription",
+        "description" : "Creates notification subscriptions for specified devices to enable outbound mapping functionality.\nWhen devices are subscribed, the system will receive real-time notifications about changes to the devices\nand can trigger outbound mappings accordingly.\n\n**Prerequisites:**\n- Outbound mapping must be enabled in service configuration\n- User must have CREATE or ADMIN role\n\n**Behavior:**\n- Automatically discovers and includes all child devices\n- Creates subscriptions for all specified API types\n- Returns the subscription with all included devices\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.\n",
+        "operationId" : "subscriptionCreate",
+        "requestBody" : {
+          "description" : "Subscription configuration with devices and API types",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/C8YNotificationSubscription"
+              },
+              "examples" : {
+                "Device Subscription" : {
+                  "description" : "Subscribe to measurements for specific devices",
+                  "value" : {
+                    "api" : "MEASUREMENT",
+                    "subscriptionName" : "temperature-sensors",
+                    "devices" : [ {
+                      "id" : "12345",
+                      "name" : "Temperature Sensor 01"
+                    }, {
+                      "id" : "12346",
+                      "name" : "Temperature Sensor 02"
+                    } ]
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Subscription created successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/C8YNotificationSubscription"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions"
+          },
+          "404" : {
+            "description" : "Outbound mapping is disabled",
+            "content" : {
+              "application/json" : { }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/mapping/{id}" : {
+      "get" : {
+        "tags" : [ "Mapping Controller" ],
+        "summary" : "Get a specific mapping",
+        "description" : "Retrieves a mapping by its unique identifier.",
+        "operationId" : "getMapping",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "The unique identifier of the mapping",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Mapping found and retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Mapping"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Mapping not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Mapping Controller" ],
+        "summary" : "Update an existing mapping",
+        "description" : "Updates an existing mapping configuration. Note that active mappings cannot be updated - they must be deactivated first. For INBOUND mappings, subscriptions will be updated across all connectors. For OUTBOUND mappings, the outbound cache will be rebuilt.\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.\n",
+        "operationId" : "updateMapping",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "The unique identifier of the mapping to update",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Mapping"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Mapping updated successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Mapping"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid mapping configuration or JSON processing error"
+          },
+          "403" : {
+            "description" : "Insufficient permissions to update mapping"
+          },
+          "404" : {
+            "description" : "Mapping not found"
+          },
+          "406" : {
+            "description" : "Active mappings cannot be updated"
+          },
+          "409" : {
+            "description" : "Mapping conflicts with existing configuration"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Mapping Controller" ],
+        "summary" : "Delete a mapping",
+        "description" : "Deletes a mapping by its unique identifier. This will also remove all associated subscriptions and cache entries.\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.\n",
+        "operationId" : "deleteMapping",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "The unique identifier of the mapping to delete",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Mapping deleted successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string",
+                  "description" : "The ID of the deleted mapping"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Mapping not found"
+          },
+          "406" : {
+            "description" : "Mapping could not be deleted due to business constraints"
+          },
+          "403" : {
+            "description" : "Insufficient permissions to delete mapping"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/deployment/defined/{mappingIdentifier}" : {
+      "get" : {
+        "tags" : [ "Deployment Controller" ],
+        "summary" : "Get deployment configuration for mapping",
+        "description" : "Retrieves the deployment configuration for a specific mapping, showing which\nconnectors this mapping is configured to be deployed to.\n\n**Note:** This shows the configured deployment, not necessarily the active runtime state.\nUse the effective deployment endpoint to see actual runtime deployment.\n",
+        "operationId" : "getDeploymentMapEntry",
+        "parameters" : [ {
+          "name" : "mappingIdentifier",
+          "in" : "path",
+          "description" : "Generated identifier for the mapping",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "l19zjk"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Deployment configuration retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "description" : "List of connector identifiers"
+                },
+                "examples" : {
+                  "Deployment Configuration" : {
+                    "description" : "List of connectors for this mapping",
+                    "value" : [ "mqtt-connector-01", "http-connector" ]
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Mapping not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Deployment Controller" ],
+        "summary" : "Update deployment configuration for mapping",
+        "description" : "Updates the deployment configuration for a specific mapping by specifying which\nconnectors it should be deployed to. This defines the intended deployment state\nrather than the actual runtime state.\n\n**Behavior:**\n- Defines which connectors should have this mapping active\n- Does not immediately deploy - requires separate activation\n- Overwrites existing deployment configuration for this mapping\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.\n",
+        "operationId" : "updateDeploymentMapEntry",
+        "parameters" : [ {
+          "name" : "mappingIdentifier",
+          "in" : "path",
+          "description" : "Generated identifier for the mapping",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "l19zjk"
+        } ],
+        "requestBody" : {
+          "description" : "List of connector identifiers where this mapping should be deployed",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "description" : "List of connector identifiers"
+              },
+              "examples" : {
+                "Connector Deployment" : {
+                  "description" : "Deploy mapping to specific connectors",
+                  "value" : [ "mqtt-connector-01", "http-connector", "tcp-connector-01" ]
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Deployment configuration updated successfully"
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions"
+          },
+          "404" : {
+            "description" : "Mapping not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/service" : {
+      "get" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Get Service Configuration",
+        "description" : "Retrieves the service configuration for tenant of the authenticated user.",
+        "operationId" : "getServiceConfiguration",
+        "responses" : {
+          "200" : {
+            "description" : "Service confíguration found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ServiceConfiguration"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Service confíguration not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Update the service configuration",
+        "description" : "Updates the service configuration of the current tenant.",
+        "operationId" : "updateServiceConfiguration",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ServiceConfiguration"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Service configuration updated successfully"
+          },
+          "400" : {
+            "description" : "Provided service configuration is not valid"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/connector/instance/{identifier}" : {
+      "get" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Get a connector configuration",
+        "description" : "Returns the connector configuration for the given ID.",
+        "operationId" : "getConnectionConfiguration",
+        "parameters" : [ {
+          "name" : "identifier",
+          "in" : "path",
+          "description" : "The identifier of the connector",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Connector configuration found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConnectorConfiguration"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Connector configuration not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Update a connector configuration",
+        "description" : "Updates the connector configuration for the given ID. Required role: `ROLE_DYNAMIC_MAPPER_ADMIN`",
+        "operationId" : "updateConnectionConfiguration",
+        "parameters" : [ {
+          "name" : "identifier",
+          "in" : "path",
+          "description" : "The identifier of the connector",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Connector configuration to be update",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectorConfiguration"
+              },
+              "example" : {
+                "identifier" : "o5rhgj4g",
+                "connectorType" : "MQTT",
+                "name" : "MQTT Connector",
+                "description" : "This is a MQTT Connector",
+                "enabled" : false,
+                "properties" : {
+                  "protocol" : "mqtt://",
+                  "mqttHost" : "mqtt.example.com",
+                  "mqttPort" : 1883,
+                  "clientId" : "dynamic_mapper_client1"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Connector configuration updated successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConnectorConfiguration"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request or unsupported connector type"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Delete a connector configuration",
+        "description" : "Deletes the connector configuration for the given ID. Required role: `ROLE_DYNAMIC_MAPPER_ADMIN`. The connector must be disabled before it can be deleted.",
+        "operationId" : "deleteConnectionConfiguration",
+        "parameters" : [ {
+          "name" : "identifier",
+          "in" : "path",
+          "description" : "The identifier of the connector",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Connector configuration deleted successfully"
+          },
+          "400" : {
+            "description" : "Connector is enabled or cannot be deleted"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/code/{id}" : {
+      "get" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Get a code template",
+        "description" : "Returns the code template for the given ID.",
+        "operationId" : "getCodeTemplate",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Code template found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeTemplate"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Code template not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Update a code template",
+        "description" : "Updates the code template for the given ID.",
+        "operationId" : "updateCodeTemplate",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CodeTemplate"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Code template updated successfully"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Delete a code template",
+        "description" : "Deletes the code template for the given ID.",
+        "operationId" : "deleteCodeTemplate",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Code template deleted successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeTemplate"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "Deletion of internal templates is not allowed"
+          },
+          "404" : {
+            "description" : "Code template not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/webhook/echo/**" : {
+      "post" : {
+        "tags" : [ "test-controller" ],
+        "operationId" : "echoInput",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/watson/mapping" : {
+      "post" : {
+        "tags" : [ "watson-controller" ],
+        "operationId" : "createMapping",
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Mapping"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/{method}" : {
+      "post" : {
+        "tags" : [ "test-controller" ],
+        "operationId" : "forwardPayload",
+        "parameters" : [ {
+          "name" : "method",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "topic",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uri"
+          }
+        }, {
+          "name" : "connectorIdentifier",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "additionalProperties" : {
+                  "type" : "object"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ProcessingContextObject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/operation" : {
+      "post" : {
+        "tags" : [ "Operation Controller" ],
+        "summary" : "Execute a service operation",
+        "description" : "Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.\n\n**Please note:** Each operation may have specific requirements and permissions. Ensure that the user has the necessary roles to perform the requested operation.\n`ROLE_DYNAMIC_MAPPER_CREATE` Operations:\n- `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.\n- `ACTIVATE_MAPPING`: Activates or deactivates a mapping.\n- `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.\n- `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.\n- `SNOOP_MAPPING`: Enables or disables snooping for a mapping.\n- `SNOOP_RESET`: Resets snooping for a mapping.\n- `REFRESH_STATUS_MAPPING`: Refreshes the status of all mappings.\n- `ADD_SAMPLE_MAPPINGS`: Adds sample mappings for inbound or outbound direction.\n- `COPY_SNOOPED_SOURCE_TEMPLATE`: Copies the source template from a snooped mapping.\n\n\n`ROLE_DYNAMIC_MAPPER_ADMIN` Operations:\n- `CONNECT`: Connects a specific connector.\n- `DISCONNECT`: Disconnects a specific connector.\n- `RESET_STATISTICS_MAPPING`: Resets statistics for all mappings.\n- `RESET_DEPLOYMENT_MAP`: Resets the deployment map for the current tenant.\n- `RELOAD_EXTENSIONS`: Reloads all extensions for the current tenant.\n- `REFRESH_NOTIFICATIONS_SUBSCRIPTIONS`: Refreshes notification subscriptions for the current tenant.\n- `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, inventory cache).\n- `INIT_CODE_TEMPLATES`: Initializes code templates for the current tenant.\n\n",
+        "operationId" : "runOperation",
+        "requestBody" : {
+          "description" : "Service operation to execute with parameters",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ServiceOperation"
+              },
+              "examples" : {
+                "Reload Mappings" : {
+                  "description" : "Reload all mappings for the current tenant",
+                  "value" : {
+                    "operation" : "RELOAD_MAPPINGS",
+                    "parameter" : { }
+                  }
+                },
+                "Connect Connector" : {
+                  "description" : "Connect a specific connector",
+                  "value" : {
+                    "operation" : "CONNECT",
+                    "parameter" : {
+                      "connectorIdentifier" : "jrr12x"
+                    }
+                  }
+                },
+                "Activate Mapping" : {
+                  "description" : "Activate or deactivate a mapping",
+                  "value" : {
+                    "operation" : "ACTIVATE_MAPPING",
+                    "parameter" : {
+                      "id" : "34573838974",
+                      "active" : "true"
+                    }
+                  }
+                },
+                "Clear Cache" : {
+                  "description" : "Clear a specific cache",
+                  "value" : {
+                    "operation" : "CLEAR_CACHE",
+                    "parameter" : {
+                      "cacheId" : "INBOUND_ID_CACHE"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Operation executed successfully",
+            "content" : {
+              "application/json" : { }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - invalid operation parameters or failed connector operations",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Map of failed connectors with their identifiers and names"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions for the requested operation"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/mapping" : {
+      "get" : {
+        "tags" : [ "Mapping Controller" ],
+        "summary" : "Get all mappings",
+        "description" : "Retrieves all mappings for the current tenant. Optionally filter by direction (INBOUND/OUTBOUND).",
+        "operationId" : "getMappings",
+        "parameters" : [ {
+          "name" : "direction",
+          "in" : "query",
+          "description" : "Filter mappings by direction",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of mappings retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Mapping"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Mapping Controller" ],
+        "summary" : "Create a new mapping",
+        "description" : "Creates a new mapping configuration. The mapping will be created in disabled state by default and needs to be activated separately. For INBOUND mappings, subscriptions will be created across all connectors. For OUTBOUND mappings, the outbound cache will be rebuilt.\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.\n",
+        "operationId" : "createMapping_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Mapping"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Mapping created successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Mapping"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid mapping configuration or JSON processing error"
+          },
+          "403" : {
+            "description" : "Insufficient permissions to create mapping"
+          },
+          "409" : {
+            "description" : "Mapping already exists or conflicts with existing configuration"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/connector/instance" : {
+      "get" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Get all connector configurations",
+        "description" : "Returns a list of all connector configurations. Optionally, filter by name.",
+        "operationId" : "getConnectionConfigurations",
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of connector configurations",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConnectorConfiguration"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Create a new connector configuration",
+        "description" : "Creates a new connector configuration for the specified type. Required role: `ROLE_DYNAMIC_MAPPER_ADMIN`",
+        "operationId" : "createConnectorConfiguration",
+        "requestBody" : {
+          "description" : "Connector configuration to be created",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectorConfiguration"
+              },
+              "example" : {
+                "identifier" : "o5rhgj4g",
+                "connectorType" : "MQTT",
+                "name" : "MQTT Connector",
+                "description" : "This is a MQTT Connector",
+                "enabled" : false,
+                "properties" : {
+                  "protocol" : "mqtt://",
+                  "mqttHost" : "mqtt.example.com",
+                  "mqttPort" : 1883,
+                  "clientId" : "dynamic_mapper_client1"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Connector configuration created successfully",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "enum" : [ "100 CONTINUE", "101 SWITCHING_PROTOCOLS", "102 PROCESSING", "103 EARLY_HINTS", "103 CHECKPOINT", "200 OK", "201 CREATED", "202 ACCEPTED", "203 NON_AUTHORITATIVE_INFORMATION", "204 NO_CONTENT", "205 RESET_CONTENT", "206 PARTIAL_CONTENT", "207 MULTI_STATUS", "208 ALREADY_REPORTED", "226 IM_USED", "300 MULTIPLE_CHOICES", "301 MOVED_PERMANENTLY", "302 FOUND", "302 MOVED_TEMPORARILY", "303 SEE_OTHER", "304 NOT_MODIFIED", "305 USE_PROXY", "307 TEMPORARY_REDIRECT", "308 PERMANENT_REDIRECT", "400 BAD_REQUEST", "401 UNAUTHORIZED", "402 PAYMENT_REQUIRED", "403 FORBIDDEN", "404 NOT_FOUND", "405 METHOD_NOT_ALLOWED", "406 NOT_ACCEPTABLE", "407 PROXY_AUTHENTICATION_REQUIRED", "408 REQUEST_TIMEOUT", "409 CONFLICT", "410 GONE", "411 LENGTH_REQUIRED", "412 PRECONDITION_FAILED", "413 PAYLOAD_TOO_LARGE", "413 REQUEST_ENTITY_TOO_LARGE", "414 URI_TOO_LONG", "414 REQUEST_URI_TOO_LONG", "415 UNSUPPORTED_MEDIA_TYPE", "416 REQUESTED_RANGE_NOT_SATISFIABLE", "417 EXPECTATION_FAILED", "418 I_AM_A_TEAPOT", "419 INSUFFICIENT_SPACE_ON_RESOURCE", "420 METHOD_FAILURE", "421 DESTINATION_LOCKED", "422 UNPROCESSABLE_ENTITY", "423 LOCKED", "424 FAILED_DEPENDENCY", "425 TOO_EARLY", "426 UPGRADE_REQUIRED", "428 PRECONDITION_REQUIRED", "429 TOO_MANY_REQUESTS", "431 REQUEST_HEADER_FIELDS_TOO_LARGE", "451 UNAVAILABLE_FOR_LEGAL_REASONS", "500 INTERNAL_SERVER_ERROR", "501 NOT_IMPLEMENTED", "502 BAD_GATEWAY", "503 SERVICE_UNAVAILABLE", "504 GATEWAY_TIMEOUT", "505 HTTP_VERSION_NOT_SUPPORTED", "506 VARIANT_ALSO_NEGOTIATES", "507 INSUFFICIENT_STORAGE", "508 LOOP_DETECTED", "509 BANDWIDTH_LIMIT_EXCEEDED", "510 NOT_EXTENDED", "511 NETWORK_AUTHENTICATION_REQUIRED" ]
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request or unsupported connector type"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/code" : {
+      "get" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Get all code templates",
+        "description" : "Returns all code templates for the current tenant.",
+        "operationId" : "getCodeTemplates",
+        "responses" : {
+          "200" : {
+            "description" : "List of code templates",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeTemplate"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Create a new code template",
+        "description" : "Creates a new code template for the current tenant.",
+        "operationId" : "createCodeTemplate",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CodeTemplate"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Code template created successfully"
+          },
+          "409" : {
+            "description" : "Template with this ID already exists"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/webhook" : {
+      "get" : {
+        "tags" : [ "test-controller" ],
+        "operationId" : "echoHealth",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/monitoring/tree" : {
+      "get" : {
+        "tags" : [ "Monitoring Controller" ],
+        "summary" : "Get inbound mapping tree",
+        "description" : "Retrieves the hierarchical tree structure of inbound mappings organized by topic patterns. This shows how incoming messages are routed to different mappings based on topic matching.",
+        "operationId" : "getInboundMappingTree",
+        "responses" : {
+          "200" : {
+            "description" : "Mapping tree retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MappingTreeNode"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/monitoring/subscription/{connectorIdentifier}" : {
+      "get" : {
+        "tags" : [ "Monitoring Controller" ],
+        "summary" : "Get active subscriptions for connector",
+        "description" : "Retrieves the active topic subscriptions for a specific connector with the count of mappings per topic. This helps monitor which topics are being subscribed to and how many mappings are listening to each topic.",
+        "operationId" : "getActiveSubscriptions",
+        "parameters" : [ {
+          "name" : "connectorIdentifier",
+          "in" : "path",
+          "description" : "The unique identifier of the connector",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "l19zjk"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Active subscriptions retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Map of topic patterns to subscription counts"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Connector not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/monitoring/status/mapping/statistic" : {
+      "get" : {
+        "tags" : [ "Monitoring Controller" ],
+        "summary" : "Get mapping statistics",
+        "description" : "Retrieves statistics for all mappings including message counts, error counts, snooping status, and loading errors. Useful for monitoring mapping performance and health.",
+        "operationId" : "getMappingStatus",
+        "responses" : {
+          "200" : {
+            "description" : "Mapping statistics retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "$ref" : "#/components/schemas/MappingStatus",
+                  "description" : "List of mapping statistics"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/monitoring/status/connectors" : {
+      "get" : {
+        "tags" : [ "Monitoring Controller" ],
+        "summary" : "Get all connectors status",
+        "description" : "Retrieves the status of all connectors for the current tenant. Returns a map with connector identifiers as keys and their status information as values. Includes both enabled and disabled connectors.",
+        "operationId" : "getConnectorsStatus",
+        "responses" : {
+          "200" : {
+            "description" : "Connectors status retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Map of connector identifiers to their status"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/monitoring/status/connector/{connectorIdentifier}" : {
+      "get" : {
+        "tags" : [ "Monitoring Controller" ],
+        "summary" : "Get connector status",
+        "description" : "Retrieves the current status of a specific connector including connection state, last update time, and any error messages.",
+        "operationId" : "getConnectorStatus",
+        "parameters" : [ {
+          "name" : "connectorIdentifier",
+          "in" : "path",
+          "description" : "The unique identifier of the connector",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "l19zjk"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Connector status retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConnectorStatusEvent"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Connector not found"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/extension" : {
+      "get" : {
+        "tags" : [ "Extension Controller" ],
+        "summary" : "Get all processor extensions",
+        "description" : "Retrieves all available processor extensions for the current tenant. Extensions provide custom data transformation and processing capabilities that can be used in mappings.",
+        "operationId" : "getProcessorExtensions",
+        "responses" : {
+          "200" : {
+            "description" : "Extensions retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Map of extension names to their configurations"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/extension/{extensionName}" : {
+      "get" : {
+        "tags" : [ "Extension Controller" ],
+        "summary" : "Get a specific processor extension",
+        "description" : "Retrieves detailed information about a specific processor extension including its configuration, status, and available entry points.",
+        "operationId" : "getProcessorExtension",
+        "parameters" : [ {
+          "name" : "extensionName",
+          "in" : "path",
+          "description" : "The unique name of the extension to retrieve",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "custom-json-processor"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Extension found and retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Extension"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Extension not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Error details indicating the extension was not found"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Extension Controller" ],
+        "summary" : "Delete a processor extension",
+        "description" : "Deletes a processor extension from the system. This will remove the extension and make it unavailable for use in mappings. Only external extensions can be deleted - built-in extensions cannot be removed.\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN role.\n",
+        "operationId" : "deleteProcessorExtension",
+        "parameters" : [ {
+          "name" : "extensionName",
+          "in" : "path",
+          "description" : "The unique name of the extension to delete",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "custom-json-processor"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Extension deleted successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Extension"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions to delete extensions"
+          },
+          "404" : {
+            "description" : "Extension not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Error details indicating the extension was not found"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/deployment/effective" : {
+      "get" : {
+        "tags" : [ "Deployment Controller" ],
+        "summary" : "Get effective deployments",
+        "description" : "Retrieves the current effective deployment state by querying all active connectors\nto see which mappings are actually deployed and running. This shows the real-time\ndeployment status across all connectors.\n\n**Use Case:**\n- Monitor which mappings are currently active on each connector\n- Verify deployment consistency across connectors\n- Troubleshoot deployment issues\n\n**Response Format:**\n- Key: Mapping identifier\n- Value: DeploymentMapEntry with connector details\n",
+        "operationId" : "getMappingsDeployed",
+        "responses" : {
+          "200" : {
+            "description" : "Effective deployments retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Map of mapping identifiers to their deployment entries"
+                },
+                "examples" : {
+                  "Effective Deployments" : {
+                    "description" : "Current deployment state across connectors",
+                    "value" : {
+                      "l19zjk" : {
+                        "identifier" : "l19zjk",
+                        "connectors" : [ {
+                          "identifier" : "mqtt-connector-01",
+                          "name" : "MQTT Production Connector",
+                          "enabled" : true,
+                          "connectorType" : "MQTT"
+                        } ]
+                      },
+                      "m23abc" : {
+                        "identifier" : "m23abc",
+                        "connectors" : [ {
+                          "identifier" : "http-connector",
+                          "name" : "HTTP Connector",
+                          "enabled" : true,
+                          "connectorType" : "HTTP"
+                        } ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/deployment/defined" : {
+      "get" : {
+        "tags" : [ "Deployment Controller" ],
+        "summary" : "Get complete deployment configuration",
+        "description" : "Retrieves the complete deployment configuration map showing all mappings and\nwhich connectors they are configured to be deployed to.\n\n**Response Format:**\n- Key: Mapping identifier\n- Value: List of connector identifiers\n\n**Use Cases:**\n- Get overview of all deployment configurations\n- Export/backup deployment settings\n- Audit deployment assignments\n- Bulk deployment management\n",
+        "operationId" : "getDeploymentMap",
+        "responses" : {
+          "200" : {
+            "description" : "Complete deployment configuration retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "description" : "Map of mapping identifiers to lists of connector identifiers"
+                },
+                "examples" : {
+                  "Complete Deployment Map" : {
+                    "description" : "All deployment configurations",
+                    "value" : {
+                      "l19zjk" : [ "mqtt-connector-01", "http-connector" ],
+                      "m23abc" : [ "mqtt-connector-01" ],
+                      "n45def" : [ "http-connector", "tcp-connector-01" ],
+                      "p67ghi" : [ "mqtt-connector-01", "tcp-connector-01" ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/feature" : {
+      "get" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Get the feature flags for the dynamic mapper service",
+        "description" : "Returns features with an indication if some functionality is available or not. This is useful if you want to check for example if outbound Mapping is possible on a tenant or not.",
+        "operationId" : "getFeatures",
+        "responses" : {
+          "200" : {
+            "description" : "Feature flags retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Feature"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/configuration/connector/specifications" : {
+      "get" : {
+        "tags" : [ "Configuration Controller" ],
+        "summary" : "Get connectors with their specifications",
+        "description" : "Returns all available connector specifications.",
+        "operationId" : "getConnectorSpecifications",
+        "responses" : {
+          "200" : {
+            "description" : "Connector specifications retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConnectorSpecification"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/subscription/{deviceId}" : {
+      "delete" : {
+        "tags" : [ "Device Subscription Controller" ],
+        "summary" : "Delete device notification subscription",
+        "description" : "Removes notification subscription for a specific device. The device will no longer trigger outbound mappings when its data changes.\n\n**Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.\n",
+        "operationId" : "subscriptionDelete",
+        "parameters" : [ {
+          "name" : "deviceId",
+          "in" : "path",
+          "description" : "ID of the device to unsubscribe",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : 12345
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Subscription deleted successfully"
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions"
+          },
+          "404" : {
+            "description" : "Device not found or outbound mapping is disabled",
+            "content" : {
+              "application/json" : { }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "C8YNotificationSubscription" : {
+        "type" : "object",
+        "description" : "Cumulocity IoT notification subscription configuration for outbound mappings",
+        "properties" : {
+          "api" : {
+            "type" : "string",
+            "description" : "Cumulocity IoT API type to subscribe to for notifications",
+            "enum" : [ "ALARM", "ALARM_WITH_CHILDREN", "EVENT", "EVENT_WITH_CHILDREN", "MEASUREMENT", "INVENTORY", "OPERATION", "EMPTY", "ALL" ],
+            "example" : "MEASUREMENT"
+          },
+          "subscriptionName" : {
+            "type" : "string",
+            "description" : "Optional name for the subscription to help identify it",
+            "example" : "temperature-sensors"
+          },
+          "devices" : {
+            "type" : "array",
+            "description" : "List of devices to include in the subscription. Child devices will be automatically discovered and included.",
+            "example" : [ {
+              "id" : "12345",
+              "name" : "Temperature Sensor 01"
+            }, {
+              "id" : "12346",
+              "name" : "Temperature Sensor 02"
+            } ],
+            "items" : {
+              "$ref" : "#/components/schemas/Device"
+            }
+          }
+        },
+        "required" : [ "api" ]
+      },
+      "Device" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id" ]
+      },
+      "ExtensionEntry" : {
+        "type" : "object",
+        "properties" : {
+          "extensionName" : {
+            "type" : "string"
+          },
+          "eventName" : {
+            "type" : "string"
+          },
+          "fqnClassName" : {
+            "type" : "string"
+          },
+          "loaded" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "extensionType" : {
+            "type" : "string",
+            "enum" : [ "EXTENSION_SOURCE", "EXTENSION_SOURCE_TARGET" ]
+          }
+        },
+        "required" : [ "eventName", "extensionName", "extensionType", "fqnClassName", "loaded", "message" ]
+      },
+      "Mapping" : {
+        "type" : "object",
+        "description" : "Mapping configuration for transforming data between external systems and Cumulocity IoT",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Unique identifier for the mapping generated by Cumulocity Core",
+            "example" : 34573838974
+          },
+          "identifier" : {
+            "type" : "string",
+            "description" : "Generated identifier for the mapping",
+            "example" : "l19zjk"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Display name for the mapping",
+            "example" : "Temperature Sensor Data Mapping"
+          },
+          "publishTopic" : {
+            "type" : "string",
+            "description" : "Topic where outbound messages will be published",
+            "example" : "device/+/temperature"
+          },
+          "publishTopicSample" : {
+            "type" : "string",
+            "description" : "Sample topic for outbound publishing",
+            "example" : "device/sensor001/temperature"
+          },
+          "mappingTopic" : {
+            "type" : "string",
+            "description" : "Topic pattern for incoming messages (supports MQTT wildcards)",
+            "example" : "sensors/+/data"
+          },
+          "mappingTopicSample" : {
+            "type" : "string",
+            "description" : "Sample topic for incoming messages",
+            "example" : "sensors/temp001/data"
+          },
+          "targetAPI" : {
+            "type" : "string",
+            "description" : "Target API for the mapping",
+            "enum" : [ "ALARM", "ALARM_WITH_CHILDREN", "EVENT", "EVENT_WITH_CHILDREN", "MEASUREMENT", "INVENTORY", "OPERATION", "EMPTY", "ALL" ]
+          },
+          "direction" : {
+            "type" : "string",
+            "description" : "Direction of data flow",
+            "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ],
+            "example" : "INBOUND"
+          },
+          "sourceTemplate" : {
+            "type" : "string",
+            "description" : "JSON template for source data structure",
+            "example" : {
+              "temperature" : 25.5,
+              "deviceId" : "sensor001"
+            }
+          },
+          "targetTemplate" : {
+            "type" : "string",
+            "description" : "JSON template for target data structure",
+            "example" : {
+              "source" : {
+                "id" : "sensor001"
+              },
+              "type" : "c8y_TemperatureMeasurement"
+            }
+          },
+          "mappingType" : {
+            "type" : "string",
+            "description" : "Type of mapping transformation",
+            "enum" : [ "JSON", "FLAT_FILE", "HEX", "PROTOBUF_INTERNAL", "EXTENSION_SOURCE", "EXTENSION_SOURCE_TARGET", "CODE_BASED" ],
+            "example" : "JSON"
+          },
+          "substitutions" : {
+            "type" : "array",
+            "description" : "Array of field substitutions for data transformation",
+            "items" : {
+              "$ref" : "#/components/schemas/Substitution"
+            }
+          },
+          "active" : {
+            "type" : "boolean",
+            "description" : "Whether the mapping is currently active",
+            "example" : true
+          },
+          "debug" : {
+            "type" : "boolean",
+            "description" : "Whether debug mode is enabled for this mapping",
+            "example" : false
+          },
+          "tested" : {
+            "type" : "boolean",
+            "description" : "Whether the mapping has been tested",
+            "example" : true
+          },
+          "supportsMessageContext" : {
+            "type" : "boolean",
+            "description" : "Whether the mapping supports message context",
+            "example" : false
+          },
+          "eventWithAttachment" : {
+            "type" : "boolean",
+            "description" : "Whether events can have attachments",
+            "example" : false
+          },
+          "createNonExistingDevice" : {
+            "type" : "boolean",
+            "description" : "Whether to create devices that don't exist",
+            "example" : true
+          },
+          "updateExistingDevice" : {
+            "type" : "boolean",
+            "description" : "Whether to update existing devices",
+            "example" : true
+          },
+          "autoAckOperation" : {
+            "type" : "boolean",
+            "description" : "Whether to automatically acknowledge operations",
+            "example" : false
+          },
+          "useExternalId" : {
+            "type" : "boolean",
+            "description" : "Whether to use external ID for device identification",
+            "example" : true
+          },
+          "externalIdType" : {
+            "type" : "string",
+            "description" : "Type of external ID to use",
+            "example" : "c8y_Serial"
+          },
+          "snoopStatus" : {
+            "type" : "string",
+            "description" : "Status of template snooping",
+            "enum" : [ "NONE", "ENABLED", "STARTED", "STOPPED" ],
+            "example" : "ENABLED"
+          },
+          "snoopedTemplates" : {
+            "type" : "array",
+            "description" : "List of templates captured during snooping",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "extension" : {
+            "$ref" : "#/components/schemas/ExtensionEntry",
+            "description" : "Extension configuration for custom processing"
+          },
+          "filterMapping" : {
+            "type" : "string",
+            "description" : "Filter expression for mapping conditions",
+            "example" : "source.type == 'temperature'"
+          },
+          "filterInventory" : {
+            "type" : "string",
+            "description" : "Filter expression for inventory queries",
+            "example" : "has(c8y_IsDevice)"
+          },
+          "maxFailureCount" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Maximum number of failures before disabling mapping",
+            "example" : 10
+          },
+          "qos" : {
+            "type" : "string",
+            "description" : "Quality of Service level for MQTT",
+            "enum" : [ "AT_MOST_ONCE", "AT_LEAST_ONCE", "EXACTLY_ONCE" ],
+            "example" : "AT_LEAST_ONCE"
+          },
+          "code" : {
+            "type" : "string",
+            "description" : "Base64 encoded code for custom substitutions"
+          },
+          "lastUpdate" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Timestamp of last update",
+            "example" : 1640995200000
+          }
+        },
+        "required" : [ "active", "debug", "direction", "id", "identifier", "lastUpdate", "mappingType", "maxFailureCount", "name", "qos", "snoopStatus", "snoopedTemplates", "sourceTemplate", "substitutions", "supportsMessageContext", "targetAPI", "targetTemplate", "tested", "useExternalId" ]
+      },
+      "Substitution" : {
+        "type" : "object",
+        "properties" : {
+          "pathSource" : {
+            "type" : "string"
+          },
+          "pathTarget" : {
+            "type" : "string"
+          },
+          "repairStrategy" : {
+            "type" : "string",
+            "enum" : [ "DEFAULT", "USE_FIRST_VALUE_OF_ARRAY", "USE_LAST_VALUE_OF_ARRAY", "IGNORE", "REMOVE_IF_MISSING_OR_NULL", "CREATE_IF_MISSING" ]
+          },
+          "expandArray" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "pathSource", "pathTarget", "repairStrategy" ]
+      },
+      "CodeTemplate" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "templateType" : {
+            "type" : "string",
+            "enum" : [ "INBOUND", "OUTBOUND", "SHARED", "SYSTEM" ]
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "internal" : {
+            "type" : "boolean"
+          },
+          "readonly" : {
+            "type" : "boolean"
+          },
+          "defaultTemplate" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "code", "defaultTemplate", "description", "id", "internal", "name", "readonly", "templateType" ]
+      },
+      "ServiceConfiguration" : {
+        "type" : "object",
+        "description" : "Service configuration for the dynamic mapping service controlling logging, caching, extensions, and performance settings",
+        "properties" : {
+          "logPayload" : {
+            "type" : "boolean",
+            "description" : "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.",
+            "example" : false
+          },
+          "logSubstitution" : {
+            "type" : "boolean",
+            "description" : "Enable logging of field substitutions during mapping transformation for debugging.",
+            "example" : false
+          },
+          "logConnectorErrorInBackend" : {
+            "type" : "boolean",
+            "description" : "Enable logging of connector errors in the backend system for monitoring and troubleshooting.",
+            "example" : false
+          },
+          "sendConnectorLifecycle" : {
+            "type" : "boolean",
+            "description" : "Enable sending connector lifecycle events (connect/disconnect) to Cumulocity IoT.",
+            "example" : false
+          },
+          "sendMappingStatus" : {
+            "type" : "boolean",
+            "description" : "Enable sending mapping execution status and statistics to Cumulocity IoT.",
+            "example" : true
+          },
+          "sendSubscriptionEvents" : {
+            "type" : "boolean",
+            "description" : "Enable sending subscription events when mappings are activated/deactivated.",
+            "example" : false
+          },
+          "sendNotificationLifecycle" : {
+            "type" : "boolean",
+            "description" : "Enable sending notification lifecycle events for outbound mapping subscriptions.",
+            "example" : false
+          },
+          "externalExtensionEnabled" : {
+            "type" : "boolean",
+            "description" : "Enable support for external processor extensions that provide custom transformation capabilities.",
+            "example" : true
+          },
+          "outboundMappingEnabled" : {
+            "type" : "boolean",
+            "description" : "Enable outbound mapping functionality for sending data from Cumulocity IoT to external systems.",
+            "example" : true
+          },
+          "inboundExternalIdCacheSize" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Size of the cache for inbound external ID lookups. Set to 0 to disable caching.",
+            "example" : 1000,
+            "minimum" : 0
+          },
+          "inboundExternalIdCacheRetention" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Retention time in hours for inbound external ID cache entries.",
+            "example" : 24,
+            "minimum" : 1
+          },
+          "inventoryCacheSize" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Size of the inventory cache for device lookups. Set to 0 to disable caching.",
+            "example" : 500,
+            "minimum" : 0
+          },
+          "inventoryCacheRetention" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Retention time in hours for inventory cache entries.",
+            "example" : 12,
+            "minimum" : 1
+          },
+          "inventoryFragmentsToCache" : {
+            "type" : "array",
+            "description" : "List of inventory fragments to include in cache for better performance. Examples: c8y_IsDevice, c8y_Hardware, c8y_Mobile",
+            "example" : [ "c8y_IsDevice", "c8y_Hardware", "c8y_Mobile" ],
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "maxCPUTimeMS" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Maximum CPU time in milliseconds allowed for code execution in mappings. Prevents infinite loops and excessive processing.",
+            "example" : 5000,
+            "maximum" : 30000,
+            "minimum" : 100
+          },
+          "codeTemplates" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/CodeTemplate"
+            },
+            "description" : "Map of code templates used for custom processing logic in mappings"
+          }
+        },
+        "required" : [ "externalExtensionEnabled", "inboundExternalIdCacheRetention", "inboundExternalIdCacheSize", "inventoryCacheRetention", "inventoryCacheSize", "inventoryFragmentsToCache", "logConnectorErrorInBackend", "logPayload", "logSubstitution", "maxCPUTimeMS", "outboundMappingEnabled", "sendConnectorLifecycle", "sendMappingStatus", "sendNotificationLifecycle", "sendSubscriptionEvents" ]
+      },
+      "ConnectorConfiguration" : {
+        "type" : "object",
+        "properties" : {
+          "identifier" : {
+            "type" : "string",
+            "description" : "A unique identifier to identify the connector",
+            "example" : "o5rhgj4g"
+          },
+          "connectorType" : {
+            "type" : "string",
+            "description" : "The type of a connector. Must be one of MQTT, CUMULOCITY_MQTT_SERVICE, KAFKA, HTTP, WEB_HOOK",
+            "enum" : [ "MQTT", "CUMULOCITY_MQTT_SERVICE", "KAFKA", "HTTP", "WEB_HOOK" ],
+            "example" : "MQTT"
+          },
+          "enabled" : {
+            "type" : "boolean",
+            "description" : "Flag if the connector is enabled or not",
+            "example" : false
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "A meaningful name of the connector",
+            "example" : "MQTT Connector"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "description" : "The properties of the connector used to establish a connection",
+            "example" : {
+              "protocol" : "mqtt://",
+              "mqttHost" : "mqtt.example.com",
+              "mqttPort" : 1883,
+              "clientId" : "dynamic_mapper_client1"
+            }
+          }
+        },
+        "required" : [ "connectorType", "enabled", "identifier", "name", "properties" ]
+      },
+      "BinaryInfo" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ByteSequence" : {
+        "type" : "object"
+      },
+      "C8YRequest" : {
+        "type" : "object",
+        "properties" : {
+          "predecessor" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "method" : {
+            "type" : "string",
+            "enum" : [ "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE" ]
+          },
+          "sourceId" : {
+            "type" : "string"
+          },
+          "externalIdType" : {
+            "type" : "string"
+          },
+          "request" : {
+            "type" : "string"
+          },
+          "response" : {
+            "type" : "string"
+          },
+          "targetAPI" : {
+            "type" : "string",
+            "enum" : [ "ALARM", "ALARM_WITH_CHILDREN", "EVENT", "EVENT_WITH_CHILDREN", "MEASUREMENT", "INVENTORY", "OPERATION", "EMPTY", "ALL" ]
+          },
+          "error" : {
+            "type" : "object",
+            "properties" : {
+              "cause" : {
+                "type" : "object",
+                "properties" : {
+                  "stackTrace" : {
+                    "type" : "array",
+                    "items" : {
+                      "type" : "object",
+                      "properties" : {
+                        "classLoaderName" : {
+                          "type" : "string"
+                        },
+                        "moduleName" : {
+                          "type" : "string"
+                        },
+                        "moduleVersion" : {
+                          "type" : "string"
+                        },
+                        "methodName" : {
+                          "type" : "string"
+                        },
+                        "fileName" : {
+                          "type" : "string"
+                        },
+                        "lineNumber" : {
+                          "type" : "integer",
+                          "format" : "int32"
+                        },
+                        "className" : {
+                          "type" : "string"
+                        },
+                        "nativeMethod" : {
+                          "type" : "boolean"
+                        }
+                      }
+                    }
+                  },
+                  "message" : {
+                    "type" : "string"
+                  },
+                  "localizedMessage" : {
+                    "type" : "string"
+                  }
+                }
+              },
+              "stackTrace" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "classLoaderName" : {
+                      "type" : "string"
+                    },
+                    "moduleName" : {
+                      "type" : "string"
+                    },
+                    "moduleVersion" : {
+                      "type" : "string"
+                    },
+                    "methodName" : {
+                      "type" : "string"
+                    },
+                    "fileName" : {
+                      "type" : "string"
+                    },
+                    "lineNumber" : {
+                      "type" : "integer",
+                      "format" : "int32"
+                    },
+                    "className" : {
+                      "type" : "string"
+                    },
+                    "nativeMethod" : {
+                      "type" : "boolean"
+                    }
+                  }
+                }
+              },
+              "message" : {
+                "type" : "string"
+              },
+              "suppressed" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "stackTrace" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "object",
+                        "properties" : {
+                          "classLoaderName" : {
+                            "type" : "string"
+                          },
+                          "moduleName" : {
+                            "type" : "string"
+                          },
+                          "moduleVersion" : {
+                            "type" : "string"
+                          },
+                          "methodName" : {
+                            "type" : "string"
+                          },
+                          "fileName" : {
+                            "type" : "string"
+                          },
+                          "lineNumber" : {
+                            "type" : "integer",
+                            "format" : "int32"
+                          },
+                          "className" : {
+                            "type" : "string"
+                          },
+                          "nativeMethod" : {
+                            "type" : "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "message" : {
+                      "type" : "string"
+                    },
+                    "localizedMessage" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              },
+              "localizedMessage" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      },
+      "Context" : {
+        "type" : "object",
+        "properties" : {
+          "engine" : {
+            "$ref" : "#/components/schemas/Engine"
+          },
+          "polyglotBindings" : {
+            "$ref" : "#/components/schemas/Value"
+          }
+        }
+      },
+      "Engine" : {
+        "type" : "object",
+        "properties" : {
+          "implementationName" : {
+            "type" : "string"
+          },
+          "options" : {
+            "$ref" : "#/components/schemas/OptionDescriptors"
+          },
+          "version" : {
+            "type" : "string"
+          },
+          "instruments" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/Instrument"
+            }
+          },
+          "languages" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/Language"
+            }
+          },
+          "cachedSources" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Source"
+            },
+            "uniqueItems" : true
+          }
+        }
+      },
+      "Instrument" : {
+        "type" : "object",
+        "properties" : {
+          "options" : {
+            "$ref" : "#/components/schemas/OptionDescriptors"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          },
+          "website" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Language" : {
+        "type" : "object",
+        "properties" : {
+          "implementationName" : {
+            "type" : "string"
+          },
+          "options" : {
+            "$ref" : "#/components/schemas/OptionDescriptors"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          },
+          "mimeTypes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "uniqueItems" : true
+          },
+          "interactive" : {
+            "type" : "boolean"
+          },
+          "defaultMimeType" : {
+            "type" : "string"
+          },
+          "website" : {
+            "type" : "string"
+          }
+        }
+      },
+      "OptionDescriptors" : {
+        "type" : "object"
+      },
+      "ProcessingContextObject" : {
+        "type" : "object",
+        "properties" : {
+          "mapping" : {
+            "$ref" : "#/components/schemas/Mapping"
+          },
+          "topic" : {
+            "type" : "string"
+          },
+          "api" : {
+            "type" : "string",
+            "enum" : [ "ALARM", "ALARM_WITH_CHILDREN", "EVENT", "EVENT_WITH_CHILDREN", "MEASUREMENT", "INVENTORY", "OPERATION", "EMPTY", "ALL" ]
+          },
+          "qos" : {
+            "type" : "string",
+            "enum" : [ "AT_MOST_ONCE", "AT_LEAST_ONCE", "EXACTLY_ONCE" ]
+          },
+          "resolvedPublishTopic" : {
+            "type" : "string"
+          },
+          "payload" : {
+            "type" : "object"
+          },
+          "rawPayload" : {
+            "type" : "object"
+          },
+          "requests" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/C8YRequest"
+            }
+          },
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "cause" : {
+                  "type" : "object",
+                  "properties" : {
+                    "stackTrace" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "object",
+                        "properties" : {
+                          "classLoaderName" : {
+                            "type" : "string"
+                          },
+                          "moduleName" : {
+                            "type" : "string"
+                          },
+                          "moduleVersion" : {
+                            "type" : "string"
+                          },
+                          "methodName" : {
+                            "type" : "string"
+                          },
+                          "fileName" : {
+                            "type" : "string"
+                          },
+                          "lineNumber" : {
+                            "type" : "integer",
+                            "format" : "int32"
+                          },
+                          "className" : {
+                            "type" : "string"
+                          },
+                          "nativeMethod" : {
+                            "type" : "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "message" : {
+                      "type" : "string"
+                    },
+                    "localizedMessage" : {
+                      "type" : "string"
+                    }
+                  }
+                },
+                "stackTrace" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "classLoaderName" : {
+                        "type" : "string"
+                      },
+                      "moduleName" : {
+                        "type" : "string"
+                      },
+                      "moduleVersion" : {
+                        "type" : "string"
+                      },
+                      "methodName" : {
+                        "type" : "string"
+                      },
+                      "fileName" : {
+                        "type" : "string"
+                      },
+                      "lineNumber" : {
+                        "type" : "integer",
+                        "format" : "int32"
+                      },
+                      "className" : {
+                        "type" : "string"
+                      },
+                      "nativeMethod" : {
+                        "type" : "boolean"
+                      }
+                    }
+                  }
+                },
+                "message" : {
+                  "type" : "string"
+                },
+                "suppressed" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "stackTrace" : {
+                        "type" : "array",
+                        "items" : {
+                          "type" : "object",
+                          "properties" : {
+                            "classLoaderName" : {
+                              "type" : "string"
+                            },
+                            "moduleName" : {
+                              "type" : "string"
+                            },
+                            "moduleVersion" : {
+                              "type" : "string"
+                            },
+                            "methodName" : {
+                              "type" : "string"
+                            },
+                            "fileName" : {
+                              "type" : "string"
+                            },
+                            "lineNumber" : {
+                              "type" : "integer",
+                              "format" : "int32"
+                            },
+                            "className" : {
+                              "type" : "string"
+                            },
+                            "nativeMethod" : {
+                              "type" : "boolean"
+                            }
+                          }
+                        }
+                      },
+                      "message" : {
+                        "type" : "string"
+                      },
+                      "localizedMessage" : {
+                        "type" : "string"
+                      }
+                    }
+                  }
+                },
+                "localizedMessage" : {
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "processingType" : {
+            "type" : "string",
+            "enum" : [ "UNDEFINED", "ONE_DEVICE_ONE_VALUE", "ONE_DEVICE_MULTIPLE_VALUE", "MULTIPLE_DEVICE_ONE_VALUE", "MULTIPLE_DEVICE_MULTIPLE_VALUE" ]
+          },
+          "mappingType" : {
+            "type" : "string",
+            "enum" : [ "JSON", "FLAT_FILE", "HEX", "PROTOBUF_INTERNAL", "EXTENSION_SOURCE", "EXTENSION_SOURCE_TARGET", "CODE_BASED" ]
+          },
+          "processingCache" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/components/schemas/SubstituteValue"
+              }
+            }
+          },
+          "sendPayload" : {
+            "type" : "boolean"
+          },
+          "needsRepair" : {
+            "type" : "boolean"
+          },
+          "tenant" : {
+            "type" : "string"
+          },
+          "serviceConfiguration" : {
+            "$ref" : "#/components/schemas/ServiceConfiguration"
+          },
+          "supportsMessageContext" : {
+            "type" : "boolean"
+          },
+          "ignoreFurtherProcessing" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string",
+            "format" : "byte"
+          },
+          "sourceId" : {
+            "type" : "string"
+          },
+          "graalEngine" : {
+            "$ref" : "#/components/schemas/Engine"
+          },
+          "graalContext" : {
+            "$ref" : "#/components/schemas/Context"
+          },
+          "sharedCode" : {
+            "type" : "string"
+          },
+          "sharedSource" : {
+            "$ref" : "#/components/schemas/Source"
+          },
+          "systemCode" : {
+            "type" : "string"
+          },
+          "systemSource" : {
+            "$ref" : "#/components/schemas/Source"
+          },
+          "mappingSource" : {
+            "$ref" : "#/components/schemas/Source"
+          },
+          "sourceValue" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "binaryInfo" : {
+            "$ref" : "#/components/schemas/BinaryInfo"
+          },
+          "currentRequest" : {
+            "$ref" : "#/components/schemas/C8YRequest"
+          },
+          "pathTargets" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "uniqueItems" : true
+          },
+          "deviceEntries" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SubstituteValue"
+            }
+          },
+          "processingCacheSize" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pathsTargetForDeviceIdentifiers" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "Source" : {
+        "type" : "object",
+        "properties" : {
+          "uri" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "length" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "bytes" : {
+            "$ref" : "#/components/schemas/ByteSequence"
+          },
+          "inputStream" : {
+            "type" : "object",
+            "deprecated" : true
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "language" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string",
+            "format" : "url"
+          },
+          "reader" : {
+            "type" : "object"
+          },
+          "mimeType" : {
+            "type" : "string"
+          },
+          "internal" : {
+            "type" : "boolean"
+          },
+          "interactive" : {
+            "type" : "boolean"
+          },
+          "characters" : {
+            "type" : "object",
+            "properties" : {
+              "empty" : {
+                "type" : "boolean"
+              }
+            }
+          },
+          "lineCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "SourceSection" : {
+        "type" : "object",
+        "properties" : {
+          "source" : {
+            "$ref" : "#/components/schemas/Source"
+          },
+          "available" : {
+            "type" : "boolean"
+          },
+          "code" : {
+            "type" : "object",
+            "deprecated" : true,
+            "properties" : {
+              "empty" : {
+                "type" : "boolean"
+              }
+            }
+          },
+          "charEndIndex" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "charLength" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "startColumn" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "endColumn" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "charIndex" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "startLine" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "endLine" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "characters" : {
+            "type" : "object",
+            "properties" : {
+              "empty" : {
+                "type" : "boolean"
+              }
+            }
+          }
+        }
+      },
+      "SubstituteValue" : {
+        "type" : "object",
+        "properties" : {
+          "value" : {
+            "type" : "object"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "ARRAY", "IGNORE", "NUMBER", "OBJECT", "TEXTUAL" ]
+          },
+          "repairStrategy" : {
+            "type" : "string",
+            "enum" : [ "DEFAULT", "USE_FIRST_VALUE_OF_ARRAY", "USE_LAST_VALUE_OF_ARRAY", "IGNORE", "REMOVE_IF_MISSING_OR_NULL", "CREATE_IF_MISSING" ]
+          },
+          "expandArray" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "Value" : {
+        "type" : "object",
+        "properties" : {
+          "context" : {
+            "$ref" : "#/components/schemas/Context"
+          },
+          "iterator" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "null" : {
+            "type" : "boolean"
+          },
+          "metaQualifiedName" : {
+            "type" : "string"
+          },
+          "hashKeysIterator" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "hashValuesIterator" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "iteratorNextElement" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "metaParents" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "nativePointer" : {
+            "type" : "boolean"
+          },
+          "hostObject" : {
+            "type" : "boolean"
+          },
+          "metaObject" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "metaSimpleName" : {
+            "type" : "string"
+          },
+          "bufferWritable" : {
+            "type" : "boolean"
+          },
+          "number" : {
+            "type" : "boolean"
+          },
+          "memberKeys" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "uniqueItems" : true
+          },
+          "proxyObject" : {
+            "type" : "boolean"
+          },
+          "arraySize" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "hashSize" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "boolean" : {
+            "type" : "boolean"
+          },
+          "bufferSize" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sourceLocation" : {
+            "$ref" : "#/components/schemas/SourceSection"
+          },
+          "exception" : {
+            "type" : "boolean"
+          },
+          "string" : {
+            "type" : "boolean"
+          },
+          "timeZone" : {
+            "type" : "boolean"
+          },
+          "time" : {
+            "type" : "boolean"
+          },
+          "date" : {
+            "type" : "boolean"
+          },
+          "duration" : {
+            "type" : "boolean"
+          },
+          "instant" : {
+            "type" : "boolean"
+          },
+          "hashEntriesIterator" : {
+            "$ref" : "#/components/schemas/Value"
+          }
+        }
+      },
+      "ServiceOperation" : {
+        "type" : "object",
+        "description" : "Service operation request containing the operation type and parameters",
+        "properties" : {
+          "tenant" : {
+            "type" : "string",
+            "description" : "Tenant identifier (automatically set from context)",
+            "example" : "t12345"
+          },
+          "operation" : {
+            "type" : "string",
+            "description" : "Type of operation to execute",
+            "enum" : [ "ACTIVATE_MAPPING", "CONNECT", "DISCONNECT", "REFRESH_STATUS_MAPPING", "RELOAD_EXTENSIONS", "RELOAD_MAPPINGS", "RESET_STATISTICS_MAPPING", "REFRESH_NOTIFICATIONS_SUBSCRIPTIONS", "DEBUG_MAPPING", "SNOOP_MAPPING", "SNOOP_RESET", "RESET_DEPLOYMENT_MAP", "CLEAR_CACHE", "APPLY_MAPPING_FILTER", "COPY_SNOOPED_SOURCE_TEMPLATE", "INIT_CODE_TEMPLATES", "ADD_SAMPLE_MAPPINGS" ],
+            "example" : "RELOAD_MAPPINGS"
+          },
+          "parameter" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "description" : "Parameters for the operation (varies by operation type)",
+            "example" : {
+              "connectorIdentifier" : "jrr12x",
+              "active" : "true"
+            }
+          }
+        },
+        "required" : [ "operation" ]
+      },
+      "MappingTreeNode" : {
+        "type" : "object",
+        "properties" : {
+          "childNodes" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/components/schemas/MappingTreeNode"
+              }
+            }
+          },
+          "mapping" : {
+            "$ref" : "#/components/schemas/Mapping"
+          },
+          "nodeId" : {
+            "type" : "string"
+          },
+          "mappingNode" : {
+            "type" : "boolean"
+          },
+          "depthIndex" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "parentNode" : {
+            "$ref" : "#/components/schemas/MappingTreeNode"
+          },
+          "absolutePath" : {
+            "type" : "string"
+          },
+          "level" : {
+            "type" : "string"
+          },
+          "tenant" : {
+            "type" : "string"
+          },
+          "treeLock" : {
+            "type" : "object"
+          },
+          "readLock" : {
+            "type" : "object"
+          },
+          "writeLock" : {
+            "type" : "object"
+          },
+          "parentOptional" : {
+            "$ref" : "#/components/schemas/MappingTreeNode"
+          },
+          "mappingOptional" : {
+            "$ref" : "#/components/schemas/Mapping"
+          }
+        }
+      },
+      "MappingStatus" : {
+        "type" : "object",
+        "description" : "Mapping execution statistics and status information",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Unique identifier for the mapping generated by Cumulocity Core",
+            "example" : 34573838974
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Display name of the mapping",
+            "example" : "Temperature Sensor Data Mapping"
+          },
+          "identifier" : {
+            "type" : "string",
+            "description" : "Generated identifier for the mapping",
+            "example" : "l19zjk"
+          },
+          "direction" : {
+            "type" : "string",
+            "description" : "Direction of data flow for this mapping",
+            "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ],
+            "example" : "INBOUND"
+          },
+          "mappingTopic" : {
+            "type" : "string",
+            "description" : "Topic pattern for incoming messages",
+            "example" : "sensors/+/data"
+          },
+          "publishTopic" : {
+            "type" : "string",
+            "description" : "Topic pattern for outbound publishing",
+            "example" : "device/+/temperature"
+          },
+          "messagesReceived" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Total number of messages processed by this mapping",
+            "example" : 1247
+          },
+          "errors" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Total number of processing errors",
+            "example" : 3
+          },
+          "currentFailureCount" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Current consecutive failure count",
+            "example" : 0
+          },
+          "snoopedTemplatesActive" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Number of currently active snooped templates",
+            "example" : 5
+          },
+          "snoopedTemplatesTotal" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Total number of snooped templates collected",
+            "example" : 10
+          },
+          "loadingError" : {
+            "type" : "string",
+            "description" : "Error message if mapping failed to load",
+            "example" : "Invalid JSON template"
+          }
+        },
+        "required" : [ "currentFailureCount", "direction", "errors", "id", "identifier", "loadingError", "mappingTopic", "messagesReceived", "name", "publishTopic", "snoopedTemplatesActive", "snoopedTemplatesTotal" ]
+      },
+      "ConnectorStatusEvent" : {
+        "type" : "object",
+        "properties" : {
+          "connectorName" : {
+            "type" : "string"
+          },
+          "connectorIdentifier" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "UNKNOWN", "CONFIGURED", "ENABLED", "CONNECTING", "CONNECTED", "DISCONNECTED", "DISCONNECTING", "FAILED" ]
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "date" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "connectorIdentifier", "connectorName", "date", "message", "status" ]
+      },
+      "Extension" : {
+        "type" : "object",
+        "description" : "Processor extension configuration providing custom data transformation capabilities",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Unique identifier for the extension",
+            "example" : "custom-json-processor"
+          },
+          "loaded" : {
+            "type" : "string",
+            "description" : "Loading status of the extension",
+            "enum" : [ "COMPLETE", "PARTIALLY", "NOT_LOADED", "UNKNOWN" ],
+            "example" : "LOADED"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Display name of the extension",
+            "example" : "Custom JSON Processor"
+          },
+          "external" : {
+            "type" : "boolean",
+            "description" : "Whether this is an external extension (true) or built-in extension (false)",
+            "example" : true
+          },
+          "extensionEntries" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/ExtensionEntry"
+            },
+            "description" : "Map of available extension entry points and their configurations"
+          }
+        },
+        "required" : [ "extensionEntries", "external", "id", "loaded", "name" ]
+      },
+      "Feature" : {
+        "type" : "object",
+        "description" : "Feature flags for the dynamic mapping service",
+        "properties" : {
+          "outputMappingEnabled" : {
+            "type" : "boolean",
+            "description" : "Flag to check if outbound mapping is enabled or not",
+            "example" : true
+          },
+          "externalExtensionsEnabled" : {
+            "type" : "boolean",
+            "description" : "Flag to check if external extensions are enabled or not",
+            "example" : true
+          },
+          "userHasMappingCreateRole" : {
+            "type" : "boolean",
+            "description" : "Flag to check if the logged in user has the CREATE Role",
+            "example" : true
+          },
+          "userHasMappingAdminRole" : {
+            "type" : "boolean",
+            "description" : "Flag to check if the logged in user has the ADMIN Role",
+            "example" : true
+          }
+        },
+        "required" : [ "externalExtensionsEnabled", "outputMappingEnabled", "userHasMappingAdminRole", "userHasMappingCreateRole" ]
+      },
+      "ConnectorProperty" : {
+        "type" : "object",
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "required" : {
+            "type" : "boolean"
+          },
+          "order" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "ID_STRING_PROPERTY", "STRING_PROPERTY", "SENSITIVE_STRING_PROPERTY", "NUMERIC_PROPERTY", "BOOLEAN_PROPERTY", "OPTION_PROPERTY", "STRING_LARGE_PROPERTY" ]
+          },
+          "readonly" : {
+            "type" : "boolean"
+          },
+          "hidden" : {
+            "type" : "boolean"
+          },
+          "defaultValue" : {
+            "type" : "object"
+          },
+          "options" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "condition" : {
+            "$ref" : "#/components/schemas/ConnectorPropertyCondition"
+          }
+        },
+        "required" : [ "condition", "defaultValue", "description", "hidden", "options", "order", "readonly", "required", "type" ]
+      },
+      "ConnectorPropertyCondition" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "anyOf" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "anyOf", "key" ]
+      },
+      "ConnectorSpecification" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "The name of the connector",
+            "example" : "MQTT Connector"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "A description of the connector",
+            "example" : "This is the MQTT Connector with the following features..."
+          },
+          "connectorType" : {
+            "type" : "string",
+            "description" : "The type of the Connector",
+            "enum" : [ "MQTT", "CUMULOCITY_MQTT_SERVICE", "KAFKA", "HTTP", "WEB_HOOK" ],
+            "example" : "MQTT"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/ConnectorProperty"
+            },
+            "description" : "A map of properties the connector needs to establish a connection. The key is the property name and the value is the property specification",
+            "example" : {
+              "protocol" : {
+                "description" : "The protocol to use",
+                "required" : true,
+                "order" : 1,
+                "type" : "STRING",
+                "readonly" : false
+              }
+            }
+          },
+          "supportsMessageContext" : {
+            "type" : "boolean",
+            "description" : "A flag to define if the connector supports message context. If true, the connector can handle additional metadata in messages.",
+            "example" : true
+          },
+          "supportedDirections" : {
+            "type" : "array",
+            "description" : "A List to define if the connector support INBOUND and OUTBOUND mappings or both.",
+            "example" : [ "INBOUND", "OUTBOUND" ],
+            "items" : {
+              "type" : "string",
+              "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ]
+            }
+          }
+        },
+        "required" : [ "connectorType", "description", "name", "properties", "supportedDirections", "supportsMessageContext" ]
+      }
+    }
+  }
+}

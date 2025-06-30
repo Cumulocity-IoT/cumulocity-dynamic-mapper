@@ -160,7 +160,11 @@ public class ExtensionController {
 
     @Operation(
         summary = "Delete a processor extension",
-        description = "Deletes a processor extension from the system. This will remove the extension and make it unavailable for use in mappings. Only external extensions can be deleted - built-in extensions cannot be removed.",
+        description = """
+        Deletes a processor extension from the system. This will remove the extension and make it unavailable for use in mappings. Only external extensions can be deleted - built-in extensions cannot be removed.
+        
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN role.
+        """,
         parameters = {
             @Parameter(
                 name = "extensionName",

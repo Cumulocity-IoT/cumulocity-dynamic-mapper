@@ -86,6 +86,8 @@ public class DeviceSubscriptionController {
             - Automatically discovers and includes all child devices
             - Creates subscriptions for all specified API types
             - Returns the subscription with all included devices
+            
+            **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
             """,
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Subscription configuration with devices and API types",
@@ -189,7 +191,8 @@ public class DeviceSubscriptionController {
             
             **Prerequisites:**
             - Outbound mapping must be enabled in service configuration
-            - User must have CREATE or ADMIN role
+            
+            **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
             """,
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Updated subscription configuration",
@@ -306,7 +309,9 @@ public class DeviceSubscriptionController {
 
     @Operation(
         summary = "Get device notification subscriptions",
-        description = "Retrieves current notification subscriptions, optionally filtered by device ID or subscription name. Shows which devices are currently subscribed for outbound notifications.",
+        description = """
+        Retrieves current notification subscriptions, optionally filtered by device ID or subscription name. Shows which devices are currently subscribed for outbound notifications.
+        """,
         parameters = {
             @Parameter(
                 name = "deviceId",
@@ -355,7 +360,11 @@ public class DeviceSubscriptionController {
 
     @Operation(
         summary = "Delete device notification subscription",
-        description = "Removes notification subscription for a specific device. The device will no longer trigger outbound mappings when its data changes.",
+        description = """
+        Removes notification subscription for a specific device. The device will no longer trigger outbound mappings when its data changes.
+        
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+        """,
         parameters = {
             @Parameter(
                 name = "deviceId",
