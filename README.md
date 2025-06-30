@@ -45,7 +45,7 @@ Please check the [Architecture overview](/ARCHITECTURE.md) if you are eager to u
 
 ## API
 
-Please check the [REST API](/resources/openAPI/API.md) provided by the Dynamic Mapper.
+Please check the [REST API](/resources/openAPI/README.md) provided by the Dynamic Mapper.
 You can also check the Swagger documentation of the Dynamic Mapper at the following URL: `{yourTenantURL}/service/dynamic-mapper-service/swagger-ui/index.html`
 
 ## Extensions
