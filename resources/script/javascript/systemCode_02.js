@@ -1,8 +1,8 @@
 // share project specific java value classes
-const SubstitutionResult = Java.type('dynamic.mapping.processor.model.SubstitutionResult');
-const SubstitutionValue = Java.type('dynamic.mapping.processor.model.SubstituteValue');
-const RepairStrategy = Java.type('dynamic.mapping.processor.model.RepairStrategy');
-const TYPE = Java.type('dynamic.mapping.processor.model.SubstituteValue$TYPE');
+const SubstitutionResult = Java.type('dynamic.mapper.processor.model.SubstitutionResult');
+const SubstitutionValue = Java.type('dynamic.mapper.processor.model.SubstituteValue');
+const RepairStrategy = Java.type('dynamic.mapper.processor.model.RepairStrategy');
+const TYPE = Java.type('dynamic.mapper.processor.model.SubstituteValue$TYPE');
 
 // share java value classes
 const ArrayList = Java.type('java.util.ArrayList');

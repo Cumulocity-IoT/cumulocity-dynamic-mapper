@@ -35,18 +35,18 @@ jobs:
         with:
           node-version: 18.x
       - run: npm i
-        working-directory: ./dynamic-mapping-ui
-      - run: cp ./LICENSE ./dynamic-mapping-ui/LICENSE
+        working-directory: ./dynamic-mapper-ui
+      - run: cp ./LICENSE ./dynamic-mapper-ui/LICENSE
         working-directory: ./
       - run: npm install -g @angular/cli > /dev/null
-        working-directory: ./dynamic-mapping-ui
+        working-directory: ./dynamic-mapper-ui
       - run: npm run build --if-present
-        working-directory: ./dynamic-mapping-ui
+        working-directory: ./dynamic-mapper-ui
       - name: Zip Frontend Plugin
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         run: |
-          cd dynamic-mapping-ui/dist/dynamic-mapping
-          zip -r -q ../../dynamic-mapping.zip *
+          cd dynamic-mapper-ui/dist/dynamic-mapper
+          zip -r -q ../../dynamic-mapper-ui.zip *
       - name: Create Release
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         id: create_release
@@ -66,8 +66,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./dynamic-mapping-ui/dynamic-mapping.zip
-          asset_name: dynamic-mapping.zip
+          asset_path: ./dynamic-mapper-ui/dynamic-mapper-ui.zip
+          asset_name: dynamic-mapper-ui.zip
           asset_content_type: application/zip
       - name: Upload Release Asset Backend
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -77,7 +77,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./dynamic-mapping-service/target/dynamic-mapping-service.zip
-          asset_name: dynamic-mapping-service.zip
+          asset_path: ./dynamic-mapper-service/target/dynamic-mapper-service.zip
+          asset_name: dynamic-mapper-service.zip
           asset_content_type: application/zip
 

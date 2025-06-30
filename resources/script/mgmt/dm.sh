@@ -48,8 +48,6 @@ set -e
 
 ORIGINAL_MAPPINGS_NAME="mappings-v46"
 MIGRATED_MAPPINGS_NAME="mappings-v47"
-#TENANT_OPTIONS_CATEGORY="dynamic-mapping-service"
-#TENANT_OPTIONS_CATEGORY="dynamic.mapping.service"
 TENANT_OPTIONS_CATEGORY="dynMappingService"
 
 function show_usage() {
@@ -65,6 +63,7 @@ function show_usage() {
   echo "  connectors list                                     : List connectors"
   echo "  configurations delete                               : Delete service configurations"
   echo "  configurations list                                 : List service configurations"
+  echo "  templates init                                      : Inits system code templates to default values"
   echo "  mappings migrate:    Migrate mappings from pre 4.7 format to new format. The migration consists of the following steps:"
   echo "     Step 0 save existing mappings to file ORIGINAL_MAPPINGS and only use the attribute d11r_mapping"
   echo "     Step 1 transform mappings to the new format except the substitutions"
@@ -76,6 +75,21 @@ function show_usage() {
   echo "If filename is not provided, defaults to 'mappings-all.json'"
 
   check_prerequisites
+}
+
+function templates_init() {
+  check_prerequisites
+  
+  echo "Initializing system code templates to default values..."
+  
+  c8y api \
+    --method POST \
+    --url "/service/dynamic-mapping-service/operation" \
+    --data '{
+      "operation": "INIT_CODE_TEMPLATES"
+    }'
+  
+  echo "System code templates have been initialized successfully."
 }
 
 function mappings_import() {

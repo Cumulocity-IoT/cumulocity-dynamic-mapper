@@ -23,13 +23,13 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.cumulocity.mapping</groupId>
-	<artifactId>dynamic-mapping-solution</artifactId>
+	<artifactId>dynamic-mapper-solution</artifactId>
 	<version>${revision}</version>
 	<packaging>pom</packaging>
 	<modules>
-		<module>dynamic-mapping-interface</module>
-		<module>dynamic-mapping-service</module>
-		<module>dynamic-mapping-extension</module>
+		<module>dynamic-mapper-interface</module>
+		<module>dynamic-mapper-service</module>
+		<module>dynamic-mapper-extension</module>
 	</modules>
 
 	<properties>
@@ -45,6 +45,8 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<graalvm.version>23.1.7</graalvm.version>
 		<graalvm.js.version>23.1.7</graalvm.js.version>
+		<springdoc.version>2.8.5</springdoc.version>
+		<authToken>${env.AUTH_TOKEN}</authToken>
 	</properties>
 	<repositories>
 		<repository>
@@ -228,7 +230,7 @@
 			<dependency>
 				<groupId>org.springdoc</groupId>
 				<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-				<version>2.3.0</version>
+				<version>${springdoc.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

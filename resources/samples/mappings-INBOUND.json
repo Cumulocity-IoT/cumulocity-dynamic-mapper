@@ -650,7 +650,7 @@
     "snoopStatus": "NONE",
     "snoopedTemplates": [],
     "extension": {
-      "extensionName": "dynamic-mapping-extension",
+      "extensionName": "dynamic-mapper-extension",
       "eventName": "CustomEvent",
       "loaded": false,
       "extensionType": "EXTENSION_SOURCE"
@@ -879,7 +879,7 @@
     "snoopStatus": "NONE",
     "snoopedTemplates": [],
     "extension": {
-      "extensionName": "dynamic-mapping-extension",
+      "extensionName": "dynamic-mapper-extension",
       "eventName": "CustomMeasurement",
       "loaded": false,
       "extensionType": "EXTENSION_SOURCE"
@@ -1050,7 +1050,7 @@
     "snoopStatus": "NONE",
     "snoopedTemplates": [],
     "extension": {
-      "extensionName": "dynamic-mapping-extension",
+      "extensionName": "dynamic-mapper-extension",
       "eventName": "CustomAlarm",
       "loaded": false,
       "extensionType": "EXTENSION_SOURCE_TARGET"

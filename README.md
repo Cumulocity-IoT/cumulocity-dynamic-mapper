@@ -37,7 +37,7 @@ Please check the [Installation Guide](/INSTALLATION.md) to find out how you can 
 
 ## User Guide
 
-Please check the [User Guide](/USERGUIDE.md) to find a comprehensive guidance how to use the Dynamic Mapper.
+Please check the [User Guide](/USERGUIDE.md) to find comprehensive guidance on how to use the Dynamic Mapper.
 
 ## Architecture
 
@@ -45,7 +45,10 @@ Please check the [Architecture overview](/ARCHITECTURE.md) if you are eager to u
 
 ## API
 
-Please check the [REST API](/API.md) provided by the Dynamic Mapper.
+Please check the [REST API](/resources/openAPI/README.md) provided by the Dynamic Mapper.
+You can also check out the **Swagger UI** of the Dynamic Mapper at the following URL: `{yourTenantURL}/service/dynamic-mapper-service/swagger-ui/index.html`
+
+To embed the API in your API tools of your choice, e.g. postman, use this URL: [Open API Specification](/resources/openAPI/openapi.json)
 
 ## Extensions
 

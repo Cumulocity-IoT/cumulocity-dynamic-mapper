@@ -28,7 +28,7 @@ The solution defines one role:`ROLE_MAPPING_ADMIN` that must be assigned to the 
 
 In your Enterprise Tenant or Tenant navigate to "Administration" App, go to "Ecosystem" -> "Microservices" and click on "Add Microservice" on the top right.
 
-Select the `dynamic-mapping-service.zip`.
+Select the `dynamic-mapper-service.zip`.
 Make sure that you subscribe the microservice to your tenant when prompted
 
 ### Web app
@@ -42,7 +42,7 @@ The frontend can be deployed in your tenant:
 #### Community store (Preferred)
 
 The Web App is part of the community store and should be available directly in your tenant under
-"Administration" -> "Ecosystem" -> "Extensions" -> "Dynamic-mapping". Here you have the choice to install it as a plugin or as a blueprint app.
+"Administration" -> "Ecosystem" -> "Extensions" -> "dynamic-mapper". Here you have the choice to install it as a plugin or as a blueprint app.
 
 > **_NOTE:_** The option to deploy the dynamic mapper as plugin is deprecated.
 ##### ~~Plugin~~
@@ -71,7 +71,7 @@ The Web App is part of the community store and should be available directly in y
 
 ##### Blueprint
 
-For the blueprint go to "Administration" -> "Ecosystem" -> "Dynamic-mapping" -> "Deploy application"
+For the blueprint go to "Administration" -> "Ecosystem" -> "dynamic-mapper" -> "Deploy application"
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_BlueprintDeploy.png" style="width: 50%;" />
@@ -79,7 +79,7 @@ For the blueprint go to "Administration" -> "Ecosystem" -> "Dynamic-mapping" -> 
 
 Enter an application key and path and click on "Deploy".
 
-After successful deployment you can find the Dynamic-mapping App in the Application Switcher
+After successful deployment you can find the dynamic-mapper App in the Application Switcher
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_BlueprintApp.png" style="width: 40%;" />
@@ -89,6 +89,6 @@ After successful deployment you can find the Dynamic-mapping App in the Applicat
 If you made changes or your want to upload the plugin manually you can do that by following these steps:
 
 1. In "Administration" App go to "Ecosystem" -> "Packages" and click on "Add Application" on the top right.
-2. Select `dynamic-mapping.zip` and wait until it is uploaded.
+2. Select `dynamic-mapper-ui.zip` and wait until it is uploaded.
 
 Follow the steps from the point above to assign the plugin to your Administration App.
