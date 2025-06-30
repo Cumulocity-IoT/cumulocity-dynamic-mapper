@@ -163,7 +163,11 @@ public class MappingController {
 
     @Operation(
         summary = "Delete a mapping", 
-        description = "Deletes a mapping by its unique identifier. This will also remove all associated subscriptions and cache entries.",
+        description = """
+        Deletes a mapping by its unique identifier. This will also remove all associated subscriptions and cache entries.
+        
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+        """,
         parameters = {
             @Parameter(
                 name = "id", 
@@ -219,7 +223,11 @@ public class MappingController {
 
     @Operation(
         summary = "Create a new mapping", 
-        description = "Creates a new mapping configuration. The mapping will be created in disabled state by default and needs to be activated separately. For INBOUND mappings, subscriptions will be created across all connectors. For OUTBOUND mappings, the outbound cache will be rebuilt."
+        description = """
+        Creates a new mapping configuration. The mapping will be created in disabled state by default and needs to be activated separately. For INBOUND mappings, subscriptions will be created across all connectors. For OUTBOUND mappings, the outbound cache will be rebuilt.
+        
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+        """
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -279,7 +287,11 @@ public class MappingController {
 
     @Operation(
         summary = "Update an existing mapping", 
-        description = "Updates an existing mapping configuration. Note that active mappings cannot be updated - they must be deactivated first. For INBOUND mappings, subscriptions will be updated across all connectors. For OUTBOUND mappings, the outbound cache will be rebuilt.",
+        description = """
+        Updates an existing mapping configuration. Note that active mappings cannot be updated - they must be deactivated first. For INBOUND mappings, subscriptions will be updated across all connectors. For OUTBOUND mappings, the outbound cache will be rebuilt.
+        
+        **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+        """,
         parameters = {
             @Parameter(
                 name = "id", 

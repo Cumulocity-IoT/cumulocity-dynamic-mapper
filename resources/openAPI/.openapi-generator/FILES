@@ -1,9 +1,8 @@
-.openapi-generator-ignore
 Apis/ConfigurationControllerApi.md
 Apis/DeploymentControllerApi.md
 Apis/DeviceSubscriptionControllerApi.md
 Apis/ExtensionControllerApi.md
-Apis/HttpConnectorControllerApi.md
+Apis/HTTPConnectorControllerApi.md
 Apis/MappingControllerApi.md
 Apis/MonitoringControllerApi.md
 Apis/OperationControllerApi.md
@@ -22,7 +21,6 @@ Models/ConnectorPropertyCondition.md
 Models/ConnectorSpecification.md
 Models/ConnectorStatusEvent.md
 Models/Context.md
-Models/DeploymentMapEntry.md
 Models/Device.md
 Models/Engine.md
 Models/Extension.md

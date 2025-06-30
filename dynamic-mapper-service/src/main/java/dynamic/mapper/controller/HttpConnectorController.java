@@ -25,6 +25,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import dynamic.mapper.model.Mapping;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -111,6 +112,8 @@ public class HttpConnectorController {
             content = {
                 @Content(
                     mediaType = "application/json",
+                    schema = @Schema(type = "object",
+                            description = "Any JSON object representing sensor data or device status"),
                     examples = @ExampleObject(
                         name = "JSON Sensor Data",
                         description = "Typical IoT sensor data",
@@ -126,6 +129,8 @@ public class HttpConnectorController {
                 ),
                 @Content(
                     mediaType = "application/xml",
+                    schema = @Schema(type = "object",
+                            description = "Any XML object representing sensor data or device status"),
                     examples = @ExampleObject(
                         name = "XML Device Status",
                         description = "Device status in XML format",
@@ -141,6 +146,8 @@ public class HttpConnectorController {
                 ),
                 @Content(
                     mediaType = "text/plain",
+                    schema = @Schema(type = "object",
+                            description = "Any CSV data representing sensor data or device status"),
                     examples = @ExampleObject(
                         name = "CSV Data",
                         description = "Simple CSV format",
@@ -149,6 +156,8 @@ public class HttpConnectorController {
                 ),
                 @Content(
                     mediaType = "application/octet-stream",
+                    schema = @Schema(type = "object",
+                            description = "Any binary data representing sensor data or device status"),
                     examples = @ExampleObject(
                         name = "Binary Data",
                         description = "Binary payload (e.g., protobuf, custom binary format)"

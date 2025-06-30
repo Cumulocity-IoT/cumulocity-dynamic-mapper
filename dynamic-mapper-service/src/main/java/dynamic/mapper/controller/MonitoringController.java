@@ -135,20 +135,20 @@ public class MonitoringController {
 		summary = "Get all connectors status", 
 		description = "Retrieves the status of all connectors for the current tenant. Returns a map with connector identifiers as keys and their status information as values. Includes both enabled and disabled connectors."
 	)
-@ApiResponses(value = {
-    @ApiResponse(
-        responseCode = "200", 
-        description = "Connectors status retrieved successfully", 
-        content = @Content(
-            mediaType = "application/json", 
-            schema = @Schema(
-                type = "object",
-                description = "Map of connector identifiers to their status"
-            )
-        )
-    ),
-    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
-})
+	@ApiResponses(value = {
+		@ApiResponse(
+			responseCode = "200",
+			description = "Connectors status retrieved successfully",
+			content = @Content(
+				mediaType = "application/json",
+				schema = @Schema(
+					type = "object",
+					description = "Map of connector identifiers to their status"
+				)
+			)
+		),
+		@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
 	@GetMapping(value = "/status/connectors", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, ConnectorStatusEvent>> getConnectorsStatus() {
 		Map<String, ConnectorStatusEvent> connectorsStatus = new ConcurrentHashMap<>();
