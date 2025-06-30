@@ -305,7 +305,7 @@ export class ConnectorConfigurationService {
         this.handleError('Failed to load configurations', error);
         return of([]);
       }),
-      tap( configs => console.log ("Configuration", configs)),
+      // tap( configs => console.log ("Configuration", configs)),
       distinctUntilChanged(),
       shareReplay(1),
       takeUntil(this.destroy$)
