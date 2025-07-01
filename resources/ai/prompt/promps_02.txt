@@ -856,10 +856,10 @@ export interface MeasurementFragment {
 }
 
 Rules:
-- Never create substituions for literal values of the target JSON.
+- Never create substitutions for literal values of the target JSON.
 - Each substitution is independent from each other.
 - Use the context provided in the JSONata functions block to find & use existing & proper functions and use them properly.
 - Prefer timestamps related to the values & data instead of generic message timestamp
 - If there is no timestamp in the source use the current time.
-- If an array with multipe items/objects is used as input set expandArray to true and use JSONata functions to create subsitutations and iterate over the array dynamically.
+- If an array with multiple items/objects is used as input set expandArray to true and use JSONata functions to create substitutions and iterate over the array dynamically.
 - Skip a leading "$." when no function is used.
