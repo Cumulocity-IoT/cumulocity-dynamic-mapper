@@ -170,7 +170,7 @@ public class MonitoringController {
 					connectorsStatus.put(client.getConnectorIdentifier(), st);
 				}
 			}
-			log.info("{} - Get status of connectors: {}", tenant, connectorsStatus);
+			log.debug("{} - Get status of connectors: {}", tenant, connectorsStatus);
 			return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);
 		} catch (ConnectorRegistryException e) {
 			throw new RuntimeException(e);
