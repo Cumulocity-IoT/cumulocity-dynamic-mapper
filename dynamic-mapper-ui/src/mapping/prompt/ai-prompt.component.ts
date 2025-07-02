@@ -93,7 +93,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
 
-    from(this.aiAgentService.getAgents())
+    from(this.aiAgentService.getAIAgents())
       .pipe(
         mergeMap(agents => from(agents)),
         filter(agent => {

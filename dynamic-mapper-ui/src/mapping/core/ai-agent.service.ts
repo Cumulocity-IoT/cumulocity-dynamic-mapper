@@ -35,24 +35,37 @@ import { type JSONValue } from 'ai';
 export class AIAgentService {
 
   client: FetchClient = inject(FetchClient);
-  async getAgents(): Promise<AgentConfigArray> {
 
-    const res: IFetchResponse = await this.client.fetch(
-      `${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        method: 'GET'
+  async getAIAgents(): Promise<AgentConfigArray> {
+    try {
+      const res: IFetchResponse = await this.client.fetch(
+        `${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}`,
+        {
+          headers: {
+            'content-type': 'application/json'
+          },
+          method: 'GET'
+        }
+      );
+
+      // Check if the response is ok
+      if (!res.ok) {
+        console.error(`Failed to fetch agents: ${res.status} ${res.statusText}`);
+        return []; // Return empty array on error
       }
-    );
-    const data = res.json();
-    return data;
 
+      const data = await res.json(); // Don't forget 'await'
+
+      // Ensure data is an array
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error fetching AI agents:', error);
+      return []; // Return empty array on error
+    }
   }
 
   async test(
-    definition: AgentTextDefinition ,
+    definition: AgentTextDefinition,
   ): Promise<string | JSONValue> {
     const data = await this.client.fetch(
       BASE_AI_URL + '/' + PATH_AGENT_ENDPOINT + '/test/' + definition.type,
@@ -71,6 +84,35 @@ export class AIAgentService {
     }
 
     return data.text();
+  }
+
+
+  async isAIOperable(): Promise<boolean> {
+    try {
+      const res: IFetchResponse = await this.client.fetch(
+        `${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}`,
+        {
+          headers: {
+            'content-type': 'application/json'
+          },
+          method: 'GET'
+        }
+      );
+
+      // Check if the response is ok and we have agents
+      if (!res.ok) {
+        console.error(`AI service not available: ${res.status} ${res.statusText}`);
+        return false;
+      }
+
+      const data = await res.json();
+
+      // AI is operable if we have a valid array with at least one agent
+      return Array.isArray(data) && data.length > 0;
+    } catch (error) {
+      console.error('Error checking AI operability:', error);
+      return false;
+    }
   }
 
 }

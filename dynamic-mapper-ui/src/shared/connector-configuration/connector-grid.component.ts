@@ -122,7 +122,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   resetCountdown(): void {
-    console.log('resetCountdown', this.currentPollingInterval);
+    // console.log('resetCountdown', this.currentPollingInterval);
 
     this.countdownIntervalComponent?.reset();
   }

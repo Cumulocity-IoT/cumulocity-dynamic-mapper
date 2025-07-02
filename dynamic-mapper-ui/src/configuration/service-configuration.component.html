@@ -305,7 +305,7 @@
                 <!-- <c8y-select formControlName="jsonataAgent" name="jsonataAgent" style="width:200px"
                   [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select> -->
 
-                <div class="c8y-select-wrapper" style="width:200px">
+                <div class="c8y-select-wrapper p-r-4" style="width:200px">
                   <select class="form-control" formControlName="jsonataAgent" name="jsonataAgent">
                     <option value="" disabled selected>
                       Select agent
@@ -316,6 +316,9 @@
                   </select>
                 </div>
                 <span></span>
+                <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate"
+                  popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                  placement="bottom" triggers="focus" type="button" *ngIf="!aiAgentDeployed"></button>
               </label>
             </div>
           </c8y-li>
@@ -337,7 +340,7 @@
                 [ngClass]="{ updated: editable2updated }">
                 <!-- <c8y-select formControlName="javaScriptAgent" name="javaScriptAgent" style="width:200px"
                   [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select> -->
-                <div class="c8y-select-wrapper" style="width:200px">
+                <div class="c8y-select-wrapper p-r-4" style="width:200px">
                   <select class="form-control" formControlName="javaScriptAgent" name="javaScriptAgent">
                     <option value="" disabled selected>
                       Select agent
@@ -348,6 +351,9 @@
                   </select>
                 </div>
                 <span></span>
+                <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate"
+                  popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                  placement="bottom" triggers="focus" type="button" *ngIf="!aiAgentDeployed"></button>
               </label>
             </div>
           </c8y-li>

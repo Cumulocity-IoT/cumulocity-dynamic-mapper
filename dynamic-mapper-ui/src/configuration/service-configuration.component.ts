@@ -65,8 +65,9 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   };
   editable2updated: boolean = false;
 
-  agents$: BehaviorSubject<string[]> = new BehaviorSubject(['holger']);
+  agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
+  aiAgentDeployed: boolean = false;
 
 
   async ngOnInit() {
@@ -87,14 +88,24 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       inventoryCacheSize: new FormControl(''),
       inventoryFragmentsToCache: new FormControl(''),
       maxCPUTimeMS: new FormControl(''),
-      jsonataAgent: new FormControl(''),
-      javaScriptAgent: new FormControl(''),
+      jsonataAgent: new FormControl({ value: '', disabled: true }),
+      javaScriptAgent: new FormControl({ value: '', disabled: true }),
     });
     await this.loadData();
-    from(this.aiAgentService.getAgents())
+    from(this.aiAgentService.getAIAgents())
       .pipe(map(agents => agents.map(agent => agent.name)), takeUntil(this.destroy$))
       .subscribe(agentNames => {
         this.agents$.next(agentNames);
+        this.aiAgentDeployed = agentNames.length > 0;
+
+        // Enable/disable controls based on whether agents are available
+        if (this.aiAgentDeployed) {
+          this.serviceForm.get('javaScriptAgent')?.enable();
+          this.serviceForm.get('jsonataAgent')?.enable();
+        } else {
+          this.serviceForm.get('javaScriptAgent')?.disable();
+          this.serviceForm.get('jsonataAgent')?.disable();
+        }
       });
   }
 
