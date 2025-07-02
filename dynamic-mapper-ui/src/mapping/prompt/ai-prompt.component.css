@@ -1,0 +1,115 @@
+.chat-message {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: var(--c8y-root-component-border-caret-width);
+  max-width: 85%;
+  box-shadow: var(--c8y-elevation-sm);
+  min-width: 0;
+  .message-content{
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+    min-width: 0;
+    p{
+      margin-bottom: 8px;
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+.agent-message {
+  color: var(--c8y-palette-low);
+  background-color: var(--c8y-brand-70);
+  align-self: flex-start;
+ 
+}
+
+.user-message {
+  background-color: var(--c8y-level-3);
+  color: var(--c8y-text-color);
+  align-self: flex-end;
+}
+
+.agent-tabs-content{
+  box-sizing: border-box;
+}
+
+
+.split-view {
+
+  @media (max-width: 991px) {
+    &--4-8 {
+      position: relative;
+      display: flex !important;
+      overflow: hidden;
+      flex-direction: column;
+      margin-bottom: 0 !important;
+      height: calc(100vh - 108px);
+      .has-action-bar & {
+        height: calc(100vh - 168px);
+      }
+    }
+
+    
+
+    &--4-8 {
+      height: calc(100vh - 166px);
+    }
+
+
+    &__list {
+      flex-grow: 1;
+      height: auto;
+    }
+
+    &__detail {
+      position: absolute;
+      top: 0;
+      left: 100%;
+      z-index: 100;
+      min-height: calc(100vh - 160px);
+      height: 100%;
+      width: 100%;
+      transition: left 0.35s ease-in-out;
+
+      &--selected {
+        left: 0;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    &--4-8 {
+      height: calc(100vh - 82px) !important;
+    }
+  }
+
+  @media (min-width: 992px) {
+    &--4-8 {
+      display: grid !important;
+      grid-template-rows: min-content auto;
+    }
+
+    &--4-8 {
+      grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    }
+  }
+}
+
+
+.agent-tabs-nav .component-tabs{
+  padding-top: 0;
+}
+
+
+.text-pre{
+  white-space-collapse: preserve!important;
+  text-wrap-mode: wrap!important;
+}
+
+.d-col-reverse {
+  display: flex!important;
+  flex-direction: column-reverse!important;
+}

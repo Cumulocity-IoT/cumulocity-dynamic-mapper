@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { HttpStatusCode } from '@angular/common/http';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import packageJson from '../../package.json';
@@ -26,7 +26,7 @@ import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 import { ActivatedRoute } from '@angular/router';
 import { AIAgentService } from 'src/mapping/core/ai-agent.service';
-import { from, map, Observable } from 'rxjs';
+import { BehaviorSubject, from, map, Observable, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -34,7 +34,7 @@ import { from, map, Observable } from 'rxjs';
   templateUrl: 'service-configuration.component.html',
   standalone: false
 })
-export class ServiceConfigurationComponent implements OnInit {
+export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   private alertService = inject(AlertService);
   private sharedService = inject(SharedService);
@@ -64,8 +64,9 @@ export class ServiceConfigurationComponent implements OnInit {
     javaScriptAgent: undefined,
   };
   editable2updated: boolean = false;
-  agents$: Observable<string[]>;
 
+  agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  destroy$: Subject<void> = new Subject<void>();
 
 
   async ngOnInit() {
@@ -90,7 +91,16 @@ export class ServiceConfigurationComponent implements OnInit {
       javaScriptAgent: new FormControl(''),
     });
     this.loadData();
-    this.agents$ = from(this.aiAgentService.getSubscriptions()).pipe(map(agents => agents.map(agent => agent.name)))
+    from(this.aiAgentService.getAgents())
+      .pipe(map(agents => agents.map(agent => agent.name)), takeUntil(this.destroy$))
+      .subscribe(agentNames => {
+        this.agents$.next(agentNames);
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   async loadData(): Promise<void> {
@@ -162,6 +172,14 @@ export class ServiceConfigurationComponent implements OnInit {
       .split(",")
       .map(fragment => fragment.trim())
       .filter(fragment => fragment.length > 0);
+    conf.javaScriptAgent = this.serviceForm.value['javaScriptAgent']
+      ? this.serviceForm.value['javaScriptAgent'].value.trim()
+      : undefined;
+    ;
+    conf.jsonataAgent = this.serviceForm.value['jsonataAgent']
+      ? this.serviceForm.value['jsonataAgent'].value?.trim()
+      : undefined;
+
     const response = await this.sharedService.updateServiceConfiguration(conf);
     if (response.status >= 200 && response.status < 300) {
       this.alertService.success(gettext('Update successful'));

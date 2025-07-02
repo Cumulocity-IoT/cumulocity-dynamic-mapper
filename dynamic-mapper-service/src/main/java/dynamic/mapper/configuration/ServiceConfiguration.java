@@ -141,21 +141,11 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public Integer maxCPUTimeMS;
 
-    @Schema(
-        requiredMode = Schema.RequiredMode.NOT_REQUIRED,
-        description = "Name of jsonata agent to be used when generating substitutions. The needs to be defined in the AI Agent Manager.",
-        example = "jsonataAgent",
-    )
-    @NotNull
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of jsonata agent to be used when generating substitutions. The needs to be defined in the AI Agent Manager.", example = "jsonataAgent")
     @JsonSetter(nulls = Nulls.SKIP)
     public String jsonataAgent;
 
-    @Schema(
-        requiredMode = Schema.RequiredMode.NOT_REQUIRED,
-        description = "Name of javaScript agent to be used when generating substitutions as JavaScript code. The needs to be defined in the AI Agent Manager.",
-        example = "javaScriptAgent",
-    )
-    @NotNull
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of javaScript agent to be used when generating substitutions as JavaScript code. The needs to be defined in the AI Agent Manager.", example = "javaScriptAgent")
     @JsonSetter(nulls = Nulls.SKIP)
     public String javaScriptAgent;
 }

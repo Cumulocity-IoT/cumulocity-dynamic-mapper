@@ -24,24 +24,10 @@ import {
 } from '@c8y/client';
 import {
   BASE_AI_URL,
-  BASE_URL,
   PATH_AGENT_ENDPOINT,
-  PATH_SUBSCRIPTIONS_ENDPOINT
 } from '../../shared';
-import { C8YNotificationSubscription } from '../shared/mapping.model';
-
-
-interface AgentConfig {
-  name: string;
-  agent: {
-    system: string;
-    maxSteps: number;
-  };
-  type: string;
-}
-
-// If you need to represent the array structure:
-type AgentConfigArray = AgentConfig[];
+import { AgentConfigArray, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { type JSONValue } from 'ai';
 
 @Injectable({
   providedIn: 'root'
@@ -49,7 +35,7 @@ type AgentConfigArray = AgentConfig[];
 export class AIAgentService {
 
   client: FetchClient = inject(FetchClient);
-  async getSubscriptions(): Promise<AgentConfigArray> {
+  async getAgents(): Promise<AgentConfigArray> {
 
     const res: IFetchResponse = await this.client.fetch(
       `${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}`,
@@ -63,6 +49,28 @@ export class AIAgentService {
     const data = res.json();
     return data;
 
+  }
+
+  async test(
+    definition: AgentTextDefinition ,
+  ): Promise<string | JSONValue> {
+    const data = await this.client.fetch(
+      BASE_AI_URL + '/' + PATH_AGENT_ENDPOINT + '/test/' + definition.type,
+      {
+        method: 'POST',
+        body: JSON.stringify(definition),
+        headers: {
+          ...this.client.defaultHeaders,
+          'content-type': 'application/json',
+        },
+      },
+    );
+
+    if (definition.type === 'object') {
+      return data.json();
+    }
+
+    return data.text();
   }
 
 }
