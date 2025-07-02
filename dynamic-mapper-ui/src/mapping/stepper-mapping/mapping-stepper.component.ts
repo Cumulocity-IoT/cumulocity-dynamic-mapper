@@ -22,6 +22,7 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  inject,
   Input,
   OnDestroy,
   OnInit,
@@ -31,7 +32,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
-import { AlertService, C8yStepper, gettext } from '@c8y/ngx-components';
+import { AlertService, BottomDrawerService, C8yStepper, gettext } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -79,6 +80,7 @@ import { EditSubstitutionComponent } from '../substitution/edit/edit-substitutio
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
+import { AIPromptComponent } from '../prompt/ai-prompt.component';
 
 let initializedMonaco = false;
 
@@ -103,14 +105,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild!: SubstitutionRendererComponent;
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
 
-  constructor(
-    private bsModalService: BsModalService,
-    private sharedService: SharedService,
-    private mappingService: MappingService,
-    private extensionService: ExtensionService,
-    private alertService: AlertService,
-    private elementRef: ElementRef
-  ) { }
+  private bsModalService = inject(BsModalService);
+  private sharedService = inject(SharedService);
+  private mappingService = inject(MappingService);
+  private extensionService = inject(ExtensionService);
+  private alertService = inject(AlertService);
+  private elementRef = inject(ElementRef);
+  private bottomDrawerService = inject(BottomDrawerService);
 
   readonly ValidationError = ValidationError;
   readonly Direction = Direction;
@@ -132,7 +133,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   substitutionModel: any = {};
   propertyFormly: FormGroup = new FormGroup({});
   codeFormly: FormGroup = new FormGroup({});
-  showGenerateSubstitution = false;
+  isGenerateSubstitutionOpen = false;
 
   codeTemplateDecoded: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
@@ -1269,12 +1270,30 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
   }
 
-  onGenerateSubstitution() {
-    this.showGenerateSubstitution = true;
-  }
 
   onCommitGeneratedSubscriptions(substitutions: MappingSubstitution[]) {
     console.log("Generated substitutions",)
+  }
+
+  async openGenerateSubstitutionDrawer() {
+    this.isGenerateSubstitutionOpen = true;
+    const drawer = this.bottomDrawerService.openDrawer(
+      AIPromptComponent,
+      {
+        initialState: {
+          // place here any content you want to pass to the component
+          mapping: this.mapping,
+        },
+      },
+    );
+
+    try {
+      const resultOf = await drawer.instance.result;
+      this.alertService.success(`Generated ${resultOf.length} substitutions.`);
+    } catch (ex) {
+      this.alertService.danger("Canceled as of: " + ex);
+    }
+    this.isGenerateSubstitutionOpen = false;
   }
 
 }

@@ -19,14 +19,14 @@
  */
 import {
   Component,
-  EventEmitter,
+  inject,
   Input,
   OnInit,
-  Output,
   ViewEncapsulation
 } from '@angular/core';
 import { DeviceGridService, } from '@c8y/ngx-components/device-grid';
 import { Mapping, MappingSubstitution } from '../../shared';
+import { BottomDrawerRef } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-ai-prompt',
@@ -36,25 +36,35 @@ import { Mapping, MappingSubstitution } from '../../shared';
   standalone: false
 })
 export class AIPromptComponent implements OnInit {
+
+  bottomDrawerRef = inject(BottomDrawerRef);
+  deviceGridService = inject(DeviceGridService);
+
   @Input() mapping: Mapping;
 
-  @Output() cancel = new EventEmitter<any>();
-  @Output() commit = new EventEmitter<MappingSubstitution[]>();
+  private _save: (value: MappingSubstitution[]) => void;
+  private _cancel: (reason?: any) => void;
+  
+  result: Promise<MappingSubstitution[]> = new Promise((resolve, reject) => {
+    this._save = resolve;
+    this._cancel = reject;
+  });
+
   substitutions: MappingSubstitution[] = [];
 
-  constructor(protected deviceGridService: DeviceGridService) {
-  }
+
   ngOnInit(): void {
     console.log(this.mapping);
   }
 
-  clickedUpdateSubscription() {
- 
-    this.commit.emit(this.substitutions);
+  save() {
+    this._save(this.substitutions);
+    this.bottomDrawerRef.close();
   }
 
-  clickedCancel() {
-    this.cancel.emit();
+  cancel() {
+    this._cancel("User canceled");
+    this.bottomDrawerRef.close();
   }
 
 }

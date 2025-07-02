@@ -339,7 +339,7 @@
                       </div>
                       <div class="btn-group p-l-48">
                         <button type="button" name="generateSubstitution" class="btn btn-default btn-sm"
-                          (click)="onGenerateSubstitution()" translate title="Generate substitutions" [disabled]="
+                          (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions" [disabled]="
                               !stepperConfiguration.showEditorSource ||
                                 stepperConfiguration.editorMode ===
                                   EditorMode.READ_ONLY
@@ -586,12 +586,4 @@
       </div>
     </ng-template>
   </c8y-stepper>
-</div>
-
-<div [ngClass]="{ drawerOpen: showGenerateSubstitution}" *ngIf="showGenerateSubstitution">
-  <div class="bottom-drawer">
-    <d11r-mapping-ai-prompt *ngIf="showGenerateSubstitution" (cancel)="showGenerateSubstitution = false"
-      (commit)="onCommitGeneratedSubscriptions($event)">
-    </d11r-mapping-ai-prompt>
-  </div>
 </div>
