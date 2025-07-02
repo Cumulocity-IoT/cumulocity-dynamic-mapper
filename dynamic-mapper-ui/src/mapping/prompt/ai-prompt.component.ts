@@ -87,9 +87,11 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   newMessage = '';
   testVars: string = '';
   serviceConfiguration: ServiceConfiguration;
+  agentType: MappingType;
 
   async ngOnInit(): Promise<void> {
-    console.log(this.mapping);
+    // console.log(this.mapping);
+    this.agentType = this.mapping.mappingType;
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
 

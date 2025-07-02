@@ -65,7 +65,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   };
   editable2updated: boolean = false;
 
-  agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  agents$: BehaviorSubject<string[]> = new BehaviorSubject(['holger']);
   destroy$: Subject<void> = new Subject<void>();
 
 
@@ -90,7 +90,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       jsonataAgent: new FormControl(''),
       javaScriptAgent: new FormControl(''),
     });
-    this.loadData();
+    await this.loadData();
     from(this.aiAgentService.getAgents())
       .pipe(map(agents => agents.map(agent => agent.name)), takeUntil(this.destroy$))
       .subscribe(agentNames => {
@@ -130,8 +130,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       maxCPUTimeMS:
         this.serviceConfiguration.maxCPUTimeMS,
       jsonataAgent:
-        //  'Austria',
-        this.serviceConfiguration.jsonataAgent,
+        // {value:'Austria', label:'Austria'},
+       this.serviceConfiguration.jsonataAgent,
       javaScriptAgent:
         this.serviceConfiguration.javaScriptAgent,
     });
@@ -173,7 +173,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       .map(fragment => fragment.trim())
       .filter(fragment => fragment.length > 0);
     conf.javaScriptAgent = this.serviceForm.value['javaScriptAgent']
-      ? this.serviceForm.value['javaScriptAgent'].value.trim()
+      ? this.serviceForm.value['javaScriptAgent'].value?.trim()
       : undefined;
     ;
     conf.jsonataAgent = this.serviceForm.value['jsonataAgent']

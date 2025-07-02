@@ -30,14 +30,14 @@
       <div class="card-block">
         <div class="inner-scroll border-top flex-grow d-col-reverse">
           <div class="d-col p-l-16 p-r-16">
-            <div *ngFor="let message of tempAgent.agent?.messages || []" class="chat-message text-break-word" [ngClass]="{
+            <div *ngFor="let message of agent.agent?.messages || []" class="chat-message text-break-word" [ngClass]="{
                     'user-message': message.role === 'user',
                     'agent-message': message.role === 'assistant',
                   }">
-              <div *ngIf="tempAgent.type === 'text' || message.role === 'user'" class="message-content"
+              <div *ngIf="agent.type === 'text' || message.role === 'user'" class="message-content"
                 [innerHTML]="message.content | markdownToHtml | async"></div>
               <div *ngIf="
-                      tempAgent.type === 'object' &&
+                      agent.type === 'object' &&
                       message.role === 'assistant'
                     " class="message-content text-break-word" [innerHTML]="
                       '```json\n' + message.content + '\n```'
@@ -49,8 +49,8 @@
         </div>
         <div class="chat-input d-flex p-16 bg-level-1 border-top">
           <input type="text" class="form-control flex-grow" placeholder="Type your message..." [(ngModel)]="newMessage"
-            (keyup.enter)="sendMessage()" [disabled]="isLoadingChat" />
-          <button class="btn btn-primary m-l-8" (click)="sendMessage()" [disabled]="!newMessage || isLoadingChat">
+            (keyup.enter)="sendMessage(agentType)" [disabled]="isLoadingChat" />
+          <button class="btn btn-primary m-l-8" (click)="sendMessage(agentType)" [disabled]="!newMessage || isLoadingChat">
             Send
           </button>
         </div>
