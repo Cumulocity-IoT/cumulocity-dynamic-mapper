@@ -36,7 +36,7 @@ import { Mapping, MappingSubstitution } from '../../shared';
   standalone: false
 })
 export class AIPromptComponent implements OnInit {
-  @Input() mapping: Mapping[];
+  @Input() mapping: Mapping;
 
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<MappingSubstitution[]>();
