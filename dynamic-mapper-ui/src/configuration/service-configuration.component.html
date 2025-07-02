@@ -28,7 +28,8 @@
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear inventory cache' | translate }}" (click)="clickedClearInventoryCache()" [disabled]="!feature?.userHasMappingAdminRole">
+  <button class="btn btn-link" title="{{ 'Clear inventory cache' | translate }}" (click)="clickedClearInventoryCache()"
+    [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="clear"></i>
     {{ 'Clear inventory cache' | translate }}
   </button>
@@ -271,21 +272,60 @@
             </div>
           </c8y-li>
 
-
-
           <c8y-li>
             <c8y-li-icon icon="alarm1"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>
                 <p>{{ 'MaxCPU time in milliseconds for JavaScript code' | translate }}</p>
                 <p>
-                  <small translate>Set the maxCPU time in milliseconds for JavaScript code, to avoid malicious code from starving the CPU</small>
+                  <small translate>Set the maxCPU time in milliseconds for JavaScript code, to avoid malicious code from
+                    starving the CPU</small>
                 </p>
               </div>
               <label class="editable m-l-auto" title="{{ ' maxCPU time in milliseconds ' | translate }}"
                 [ngClass]="{ updated: editable2updated }">
-                <input class="form-control" name="maxCPUTimeMS" type="number"
-                  formControlName="maxCPUTimeMS" />
+                <input class="form-control" name="maxCPUTimeMS" type="number" formControlName="maxCPUTimeMS" />
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="bot"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Name of jsonata agent to be used when generating substitutions.' | translate }}</p>
+                <p>
+                  <small translate>Name of jsonata agent to be used when generating substitutions. The needs to be
+                    defined in the AI Agent Manager.</small>
+                </p>
+              </div>
+              <label class="m-l-auto" title="{{ ' Name of jsonata agent' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <c8y-select formControlName="jsonataAgent" name="jsonataAgent" style="width:200px"
+                  [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select>
+                <span></span>
+              </label>
+            </div>
+          </c8y-li>
+
+
+          <c8y-li>
+            <c8y-li-icon icon="bot"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Name of javaScript agent to be used when generating substitutions as JavaScript code.' |
+                  translate }}</p>
+                <p>
+                  <small translate>Name of javaScript agent to be used when generating substitutions as JavaScript code.
+                    The needs to be
+                    defined in the AI Agent Manager.</small>
+                </p>
+              </div>
+              <label class="m-l-auto" title="{{ ' Name of javaScript agent' | translate }}"
+                [ngClass]="{ updated: editable2updated }">
+                <c8y-select formControlName="javaScriptAgent" name="javaScriptAgent" style="width:200px"
+                  [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select>
                 <span></span>
               </label>
             </div>
@@ -297,7 +337,8 @@
   </div>
   <div class="card-footer">
     <div class="form-group">
-      <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveServiceConfiguration()" translate [disabled]="!feature?.userHasMappingAdminRole">
+      <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveServiceConfiguration()" translate
+        [disabled]="!feature?.userHasMappingAdminRole">
         Save
       </button>
     </div>

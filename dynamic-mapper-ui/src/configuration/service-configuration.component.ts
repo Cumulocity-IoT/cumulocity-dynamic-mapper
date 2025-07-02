@@ -18,13 +18,15 @@
  * @authors Christof Strack
  */
 import { HttpStatusCode } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 import { ActivatedRoute } from '@angular/router';
+import { AIAgentService } from 'src/mapping/core/ai-agent.service';
+import { from, map, Observable } from 'rxjs';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -34,13 +36,12 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class ServiceConfigurationComponent implements OnInit {
 
-  constructor(
-    private alertService: AlertService,
-    private sharedService: SharedService,
-    private fb: FormBuilder,
-    private route: ActivatedRoute
-  ) { }
-  
+  private alertService = inject(AlertService);
+  private sharedService = inject(SharedService);
+  private fb = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+  private aiAgentService = inject(AIAgentService);
+
   version: string = packageJson.version;
   serviceForm: FormGroup;
   feature: Feature;
@@ -59,8 +60,11 @@ export class ServiceConfigurationComponent implements OnInit {
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
     maxCPUTimeMS: 5000,  // 5 seconds
+    jsonataAgent: undefined,
+    javaScriptAgent: undefined,
   };
   editable2updated: boolean = false;
+  agents$: Observable<string[]>;
 
 
 
@@ -81,9 +85,12 @@ export class ServiceConfigurationComponent implements OnInit {
       inventoryCacheRetention: new FormControl(''),
       inventoryCacheSize: new FormControl(''),
       inventoryFragmentsToCache: new FormControl(''),
-      maxCPUTimeMS: new FormControl('')
+      maxCPUTimeMS: new FormControl(''),
+      jsonataAgent: new FormControl(''),
+      javaScriptAgent: new FormControl(''),
     });
     this.loadData();
+    this.agents$ = from(this.aiAgentService.getSubscriptions()).pipe(map(agents => agents.map(agent => agent.name)))
   }
 
   async loadData(): Promise<void> {
@@ -111,7 +118,12 @@ export class ServiceConfigurationComponent implements OnInit {
       inventoryFragmentsToCache:
         this.serviceConfiguration.inventoryFragmentsToCache.join(","),
       maxCPUTimeMS:
-        this.serviceConfiguration.maxCPUTimeMS
+        this.serviceConfiguration.maxCPUTimeMS,
+      jsonataAgent:
+        //  'Austria',
+        this.serviceConfiguration.jsonataAgent,
+      javaScriptAgent:
+        this.serviceConfiguration.javaScriptAgent,
     });
   }
 

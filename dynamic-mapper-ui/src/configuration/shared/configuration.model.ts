@@ -36,6 +36,8 @@ export interface ServiceConfiguration {
   inventoryFragmentsToCache?: string[];
   codeTemplates?: any;
   maxCPUTimeMS: number;
+  jsonataAgent: string;
+  javaScriptAgent: string;
 }
 
 export enum TemplateType {
