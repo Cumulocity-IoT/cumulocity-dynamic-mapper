@@ -302,19 +302,19 @@
               </div>
               <label class="m-l-auto" title="{{ ' Name of jsonata agent' | translate }}"
                 [ngClass]="{ updated: editable2updated }">
-                <c8y-select formControlName="jsonataAgent" name="jsonataAgent" style="width:200px"
-                  [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select>
+                <!-- <c8y-select formControlName="jsonataAgent" name="jsonataAgent" style="width:200px"
+                  [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select> -->
 
-                <!-- <div class="c8y-select-wrapper" style="width:200px">
+                <div class="c8y-select-wrapper" style="width:200px">
                   <select class="form-control" formControlName="jsonataAgent" name="jsonataAgent">
-                    <option [value]="-1" [disabled]="true">
+                    <option value="" disabled selected>
                       Select agent
                     </option>
-                    <option *ngFor="let agent of (agents$| async)">
+                    <option *ngFor="let agent of (agents$| async)" [value]="agent">
                       {{ agent }}
                     </option>
                   </select>
-                </div> -->
+                </div>
                 <span></span>
               </label>
             </div>
@@ -335,18 +335,18 @@
               </div>
               <label class="m-l-auto" title="{{ ' Name of javaScript agent' | translate }}"
                 [ngClass]="{ updated: editable2updated }">
-                <c8y-select formControlName="javaScriptAgent" name="javaScriptAgent" style="width:200px"
-                  [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select>
-                <!-- <div class="c8y-select-wrapper" style="width:200px">
+                <!-- <c8y-select formControlName="javaScriptAgent" name="javaScriptAgent" style="width:200px"
+                  [items]="agents$ | async" [placeholder]="'Select agent'"></c8y-select> -->
+                <div class="c8y-select-wrapper" style="width:200px">
                   <select class="form-control" formControlName="javaScriptAgent" name="javaScriptAgent">
-                    <option [value]="-1" [disabled]="true">
+                    <option value="" disabled selected>
                       Select agent
                     </option>
-                    <option *ngFor="let agent of (agents$| async)">
+                    <option *ngFor="let agent of (agents$| async)" [value]="agent">
                       {{ agent }}
                     </option>
                   </select>
-                </div> -->
+                </div>
                 <span></span>
               </label>
             </div>

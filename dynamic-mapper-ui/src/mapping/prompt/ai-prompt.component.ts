@@ -31,7 +31,7 @@ import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from 'src/configuration';
-import { filter, from, map, mergeMap, Subject, takeUntil } from 'rxjs';
+import { filter, from, mergeMap, Subject, takeUntil } from 'rxjs';
 
 type AgentDefinitionProps =
   | 'agent'
@@ -70,7 +70,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   private _save: (value: MappingSubstitution[]) => void;
   private _cancel: (reason?: any) => void;
   destroy$: Subject<void> = new Subject<void>();
-
+  valid: boolean = false;
 
   result: Promise<MappingSubstitution[]> = new Promise((resolve, reject) => {
     this._save = resolve;
@@ -78,8 +78,6 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   });
 
   substitutions: MappingSubstitution[] = [];
-  jsonataAgent: AgentTextDefinition | null = null;
-  javaScriptAgent: AgentTextDefinition | null = null;
   agent: AgentTextDefinition | null = null;
   hasIssue = false;
   isLoading = false;
@@ -97,24 +95,30 @@ export class AIPromptComponent implements OnInit, OnDestroy {
 
     from(this.aiAgentService.getAgents())
       .pipe(
-        mergeMap(agents => from(agents)), // Convert array to individual emissions
-        filter(agent => agent.name === this.serviceConfiguration.jsonataAgent),
+        mergeMap(agents => from(agents)),
+        filter(agent => {
+          if (this.agentType === MappingType.JSON) {
+            return agent.name === this.serviceConfiguration.jsonataAgent;
+          } else {
+            return agent.name === this.serviceConfiguration.javaScriptAgent;
+          }
+        }),
         takeUntil(this.destroy$)
       )
-      .subscribe(matchingAgent => {
-        // update this.tempAgent with the agent that matches 
-        this.jsonataAgent = matchingAgent as any;
-      });
+      .subscribe(async (matchingAgent) => {
+        // update this.agent with the agent that matches 
+        this.agent = matchingAgent as any;
+        this.testVars = JSON.stringify(
+          this.agent?.agent?.variables || {},
+        );
 
-    from(this.aiAgentService.getAgents())
-      .pipe(
-        mergeMap(agents => from(agents)), // Convert array to individual emissions
-        filter(agent => agent.name === this.serviceConfiguration.javaScriptAgent),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(matchingAgent => {
-        // update this.tempAgent with the agent that matches 
-        this.javaScriptAgent = matchingAgent as any;
+        // when the component is loaded I want to automatically 
+        // 1. set this.newMessage = [this.mapping.source, this.mapping.target]
+        // 2. call sendMessage()
+        this.newMessage = JSON.stringify([this.mapping.sourceTemplate, this.mapping.targetTemplate], null, 2);
+
+        // Call sendMessage() automatically
+        await this.sendMessage();
       });
   }
 
@@ -134,17 +138,9 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   }
 
 
-  async sendMessage(agentType: MappingType) {
-    if (agentType == MappingType.JSON) {
-      if (!this.jsonataAgent) {
-        return;
-      }
-      this.agent = this.jsonataAgent;
-    } else if (agentType == MappingType.CODE_BASED) {
-      if (!this.javaScriptAgent) {
-        return;
-      }
-      this.agent = this.javaScriptAgent;
+  async sendMessage() {
+    if (!this.agent) {
+      return;
     }
 
     if (this.newMessage.trim()) {
@@ -179,6 +175,8 @@ export class AIPromptComponent implements OnInit, OnDestroy {
           content,
           role: 'assistant',
         });
+
+        this.checkIfResponseContainsSubstitutions(content);
       } catch (ex) {
         this.alertService.addServerFailure(ex);
       }
@@ -186,6 +184,91 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       // Clear the input field
       this.newMessage = '';
       this.isLoadingChat = false;
+    }
+  }
+
+  checkIfResponseContainsSubstitutions(content: any) {
+    /*
+    the content could look like the following:
+    I can see you've provided a source JSON with temperature data and a target JSON in Cumulocity measurement format. Let me create the substitutions to map between them:
+
+```json
+[
+  {
+    "pathSource": "temperature",
+    "pathTarget": "c8y_TemperatureMeasurement.T.value",
+    "expandArray": false
+  },
+  {
+    "pathSource": "unit",
+    "pathTarget": "c8y_TemperatureMeasurement.T.unit",
+    "expandArray": false
+  },
+  {
+    "pathSource": "time",
+    "pathTarget": "time",
+    "expandArray": false
+  },
+  {
+    "pathSource": "'c8y_TemperatureMeasurement'",
+    "pathTarget": "type",
+    "expandArray": false
+  }
+]
+```
+
+These substitutions will:
+1. Map the temperature value from the source to the Cumulocity measurement value
+2. Map the unit from source to target (note: the source uses "°C" while target expects "C")
+3. Map the timestamp directly
+4. Set the measurement type as a literal string "c8y_TemperatureMeasurement"
+   
+now check if the content contains the pattern ```json and then extract the following array and assign it to this.substitutions
+ */
+
+    try {
+      // Look for the pattern ```json followed by content and ending with ```
+      const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
+      const match = content.match(jsonBlockRegex);
+
+      if (match && match[1]) {
+        // Extract the JSON content
+        const jsonContent = match[1].trim();
+
+        // Parse the JSON array
+        const parsedSubstitutions = JSON.parse(jsonContent);
+
+        // Validate that it's an array
+        if (Array.isArray(parsedSubstitutions)) {
+          // Validate that each item has the expected properties
+          const isValidSubstitutions = parsedSubstitutions.every(sub =>
+            sub.hasOwnProperty('pathSource') &&
+            sub.hasOwnProperty('pathTarget') &&
+            sub.hasOwnProperty('expandArray')
+          );
+
+          if (isValidSubstitutions) {
+            this.substitutions = parsedSubstitutions;
+            this.valid = true;
+            this.alertService.success('Substitutions extracted successfully!');
+          } else {
+            this.valid = false;
+            this.alertService.warning('Invalid substitution format found in response');
+          }
+        } else {
+          this.valid = false;
+          this.alertService.warning('Expected array of substitutions but found different format');
+        }
+      } else {
+        this.valid = false;
+        // No JSON block found - this might be normal if the AI is still explaining
+        console.log('No JSON block found in response');
+      }
+
+    } catch (error) {
+      this.valid = false;
+      console.error('Error parsing substitutions from response:', error);
+      this.alertService.danger('Failed to parse substitutions from AI response');
     }
   }
 

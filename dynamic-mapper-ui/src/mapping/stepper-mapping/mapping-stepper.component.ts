@@ -1290,8 +1290,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     try {
       const resultOf = await drawer.instance.result;
       this.alertService.success(`Generated ${resultOf.length} substitutions.`);
+      if (resultOf) {
+      this.mapping.substitutions.splice(0);
+        resultOf.forEach( sub => this.addSubstitution(sub));
+      }
     } catch (ex) {
-      this.alertService.danger("Canceled as of: " + ex);
+      this.alertService.warning("Canceled as of: " + ex);
     }
     this.isGenerateSubstitutionOpen = false;
   }

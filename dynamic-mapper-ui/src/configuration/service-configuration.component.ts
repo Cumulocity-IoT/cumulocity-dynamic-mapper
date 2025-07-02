@@ -131,7 +131,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         this.serviceConfiguration.maxCPUTimeMS,
       jsonataAgent:
         // {value:'Austria', label:'Austria'},
-       this.serviceConfiguration.jsonataAgent,
+        this.serviceConfiguration.jsonataAgent,
       javaScriptAgent:
         this.serviceConfiguration.javaScriptAgent,
     });
@@ -172,12 +172,14 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       .split(",")
       .map(fragment => fragment.trim())
       .filter(fragment => fragment.length > 0);
+
+    // console.log("VALUE", this.serviceForm.value['jsonataAgent'])
     conf.javaScriptAgent = this.serviceForm.value['javaScriptAgent']
-      ? this.serviceForm.value['javaScriptAgent'].value?.trim()
+      ? this.serviceForm.value['javaScriptAgent']?.trim()
       : undefined;
     ;
     conf.jsonataAgent = this.serviceForm.value['jsonataAgent']
-      ? this.serviceForm.value['jsonataAgent'].value?.trim()
+      ? this.serviceForm.value['jsonataAgent']?.trim()
       : undefined;
 
     const response = await this.sharedService.updateServiceConfiguration(conf);

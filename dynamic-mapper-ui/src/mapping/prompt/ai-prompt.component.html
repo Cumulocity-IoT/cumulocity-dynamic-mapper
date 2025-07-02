@@ -29,7 +29,7 @@
     <div class="card-inner-scroll fit-h">
       <div class="card-block">
         <div class="inner-scroll border-top flex-grow d-col-reverse">
-          <div class="d-col p-l-16 p-r-16">
+          <div class="d-col p-l-16 p-r-16" *ngIf="agent">
             <div *ngFor="let message of agent.agent?.messages || []" class="chat-message text-break-word" [ngClass]="{
                     'user-message': message.role === 'user',
                     'agent-message': message.role === 'assistant',
@@ -49,8 +49,8 @@
         </div>
         <div class="chat-input d-flex p-16 bg-level-1 border-top">
           <input type="text" class="form-control flex-grow" placeholder="Type your message..." [(ngModel)]="newMessage"
-            (keyup.enter)="sendMessage(agentType)" [disabled]="isLoadingChat" />
-          <button class="btn btn-primary m-l-8" (click)="sendMessage(agentType)" [disabled]="!newMessage || isLoadingChat">
+            (keyup.enter)="sendMessage()" [disabled]="isLoadingChat" />
+          <button class="btn btn-primary m-l-8" (click)="sendMessage()" [disabled]="!newMessage || isLoadingChat">
             Send
           </button>
         </div>
@@ -59,7 +59,7 @@
   </div>
   <div class="card-footer d-block text-center">
     <div class="form-group">
-      <button type="button" name="update" class="btn btn-primary" (click)="save()" translate>
+      <button type="button" name="update" class="btn btn-primary" (click)="save()" [disabled]="!valid" translate>
         Save
       </button>
       <button type="button" name="update" class="btn btn-primary" (click)="cancel()" translate>
