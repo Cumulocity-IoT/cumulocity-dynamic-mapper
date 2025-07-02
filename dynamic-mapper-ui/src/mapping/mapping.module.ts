@@ -57,6 +57,7 @@ import { MappingSubscriptionComponent } from './subscription/subscription.compon
 import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 import { DeviceSelectorSubscription2Component } from './subscription/device-selector2/device-selector-subscription2.component';
+import { AIPromptComponent } from './prompt/ai-prompt.component';
 
 @NgModule({
   declarations: [
@@ -86,6 +87,7 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
     AdviceActionComponent,
     MappingFilterComponent,
     ManageTemplateComponent,
+    AIPromptComponent,
   ],
   imports: [
     CoreModule,

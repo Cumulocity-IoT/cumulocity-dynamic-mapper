@@ -132,6 +132,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   substitutionModel: any = {};
   propertyFormly: FormGroup = new FormGroup({});
   codeFormly: FormGroup = new FormGroup({});
+  showGenerateSubstitution = false;
 
   codeTemplateDecoded: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
@@ -283,7 +284,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.editorOptionsSourceTemplate.readOnly = true;
       this.editorOptionsTargetTemplate.readOnly = true;
     }
-    
+
     this.initializeFormlyFields();
 
     this.initializeCodeTemplates();
@@ -306,7 +307,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               customWrapperClass: 'm-b-24',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 // !this.stepperConfiguration.allowDefiningSubstitutions,
-              !this.stepperConfiguration.allowDefiningSubstitutions || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
+                !this.stepperConfiguration.allowDefiningSubstitutions || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
               placeholder: '$exists(c8y_TemperatureMeasurement)',
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
@@ -1267,4 +1268,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  onGenerateSubstitution() {
+    this.showGenerateSubstitution = true;
+  }
+
+  onCommitGeneratedSubscriptions(substitutions: MappingSubstitution[]) {
+    console.log("Generated substitutions",)
+  }
+
 }
