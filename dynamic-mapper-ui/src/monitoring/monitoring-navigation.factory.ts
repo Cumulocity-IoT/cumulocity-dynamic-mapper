@@ -29,7 +29,7 @@ import {
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
-import {  NODE2, SharedService } from '../shared';
+import { NODE2, SharedService } from '../shared';
 
 @Injectable()
 export class MonitoringNavigationFactory implements NavigatorNodeFactory {
@@ -38,7 +38,7 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
 
   appName: string;
   isStandaloneApp: boolean = false;
-  staticNodes = {
+  staticNodesStandalone = {
     monitoringMappingNode: new NavigatorNode({
       parent: gettext('Monitoring'),
       label: gettext('Statistic processed'),
@@ -80,29 +80,42 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
     });
   }
 
-  async get() {
-    const feature: any = await this.sharedService.getFeatures();
-    let navs;
-    let copyStaticNodesPlugin;
+  async get(): Promise<any> {
+    try {
+      const feature: any = await this.sharedService.getFeatures();
+      let navs;
+      let copyStaticNodesPlugin;
 
-    copyStaticNodesPlugin = _.clone(this.staticNodes);
-    if (!feature?.outputMappingEnabled) {
-      delete copyStaticNodesPlugin.mappingOutboundNode;
-      delete copyStaticNodesPlugin.subscriptionOutboundNode;
+      copyStaticNodesPlugin = _.clone(this.staticNodesStandalone);
+      if (!feature?.outputMappingEnabled) {
+        delete copyStaticNodesPlugin.mappingOutboundNode;
+        delete copyStaticNodesPlugin.subscriptionOutboundNode;
+      }
+      navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
+
+      return this.applicationService
+        .isAvailable(MonitoringNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)
+        .then((data) => {
+          if (!data.data || !feature) {
+            this.alertService.danger(
+              'Microservice: dynamic-mapper-service not subscribed. Please subscribe this service before using the mapping editor!'
+            );
+            console.error('dynamic-mapper-service microservice not subscribed!');
+            return [];
+          }
+          return navs;
+        });
+    } catch (error) {
+      console.error('Error getting features:', error);
+      this.alertService.danger(
+        'Failed to load resources from the backend service dynamic-mapper-service. Please check that this service is deployed and try again.'
+      );
+
+      // Return empty array or handle gracefully based on your needs
+      return [];
+
+      // Alternative: You could also rethrow the error if you want calling code to handle it
+      // throw error;
     }
-    navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
-
-    return this.applicationService
-      .isAvailable(MonitoringNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)
-      .then((data) => {
-        if (!data.data || !feature) {
-          this.alertService.danger(
-            'Microservice:dynamic-mapper-service not subscribed. Please subscribe this service before using the mapping editor!'
-          );
-          console.error('dynamic-mapper-service microservice not subscribed!');
-          return [];
-        }
-        return navs;
-      });
   }
 }
