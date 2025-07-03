@@ -1294,19 +1294,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
   }
 
-
-  onCommitGeneratedSubscriptions(substitutions: MappingSubstitution[]) {
-    console.log("Generated substitutions",)
-  }
-
   async openGenerateSubstitutionDrawer() {
     this.isGenerateSubstitutionOpen = true;
+
+    const testMapping = _.clone(this.mapping);
+    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
+    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
     const drawer = this.bottomDrawerService.openDrawer(
       AIPromptComponent,
       {
         initialState: {
-          // place here any content you want to pass to the component
-          mapping: this.mapping,
+          mapping: testMapping,
         },
       },
     );
