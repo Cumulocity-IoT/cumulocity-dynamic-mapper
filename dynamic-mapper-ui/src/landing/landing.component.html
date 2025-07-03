@@ -22,7 +22,7 @@
 
 <a id="top"></a>
 <div class="text-right m-b-16">
-  <a href="#top" class="to-the-top" role="button" aria-label="Scroll to top">
+  <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top" style="cursor: pointer;">
     <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
   </a>
 </div>
@@ -34,14 +34,14 @@
   </div>
   <div class="card-block">
     <ul class="text-16" style="list-style-type: decimal;">
-      <li><a href="#overview">{{ 'Overview of Dynamic Mapper' | translate }}</a></li>
-      <li><a href="#supported-connectors">{{ 'Supported connectors' | translate }}</a></li>
-      <li><a href="#define-mapping">{{ 'Defining a mapping' | translate }}</a></li>
-      <li><a href="#jsonata-substitution">{{ 'Defining a substitution using JSONata' | translate }}</a></li>
-      <li><a href="#javascript-substitution">{{ 'Defining a substitution using JavaScript' | translate }}</a></li>
-      <li><a href="#unknown-payload">{{ 'Getting started without knowing your source payload' | translate }}</a></li>
-      <li><a href="#reliability-settings">{{ 'Using reliability settings in mappings' | translate }}</a></li>
-      <li><a href="#access-control">{{ 'Managing permissions for Dynamic Mapper features' | translate }}</a></li>
+      <li><a (click)="scrollToElement('overview')" style="cursor: pointer;">{{ 'Overview of Dynamic Mapper' | translate }}</a></li>
+      <li><a (click)="scrollToElement('supported-connectors')" style="cursor: pointer;">{{ 'Supported connectors' | translate }}</a></li>
+      <li><a (click)="scrollToElement('define-mapping')" style="cursor: pointer;">{{ 'Defining a mapping' | translate }}</a></li>
+      <li><a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">{{ 'Defining a substitution using JSONata' | translate }}</a></li>
+      <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a substitution using JavaScript' | translate }}</a></li>
+      <li><a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">{{ 'Getting started without knowing your source payload' | translate }}</a></li>
+      <li><a (click)="scrollToElement('reliability-settings')" style="cursor: pointer;">{{ 'Using reliability settings in mappings' | translate }}</a></li>
+      <li><a (click)="scrollToElement('access-control')" style="cursor: pointer;">{{ 'Managing permissions for Dynamic Mapper features' | translate }}</a></li>
     </ul>
   </div>
 
