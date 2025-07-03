@@ -17,7 +17,7 @@ export interface Substitution {
     expandArray: boolean
 }
 
-# Domain-specifc term `expandArray`
+# Domain-specific term `expandArray`
 We use domain-specific terms such as `expandArray`. To improve the generated substitutions, I provide examples that should be included in the context.
 ## Important Notes for `expandArray`:
 
@@ -867,7 +867,7 @@ __Signature:__ `$formatInteger(number, picture)`
 
 Casts the `number` to a string and formats it to an integer representation as specified by the `picture` string.
 
-The behaviour of this function is consistent with the two-argument version of the XPath/XQuery function [fn:format-integer](https://www.w3.org/TR/xpath-functions-31/#func-format-integer) as defined in the XPath F&O 3.1 specification.  The picture string parameter defines how the number is formatted and has the same syntax as fn:format-integer.
+The behavior of this function is consistent with the two-argument version of the XPath/XQuery function [fn:format-integer](https://www.w3.org/TR/xpath-functions-31/#func-format-integer) as defined in the XPath F&O 3.1 specification.  The picture string parameter defines how the number is formatted and has the same syntax as fn:format-integer.
 
 __Examples__
 
