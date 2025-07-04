@@ -48,7 +48,7 @@
             </div>
           </div>
         </div>
-        <div class="chat-input d-flex p-16 bg-level-1 border-top">
+        <div *ngIf="agent" class="chat-input d-flex p-16 bg-level-1 border-top">
           <input type="text" class="form-control flex-grow" placeholder="Type your message..." [(ngModel)]="newMessage"
             (keyup.enter)="sendMessage()" [disabled]="isLoadingChat" />
           <button class="btn btn-primary m-l-8" (click)="sendMessage()" [disabled]="!newMessage || isLoadingChat">

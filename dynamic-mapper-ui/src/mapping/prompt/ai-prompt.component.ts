@@ -78,7 +78,14 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   });
 
   substitutions: MappingSubstitution[] = [];
-  agent: AgentTextDefinition | null = null;
+  agent: AgentTextDefinition  =  {
+    name: '',
+    type: 'text',
+    agent: {
+      messages: []
+    }
+  } as any;
+  
   hasIssue = false;
   isLoading = false;
   isLoadingChat = false;
