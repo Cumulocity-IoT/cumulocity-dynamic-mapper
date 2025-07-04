@@ -336,7 +336,9 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   async editMessageFilter(m: MappingEnriched) {
     const { mapping } = m;
-    const initialState = { mapping };
+    const sourceSystem =
+      mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+    const initialState = { mapping, sourceSystem };
     try {
       const modalRef = this.bsModalService.show(MappingFilterComponent, {
         initialState
@@ -361,11 +363,11 @@ export class MappingComponent implements OnInit, OnDestroy {
               resolve(undefined);
             }
           });
-        });
-      } catch (error) {
-        this.alertService.danger(`'Failed to apply mapping filter': ${error.message}`);
-      }
+      });
+    } catch (error) {
+      this.alertService.danger(`'Failed to apply mapping filter': ${error.message}`);
     }
+  }
 
   private async applyMappingFilter(filterMapping: string, mappingId: string): Promise<string> {
     const params = {

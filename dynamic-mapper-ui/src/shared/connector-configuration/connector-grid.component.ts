@@ -394,7 +394,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       }));
   }
 
-  trackUserClickOnIntervalToggle(target: EventTarget): void {
+  trackUserClickOnIntervalToggle(event: Event): void {
+    const target = event.target;
     this.shouldRefreshAutomatic = (target as HTMLInputElement).checked;
     this.connectorConfigurationService.toggleCountdown();
     if (!this.shouldRefreshAutomatic) {

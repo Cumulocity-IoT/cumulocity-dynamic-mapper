@@ -43,6 +43,7 @@ import { getTypeOf } from '../shared/util';
 })
 export class MappingFilterComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() mapping: Mapping;
+  @Input() sourceSystem: string;
 
   @ViewChild('editorSourceFilter', { static: false })
   editorSourceFilter: JsonEditorComponent;

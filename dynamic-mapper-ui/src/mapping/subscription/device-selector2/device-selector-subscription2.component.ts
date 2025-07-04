@@ -88,7 +88,7 @@ export class DeviceSelectorSubscription2Component implements OnInit {
   }
 
   /** Executes an action on selected items, whenever the selection changes. */
-  onItemsSelect(selectedItemIds) {
+  onItemsSelect(selectedItemIds: string[]) {
     this.selectedItemIds = selectedItemIds;
   }
 

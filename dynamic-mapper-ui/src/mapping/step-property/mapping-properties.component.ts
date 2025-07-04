@@ -53,7 +53,7 @@ export class MappingStepPropertiesComponent
   @Input() propertyFormly: FormGroup;
   @Input() codeFormly: FormGroup;
 
-  @Output() targetAPIChanged = new EventEmitter<any>();
+  @Output() targetAPIChanged = new EventEmitter<string>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
   ValidationError = ValidationError;

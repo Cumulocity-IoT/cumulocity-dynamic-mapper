@@ -71,7 +71,7 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
   events$: Observable<IResultList<IEvent>>;
   LoggingEventTypeMap = LoggingEventTypeMap;
-  filterMappingServiceEvent = { type: 'ALL' };
+  filterMappingServiceEvent = { type: 'ALL' } as any;
   filterSubject$ = new BehaviorSubject<void>(null);
   destroy$ = new Subject<void>();
   reload$ = new Subject<void>();
@@ -105,12 +105,12 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.filterSubject$.next();
   }
 
-  onDateFromChange(date): void {
+  onDateFromChange(date: Date): void {
     this.baseFilter['dateFrom'] = date.toISOString();
     this.filterSubject$.next();
   }
 
-  onDateToChange(date): void {
+  onDateToChange(date: Date): void {
     this.baseFilter['dateTo'] = date.toISOString();
     this.filterSubject$.next();
   }

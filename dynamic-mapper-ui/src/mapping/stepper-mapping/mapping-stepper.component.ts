@@ -85,6 +85,11 @@ import { AIAgentService } from '../core/ai-agent.service';
 
 let initializedMonaco = false;
 
+interface StepperStepChange {
+  stepper: C8yStepper;
+  step: CdkStep;
+}
+
 @Component({
   selector: 'd11r-mapping-stepper',
   templateUrl: 'mapping-stepper.component.html',
@@ -570,7 +575,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  deploymentMapEntryChange(e): void {
+  deploymentMapEntryChange(deploymentMapEntry: DeploymentMapEntry): void {
     const isDisabled = !this.deploymentMapEntry?.connectors ||
       this.deploymentMapEntry?.connectors?.length == 0;
 
@@ -912,11 +917,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.editorTargetStepSubstitution?.set(this.targetTemplate);
   }
 
-  onNextStep(event: {
-    stepper: C8yStepper;
-    step: CdkStep;
-  }): void {
-
+  onNextStep(event: StepperStepChange): void {
     this.stepperForward = true;
     if (this.stepperConfiguration.advanceFromStepToEndStep && this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
       this.goToLastStep();
@@ -938,10 +939,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.stepper.selectedIndex = this.stepper.steps.length - 1;
   }
 
-  async onBackStep(event: {
-    stepper: C8yStepper;
-    step: CdkStep;
-  }): Promise<void> {
+  async onBackStep(event: StepperStepChange): Promise<void> {
     this.step = event.step.label;
     this.stepperForward = false;
     if (this.step == 'Test mapping') {
@@ -1035,7 +1033,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.snoopedTemplateCounter++;
   }
 
-  async onSelectSnoopedSourceTemplate(index: any) {
+  async onSelectSnoopedSourceTemplate(event: Event) {
+    const index = this.templateForm.get('snoopedTemplateIndex')?.value;
     try {
       this.sourceTemplate = JSON.parse(this.mapping.snoopedTemplates[index]);
     } catch (error) {
@@ -1062,7 +1061,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.mapping.snoopStatus = SnoopStatus.STOPPED;
   }
 
-  async onTargetAPIChanged(changedTargetAPI): Promise<void> {
+  async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
