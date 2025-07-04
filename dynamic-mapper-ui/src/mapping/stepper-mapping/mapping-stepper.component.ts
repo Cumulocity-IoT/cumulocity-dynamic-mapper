@@ -19,6 +19,7 @@
  */
 import { CdkStep } from '@angular/cdk/stepper';
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
   EventEmitter,
@@ -110,7 +111,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild('editorTargetStepSubstitution', { static: false }) editorTargetStepSubstitution!: JsonEditorComponent;
   @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild!: SubstitutionRendererComponent;
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
+  @ViewChild('codeEditor', { static: false }) codeEditor: EditorComponent;
 
+  private cdr = inject(ChangeDetectorRef);
   private bsModalService = inject(BsModalService);
   private sharedService = inject(SharedService);
   private mappingService = inject(MappingService);
@@ -1293,33 +1296,52 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
   }
 
-  async openGenerateSubstitutionDrawer() {
-    this.isGenerateSubstitutionOpen = true;
+async openGenerateSubstitutionDrawer() {
+  this.isGenerateSubstitutionOpen = true;
 
-    const testMapping = _.clone(this.mapping);
-    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
-    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-    const drawer = this.bottomDrawerService.openDrawer(
-      AIPromptComponent,
-      {
-        initialState: {
-          mapping: testMapping,
-        },
-      },
-    );
+  const testMapping = _.clone(this.mapping);
+  testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
+  testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+  delete testMapping.code;
 
-    try {
-      const resultOf = await drawer.instance.result;
-      this.alertService.success(`Generated ${resultOf.length} substitutions.`);
-      if (resultOf) {
+  const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
+    initialState: { mapping: testMapping },
+  });
+
+  try {
+    const resultOf = await drawer.instance.result;
+
+    if (this.mapping.mappingType === MappingType.CODE_BASED) {
+      if (typeof resultOf === 'string' && resultOf.trim()) {
+        this.mappingCode = resultOf;
+        
+        // Multiple approaches to ensure update
+        this.cdr.detectChanges();
+        
+        if (this.codeEditor) {
+          setTimeout(() => {
+            this.codeEditor.writeValue(resultOf);
+          }, 100);
+        }
+        
+        this.alertService.success('Generated JavaScript code successfully.');
+      } else {
+        this.alertService.warning('No valid JavaScript code was generated.');
+      }
+    } else {
+      if (Array.isArray(resultOf) && resultOf.length > 0) {
+        this.alertService.success(`Generated ${resultOf.length} substitutions.`);
         this.mapping.substitutions.splice(0);
         resultOf.forEach(sub => this.addSubstitution(sub));
+      } else {
+        this.alertService.warning('No substitutions were generated.');
       }
-    } catch (ex) {
-      // do nothing
-      // this.alertService.warning("Canceled as of: " + ex);
     }
-    this.isGenerateSubstitutionOpen = false;
+  } catch (ex) {
+    // User canceled or error occurred
   }
+
+  this.isGenerateSubstitutionOpen = false;
+}
 
 }

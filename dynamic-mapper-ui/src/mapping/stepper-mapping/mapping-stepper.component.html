@@ -287,39 +287,7 @@
               </div>
               <div [formGroup]="substitutionFormly">
                 <div class="row p-t-8">
-                  <!-- <div class="col-lg-2 col-lg-offset-1 p-l-48">
-                    <button type="button" name="addSubstitution" class="btn btn-default btn-sm"
-                      (click)="onAddSubstitution()" translate title="Add substitution"
-                      [disabled]="addSubstitutionDisabled() || ( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
-                      <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution
-                    </button>
-                  </div>
-                  <div class="col-lg-2 col-lg-offset-1">
-                    <button type="button" name="updateSubstitution" class="btn btn-default btn-sm"
-                      (click)="onUpdateSubstitution()" translate title="Update substitution"
-                      [disabled]="updateSubstitutionDisabled() || ( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
-                      <i c8yIcon="pencil"></i><span id="updateButton">&nbsp;Update substitution</span>
-                    </button>
-                  </div>
-                  <div class="col-lg-2 col-lg-offset-1">
-                    <button type="button" name="generateSubstitution" class="btn btn-default btn-sm"
-                      (click)="onGenerateSubstitution()" translate title="Generate substitution" [disabled]="
-                          !stepperConfiguration.showEditorSource ||
-                            stepperConfiguration.editorMode ===
-                              EditorMode.READ_ONLY
-                      ">
-                      <i c8yIcon="bot"></i><span id="updateButton">&nbsp;Generate substitution</span>
-                    </button>
-                  </div>
-                  <div class="col-lg-2 col-lg-offset-1">
-                    <label class="c8y-switch">
-                      <input type="checkbox" [value]="expertMode" (change)="toggleExpertMode()" />
-                      <span></span>
-                      <span>
-                        {{ 'Expert mode' | translate }}
-                      </span>
-                    </label>
-                  </div> -->
+
                   <div class="col-lg-offset-1"></div>
                   <div class="col-lg-10 col-lg-offset-1">
                     <div class="btn-group btn-group-justified">
@@ -358,16 +326,6 @@
                           <i c8yIcon="c8y-analytic-model"></i><span id="updateButton">&nbsp;Toggle expert mode</span>
                         </button>
                       </div>
-                      <!-- <div class="btn-group">
-                        <label class="c8y-switch">
-                          <input type="checkbox" [value]="expertMode" (change)="toggleExpertMode()" />
-                          <span></span>
-                          <span>
-                            {{ 'Expert mode' | translate }}
-                          </span>
-                        </label>
-                      </div> 
-                      -->
                     </div>
                   </div>
 
@@ -503,7 +461,7 @@
       <div>
         <div class="form-group p-b-8">
           <div class="row p-b-8">
-            <div class="col-lg-8">
+            <div class="col-lg-6">
               <div class="d-flex">
                 <label translate style="margin-top:4px">JavaScript callback for creating substitutions</label>
                 <span class="hidden-xs hidden-sm">
@@ -515,6 +473,20 @@
                 </span>
               </div>
             </div>
+            <div class="col-lg-2" style="padding-top: 2px;">
+              <button type="button" name="generateSubstitution" class="btn btn-default btn-sm"
+                (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions" [disabled]="
+                              !stepperConfiguration.showEditorSource ||
+                                stepperConfiguration.editorMode ===
+                                  EditorMode.READ_ONLY || !aiAgentDeployed
+                          ">
+                <i c8yIcon="bot"></i><span id="updateButton">&nbsp;Generate substitutions</span>
+              </button>
+              <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+                popover="{{'Generate substitutions is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                placement="right" container="body" triggers="focus" type="button" *ngIf="!aiAgentDeployed"></button>
+            </div>
+
             <div class="col-lg-2">
               <div class="c8y-select-wrapper" style="max-width: 200px; overflow: auto !important">
                 <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId"

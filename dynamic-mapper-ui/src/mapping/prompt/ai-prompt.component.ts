@@ -67,25 +67,26 @@ export class AIPromptComponent implements OnInit, OnDestroy {
 
   @Input() mapping: Mapping;
 
-  private _save: (value: MappingSubstitution[]) => void;
+  private _save: (value: MappingSubstitution[] | string) => void;
   private _cancel: (reason?: any) => void;
   destroy$: Subject<void> = new Subject<void>();
   valid: boolean = false;
 
-  result: Promise<MappingSubstitution[]> = new Promise((resolve, reject) => {
+  result: Promise<MappingSubstitution[] | string> = new Promise((resolve, reject) => {
     this._save = resolve;
     this._cancel = reject;
   });
 
   substitutions: MappingSubstitution[] = [];
-  agent: AgentTextDefinition  =  {
+  generatedCode: string = '';
+  agent: AgentTextDefinition = {
     name: '',
     type: 'text',
     agent: {
       messages: []
     }
   } as any;
-  
+
   hasIssue = false;
   isLoading = false;
   isLoadingChat = false;
@@ -93,6 +94,11 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   testVars: string = '';
   serviceConfiguration: ServiceConfiguration;
   agentType: MappingType;
+
+  // Add getter to check if this is a code-based mapping
+  get isCodeMapping(): boolean {
+    return this.agentType === MappingType.CODE_BASED;
+  }
 
   async ngOnInit(): Promise<void> {
     // console.log(this.mapping);
@@ -119,10 +125,20 @@ export class AIPromptComponent implements OnInit, OnDestroy {
           this.agent?.agent?.variables || {},
         );
 
-        // when the component is loaded I want to automatically 
-        // 1. set this.newMessage = [this.mapping.source, this.mapping.target]
-        // 2. call sendMessage()
-        this.newMessage = JSON.stringify([this.mapping.sourceTemplate, this.mapping.targetTemplate], null, 2);
+        // Prepare message based on mapping type
+        if (this.isCodeMapping) {
+          // For CODE mappings, include existing JavaScript code if available
+          const existingCode = this.extractExistingJavaScriptCode();
+          this.newMessage = JSON.stringify({
+            sourceTemplate: this.mapping.sourceTemplate,
+            targetTemplate: this.mapping.targetTemplate,
+            existingCode: existingCode,
+            mappingType: 'JavaScript'
+          }, null, 2);
+        } else {
+          // For JSON mappings (existing behavior)
+          this.newMessage = JSON.stringify([this.mapping.sourceTemplate, this.mapping.targetTemplate], null, 2);
+        }
 
         // Call sendMessage() automatically
         await this.sendMessage();
@@ -135,7 +151,11 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   }
 
   save() {
-    this._save(this.substitutions);
+    if (this.isCodeMapping) {
+      this._save(this.generatedCode);
+    } else {
+      this._save(this.substitutions);
+    }
     this.bottomDrawerRef.close();
   }
 
@@ -144,6 +164,26 @@ export class AIPromptComponent implements OnInit, OnDestroy {
     this.bottomDrawerRef.close();
   }
 
+  private extractExistingJavaScriptCode(): string {
+    // Extract existing JavaScript code from the mapping
+    // This depends on how your mapping stores JavaScript code
+    // Adjust the property path according to your Mapping interface
+    if (this.mapping && (this.mapping as any).code) {
+      return (this.mapping as any).code;
+    }
+    
+    // If code is stored in substitutions as a single item
+    if (this.mapping && this.mapping.substitutions && this.mapping.substitutions.length > 0) {
+      const codeSubstitution = this.mapping.substitutions.find(sub => 
+        typeof sub.pathSource === 'string' && sub.pathSource.includes('function')
+      );
+      if (codeSubstitution) {
+        return codeSubstitution.pathSource;
+      }
+    }
+    
+    return '';
+  }
 
   async sendMessage() {
     if (!this.agent) {
@@ -166,10 +206,10 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       } catch (ex) {
         console.log(ex);
         this.alertService.danger('Invalid JSON in test variables');
-        // ADDED: Reset isLoading on error
         this.isLoadingChat = false;
         return;
       }
+      
       try {
         const response = await this.aiAgentService.test(this.agent);
 
@@ -183,7 +223,11 @@ export class AIPromptComponent implements OnInit, OnDestroy {
           role: 'assistant',
         });
 
-        this.checkIfResponseContainsSubstitutions(content);
+        if (this.isCodeMapping) {
+          this.checkIfResponseContainsJavaScript(content);
+        } else {
+          this.checkIfResponseContainsSubstitutions(content);
+        }
       } catch (ex) {
         this.alertService.addServerFailure(ex);
       }
@@ -194,45 +238,53 @@ export class AIPromptComponent implements OnInit, OnDestroy {
     }
   }
 
-  checkIfResponseContainsSubstitutions(content: any) {
-    /*
-    the content could look like the following:
-    I can see you've provided a source JSON with temperature data and a target JSON in Cumulocity measurement format. Let me create the substitutions to map between them:
+  checkIfResponseContainsJavaScript(content: any): void {
+    try {
+      // Look for JavaScript code blocks
+      const jsBlockRegex = /```javascript\s*([\s\S]*?)\s*```/;
+      const match = content.match(jsBlockRegex);
 
-```json
-[
-  {
-    "pathSource": "temperature",
-    "pathTarget": "c8y_TemperatureMeasurement.T.value",
-    "expandArray": false
-  },
-  {
-    "pathSource": "unit",
-    "pathTarget": "c8y_TemperatureMeasurement.T.unit",
-    "expandArray": false
-  },
-  {
-    "pathSource": "time",
-    "pathTarget": "time",
-    "expandArray": false
-  },
-  {
-    "pathSource": "'c8y_TemperatureMeasurement'",
-    "pathTarget": "type",
-    "expandArray": false
+      if (match && match[1]) {
+        // Extract the JavaScript content
+        const jsContent = match[1].trim();
+        
+        // Validate that it contains a function (basic validation)
+        if (jsContent.includes('function') && jsContent.includes('extractFromSource')) {
+          this.generatedCode = jsContent;
+          this.valid = true;
+          this.alertService.success('JavaScript code extracted successfully!');
+        } else {
+          this.valid = false;
+          this.alertService.warning('Invalid JavaScript function format found in response');
+        }
+      } else {
+        // Try alternative patterns for code blocks
+        const genericCodeRegex = /```(?:js|javascript)?\s*([\s\S]*?)\s*```/;
+        const genericMatch = content.match(genericCodeRegex);
+        
+        if (genericMatch && genericMatch[1]) {
+          const jsContent = genericMatch[1].trim();
+          if (jsContent.includes('function')) {
+            this.generatedCode = jsContent;
+            this.valid = true;
+            this.alertService.success('JavaScript code extracted successfully!');
+          } else {
+            this.valid = false;
+            this.alertService.warning('No valid JavaScript function found in response');
+          }
+        } else {
+          this.valid = false;
+          console.log('No JavaScript code block found in response');
+        }
+      }
+    } catch (error) {
+      this.valid = false;
+      console.error('Error parsing JavaScript from response:', error);
+      this.alertService.danger('Failed to parse JavaScript code from AI response');
+    }
   }
-]
-```
 
-These substitutions will:
-1. Map the temperature value from the source to the Cumulocity measurement value
-2. Map the unit from source to target (note: the source uses "°C" while target expects "C")
-3. Map the timestamp directly
-4. Set the measurement type as a literal string "c8y_TemperatureMeasurement"
-   
-now check if the content contains the pattern ```json and then extract the following array and assign it to this.substitutions
- */
-
+  checkIfResponseContainsSubstitutions(content: any) {
     try {
       // Look for the pattern ```json followed by content and ending with ```
       const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
@@ -268,15 +320,12 @@ now check if the content contains the pattern ```json and then extract the follo
         }
       } else {
         this.valid = false;
-        // No JSON block found - this might be normal if the AI is still explaining
         console.log('No JSON block found in response');
       }
-
     } catch (error) {
       this.valid = false;
       console.error('Error parsing substitutions from response:', error);
       this.alertService.danger('Failed to parse substitutions from AI response');
     }
   }
-
 }
