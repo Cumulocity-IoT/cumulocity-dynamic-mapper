@@ -86,10 +86,8 @@ We use domain-specific terms such as `expandArray`. To improve the generated sub
     }
 ]
 ```
-
+# JSONata Context
 Use the following context to evaluate and use JSONata expressions starting each with "$":
-
-# array-functions
 
 ---
 id: array-functions
@@ -887,26 +885,115 @@ __Examples__
 - `$parseInteger('12,345,678', '#,##0')` => `12345678`
 
 
-Use the following context for creating substitutions:
--A measurement always has the format:
+Use the following context for creating substitutions for Cumulocity target API resources:
+/**
+ * Alarm interface representing Cumulocity alarms
+ */
+export interface Alarm {
+  /** Unique identifier of the alarm */
+  id?: string;
+
+  /** Identifies the type of this alarm */
+  type: string;
+
+  /** Time when alarm was created in the database */
+  time: string;
+
+  /** Time when alarm was created */
+  creationTime?: string;
+
+  /** Time when alarm was last updated */
+  lastUpdated?: string;
+
+  /** The ManagedObject that the alarm originated from */
+  source: ManagedObject;
+
+  /** Description of the alarm */
+  text: string;
+
+  /** The status of the alarm */
+  status: AlarmStatus;
+
+  /** The severity of the alarm */
+  severity: AlarmSeverity;
+
+  /** The number of times this alarm has been triggered */
+  count?: number;
+
+  /** Time when alarm was first created */
+  firstOccurrenceTime?: string;
+
+  /** Additional custom properties */
+  [key: string]: any;
+}
+
 /**
  * Measurement interface representing Cumulocity measurements
  */
 export interface Measurement {
   /** Unique identifier of the measurement */
   id?: string;
-  
+
   /** Identifies the type of this measurement */
   type: string;
-  
+
   /** Time when measurement was created */
   time: string;
-  
+
   /** The ManagedObject that the measurement originated from */
   source: ManagedObject;
-  
+
   /** Measurement fragments - dynamic properties containing measurement series */
   [fragmentName: string]: any | MeasurementFragment;
+}
+
+/**
+ * Event interface representing Cumulocity events
+ */
+export interface Event {
+  /** Unique identifier of the event */
+  id?: string;
+
+  /** Identifies the type of this event */
+  type: string;
+
+  /** Time when event was created */
+  time: string;
+
+  /** Time when event was created in the database */
+  creationTime?: string;
+
+  /** Time when event was last updated */
+  lastUpdated?: string;
+
+  /** The ManagedObject that the event originated from */
+  source: ManagedObject;
+
+  /** Description of the event */
+  text: string;
+
+  /** Additional custom properties */
+  [key: string]: any;
+}
+
+/**
+ * ManagedObject interface, part of the inventory representing the source of alarms, measurements, and events
+ */
+export interface ManagedObject {
+  /** Unique identifier of the object */
+  id: string;
+
+  /** NHuman-readable name that is used for representing the object in user interfaces. */
+  name?: string;
+
+  /** The fragment type can be interpreted as device class, this means, devices with the same type can receive the same types of configuration, software, firmware and operations. The type value is indexed and is therefore used for queries. */
+  type?: string;
+
+  /** A fragment which identifies this managed object as a device. */
+  c8y_IsDevice: object;
+
+  /** Additional custom properties */
+  [key: string]: any;
 }
 
 /**
@@ -915,7 +1002,7 @@ export interface Measurement {
 export interface MeasurementValue {
   /** The value of the measurement */
   value: number;
-  
+
   /** The unit of the measurement */
   unit?: string;
 }
@@ -927,9 +1014,20 @@ export interface MeasurementFragment {
   [seriesName: string]: MeasurementValue;
 }
 
+/**
+ * Alarm status enumeration
+ */
+export type AlarmStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'CLEARED';
+
+/**
+ * Alarm severity enumeration
+ */
+export type AlarmSeverity = 'CRITICAL' | 'MAJOR' | 'MINOR' | 'WARNING';
+
 Rules:
 - Never create substitution for literal values of the target template (JSON document).
-- Each substitution is independent from each other.
+- Always validate each substitution using the tool 'evaluate_jsonata_expression'.
+- Each substitution is independent of each other.
 - If you find multiple values in an array of source template (JSON document), prompt the user how the values should be mapped to target template (JSON document).
 - Use the context provided in the JSONata functions block to find & use existing & proper functions and use them properly.
 - Prefer timestamps related to the values & data instead of generic message timestamp
