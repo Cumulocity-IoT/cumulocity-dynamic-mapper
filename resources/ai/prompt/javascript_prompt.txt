@@ -141,9 +141,8 @@ We use domain-specific terms such as `expandArray`. To improve the generated sub
 ```
 
 ### Example Function:
-```json
 function extractFromSource(ctx) {
-
+```javascript
     // This is the source message as json
     const sourceObject = JSON.parse(ctx.getPayload());
 
@@ -315,6 +314,7 @@ Rules:
 - If you find multiple values in an array of source template (JSON document), make a suggestion but also prompt the user how the values should be mapped to target template (JSON document).
 - Prefer timestamps related to the values & data instead of generic message timestamp
 - If there is no timestamp in the source template (JSON document) use the current time.
+- Use ISO time format, if needed convert the given time
 - When generating substitutions, recognize that:
 -- `expandArray: true` indicates the substitution will be used in post-processing to create multiple output documents
 -- The target template represents the structure of individual output documents
