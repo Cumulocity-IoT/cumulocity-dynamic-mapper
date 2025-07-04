@@ -18,8 +18,8 @@
  * @authors Christof Strack
  */
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import {
-  AlertService,
   Pagination
 } from '@c8y/ngx-components';
 import { BehaviorSubject, from, Observable, Subject, switchMap, takeUntil } from 'rxjs';
@@ -28,21 +28,6 @@ import {
   SharedService
 } from '../../shared';
 import { EventService, IEvent, IResultList } from '@c8y/client';
-
-interface EventFilter {
-  pageSize: number;
-  withTotalPages: boolean;
-  source?: string;
-  type?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}
-
-interface ComponentState {
-  events: IResultList<IEvent> | null;
-  isLoading: boolean;
-  error: string | null;
-}
 
 @Component({
   selector: 'd11r-mapping-service-event',
@@ -55,8 +40,11 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
   constructor(
     private eventService: EventService,
-    private sharedService: SharedService
-  ) { }
+    private sharedService: SharedService,
+    private fb: FormBuilder
+  ) {
+    this.createForm();
+  }
 
   readonly baseFilter = {
     pageSize: 1000,
@@ -69,15 +57,56 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     currentPage: 1
   };
 
+  // Reactive Form
+  filterForm: FormGroup;
+  
   events$: Observable<IResultList<IEvent>>;
   LoggingEventTypeMap = LoggingEventTypeMap;
-  filterMappingServiceEvent = { type: 'ALL' } as any;
   filterSubject$ = new BehaviorSubject<void>(null);
   destroy$ = new Subject<void>();
   reload$ = new Subject<void>();
 
+  private createForm(): void {
+    this.filterForm = this.fb.group({
+      type: new FormControl('ALL'),
+      dateFrom: new FormControl(null),
+      dateTo: new FormControl(null)
+    });
+  }
 
   ngOnInit(): void {
+    this.setupFormSubscriptions();
+    this.setupEventsObservable();
+  }
+
+  private setupFormSubscriptions(): void {
+    // Subscribe to type changes
+    this.filterForm.get('type')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(type => {
+        this.onFilterMappingServiceEventSelect(type);
+      });
+
+    // Subscribe to dateFrom changes
+    this.filterForm.get('dateFrom')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(date => {
+        if (date) {
+          this.onDateFromChange(date);
+        }
+      });
+
+    // Subscribe to dateTo changes
+    this.filterForm.get('dateTo')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(date => {
+        if (date) {
+          this.onDateToChange(date);
+        }
+      });
+  }
+
+  private setupEventsObservable(): void {
     this.events$ = this.filterSubject$.pipe(
       switchMap(() => from(this.sharedService.getDynamicMappingServiceAgent())),
       switchMap((mappingServiceId) =>
@@ -96,8 +125,8 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.reload$.complete();
   }
 
-  onFilterMappingServiceEventSelect(event): void {
-    if (event == 'ALL') {
+  onFilterMappingServiceEventSelect(event: string): void {
+    if (event === 'ALL') {
       delete this.baseFilter['type'];
     } else {
       this.baseFilter['type'] = LoggingEventTypeMap[event].type;
