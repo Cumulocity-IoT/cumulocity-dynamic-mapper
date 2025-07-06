@@ -26,7 +26,7 @@ import {
   BASE_AI_URL,
   PATH_AGENT_ENDPOINT,
 } from '../../shared';
-import { AgentConfigArray, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { type JSONValue } from 'ai';
 
 @Injectable({
@@ -36,7 +36,7 @@ export class AIAgentService {
 
   client: FetchClient = inject(FetchClient);
 
-  async getAIAgents(): Promise<AgentConfigArray> {
+  async getAIAgents(): Promise<AgentTextDefinition[]> {
     try {
       const res: IFetchResponse = await this.client.fetch(
         `${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}`,
@@ -65,7 +65,7 @@ export class AIAgentService {
   }
 
   async test(
-    definition: AgentTextDefinition,
+    definition: AgentTextDefinition | AgentObjectDefinition,
   ): Promise<string | JSONValue> {
     const data = await this.client.fetch(
       BASE_AI_URL + '/' + PATH_AGENT_ENDPOINT + '/test/' + definition.type,

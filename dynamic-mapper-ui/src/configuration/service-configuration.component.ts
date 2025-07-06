@@ -26,7 +26,7 @@ import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 import { ActivatedRoute } from '@angular/router';
 import { AIAgentService } from 'src/mapping/core/ai-agent.service';
-import { BehaviorSubject, from, map, Observable, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, from, map, Observable, of, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -41,6 +41,25 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
   private aiAgentService = inject(AIAgentService);
+
+  // myGroup = new FormGroup({
+  //   firstName: new FormControl('Austria')
+  // });
+
+  // formValues$ : any = of([
+  //   'Austria',
+  //   'Bulgaria',
+  //   'Germany',
+  //   'Madagascar',
+  //   'Poland',
+  //   'Portugal',
+  //   'UK',
+  //   'USA'
+  // ]);
+
+  myGroup: FormGroup;
+
+  formValues$: Observable<string[]>;
 
   version: string = packageJson.version;
   serviceForm: FormGroup;
@@ -107,6 +126,35 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
           this.serviceForm.get('jsonataAgent')?.disable();
         }
       });
+
+
+    // this.myGroup = new FormGroup({
+    //   firstName: new FormControl('Austria')
+    // });
+
+    // this.formValues$ = of([
+    //   'Austria',
+    //   'Bulgaria',
+    //   'Germany',
+    //   'Madagascar',
+    //   'Poland',
+    //   'Portugal',
+    //   'UK',
+    //   'USA'
+    // ]);
+
+    const values = [
+      'Austria',
+      'Bulgaria',
+      'Germany',
+      'Madagascar',
+      'Poland',
+      'Portugal',
+      'UK',
+      'USA'
+    ];
+
+   this.formValues$ = of(values);
   }
 
   ngOnDestroy(): void {

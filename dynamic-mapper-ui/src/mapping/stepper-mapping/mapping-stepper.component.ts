@@ -83,6 +83,7 @@ import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } fro
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AIAgentService } from '../core/ai-agent.service';
+import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 
 let initializedMonaco = false;
 
@@ -158,6 +159,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   targetTemplateUpdated: any;
   targetSystem: string;
   aiAgentDeployed: boolean = false;
+  aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
 
   countDeviceIdentifiers$: BehaviorSubject<number> =
     new BehaviorSubject<number>(0);
@@ -301,22 +303,34 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
 
+    // implementation such that aiAgent is defined depending on mapping type
     from(this.aiAgentService.getAIAgents())
-      .pipe(map(agents => agents.map(agent => agent.name)), takeUntil(this.destroy$))
-      .subscribe(agentNames => {
-        let hasRequiredAgent = false;
+      .pipe(
+        map(agents => {
+          const agentNames = agents.map(agent => agent.name);
 
-        if (this.mapping.mappingType === MappingType.JSON) {
-          // must be set this.serviceConfiguration.jsonataAgent, include this in this.aiAgentDeployed 
-          hasRequiredAgent = this.serviceConfiguration?.jsonataAgent &&
-            agentNames.includes(this.serviceConfiguration.jsonataAgent);
-        } else {
-          // must be set this.serviceConfiguration.javaScriptAgent, include this in this.aiAgentDeployed
-          hasRequiredAgent = this.serviceConfiguration?.javaScriptAgent &&
-            agentNames.includes(this.serviceConfiguration.javaScriptAgent);
-        }
+          const requiredAgentName = this.mapping.mappingType === MappingType.JSON
+            ? this.serviceConfiguration?.jsonataAgent
+            : this.serviceConfiguration?.javaScriptAgent;
 
-        this.aiAgentDeployed = agentNames.length > 0 && hasRequiredAgent;
+          const hasRequiredAgent = requiredAgentName && agentNames.includes(requiredAgentName);
+          const selectedAgent = hasRequiredAgent
+            ? agents.find(agent => agent.name === requiredAgentName)
+            : null;
+
+          return {
+            agents,
+            agentNames,
+            hasRequiredAgent,
+            selectedAgent,
+            aiAgentDeployed: agentNames.length > 0 && hasRequiredAgent
+          };
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(result => {
+        this.aiAgent = result.selectedAgent;
+        this.aiAgentDeployed = result.aiAgentDeployed;
       });
 
     this.initializeFormlyFields();
@@ -1296,52 +1310,53 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
   }
 
-async openGenerateSubstitutionDrawer() {
-  this.isGenerateSubstitutionOpen = true;
+  async openGenerateSubstitutionDrawer() {
+    this.isGenerateSubstitutionOpen = true;
 
-  const testMapping = _.clone(this.mapping);
-  testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
-  testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-  delete testMapping.code;
+    const testMapping = _.clone(this.mapping);
+    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
+    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+    delete testMapping.code;
 
-  const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
-    initialState: { mapping: testMapping },
-  });
+    const aiAgent = this.aiAgent;
+    const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
+      initialState: { mapping: testMapping, aiAgent },
+    });
 
-  try {
-    const resultOf = await drawer.instance.result;
+    try {
+      const resultOf = await drawer.instance.result;
 
-    if (this.mapping.mappingType === MappingType.CODE_BASED) {
-      if (typeof resultOf === 'string' && resultOf.trim()) {
-        this.mappingCode = resultOf;
-        
-        // Multiple approaches to ensure update
-        this.cdr.detectChanges();
-        
-        if (this.codeEditor) {
-          setTimeout(() => {
-            this.codeEditor.writeValue(resultOf);
-          }, 100);
+      if (this.mapping.mappingType === MappingType.CODE_BASED) {
+        if (typeof resultOf === 'string' && resultOf.trim()) {
+          this.mappingCode = resultOf;
+
+          // Multiple approaches to ensure update
+          this.cdr.detectChanges();
+
+          if (this.codeEditor) {
+            setTimeout(() => {
+              this.codeEditor.writeValue(resultOf);
+            }, 100);
+          }
+
+          this.alertService.success('Generated JavaScript code successfully.');
+        } else {
+          this.alertService.warning('No valid JavaScript code was generated.');
         }
-        
-        this.alertService.success('Generated JavaScript code successfully.');
       } else {
-        this.alertService.warning('No valid JavaScript code was generated.');
+        if (Array.isArray(resultOf) && resultOf.length > 0) {
+          this.alertService.success(`Generated ${resultOf.length} substitutions.`);
+          this.mapping.substitutions.splice(0);
+          resultOf.forEach(sub => this.addSubstitution(sub));
+        } else {
+          this.alertService.warning('No substitutions were generated.');
+        }
       }
-    } else {
-      if (Array.isArray(resultOf) && resultOf.length > 0) {
-        this.alertService.success(`Generated ${resultOf.length} substitutions.`);
-        this.mapping.substitutions.splice(0);
-        resultOf.forEach(sub => this.addSubstitution(sub));
-      } else {
-        this.alertService.warning('No substitutions were generated.');
-      }
+    } catch (ex) {
+      // User canceled or error occurred
     }
-  } catch (ex) {
-    // User canceled or error occurred
-  }
 
-  this.isGenerateSubstitutionOpen = false;
-}
+    this.isGenerateSubstitutionOpen = false;
+  }
 
 }

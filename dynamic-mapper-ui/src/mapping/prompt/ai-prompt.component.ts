@@ -29,25 +29,10 @@ import { DeviceGridService, } from '@c8y/ngx-components/device-grid';
 import { Mapping, MappingSubstitution, MappingType, SharedService } from '../../shared';
 import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
 import { AIAgentService } from '../core/ai-agent.service';
-import { AgentTextDefinition } from '../shared/ai-prompt.model';
+import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from 'src/configuration';
 import { filter, from, mergeMap, Subject, takeUntil } from 'rxjs';
 
-type AgentDefinitionProps =
-  | 'agent'
-  | 'provider'
-  | 'context'
-  | 'agent.variables'
-  | 'mcp';
-
-type AgentSettingsTabKey =
-  | 'provider'
-  | 'context'
-  | 'tools'
-  | 'systemPrompt'
-  | 'advanced'
-  | 'test'
-  | 'variables';
 
 @Component({
   selector: 'd11r-mapping-ai-prompt',
@@ -66,6 +51,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   deviceGridService = inject(DeviceGridService);
 
   @Input() mapping: Mapping;
+  @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
 
   private _save: (value: MappingSubstitution[] | string) => void;
   private _cancel: (reason?: any) => void;
@@ -79,13 +65,6 @@ export class AIPromptComponent implements OnInit, OnDestroy {
 
   substitutions: MappingSubstitution[] = [];
   generatedCode: string = '';
-  agent: AgentTextDefinition = {
-    name: '',
-    type: 'text',
-    agent: {
-      messages: []
-    }
-  } as any;
 
   hasIssue = false;
   isLoading = false;
@@ -106,43 +85,24 @@ export class AIPromptComponent implements OnInit, OnDestroy {
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
 
-    from(this.aiAgentService.getAIAgents())
-      .pipe(
-        mergeMap(agents => from(agents)),
-        filter(agent => {
-          if (this.agentType === MappingType.JSON) {
-            return agent.name === this.serviceConfiguration.jsonataAgent;
-          } else {
-            return agent.name === this.serviceConfiguration.javaScriptAgent;
-          }
-        }),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(async (matchingAgent) => {
-        // update this.agent with the agent that matches 
-        this.agent = matchingAgent as any;
-        this.testVars = JSON.stringify(
-          this.agent?.agent?.variables || {},
-        );
+    this.testVars = JSON.stringify(
+      this.aiAgent?.agent?.variables || {},
+    );
+    if (this.isCodeMapping) {
+      // For CODE mappings, include existing JavaScript code if available
+      const existingCode = this.extractExistingJavaScriptCode();
+      this.newMessage = JSON.stringify({
+        sourceTemplate: this.mapping.sourceTemplate,
+        targetTemplate: this.mapping.targetTemplate,
+        existingCode: existingCode,
+        mappingType: 'JavaScript'
+      }, null, 2);
+    } else {
+      this.newMessage = JSON.stringify([this.mapping.sourceTemplate, this.mapping.targetTemplate], null, 2);
+    }
 
-        // Prepare message based on mapping type
-        if (this.isCodeMapping) {
-          // For CODE mappings, include existing JavaScript code if available
-          const existingCode = this.extractExistingJavaScriptCode();
-          this.newMessage = JSON.stringify({
-            sourceTemplate: this.mapping.sourceTemplate,
-            targetTemplate: this.mapping.targetTemplate,
-            existingCode: existingCode,
-            mappingType: 'JavaScript'
-          }, null, 2);
-        } else {
-          // For JSON mappings (existing behavior)
-          this.newMessage = JSON.stringify([this.mapping.sourceTemplate, this.mapping.targetTemplate], null, 2);
-        }
-
-        // Call sendMessage() automatically
-        await this.sendMessage();
-      });
+    // Call sendMessage() automatically
+    await this.sendMessage();
   }
 
   ngOnDestroy(): void {
@@ -171,54 +131,54 @@ export class AIPromptComponent implements OnInit, OnDestroy {
     if (this.mapping && (this.mapping as any).code) {
       return (this.mapping as any).code;
     }
-    
+
     // If code is stored in substitutions as a single item
     if (this.mapping && this.mapping.substitutions && this.mapping.substitutions.length > 0) {
-      const codeSubstitution = this.mapping.substitutions.find(sub => 
+      const codeSubstitution = this.mapping.substitutions.find(sub =>
         typeof sub.pathSource === 'string' && sub.pathSource.includes('function')
       );
       if (codeSubstitution) {
         return codeSubstitution.pathSource;
       }
     }
-    
+
     return '';
   }
 
   async sendMessage() {
-    if (!this.agent) {
+    if (!this.aiAgent) {
       return;
     }
 
     if (this.newMessage.trim()) {
       this.isLoadingChat = true;
-      if (this.agent.agent.messages === undefined) {
-        this.agent.agent.messages = [];
+      if (this.aiAgent.agent.messages === undefined) {
+        this.aiAgent.agent.messages = [];
       }
 
-      this.agent.agent.messages.push({
+      this.aiAgent.agent.messages.push({
         content: this.newMessage,
         role: 'user',
       });
 
       try {
-        this.agent.agent.variables = JSON.parse(this.testVars);
+        this.aiAgent.agent.variables = JSON.parse(this.testVars);
       } catch (ex) {
         console.log(ex);
         this.alertService.danger('Invalid JSON in test variables');
         this.isLoadingChat = false;
         return;
       }
-      
+
       try {
-        const response = await this.aiAgentService.test(this.agent);
+        const response = await this.aiAgentService.test(this.aiAgent);
 
         const content =
           typeof response === 'string'
             ? response
             : JSON.stringify(response, null, 2);
 
-        this.agent.agent.messages.push({
+        this.aiAgent.agent.messages.push({
           content,
           role: 'assistant',
         });
@@ -247,7 +207,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       if (match && match[1]) {
         // Extract the JavaScript content
         const jsContent = match[1].trim();
-        
+
         // Validate that it contains a function (basic validation)
         if (jsContent.includes('function') && jsContent.includes('extractFromSource')) {
           this.generatedCode = jsContent;
@@ -261,7 +221,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
         // Try alternative patterns for code blocks
         const genericCodeRegex = /```(?:js|javascript)?\s*([\s\S]*?)\s*```/;
         const genericMatch = content.match(genericCodeRegex);
-        
+
         if (genericMatch && genericMatch[1]) {
           const jsContent = genericMatch[1].trim();
           if (jsContent.includes('function')) {
@@ -328,4 +288,59 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       this.alertService.danger('Failed to parse substitutions from AI response');
     }
   }
+
+  getCompatibleMessages() {
+    if (!this.aiAgent?.agent?.messages) {
+      return [];
+    }
+
+    // Filter out messages with incompatible roles
+    return this.aiAgent.agent.messages.filter(message =>
+      message.role === 'user' ||
+      message.role === 'assistant' ||
+      message.role === 'system'
+    );
+  }
+
+  getMessageContent(message: any): string {
+  if (!message?.content) {
+    return '';
+  }
+
+  // If it's already a string, return it
+  if (typeof message.content === 'string') {
+    return message.content;
+  }
+
+  // If it's an array of parts, extract text content
+  if (Array.isArray(message.content)) {
+    return message.content
+      .map(part => {
+        if (typeof part === 'string') {
+          return part;
+        }
+        if (part && typeof part === 'object' && 'text' in part) {
+          return part.text;
+        }
+        if (part && typeof part === 'object' && 'content' in part) {
+          return part.content;
+        }
+        return '';
+      })
+      .filter(text => text.length > 0)
+      .join(' ');
+  }
+
+  // If it's an object with text property
+  if (typeof message.content === 'object' && 'text' in message.content) {
+    return message.content.text;
+  }
+
+  // Fallback: try to stringify
+  try {
+    return JSON.stringify(message.content);
+  } catch {
+    return '[Unable to display content]';
+  }
+}
 }
