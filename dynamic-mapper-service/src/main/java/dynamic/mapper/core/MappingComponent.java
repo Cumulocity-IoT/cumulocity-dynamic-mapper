@@ -46,6 +46,7 @@ import org.apache.commons.lang3.mutable.MutableObject;
 import org.graalvm.polyglot.Context;
 import org.joda.time.DateTime;
 import org.slf4j.bridge.SLF4JBridgeHandler;
+import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -998,5 +999,18 @@ public class MappingComponent {
     private boolean containsMappingOutboundInCache(String tenant, String mappingId) {
         return cacheMappingOutbound.get(tenant).containsKey(mappingId);
     }
+
+    @Tool(description = "Evaluate a JSONata expression against a JSON object")
+    public String evaluateJsonataExpression(String tenant, String expression, Object jsonObject) {
+        try {
+            var expr = jsonata(expression);
+            Object result = expr.evaluate(jsonObject);
+            return toPrettyJsonString(result);
+        } catch (Exception e) {
+            log.error("{} - Error evaluating JSONata expression: {}", tenant, e.getMessage());
+            return null;
+        }
+    }
+
 
 }

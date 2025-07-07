@@ -46,6 +46,7 @@
 		<graalvm.version>23.1.7</graalvm.version>
 		<graalvm.js.version>23.1.7</graalvm.js.version>
 		<springdoc.version>2.8.5</springdoc.version>
+		<spring-ai.version>1.0.0</spring-ai.version>
 		<authToken>${env.AUTH_TOKEN}</authToken>
 	</properties>
 	<repositories>
@@ -231,6 +232,11 @@
 				<groupId>org.springdoc</groupId>
 				<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 				<version>${springdoc.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+				<version>${spring-ai.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
