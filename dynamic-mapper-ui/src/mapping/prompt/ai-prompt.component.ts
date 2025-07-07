@@ -92,13 +92,14 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       // For CODE mappings, include existing JavaScript code if available
       const existingCode = this.extractExistingJavaScriptCode();
       this.newMessage = JSON.stringify({
-        sourceTemplate: this.mapping.sourceTemplate,
-        targetTemplate: this.mapping.targetTemplate,
+        sourceTemplate: JSON.parse(this.mapping.sourceTemplate),
+        targetTemplate: JSON.parse(this.mapping.targetTemplate),
         existingCode: existingCode,
         mappingType: 'JavaScript'
       }, null, 2);
     } else {
-      this.newMessage = JSON.stringify([this.mapping.sourceTemplate, this.mapping.targetTemplate], null, 2);
+      this.newMessage = "Map the following source and target templates:\n\n" + "**Source:**\n\n"+ "```json\n" + JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) + "\n```\n\n" + "**Target:**\n\n" + "```json\n" +  JSON.stringify(JSON.parse(this.mapping.targetTemplate),null, 2) + "\n```\n";
+      //this.newMessage = JSON.stringify([this.mapping.sourceTemplate, this.mapping.targetTemplate], null, 2);
     }
 
     // Call sendMessage() automatically
@@ -150,7 +151,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.newMessage.trim()) {
+    if (this.newMessage) {
       this.isLoadingChat = true;
       if (this.aiAgent.agent.messages === undefined) {
         this.aiAgent.agent.messages = [];
