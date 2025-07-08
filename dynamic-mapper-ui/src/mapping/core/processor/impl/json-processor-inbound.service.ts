@@ -54,7 +54,9 @@ export class JSONProcessorInbound extends BaseProcessorInbound {
       try {
         // step 1 extract content from inbound payload
         extractedSourceContent = await this.evaluateExpression(
-          JSON.parse(mapping.sourceTemplate),
+          //JSON.parse(mapping.sourceTemplate),
+          // use payload instead
+          payload,
           substitution.pathSource
         );
 
