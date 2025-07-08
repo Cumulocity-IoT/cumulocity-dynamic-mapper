@@ -39,7 +39,7 @@ import {
   getSchema
 } from '../../shared/';
 import { MappingService } from '../core/mapping.service';
-import { C8YRequest, ProcessingContext } from '../core/processor/processor.model';
+import { C8YRequest, ProcessingContext, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
 import { MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -174,7 +174,20 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     } else {
       contentAsJson = content['json'];
     }
-    this.sourceTemplate = contentAsJson;
+
+    const joinedStringArray = contentAsJson &&
+      contentAsJson[TOKEN_TOPIC_LEVEL] &&
+      Array.isArray(contentAsJson[TOKEN_TOPIC_LEVEL])
+      ? contentAsJson[TOKEN_TOPIC_LEVEL].filter(item => item !== undefined && item !== null).join('/')
+      : '';
+
+    const testMapping = {
+      ...this.testMapping,
+      sourceTemplate: JSON.stringify(contentAsJson || {}),
+      mappingTopicSample: joinedStringArray
+    };
+    this.handleTestMappingUpdate(testMapping);
+    //this.sourceTemplate = contentAsJson;
 
     // console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate, this.mapping.targetTemplate);
   }
