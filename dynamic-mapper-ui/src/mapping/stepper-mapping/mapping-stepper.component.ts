@@ -999,12 +999,21 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       !this.templatesInitialized
     ) {
       this.templatesInitialized = true;
-      this.sourceTemplate = expandSource(
-        JSON.parse(getExternalTemplate(this.mapping))
-      );
-      this.targetTemplate = expandTarget(
-        JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI])
-      );
+      if(this.mapping.direction === Direction.INBOUND) {
+        this.sourceTemplate = expandSource(
+          JSON.parse(getExternalTemplate(this.mapping))
+        );
+        this.targetTemplate = expandTarget(
+          JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI])
+        );
+      } else {
+        this.sourceTemplate = expandSource(
+          JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI])
+        );
+        this.targetTemplate = expandTarget(
+          JSON.parse(getExternalTemplate(this.mapping))
+        );
+      }
       return;
     }
 
