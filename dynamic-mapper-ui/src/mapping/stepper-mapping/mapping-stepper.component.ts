@@ -1325,7 +1325,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const testMapping = _.clone(this.mapping);
     testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
     testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-    delete testMapping.code;
 
     const aiAgent = this.aiAgent;
     const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {

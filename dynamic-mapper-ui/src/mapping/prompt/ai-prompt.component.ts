@@ -30,8 +30,9 @@ import { Mapping, MappingSubstitution, MappingType, SharedService } from '../../
 import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
-import { ServiceConfiguration } from 'src/configuration';
-import { filter, from, mergeMap, Subject, takeUntil } from 'rxjs';
+import { CodeTemplateMap, ServiceConfiguration } from '../../configuration';
+import { Subject } from 'rxjs';
+import { base64ToBytes } from '../shared/util';
 
 
 @Component({
@@ -88,18 +89,51 @@ export class AIPromptComponent implements OnInit, OnDestroy {
     this.testVars = JSON.stringify(
       this.aiAgent?.agent?.variables || {},
     );
+
     if (this.isCodeMapping) {
       // For CODE mappings, include existing JavaScript code if available
-      const existingCode = this.extractExistingJavaScriptCode();
-      this.newMessage = JSON.stringify({
-        sourceTemplate: JSON.parse(this.mapping.sourceTemplate),
-        targetTemplate: JSON.parse(this.mapping.targetTemplate),
-        existingCode: existingCode,
-        mappingType: 'JavaScript'
-      }, null, 2);
+      const existingCode = this.extractExistingJavaScriptCode(this.mapping);
+      const mappingWithoutSubstitutions = { ...this.mapping };
+      delete mappingWithoutSubstitutions.substitutions;
+      mappingWithoutSubstitutions.code = existingCode;
+
+      // this.newMessage = JSON.stringify({
+      //   sourceTemplate: JSON.parse(this.mapping.sourceTemplate),
+      //   targetTemplate: JSON.parse(this.mapping.targetTemplate),
+      //   existingCode: existingCode,
+      //   mappingType: 'JavaScript'
+      // }, null, 2);
+
+      this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
+        "**Complete Mapping:**\n\n" +
+        "```json\n" +
+        JSON.stringify(mappingWithoutSubstitutions, null, 2) +
+        "\n```\n\n" +
+        "**Source:**\n\n" +
+        "```json\n" +
+        JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
+        "\n```\n\n" +
+        "**Target:**\n\n" +
+        "```json\n" +
+        JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
+        "\n```\n";
     } else {
-      this.newMessage = "Map the following source and target templates:\n\n" + "**Source:**\n\n"+ "```json\n" + JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) + "\n```\n\n" + "**Target:**\n\n" + "```json\n" +  JSON.stringify(JSON.parse(this.mapping.targetTemplate),null, 2) + "\n```\n";
-      //this.newMessage = JSON.stringify([this.mapping.sourceTemplate, this.mapping.targetTemplate], null, 2);
+      // Include the complete mapping but remove existing substitutions
+      const mappingWithoutSubstitutions = { ...this.mapping };
+      delete mappingWithoutSubstitutions.substitutions;
+
+      this.newMessage = "Map for the following mapping the source template to the target template:**\n\n" +
+        "```json\n" +
+        JSON.stringify(mappingWithoutSubstitutions, null, 2) +
+        "\n```\n\n" +
+        "**Source:**\n\n" +
+        "```json\n" +
+        JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
+        "\n```\n\n" +
+        "**Target:**\n\n" +
+        "```json\n" +
+        JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
+        "\n```\n";
     }
 
     // Call sendMessage() automatically
@@ -125,25 +159,13 @@ export class AIPromptComponent implements OnInit, OnDestroy {
     this.bottomDrawerRef.close();
   }
 
-  private extractExistingJavaScriptCode(): string {
-    // Extract existing JavaScript code from the mapping
-    // This depends on how your mapping stores JavaScript code
-    // Adjust the property path according to your Mapping interface
-    if (this.mapping && (this.mapping as any).code) {
-      return (this.mapping as any).code;
+  private extractExistingJavaScriptCode(mapping: Mapping): string {
+    if (!mapping.code) {
+      return '';
     }
-
-    // If code is stored in substitutions as a single item
-    if (this.mapping && this.mapping.substitutions && this.mapping.substitutions.length > 0) {
-      const codeSubstitution = this.mapping.substitutions.find(sub =>
-        typeof sub.pathSource === 'string' && sub.pathSource.includes('function')
-      );
-      if (codeSubstitution) {
-        return codeSubstitution.pathSource;
-      }
-    }
-
-    return '';
+    const enc = new TextDecoder("utf-8");
+    const mappingCodeTemplateDecoded = enc.decode(base64ToBytes(mapping.code));
+    return mappingCodeTemplateDecoded;
   }
 
   async sendMessage() {
@@ -304,44 +326,44 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   }
 
   getMessageContent(message: any): string {
-  if (!message?.content) {
-    return '';
-  }
+    if (!message?.content) {
+      return '';
+    }
 
-  // If it's already a string, return it
-  if (typeof message.content === 'string') {
-    return message.content;
-  }
+    // If it's already a string, return it
+    if (typeof message.content === 'string') {
+      return message.content;
+    }
 
-  // If it's an array of parts, extract text content
-  if (Array.isArray(message.content)) {
-    return message.content
-      .map(part => {
-        if (typeof part === 'string') {
-          return part;
-        }
-        if (part && typeof part === 'object' && 'text' in part) {
-          return part.text;
-        }
-        if (part && typeof part === 'object' && 'content' in part) {
-          return part.content;
-        }
-        return '';
-      })
-      .filter(text => text.length > 0)
-      .join(' ');
-  }
+    // If it's an array of parts, extract text content
+    if (Array.isArray(message.content)) {
+      return message.content
+        .map(part => {
+          if (typeof part === 'string') {
+            return part;
+          }
+          if (part && typeof part === 'object' && 'text' in part) {
+            return part.text;
+          }
+          if (part && typeof part === 'object' && 'content' in part) {
+            return part.content;
+          }
+          return '';
+        })
+        .filter(text => text.length > 0)
+        .join(' ');
+    }
 
-  // If it's an object with text property
-  if (typeof message.content === 'object' && 'text' in message.content) {
-    return message.content.text;
-  }
+    // If it's an object with text property
+    if (typeof message.content === 'object' && 'text' in message.content) {
+      return message.content.text;
+    }
 
-  // Fallback: try to stringify
-  try {
-    return JSON.stringify(message.content);
-  } catch {
-    return '[Unable to display content]';
+    // Fallback: try to stringify
+    try {
+      return JSON.stringify(message.content);
+    } catch {
+      return '[Unable to display content]';
+    }
   }
-}
 }
