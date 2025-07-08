@@ -64,3 +64,8 @@ c8y-data-grid button[title='Reload'] {
 .c8y-switch > button {
   display: none;
 }
+
+.console-output {
+  height: 100px;
+  overflow: auto;
+}
