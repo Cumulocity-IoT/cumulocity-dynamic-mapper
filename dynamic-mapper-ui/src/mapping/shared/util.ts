@@ -296,7 +296,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
     }
 
     // count number of "+" in publishTopic
-    const count_single = (publishTopic.value?.match(/\+/g) || []).length;
+    /*const count_single = (publishTopic.value?.match(/\+/g) || []).length;
     if (count_single > 1) {
       errors = {
         ...errors,
@@ -306,6 +306,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
         }
       };
     }
+      */
 
     // wildcard "#" can only appear at the end in mappingTopic
     if (
