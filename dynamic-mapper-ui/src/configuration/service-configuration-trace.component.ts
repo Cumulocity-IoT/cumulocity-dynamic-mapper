@@ -17,34 +17,50 @@
  *
  * @authors Christof Strack
  */
-import { HttpStatusCode } from '@angular/common/http';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
-import { AlertService, gettext } from '@c8y/ngx-components';
-import packageJson from '../../package.json';
-import { Feature, Operation, SharedService } from '../shared';
-import { ServiceConfiguration } from './shared/configuration.model';
 import { ActivatedRoute } from '@angular/router';
-import { AIAgentService } from 'src/mapping/core/ai-agent.service';
-import { BehaviorSubject, from, map, Observable, of, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
+import { Feature, SharedService } from '../shared';
+import { ServiceConfiguration } from './shared/configuration.model';
+
 
 @Component({
-  selector: 'd11r-mapping-service-configuration',
+  selector: 'd11r-mapping-service-trace-configuration',
   styleUrls: ['./service-configuration.component.style.css'],
-  templateUrl: 'service-configuration.component.html',
+  templateUrl: 'service-configuration-trace.component.html',
   standalone: false
 })
-export class ServiceConfigurationComponent implements OnInit, OnDestroy {
+export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
 
-  private alertService = inject(AlertService);
+
+  myGroup = new FormGroup({
+    firstName: new FormControl('Austria')
+  });
+
+  private route = inject(ActivatedRoute);
   private sharedService = inject(SharedService);
   private fb = inject(FormBuilder);
-  private route = inject(ActivatedRoute);
-  private aiAgentService = inject(AIAgentService);
 
-  version: string = packageJson.version;
+  // formValues$ : any = of([
+  //   'Austria',
+  //   'Bulgaria',
+  //   'Germany',
+  //   'Madagascar',
+  //   'Poland',
+  //   'Portugal',
+  //   'UK',
+  //   'USA'
+  // ]);
+
+  formValues$: Observable<string[]>;
   serviceForm: FormGroup;
+
   feature: Feature;
+
+  agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  destroy$: Subject<void> = new Subject<void>();
+  aiAgentDeployed: boolean = false;
 
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
@@ -63,16 +79,12 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
   };
-  editable2updated: boolean = false;
-
-  agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
-  destroy$: Subject<void> = new Subject<void>();
-  aiAgentDeployed: boolean = false;
-
 
   async ngOnInit() {
-    // console.log('Running version', this.version);
+
+
     this.feature = this.route.snapshot.data['feature'];
+
     this.serviceForm = this.fb.group({
       logPayload: new FormControl(''),
       logSubstitution: new FormControl(''),
@@ -91,22 +103,43 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       jsonataAgent: new FormControl({ value: '', disabled: true }),
       javaScriptAgent: new FormControl({ value: '', disabled: true }),
     });
-    await this.loadData();
-    from(this.aiAgentService.getAIAgents())
-      .pipe(map(agents => agents.map(agent => agent.name)), takeUntil(this.destroy$))
-      .subscribe(agentNames => {
-        this.agents$.next(agentNames);
-        this.aiAgentDeployed = agentNames.length > 0;
+    const values_01 = [
+      'Austria',
+      'Bulgaria',
+      'Germany'
+    ];
 
-        // Enable/disable controls based on whether agents are available
-        if (this.aiAgentDeployed) {
-          this.serviceForm.get('javaScriptAgent')?.enable();
-          this.serviceForm.get('jsonataAgent')?.enable();
-        } else {
-          this.serviceForm.get('javaScriptAgent')?.disable();
-          this.serviceForm.get('jsonataAgent')?.disable();
-        }
-      });
+    this.formValues$ = of(values_01);
+    await this.loadData();
+
+       const values_02 = [
+      'Austria',
+      'Bulgaria',
+      'Germany',
+      'Madagascar',
+      'Poland',
+      'Portugal',
+      'UK',
+      'USA'
+    ];
+
+    this.formValues$ = of(values_02);
+
+
+    // this.myGroup = new FormGroup({
+    //   firstName: new FormControl('Austria')
+    // });
+
+    // this.formValues$ = of([
+    //   'Austria',
+    //   'Bulgaria',
+    //   'Germany',
+    //   'Madagascar',
+    //   'Poland',
+    //   'Portugal',
+    //   'UK',
+    //   'USA'
+    // ]);
   }
 
   ngOnDestroy(): void {
@@ -141,64 +174,12 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       maxCPUTimeMS:
         this.serviceConfiguration.maxCPUTimeMS,
       jsonataAgent:
+        // {value:'Austria', label:'Austria'},
         this.serviceConfiguration.jsonataAgent,
       javaScriptAgent:
         this.serviceConfiguration.javaScriptAgent,
     });
   }
 
-  async clickedClearInboundExternalIdCache() {
-    const response1 = await this.sharedService.runOperation(
-      {
-        operation: Operation.CLEAR_CACHE,
-        parameter: { cacheId: 'INBOUND_ID_CACHE' }
-      }
-    );
-    if (response1.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Cache cleared.'));
-    } else {
-      this.alertService.danger(gettext('Failed to clear cache!'));
-    }
-  }
 
-  async clickedClearInventoryCache() {
-    const response1 = await this.sharedService.runOperation(
-      {
-        operation: Operation.CLEAR_CACHE,
-        parameter: { cacheId: 'INVENTORY_CACHE' }
-      }
-    );
-    if (response1.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Cache cleared.'));
-    } else {
-      this.alertService.danger(gettext('Failed to clear cache!'));
-    }
-  }
-
-  async clickedSaveServiceConfiguration() {
-    const conf = this.serviceForm.value;
-    // trim the separated fragments
-    conf.inventoryFragmentsToCache = this.serviceForm.value['inventoryFragmentsToCache']
-      .split(",")
-      .map(fragment => fragment.trim())
-      .filter(fragment => fragment.length > 0);
-
-    // console.log("VALUE", this.serviceForm.value['jsonataAgent'])
-    conf.javaScriptAgent = this.serviceForm.value['javaScriptAgent']
-      ? this.serviceForm.value['javaScriptAgent']?.trim()
-      : undefined;
-    ;
-    conf.jsonataAgent = this.serviceForm.value['jsonataAgent']
-      ? this.serviceForm.value['jsonataAgent']?.trim()
-      : undefined;
-
-    const response = await this.sharedService.updateServiceConfiguration(conf);
-    if (response.status >= 200 && response.status < 300) {
-      this.alertService.success(gettext('Update successful'));
-    } else {
-      this.alertService.danger(
-        gettext('Failed to update service configuration')
-      );
-    }
-  }
 }
