@@ -86,6 +86,8 @@ We use domain-specific terms such as `expandArray`. To improve the generated sub
     }
 ]
 ```
+# _IDENTITY_ property
+The "_IDENTITY_" property contains "externalId", which contains a placeholder or example for the unique identifier of the device and "c8ySource" which contains a reference to an internal ID in Cumulocity.
 
 # JSONata Context
 Use the following context to evaluate and use JSONata expressions starting each with "$":
