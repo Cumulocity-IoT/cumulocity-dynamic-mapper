@@ -151,6 +151,28 @@ export interface Mapping {
   lastUpdate: number;
 }
 
+# RepairStrategy
+export enum RepairStrategy {
+  /** Process substitution as defined without any special handling */
+  DEFAULT = 'DEFAULT',
+  
+  /** If extracted content from source is an array, use only the first element */
+  USE_FIRST_VALUE_OF_ARRAY = 'USE_FIRST_VALUE_OF_ARRAY',
+  
+  /** If extracted content from source is an array, use only the last element */
+  USE_LAST_VALUE_OF_ARRAY = 'USE_LAST_VALUE_OF_ARRAY',
+  
+  /** Skip this substitution if source path evaluation fails */
+  IGNORE = 'IGNORE',
+  
+  /** Remove the target node if source evaluation returns undefined, null, or empty. Enables dynamic content handling */
+  REMOVE_IF_MISSING_OR_NULL = 'REMOVE_IF_MISSING_OR_NULL',
+  
+  /** Create the target node if it doesn't exist. Enables dynamic content creation */
+  CREATE_IF_MISSING = 'CREATE_IF_MISSING'
+}
+
+
 # Domain-specific term `expandArray`
 We use domain-specific terms such as `expandArray`. To improve the generated substitutions, I provide examples that should be included in the context.
 ## Important Notes for `expandArray`:
