@@ -138,7 +138,8 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
       await this.sharedService.getServiceConfiguration();
     this.serviceForm.patchValue({
       jsonataAgent:
-      'Austria'
+      ///'Austria'
+      'Netherland'
         // { value: 'Wien', label: 'Wien' },
       //  { value: 'Austria', label: 'Austria' },
       // this.serviceConfiguration.jsonataAgent,
@@ -147,6 +148,4 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
   //  this.myGroup.patchValue({firstName:'Italy'});
    this.myGroup.patchValue({firstName:'Germany'});
   }
-
-
 }
