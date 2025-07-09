@@ -54,7 +54,7 @@ import {
   getSchema,
   JsonEditorComponent,
   Mapping,
-  MappingSubstitution,
+  Substitution,
   RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SharedService,
@@ -1164,7 +1164,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         filter(Boolean) // Only proceed if we have valid data
       )
       .subscribe({
-        next: (editedSubstitution: MappingSubstitution) => {
+        next: (editedSubstitution: Substitution) => {
           try {
             mapping.substitutions[selectedSubstitution] = editedSubstitution;
             this.updateSubstitutionValid();
@@ -1176,7 +1176,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       });
   }
 
-  private addSubstitution(newSubstitution: MappingSubstitution): void {
+  private addSubstitution(newSubstitution: Substitution): void {
     const substitution = { ...newSubstitution };
     const { mapping, stepperConfiguration, expertMode } = this;
 
@@ -1213,7 +1213,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       .pipe(
         take(1) // Automatically unsubscribe after first emission
       )
-      .subscribe((updatedSubstitution: MappingSubstitution) => {
+      .subscribe((updatedSubstitution: Substitution) => {
         if (!updatedSubstitution) return;
 
         if (isDuplicate) {

@@ -21,7 +21,7 @@
 import { ChangeDetectorRef, Component, Input, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { JsonEditorComponent, Mapping, MappingSubstitution, MappingEnriched, SharedService, Feature } from '../../shared';
+import { JsonEditorComponent, Mapping, Substitution, MappingEnriched, SharedService, Feature } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { HttpStatusCode } from '@angular/common/http';
 
@@ -48,7 +48,7 @@ export class SnoopExplorerComponent implements OnInit, OnDestroy {
 
   pending: boolean = false;
   mapping: Mapping;
-  closeSubject: Subject<MappingSubstitution> = new Subject();
+  closeSubject: Subject<Substitution> = new Subject();
   labels: ModalLabels;
   template: any;
   index: number;

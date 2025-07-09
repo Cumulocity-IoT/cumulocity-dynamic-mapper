@@ -7,6 +7,7 @@
     <pre>{{myGroup.value | json}}{{ formValues$ | async | json }}</pre>
   </div>
 </div>
-
-<span>Hello
-</span>
+<form [formGroup]="serviceForm">
+  <c8y-select formControlName="jsonataAgent" name="jsonataAgent" style="width:200px" [items]="agents$ | async"
+    [placeholder]="'Select agent'"></c8y-select>
+</form>

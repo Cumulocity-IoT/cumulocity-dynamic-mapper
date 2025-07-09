@@ -24,7 +24,7 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import {
   Direction,
   Mapping,
-  MappingSubstitution,
+  Substitution,
   RepairStrategy
 } from '../../../shared';
 import { definesDeviceIdentifier, StepperConfiguration } from '../../../shared/mapping/mapping.model';
@@ -36,8 +36,8 @@ import { EditorMode } from '../../shared/stepper.model';
   standalone: false
 })
 export class EditSubstitutionComponent implements OnInit, OnDestroy {
-  @Input() substitution: MappingSubstitution;
-  @Input() duplicate: MappingSubstitution;
+  @Input() substitution: Substitution;
+  @Input() duplicate: Substitution;
   @Input() isDuplicate: boolean;
   @Input() isUpdate: boolean = false;
   @Input() duplicateSubstitutionIndex: number;
@@ -45,12 +45,12 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
 
   substitutionForm: FormGroup;
-  closeSubject: Subject<MappingSubstitution> = new Subject();
+  closeSubject: Subject<Substitution> = new Subject();
   labels: ModalLabels;
   override: boolean = false;
   repairStrategyOptions: any[];
   substitutionText: string;
-  editedSubstitution: MappingSubstitution;
+  editedSubstitution: Substitution;
   disabled$: BehaviorSubject<boolean> = new BehaviorSubject(false);
   Direction = Direction;
 

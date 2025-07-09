@@ -44,7 +44,7 @@ import {
   Direction,
   Mapping,
   MappingEnriched,
-  MappingSubstitution,
+  Substitution,
   MappingType,
   Operation,
   Qos,
@@ -502,7 +502,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
 
     const identifier = createCustomUuid();
-    const sub: MappingSubstitution[] = [];
+    const sub: Substitution[] = [];
     let mapping: Mapping;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       mapping = {

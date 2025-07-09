@@ -58,7 +58,8 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
 
   feature: Feature;
 
-  agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  // agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  agents$: Observable<string[]>;
   destroy$: Subject<void> = new Subject<void>();
   aiAgentDeployed: boolean = false;
 
@@ -86,22 +87,7 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
     this.feature = this.route.snapshot.data['feature'];
 
     this.serviceForm = this.fb.group({
-      logPayload: new FormControl(''),
-      logSubstitution: new FormControl(''),
-      logConnectorErrorInBackend: new FormControl(''),
-      sendConnectorLifecycle: new FormControl(''),
-      sendMappingStatus: new FormControl(''),
-      sendSubscriptionEvents: new FormControl(''),
-      sendNotificationLifecycle: new FormControl(''),
-      outboundMappingEnabled: new FormControl(''),
-      inboundExternalIdCacheSize: new FormControl(''),
-      inboundExternalIdCacheRetention: new FormControl(''),
-      inventoryCacheRetention: new FormControl(''),
-      inventoryCacheSize: new FormControl(''),
-      inventoryFragmentsToCache: new FormControl(''),
-      maxCPUTimeMS: new FormControl(''),
-      jsonataAgent: new FormControl({ value: '', disabled: true }),
-      javaScriptAgent: new FormControl({ value: '', disabled: true }),
+      jsonataAgent: new FormControl({ value: '', disabled: false }),
     });
     const values_01 = [
       'Austria',
@@ -110,9 +96,10 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
     ];
 
     this.formValues$ = of(values_01);
+    this.agents$ = of(values_01);
     await this.loadData();
 
-       const values_02 = [
+    const values_02 = [
       'Austria',
       'Bulgaria',
       'Germany',
@@ -125,9 +112,8 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
 
     this.formValues$ = of(values_02);
 
-
     // this.myGroup = new FormGroup({
-    //   firstName: new FormControl('Austria')
+    //   country: new FormControl('Austria')
     // });
 
     // this.formValues$ = of([
@@ -151,34 +137,15 @@ export class ServiceConfigurationTraceComponent implements OnInit, OnDestroy {
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
     this.serviceForm.patchValue({
-      logPayload: this.serviceConfiguration.logPayload,
-      logSubstitution: this.serviceConfiguration.logSubstitution,
-      logConnectorErrorInBackend:
-        this.serviceConfiguration.logConnectorErrorInBackend,
-      sendConnectorLifecycle: this.serviceConfiguration.sendConnectorLifecycle,
-      sendMappingStatus: this.serviceConfiguration.sendMappingStatus,
-      sendSubscriptionEvents: this.serviceConfiguration.sendSubscriptionEvents,
-      sendNotificationLifecycle:
-        this.serviceConfiguration.sendNotificationLifecycle,
-      outboundMappingEnabled: this.serviceConfiguration.outboundMappingEnabled,
-      inboundExternalIdCacheSize:
-        this.serviceConfiguration.inboundExternalIdCacheSize,
-      inboundExternalIdCacheRetention:
-        this.serviceConfiguration.inboundExternalIdCacheRetention,
-      inventoryCacheSize:
-        this.serviceConfiguration.inventoryCacheSize,
-      inventoryCacheRetention:
-        this.serviceConfiguration.inventoryCacheRetention,
-      inventoryFragmentsToCache:
-        this.serviceConfiguration.inventoryFragmentsToCache.join(","),
-      maxCPUTimeMS:
-        this.serviceConfiguration.maxCPUTimeMS,
       jsonataAgent:
-        // {value:'Austria', label:'Austria'},
-        this.serviceConfiguration.jsonataAgent,
-      javaScriptAgent:
-        this.serviceConfiguration.javaScriptAgent,
+      'Austria'
+        // { value: 'Wien', label: 'Wien' },
+      //  { value: 'Austria', label: 'Austria' },
+      // this.serviceConfiguration.jsonataAgent,
     });
+
+  //  this.myGroup.patchValue({firstName:'Italy'});
+   this.myGroup.patchValue({firstName:'Germany'});
   }
 
 

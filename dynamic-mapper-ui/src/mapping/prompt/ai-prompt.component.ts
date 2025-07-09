@@ -26,7 +26,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { DeviceGridService, } from '@c8y/ngx-components/device-grid';
-import { Mapping, MappingSubstitution, MappingType, SharedService } from '../../shared';
+import { Mapping, Substitution, MappingType, SharedService } from '../../shared';
 import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
@@ -54,17 +54,17 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
 
-  private _save: (value: MappingSubstitution[] | string) => void;
+  private _save: (value: Substitution[] | string) => void;
   private _cancel: (reason?: any) => void;
   destroy$: Subject<void> = new Subject<void>();
   valid: boolean = false;
 
-  result: Promise<MappingSubstitution[] | string> = new Promise((resolve, reject) => {
+  result: Promise<Substitution[] | string> = new Promise((resolve, reject) => {
     this._save = resolve;
     this._cancel = reject;
   });
 
-  substitutions: MappingSubstitution[] = [];
+  substitutions: Substitution[] = [];
   generatedCode: string = '';
 
   hasIssue = false;
