@@ -126,7 +126,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       mappingWithoutSubstitutions.sourceTemplate = JSON.parse(mappingWithoutSubstitutions.sourceTemplate);
       mappingWithoutSubstitutions.targetTemplate = JSON.parse(mappingWithoutSubstitutions.targetTemplate);
 
-      this.newMessage = "Map for the following mapping the source template to the target template:**\n\n" +
+      this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
         "```json\n" +
         JSON.stringify(mappingWithoutSubstitutions, null, 2)
         + "\n```\n";
