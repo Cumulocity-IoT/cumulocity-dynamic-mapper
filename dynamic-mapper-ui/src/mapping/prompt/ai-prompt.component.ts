@@ -96,6 +96,8 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       const mappingWithoutSubstitutions = { ...this.mapping };
       delete mappingWithoutSubstitutions.substitutions;
       mappingWithoutSubstitutions.code = existingCode;
+      mappingWithoutSubstitutions.sourceTemplate = JSON.parse(mappingWithoutSubstitutions.sourceTemplate);
+      mappingWithoutSubstitutions.targetTemplate = JSON.parse(mappingWithoutSubstitutions.targetTemplate);
 
       // this.newMessage = JSON.stringify({
       //   sourceTemplate: JSON.parse(this.mapping.sourceTemplate),
@@ -107,33 +109,35 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
         "**Complete Mapping:**\n\n" +
         "```json\n" +
-        JSON.stringify(mappingWithoutSubstitutions, null, 2) +
-        "\n```\n\n" +
-        "**Source:**\n\n" +
-        "```json\n" +
-        JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
-        "\n```\n\n" +
-        "**Target:**\n\n" +
-        "```json\n" +
-        JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
+        JSON.stringify(mappingWithoutSubstitutions, null, 2)
         "\n```\n";
+      // +  "**Source:**\n\n" +
+      // "```json\n" +
+      // JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
+      // "\n```\n\n" +
+      // "**Target:**\n\n" +
+      // "```json\n" +
+      // JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
+      // "\n```\n";
     } else {
       // Include the complete mapping but remove existing substitutions
       const mappingWithoutSubstitutions = { ...this.mapping };
       delete mappingWithoutSubstitutions.substitutions;
+      mappingWithoutSubstitutions.sourceTemplate = JSON.parse(mappingWithoutSubstitutions.sourceTemplate);
+      mappingWithoutSubstitutions.targetTemplate = JSON.parse(mappingWithoutSubstitutions.targetTemplate);
 
       this.newMessage = "Map for the following mapping the source template to the target template:**\n\n" +
         "```json\n" +
-        JSON.stringify(mappingWithoutSubstitutions, null, 2) +
-        "\n```\n\n" +
-        "**Source:**\n\n" +
-        "```json\n" +
-        JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
-        "\n```\n\n" +
-        "**Target:**\n\n" +
-        "```json\n" +
-        JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
-        "\n```\n";
+        JSON.stringify(mappingWithoutSubstitutions, null, 2)
+        + "\n```\n";
+      // + "**Source:**\n\n" +
+      // "```json\n" +
+      // JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
+      // "\n```\n\n" +
+      // "**Target:**\n\n" +
+      // "```json\n" +
+      // JSON.stringify(JSON.parse(this.mapping.targetTemplate), null, 2) +
+      // "\n```\n";
     }
 
     // Call sendMessage() automatically
