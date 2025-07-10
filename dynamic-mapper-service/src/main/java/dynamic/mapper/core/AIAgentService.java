@@ -62,6 +62,7 @@ public class AIAgentService {
     private static final String MCP_HEALTH_ENDPOINT = "/service/mcp-server-c8y/health";
     private static final String MCP_SSE_ENDPOINT = "/service/mcp-server-c8y/sse/";
     private static final String JSONATA_TOOL_NAME = "evaluate_jsonata_expression";
+    private static final String MCP_SERVER_NAME = "Dynamic Mapper MCP Server";
 
 
     public void initializeAIAgents() {
@@ -76,7 +77,7 @@ public class AIAgentService {
                         log.info("{} - No MCP Servers found in AI Agent Manager, creating MCP Server...", contextService.getContext().getTenant());
                         mcpServer = new MCPServer();
                         mcpServer.setUrl(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT);
-                        mcpServer.setName("Dynamic Mapper MCP Server");
+                        mcpServer.setName(MCP_SERVER_NAME);
                         mcpServer.setDescription("MCP Server for dynamic mapper service");
                         mcpServer.setDefault(false);
                         try {
@@ -91,17 +92,17 @@ public class AIAgentService {
                         }
 
                     } else {
-                        if (mcpServers.getServers().stream().anyMatch(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT))) {
+                        if (mcpServers.getServers().stream().anyMatch(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT) || server.getName().equals(MCP_SERVER_NAME))) {
                             log.info("{} - MCP Server already exists, not re-creating it", contextService.getContext().getTenant());
                             mcpServer = mcpServers.getServers().stream()
-                                    .filter(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT))
+                                    .filter(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT) || server.getName().equals(MCP_SERVER_NAME))
                                     .findFirst()
                                     .orElse(null);
                         } else {
                             log.info("{} - MCP Server not found, creating MCP Server...", contextService.getContext().getTenant());
                             mcpServer = new MCPServer();
                             mcpServer.setUrl(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT);
-                            mcpServer.setName("Dynamic Mapper MCP Server");
+                            mcpServer.setName(MCP_SERVER_NAME);
                             mcpServer.setDescription("MCP Server for dynamic mapper service");
                             mcpServer.setDefault(false);
                             try {
@@ -208,7 +209,7 @@ public class AIAgentService {
                 MCPUsage tools = new MCPUsage();
                 tools.setServerName(mcpServer.getName());
                 tools.setTools(new String[]{JSONATA_TOOL_NAME});
-                aiAgent.setMcp(List.of(new MCPUsage()));
+                aiAgent.setMcp(List.of(tools));
             }
             ResponseEntity<String> response = createAIAgent(aiAgent);
             if (!response.getStatusCode().is2xxSuccessful())
