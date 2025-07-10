@@ -80,6 +80,9 @@ public class BootstrapService {
         this.virtualThreadPool = virtualThreadPool;
     }
 
+    @Autowired
+    private AIAgentService aiAgentService;
+
     public BootstrapService(
             ConnectorRegistry connectorRegistry,
             ConfigurationRegistry configurationRegistry,
@@ -200,6 +203,7 @@ public class BootstrapService {
         // only initialize mapping after all connectors are initialized
         // and connected
         mappingComponent.initializeResources(tenant);
+        aiAgentService.initializeAIAgents();
 
         handleOutboundMapping(tenant, serviceConfiguration);
     }
