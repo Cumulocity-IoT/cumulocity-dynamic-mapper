@@ -56,16 +56,27 @@ c8y-data-grid button[title='Reload'] {
   from {
     background-color: var(--brand-light, var(--c8y-brand-light));
   }
+
   to {
     background-color: white;
   }
 }
 
-.c8y-switch > button {
+.c8y-switch>button {
   display: none;
 }
 
 .console-output {
   height: 100px;
   overflow: auto;
+}
+
+.sticky-buttons {
+  z-index: 10;
+  bottom: 0;
+  position: sticky;
+  padding-bottom: 70px;
+  /* padding: 0 var(--c8y-component-padding, var(--c8y-root-component-padding)); */
+  background: var(--c8y-component-background-default, var(--c8y-root-component-background-default));
+  margin-top: auto;
 }

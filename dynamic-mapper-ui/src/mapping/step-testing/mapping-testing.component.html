@@ -108,7 +108,7 @@
     </div>
   </div>
 
-  <div class="d-flex">
+  <div class="d-flex sticky-buttons">
     <div class="col-lg-8 col-lg-offset-2 text-center">
       <button type="button" class="btn btn-default btn-sm" (click)="onTestTransformation()"
         [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0)">
@@ -132,8 +132,5 @@
           class="btn-help" aria-label="Help content"></button>
       </div>
     </div>
-  </div>
-
-  <div class="d-flex" style="min-height:50px">
   </div>
 </div>
