@@ -66,7 +66,7 @@ import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
-import dynamic.mapper.model.MappingServiceRepresentation;
+import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.ResolveException;
 import dynamic.mapper.model.SnoopStatus;
@@ -144,17 +144,17 @@ public class MappingComponent {
     }
 
     public void initializeMappingStatus(String tenant, boolean reset) {
-        MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
-                .getMappingServiceRepresentation(tenant);
+        MapperServiceRepresentation mapperServiceRepresentation = configurationRegistry
+                .getMapperServiceRepresentation(tenant);
 
-        if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
+        if (mapperServiceRepresentation.getMappingStatus() != null && !reset) {
             log.debug("{} - Initializing status: {}, {} ", tenant,
-                    mappingServiceRepresentation.getMappingStatus(),
-                    (mappingServiceRepresentation.getMappingStatus() == null
-                            || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
-                                    : mappingServiceRepresentation.getMappingStatus().size()));
+                    mapperServiceRepresentation.getMappingStatus(),
+                    (mapperServiceRepresentation.getMappingStatus() == null
+                            || mapperServiceRepresentation.getMappingStatus().size() == 0 ? 0
+                                    : mapperServiceRepresentation.getMappingStatus().size()));
             Map<String, MappingStatus> mappingStatus = new ConcurrentHashMap<>();
-            mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
+            mapperServiceRepresentation.getMappingStatus().forEach(ms -> {
                 mappingStatus.put(ms.identifier, ms);
             });
             mappingStatusS.put(tenant, mappingStatus);
@@ -179,10 +179,10 @@ public class MappingComponent {
         if (configurationRegistry.getServiceConfiguration(tenant).sendMappingStatus & initialized) {
             subscriptionsService.runForTenant(tenant, () -> {
                 Map<String, MappingStatus> statusMapping = mappingStatusS.get(tenant);
-                MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
-                        .getMappingServiceRepresentation(tenant);
+                MapperServiceRepresentation mapperServiceRepresentation = configurationRegistry
+                        .getMapperServiceRepresentation(tenant);
                 // avoid sending empty monitoring events
-                if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null) {
+                if (statusMapping.values().size() > 0 && mapperServiceRepresentation != null) {
                     log.debug("{} - Sending monitoring: {}", tenant, statusMapping.values().size());
                     Map<String, Object> service = new ConcurrentHashMap<String, Object>();
                     // Convert statusMapping values to a list for filtering
@@ -208,7 +208,7 @@ public class MappingComponent {
                     }
                     service.put(C8YAgent.MAPPING_FRAGMENT, ms);
                     ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
-                    updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
+                    updateMor.setId(GId.asGId(mapperServiceRepresentation.getId()));
                     updateMor.setAttrs(service);
                     this.inventoryApi.update(updateMor);
                 } else {
@@ -265,7 +265,7 @@ public class MappingComponent {
                 entry("date", date));
         configurationRegistry.getC8yAgent().createEvent(message,
                 LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE,
-                DateTime.now(), configurationRegistry.getMappingServiceRepresentation(tenant), tenant, stMap);
+                DateTime.now(), configurationRegistry.getMapperServiceRepresentation(tenant), tenant, stMap);
     }
 
     public void saveMappings(String tenant, List<Mapping> mappings) {
@@ -817,7 +817,7 @@ public class MappingComponent {
 
             configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
                     LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
-                    DateTime.now(), configurationRegistry.getMappingServiceRepresentation(tenant), tenant,
+                    DateTime.now(), configurationRegistry.getMapperServiceRepresentation(tenant), tenant,
                     null);
         }
         // reset dirtySet
@@ -861,21 +861,21 @@ public class MappingComponent {
         }
         configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
                 LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
-                DateTime.now(), configurationRegistry.getMappingServiceRepresentation(tenant), tenant,
+                DateTime.now(), configurationRegistry.getMapperServiceRepresentation(tenant), tenant,
                 null);
         // }
     }
 
     public void initializeDeploymentMap(String tenant, boolean reset) {
-        MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
-                .getMappingServiceRepresentation(tenant);
-        if (mappingServiceRepresentation.getDeploymentMap() != null && !reset) {
+        MapperServiceRepresentation mapperServiceRepresentation = configurationRegistry
+                .getMapperServiceRepresentation(tenant);
+        if (mapperServiceRepresentation.getDeploymentMap() != null && !reset) {
             log.debug("{} - Initializing deploymentMap: {}, {} ", tenant,
-                    mappingServiceRepresentation.getDeploymentMap(),
-                    (mappingServiceRepresentation.getDeploymentMap() == null
-                            || mappingServiceRepresentation.getDeploymentMap().size() == 0 ? 0
-                                    : mappingServiceRepresentation.getDeploymentMap().size()));
-            deploymentMaps.put(tenant, mappingServiceRepresentation.getDeploymentMap());
+                    mapperServiceRepresentation.getDeploymentMap(),
+                    (mapperServiceRepresentation.getDeploymentMap() == null
+                            || mapperServiceRepresentation.getDeploymentMap().size() == 0 ? 0
+                                    : mapperServiceRepresentation.getDeploymentMap().size()));
+            deploymentMaps.put(tenant, mapperServiceRepresentation.getDeploymentMap());
         } else {
             deploymentMaps.put(tenant, new ConcurrentHashMap<>());
         }
@@ -930,8 +930,8 @@ public class MappingComponent {
 
     public void saveDeploymentMap(String tenant) {
         subscriptionsService.runForTenant(tenant, () -> {
-            MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
-                    .getMappingServiceRepresentation(tenant);
+            MapperServiceRepresentation mapperServiceRepresentation = configurationRegistry
+                    .getMapperServiceRepresentation(tenant);
             // avoid sending empty monitoring events
             log.info("{} - Saving deploymentMap, number deployments: {}", tenant,
                     deploymentMaps.get(tenant).size());
@@ -939,7 +939,7 @@ public class MappingComponent {
             Map<String, List<String>> deploymentMapPerTenant = deploymentMaps.get(tenant);
             map.put(C8YAgent.DEPLOYMENT_MAP_FRAGMENT, deploymentMapPerTenant);
             ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
-            updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
+            updateMor.setId(GId.asGId(mapperServiceRepresentation.getId()));
             updateMor.setAttrs(map);
             this.inventoryApi.update(updateMor);
         });
@@ -958,7 +958,7 @@ public class MappingComponent {
                 log.warn(message);
                 configurationRegistry.getC8yAgent().createEvent(message,
                         LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE,
-                        DateTime.now(), configurationRegistry.getMappingServiceRepresentation(tenant), tenant,
+                        DateTime.now(), configurationRegistry.getMapperServiceRepresentation(tenant), tenant,
                         null);
             } catch (Exception e) {
                 log.error("{} - Mapping {} failed to deactivate mapping, due to exceeded failure count: {}",

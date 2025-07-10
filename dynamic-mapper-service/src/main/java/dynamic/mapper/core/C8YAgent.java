@@ -300,7 +300,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void createEvent(String message, LoggingEventType loggingType, DateTime eventTime,
-            MappingServiceRepresentation source,
+            MapperServiceRepresentation source,
             String tenant, Map<String, String> properties) {
         subscriptionsService.runForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
@@ -850,21 +850,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public ManagedObjectRepresentation initializeMappingServiceObject(String tenant) {
-        ExternalIDRepresentation mappingServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
-                new ID(null, MappingServiceRepresentation.AGENT_ID),
+    public ManagedObjectRepresentation initializeMapperServiceObject(String tenant) {
+        ExternalIDRepresentation mapperServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
+                new ID(null, MapperServiceRepresentation.AGENT_ID),
                 null);
         ;
         ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
 
-        if (mappingServiceIdRepresentation != null) {
-            amo = inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
+        if (mapperServiceIdRepresentation != null) {
+            amo = inventoryApi.get(mapperServiceIdRepresentation.getManagedObject().getId());
             log.info("{} - Agent with external ID [{}] already exists, sourceId: {}", tenant,
-                    MappingServiceRepresentation.AGENT_ID,
+                    MapperServiceRepresentation.AGENT_ID,
                     amo.getId().getValue());
         } else {
-            amo.setName(MappingServiceRepresentation.AGENT_NAME);
-            amo.setType(MappingServiceRepresentation.AGENT_TYPE);
+            amo.setName(MapperServiceRepresentation.AGENT_NAME);
+            amo.setType(MapperServiceRepresentation.AGENT_TYPE);
             amo.set(new Agent());
             HashMap<String, String> agentFragments = new HashMap<>();
             agentFragments.put("name", "Dynamic Mapper");
@@ -879,7 +879,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("{} - Agent has been created with ID {}", tenant, amo.getId());
             ExternalIDRepresentation externalAgentId = identityApi.create(amo,
                     new ID("c8y_Serial",
-                            MappingServiceRepresentation.AGENT_ID),
+                            MapperServiceRepresentation.AGENT_ID),
                     null);
             log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
         }
@@ -926,7 +926,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     entry("date", date));
             createEvent("Connector status: " + connectorStatus.name(),
                     LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE, DateTime.now(),
-                    configurationRegistry.getMappingServiceRepresentation(tenant), tenant,
+                    configurationRegistry.getMapperServiceRepresentation(tenant), tenant,
                     stMap);
         }
     }

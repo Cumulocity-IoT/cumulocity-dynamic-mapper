@@ -65,7 +65,7 @@ import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingServiceRepresentation;
+import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.DispatcherInbound;
 import dynamic.mapper.processor.model.MappingType;
@@ -116,7 +116,7 @@ public abstract class AConnectorClient {
     protected MappingComponent mappingComponent;
 
     @Getter
-    protected MappingServiceRepresentation mappingServiceRepresentation;
+    protected MapperServiceRepresentation mapperServiceRepresentation;
 
     @Getter
     protected ConnectorConfigurationComponent connectorConfigurationComponent;
@@ -633,7 +633,7 @@ public abstract class AConnectorClient {
                 message,
                 LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
                 DateTime.now(),
-                mappingServiceRepresentation,
+                mapperServiceRepresentation,
                 tenant,
                 statusMap);
     }
@@ -666,7 +666,7 @@ public abstract class AConnectorClient {
                 message,
                 LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE,
                 DateTime.now(),
-                mappingServiceRepresentation,
+                mapperServiceRepresentation,
                 tenant,
                 eventMap);
     }
