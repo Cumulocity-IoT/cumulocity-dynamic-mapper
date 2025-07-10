@@ -26,6 +26,7 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.sdk.client.RestConnector;
 import dynamic.mapper.model.*;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -39,6 +40,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 
 @Service
@@ -61,24 +63,25 @@ public class AIAgentService {
     private static final String MCP_SSE_ENDPOINT = "/service/mcp-server-c8y/sse/";
     private static final String JSONATA_TOOL_NAME = "evaluate_jsonata_expression";
 
+
     public void initializeAIAgents() {
-        if(checkAIAgentAvailable()) {
+        if (checkAIAgentAvailable()) {
             boolean mcpAvailable = checkMCPServerAvailable();
             MCPServer mcpServer = null;
-            if(mcpAvailable) {
+            if (mcpAvailable) {
                 ResponseEntity<MCPServers> mcpServerResponse = getMCPServer();
                 if (mcpServerResponse != null && mcpServerResponse.getStatusCode().is2xxSuccessful() && mcpServerResponse.getBody() != null) {
                     MCPServers mcpServers = mcpServerResponse.getBody();
                     if (mcpServers.getServers().isEmpty()) {
                         log.info("{} - No MCP Servers found in AI Agent Manager, creating MCP Server...", contextService.getContext().getTenant());
                         mcpServer = new MCPServer();
-                        mcpServer.setUrl(clientProperties.getBaseURL()+ MCP_SSE_ENDPOINT);
+                        mcpServer.setUrl(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT);
                         mcpServer.setName("Dynamic Mapper MCP Server");
                         mcpServer.setDescription("MCP Server for dynamic mapper service");
                         mcpServer.setDefault(false);
                         try {
                             ResponseEntity<String> response = createMCPServer(mcpServer);
-                            if(response != null && !response.getStatusCode().is2xxSuccessful()) {
+                            if (response != null && !response.getStatusCode().is2xxSuccessful()) {
                                 log.error("{} - Failed to create MCP Server: {}", contextService.getContext().getTenant(), response.getBody());
                             } else {
                                 log.info("{} - MCP Server created successfully", contextService.getContext().getTenant());
@@ -88,7 +91,7 @@ public class AIAgentService {
                         }
 
                     } else {
-                        if(mcpServers.getServers().stream().anyMatch(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT))) {
+                        if (mcpServers.getServers().stream().anyMatch(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT))) {
                             log.info("{} - MCP Server already exists, not re-creating it", contextService.getContext().getTenant());
                             mcpServer = mcpServers.getServers().stream()
                                     .filter(server -> server.getUrl().equals(clientProperties.getBaseURL() + MCP_SSE_ENDPOINT))
@@ -103,7 +106,7 @@ public class AIAgentService {
                             mcpServer.setDefault(false);
                             try {
                                 ResponseEntity<String> response = createMCPServer(mcpServer);
-                                if(response != null && !response.getStatusCode().is2xxSuccessful()) {
+                                if (response != null && !response.getStatusCode().is2xxSuccessful()) {
                                     log.error("{} - Failed to create MCP Server: {}", contextService.getContext().getTenant(), response.getBody());
                                 } else {
                                     log.info("{} - MCP Server created successfully", contextService.getContext().getTenant());
@@ -135,6 +138,7 @@ public class AIAgentService {
                 log.info("{} - Failed to retrieve AIAgents", contextService.getContext().getTenant());
             }
         }
+
     }
 
     public boolean checkAIAgentAvailable() {
@@ -200,7 +204,7 @@ public class AIAgentService {
             agent.setSystem(prompts.get(file));
             aiAgent.setAgent(agent);
             aiAgent.setType("text");
-            if(mcpServer != null && aiAgent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)) {
+            if (mcpServer != null && aiAgent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)) {
                 MCPUsage tools = new MCPUsage();
                 tools.setServerName(mcpServer.getName());
                 tools.setTools(new String[]{JSONATA_TOOL_NAME});
@@ -258,7 +262,7 @@ public class AIAgentService {
         try {
             String serverUrl = clientProperties.getBaseURL() + "/service/ai/agent";
             RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<Void> requestEntity = new HttpEntity<>( headers);
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
             return restTemplate.exchange(serverUrl, HttpMethod.GET, requestEntity, AIAgent[].class);
         } catch (Exception e) {
             log.info("{} - AIAgent retrieval failed", tenant);
@@ -294,7 +298,7 @@ public class AIAgentService {
         try {
             String serverUrl = clientProperties.getBaseURL() + "/service/ai/mcp/servers";
             RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<Void> requestEntity = new HttpEntity<>( headers);
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
             return restTemplate.exchange(serverUrl, HttpMethod.GET, requestEntity, MCPServers.class);
         } catch (Exception e) {
             log.error("{} - MCPServer creation failed", tenant, e);

@@ -203,10 +203,7 @@ public class BootstrapService {
         // only initialize mapping after all connectors are initialized
         // and connected
         mappingComponent.initializeResources(tenant);
-        virtualThreadPool.submit(() -> {
-            aiAgentService.initializeAIAgents();
-        });
-
+        aiAgentService.initializeAIAgents();
 
         handleOutboundMapping(tenant, serviceConfiguration);
     }
