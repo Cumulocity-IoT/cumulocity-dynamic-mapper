@@ -172,7 +172,7 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public ExtensionEntry extension;
 
-    @Schema(description = "Filter expression for mapping conditions", example = "source.type == 'temperature'")
+    @Schema(description = "Filter expression (condition) if mapping should be applied", example = "telemetry.telemetryReadings[0].value >15")
     @JsonSetter(nulls = Nulls.SKIP)
     public String filterMapping;
 

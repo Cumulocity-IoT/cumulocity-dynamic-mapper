@@ -93,7 +93,7 @@ export interface Mapping {
   /** Array of field substitutions for data transformation */
   substitutions?: Substitution[];
 
-  /** Filter expression for mapping conditions (e.g., "source.type == 'temperature'") */
+  /** Filter expression (condition) if mapping should be applied  (e.g., "telemetry.telemetryReadings[0].value >15") */
   filterMapping?: string;
 
   /** Filter expression for inventory queries (e.g., "has(c8y_IsDevice)") */

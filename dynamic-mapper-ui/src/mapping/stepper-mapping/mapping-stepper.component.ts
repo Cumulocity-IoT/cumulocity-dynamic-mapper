@@ -344,12 +344,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       {
         fieldGroup: [
           {
-            className: 'col-lg-5 col-lg-offset-1',
+            // className: 'col-lg-5 col-lg-offset-1',
             key: 'filterMapping',
             type: 'input-custom',
             wrappers: ['custom-form-field-wrapper'],
             templateOptions: {
-              label: 'Filter mapping',
+              label: 'Filter execution mapping',
               class: 'input-sm',
               customWrapperClass: 'm-b-24',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||

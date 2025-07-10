@@ -29,7 +29,7 @@
 | **snoopStatus** | **String** | Status of template snooping | [default to null] |
 | **snoopedTemplates** | **List** | List of templates captured during snooping | [default to null] |
 | **extension** | [**ExtensionEntry**](ExtensionEntry.md) | Extension configuration for custom processing | [optional] [default to null] |
-| **filterMapping** | **String** | Filter expression for mapping conditions | [optional] [default to null] |
+| **filterMapping** | **String** | Filter expression (condition) if mapping should be applied | [optional] [default to null] |
 | **filterInventory** | **String** | Filter expression for inventory queries | [optional] [default to null] |
 | **maxFailureCount** | **Long** | Maximum number of failures before disabling mapping | [default to null] |
 | **qos** | **String** | Quality of Service level for MQTT | [default to null] |
