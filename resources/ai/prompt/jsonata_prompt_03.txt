@@ -280,7 +280,7 @@ Convert the `number` representing milliseconds since the Unix *Epoch* (1 January
 
 If the optional `picture` parameter is omitted, then the timestamp is formatted in the [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) format.
 
-If the optional `picture` string is supplied, then the timestamp is formatted occording to the representation specified in that string.
+If the optional `picture` string is supplied, then the timestamp is formatted according to the representation specified in that string.
 The behaviour of this function is consistent with the two-argument version of the XPath/XQuery function [fn:format-dateTime](https://www.w3.org/TR/xpath-functions-31/#func-format-dateTime) as defined in the XPath F&O 3.1 specification.  The picture string parameter defines how the timestamp is formatted and has the [same syntax](https://www.w3.org/TR/xpath-functions-31/#date-picture-string) as fn:format-dateTime.
 
 If the optional `timezone` string is supplied, then the formatted timestamp will be in that timezone.  The `timezone` string should be in the
@@ -472,7 +472,7 @@ __Examples__
 ## `$match()`
 __Signature:__ `$match(str, pattern [, limit])`
 
-Applies the `str` string to the `pattern` regular expression and returns an array of objects, with each object containing information about each occurrence of a match withing `str`.
+Applies the `str` string to the `pattern` regular expression and returns an array of objects, with each object containing information about each occurrence of a match within `str`.
 
 The object contains the following fields:
 
