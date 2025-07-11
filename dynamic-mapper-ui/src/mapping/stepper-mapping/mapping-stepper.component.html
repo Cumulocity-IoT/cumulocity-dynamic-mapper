@@ -328,13 +328,13 @@
                   </div>
 
                 </div>
-                <div class="d-flex p-t-8" *ngIf="expertMode">
+                <div class="d-flex d-col p-t-8" *ngIf="expertMode">
                   <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFields"
                     [model]="substitutionModel"></formly-form>
                   <div class="d-flex">
                     <div class="col-lg-5 col-lg-offset-1">
-                      <div class="form-group m-b-4" style="margin-left: 10px">
-                        <label translate style="padding-left: 6px">Source Result [{{
+                      <div class="form-group m-b-4">
+                        <label translate>&nbsp;Source Result [{{
                           substitutionModel.sourceExpression?.resultType
                           }}]</label>
                         <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
@@ -346,8 +346,8 @@
                       </div>
                     </div>
                     <div class="col-lg-5">
-                      <div class="form-group m-b-4" style="margin-right: 10px">
-                        <label translate style="padding-left: 6px">Target Result [{{
+                      <div class="form-group m-b-4">
+                        <label translate>&nbsp;Target Result [{{
                           substitutionModel.targetExpression?.resultType
                           }}]</label>
                         <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
