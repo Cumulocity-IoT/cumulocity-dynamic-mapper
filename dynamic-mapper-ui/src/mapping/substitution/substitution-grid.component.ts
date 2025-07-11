@@ -30,7 +30,7 @@ import {
   ConfirmationModalComponent,
   definesDeviceIdentifier,
   Mapping,
-  MappingSubstitution
+  Substitution
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
 
@@ -60,7 +60,7 @@ export class SubstitutionRendererComponent {
   readonly definesDeviceIdentifier = definesDeviceIdentifier;
   readonly EditorMode = EditorMode;
   readonly substitutionTemplateHelp = 'Substitutions defining the device identifier are marked with an <code>*</code>. Before adding a substitution target and source property in templates have to be selected.';
-  substitutions: MappingSubstitution[] = [];
+  substitutions: Substitution[] = [];
 
 
   onSubstitutionSelect(index: number) : void {

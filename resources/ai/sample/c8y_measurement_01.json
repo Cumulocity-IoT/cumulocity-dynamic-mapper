@@ -1,0 +1,13 @@
+{
+    "c8y_ProcessLoadMeasurement": {
+        "L": {
+            "value": 110,
+            "unit": "%"
+        }
+    },
+    "time": "2022-08-05T00:14:49.389+02:00",
+    "type": "c8y_ProcessLoadMeasurement",
+    "_IDENTITY_": {
+        "externalId": "any_SerialNumber"
+    }
+}

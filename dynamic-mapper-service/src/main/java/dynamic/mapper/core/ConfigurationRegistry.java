@@ -53,7 +53,7 @@ import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.webhook.WebHook;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingServiceRepresentation;
+import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.C8YNotificationSubscriber;
 import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapper.processor.inbound.BaseProcessorInbound;
@@ -91,8 +91,8 @@ public class ConfigurationRegistry {
 
     private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
 
-    // Structure: < Tenant, < MappingType, < MappingServiceRepresentation > >
-    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new ConcurrentHashMap<>();
+    // Structure: < Tenant, < MappingType, < MapperServiceRepresentation > >
+    private Map<String, MapperServiceRepresentation> mapperServiceRepresentations = new ConcurrentHashMap<>();
 
     // Structure: < Tenant, < MappingType, ProcessorInbound>>
     private Map<String, Map<MappingType, BaseProcessorInbound<?>>> payloadProcessorsInbound = new ConcurrentHashMap<>();
@@ -275,12 +275,12 @@ public class ConfigurationRegistry {
                 createPayloadProcessorsOutbound(connectorClient));
     }
 
-    public void initializeMappingServiceRepresentation(String tenant) {
-        ManagedObjectRepresentation mappingServiceMOR = c8yAgent
-                .initializeMappingServiceObject(tenant);
-        MappingServiceRepresentation mappingServiceRepresentation = objectMapper
-                .convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
-        addMappingServiceRepresentation(tenant, mappingServiceRepresentation);
+    public void initializeMapperServiceRepresentation(String tenant) {
+        ManagedObjectRepresentation mapperServiceMOR = c8yAgent
+                .initializeMapperServiceObject(tenant);
+        MapperServiceRepresentation mapperServiceRepresentation = objectMapper
+                .convertValue(mapperServiceMOR, MapperServiceRepresentation.class);
+        addMapperServiceRepresentation(tenant, mapperServiceRepresentation);
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {
@@ -351,17 +351,17 @@ public class ConfigurationRegistry {
         serviceConfigurations.remove(tenant);
     }
 
-    public void addMappingServiceRepresentation(String tenant,
-            MappingServiceRepresentation mappingServiceRepresentation) {
-        mappingServiceRepresentations.put(tenant, mappingServiceRepresentation);
+    public void addMapperServiceRepresentation(String tenant,
+            MapperServiceRepresentation mapperServiceRepresentation) {
+        mapperServiceRepresentations.put(tenant, mapperServiceRepresentation);
     }
 
-    public MappingServiceRepresentation getMappingServiceRepresentation(String tenant) {
-        return mappingServiceRepresentations.get(tenant);
+    public MapperServiceRepresentation getMapperServiceRepresentation(String tenant) {
+        return mapperServiceRepresentations.get(tenant);
     }
 
-    public void removeMappingServiceRepresentation(String tenant) {
-        mappingServiceRepresentations.remove(tenant);
+    public void removeMapperServiceRepresentation(String tenant) {
+        mapperServiceRepresentations.remove(tenant);
     }
 
     public ExtensibleProcessorInbound getExtensibleProcessor(String tenant) {

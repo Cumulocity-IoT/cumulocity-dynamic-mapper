@@ -29,11 +29,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
+import dynamic.mapper.core.MappingComponent;
 import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.model.MappingTreeNodeSerializer;
 import io.micrometer.core.instrument.MeterRegistry;
 
+import io.modelcontextprotocol.server.McpServer;
+import io.modelcontextprotocol.server.McpSyncServer;
+import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.spec.McpServerTransportProvider;
 import org.joda.time.DateTime;
+import org.springframework.ai.mcp.McpToolUtils;
+import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -115,6 +124,13 @@ public class App {
         module.addSerializer(MappingTreeNode.class, new MappingTreeNodeSerializer());
         objectMapper.registerModule(module);
         return objectMapper;
+    }
+
+    @Bean
+    public ToolCallbackProvider tools(MappingComponent mappingComponent) {
+        return MethodToolCallbackProvider.builder()
+                .toolObjects(mappingComponent)
+                .build();
     }
 
     public static ObjectMapper baseObjectMapper() {

@@ -1,0 +1,22 @@
+{
+    "mea": [
+        {
+            "devicePath": "VVB001StatusB_Crest",
+            "values": [
+                {
+                    "value": 44,
+                    "timestamp": 1648562285347
+                }
+            ]
+        },
+        {
+            "devicePath": "VVB001StatusB_Crest",
+            "values": [
+                {
+                    "value": 56,
+                    "timestamp": 1648563295347
+                }
+            ]
+        }
+    ]
+}

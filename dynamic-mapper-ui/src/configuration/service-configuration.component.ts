@@ -18,13 +18,15 @@
  * @authors Christof Strack
  */
 import { HttpStatusCode } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
 import { ActivatedRoute } from '@angular/router';
+import { AIAgentService } from 'src/mapping/core/ai-agent.service';
+import { BehaviorSubject, from, map, Observable, of, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -32,15 +34,14 @@ import { ActivatedRoute } from '@angular/router';
   templateUrl: 'service-configuration.component.html',
   standalone: false
 })
-export class ServiceConfigurationComponent implements OnInit {
+export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
-  constructor(
-    private alertService: AlertService,
-    private sharedService: SharedService,
-    private fb: FormBuilder,
-    private route: ActivatedRoute
-  ) { }
-  
+  private alertService = inject(AlertService);
+  private sharedService = inject(SharedService);
+  private fb = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+  private aiAgentService = inject(AIAgentService);
+
   version: string = packageJson.version;
   serviceForm: FormGroup;
   feature: Feature;
@@ -59,9 +60,14 @@ export class ServiceConfigurationComponent implements OnInit {
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
     maxCPUTimeMS: 5000,  // 5 seconds
+    jsonataAgent: undefined,
+    javaScriptAgent: undefined,
   };
   editable2updated: boolean = false;
 
+  agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  destroy$: Subject<void> = new Subject<void>();
+  aiAgentDeployed: boolean = false;
 
 
   async ngOnInit() {
@@ -81,9 +87,31 @@ export class ServiceConfigurationComponent implements OnInit {
       inventoryCacheRetention: new FormControl(''),
       inventoryCacheSize: new FormControl(''),
       inventoryFragmentsToCache: new FormControl(''),
-      maxCPUTimeMS: new FormControl('')
+      maxCPUTimeMS: new FormControl(''),
+      jsonataAgent: new FormControl({ value: '', disabled: true }),
+      javaScriptAgent: new FormControl({ value: '', disabled: true }),
     });
-    this.loadData();
+    await this.loadData();
+    from(this.aiAgentService.getAIAgents())
+      .pipe(map(agents => agents.map(agent => agent.name)), takeUntil(this.destroy$))
+      .subscribe(agentNames => {
+        this.agents$.next(agentNames);
+        this.aiAgentDeployed = agentNames.length > 0;
+
+        // Enable/disable controls based on whether agents are available
+        if (this.aiAgentDeployed) {
+          this.serviceForm.get('javaScriptAgent')?.enable();
+          this.serviceForm.get('jsonataAgent')?.enable();
+        } else {
+          this.serviceForm.get('javaScriptAgent')?.disable();
+          this.serviceForm.get('jsonataAgent')?.disable();
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   async loadData(): Promise<void> {
@@ -111,7 +139,11 @@ export class ServiceConfigurationComponent implements OnInit {
       inventoryFragmentsToCache:
         this.serviceConfiguration.inventoryFragmentsToCache.join(","),
       maxCPUTimeMS:
-        this.serviceConfiguration.maxCPUTimeMS
+        this.serviceConfiguration.maxCPUTimeMS,
+      jsonataAgent:
+        this.serviceConfiguration.jsonataAgent,
+      javaScriptAgent:
+        this.serviceConfiguration.javaScriptAgent,
     });
   }
 
@@ -150,6 +182,16 @@ export class ServiceConfigurationComponent implements OnInit {
       .split(",")
       .map(fragment => fragment.trim())
       .filter(fragment => fragment.length > 0);
+
+    // console.log("VALUE", this.serviceForm.value['jsonataAgent'])
+    conf.javaScriptAgent = this.serviceForm.value['javaScriptAgent']
+      ? this.serviceForm.value['javaScriptAgent']?.trim()
+      : undefined;
+    ;
+    conf.jsonataAgent = this.serviceForm.value['jsonataAgent']
+      ? this.serviceForm.value['jsonataAgent']?.trim()
+      : undefined;
+
     const response = await this.sharedService.updateServiceConfiguration(conf);
     if (response.status >= 200 && response.status < 300) {
       this.alertService.success(gettext('Update successful'));

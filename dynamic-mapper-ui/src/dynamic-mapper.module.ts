@@ -73,6 +73,6 @@ import { LandingModule } from './landing/landing.module';
     hookNavigator(MappingNavigationFactory),
   ],
 })
-export class DynamicMappingModule {
+export class DynamicMapperModule {
   constructor() {}
 }

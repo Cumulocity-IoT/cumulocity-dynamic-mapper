@@ -39,10 +39,11 @@ import {
   getSchema
 } from '../../shared/';
 import { MappingService } from '../core/mapping.service';
-import { C8YRequest, ProcessingContext } from '../core/processor/processor.model';
+import { C8YRequest, ProcessingContext, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
 import { MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { Content } from 'vanilla-jsoneditor';
 
 interface TestingModel {
   payload?: any;
@@ -80,13 +81,22 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private destroy$ = new BehaviorSubject<void>(undefined);
 
-  private readonly defaultEditorOptions = {
+  readonly editorOptionsDefault = {
     mode: 'tree',
     removeModes: ['text', 'table'],
     mainMenuBar: true,
     navigationBar: false,
     statusBar: false,
     readOnly: true
+  } as const;
+
+  readonly editorOptionsSource = {
+    mode: 'tree',
+    removeModes: ['table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    statusBar: false,
+    readOnly: false
   } as const;
 
   testContext!: ProcessingContext;
@@ -96,7 +106,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   sourceSystem!: string;
   targetSystem!: string;
   selectedResult$ = new BehaviorSubject<number>(0);
-  editorOptionsTesting = this.defaultEditorOptions;
   ignoreErrorNonExisting = false;
 
   constructor(
@@ -104,7 +113,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     private readonly alertService: AlertService,
     private readonly elementRef: ElementRef,
     private readonly bsModalService: BsModalService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.initializeMapping();
@@ -152,6 +161,35 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return !this.stepperConfiguration.allowTestSending ||
       this.testingModel.results.length === 0 ||
       !this.testMapping.useExternalId;
+  }
+
+  onSourceTemplateChanged(content: Content) {
+    let contentAsJson;
+    if (_.has(content, 'text') && content['text']) {
+      try {
+        contentAsJson = JSON.parse(content['text']);
+      } catch (error) {
+        // ignore parsing error
+      }
+    } else {
+      contentAsJson = content['json'];
+    }
+
+    const joinedStringArray = contentAsJson &&
+      contentAsJson[TOKEN_TOPIC_LEVEL] &&
+      Array.isArray(contentAsJson[TOKEN_TOPIC_LEVEL])
+      ? contentAsJson[TOKEN_TOPIC_LEVEL].filter(item => item !== undefined && item !== null).join('/')
+      : '';
+
+    const testMapping = {
+      ...this.testMapping,
+      sourceTemplate: JSON.stringify(contentAsJson || {}),
+      mappingTopicSample: joinedStringArray
+    };
+    this.handleTestMappingUpdate(testMapping);
+    //this.sourceTemplate = contentAsJson;
+
+    // console.log("Step onSourceTemplateChanged", this.mapping.sourceTemplate, this.mapping.targetTemplate);
   }
 
   // --- Private methods ---

@@ -92,7 +92,7 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
                         payload, e);
             }
             /*
-             * step 2 analyse extracted content: textual, array
+             * step 2 analyze extracted content: textual, array
              */
             List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     substitution.pathTarget,

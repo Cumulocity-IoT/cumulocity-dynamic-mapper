@@ -1,31 +1,25 @@
-/*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *  @authors Christof Strack, Stefan Witschel
- *
- */
-
 package dynamic.mapper.processor.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Strategies for handling edge cases during field substitution and data transformation")
 public enum RepairStrategy {
-    DEFAULT, // Process substitution as defined                  
-    USE_FIRST_VALUE_OF_ARRAY, // If extracted content from the source payload is an array, copy only the first item to the target payload
-    USE_LAST_VALUE_OF_ARRAY, // If extracted content from the source payload is an array, copy only the last item to the target payload
+    
+    @Schema(description = "Process substitution as defined without any special handling")
+    DEFAULT,
+    
+    @Schema(description = "If extracted content from source is an array, use only the first element")
+    USE_FIRST_VALUE_OF_ARRAY,
+    
+    @Schema(description = "If extracted content from source is an array, use only the last element") 
+    USE_LAST_VALUE_OF_ARRAY,
+    
+    @Schema(description = "Skip this substitution if source path evaluation fails")
     IGNORE,
-    REMOVE_IF_MISSING_OR_NULL, // Remove the node in the target if it the evaluation of the source expression returns undefined, empty. This allows for using mapping with dynamic content
-    CREATE_IF_MISSING, // Create the node in the target if it doesn't exist. This allows for using mapping with dynamic content
+    
+    @Schema(description = "Remove the target node if source evaluation returns undefined, null, or empty. Enables dynamic content handling")
+    REMOVE_IF_MISSING_OR_NULL,
+    
+    @Schema(description = "Create the target node if it doesn't exist. Enables dynamic content creation")
+    CREATE_IF_MISSING
 }

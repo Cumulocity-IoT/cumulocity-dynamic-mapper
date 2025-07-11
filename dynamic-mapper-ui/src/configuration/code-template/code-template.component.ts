@@ -238,7 +238,7 @@ export class CodeComponent implements OnInit {
     }
   }
 
-  onValueCodeChange(value) {
+  onValueCodeChange(value: string) {
     // console.log("code changed", value);
     this.codeTemplateDecoded.code = value;
   }

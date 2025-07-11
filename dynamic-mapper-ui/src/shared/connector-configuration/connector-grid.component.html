@@ -41,7 +41,7 @@
         <div class="input-group">
           <label class="toggle-countdown" placement="bottom" data-cy="c8y-alarms-interval-refresh--toggle-countdown">
             <input type="checkbox" data-cy="c8y-alarms-interval-toggle" formControlName="intervalToggle"
-              (click)="trackUserClickOnIntervalToggle($event.target)" />
+              (click)="trackUserClickOnIntervalToggle($event)" />
             <c8y-countdown-interval [countdownInterval]="nextTriggerCountdown$| async"
               (countdownEnded)="onCountdownEnded()"></c8y-countdown-interval>
             <i data-cy="c8y-alarms-interval-refresh--pause" c8yIcon="pause"></i>

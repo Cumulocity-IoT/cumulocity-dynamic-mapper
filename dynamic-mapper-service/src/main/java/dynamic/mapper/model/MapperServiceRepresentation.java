@@ -36,7 +36,7 @@ import dynamic.mapper.core.ConnectorStatusEvent;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MappingServiceRepresentation implements Serializable {
+public class MapperServiceRepresentation implements Serializable {
 
 	public static final String AGENT_ID = "d11r_mappingService";
 	public static final String AGENT_NAME = "Dynamic Mapper Service";

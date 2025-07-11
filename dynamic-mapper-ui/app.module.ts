@@ -22,7 +22,7 @@ import { NgModule } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule as ngRouterModule } from '@angular/router';
 import { CoreModule, RouterModule } from '@c8y/ngx-components';
-import { DynamicMappingModule } from './src/dynamic-mapping.module';
+import { DynamicMappingModule } from './src/dynamic-mapper.module';
 import './src/shared/styles/shared.css';
 
 @NgModule({

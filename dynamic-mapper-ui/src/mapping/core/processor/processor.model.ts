@@ -20,7 +20,7 @@
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
-import { API, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
+import { API, getPathTargetForDeviceIdentifiers, Mapping, Substitution, MappingType, RepairStrategy } from '../../../shared';
 import { Java, SubstitutionContext } from './processor-js.model';
 
 export interface C8YRequest {
@@ -84,7 +84,7 @@ export const isNumeric = (num: any) => (typeof num === 'number' || (typeof num =
   !isNaN(num as number);
 
 
-export function processSubstitute(processingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: MappingSubstitution) {
+export function processSubstitute(processingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: Substitution) {
   if (getTypeOf(extractedSourceContent) == 'null') {
     processingCacheEntry.push({
       value: extractedSourceContent,

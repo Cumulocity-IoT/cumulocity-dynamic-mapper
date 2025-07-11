@@ -21,10 +21,9 @@
 import { ChangeDetectorRef, Component, Input, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AlertService, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { JsonEditorComponent, Mapping, MappingSubstitution, MappingEnriched, SharedService, Feature } from '../../shared';
+import { JsonEditorComponent, Mapping, Substitution, MappingEnriched, SharedService, Feature } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { HttpStatusCode } from '@angular/common/http';
-import { BsModalRef } from 'ngx-bootstrap/modal';
 
 @Component({
   selector: 'd11r-snoop-explorer-modal',
@@ -49,7 +48,7 @@ export class SnoopExplorerComponent implements OnInit, OnDestroy {
 
   pending: boolean = false;
   mapping: Mapping;
-  closeSubject: Subject<MappingSubstitution> = new Subject();
+  closeSubject: Subject<Substitution> = new Subject();
   labels: ModalLabels;
   template: any;
   index: number;
@@ -77,27 +76,6 @@ export class SnoopExplorerComponent implements OnInit, OnDestroy {
     }
   }
 
-  private validateInputs(): void {
-    if (!this.enrichedMapping?.mapping) {
-      throw new Error('Invalid enriched mapping provided');
-    }
-
-    this.mapping = this.enrichedMapping.mapping;
-
-    if (!this.mapping.snoopedTemplates?.length) {
-      throw new Error('No snooped templates available');
-    }
-  }
-
-  private initializeComponent(): void {
-    this.index = 0;
-    this.labels = {
-      ok: 'Delete templates',
-      cancel: 'Close'
-    };
-    this.onSelectSnoopedTemplate(0);
-  }
-
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -108,7 +86,14 @@ export class SnoopExplorerComponent implements OnInit, OnDestroy {
     this.modal?._dismiss();
   }
 
-  onSelectSnoopedTemplate(index: number): void {
+  onSelectSnoopedTemplate(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const index = parseInt(target.value, 10);
+    this.initSnoopedTemplate(index);
+  }
+
+
+  initSnoopedTemplate(index: number) {
     if (!this.isValidTemplateIndex(index)) {
       console.error('Invalid template index:', index);
       return;
@@ -130,6 +115,27 @@ export class SnoopExplorerComponent implements OnInit, OnDestroy {
       this.alertService.warning('Invalid template format');
       this.template = {};
     }
+  }
+
+  private validateInputs(): void {
+    if (!this.enrichedMapping?.mapping) {
+      throw new Error('Invalid enriched mapping provided');
+    }
+
+    this.mapping = this.enrichedMapping.mapping;
+
+    if (!this.mapping.snoopedTemplates?.length) {
+      throw new Error('No snooped templates available');
+    }
+  }
+
+  private initializeComponent(): void {
+    this.index = 0;
+    this.labels = {
+      ok: 'Delete templates',
+      cancel: 'Close'
+    };
+    this.initSnoopedTemplate(0);
   }
 
   private isValidTemplateIndex(index: number): boolean {
