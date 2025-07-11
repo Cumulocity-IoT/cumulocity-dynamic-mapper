@@ -155,13 +155,14 @@ public class AIAgentService {
             HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
             response = restTemplate.exchange(serverUrl, HttpMethod.GET, requestEntity, String.class);
         } catch (Exception e) {
-            log.info("{} - AIAgent is not available", tenant);
+            log.info("{} - AI Agent Manager is not available. AI capabilities won't be available", tenant);
+            return false;
         }
         if (response != null && response.getStatusCode().is2xxSuccessful()) {
             log.info("{} - AIAgent is available", tenant);
             return true;
         } else {
-            log.info("{} - AIAgent is not available", tenant);
+            log.info("{} - AI Agent Manager is not available. AI capabilities won't be available", tenant);
             return false;
         }
     }
