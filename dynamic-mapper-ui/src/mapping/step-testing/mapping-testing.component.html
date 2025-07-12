@@ -109,7 +109,7 @@
   </div>
 
   <div class="d-flex sticky-buttons">
-    <div class="col-lg-6 col-lg-offset-3">
+    <div class="col-lg-10 col-lg-offset-1">
       <div class="btn-group btn-group-justified">
         <div class="btn-group">
           <button type="button" class="btn btn-default btn-sm" (click)="onTestTransformation()"
@@ -135,8 +135,8 @@
             Send Test Message
           </button>
           <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-            [popover]="'Send Test Message is only supported for mappings that use an external id!'" triggers="focus"
-            type="button" class="btn-help" aria-label="Help content"></button>
+            popover="{{'Send Test Message is only supported for mappings that use an external id!'}}" triggers="focus"
+            type="button" container="body"></button>
         </div>
       </div>
     </div>
