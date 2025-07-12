@@ -35,19 +35,17 @@
 
     <cdk-step label="Add and select connector">
       <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
-        <div class="row">
+        <div class="d-flex">
           <div class="col-lg-10 col-lg-offset-1">
-            <h4 class="text-medium">
-              <div class="text-center">
-                <span *ngIf="
+            <h4 class="text-medium text-center">
+              <span *ngIf="
                       stepperConfiguration.editorMode !== EditorMode.READ_ONLY
                     ">Select connector for mapping (at least one is required)</span>
-                <div *ngIf="
+              <div *ngIf="
                       stepperConfiguration.editorMode === EditorMode.READ_ONLY
                     ">
-                  Selected connectors
-                  <span class="label label-primary text-12">{{ 'Read Only' }}</span>
-                </div>
+                Selected connectors
+                <span class="label label-primary text-12">{{ 'Read Only' }}</span>
               </div>
             </h4>
           </div>
@@ -80,10 +78,8 @@
       <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
         <div class="d-flex">
           <div class="col-lg-6 col-lg-offset-3">
-            <h4 class="text-medium">
-              <div class="text-center">
-                Define templates for source & target payload
-              </div>
+            <h4 class="text-medium text-center">
+              Define templates for source & target payload
             </h4>
           </div>
         </div>
