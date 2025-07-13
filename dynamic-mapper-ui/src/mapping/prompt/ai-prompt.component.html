@@ -23,19 +23,22 @@
   <div class="card card--fullpage m-t-16">
     <div class="card-header p-l-12 p-r-12 p-t-12" style="justify-content: center; padding-bottom:0px">
       <h4 class="card-title d-flex">
-        <i [c8yIcon]="'bot'" class="icon-32 m-r-16"></i> <span class="m-t-8">Generate substitutions</span><span
-          class="label label-primary m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
+        <i [c8yIcon]="'bot'" class="icon-32 m-r-16"></i> 
+        <span class="m-t-8">Generate substitutions</span>
+        <span class="label label-primary m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
       </h4>
     </div>
-    <div class="card-inner-scroll fit-h">
+    
+    <!-- Add the ViewChild reference here -->
+    <div #cardInnerScroll class="card-inner-scroll fit-h">
       <div class="card-block">
         <div class="inner-scroll border-top flex-grow d-col-reverse">
           <div class="d-col p-l-16 p-r-16 p-t-16" *ngIf="aiAgent">
-            <div #messagesContainer *ngFor="let message of getCompatibleMessages()" class="chat-message text-break-word"
+            <div *ngFor="let message of getCompatibleMessages()" class="chat-message text-break-word"
               [ngClass]="{
-  'user-message': message.role === 'user',
-  'aiAgent-message': message.role === 'assistant',
-}">
+                'user-message': message.role === 'user',
+                'aiAgent-message': message.role === 'assistant',
+              }">
               <div *ngIf="aiAgent.type === 'text' || message.role === 'user'" class="message-content text-break-word"
                 [innerHTML]="getMessageContent(message) | markdownToHtml | async"></div>
               <div *ngIf="aiAgent.type === 'object' && message.role === 'assistant'"
@@ -44,14 +47,10 @@
             </div>
           </div>
         </div>
+        
         <div *ngIf="aiAgent" class="chat-input d-flex p-16 bg-level-1 border-top">
-          <!--<textarea
-            class="form-control"
-            rows="6"
-            placeholder="Type your message..." [(ngModel)]="newMessage" [disabled]="isLoadingChat" >
-          </textarea>-->
-          <input type="text" class="form-control flex-grow" placeholder="Type your message..." [(ngModel)]="newMessage"
-            (keyup.enter)="sendMessage()" [disabled]="isLoadingChat" />
+          <input type="text" class="form-control flex-grow" placeholder="Type your message..." 
+                 [(ngModel)]="newMessage" (keyup.enter)="sendMessage()" [disabled]="isLoadingChat" />
           <button class="btn btn-primary m-l-8" (click)="sendMessage()" [disabled]="!newMessage || isLoadingChat">
             Send
           </button>
@@ -59,7 +58,7 @@
       </div>
     </div>
   </div>
-  <a id="end"></a>
+  
   <div class="card-footer d-block text-center">
     <div class="form-group">
       <button type="button" name="update" class="btn btn-primary" (click)="save()" [disabled]="!valid" translate>

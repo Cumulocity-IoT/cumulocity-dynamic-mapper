@@ -47,7 +47,7 @@ import { base64ToBytes } from '../shared/util';
 })
 export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
 
-  @ViewChild('messagesContainer', { static: false }) messagesContainer: ElementRef;
+  @ViewChild('cardInnerScroll', { static: false }) cardInnerScroll: ElementRef;
   private shouldScrollToBottom = false;
 
   alertService = inject(AlertService);
@@ -163,14 +163,28 @@ export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private scrollToBottom(): void {
-    try {
-      if (this.messagesContainer && this.messagesContainer.nativeElement) {
-        const element = this.messagesContainer.nativeElement;
-        element.scrollTop = element.scrollHeight;
+    setTimeout(() => {
+      try {
+        if (this.cardInnerScroll && this.cardInnerScroll.nativeElement) {
+          const element = this.cardInnerScroll.nativeElement;
+          element.scrollTo({
+            top: element.scrollHeight,
+            behavior: 'smooth'
+          });
+          return;
+        }
+
+        const cardInnerScrollElement = document.querySelector('.card-inner-scroll');
+        if (cardInnerScrollElement) {
+          cardInnerScrollElement.scrollTo({
+            top: cardInnerScrollElement.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      } catch (err) {
+        console.error('Error scrolling to bottom:', err);
       }
-    } catch (err) {
-      console.error('Error scrolling to bottom:', err);
-    }
+    }, 200);
   }
 
   save() {
