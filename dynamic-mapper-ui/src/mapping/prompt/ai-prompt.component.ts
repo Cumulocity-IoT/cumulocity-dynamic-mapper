@@ -18,11 +18,14 @@
  * @authors Christof Strack
  */
 import {
+  AfterViewChecked,
   Component,
+  ElementRef,
   inject,
   Input,
   OnDestroy,
   OnInit,
+  ViewChild,
   ViewEncapsulation
 } from '@angular/core';
 import { DeviceGridService, } from '@c8y/ngx-components/device-grid';
@@ -42,7 +45,10 @@ import { base64ToBytes } from '../shared/util';
   encapsulation: ViewEncapsulation.None,
   standalone: false
 })
-export class AIPromptComponent implements OnInit, OnDestroy {
+export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
+
+  @ViewChild('messagesContainer', { static: false }) messagesContainer: ElementRef;
+  private shouldScrollToBottom = false;
 
   alertService = inject(AlertService);
   aiAgentService = inject(AIAgentService);
@@ -110,7 +116,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
         "**Complete Mapping:**\n\n" +
         "```json\n" +
         JSON.stringify(mappingWithoutSubstitutions, null, 2)
-        "\n```\n";
+      "\n```\n";
       // +  "**Source:**\n\n" +
       // "```json\n" +
       // JSON.stringify(JSON.parse(this.mapping.sourceTemplate), null, 2) +
@@ -147,6 +153,24 @@ export class AIPromptComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.shouldScrollToBottom) {
+      this.scrollToBottom();
+      this.shouldScrollToBottom = false;
+    }
+  }
+
+  private scrollToBottom(): void {
+    try {
+      if (this.messagesContainer && this.messagesContainer.nativeElement) {
+        const element = this.messagesContainer.nativeElement;
+        element.scrollTop = element.scrollHeight;
+      }
+    } catch (err) {
+      console.error('Error scrolling to bottom:', err);
+    }
   }
 
   save() {
@@ -210,6 +234,9 @@ export class AIPromptComponent implements OnInit, OnDestroy {
           role: 'assistant',
         });
 
+        // Set flag to scroll after AI response is added
+        this.shouldScrollToBottom = true;
+
         if (this.isCodeMapping) {
           this.checkIfResponseContainsJavaScript(content);
         } else {
@@ -218,7 +245,7 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       } catch (ex) {
         this.alertService.addServerFailure(ex);
       }
-
+      // After the new message is added I want to scroll to the end of the screen
       // Clear the input field
       this.newMessage = '';
       this.isLoadingChat = false;
@@ -370,4 +397,5 @@ export class AIPromptComponent implements OnInit, OnDestroy {
       return '[Unable to display content]';
     }
   }
+
 }
