@@ -65,10 +65,8 @@ import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.DispatcherInbound;
-import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -626,7 +624,7 @@ public abstract class AConnectorClient {
     private void createAndSendLifecycleEvent() {
         Map<String, String> statusMap = createStatusMap();
         String message = "Connector status: " + connectorStatus.status;
-        c8yAgent.createEvent(
+        c8yAgent.createOperationEvent(
                 message,
                 LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
                 DateTime.now(),
@@ -658,7 +656,7 @@ public abstract class AConnectorClient {
         String message = action + " topic: " + topic;
         Map<String, String> eventMap = createSubscriptionEventMap(message);
 
-        c8yAgent.createEvent(
+        c8yAgent.createOperationEvent(
                 message,
                 LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE,
                 DateTime.now(),

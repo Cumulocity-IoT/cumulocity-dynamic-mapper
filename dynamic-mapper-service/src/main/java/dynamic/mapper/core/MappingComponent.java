@@ -263,7 +263,7 @@ public class MappingComponent {
                 entry("message", message),
                 entry("id", mo.getId().getValue()),
                 entry("date", date));
-        configurationRegistry.getC8yAgent().createEvent(message,
+        configurationRegistry.getC8yAgent().createOperationEvent(message,
                 LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE,
                 DateTime.now(), tenant, stMap);
     }
@@ -816,7 +816,7 @@ public class MappingComponent {
                 updateMapping(tenant, mapping, true, false);
             }
 
-            configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
+            configurationRegistry.getC8yAgent().createOperationEvent("Mappings updated in backend",
                     LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(), tenant,
                     null);
@@ -860,7 +860,7 @@ public class MappingComponent {
             addMappingInboundToResolver(tenant, mapping);
             addMappingInboundToCache(tenant, mapping.id, mapping);
         }
-        configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
+        configurationRegistry.getC8yAgent().createOperationEvent("Mappings updated in backend",
                 LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(), tenant,
                 null);
@@ -957,7 +957,7 @@ public class MappingComponent {
                         "Tenant %s - Mapping %s deactivated mapping due to exceeded failure count: %d",
                         tenant, mapping.id, mappingStatus.getCurrentFailureCount());
                 log.warn(message);
-                configurationRegistry.getC8yAgent().createEvent(message,
+                configurationRegistry.getC8yAgent().createOperationEvent(message,
                         LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE,
                         DateTime.now(), tenant,
                         null);

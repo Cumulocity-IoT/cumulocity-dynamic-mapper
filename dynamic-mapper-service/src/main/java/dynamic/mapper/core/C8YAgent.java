@@ -306,7 +306,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return alarmRepresentation;
     }
 
-    public void createEvent(String message, LoggingEventType loggingType, DateTime eventTime,
+    public void createOperationEvent(String message, LoggingEventType loggingType, DateTime eventTime,
             String tenant, Map<String, String> properties) {
         MapperServiceRepresentation source = configurationRegistry.getMapperServiceRepresentation(tenant);
         subscriptionsService.runForTenant(tenant, () -> {
@@ -951,7 +951,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     entry("connectorName", C8Y_NOTIFICATION_CONNECTOR),
                     entry("connectorIdentifier", "000000"),
                     entry("date", date));
-            createEvent("Connector status: " + connectorStatus.name(),
+            createOperationEvent("Connector status: " + connectorStatus.name(),
                     LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE, DateTime.now(),
                     tenant,
                     stMap);
