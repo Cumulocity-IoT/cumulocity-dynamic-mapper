@@ -21,7 +21,7 @@
 
 <div class="flex-col flex-nowrap no-align-items fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
   <div class="card card--fullpage m-t-16">
-    <div class="card-header p-l-12 p-r-12 p-t-12" style="justify-content: center; padding-bottom:0px">
+    <div class="card-header p-8" style="justify-content: center; padding-bottom:0px">
       <h4 class="card-title d-flex">
         <i [c8yIcon]="'bot'" class="icon-32 m-r-16"></i> 
         <span class="m-t-8">Generate substitutions</span>
@@ -33,7 +33,7 @@
     <div #cardInnerScroll class="card-inner-scroll fit-h">
       <div class="card-block">
         <div class="inner-scroll border-top flex-grow d-col-reverse">
-          <div class="d-col p-l-16 p-r-16 p-t-16" *ngIf="aiAgent">
+          <div class="d-col p-16" *ngIf="aiAgent">
             <div *ngFor="let message of getCompatibleMessages()" class="chat-message text-break-word"
               [ngClass]="{
                 'user-message': message.role === 'user',

@@ -18,11 +18,12 @@
   ~  @authors Christof Strack, Stefan Witschel
   ~
   -->
-<c8y-title>{{ 'Getting started' | translate }}</c8y-title>
+<c8y-title>{{ 'Getting started Dynamic Mapper' | translate }}</c8y-title>
 
 <a id="top"></a>
 <div class="text-right m-b-16">
-  <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top" style="cursor: pointer;">
+  <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
+    style="cursor: pointer;">
     <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
   </a>
 </div>
@@ -34,14 +35,22 @@
   </div>
   <div class="card-block">
     <ul class="text-16" style="list-style-type: decimal;">
-      <li><a (click)="scrollToElement('overview')" style="cursor: pointer;">{{ 'Overview of Dynamic Mapper' | translate }}</a></li>
-      <li><a (click)="scrollToElement('supported-connectors')" style="cursor: pointer;">{{ 'Supported connectors' | translate }}</a></li>
-      <li><a (click)="scrollToElement('define-mapping')" style="cursor: pointer;">{{ 'Defining a mapping' | translate }}</a></li>
-      <li><a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">{{ 'Defining a substitution using JSONata' | translate }}</a></li>
-      <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a substitution using JavaScript' | translate }}</a></li>
-      <li><a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">{{ 'Getting started without knowing your source payload' | translate }}</a></li>
-      <li><a (click)="scrollToElement('reliability-settings')" style="cursor: pointer;">{{ 'Using reliability settings in mappings' | translate }}</a></li>
-      <li><a (click)="scrollToElement('access-control')" style="cursor: pointer;">{{ 'Managing permissions for Dynamic Mapper features' | translate }}</a></li>
+      <li><a (click)="scrollToElement('overview')" style="cursor: pointer;">{{ 'Overview of Dynamic Mapper' | translate
+          }}</a></li>
+      <li><a (click)="scrollToElement('supported-connectors')" style="cursor: pointer;">{{ 'Supported connectors' |
+          translate }}</a></li>
+      <li><a (click)="scrollToElement('define-mapping')" style="cursor: pointer;">{{ 'Defining a mapping' | translate
+          }}</a></li>
+      <li><a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
+          using JSONata' | translate }}</a></li>
+      <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
+          using JavaScript' | translate }}</a></li>
+      <li><a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">{{ 'Getting started without knowing
+          your source payload' | translate }}</a></li>
+      <li><a (click)="scrollToElement('reliability-settings')" style="cursor: pointer;">{{ 'Using reliability settings
+          in mappings' | translate }}</a></li>
+      <li><a (click)="scrollToElement('access-control')" style="cursor: pointer;">{{ 'Managing permissions for Dynamic
+          Mapper features' | translate }}</a></li>
     </ul>
   </div>
 
@@ -94,7 +103,22 @@
         <a [routerLink]="ROUTE_CONNECTORS"> connectors</a> are currently defined.
       </li>
     </ul>
+
+    <div class="p-b-8 text-16">
+      The Dynamic Mapper in <b>AI empowered</b>.<br />
+      When you configure an AI Provider, e.g. Anthropic, ChatGPT, ... substitutions or JavaScript code can be
+      generated.<br />
+      This significantly reduces the effort to integrate your devices .<br />
+      The following screenshot show a prompt to generate a list of substitutions (mapping rules):
+    </div>
+    <br />
+    <img width="70%" class="m-l-48 m-b-48"
+      src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png"
+      alt="Substitution annotation" />
+    <p class="image-description"><b>Description:</b> Screenshot showing a prompt to generate a list of substitutions
+      (mapping rules).</p>
   </div>
+
   <div class="card-header" id="supported-connectors">
     <h3>
       {{ 'Supported connectors' | translate }}
@@ -180,8 +204,8 @@
       In the <b>Add mapping</b> dialog, you can choose <b>Define substitutions as JavaScript</b> to use
       JavaScript.<br /><br />
       <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif"
-        alt="Mapping stepper animation" />
+        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png"
+        alt="Mapping stepper properties" />
     </div>
     <div class="p-b-8 text-16">
       The stepper guides you through these steps to define a mapping using JSONata for substitutions:
@@ -223,12 +247,6 @@
         At runtime, these rules are applied to the actual payload received from your broker. To define a substitution:
       </div>
       <br />
-      <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.webp"
-        alt="Substitution animation" />
-      <p class="image-description"><b>Description:</b> This animation shows the steps to define substitutions in a
-        mapping.</p>
-      <div class="p-b-8"></div>
       <ol class="p-b-8 text-16">
         <li>
           Select a node in the source payload (e.g., <code>_TOPIC_LEVEL_[1]</code>).
@@ -250,6 +268,23 @@
       <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
         JSONata.</p>
     </div>
+
+
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        For more advanced mapping rules, e.g. extracting parts of a string for a name (40404-psid-device100-w2w2)
+        expressions in JSONata can be used.<br />
+        To use this option you have to toggle the button **Toggle expert mode **.<br />
+      </div>
+      <br />
+      <img width="70%" class="m-l-48 m-b-48"
+        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png"
+        alt="Defining Substitutions in  ExpertMode" />
+      <p class="image-description"><b>Description:</b> Screenshot showing the definition of substitutions in ExpertMode
+        using
+        JSONata.</p>
+    </div>
+
     <div class="p-b-8"></div>
     <div class="card-header" id="javascript-substitution">
       <h3>
@@ -306,9 +341,11 @@
     </div>
     <br />
     <br />
+    <p>The following screenshot shows a mapping that uses snoop and for which the process already and snooped messages
+      arrived.</p>
     <div>
       <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif"
+        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png"
         alt="Snooping stepper" />
     </div>
     <p class="image-description"><b>Description:</b> Animation showing the steps for defining a mapping in snooping
