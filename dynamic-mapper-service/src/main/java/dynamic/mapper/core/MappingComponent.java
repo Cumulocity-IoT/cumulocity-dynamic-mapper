@@ -265,7 +265,7 @@ public class MappingComponent {
                 entry("date", date));
         configurationRegistry.getC8yAgent().createEvent(message,
                 LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE,
-                DateTime.now(), configurationRegistry.getMapperServiceRepresentation(tenant), tenant, stMap);
+                DateTime.now(), tenant, stMap);
     }
 
     public void saveMappings(String tenant, List<Mapping> mappings) {
@@ -501,12 +501,13 @@ public class MappingComponent {
             MappingStatus mappingStatus = getMappingStatus(tenant, mapping);
             mappingStatus.currentFailureCount = 0;
             // TODO GRAAL_PERFORMANCE add code source to graalCode cache
-//            if(mapping.code != null)
-//                configurationRegistry.updateGraalsSourceMapping(tenant, mappingId, mapping.code);
+            // if(mapping.code != null)
+            // configurationRegistry.updateGraalsSourceMapping(tenant, mappingId,
+            // mapping.code);
         } else {
             // TODO GRAAL_PERFORMANCE remove code source from graalCode cache
-//            if(mapping.code != null)
-//                configurationRegistry.removeGraalsSourceMapping(tenant, mappingId);
+            // if(mapping.code != null)
+            // configurationRegistry.removeGraalsSourceMapping(tenant, mappingId);
 
         }
         return mapping;
@@ -817,7 +818,7 @@ public class MappingComponent {
 
             configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
                     LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
-                    DateTime.now(), configurationRegistry.getMapperServiceRepresentation(tenant), tenant,
+                    DateTime.now(), tenant,
                     null);
         }
         // reset dirtySet
@@ -861,7 +862,7 @@ public class MappingComponent {
         }
         configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
                 LoggingEventType.STATUS_MAPPING_CHANGED_EVENT_TYPE,
-                DateTime.now(), configurationRegistry.getMapperServiceRepresentation(tenant), tenant,
+                DateTime.now(), tenant,
                 null);
         // }
     }
@@ -958,7 +959,7 @@ public class MappingComponent {
                 log.warn(message);
                 configurationRegistry.getC8yAgent().createEvent(message,
                         LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE,
-                        DateTime.now(), configurationRegistry.getMapperServiceRepresentation(tenant), tenant,
+                        DateTime.now(), tenant,
                         null);
             } catch (Exception e) {
                 log.error("{} - Mapping {} failed to deactivate mapping, due to exceeded failure count: {}",
@@ -1011,6 +1012,5 @@ public class MappingComponent {
             return null;
         }
     }
-
 
 }

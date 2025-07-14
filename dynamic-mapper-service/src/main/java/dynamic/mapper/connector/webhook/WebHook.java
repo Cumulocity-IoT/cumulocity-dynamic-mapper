@@ -139,7 +139,6 @@ public class WebHook extends AConnectorClient {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mapperServiceRepresentation = configurationRegistry.getMapperServiceRepresentation(tenant);
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;

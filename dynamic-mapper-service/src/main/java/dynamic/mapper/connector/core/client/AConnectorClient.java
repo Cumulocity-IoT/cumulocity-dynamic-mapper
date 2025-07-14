@@ -116,9 +116,6 @@ public abstract class AConnectorClient {
     protected MappingComponent mappingComponent;
 
     @Getter
-    protected MapperServiceRepresentation mapperServiceRepresentation;
-
-    @Getter
     protected ConnectorConfigurationComponent connectorConfigurationComponent;
 
     @Getter
@@ -633,7 +630,6 @@ public abstract class AConnectorClient {
                 message,
                 LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
                 DateTime.now(),
-                mapperServiceRepresentation,
                 tenant,
                 statusMap);
     }
@@ -666,7 +662,6 @@ public abstract class AConnectorClient {
                 message,
                 LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE,
                 DateTime.now(),
-                mapperServiceRepresentation,
                 tenant,
                 eventMap);
     }
