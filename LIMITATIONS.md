@@ -1,10 +1,11 @@
 # Known Limitation and Disclaimer
 
-As we already have a very good C8Y API coverage for mapping not all complex cases might be supported. Currently, the
-mappings to the following C8Y APIs are supported:
+As we already have a great C8Y API coverage for mappings, not all complex cases might be supported. 
+
+Currently, the mappings to the following C8Y APIs are supported:
 
 - inventory
-- events
+- events (with binaries)
 - measurements
 - alarms
 - operations (outbound to devices)
@@ -17,4 +18,4 @@ A mapping is defined of mapping properties and substitutions. The substitutions 
 
 Differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
 
-For Cumulocity MQTT Service currently no wildcards topics (e.g. `topic/#` or `topic/+` ) for Inbound Mappings / Subscriptions are allowed.
+For Cumulocity MQTT Service currently no wildcard topics (e.g. `topic/#` or `topic/+` ) for Inbound Mappings / Subscriptions are allowed.

@@ -22,11 +22,14 @@ The main components of this project are:
   - **MQTT Service client** - using hivemq-mqtt-client to connect to MQTT Service
   - **Kafka connector** - to connect to Kafka brokers
   - **HTTP/REST endpoint** - to receive data from HTTP/REST clients
-- **Data mapper** - handling of received messages via connector and mapping them to a target data format for Cumulocity IoT.
-  Also includes an expression runtime [JSONata](https://jsonata.org) to execute expressions
-- **C8Y client** - implements part of the Cumulocity IoT REST API to integrate data
-- **REST endpoints** - custom endpoints which are used by the MQTT Frontend or can be used to add mappings programmatically
-- **Mapper frontend** - A plugin for Cumulocity IoT to provide a UI for MQTT Configuration & Data Mapping
+- **Data mapper** - handling of received messages via connector and mapping them to a target data format for Cumulocity.
+  Also includes an expression runtime [JSONata](https://jsonata.org) and JavaScript runtime to execute expressions
+- **C8Y client** - implements part of the Cumulocity REST API to integrate data
+- **REST endpoints** - custom endpoints which are used by the Dynamic Mapper Frontend or can be used to add mappings programmatically
+- **Mapper frontend** - A plugin for Cumulocity to provide a full blown UI to configure the Dynamic Mapper, including
+  - Connector configuration
+  - Mapping configuration
+  - Monitoring of the mapper and its connectors
 
 > **Please Note:** When using MQTT or any other Message Broker beside MQTT Service you need to provide this broker available yourself to use the Dynamic Mapper.
 
@@ -37,7 +40,7 @@ The mapper processes messages in both directions:
 
 The Dynamic Mapper can be deployed as a **multi tenant microservice** which means you can deploy it once in your enterprise tenant and subscribe additional tenants using the same hardware resources.
 It is also implemented to support **multiple broker connections** at the same time. So you can combine multiple message brokers sharing the same mappings.
-This implies of course that all of them use the same topic structure and payload otherwise the mappings will fail.
+This implies that all of them use the same topic structure and payload otherwise the mappings will fail.
 
 Incoming messages are processed by the steps in the following diagram. It shows the involved classes:
 
