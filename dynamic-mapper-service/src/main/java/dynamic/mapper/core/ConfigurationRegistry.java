@@ -275,12 +275,13 @@ public class ConfigurationRegistry {
                 createPayloadProcessorsOutbound(connectorClient));
     }
 
-    public void initializeMapperServiceRepresentation(String tenant) {
+    public MapperServiceRepresentation initializeMapperServiceRepresentation(String tenant) {
         ManagedObjectRepresentation mapperServiceMOR = c8yAgent
                 .initializeMapperServiceObject(tenant);
         MapperServiceRepresentation mapperServiceRepresentation = objectMapper
                 .convertValue(mapperServiceMOR, MapperServiceRepresentation.class);
         addMapperServiceRepresentation(tenant, mapperServiceRepresentation);
+        return mapperServiceRepresentation;
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {

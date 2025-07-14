@@ -43,6 +43,7 @@ import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
+import com.cumulocity.sdk.client.buffering.Future;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.event.EventBinaryApi;
@@ -58,7 +59,14 @@ import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
-import dynamic.mapper.model.*;
+import dynamic.mapper.model.API;
+import dynamic.mapper.model.BinaryInfo;
+import dynamic.mapper.model.EventBinary;
+import dynamic.mapper.model.Extension;
+import dynamic.mapper.model.ExtensionEntry;
+import dynamic.mapper.model.ExtensionType;
+import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
@@ -316,8 +324,26 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 }
                 try {
                     c8ySemaphore.acquire();
-                    // TODO here we have to wait for the result and call this.initializeMapperServiceObject(tenant), add the new mo to the configuration regsitry and rety the API call
-                    this.eventApi.createAsync(er);
+                    // TODO here we have to wait for the result and call
+                    // this.initializeMapperServiceObject(tenant), add the new mo to the
+                    // configuration registry and retry the API call
+                    Future result = this.eventApi.createAsync(er);
+                    try {
+                        EventRepresentation oneEvent = (EventRepresentation) result.get();
+                    } catch (Exception e) {
+                        log.error("{} - Failed to send event", tenant, e);
+                        log.warn("{} - Try to recreate the Agent with external ID", tenant);
+
+                        mor = new ManagedObjectRepresentation();
+                        MapperServiceRepresentation sourceNew = configurationRegistry.initializeMapperServiceRepresentation(tenant);
+                        mor.setId(new GId(sourceNew.getId()));
+                        er = new EventRepresentation();
+                        er.setSource(mor);
+                        er.setText(message);
+                        er.setDateTime(eventTime);
+                        er.setType(loggingType.type);
+                        this.eventApi.createAsync(er);
+                    }
                 } catch (InterruptedException e) {
                     log.error("{} - Failed to acquire semaphore for creating Event", tenant, e);
                 } finally {
@@ -873,7 +899,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             agentFragments.put("url", "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
             agentFragments.put("maintainer", "Open-Source");
             amo.set(agentFragments, "c8y_Agent");
-            // amo.set(new IsDevice());
+            amo.set(new IsDevice());
             amo.setProperty(C8YAgent.MAPPING_FRAGMENT,
                     new ArrayList<>());
             amo = inventoryApi.create(amo, null);
