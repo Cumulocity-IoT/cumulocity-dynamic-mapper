@@ -327,23 +327,27 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     // this.initializeMapperServiceObject(tenant), add the new mo to the
                     // configuration registry and retry the API call
                     Future result = this.eventApi.createAsync(er);
-                    configurationRegistry.getVirtualThreadPool().submit(() -> {
-                        try {
-                            EventRepresentation oneEvent = (EventRepresentation) result.get();
-                        } catch (SDKException e) {
-                            log.error("{} - Failed to send event", tenant, e);
-                            if(e.getHttpStatus() == 404) {
-                                log.warn("{} - Try to recreate the Agent with external ID", tenant);
-                                MapperServiceRepresentation sourceNew = configurationRegistry.initializeMapperServiceRepresentation(tenant);
-                                mor.setId(new GId(sourceNew.getId()));
-                                er.setSource(mor);
-                                er.setText(message);
-                                er.setDateTime(eventTime);
-                                er.setType(loggingType.type);
-                                this.eventApi.createAsync(er);
-                            }
-                        }
-                    });
+                    // configurationRegistry.getVirtualThreadPool().submit(() -> {
+                    //     try {
+                    //         EventRepresentation oneEvent = (EventRepresentation) result.get();
+                    //     } catch (SDKException e) {
+                    //         log.error("{} - Failed to send event", tenant, e);
+                    //         if (e.getHttpStatus() == 404 ||  e.getHttpStatus() == 422) {
+                    //             log.warn("{} - Try to recreate the Agent with external ID", tenant);
+                    //             MapperServiceRepresentation sourceNew = configurationRegistry
+                    //                     .initializeMapperServiceRepresentation(tenant);
+                    //             mor.setId(new GId(sourceNew.getId()));
+                    //             er.setSource(mor);
+                    //             er.setText(message);
+                    //             er.setDateTime(eventTime);
+                    //             er.setType(loggingType.type);
+                    //             this.eventApi.createAsync(er);
+                    //         }
+                    //     } catch (Exception e) {
+                    //         log.error("{} - Failed to send event", tenant, e);
+                    //     }
+
+                    // });
                 } catch (InterruptedException e) {
                     log.error("{} - Failed to acquire semaphore for creating Event", tenant, e);
                 } finally {
