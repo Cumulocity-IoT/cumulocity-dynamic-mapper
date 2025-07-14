@@ -57,7 +57,7 @@ The mapper supports the following connectors:
 </p>
 <br/>
 
-Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently, we support the following connectors:
+Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog, you have to first select the type of connector. Currently, we support the following connectors:
 
 - MQTT: supports connections to MQTT version 3.1.1 over websocket and tcp
 - MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
@@ -93,7 +93,7 @@ The settings for the Webhook (outbound) are as follows
 </p>
 <br/>
 
-When you add or change a connection configuration it happens very often that the parameter are incorrect and the connection fails. In this case the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter you can follows the error messages in the connections logs on the same UI:
+When you add or change a connection configuration, it happens very often that the parameters are incorrect and the connection fails. In this case, the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter, you can follow the error messages in the connections logs on the same UI:
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Connector_Details.png"  style="width: 50%;" />
@@ -104,7 +104,7 @@ When you add or change a connection configuration it happens very often that the
 
 ### Table of mappings
 
-Once the connection to a broker is configured and successfully enabled you can start defining mappings. The mappings table is the entry point for:
+Once the connection to a broker is configured and successfully enabled, you can start defining mappings. The mapping table is the entry point for:
 
 1. Creating new mappings: Press button `Add mapping`
 2. Updating existing mapping: Press the pencil in the row of the relevant mapping
@@ -112,7 +112,7 @@ Once the connection to a broker is configured and successfully enabled you can s
 4. Importing new mappings
 5. Exporting defined mappings
 
-To change a mapping it has to be deactivated. After changes are made the mapping needs to be activated again. The updated version of the mapping is deployed automatically and applied immediately when new messages are sent to the configure mapping topic.
+To change a mapping, it has to be deactivated. After changes are made, the mapping needs to be activated again. The updated version of the mapping is deployed automatically and applied immediately when new messages are sent to the configured mapping topic.
 
 ### Define mappings from source to target format (Cumulocity REST format)
 
@@ -487,6 +487,10 @@ then three requests are generated:
 1. request: for device `"device_101025"`, timestamp `2022-10-30T04:12:00.000Z` and value `10.4`
 
 ---
+### Auto-generate substitutions & javaScript code
+
+When AI features are enabled of Dynamic Mapper, you can use the button `Generate Substitutions` to generate the substitutions or the code for the mapping automatically based on the provided source and target template. If the suggested output is not as expected, you can re-prompt the AI agent to re-fine the substitutions or code.
+Important is that in the end the response of the AI agent should either contain a valid JSON Array of substitutions or a valid JavaScript code that returns a `SubstitutionResult` object and can be `Saved` to the Mapping.
 
 ### Apply a filter for a mapping
 

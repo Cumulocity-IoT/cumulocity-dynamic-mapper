@@ -9,17 +9,17 @@ The following roles have been renamed:
 
 **Previous roles:**
 ```
-    ROLE_MAPPING_ADMIN
-    ROLE_MAPPING_CREATE
-    ROLE_MAPPING_HTTP_CONNECTOR_CREATE
+    ROLE_DYNAMIC_MAPPING_ADMIN
+    ROLE_DYNAMIC_MAPPING_CREATE
+    ROLE_DYNAMIC_MAPPING_HTTP_CONNECTOR_CREATE
 ```
 
 **New roles:**
 
 ```
-    ROLE_MAPPER_ADMIN
-    ROLE_MAPPER_CREATE
-    ROLE_MAPPER_HTTP_CONNECTOR_CREATE
+    ROLE_DYNAMIC_MAPPER_ADMIN
+    ROLE_DYNAMIC_MAPPER_CREATE
+    ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE
 ```
 
 ### Permission Enforcement
@@ -33,9 +33,9 @@ Permissions are now strictly enforced, whereas they were not enforced in previou
 
 **Enhanced permissions:**
 - To create, modify, or delete resources, users must be granted the appropriate roles listed above
-- Administrative functions require the `ROLE_MAPPER_ADMIN` role
-- Creating new mappings requires the `ROLE_MAPPER_CREATE` role
-- Creating HTTP connectors requires the `ROLE_MAPPER_HTTP_CONNECTOR_CREATE` role
+- Administrative functions require the `ROLE_DYNAMIC_MAPPER_ADMIN` role
+- Creating new mappings requires the `ROLE_DYNAMIC_MAPPER_CREATE` role
+- Creating HTTP connectors requires the `ROLE_DYNAMIC__HTTP_CONNECTOR_CREATE` role
 
 To be able to use more feature additional roles have to be granted:
      <div class="table-responsive table-width-80">
