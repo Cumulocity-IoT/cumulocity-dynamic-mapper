@@ -69,7 +69,6 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
@@ -189,8 +188,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @PostConstruct
     private void init() {
-            Gauge.builder("dynmapper_available_c8y_connections", this.c8ySemaphore, Semaphore::availablePermits)
-                    .register(Metrics.globalRegistry);
+        Gauge.builder("dynmapper_available_c8y_connections", this.c8ySemaphore, Semaphore::availablePermits)
+                .register(Metrics.globalRegistry);
 
     }
 
@@ -300,8 +299,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void createEvent(String message, LoggingEventType loggingType, DateTime eventTime,
-            MapperServiceRepresentation source,
             String tenant, Map<String, String> properties) {
+        MapperServiceRepresentation source = configurationRegistry.getMapperServiceRepresentation(tenant);
         subscriptionsService.runForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
             contextService.runWithinContext(context, () -> {
@@ -317,6 +316,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 }
                 try {
                     c8ySemaphore.acquire();
+                    // TODO here we have to wait for the result and call this.initializeMapperServiceObject(tenant), add the new mo to the configuration regsitry and rety the API call
                     this.eventApi.createAsync(er);
                 } catch (InterruptedException e) {
                     log.error("{} - Failed to acquire semaphore for creating Event", tenant, e);
@@ -441,9 +441,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
             throws ProcessingException {
-        //log.info("{} - C8Y Connections available: {}", context.getTenant(),c8ySemaphore.availablePermits());
+        // log.info("{} - C8Y Connections available: {}",
+        // context.getTenant(),c8ySemaphore.availablePermits());
         String tenant = context.getTenant();
-        //this.c8yRequestTimerMap.get(tenant);
+        // this.c8yRequestTimerMap.get(tenant);
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         C8YRequest currentRequest = context.getCurrentRequest();
@@ -872,7 +873,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             agentFragments.put("url", "https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper");
             agentFragments.put("maintainer", "Open-Source");
             amo.set(agentFragments, "c8y_Agent");
-            amo.set(new IsDevice());
+            // amo.set(new IsDevice());
             amo.setProperty(C8YAgent.MAPPING_FRAGMENT,
                     new ArrayList<>());
             amo = inventoryApi.create(amo, null);
@@ -926,7 +927,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     entry("date", date));
             createEvent("Connector status: " + connectorStatus.name(),
                     LoggingEventType.STATUS_NOTIFICATION_EVENT_TYPE, DateTime.now(),
-                    configurationRegistry.getMapperServiceRepresentation(tenant), tenant,
+                    tenant,
                     stMap);
         }
     }
@@ -1173,7 +1174,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     c8ySemaphore.acquire();
                     response = restTemplate.postForEntity(serverUrl, requestEntity, EventBinary.class);
                 } catch (InterruptedException e) {
-                    log.error("{} - Failed to acquire semaphore for uploading attachment to event {}: ", tenant, eventId, e);
+                    log.error("{} - Failed to acquire semaphore for uploading attachment to event {}: ", tenant,
+                            eventId, e);
                 } finally {
                     c8ySemaphore.release();
                 }
