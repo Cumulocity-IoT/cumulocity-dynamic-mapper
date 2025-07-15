@@ -168,7 +168,7 @@ public abstract class BaseProcessorInbound<T> {
                 // for (MappingSubstituteValue device : deviceEntries) {
                 getBuildProcessingContext(context, deviceEntries.get(i),
                         i, deviceEntries.size());
-                if(context.getCurrentRequest() != null && context.getCurrentRequest().hasError()) {
+                if (context.getCurrentRequest() != null && context.getCurrentRequest().hasError()) {
                     Exception e = context.getCurrentRequest().getError();
                     if (e instanceof ProcessingException &&
                             e.getCause() != null &&
@@ -267,7 +267,7 @@ public abstract class BaseProcessorInbound<T> {
                 context.getCurrentRequest().setResponse(response);
                 context.getCurrentRequest().setSourceId(adHocDevice.getId().getValue());
             } catch (Exception e) {
-                    context.getCurrentRequest().setError(e);
+                context.getCurrentRequest().setError(e);
             }
             predecessor = newPredecessor;
         } else if (!context.getApi().equals(API.INVENTORY)) {
@@ -339,6 +339,45 @@ public abstract class BaseProcessorInbound<T> {
             context.getBinaryInfo().setType((String) substitute.value);
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Data").equals(pathTarget)) {
             context.getBinaryInfo().setData((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA).equals(pathTarget)) {
+            // Handle the case where substitute.value is a Map containing context data keys
+            if (substitute.value instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> contextDataMap = (Map<String, Object>) substitute.value;
+
+                // Process each key in the map
+                for (Map.Entry<String, Object> entry : contextDataMap.entrySet()) {
+                    String key = entry.getKey();
+                    Object value = entry.getValue();
+
+                    switch (key) {
+                        case "api":
+                            if (value instanceof String) {
+                                context.setApi(API.fromString((String) value));
+                            }
+                            break;
+                        case "attachment_Name":
+                            if (value instanceof String) {
+                                context.getBinaryInfo().setName((String) value);
+                            }
+                            break;
+                        case "attachment_Type":
+                            if (value instanceof String) {
+                                context.getBinaryInfo().setType((String) value);
+                            }
+                            break;
+                        case "attachment_Data":
+                            if (value instanceof String) {
+                                context.getBinaryInfo().setData((String) value);
+                            }
+                            break;
+                        default:
+                            // Handle unknown keys - you might want to log a warning or ignore
+                            // Optional: log.warn("Unknown context data key: {}", key);
+                            break;
+                    }
+                }
+            }
         } else {
             SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
