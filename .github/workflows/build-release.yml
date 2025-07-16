@@ -29,7 +29,7 @@ jobs:
           java-version: 21
           distribution: zulu
       #Building Starter backend
-      - name: Build Performance Backend
+      - name: Build Starter Backend
         run: mvn -B package --file pom.xml
       - name: Rename file
         run: |
@@ -57,7 +57,7 @@ jobs:
       - name: Rename cumulocity file
         run: |
           mv ./dynamic-mapper-service/src/main/configuration/cumulocity-16c.json ./dynamic-mapper-service/src/main/configuration/cumulocity.json
-      - name: Build Performance Backend
+      - name: Build Max Backend
         run: mvn -B package --file pom.xml
       - name: Rename file
         run: |
