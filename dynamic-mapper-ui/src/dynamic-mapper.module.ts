@@ -20,12 +20,10 @@
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
-  BootstrapComponent,
   CommonModule,
   CoreModule,
   DynamicFormsModule,
   hookNavigator,
-  hookTab,
   RealtimeModule
 } from '@c8y/ngx-components';
 import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
