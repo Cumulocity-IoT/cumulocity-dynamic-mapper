@@ -1001,16 +1001,4 @@ public class MappingComponent {
         return cacheMappingOutbound.get(tenant).containsKey(mappingId);
     }
 
-    @Tool(description = "Evaluate a JSONata expression against a JSON object")
-    public String evaluateJsonataExpression(String tenant, String expression, Object jsonObject) {
-        try {
-            var expr = jsonata(expression);
-            Object result = expr.evaluate(jsonObject);
-            return toPrettyJsonString(result);
-        } catch (Exception e) {
-            log.error("{} - Error evaluating JSONata expression: {}", tenant, e.getMessage());
-            return null;
-        }
-    }
-
 }

@@ -21,26 +21,31 @@
 
 package dynamic.mapper;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-
-import dynamic.mapper.core.MappingComponent;
+import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
+import com.cumulocity.microservice.context.annotation.EnableContextSupport;
+import com.cumulocity.model.DateTimeConverter;
+import com.cumulocity.model.IDTypeConverter;
+import com.cumulocity.model.JSONBase;
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
+import com.cumulocity.rest.representation.BaseResourceRepresentation;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.deser.Deserializers;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ser.Serializers;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
+import dynamic.mapper.core.AIAgentService;
 import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.model.MappingTreeNodeSerializer;
 import io.micrometer.core.instrument.MeterRegistry;
-
-import io.modelcontextprotocol.server.McpServer;
-import io.modelcontextprotocol.server.McpSyncServer;
-import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpServerTransportProvider;
+import lombok.SneakyThrows;
 import org.joda.time.DateTime;
-import org.springframework.ai.mcp.McpToolUtils;
-import org.springframework.ai.support.ToolCallbacks;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,37 +61,13 @@ import org.svenson.AbstractDynamicProperties;
 import org.svenson.JSONParser;
 import org.svenson.converter.DefaultTypeConverterRepository;
 
-import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
-import com.cumulocity.microservice.context.annotation.EnableContextSupport;
-import com.cumulocity.model.DateTimeConverter;
-import com.cumulocity.model.IDTypeConverter;
-import com.cumulocity.model.JSONBase;
-import com.cumulocity.model.idtype.GId;
-import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.cumulocity.rest.representation.BaseResourceRepresentation;
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.BeanDescription;
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationConfig;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.deser.Deserializers;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.ser.Serializers;
-import com.fasterxml.jackson.datatype.joda.JodaModule;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
-import lombok.SneakyThrows;
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 @MicroserviceApplication
 @EnableContextSupport
@@ -127,11 +108,12 @@ public class App {
     }
 
     @Bean
-    public ToolCallbackProvider tools(MappingComponent mappingComponent) {
+    public ToolCallbackProvider tools(AIAgentService aiAgentService) {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(mappingComponent)
+                .toolObjects(aiAgentService)
                 .build();
     }
+
 
     public static ObjectMapper baseObjectMapper() {
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -158,7 +140,7 @@ public class App {
 
         class SvensonDeserializers extends Deserializers.Base {
             public JsonDeserializer<?> findBeanDeserializer(JavaType type, DeserializationConfig config,
-                    BeanDescription beanDesc) {
+                                                            BeanDescription beanDesc) {
                 final Class<?> rawClass = type.getRawClass();
 
                 // base resource representation is deserialized using svenson
@@ -180,7 +162,7 @@ public class App {
         class SvensonSerializers extends Serializers.Base {
             @Override
             public JsonSerializer<?> findSerializer(final SerializationConfig config, final JavaType type,
-                    BeanDescription beanDesc) {
+                                                    BeanDescription beanDesc) {
                 final Class<?> rawClass = type.getRawClass();
 
                 // gid is serialized using svenson
@@ -188,7 +170,7 @@ public class App {
                     return new JsonSerializer<Object>() {
                         @SneakyThrows
                         public void serialize(Object value, final JsonGenerator gen,
-                                final SerializerProvider serializers) {
+                                              final SerializerProvider serializers) {
                             final GId representation = (GId) value;
                             gen.writeString(representation.getValue());
                         }
