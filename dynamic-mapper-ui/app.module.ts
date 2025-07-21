@@ -34,6 +34,5 @@ import './src/shared/styles/shared.css';
     CoreModule.forRoot(),
     DynamicMappingModule
   ],
-  // bootstrap: [BootstrapComponent]
 })
 export class AppModule { }
