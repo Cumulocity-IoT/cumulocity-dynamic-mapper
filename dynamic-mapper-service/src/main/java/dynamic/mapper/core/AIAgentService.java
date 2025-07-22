@@ -324,24 +324,19 @@ public class AIAgentService {
      * @param sourceJSON JSON string to be used as source for the JSONata expression evaluation
      * @return The result of the JSONata expression evaluation as a pretty-printed JSON string
      * @throws RuntimeException if the evaluation fails
+     * @throws IllegalArgumentException if the expression or source JSON is null or empty
      */
     @Tool(description = "Evaluate a JSONata expression against a JSON object")
     public String evaluateJsonataExpression(String expression, String sourceJSON) {
+        if(expression == null || expression.isEmpty())
+            throw new IllegalArgumentException("JSONata expression cannot be null");
+        if(sourceJSON == null || sourceJSON.isEmpty())
+            throw new IllegalArgumentException("Source JSON cannot be null");
         try {
-            if(expression == null)
-                throw new IllegalArgumentException("JSONata expression cannot be null");
-            if(sourceJSON == null)
-                throw new IllegalArgumentException("Source JSON cannot be null");
             var expr = jsonata(expression);
             Object parsedJson = Json.parseJson(sourceJSON);
             Object result = expr.evaluate(parsedJson);
-            if(result != null && !(result instanceof String)) {
-                // If the result is not a string, convert it to a pretty JSON string
-                return toPrettyJsonString(result);
-            } else {
-                // If the result is a string, just return it as is
-                return result != null ? result.toString() : null;
-            }
+            return toPrettyJsonString(result);
         } catch (Exception e) {
             log.error("Error evaluating JSONata expression: ", e);
             throw new RuntimeException(e);
