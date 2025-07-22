@@ -12,7 +12,6 @@ If you want to use the dynamic mapper, the following prerequisites must be met:
 To leverage **AI capabilities** of the dynamic mapper, you need to have the following prerequisites:
 - **AI Agent Manager** microservice deployed in your tenant. This is currently in private preview, please contact your Cumulocity representative to get access.
 - **AI Model Provider + API key** is required which must be configured in the **AI Agent Manager** and is leveraged by the AI agents. We tested `claude-sonnet-4-20250514` model from Anthropic, but you can use any other model that supports the required functionality.
-- **Cumulocity MCP Server** microservice deployed in your tenant. Can be downloaded here: https://github.com/Cumulocity-IoT/cumulocity-mcp-server/releases
 
 ## Installation
 
