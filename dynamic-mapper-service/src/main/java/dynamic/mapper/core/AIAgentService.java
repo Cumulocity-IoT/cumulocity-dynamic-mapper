@@ -24,6 +24,7 @@ package dynamic.mapper.core;
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.sdk.client.RestConnector;
 import dynamic.mapper.model.*;
 import lombok.Getter;
@@ -53,6 +54,9 @@ public class AIAgentService {
 
     @Autowired
     private ContextService<MicroserviceCredentials> contextService;
+
+    @Autowired
+    MicroserviceSubscriptionsService subscriptionsService;
 
     @Autowired
     CumulocityClientProperties clientProperties;
@@ -313,13 +317,12 @@ public class AIAgentService {
 
     @Tool(description = "Evaluate a JSONata expression against a JSON object")
     public String evaluateJsonataExpression( String expression, Object jsonObject) {
-        String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
         try {
             var expr = jsonata(expression);
             Object result = expr.evaluate(jsonObject);
             return toPrettyJsonString(result);
         } catch (Exception e) {
-            log.error("{} - Error evaluating JSONata expression: {}", tenant, e.getMessage());
+            log.error("{} - Error evaluating JSONata expression: {}", e.getMessage());
             return null;
         }
     }
