@@ -26,8 +26,9 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.sdk.client.RestConnector;
+import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.model.*;
-import lombok.Getter;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,13 +37,15 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
+
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
@@ -315,15 +318,29 @@ public class AIAgentService {
         return null;
     }
 
+    /**
+     * Test a JSONata expression against a JSON string.
+     * @param expression JSONata expression to be evaluated against the source JSON
+     * @param sourceJSON JSON string to be used as source for the JSONata expression evaluation
+     * @return The result of the JSONata expression evaluation as a pretty-printed JSON string
+     * @throws RuntimeException if the evaluation fails
+     */
     @Tool(description = "Evaluate a JSONata expression against a JSON object")
-    public String evaluateJsonataExpression( String expression, Object jsonObject) {
+    public String evaluateJsonataExpression(String expression, String sourceJSON) {
         try {
             var expr = jsonata(expression);
-            Object result = expr.evaluate(jsonObject);
-            return toPrettyJsonString(result);
+            Object parsedJson = Json.parseJson(sourceJSON);
+            Object result = expr.evaluate(parsedJson);
+            if(result != null && !(result instanceof String)) {
+                // If the result is not a string, convert it to a pretty JSON string
+                return toPrettyJsonString(result);
+            } else {
+                // If the result is a string, just return it as is
+                return result != null ? result.toString() : null;
+            }
         } catch (Exception e) {
-            log.error("{} - Error evaluating JSONata expression: {}", e.getMessage());
-            return null;
+            log.error("Error evaluating JSONata expression: ", e);
+            throw new RuntimeException(e);
         }
     }
 }
