@@ -328,6 +328,10 @@ public class AIAgentService {
     @Tool(description = "Evaluate a JSONata expression against a JSON object")
     public String evaluateJsonataExpression(String expression, String sourceJSON) {
         try {
+            if(expression == null)
+                throw new IllegalArgumentException("JSONata expression cannot be null");
+            if(sourceJSON == null)
+                throw new IllegalArgumentException("Source JSON cannot be null");
             var expr = jsonata(expression);
             Object parsedJson = Json.parseJson(sourceJSON);
             Object result = expr.evaluate(parsedJson);
