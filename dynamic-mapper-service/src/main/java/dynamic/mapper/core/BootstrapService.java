@@ -139,6 +139,7 @@ public class BootstrapService {
         C8YNotificationSubscriber subscriber = configurationRegistry.getNotificationSubscriber();
         subscriber.disconnect(tenant);
         subscriber.unsubscribeDeviceSubscriber(tenant);
+        subscriber.unsubscribeDeviceGroupSubscriber(tenant);
 
         connectorRegistry.unregisterAllClientsForTenant(tenant);
 
@@ -205,7 +206,7 @@ public class BootstrapService {
         mappingComponent.initializeResources(tenant);
         aiAgentService.initializeAIAgents();
 
-        handleOutboundMapping(tenant, serviceConfiguration);
+        initResourcesForOutbound(tenant, serviceConfiguration);
     }
 
     private ServiceConfiguration initializeServiceConfiguration(String tenant) {
@@ -338,7 +339,7 @@ public class BootstrapService {
         }
     }
 
-    private void handleOutboundMapping(String tenant, ServiceConfiguration serviceConfig) {
+    private void initResourcesForOutbound(String tenant, ServiceConfiguration serviceConfig) {
         log.info("{} - Config mappingOutbound enabled: {}", tenant, serviceConfig.isOutboundMappingEnabled());
 
         if (!serviceConfig.isOutboundMappingEnabled()) {
@@ -349,6 +350,7 @@ public class BootstrapService {
             disableOutboundMapping(tenant, serviceConfig);
         } else {
             configurationRegistry.getNotificationSubscriber().initDeviceClient();
+            configurationRegistry.getNotificationSubscriber().initManagementClient();
         }
     }
 

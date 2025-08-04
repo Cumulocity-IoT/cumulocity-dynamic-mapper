@@ -35,11 +35,11 @@
 
 <div class="card" *ngIf="
     stepperConfiguration.direction === Direction.OUTBOUND &&
-    subscription?.devices
+    subscriptionDevices?.devices
   ">
   <div class="card-block content-fullpage border-top border-bottom">
     <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false" [title]="titleSubscription | translate"
-      [columns]="columnsSubscriptions" [rows]="subscriptions" [pagination]="pagination" 
+      [columns]="columnsSubscriptions" [rows]="subscribedDevices" [pagination]="pagination" 
       [actionControls]="actionControlSubscription" [bulkActionControls]="bulkActionControlSubscription">
       <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-mail'"
         [title]="'No subscriptions for devices exist.' | translate" [subtitle]="
@@ -57,7 +57,7 @@
 <div [ngClass]="{ drawerOpen: showConfigSubscription }">
   <div class="bottom-drawer">
     <d11r-device-selector-subscription *ngIf="showConfigSubscription" (cancel)="showConfigSubscription = false"
-      (commit)="onCommitSubscriptions($event)" [deviceList]="subscription.devices">
+      (commit)="onCommitSubscriptions($event)" [deviceList]="subscribedDevices">
     </d11r-device-selector-subscription>
   </div>
 </div>
@@ -66,7 +66,7 @@
 <div [ngClass]="{ drawerOpen: showConfigSubscription2 }">
   <div class="bottom-drawer">
     <d11r-device-selector-subscription2 *ngIf="showConfigSubscription2" (cancel)="showConfigSubscription2 = false"
-      (commit)="onCommitSubscriptions($event)" [deviceList]="subscription.devices">
+      (commit)="onCommitSubscriptions($event)" [deviceList]="subscribedDevices">
     </d11r-device-selector-subscription2>
   </div>
 </div>

@@ -194,7 +194,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       try {
         const mappings = await this.mappingService.getMappings(Direction.OUTBOUND);
         const numberOutboundMappings = mappings.length;
-        const { devices } = await this.mappingService.getSubscriptions();
+        const { devices } = await this.mappingService.getSubscriptionDevice();
         if (devices.length === 0 && numberOutboundMappings > 0) {
           this.alertService.warning(
             "No device subscriptions found for your outbound mappings. " +

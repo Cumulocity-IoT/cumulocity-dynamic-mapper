@@ -340,7 +340,7 @@ export class MappingService {
     }
   }
 
-  async updateSubscriptions(
+  async updateSubscriptionDevice(
     sub: C8YNotificationSubscription
   ): Promise<C8YNotificationSubscription> {
     const response = this.client.fetch(
@@ -359,7 +359,26 @@ export class MappingService {
     return m;
   }
 
-  async deleteSubscriptions(device: IIdentified): Promise<any> {
+  async updateSubscriptionDeviceGroup(
+    sub: C8YNotificationSubscription
+  ): Promise<C8YNotificationSubscription> {
+    const response = this.client.fetch(
+      `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/group`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(sub),
+        method: 'PUT'
+      }
+    );
+    const data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    const m = await data.json();
+    return m;
+  }
+
+  async deleteSubscriptionDevice(device: IIdentified): Promise<any> {
     const response = this.client.fetch(
       `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}`,
       {
@@ -375,12 +394,48 @@ export class MappingService {
     return m;
   }
 
-  async getSubscriptions(): Promise<C8YNotificationSubscription> {
+    async deleteSubscriptionDeviceGroup(device: IIdentified): Promise<any> {
+    const response = this.client.fetch(
+      `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'DELETE'
+      }
+    );
+    const data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    const m = await data.text();
+    return m;
+  }
+
+  async getSubscriptionDevice(): Promise<C8YNotificationSubscription> {
     const feature = await this.sharedService.getFeatures();
 
     if (feature?.outputMappingEnabled) {
       const res: IFetchResponse = await this.client.fetch(
         `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
+        {
+          headers: {
+            'content-type': 'application/json'
+          },
+          method: 'GET'
+        }
+      );
+      const data = await res.json();
+      return data;
+    } else {
+      return null;
+    }
+  }
+
+  async getSubscriptionDeviceGroup(): Promise<C8YNotificationSubscription> {
+    const feature = await this.sharedService.getFeatures();
+
+    if (feature?.outputMappingEnabled) {
+      const res: IFetchResponse = await this.client.fetch(
+        `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}/group`,
         {
           headers: {
             'content-type': 'application/json'
