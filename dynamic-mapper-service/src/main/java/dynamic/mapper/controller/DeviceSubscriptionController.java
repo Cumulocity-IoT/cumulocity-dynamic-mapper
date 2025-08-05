@@ -508,5 +508,4 @@ public class DeviceSubscriptionController {
         }
         return ResponseEntity.ok().build();
     }
-
 }
