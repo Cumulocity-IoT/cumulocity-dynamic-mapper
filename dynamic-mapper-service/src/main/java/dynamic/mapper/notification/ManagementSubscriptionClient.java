@@ -23,18 +23,19 @@ package dynamic.mapper.notification;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import com.dashjoin.jsonata.json.Json;
-
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
+import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.API;
 import dynamic.mapper.notification.websocket.Notification;
 import dynamic.mapper.processor.C8YMessage;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -45,22 +46,22 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     public static String CONNECTOR_NAME = "MANAGEMENT_SUBSCRIPTION_CONNECTOR";
     public static String CONNECTOR_ID = "MANAGEMENT_SUBSCRIPTION_ID";
 
-    protected C8YNotificationSubscriber notificationSubscriber;
+    private C8YNotificationSubscriber notificationSubscriber;
 
-    protected C8YAgent c8yAgent;
+    private String tenant;
 
-    protected String tenant;
+    private ExecutorService virtualThreadPool;
 
-    protected ExecutorService virtualThreadPool;
+    private ConfigurationRegistry configurationRegistry;
 
-    protected ConfigurationRegistry configurationRegistry;
+    private Map<String, ManagedObjectRepresentation> groupCache = new ConcurrentHashMap<>();
 
     // The Outbound Dispatcher is hardly connected to the Connector otherwise it is
     // not possible to correlate messages received bei Notification API to the
     // correct Connector
     public ManagementSubscriptionClient(ConfigurationRegistry configurationRegistry,
             String tenant) {
-        this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.tenant = tenant;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.configurationRegistry = configurationRegistry;
         this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
@@ -68,7 +69,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
 
     @Override
     public void onOpen(URI serverUri) {
-        log.info("{} - Phase IV: Notification 2.0 connected over WebSocket, managing subscriptions to connector: {}",
+        log.info("{} - Phase IV: Notification 2.0 connected over WebSocket, managing subscriptions",
                 tenant);
         notificationSubscriber.setDeviceConnectionStatus(tenant, 200);
     }
@@ -82,21 +83,8 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         // is not connected
         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
 
-        // log.info("{} - Notification message received {}",
-        // tenant, operation);
-        if (("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))) {
-            // log.info("{} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
-            // notification.getMessage(),
-            // notification.getNotificationHeaders(),
-            // connectorClient.connectorConfiguration.name,
-            // connectorClient.isConnected());
-            // if ("UPDATE".equals(notification.getOperation()) &&
-            // notification.getApi().equals(API.OPERATION)) {
-            // log.info("{} - Update Operation message for managing subscriptions received,
-            // ignoring it",
-            // tenant);
-            // return result;
-            // }
+        // only check for update of managedObject
+        if ("UPDATE".equals(notification.getOperation())) {
             C8YMessage c8yMessage = new C8YMessage();
             Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
             c8yMessage.setParsedPayload(parsedPayload);
@@ -123,8 +111,13 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     }
 
     private ProcessingResult<?> manageSubscriptions(C8YMessage c8yMessage) {
-        log.info("Update DeviceGroup: {}", c8yMessage);
-        return null;
+        log.info("{} - Update DeviceGroup: {}", tenant, c8yMessage.toString());
+        Qos consolidatedQos = Qos.AT_LEAST_ONCE;
+        ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
+        Future<?> futureProcessingResult = virtualThreadPool.submit(
+                new UpdateSubscriptionTask(configurationRegistry,
+                        c8yMessage, groupCache));
+        return result;
     }
 
     @Override
@@ -145,4 +138,202 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         return notificationHeaders.get(0).split("/")[1];
     }
 
+    public static class UpdateSubscriptionTask<T> implements Callable<List<Future<NotificationSubscriptionRepresentation>>> {
+        C8YMessage c8yMessage;
+        ConfigurationRegistry configurationRegistry;
+        C8YNotificationSubscriber notificationSubscriber;
+        Map<String, ManagedObjectRepresentation> groupCache;
+
+        public UpdateSubscriptionTask(ConfigurationRegistry configurationRegistry,
+                C8YMessage c8yMessage, Map<String, ManagedObjectRepresentation> groupCache) {
+            this.c8yMessage = c8yMessage;
+            this.configurationRegistry = configurationRegistry;
+            this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
+            this.groupCache = groupCache;
+        }
+
+        @Override
+        public List<Future<NotificationSubscriptionRepresentation>> call() throws Exception {
+            List<Future<NotificationSubscriptionRepresentation>> processingResult = new ArrayList<>();
+            String tenant = c8yMessage.getTenant();
+
+            // get the group from groupCache as cachedGroup
+            // if not found report warning
+            // if found compare childAssets.references in cachedGroup with the
+            // payload.childAssets.references
+
+            // "childAssets": {
+            // "references": [
+            // {
+            // "managedObject": {
+            // "self":
+            // "https://t2050305588.eu-latest.cumulocity.com/inventory/managedObjects/9877263",
+            // "id": "9877263"
+            // },
+            // "self":
+            // "https://t2050305588.eu-latest.cumulocity.com/inventory/managedObjects/6673218/childAssets/9877263"
+            // },
+            // {
+            // "managedObject": {
+            // "self":
+            // "https://t2050305588.eu-latest.cumulocity.com/inventory/managedObjects/5677264",
+            // "id": "5677264"
+            // },
+            // "self":
+            // "https://t2050305588.eu-latest.cumulocity.com/inventory/managedObjects/6673218/childAssets/5677264"
+            // },
+            // {
+            // "managedObject": {
+            // "self":
+            // "https://t2050305588.eu-latest.cumulocity.com/inventory/managedObjects/4827613",
+            // "id": "4827613"
+            // },
+            // "self":
+            // "https://t2050305588.eu-latest.cumulocity.com/inventory/managedObjects/6673218/childAssets/4827613"
+            // }
+            // ],
+            // "self":
+            // "https://t2050305588.eu-latest.cumulocity.com/inventory/managedObjects/6673218/childAssets"
+            // }
+
+            // for each childAsset in payload.childAssets.references that is not in
+            // childAssets.references of cachedGroup call
+            // notificationSubscriber.subscribeDeviceAndConnect()
+            // for each childAsset in childAssets.references in cachedGroup that is not in
+            // payload.childAssets.references call
+            // notificationSubscriber.unsubscribeDeviceAndDisconnect()
+            // in case of changes update the cachedGroup in groupCache
+
+            // Get group id from payload
+            Object groupIdObj = c8yMessage.getParsedPayload().get("id");
+            if (groupIdObj == null) {
+                log.warn("{} - No group id found in payload, skipping subscription update.", tenant);
+                return processingResult;
+            }
+            String groupId = String.valueOf(groupIdObj);
+
+            // Get cached group
+            ManagedObjectRepresentation cachedGroup = groupCache.get(groupId);
+
+            if (cachedGroup == null) {
+                log.warn("{} - Group with id {} not found in cache, skipping subscription update.", tenant, groupId);
+                return processingResult;
+            }
+
+            // Extract child asset IDs from cached group
+            List<String> cachedChildIds = new ArrayList<>();
+            try {
+                Object cachedChildAssets = cachedGroup.get("childAssets");
+                if (cachedChildAssets instanceof Map) {
+                    Object cachedReferences = ((Map<?, ?>) cachedChildAssets).get("references");
+                    if (cachedReferences instanceof List) {
+                        for (Object ref : (List<?>) cachedReferences) {
+                            if (ref instanceof Map) {
+                                Object managedObject = ((Map<?, ?>) ref).get("managedObject");
+                                if (managedObject instanceof Map) {
+                                    Object id = ((Map<?, ?>) managedObject).get("id");
+                                    if (id != null) {
+                                        cachedChildIds.add(String.valueOf(id));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("{} - Failed to extract cached child assets for group {}: {}", tenant, groupId,
+                        e.getMessage());
+            }
+
+            // Extract child asset IDs from payload
+            List<String> payloadChildIds = new ArrayList<>();
+            try {
+                Object payloadChildAssets = ((Map<?, ?>) c8yMessage.getParsedPayload().get("childAssets"));
+                if (payloadChildAssets instanceof Map) {
+                    Object payloadReferences = ((Map<?, ?>) payloadChildAssets).get("references");
+                    if (payloadReferences instanceof List) {
+                        for (Object ref : (List<?>) payloadReferences) {
+                            if (ref instanceof Map) {
+                                Object managedObject = ((Map<?, ?>) ref).get("managedObject");
+                                if (managedObject instanceof Map) {
+                                    Object id = ((Map<?, ?>) managedObject).get("id");
+                                    if (id != null) {
+                                        payloadChildIds.add(String.valueOf(id));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("{} - Failed to extract payload child assets for group {}: {}", tenant, groupId,
+                        e.getMessage());
+            }
+
+            // Determine added and removed child assets
+            List<String> toAdd = new ArrayList<>(payloadChildIds);
+            toAdd.removeAll(cachedChildIds);
+
+            List<String> toRemove = new ArrayList<>(cachedChildIds);
+            toRemove.removeAll(payloadChildIds);
+
+            // Subscribe new child assets
+            for (String childId : toAdd) {
+                try {
+                    ManagedObjectRepresentation childMO = notificationSubscriber.getConfigurationRegistry()
+                            .getC8yAgent().getManagedObjectForId(tenant, childId);
+                    if (childMO != null) {
+                        Future<NotificationSubscriptionRepresentation> subResult = notificationSubscriber
+                                .subscribeDeviceAndConnect(tenant, childMO, c8yMessage.getApi());
+                        log.info("{} - Subscribed and connected child asset {} to group {}", tenant, childId, groupId);
+                    } else {
+                        log.warn("{} - Could not find ManagedObject for child asset {} to subscribe.", tenant, childId);
+                    }
+                } catch (Exception e) {
+                    log.warn("{} - Failed to subscribe/connect child asset {}: {}", tenant, childId, e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+
+            // Unsubscribe removed child assets
+            for (String childId : toRemove) {
+                try {
+                    ManagedObjectRepresentation childMO = notificationSubscriber.getConfigurationRegistry()
+                            .getC8yAgent().getManagedObjectForId(tenant, childId);
+                    if (childMO != null) {
+                        notificationSubscriber.unsubscribeDeviceAndDisconnect(tenant, childMO);
+                        log.info("{} - Unsubscribed and disconnected child asset {} from group {}", tenant, childId,
+                                groupId);
+                    } else {
+                        log.warn("{} - Could not find ManagedObject for child asset {} to unsubscribe.", tenant,
+                                childId);
+                    }
+                } catch (Exception e) {
+                    log.warn("{} - Failed to unsubscribe/disconnect child asset {}: {}", tenant, childId,
+                            e.getMessage());
+                }
+            }
+
+            // If there were changes, update the cache
+            if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
+                ManagedObjectRepresentation updatedGroup = notificationSubscriber.getConfigurationRegistry()
+                        .getC8yAgent().getManagedObjectForId(tenant, groupId);
+                groupCache.put(updatedGroup.getId().getValue(), updatedGroup);
+
+                log.info("{} - Updated group cache for group {}", tenant, groupId);
+            }
+
+            return processingResult;
+        }
+    }
+
+    public void addGroupToCache(ManagedObjectRepresentation groupMO) {
+        this.groupCache.put(groupMO.getId().getValue(), groupMO);
+        log.debug("{} - Added group to cache: {}", tenant, groupMO.getId().getValue());
+    }
+
+    public void removeGroupFromCache(ManagedObjectRepresentation groupMO) {
+        this.groupCache.remove(groupMO.getId().getValue());
+        log.debug("{} - Removed group from cache: {}", tenant, groupMO.getId().getValue());
+    }
 }

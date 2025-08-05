@@ -24,6 +24,7 @@ package dynamic.mapper.processor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.util.Map;
 
@@ -34,6 +35,7 @@ import jakarta.validation.constraints.NotNull;
 @Getter
 @Setter
 @NoArgsConstructor
+@ToString
 public class C8YMessage {
     @NotNull
     private String sourceId; 

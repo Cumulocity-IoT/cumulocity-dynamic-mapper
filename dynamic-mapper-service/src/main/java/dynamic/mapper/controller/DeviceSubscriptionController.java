@@ -135,7 +135,7 @@ public class DeviceSubscriptionController {
                     ManagedObjectRepresentation childDeviceMor = c8yAgent
                             .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
                     // Creates subscription for each connector
-                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor,
+                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(tenant, childDeviceMor,
                             subscription.getApi());
                 }
             }
@@ -223,7 +223,7 @@ public class DeviceSubscriptionController {
                 for (Device childDevice : allChildDevices) {
                     ManagedObjectRepresentation childDeviceMor = c8yAgent.getManagedObjectForId(tenant,
                             childDevice.getId());
-                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor,
+                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(tenant, childDeviceMor,
                             subscription.getApi());
                 }
                 subscription.setDevices(allChildDevices);
@@ -233,7 +233,7 @@ public class DeviceSubscriptionController {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
-                        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(mor);
+                        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor);
                     } catch (Exception e) {
                         log.error("{} - Error removing subscriptions: ", tenant, e);
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -298,7 +298,7 @@ public class DeviceSubscriptionController {
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(),
                     deviceId);
             if (mor != null) {
-                configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(mor);
+                configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor);
             } else {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Could not delete subscription for device with id " + deviceId + ". Device not found");
@@ -376,7 +376,7 @@ public class DeviceSubscriptionController {
                     configurationRegistry.getNotificationSubscriber().subscribeDeviceGroup(groupMor);
                     try {
                         allChildDevices = configurationRegistry.getNotificationSubscriber()
-                                .findAllRelatedDevicesByMO(groupMor, allChildDevices, true);
+                                .findAllRelatedDevicesByMO(groupMor, allChildDevices, false);
                     } catch (Exception e) {
                         log.error("{} - Error creating group subscriptions: ", tenant, e);
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -391,7 +391,7 @@ public class DeviceSubscriptionController {
                 for (Device childDevice : allChildDevices) {
                     ManagedObjectRepresentation childDeviceMor = c8yAgent.getManagedObjectForId(tenant,
                             childDevice.getId());
-                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(childDeviceMor,
+                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(tenant, childDeviceMor,
                             subscription.getApi());
                 }
             }
@@ -408,7 +408,7 @@ public class DeviceSubscriptionController {
                         for (Device deviceToRemove : devicesToRemove) {
                             ManagedObjectRepresentation deviceMor = c8yAgent.getManagedObjectForId(tenant,
                                     deviceToRemove.getId());
-                            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(deviceMor);
+                            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, deviceMor);
                         }
                     } catch (Exception e) {
                         log.error("{} - Error removing group subscriptions: ", tenant, e);
@@ -486,13 +486,13 @@ public class DeviceSubscriptionController {
 
                 // Find all devices in the group
                 List<Device> devicesInGroup = configurationRegistry.getNotificationSubscriber()
-                        .findAllRelatedDevicesByMO(groupMor, new ArrayList<>(), true);
+                        .findAllRelatedDevicesByMO(groupMor, new ArrayList<>(), false);
 
                 // Unsubscribe each device in the group
                 for (Device device : devicesInGroup) {
                     ManagedObjectRepresentation deviceMor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                     if (deviceMor != null) {
-                        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(deviceMor);
+                        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, deviceMor);
                     }
                 }
                 log.info("{} - Successfully unsubscribed {} devices from group {}", tenant, devicesInGroup.size(),

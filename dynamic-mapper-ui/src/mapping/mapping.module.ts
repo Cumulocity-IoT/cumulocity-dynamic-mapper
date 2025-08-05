@@ -58,6 +58,7 @@ import { EditSubstitutionComponent } from './substitution/edit/edit-substitution
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 import { DeviceSelectorSubscription2Component } from './subscription/device-selector2/device-selector-subscription2.component';
 import { AIPromptComponent } from './prompt/ai-prompt.component';
+import { DeviceSelectorSubscription3Component } from './subscription/device-selector3/device-selector-subscription3.component';
 
 @NgModule({
   declarations: [
@@ -68,6 +69,7 @@ import { AIPromptComponent } from './prompt/ai-prompt.component';
     MappingStepPropertiesComponent,
     DeviceSelectorSubscriptionComponent,
     DeviceSelectorSubscription2Component,
+    DeviceSelectorSubscription3Component,
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,

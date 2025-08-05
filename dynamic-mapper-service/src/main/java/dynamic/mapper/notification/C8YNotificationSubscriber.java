@@ -220,41 +220,38 @@ public class C8YNotificationSubscriber {
             log.info("{} - Phase II: Notification 2.0, subscribing to management", tenant);
             log.debug("{} - Phase II: Notification 2.0, subscribing to management: {}", tenant,
                     managementSubList);
+
+            // add monitored groups in managementSubList to cache
+            for (NotificationSubscriptionRepresentation subscription : managementSubList) {
+                if (subscription != null && subscription.getSource() != null) {
+                    ManagedObjectRepresentation groupMO = configurationRegistry.getC8yAgent()
+                            .getManagedObjectForId(tenant, subscription.getSource().getId().getValue());
+                    if (groupMO != null)
+                        ((ManagementSubscriptionClient) managementCallback).addGroupToCache(groupMO);
+                } else {
+                    log.warn("{} - Error initializing initManagementClient: {}", tenant, subscription);
+                }
+            }
+
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
-        // When one subscription exists, connect...
-        if (managementSubList.size() > 0) {
-            try {
+        try {
 
-                // Only connect if connector is enabled
-                String tokenSeed = MANAGEMENT_SUBSCRIBER
-                        + additionalSubscriptionIdTest;
-                String token = createToken(MANAGEMENT_SUBSCRIBER,
-                        tokenSeed);
-                ConnectorId connectorId = new ConnectorId(
-                        ManagementSubscriptionClient.CONNECTOR_NAME,
-                        ManagementSubscriptionClient.CONNECTOR_ID);
-                managementTokens.put(tenant, token);
-                CustomWebSocketClient client = connect(token, managementCallback, connectorId);
-                managementClientMap.put(tenant, client);
+            // Only connect if connector is enabled
+            String tokenSeed = MANAGEMENT_SUBSCRIBER
+                    + additionalSubscriptionIdTest;
+            String token = createToken(MANAGEMENT_SUBSCRIPTION,
+                    tokenSeed);
+            ConnectorId connectorId = new ConnectorId(
+                    ManagementSubscriptionClient.CONNECTOR_NAME,
+                    ManagementSubscriptionClient.CONNECTOR_ID);
+            managementTokens.put(tenant, token);
+            CustomWebSocketClient client = connect(token, managementCallback, connectorId);
+            managementClientMap.put(tenant, client);
 
-                for (NotificationSubscriptionRepresentation subscription : managementSubList) {
-                    if (subscription != null && subscription.getSource() != null) {
-                        ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
-                                .resolveGlobalId2ExternalId(tenant, subscription.getSource().getId(), null, null);
-
-                        if (extId != null)
-                            activatePushConnectivityStatus(tenant, extId.getExternalId());
-                    } else {
-                        log.warn("{} - Error initializing initManagementClient: {}", tenant, subscription);
-                    }
-
-                }
-
-            } catch (URISyntaxException e) {
-                log.error("{} - Error connecting management subscription: {}", tenant, e.getLocalizedMessage());
-            }
+        } catch (URISyntaxException e) {
+            log.error("{} - Error connecting management subscription: {}", tenant, e.getLocalizedMessage());
         }
     }
 
@@ -355,11 +352,11 @@ public class C8YNotificationSubscriber {
         return notificationSubscriptionRepresentation;
     }
 
-    public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
+    public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(String tenant,
             ManagedObjectRepresentation mor,
             API api) throws ExecutionException, InterruptedException {
         /* Connect to all devices */
-        String tenant = subscriptionsService.getTenant();
+        //String tenant = subscriptionsService.getTenant();
         String deviceName = mor.getName();
         log.info("{} - Creating new Subscription for Device {} with ID {}", tenant, deviceName,
                 mor.getId().getValue());
@@ -613,37 +610,39 @@ public class C8YNotificationSubscriber {
         return c8yNotificationSubscription;
     }
 
-    public void unsubscribeDeviceAndDisconnect(ManagedObjectRepresentation mor) throws SDKException {
-        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+    public void unsubscribeDeviceAndDisconnect(String tenant, ManagedObjectRepresentation mor) throws SDKException {
+        subscriptionsService.runForTenant(tenant, () -> {
             try {
                 getNotificationSubscriptionForDevices(mor.getId().getValue(), DEVICE_SUBSCRIPTION).get()
                         .forEach(sub -> {
                             subscriptionAPI.delete(sub);
                             log.info("{} - Subscription {} deleted for device with ID {}",
-                                    subscriptionsService.getTenant(), sub.getSubscription(), mor.getId().getValue());
+                                    tenant, sub.getSubscription(), mor.getId().getValue());
                         });
             } catch (Exception e) {
-                log.error("{} - Error on unsubscribing device: {}", subscriptionsService.getTenant(),
+                log.error("{} - Error on unsubscribing device: {}", tenant,
                         e.getLocalizedMessage());
             }
             if (!subscriptionAPI
                     .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
                     .get().allPages().iterator().hasNext()) {
-                disconnect(subscriptionsService.getTenant());
+                disconnect(tenant);
             }
             ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
-                    .resolveGlobalId2ExternalId(subscriptionsService.getTenant(), mor.getId(), null, null);
+                    .resolveGlobalId2ExternalId(tenant, mor.getId(), null, null);
             // use dummy external ID
             if (extId == null) {
                 extId = new ExternalIDRepresentation();
                 extId.setExternalId(String.format("NOT_EXISTING_EXTERNAL_ID-%s!", mor.getId()));
             }
 
-            deactivatePushConnectivityStatus(subscriptionsService.getTenant(), extId.getExternalId());
+            deactivatePushConnectivityStatus(tenant, extId.getExternalId());
         });
     }
 
     public void unsubscribeDeviceGroup(ManagedObjectRepresentation mor) throws SDKException {
+        String tenant = subscriptionsService.getTenant();
+        NotificationCallback managementCallback = managementCallbackMap.get(tenant);
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             try {
                 getNotificationSubscriptionForDeviceGroups(mor.getId().getValue(), MANAGEMENT_SUBSCRIPTION).get()
@@ -652,6 +651,8 @@ public class C8YNotificationSubscriber {
                             log.info("{} - Subscription {} deleted for deviceGroup with ID {}",
                                     subscriptionsService.getTenant(), sub.getSubscription(), mor.getId().getValue());
                         });
+
+                ((ManagementSubscriptionClient) managementCallback).removeGroupFromCache(mor);
             } catch (Exception e) {
                 log.error("{} - Error on unsubscribing deviceGroup: {}", subscriptionsService.getTenant(),
                         e.getLocalizedMessage());

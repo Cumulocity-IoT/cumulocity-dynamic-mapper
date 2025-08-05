@@ -86,6 +86,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   showConfigSubscription: boolean = false;
   showConfigSubscription2: boolean = false;
+  showConfigSubscription3: boolean = false;
 
   isConnectionToMQTTEstablished: boolean;
 
