@@ -323,6 +323,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
                 log.info("{} - Updated group cache for group {}", tenant, groupId);
             }
 
+            // TODO: Return a future so it can be blocked for QoS 1 or 2
             return processingResult;
         }
     }
