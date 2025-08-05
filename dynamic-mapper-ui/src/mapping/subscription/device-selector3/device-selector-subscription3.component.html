@@ -23,13 +23,13 @@
   <div class="card">
     <div class="card-header m-t-48 p-24 separator" style="justify-content: center">
       <h4 class="card-title">
-        Select devices to subscribe to for outbound mappings
+        Select devices group to subscribe to all device for outbound mappings
       </h4>
     </div>
     <div class="card-block">
       <c8y-asset-selector-miller [(ngModel)]="deviceList" (onSelected)="selectionChanged($event)" [config]="{
             groupsSelectable: true,
-              groupsOnly: true,
+            groupsOnly: true,
             columnHeaders: true,
             showFilter: true,
             showUnassignedDevices: false,

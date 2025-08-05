@@ -21,7 +21,14 @@
 
 <c8y-title translate>Subscription outbound</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription()"
+  <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription3()"
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+    <i c8yIcon="subscription"></i>
+    {{ 'Manage subscriptions (device groups selection)' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription1()"
     [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     <i c8yIcon="subscription"></i>
     {{ 'Manage subscriptions (device selection)' | translate }}
@@ -49,7 +56,7 @@
         [title]="'No subscriptions for devices exist.' | translate" [subtitle]="
     'Create your first subscription for a device.' | translate
   " [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Manage subscriptions' | translate }}"
-          (click)="onDefineSubscription()">
+          (click)="onDefineSubscription1()">
           <i c8yIcon="subscription"></i>
           {{ 'Manage subscriptions' | translate }}
         </button>
@@ -58,10 +65,10 @@
   </div>
 </div>
 
-<div [ngClass]="{ drawerOpen: showConfigSubscription }">
+<div [ngClass]="{ drawerOpen: showConfigSubscription1 }">
   <div class="bottom-drawer">
-    <d11r-device-selector-subscription *ngIf="showConfigSubscription" (cancel)="showConfigSubscription = false"
-      (commit)="onCommitSubscriptions($event)" [deviceList]="subscribedDevices">
+    <d11r-device-selector-subscription *ngIf="showConfigSubscription1" (cancel)="showConfigSubscription1 = false"
+      (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
     </d11r-device-selector-subscription>
   </div>
 </div>
@@ -70,7 +77,7 @@
 <div [ngClass]="{ drawerOpen: showConfigSubscription2 }">
   <div class="bottom-drawer">
     <d11r-device-selector-subscription2 *ngIf="showConfigSubscription2" (cancel)="showConfigSubscription2 = false"
-      (commit)="onCommitSubscriptions($event)" [deviceList]="subscribedDevices">
+      (commit)="onCommitSubscriptionDevice($event)" [deviceList]="subscribedDevices">
     </d11r-device-selector-subscription2>
   </div>
 </div>
@@ -78,7 +85,7 @@
 <div [ngClass]="{ drawerOpen: showConfigSubscription3 }">
   <div class="bottom-drawer">
     <d11r-device-selector-subscription3 *ngIf="showConfigSubscription3" (cancel)="showConfigSubscription3 = false"
-      (commit)="onCommitSubscriptions($event)" [deviceList]="subscribedDeviceGroups">
+      (commit)="onCommitSubscriptionDeviceGroup($event)" [deviceList]="subscribedDeviceGroups">
     </d11r-device-selector-subscription3>
   </div>
 </div>

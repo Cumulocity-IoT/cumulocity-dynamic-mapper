@@ -43,8 +43,8 @@ export class DeviceSelectorSubscription3Component implements OnInit {
 
   constructor() {
   }
-  ngOnInit(): void {
 
+  ngOnInit(): void {
   }
 
   selectionChanged(event: AssetSelectionChangeEvent) {
