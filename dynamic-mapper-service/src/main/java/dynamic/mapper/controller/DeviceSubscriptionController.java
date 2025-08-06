@@ -420,9 +420,9 @@ public class DeviceSubscriptionController {
                 }
             }
 
-            // Get all currently subscribed devices to return
+            // Get all currently subscribed device groups to return
             C8YNotificationSubscription updatedSubscription = configurationRegistry.getNotificationSubscriber()
-                    .getSubscriptionsForDevices(tenant, null, subscription.getSubscriptionName());
+                    .getSubscriptionsForDeviceGroups(tenant);
             return ResponseEntity.ok(updatedSubscription);
 
         } catch (Exception e) {
