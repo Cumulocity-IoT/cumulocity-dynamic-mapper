@@ -23,8 +23,6 @@ package dynamic.mapper.model;
 
 import lombok.Data;
 
-import java.util.List;
-
 @Data
 public class MCPServer {
     private String url;

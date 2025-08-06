@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import com.cumulocity.sdk.client.ProcessingMode;
 import com.cumulocity.sdk.client.SDKException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -339,6 +340,8 @@ public abstract class BaseProcessorInbound<T> {
             context.getBinaryInfo().setType((String) substitute.value);
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Data").equals(pathTarget)) {
             context.getBinaryInfo().setData((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".processingMode").equals(pathTarget)) {
+            context.setProcessingMode(ProcessingMode.parse((String) substitute.value));
         } else if ((Mapping.TOKEN_CONTEXT_DATA).equals(pathTarget)) {
             // Handle the case where substitute.value is a Map containing context data keys
             if (substitute.value instanceof Map) {
@@ -369,6 +372,11 @@ public abstract class BaseProcessorInbound<T> {
                         case "attachment_Data":
                             if (value instanceof String) {
                                 context.getBinaryInfo().setData((String) value);
+                            }
+                            break;
+                        case "processingMode":
+                            if (value instanceof String) {
+                                context.setProcessingMode(ProcessingMode.parse((String) substitute.value));
                             }
                             break;
                         default:

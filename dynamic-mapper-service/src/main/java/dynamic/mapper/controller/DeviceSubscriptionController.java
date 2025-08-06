@@ -404,7 +404,7 @@ public class DeviceSubscriptionController {
                     configurationRegistry.getNotificationSubscriber().unsubscribeDeviceGroup(groupMor);
                     try {
                         List<Device> devicesToRemove = configurationRegistry.getNotificationSubscriber()
-                                .findAllRelatedDevicesByMO(groupMor, new ArrayList<>(), true);
+                                .findAllRelatedDevicesByMO(groupMor, new ArrayList<>(), false);
                         for (Device deviceToRemove : devicesToRemove) {
                             ManagedObjectRepresentation deviceMor = c8yAgent.getManagedObjectForId(tenant,
                                     deviceToRemove.getId());

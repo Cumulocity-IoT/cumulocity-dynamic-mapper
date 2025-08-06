@@ -43,6 +43,8 @@ import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
+import com.cumulocity.sdk.client.ProcessingMode;
+
 @Getter
 @Setter
 @Builder
@@ -122,6 +124,9 @@ public class ProcessingContext<O> {
     private Source mappingSource;
 
     private Value sourceValue;
+    
+    @Builder.Default
+    private ProcessingMode processingMode = ProcessingMode.PERSISTENT;
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();

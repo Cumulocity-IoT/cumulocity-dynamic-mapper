@@ -52,6 +52,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
@@ -86,11 +87,14 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.sdk.client.Platform;
+import com.cumulocity.sdk.client.PlatformImpl;
+import com.cumulocity.sdk.client.ProcessingMode;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.buffering.Future;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
+import com.cumulocity.sdk.client.interceptor.HttpClientInterceptor;
 import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -125,6 +129,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
+import jakarta.ws.rs.client.Invocation;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -150,13 +155,20 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private MeasurementApi measurementApi;
 
     @Autowired
+    private Platform platform;
+
+    // @Autowired
+    // @Qualifier("measurementApiTransient")
+    private MeasurementApi measurementApiTransient;
+
+    @Autowired
     private AlarmApi alarmApi;
 
     @Autowired
     private DeviceControlApi deviceControlApi;
 
     @Autowired
-    private Platform platform;
+    private Platform transientPlatform;
 
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
@@ -203,6 +215,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Value("${application.version}")
     private String version;
 
+    private boolean transientApisInitialized = false;
     private Integer maxConnections = 100;
     private Semaphore c8ySemaphore;
     private Timer c8yRequestTimer = Timer.builder("dynmapper_c8y_request_processing_time")
@@ -217,7 +230,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void init() {
         Gauge.builder("dynmapper_available_c8y_connections", this.c8ySemaphore, Semaphore::availablePermits)
                 .register(Metrics.globalRegistry);
-
+        // initializeTransientApis();
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
@@ -271,6 +284,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public MeasurementRepresentation createMeasurement(String name, String type, ManagedObjectRepresentation mor,
             DateTime dateTime, HashMap<String, MeasurementValue> mvMap, String tenant) {
+        initializeTransientApis();
         MeasurementRepresentation measurementRepresentation = new MeasurementRepresentation();
         subscriptionsService.runForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
@@ -347,24 +361,24 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     // configuration registry and retry the API call
                     Future result = this.eventApi.createAsync(er);
                     // configurationRegistry.getVirtualThreadPool().submit(() -> {
-                    //     try {
-                    //         EventRepresentation oneEvent = (EventRepresentation) result.get();
-                    //     } catch (SDKException e) {
-                    //         log.error("{} - Failed to send event", tenant, e);
-                    //         if (e.getHttpStatus() == 404 ||  e.getHttpStatus() == 422) {
-                    //             log.warn("{} - Try to recreate the Agent with external ID", tenant);
-                    //             MapperServiceRepresentation sourceNew = configurationRegistry
-                    //                     .initializeMapperServiceRepresentation(tenant);
-                    //             mor.setId(new GId(sourceNew.getId()));
-                    //             er.setSource(mor);
-                    //             er.setText(message);
-                    //             er.setDateTime(eventTime);
-                    //             er.setType(loggingType.type);
-                    //             this.eventApi.createAsync(er);
-                    //         }
-                    //     } catch (Exception e) {
-                    //         log.error("{} - Failed to send event", tenant, e);
-                    //     }
+                    // try {
+                    // EventRepresentation oneEvent = (EventRepresentation) result.get();
+                    // } catch (SDKException e) {
+                    // log.error("{} - Failed to send event", tenant, e);
+                    // if (e.getHttpStatus() == 404 || e.getHttpStatus() == 422) {
+                    // log.warn("{} - Try to recreate the Agent with external ID", tenant);
+                    // MapperServiceRepresentation sourceNew = configurationRegistry
+                    // .initializeMapperServiceRepresentation(tenant);
+                    // mor.setId(new GId(sourceNew.getId()));
+                    // er.setSource(mor);
+                    // er.setText(message);
+                    // er.setDateTime(eventTime);
+                    // er.setType(loggingType.type);
+                    // this.eventApi.createAsync(er);
+                    // }
+                    // } catch (Exception e) {
+                    // log.error("{} - Failed to send event", tenant, e);
+                    // }
 
                     // });
                 } catch (InterruptedException e) {
@@ -461,7 +475,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
                             MeasurementRepresentation measurementRepresentation = jsonParser
                                     .parse(MeasurementRepresentation.class, payload);
-                            rt = measurementApi.create(measurementRepresentation);
+                            // Set processing mode for measurements
+                            if (context.getProcessingMode() != null &&
+                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
+                                rt = measurementApiTransient.create(measurementRepresentation);
+                                log.info("{} - Using TRANSIENT processing mode for measurement", tenant);
+                            } else {
+                                rt = measurementApi.create(measurementRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
+                            }
                             log.info("{} - SEND: measurement posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.OPERATION)) {
                             OperationRepresentation operationRepresentation = jsonParser
@@ -1242,4 +1264,32 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             throw new ProcessingException("Failed to upload attachment to event: " + e.getMessage(), e);
         }
     }
+
+    private synchronized void initializeTransientApis() {
+        if (!transientApisInitialized) {
+            try {
+                if (transientPlatform instanceof PlatformImpl) {
+
+                    // Register the transient interceptor
+                    ((PlatformImpl) transientPlatform).registerInterceptor(new HttpClientInterceptor() {
+                        @Override
+                        public Invocation.Builder apply(Invocation.Builder builder) {
+                            return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
+                        }
+                    });
+
+                    // Initialize transient APIs
+                    measurementApiTransient = transientPlatform.getMeasurementApi();
+
+                    transientApisInitialized = true;
+                    log.info("Transient APIs initialized successfully");
+                } else {
+                    log.warn("Platform is not PlatformImpl, falling back to header-based approach");
+                }
+            } catch (Exception e) {
+                log.warn("Could not initialize transient APIs: ", e);
+            }
+        }
+    }
+
 }

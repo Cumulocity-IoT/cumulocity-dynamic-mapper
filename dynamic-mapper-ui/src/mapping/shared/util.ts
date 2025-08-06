@@ -445,17 +445,17 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
       if (mapping.supportsMessageContext) {
         result = {
           ...result,
-          [TOKEN_CONTEXT_DATA]: { 'api': mapping.targetAPI }
+          [TOKEN_CONTEXT_DATA]: { 'api': mapping.targetAPI, 'processingMode': 'PERSISTENT' }
         };
       }
-      
+
       // Handle attachment properties independently
       if (mapping.eventWithAttachment) {
         // Initialize [TOKEN_CONTEXT_DATA] if it doesn't exist yet
         if (!result[TOKEN_CONTEXT_DATA]) {
           result[TOKEN_CONTEXT_DATA] = {};
         }
-        
+
         // Add attachment properties
         result[TOKEN_CONTEXT_DATA].attachment_Name = 'TestImage.jpeg';
         result[TOKEN_CONTEXT_DATA].attachment_Type = 'image/jpeg';

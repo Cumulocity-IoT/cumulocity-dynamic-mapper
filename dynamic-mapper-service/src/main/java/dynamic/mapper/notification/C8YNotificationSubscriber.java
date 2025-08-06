@@ -356,7 +356,7 @@ public class C8YNotificationSubscriber {
             ManagedObjectRepresentation mor,
             API api) throws ExecutionException, InterruptedException {
         /* Connect to all devices */
-        //String tenant = subscriptionsService.getTenant();
+        // String tenant = subscriptionsService.getTenant();
         String deviceName = mor.getName();
         log.info("{} - Creating new Subscription for Device {} with ID {}", tenant, deviceName,
                 mor.getId().getValue());
@@ -372,34 +372,36 @@ public class C8YNotificationSubscriber {
 
                         try {
                             // Add Dispatcher for each Connector
-                            if (dispatcherOutboundMaps.get(tenant).keySet().isEmpty())
+                            if (dispatcherOutboundMaps.get(tenant) == null
+                                    || dispatcherOutboundMaps.get(tenant).keySet().isEmpty()) {
                                 log.info(
                                         "{} - No Outbound dispatcher for any connector is registered, add a connector first!",
                                         tenant);
-
-                            for (DispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
-                                    .values()) {
-                                // subscribe to client to receive traces for devices
-                                String tokenSeedDevice = DEVICE_SUBSCRIBER
-                                        + dispatcherOutbound.getConnectorClient().getConnectorIdentifier()
-                                        + additionalSubscriptionIdTest;
-                                String tokenDevice = createToken(DEVICE_SUBSCRIPTION,
-                                        tokenSeedDevice);
-                                log.info(
-                                        "{} - Creating new Subscription for Device {} with ID {} for Connector {}",
-                                        tenant, deviceName,
-                                        mor.getId().getValue(),
-                                        dispatcherOutbound.getConnectorClient().getConnectorName());
-                                deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
-                                        tokenDevice);
-                                ConnectorId connectorId = new ConnectorId(
-                                        dispatcherOutbound.getConnectorClient().getConnectorName(),
-                                        dispatcherOutbound.getConnectorClient().getConnectorIdentifier());
-                                CustomWebSocketClient clientDevice = connect(tokenDevice, dispatcherOutbound,
-                                        connectorId);
-                                deviceClientMap.get(tenant).put(
-                                        dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
-                                        clientDevice);
+                            } else {
+                                for (DispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
+                                        .values()) {
+                                    // subscribe to client to receive traces for devices
+                                    String tokenSeedDevice = DEVICE_SUBSCRIBER
+                                            + dispatcherOutbound.getConnectorClient().getConnectorIdentifier()
+                                            + additionalSubscriptionIdTest;
+                                    String tokenDevice = createToken(DEVICE_SUBSCRIPTION,
+                                            tokenSeedDevice);
+                                    log.info(
+                                            "{} - Creating new Subscription for Device {} with ID {} for Connector {}",
+                                            tenant, deviceName,
+                                            mor.getId().getValue(),
+                                            dispatcherOutbound.getConnectorClient().getConnectorName());
+                                    deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
+                                            tokenDevice);
+                                    ConnectorId connectorId = new ConnectorId(
+                                            dispatcherOutbound.getConnectorClient().getConnectorName(),
+                                            dispatcherOutbound.getConnectorClient().getConnectorIdentifier());
+                                    CustomWebSocketClient clientDevice = connect(tokenDevice, dispatcherOutbound,
+                                            connectorId);
+                                    deviceClientMap.get(tenant).put(
+                                            dispatcherOutbound.getConnectorClient().getConnectorIdentifier(),
+                                            clientDevice);
+                                }
                             }
                         } catch (URISyntaxException e) {
                             log.error("{} - Error on connecting to Notification Service: {}", tenant,
@@ -834,6 +836,10 @@ public class C8YNotificationSubscriber {
     public void refreshTokens() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
+            if (deviceTokenPerConnector.get(tenant) == null || deviceTokenPerConnector.get(tenant).isEmpty()) {
+                log.info("{} - No device tokens to refresh", tenant);
+                return;
+            }
             for (String connectorId : deviceTokenPerConnector.get(tenant).keySet()) {
                 try {
 
@@ -900,7 +906,7 @@ public class C8YNotificationSubscriber {
             device.setId(mor.getId().getValue());
             device.setName(mor.getName());
             if (!devices.contains(device)) {
-                log.info("{} - Adding child Device {} to be subscribed to", tenant, mor.getId());
+                log.info("{} - Resolving child device {}", tenant, mor.getId().getValue());
                 devices.add(device);
             }
             Iterator<ManagedObjectReferenceRepresentation> childDeviceIt = mor.getChildDevices().iterator();
