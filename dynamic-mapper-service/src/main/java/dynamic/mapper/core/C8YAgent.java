@@ -52,7 +52,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
@@ -87,7 +86,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.sdk.client.Platform;
-import com.cumulocity.sdk.client.PlatformImpl;
+import com.cumulocity.sdk.client.PlatformParameters;
 import com.cumulocity.sdk.client.ProcessingMode;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
@@ -230,7 +229,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void init() {
         Gauge.builder("dynmapper_available_c8y_connections", this.c8ySemaphore, Semaphore::availablePermits)
                 .register(Metrics.globalRegistry);
-        // initializeTransientApis();
+        initializeTransientApis();
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
@@ -299,6 +298,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     try {
                         c8ySemaphore.acquire();
                         mrn = measurementApi.create(measurementRepresentation);
+                        // Set processing mode for measurements
+                        // if (context.getProcessingMode() != null &&
+                        // ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
+                        // mrn = measurementApiTransient.create(measurementRepresentation);
+                        // log.info("{} - Using TRANSIENT processing mode for measurement", tenant);
+                        // } else {
+                        // mrn = measurementApi.create(measurementRepresentation);
+                        // log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
+                        // }
                         measurementRepresentation.setId(mrn.getId());
                     } catch (InterruptedException e) {
                         log.error("{} - Failed to acquire semaphore for creating Measurement", tenant, e);
@@ -572,7 +580,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 .parse(MeasurementRepresentation.class, payload);
                         try {
                             c8ySemaphore.acquire();
-                            rt = measurementApi.create(measurementRepresentation);
+                            if (context.getProcessingMode() != null &&
+                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
+                                rt = measurementApiTransient.create(measurementRepresentation);
+                                log.info("{} - Using TRANSIENT processing mode for measurement", tenant);
+                            } else {
+                                rt = measurementApi.create(measurementRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
+                            }
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating Alarm", tenant, e);
                         } finally {
@@ -1268,10 +1283,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private synchronized void initializeTransientApis() {
         if (!transientApisInitialized) {
             try {
-                if (transientPlatform instanceof PlatformImpl) {
+                if (transientPlatform instanceof PlatformParameters) {
 
                     // Register the transient interceptor
-                    ((PlatformImpl) transientPlatform).registerInterceptor(new HttpClientInterceptor() {
+                    ((PlatformParameters) transientPlatform).registerInterceptor(new HttpClientInterceptor() {
                         @Override
                         public Invocation.Builder apply(Invocation.Builder builder) {
                             return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");

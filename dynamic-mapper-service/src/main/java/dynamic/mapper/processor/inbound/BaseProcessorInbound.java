@@ -103,6 +103,8 @@ public abstract class BaseProcessorInbound<T> {
                         put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
                         put("api",
                                 context.getMapping().getTargetAPI().toString());
+                        put("processingMode",
+                                ProcessingMode.PERSISTENT.toString());
                     }
                 };
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
