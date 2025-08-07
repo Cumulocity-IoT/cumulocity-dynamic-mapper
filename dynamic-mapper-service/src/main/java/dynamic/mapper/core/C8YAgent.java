@@ -51,8 +51,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
-import org.springframework.aop.framework.Advised;
-import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
@@ -67,7 +65,6 @@ import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
-import org.svenson.JSONParser;
 
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
@@ -131,6 +128,8 @@ import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT;
+import static com.cumulocity.rest.representation.event.EventMediaType.EVENT;
+import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
 
 @Slf4j
 @Component
@@ -192,8 +191,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
         this.configurationRegistry = configurationRegistry;
     }
-
-    private JSONParser jsonParser = JSONBase.getJSONParser();
 
     public static final String MAPPING_FRAGMENT = "d11r_mapping";
 
@@ -458,30 +455,61 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(
                                     payload,
                                     EventRepresentation.class);
-                            rt = eventApi.create(eventRepresentation);
+                            // Set processing mode for events
+                            if (context.getProcessingMode() != null &&
+                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
+                                    if (targetAPI.equals(API.EVENT)) {
+                                        // Now use the connector with the processing mode header
+                                        return (EventRepresentation) connector.post("/event/events",
+                                                EVENT,
+                                                eventRepresentation);
+                                    }
+                                    return null;
+                                });
+                                log.info("{} - Using TRANSIENT processing mode for event", tenant);
+                            } else {
+                                rt = eventApi.create(eventRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for event", tenant);
+                            }
                             log.info("{} - SEND: event posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.ALARM)) {
                             AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(
                                     payload,
                                     AlarmRepresentation.class);
-                            rt = alarmApi.create(alarmRepresentation);
+                            // Set processing mode for alarms
+                            if (context.getProcessingMode() != null &&
+                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
+                                    if (targetAPI.equals(API.ALARM)) {
+                                        // Now use the connector with the processing mode header
+                                        return (AlarmRepresentation) connector.post("/alarm/alarms",
+                                                ALARM,
+                                                alarmRepresentation);
+                                    }
+                                    return null;
+                                });
+                                log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
+                            } else {
+                                rt = alarmApi.create(alarmRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
+                            }
                             log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
-                            MeasurementRepresentation measurementRepresentation = jsonParser
-                                    .parse(MeasurementRepresentation.class, payload);
+                            MeasurementRepresentation measurementRepresentation = configurationRegistry
+                                    .getObjectMapper().readValue(
+                                            payload,
+                                            MeasurementRepresentation.class);
                             // Set processing mode for measurements
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
                                 // rt = measurementApiTransient.create(measurementRepresentation);
                                 rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
                                     if (targetAPI.equals(API.MEASUREMENT)) {
-                                        MeasurementRepresentation mr = jsonParser
-                                                .parse(MeasurementRepresentation.class, payload);
-
                                         // Now use the connector with the processing mode header
                                         return (MeasurementRepresentation) connector.post("/measurement/measurements",
                                                 MEASUREMENT,
-                                                mr);
+                                                measurementRepresentation);
                                     }
                                     return null;
                                 });
@@ -492,8 +520,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             }
                             log.info("{} - SEND: measurement posted: {}", tenant, rt);
                         } else if (targetAPI.equals(API.OPERATION)) {
-                            OperationRepresentation operationRepresentation = jsonParser
-                                    .parse(OperationRepresentation.class, payload);
+                            OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
+                                    .readValue(
+                                            payload, OperationRepresentation.class);
                             rt = deviceControlApi.create(operationRepresentation);
                             log.info("{} - SEND: operation posted: {}", tenant, rt);
                         } else {
@@ -514,6 +543,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
             return result;
         });
+
     }
 
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
@@ -540,9 +570,25 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 EventRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
-                            rt = eventApi.create(eventRepresentation);
+                            // Set processing mode for events
+                            if (context.getProcessingMode() != null &&
+                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
+                                    if (targetAPI.equals(API.EVENT)) {
+                                        // Now use the connector with the processing mode header
+                                        return (EventRepresentation) connector.post("/event/events",
+                                                EVENT,
+                                                eventRepresentation);
+                                    }
+                                    return null;
+                                });
+                                log.info("{} - Using TRANSIENT processing mode for event", tenant);
+                            } else {
+                                rt = eventApi.create(eventRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for event", tenant);
+                            }
                         } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating Event", tenant, e);
+                            log.error("{} - Failed to acquire semaphore for creating event", tenant, e);
                         } finally {
                             c8ySemaphore.release();
                         }
@@ -563,9 +609,25 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 AlarmRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
-                            rt = alarmApi.create(alarmRepresentation);
+                            // Set processing mode for alarms
+                            if (context.getProcessingMode() != null &&
+                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
+                                    if (targetAPI.equals(API.ALARM)) {
+                                        // Now use the connector with the processing mode header
+                                        return (AlarmRepresentation) connector.post("/alarm/alarms",
+                                                ALARM,
+                                                alarmRepresentation);
+                                    }
+                                    return null;
+                                });
+                                log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
+                            } else {
+                                rt = alarmApi.create(alarmRepresentation);
+                                log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
+                            }
                         } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating Alarm", tenant, e);
+                            log.error("{} - Failed to acquire semaphore for creating alarm", tenant, e);
                         } finally {
                             c8ySemaphore.release();
                         }
@@ -575,8 +637,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             log.info("{} - SEND: alarm posted with Id {}", tenant,
                                     ((AlarmRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.MEASUREMENT)) {
-                        MeasurementRepresentation measurementRepresentation = jsonParser
-                                .parse(MeasurementRepresentation.class, payload);
+                        MeasurementRepresentation measurementRepresentation = configurationRegistry.getObjectMapper()
+                                .readValue(
+                                        payload, MeasurementRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
                             if (context.getProcessingMode() != null &&
@@ -584,8 +647,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 // rt = measurementApiTransient.create(measurementRepresentation);
                                 rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
                                     if (targetAPI.equals(API.MEASUREMENT)) {
-                                        MeasurementRepresentation mr = jsonParser
-                                                .parse(MeasurementRepresentation.class, payload);
+                                        MeasurementRepresentation mr = configurationRegistry.getObjectMapper()
+                                                .readValue(
+                                                        payload, MeasurementRepresentation.class);
 
                                         // Now use the connector with the processing mode header
                                         return (MeasurementRepresentation) connector.post("/measurement/measurements",
@@ -600,7 +664,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
                             }
                         } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating Alarm", tenant, e);
+                            log.error("{} - Failed to acquire semaphore for creating measurement", tenant, e);
                         } finally {
                             c8ySemaphore.release();
                         }
@@ -610,8 +674,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             log.info("{} - SEND: measurement posted with Id {}", tenant,
                                     ((MeasurementRepresentation) rt).getId().getValue());
                     } else if (targetAPI.equals(API.OPERATION)) {
-                        OperationRepresentation operationRepresentation = jsonParser
-                                .parse(OperationRepresentation.class, payload);
+                        OperationRepresentation operationRepresentation = configurationRegistry.getObjectMapper()
+                                .readValue(
+                                        payload, OperationRepresentation.class);
                         try {
                             c8ySemaphore.acquire();
                             rt = deviceControlApi.create(operationRepresentation);
