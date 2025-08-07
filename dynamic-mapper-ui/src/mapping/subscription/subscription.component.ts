@@ -285,6 +285,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
         this.subscriptionDevices
       );
       this.loadSubscriptionDeviceGroup();
+      this.loadSubscriptionDevice();
+
       this.alertService.success(gettext('Subscriptions updated successfully'));
     } catch (error) {
       this.alertService.danger(

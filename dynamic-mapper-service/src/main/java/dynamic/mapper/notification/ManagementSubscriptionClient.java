@@ -23,6 +23,8 @@ package dynamic.mapper.notification;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
+import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceCollectionRepresentation;
+import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import com.dashjoin.jsonata.json.Json;
@@ -138,7 +140,8 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         return notificationHeaders.get(0).split("/")[1];
     }
 
-    public static class UpdateSubscriptionTask<T> implements Callable<List<Future<NotificationSubscriptionRepresentation>>> {
+    public static class UpdateSubscriptionTask<T>
+            implements Callable<List<Future<NotificationSubscriptionRepresentation>>> {
         C8YMessage c8yMessage;
         ConfigurationRegistry configurationRegistry;
         C8YNotificationSubscriber notificationSubscriber;
@@ -223,23 +226,11 @@ public class ManagementSubscriptionClient implements NotificationCallback {
             // Extract child asset IDs from cached group
             List<String> cachedChildIds = new ArrayList<>();
             try {
-                Object cachedChildAssets = cachedGroup.get("childAssets");
-                if (cachedChildAssets instanceof Map) {
-                    Object cachedReferences = ((Map<?, ?>) cachedChildAssets).get("references");
-                    if (cachedReferences instanceof List) {
-                        for (Object ref : (List<?>) cachedReferences) {
-                            if (ref instanceof Map) {
-                                Object managedObject = ((Map<?, ?>) ref).get("managedObject");
-                                if (managedObject instanceof Map) {
-                                    Object id = ((Map<?, ?>) managedObject).get("id");
-                                    if (id != null) {
-                                        cachedChildIds.add(String.valueOf(id));
-                                    }
-                                }
-                            }
-                        }
-                    }
+                ManagedObjectReferenceCollectionRepresentation cachedChildAssets = cachedGroup.getChildAssets();
+                for (ManagedObjectReferenceRepresentation child : cachedChildAssets.getReferences()) {
+                    cachedChildIds.add(child.getManagedObject().getId().getValue());
                 }
+
             } catch (Exception e) {
                 log.warn("{} - Failed to extract cached child assets for group {}: {}", tenant, groupId,
                         e.getMessage());
