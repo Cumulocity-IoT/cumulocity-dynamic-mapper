@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import jakarta.ws.rs.client.Invocation;
-import java.util.concurrent.Callable;
+
 
 @Slf4j
 @Component
@@ -22,46 +22,20 @@ public class ProcessingModeService {
     private final ContextService<MicroserviceCredentials> contextService;
     private final PlatformProperties platformProperties;
 
-    public <T> T callWithProcessingMode(String processingMode, Callable<T> callable) throws Exception {
+    public <T> T callWithProcessingMode(String processingMode, ConnectorFunction<T> function) throws Exception {
         final RestConnector connector = createRestConnector();
         final HttpClientInterceptor interceptor = new ProcessingModeHttpClientInterceptor(processingMode);
         
         try {
             connector.getPlatformParameters().registerInterceptor(interceptor);
             log.debug("Registered {} processing mode interceptor", processingMode);
-            return callable.call();
+            return function.apply(connector);
         } finally {
             connector.getPlatformParameters().unregisterInterceptor(interceptor);
             log.debug("Unregistered {} processing mode interceptor", processingMode);
         }
     }
 
-    public void runWithProcessingMode(String processingMode, Runnable runnable) {
-        final RestConnector connector = createRestConnector();
-        final HttpClientInterceptor interceptor = new ProcessingModeHttpClientInterceptor(processingMode);
-        
-        try {
-            connector.getPlatformParameters().registerInterceptor(interceptor);
-            log.debug("Registered {} processing mode interceptor", processingMode);
-            runnable.run();
-        } finally {
-            connector.getPlatformParameters().unregisterInterceptor(interceptor);
-            log.debug("Unregistered {} processing mode interceptor", processingMode);
-        }
-    }
-
-    public Platform createPlatformWithProcessingMode(String processingMode) {
-        final RestConnector connector = createRestConnector();
-        final HttpClientInterceptor interceptor = new ProcessingModeHttpClientInterceptor(processingMode);
-        
-        connector.getPlatformParameters().registerInterceptor(interceptor);
-        log.debug("Created platform with {} processing mode", processingMode);
-        
-        //return new PlatformImpl(connector.getPlatformParameters());
-        final PlatformParameters params = createPlatformParameters();
-
-        return new PlatformImpl(platformProperties.getUrl().get(), params.getCumulocityCredentials());
-    }
 
     private RestConnector createRestConnector() {
         final PlatformParameters params = createPlatformParameters();

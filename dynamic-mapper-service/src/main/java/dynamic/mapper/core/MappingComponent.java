@@ -46,7 +46,6 @@ import org.apache.commons.lang3.mutable.MutableObject;
 import org.graalvm.polyglot.Context;
 import org.joda.time.DateTime;
 import org.slf4j.bridge.SLF4JBridgeHandler;
-import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -155,7 +154,12 @@ public class MappingComponent {
                                     : mapperServiceRepresentation.getMappingStatus().size()));
             Map<String, MappingStatus> mappingStatus = new ConcurrentHashMap<>();
             mapperServiceRepresentation.getMappingStatus().forEach(ms -> {
-                mappingStatus.put(ms.identifier, ms);
+                if (ms != null && ms.identifier != null) {
+                    mappingStatus.put(ms.identifier, ms);
+                } else {
+                    log.warn("{} - Skipping MappingStatus with null identifier or null object: {}", tenant,
+                            ms != null ? ms.toString() : "null");
+                }
             });
             mappingStatusS.put(tenant, mappingStatus);
             resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));

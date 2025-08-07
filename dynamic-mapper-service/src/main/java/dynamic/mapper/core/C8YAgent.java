@@ -88,14 +88,12 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.sdk.client.Platform;
-import com.cumulocity.sdk.client.PlatformImpl;
 import com.cumulocity.sdk.client.ProcessingMode;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.buffering.Future;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
-import com.cumulocity.sdk.client.interceptor.HttpClientInterceptor;
 import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -130,9 +128,9 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
-import jakarta.ws.rs.client.Invocation;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT;
 
 @Slf4j
 @Component
@@ -209,10 +207,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "dynamic.mapper.processor.extension.external";
 
+    public static final String MEASUREMENT_COLLECTION_PATH = "/measurement/measurements";
+
     @Value("${application.version}")
     private String version;
 
-    private boolean transientApisInitialized = false;
     private Integer maxConnections = 100;
     private Semaphore c8ySemaphore;
     private Timer c8yRequestTimer = Timer.builder("dynmapper_c8y_request_processing_time")
@@ -227,7 +226,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void init() {
         Gauge.builder("dynmapper_available_c8y_connections", this.c8ySemaphore, Semaphore::availablePermits)
                 .register(Metrics.globalRegistry);
-        // initializeTransientApis();
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
@@ -295,15 +293,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     try {
                         c8ySemaphore.acquire();
                         mrn = measurementApi.create(measurementRepresentation);
-                        // Set processing mode for measurements
-                        // if (context.getProcessingMode() != null &&
-                        // ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                        // mrn = measurementApiTransient.create(measurementRepresentation);
-                        // log.info("{} - Using TRANSIENT processing mode for measurement", tenant);
-                        // } else {
-                        // mrn = measurementApi.create(measurementRepresentation);
-                        // log.debug("{} - Using PERSISTENT processing mode for measurement", tenant);
-                        // }
                         measurementRepresentation.setId(mrn.getId());
                     } catch (InterruptedException e) {
                         log.error("{} - Failed to acquire semaphore for creating Measurement", tenant, e);
@@ -484,12 +473,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
                                 // rt = measurementApiTransient.create(measurementRepresentation);
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", () -> {
-                                    // Use your existing APIs here - they'll automatically get the transient header
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
                                     if (targetAPI.equals(API.MEASUREMENT)) {
                                         MeasurementRepresentation mr = jsonParser
                                                 .parse(MeasurementRepresentation.class, payload);
-                                        return measurementApi.create(mr);
+
+                                        // Now use the connector with the processing mode header
+                                        return (MeasurementRepresentation) connector.post("/measurement/measurements",
+                                                MEASUREMENT,
+                                                mr);
                                     }
                                     return null;
                                 });
@@ -526,7 +518,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
             throws ProcessingException {
-        //initializeTransientApis();
+        // initializeTransientApis();
         // log.info("{} - C8Y Connections available: {}",
         // context.getTenant(),c8ySemaphore.availablePermits());
         String tenant = context.getTenant();
@@ -590,12 +582,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             if (context.getProcessingMode() != null &&
                                     ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
                                 // rt = measurementApiTransient.create(measurementRepresentation);
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", () -> {
-                                    // Use your existing APIs here - they'll automatically get the transient header
+                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
                                     if (targetAPI.equals(API.MEASUREMENT)) {
                                         MeasurementRepresentation mr = jsonParser
                                                 .parse(MeasurementRepresentation.class, payload);
-                                        return measurementApi.create(mr);
+
+                                        // Now use the connector with the processing mode header
+                                        return (MeasurementRepresentation) connector.post("/measurement/measurements",
+                                                MEASUREMENT,
+                                                mr);
                                     }
                                     return null;
                                 });
@@ -1297,72 +1292,73 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     // private synchronized void initializeTransientApis() {
-    //     if (!transientApisInitialized) {
-    //         try {
-    //             // Method 1
-    //             // // Use reflection to call registerInterceptor
-    //             // Method registerMethod =
-    //             // transientPlatform.getClass().getMethod("registerInterceptor",
-    //             // HttpClientInterceptor.class);
-    //             // registerMethod.invoke(transientPlatform, new HttpClientInterceptor() {
-    //             // @Override
-    //             // public Invocation.Builder apply(Invocation.Builder builder) {
-    //             // return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
-    //             // }
-    //             // });
-    //             // log.info("Successfully registered interceptor via reflection");
-    //             // } catch (Exception e) {
-    //             // log.warn("Could not register interceptor via reflection: ", e);
-    //             // }
+    // if (!transientApisInitialized) {
+    // try {
+    // // Method 1
+    // // // Use reflection to call registerInterceptor
+    // // Method registerMethod =
+    // // transientPlatform.getClass().getMethod("registerInterceptor",
+    // // HttpClientInterceptor.class);
+    // // registerMethod.invoke(transientPlatform, new HttpClientInterceptor() {
+    // // @Override
+    // // public Invocation.Builder apply(Invocation.Builder builder) {
+    // // return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
+    // // }
+    // // });
+    // // log.info("Successfully registered interceptor via reflection");
+    // // } catch (Exception e) {
+    // // log.warn("Could not register interceptor via reflection: ", e);
+    // // }
 
-    //             // Method 2
-    //             // if (transientPlatform instanceof PlatformParameters) {
+    // // Method 2
+    // // if (transientPlatform instanceof PlatformParameters) {
 
-    //             // // Register the transient interceptor
-    //             // ((PlatformParameters) transientPlatform).registerInterceptor(new
-    //             // HttpClientInterceptor() {
-    //             // @Override
-    //             // public Invocation.Builder apply(Invocation.Builder builder) {
-    //             // return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
-    //             // }
-    //             // });
+    // // // Register the transient interceptor
+    // // ((PlatformParameters) transientPlatform).registerInterceptor(new
+    // // HttpClientInterceptor() {
+    // // @Override
+    // // public Invocation.Builder apply(Invocation.Builder builder) {
+    // // return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
+    // // }
+    // // });
 
-    //             // // Initialize transient APIs
-    //             // measurementApiTransient = transientPlatform.getMeasurementApi();
+    // // // Initialize transient APIs
+    // // measurementApiTransient = transientPlatform.getMeasurementApi();
 
-    //             // transientApisInitialized = true;
-    //             // log.info("Transient APIs initialized successfully");
-    //             // } else {
-    //             // log.warn("Platform is not PlatformImpl, falling back to header-based
-    //             // approach");
-    //             // }
+    // // transientApisInitialized = true;
+    // // log.info("Transient APIs initialized successfully");
+    // // } else {
+    // // log.warn("Platform is not PlatformImpl, falling back to header-based
+    // // approach");
+    // // }
 
-    //             // Method 3
-    //             Class<?> targetClass = AopUtils.getTargetClass(transientPlatform);
-    //             log.info("Target class: {}", targetClass.getName());
-    //             log.info("Is PlatformImpl: {}", PlatformImpl.class.isAssignableFrom(targetClass));
-    //             if (PlatformImpl.class.isAssignableFrom(targetClass)) {
-    //                 try {
-    //                     // Try to get the actual target object
-    //                     Object target = ((Advised) transientPlatform).getTargetSource().getTarget();
-    //                     if (target instanceof PlatformImpl) {
-    //                         ((PlatformImpl) target).registerInterceptor(new HttpClientInterceptor() {
-    //                             @Override
-    //                             public Invocation.Builder apply(Invocation.Builder builder) {
-    //                                 return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
-    //                             }
-    //                         });
-    //                         log.info("Successfully registered interceptor on target PlatformImpl");
-    //                     }
-    //                 } catch (Exception e) {
-    //                     log.warn("Could not access target PlatformImpl: ", e);
-    //                 }
-    //             }
+    // // Method 3
+    // Class<?> targetClass = AopUtils.getTargetClass(transientPlatform);
+    // log.info("Target class: {}", targetClass.getName());
+    // log.info("Is PlatformImpl: {}",
+    // PlatformImpl.class.isAssignableFrom(targetClass));
+    // if (PlatformImpl.class.isAssignableFrom(targetClass)) {
+    // try {
+    // // Try to get the actual target object
+    // Object target = ((Advised) transientPlatform).getTargetSource().getTarget();
+    // if (target instanceof PlatformImpl) {
+    // ((PlatformImpl) target).registerInterceptor(new HttpClientInterceptor() {
+    // @Override
+    // public Invocation.Builder apply(Invocation.Builder builder) {
+    // return builder.header("X-Cumulocity-Processing-Mode", "TRANSIENT");
+    // }
+    // });
+    // log.info("Successfully registered interceptor on target PlatformImpl");
+    // }
+    // } catch (Exception e) {
+    // log.warn("Could not access target PlatformImpl: ", e);
+    // }
+    // }
 
-    //         } catch (Exception e) {
-    //             log.warn("Could not initialize transient APIs: ", e);
-    //         }
-    //     }
-   // }
+    // } catch (Exception e) {
+    // log.warn("Could not initialize transient APIs: ", e);
+    // }
+    // }
+    // }
 
 }
