@@ -39,9 +39,12 @@ import java.util.concurrent.TimeUnit;
 
 import com.cumulocity.sdk.client.ProcessingMode;
 import com.cumulocity.sdk.client.SDKException;
+
+import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
@@ -62,6 +65,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -301,6 +305,11 @@ public abstract class BaseProcessorInbound<T> {
                     payloadTarget.jsonString(),
                     size);
         }
+        // Ensure alarms are of the correct type for createAlarm
+        ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
+        sourceMor.setId(new GId(context.getSourceId()));
+        context.getAlarms()
+                .forEach(alarm -> c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM, new DateTime(), sourceMor, tenant));
         return context;
     }
 

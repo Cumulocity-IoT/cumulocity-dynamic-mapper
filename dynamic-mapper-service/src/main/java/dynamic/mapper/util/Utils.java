@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 
 public class Utils  {
     public static final String OPTION_CATEGORY_CONFIGURATION = "dynMappingService";
+    public static final String MAPPER_PROCESSING_ALARM = "d11r_mapperProcessingAlarm";
 
 	public static String createCustomUuid() {
 	    return Utils.SECURE_RANDOM.ints(Utils.UUID_LENGTH, 0, 36) 

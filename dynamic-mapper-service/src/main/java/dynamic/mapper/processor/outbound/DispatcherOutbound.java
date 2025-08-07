@@ -427,7 +427,8 @@ public class DispatcherOutbound implements NotificationCallback {
                             || className.equals("dynamic.mapper.processor.model.RepairStrategy")
                             // Allow base collection classes needed for return values
                             || className.equals("java.util.ArrayList") ||
-                            className.equals("java.util.HashMap"))
+                            className.equals("java.util.HashMap")||
+                            className.equals("java.util.HashSet"))
                     .build();
 
             return graalContext;

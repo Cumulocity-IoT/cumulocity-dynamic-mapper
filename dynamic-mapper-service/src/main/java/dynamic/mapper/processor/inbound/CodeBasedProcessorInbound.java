@@ -175,6 +175,12 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                             context.getTenant(),
                             keySet == null ? 0 : keySet.size(), jsonObject);
                 }
+                if (typedResult.alarms != null && !typedResult.alarms.isEmpty()) {
+                    for (String alarm: typedResult.alarms){
+                        context.getAlarms().add(alarm);
+                        log.debug("{} - Alarm added: {}", context.getTenant(), alarm);
+                    }
+                }
             }
 
         }

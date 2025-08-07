@@ -24,6 +24,7 @@ package dynamic.mapper.processor.model;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,7 +63,7 @@ public class ProcessingContext<O> {
     private String topic;
 
     private API api;
-    
+
     private Qos qos;
 
     private String resolvedPublishTopic;
@@ -124,7 +125,10 @@ public class ProcessingContext<O> {
     private Source mappingSource;
 
     private Value sourceValue;
-    
+
+    @Builder.Default
+    private Set<String> alarms = new HashSet<>();
+
     @Builder.Default
     private ProcessingMode processingMode = ProcessingMode.PERSISTENT;
 

@@ -113,7 +113,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     }
 
     private ProcessingResult<?> manageSubscriptions(C8YMessage c8yMessage) {
-        log.info("{} - Update DeviceGroup: {}", tenant, c8yMessage.toString());
+        log.debug("{} - Update DeviceGroup: {}", tenant, c8yMessage.toString());
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
         Future<?> futureProcessingResult = virtualThreadPool.submit(
