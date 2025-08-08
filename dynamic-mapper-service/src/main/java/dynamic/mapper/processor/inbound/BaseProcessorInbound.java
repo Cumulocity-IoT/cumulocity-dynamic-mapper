@@ -305,7 +305,7 @@ public abstract class BaseProcessorInbound<T> {
                     payloadTarget.jsonString(),
                     size);
         }
-        // Ensure alarms are of the correct type for createAlarm
+        // Create alarms for messages reported during processing substitutions
         ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
         sourceMor.setId(new GId(context.getSourceId()));
         context.getAlarms()

@@ -169,17 +169,17 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
                         substitutionTimeExists = true;
                     }
                 }
-                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                    log.info(
-                            "{} - Extraction of source in CodeBasedProcessorInbound.extractFromSource returned {} results, payload: {} ",
-                            context.getTenant(),
-                            keySet == null ? 0 : keySet.size(), jsonObject);
-                }
                 if (typedResult.alarms != null && !typedResult.alarms.isEmpty()) {
                     for (String alarm: typedResult.alarms){
                         context.getAlarms().add(alarm);
                         log.debug("{} - Alarm added: {}", context.getTenant(), alarm);
                     }
+                }
+                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                    log.info(
+                            "{} - Extraction of source in CodeBasedProcessorInbound.extractFromSource returned {} results, payload: {} ",
+                            context.getTenant(),
+                            keySet == null ? 0 : keySet.size(), jsonObject);
                 }
             }
 

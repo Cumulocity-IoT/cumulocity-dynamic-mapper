@@ -135,6 +135,12 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                         }
                         processingCache.put(key, processingCacheEntry);
                     }
+                    if (typedResult.alarms != null && !typedResult.alarms.isEmpty()) {
+                        for (String alarm : typedResult.alarms) {
+                            context.getAlarms().add(alarm);
+                            log.debug("{} - Alarm added: {}", context.getTenant(), alarm);
+                        }
+                    }
                     if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
                         log.info(
                                 "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned {} results, payload: {} ",
