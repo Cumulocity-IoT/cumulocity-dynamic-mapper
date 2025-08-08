@@ -49,6 +49,7 @@ import dynamic.mapper.model.Device;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.outbound.DispatcherOutbound;
+import dynamic.mapper.util.Utils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.ArrayStack;
@@ -64,6 +65,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -216,7 +218,7 @@ public class C8YNotificationSubscriber {
 
         try {
             // Getting existing subscriptions
-            managementSubList = getNotificationSubscriptionForDeviceGroups(null, null).get();
+            managementSubList = getNotificationSubscriptionForDeviceGroup(null, null).get();
             log.info("{} - Phase II: Notification 2.0, subscribing to management", tenant);
             log.debug("{} - Phase II: Notification 2.0, subscribing to management: {}", tenant,
                     managementSubList);
@@ -320,36 +322,81 @@ public class C8YNotificationSubscriber {
     //
     // section 2: handle subscription on device scope
     //
-    private NotificationSubscriptionRepresentation createSubscription(ManagedObjectRepresentation mor, API api,
+    private NotificationSubscriptionRepresentation createSubscriptionByMO(ManagedObjectRepresentation mor, API api,
             String subscriptionName) {
         String tenant = subscriptionsService.getTenant();
-        // final String subscriptionName = DEVICE_SUBSCRIPTION;
 
         Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
                 .getSubscriptionsByFilter(
                         new NotificationSubscriptionFilter().bySubscription(subscriptionName).bySource(mor.getId()))
                 .get().allPages().iterator();
-        NotificationSubscriptionRepresentation notificationSubscriptionRepresentation = null;
+        NotificationSubscriptionRepresentation nor = null;
         while (subIt.hasNext()) {
-            notificationSubscriptionRepresentation = subIt.next();
-            if (DEVICE_SUBSCRIPTION.equals(notificationSubscriptionRepresentation.getSubscription())) {
+            nor = subIt.next();
+            if (DEVICE_SUBSCRIPTION.equals(nor.getSubscription())) {
                 log.info("{} - Subscription with ID {} and source {} already exists.", tenant,
-                        notificationSubscriptionRepresentation.getId().getValue(),
-                        notificationSubscriptionRepresentation.getSource().getId().getValue());
-                return notificationSubscriptionRepresentation;
+                        nor.getId().getValue(),
+                        nor.getSource().getId().getValue());
+                return nor;
             }
         }
 
-        notificationSubscriptionRepresentation = new NotificationSubscriptionRepresentation();
-        notificationSubscriptionRepresentation.setSource(mor);
+        nor = new NotificationSubscriptionRepresentation();
+        nor.setSource(mor);
         final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
         // filterRepresentation.setApis(List.of("operations"));
         filterRepresentation.setApis(List.of(api.notificationFilter));
-        notificationSubscriptionRepresentation.setContext("mo");
-        notificationSubscriptionRepresentation.setSubscription(subscriptionName);
-        notificationSubscriptionRepresentation.setSubscriptionFilter(filterRepresentation);
-        notificationSubscriptionRepresentation = subscriptionAPI.subscribe(notificationSubscriptionRepresentation);
-        return notificationSubscriptionRepresentation;
+        nor.setContext("mo");
+        nor.setSubscription(subscriptionName);
+        nor.setSubscriptionFilter(filterRepresentation);
+        nor = subscriptionAPI.subscribe(nor);
+        return nor;
+    }
+
+    //
+    // section 2: handle subscription on device scope
+    //
+    public C8YNotificationSubscription updateSubscriptionByType(List<String> types) {
+        String tenant = subscriptionsService.getTenant();
+
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                .getSubscriptionsByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(MANAGEMENT_SUBSCRIPTION)
+                                .byContext("tenant"))
+                .get().allPages().iterator();
+        NotificationSubscriptionRepresentation nsr = null;
+        String existingTypeFilter = null;
+        while (subIt.hasNext()) {
+            nsr = subIt.next();
+            existingTypeFilter = nsr.getSubscriptionFilter().getTypeFilter();
+            log.info("{} - Subscription for types already exists and update type list {}", tenant,
+                    existingTypeFilter);
+            break;
+        }
+
+        if (nsr == null) {
+            log.info("{} - No existing subscription for types found, creating new one", tenant);
+        } else {
+            // delete existing subscription
+            subscriptionAPI.delete(nsr);
+        }
+
+        String changedTypeFilter = Utils.createChangedTypeFilter(types, existingTypeFilter);
+        C8YNotificationSubscription c8yNotificationSubscription = new C8YNotificationSubscription();
+        if (changedTypeFilter != null) {
+            nsr = new NotificationSubscriptionRepresentation();
+            NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
+            filterRepresentation.setApis(List.of(API.INVENTORY.notificationFilter));
+            filterRepresentation.setTypeFilter(changedTypeFilter);
+            nsr.setContext("tenant");
+            nsr.setSubscription(MANAGEMENT_SUBSCRIPTION);
+            nsr.setSubscriptionFilter(filterRepresentation);
+            nsr = subscriptionAPI.subscribe(nsr);
+
+            c8yNotificationSubscription.setSubscriptionName(nsr.getSubscription());
+            c8yNotificationSubscription.setTypes(new ArrayList<>(Utils.parseTypesFromFilter(changedTypeFilter)));
+        }
+        return c8yNotificationSubscription;
     }
 
     public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(String tenant,
@@ -358,13 +405,13 @@ public class C8YNotificationSubscriber {
         /* Connect to all devices */
         // String tenant = subscriptionsService.getTenant();
         String deviceName = mor.getName();
-        log.info("{} - Creating new Subscription for Device {} with ID {}", tenant, deviceName,
+        log.info("{} - Creating new subscription for Device {} with ID {}", tenant, deviceName,
                 mor.getId().getValue());
 
         Callable<NotificationSubscriptionRepresentation> callableTask = () -> subscriptionsService.callForTenant(tenant,
                 () -> {
                     Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
-                    NotificationSubscriptionRepresentation notification = createSubscription(mor, api,
+                    NotificationSubscriptionRepresentation notification = createSubscriptionByMO(mor, api,
                             DEVICE_SUBSCRIPTION);
                     if (deviceWSStatusCode.get(tenant) == null
                             || (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) != 200)) {
@@ -387,7 +434,7 @@ public class C8YNotificationSubscriber {
                                     String tokenDevice = createToken(DEVICE_SUBSCRIPTION,
                                             tokenSeedDevice);
                                     log.info(
-                                            "{} - Creating new Subscription for Device {} with ID {} for Connector {}",
+                                            "{} - Creating new subscription for Device {} with ID {} for Connector {}",
                                             tenant, deviceName,
                                             mor.getId().getValue(),
                                             dispatcherOutbound.getConnectorClient().getConnectorName());
@@ -419,15 +466,15 @@ public class C8YNotificationSubscriber {
         return virtualThreadPool.submit(callableTask);
     }
 
-    public Future<NotificationSubscriptionRepresentation> subscribeDeviceGroup(
+    public Future<NotificationSubscriptionRepresentation> subscribeByDeviceGroup(
             ManagedObjectRepresentation mor) throws ExecutionException, InterruptedException {
         String tenant = subscriptionsService.getTenant();
-        log.info("{} - Creating new Subscription for DeviceGroup {} with ID {}", tenant, mor.getId(),
+        log.info("{} - Creating new subscription by deviceGroup {} with ID {}", tenant, mor.getId(),
                 mor.getId().getValue());
 
         Callable<NotificationSubscriptionRepresentation> callableTask = () -> subscriptionsService.callForTenant(tenant,
                 () -> {
-                    NotificationSubscriptionRepresentation notification = createSubscription(mor, API.INVENTORY,
+                    NotificationSubscriptionRepresentation notification = createSubscriptionByMO(mor, API.INVENTORY,
                             MANAGEMENT_SUBSCRIPTION);
                     return notification;
                 });
@@ -474,7 +521,7 @@ public class C8YNotificationSubscriber {
         return virtualThreadPool.submit(callableTask);
     }
 
-    public Future<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDeviceGroups(
+    public Future<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDeviceGroup(
             String deviceId,
             String deviceSubscription) {
 
@@ -503,7 +550,7 @@ public class C8YNotificationSubscriber {
                         notificationSubscriptionRepresentation = subIt.next();
                         if (!"tenant".equals(notificationSubscriptionRepresentation.getContext())) {
                             log.info(
-                                    "{} - Phase I: Notification 2.0, retrieving subscription for management: {}, filter: {},{}",
+                                    "{} - Phase I: Notification 2.0, retrieving subscription for management (deviceGroup): {}, filter: {},{}",
                                     tenant,
                                     notificationSubscriptionRepresentation.getId().getValue(),
                                     notificationSubscriptionRepresentation.getSource(),
@@ -516,7 +563,38 @@ public class C8YNotificationSubscriber {
         return virtualThreadPool.submit(callableTask);
     }
 
-    public C8YNotificationSubscription getSubscriptionsForDevices(String tenant, String deviceId,
+    private Future<NotificationSubscriptionRepresentation> getNotificationSubscriptionForDeviceType() {
+        NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
+        filter = filter.bySubscription(MANAGEMENT_SUBSCRIPTION);
+        filter = filter.byContext("tenant");
+
+        NotificationSubscriptionFilter finalFilter = filter;
+        String tenant = subscriptionsService.getTenant();
+        Callable<NotificationSubscriptionRepresentation> callableTask = () -> subscriptionsService
+                .callForTenant(tenant, () -> {
+                    NotificationSubscriptionRepresentation managementSubList = null;
+                    Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                            .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+                    NotificationSubscriptionRepresentation nor = null;
+                    while (subIt.hasNext()) {
+                        nor = subIt.next();
+                        if ("tenant".equals(nor.getContext())) {
+                            log.info(
+                                    "{} - Phase I: Notification 2.0, retrieving subscription for management (type): {}, filter: {},{}",
+                                    tenant,
+                                    nor.getId().getValue(),
+                                    nor.getSource(),
+                                    nor.getSubscriptionFilter());
+                            managementSubList = nor;
+                            break;
+                        }
+                    }
+                    return managementSubList;
+                });
+        return virtualThreadPool.submit(callableTask);
+    }
+
+    public C8YNotificationSubscription getSubscriptionsDevices(String tenant, String deviceId,
             String deviceSubscription) {
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
         if (deviceSubscription != null)
@@ -569,7 +647,7 @@ public class C8YNotificationSubscriber {
         return c8yNotificationSubscription;
     }
 
-    public C8YNotificationSubscription getSubscriptionsForDeviceGroups(String tenant) {
+    public C8YNotificationSubscription getSubscriptionsByDeviceGroup(String tenant) {
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
         filter = filter.bySubscription(MANAGEMENT_SUBSCRIPTION);
         filter = filter.byContext("mo");
@@ -612,6 +690,32 @@ public class C8YNotificationSubscriber {
         return c8yNotificationSubscription;
     }
 
+    public C8YNotificationSubscription getSubscriptionsByDeviceType(String tenant) {
+        C8YNotificationSubscription c8yNotificationSubscription = new C8YNotificationSubscription();
+        Future<NotificationSubscriptionRepresentation> fnur = getNotificationSubscriptionForDeviceType();
+        String filterString = null;
+        try {
+            NotificationSubscriptionRepresentation nsr = fnur.get();
+            if (nsr != null && nsr.getSubscriptionFilter() != null) {
+                filterString = nsr.getSubscriptionFilter().getTypeFilter();
+                log.debug("{} - Subscription with ID {} retrieved: {},{}", tenant,
+                        nsr.getId().getValue(),
+                        nsr.getSource(),
+                        nsr.getSubscriptionFilter());
+                if (filterString != null) {
+                    c8yNotificationSubscription.setTypes(new ArrayList<>(Utils.parseTypesFromFilter(filterString)));
+                }
+                c8yNotificationSubscription.setSubscriptionName(nsr.getSubscription());
+            } else {
+                log.warn("{} - No subscription for device type found!", tenant);
+            }
+        } catch (Exception e) {
+            log.error("{} - Error on retrieving subscriptions by type: {}", tenant,
+                    e.getLocalizedMessage());
+        }
+        return c8yNotificationSubscription;
+    }
+
     public void unsubscribeDeviceAndDisconnect(String tenant, ManagedObjectRepresentation mor) throws SDKException {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
@@ -642,12 +746,12 @@ public class C8YNotificationSubscriber {
         });
     }
 
-    public void unsubscribeDeviceGroup(ManagedObjectRepresentation mor) throws SDKException {
+    public void unsubscribeByDeviceGroup(ManagedObjectRepresentation mor) throws SDKException {
         String tenant = subscriptionsService.getTenant();
         NotificationCallback managementCallback = managementCallbackMap.get(tenant);
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             try {
-                getNotificationSubscriptionForDeviceGroups(mor.getId().getValue(), MANAGEMENT_SUBSCRIPTION).get()
+                getNotificationSubscriptionForDeviceGroup(mor.getId().getValue(), MANAGEMENT_SUBSCRIPTION).get()
                         .forEach(sub -> {
                             subscriptionAPI.delete(sub);
                             log.info("{} - Subscription {} deleted for deviceGroup with ID {}",
@@ -660,9 +764,6 @@ public class C8YNotificationSubscriber {
                         e.getLocalizedMessage());
             }
         });
-    }
-
-    public void unsubscribeGroupAndDisconnect(ManagedObjectRepresentation mor) throws SDKException {
     }
 
     public void unsubscribeAllDevices() {

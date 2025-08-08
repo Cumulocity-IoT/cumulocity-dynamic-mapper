@@ -359,11 +359,30 @@ export class MappingService {
     return m;
   }
 
-  async updateSubscriptionDeviceGroup(
+  async updateSubscriptionByDeviceGroup(
     sub: C8YNotificationSubscription
   ): Promise<C8YNotificationSubscription> {
     const response = this.client.fetch(
       `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/group`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(sub),
+        method: 'PUT'
+      }
+    );
+    const data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    const m = await data.json();
+    return m;
+  }
+
+    async updateSubscriptionByDeviceType(
+    sub: C8YNotificationSubscription
+  ): Promise<C8YNotificationSubscription> {
+    const response = this.client.fetch(
+      `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/type`,
       {
         headers: {
           'content-type': 'application/json'
@@ -430,12 +449,33 @@ export class MappingService {
     }
   }
 
-  async getSubscriptionDeviceGroup(): Promise<C8YNotificationSubscription> {
+  async getSubscriptionByDeviceGroup(): Promise<C8YNotificationSubscription> {
     const feature = await this.sharedService.getFeatures();
 
     if (feature?.outputMappingEnabled) {
       const res: IFetchResponse = await this.client.fetch(
         `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}/group`,
+        {
+          headers: {
+            'content-type': 'application/json'
+          },
+          method: 'GET'
+        }
+      );
+      const data = await res.json();
+      return data;
+    } else {
+      return null;
+    }
+  }
+
+
+  async getSubscriptionByDeviceType(): Promise<C8YNotificationSubscription> {
+    const feature = await this.sharedService.getFeatures();
+
+    if (feature?.outputMappingEnabled) {
+      const res: IFetchResponse = await this.client.fetch(
+        `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}/type`,
         {
           headers: {
             'content-type': 'application/json'

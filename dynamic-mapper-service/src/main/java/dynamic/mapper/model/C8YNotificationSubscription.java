@@ -66,4 +66,14 @@ public class C8YNotificationSubscription {
         """
     )
     private List<Device> devices;
+        @Schema(
+        description = "List of device types to monitor dynamically to include be included in subscriptions.",
+        example = """
+        [
+          "type_temperature-sensor",
+          "type_humidity-sensor"
+        ]
+        """
+    )
+    private List<String> types;
 }

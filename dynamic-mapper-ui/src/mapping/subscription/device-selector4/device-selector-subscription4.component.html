@@ -1,0 +1,53 @@
+<!--
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
+
+<div class="flex-col flex-nowrap no-align-items fit-h col-md-8 col-md-offset-2 c8y-stepper--no-btns">
+  <div class="card">
+    <div class="card-header m-t-48 p-24 separator" style="justify-content: center">
+      <h4 class="card-title">
+        Select devices types to subscribe to for outbound mappings
+      </h4>
+    </div>
+    <div class="card-block">
+      <div class="container-fluid p-24">
+        <ul class="list-unstyled p-t-16" c8yInputGroupListContainer>
+          <li class="m-b-8" *ngFor="let item of typeList; let i = index; trackBy: trackByFn">
+            <c8y-input-group-list [index]="i" (onAdd)="add()" (onRemove)="remove($event)" [minus]="typeList.length > 1">
+              <c8y-form-group class="form-group--tooltip-validation">
+                <input class="form-control" placeholder="{{ 'e.g.' }} placeholder" type="text" [required]="true"
+                  [(ngModel)]="typeList[i]" />
+              </c8y-form-group>
+            </c8y-input-group-list>
+          </li>
+        </ul>
+      </div>
+      <div class="card-footer text-center">
+        <div class="form-group">
+          <button type="button" name="update" class="btn btn-primary" (click)="clickedUpdateSubscription()" translate>
+            Save
+          </button>
+          <button type="button" name="update" class="btn btn-primary" (click)="clickedCancel()" translate>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>

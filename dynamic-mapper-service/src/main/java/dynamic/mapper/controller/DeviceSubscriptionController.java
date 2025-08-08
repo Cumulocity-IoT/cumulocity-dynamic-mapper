@@ -24,6 +24,8 @@ package dynamic.mapper.controller;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
+
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.model.C8YNotificationSubscription;
@@ -190,7 +192,7 @@ public class DeviceSubscriptionController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             C8YNotificationSubscription c8ySubscription = configurationRegistry.getNotificationSubscriber()
-                    .getSubscriptionsForDevices(tenant, null, null);
+                    .getSubscriptionsDevices(tenant, null, null);
 
             List<Device> toBeRemovedSub = new ArrayList<>();
             List<Device> toBeCreatedSub = new ArrayList<>();
@@ -267,7 +269,7 @@ public class DeviceSubscriptionController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             C8YNotificationSubscription c8YAPISubscription = configurationRegistry.getNotificationSubscriber()
-                    .getSubscriptionsForDevices(contextService.getContext().getTenant(), null, null);
+                    .getSubscriptionsDevices(contextService.getContext().getTenant(), null, null);
             return ResponseEntity.ok(c8YAPISubscription);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -345,7 +347,7 @@ public class DeviceSubscriptionController {
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PutMapping(value = "/group", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<C8YNotificationSubscription> subscriptionDeviceGroupUpdate(
+    public ResponseEntity<C8YNotificationSubscription> subscriptionByDeviceGroupUpdate(
             @Valid @RequestBody C8YNotificationSubscription subscription) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
@@ -353,7 +355,7 @@ public class DeviceSubscriptionController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             C8YNotificationSubscription deviceGroupsSubscription = configurationRegistry.getNotificationSubscriber()
-                    .getSubscriptionsForDeviceGroups(tenant);
+                    .getSubscriptionsByDeviceGroup(tenant);
 
             List<Device> toBeRemovedGroups = new ArrayList<>();
             List<Device> toBeCreatedGroups = new ArrayList<>();
@@ -373,7 +375,7 @@ public class DeviceSubscriptionController {
                 ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId());
                 if (groupMor != null) {
                     // add subscription for deviceGroup
-                    configurationRegistry.getNotificationSubscriber().subscribeDeviceGroup(groupMor);
+                    configurationRegistry.getNotificationSubscriber().subscribeByDeviceGroup(groupMor);
                     try {
                         allChildDevices = configurationRegistry.getNotificationSubscriber()
                                 .findAllRelatedDevicesByMO(groupMor, allChildDevices, false);
@@ -401,14 +403,15 @@ public class DeviceSubscriptionController {
                 ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(tenant, group.getId());
                 if (groupMor != null) {
                     // remove subscription for deviceGroup
-                    configurationRegistry.getNotificationSubscriber().unsubscribeDeviceGroup(groupMor);
+                    configurationRegistry.getNotificationSubscriber().unsubscribeByDeviceGroup(groupMor);
                     try {
                         List<Device> devicesToRemove = configurationRegistry.getNotificationSubscriber()
                                 .findAllRelatedDevicesByMO(groupMor, new ArrayList<>(), false);
                         for (Device deviceToRemove : devicesToRemove) {
                             ManagedObjectRepresentation deviceMor = c8yAgent.getManagedObjectForId(tenant,
                                     deviceToRemove.getId());
-                            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, deviceMor);
+                            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant,
+                                    deviceMor);
                         }
                     } catch (Exception e) {
                         log.error("{} - Error removing group subscriptions: ", tenant, e);
@@ -422,7 +425,7 @@ public class DeviceSubscriptionController {
 
             // Get all currently subscribed device groups to return
             C8YNotificationSubscription updatedSubscription = configurationRegistry.getNotificationSubscriber()
-                    .getSubscriptionsForDeviceGroups(tenant);
+                    .getSubscriptionsByDeviceGroup(tenant);
             return ResponseEntity.ok(updatedSubscription);
 
         } catch (Exception e) {
@@ -432,7 +435,7 @@ public class DeviceSubscriptionController {
     }
 
     @Operation(summary = "Get group notification subscriptions", description = """
-            Retrieves current group notification subscriptions, optionally filtered by group ID or subscription name. Shows which device groups are currently subscribed for outbound notifications.
+            Retrieves current group notification subscriptions. Shows which device groups are currently subscribed for outbound mappings.
             """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "DeviceGroup subscriptions retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = C8YNotificationSubscription.class))),
@@ -440,14 +443,14 @@ public class DeviceSubscriptionController {
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @GetMapping(value = "/group", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<C8YNotificationSubscription> subscriptionDeviceGroupGet() {
+    public ResponseEntity<C8YNotificationSubscription> subscriptionByDeviceGroupGet() {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         if (!serviceConfiguration.isOutboundMappingEnabled())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             C8YNotificationSubscription c8YAPISubscription = configurationRegistry.getNotificationSubscriber()
-                    .getSubscriptionsForDeviceGroups(contextService.getContext().getTenant());
+                    .getSubscriptionsByDeviceGroup(contextService.getContext().getTenant());
             return ResponseEntity.ok(c8YAPISubscription);
         } catch (Exception e) {
             log.error("{} - Error retrieving deviceGroups subscriptions: ", tenant, e);
@@ -461,7 +464,7 @@ public class DeviceSubscriptionController {
 
             **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
             """, parameters = {
-            @Parameter(name = "deviceId", description = "ID of the device group to unsubscribe", required = true, example = "67890", schema = @Schema(type = "string"))
+            @Parameter(name = "groupId", description = "ID of the device group to unsubscribe", required = true, example = "67890", schema = @Schema(type = "string"))
     })
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Device group subscription deleted successfully", content = @Content),
@@ -470,8 +473,8 @@ public class DeviceSubscriptionController {
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
-    @DeleteMapping(value = "/group/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> subscriptionDeviceGroupDelete(@PathVariable String deviceId) {
+    @DeleteMapping(value = "/group/{groupId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> subscriptionByDeviceGroupDelete(@PathVariable String groupId) {
         String tenant = contextService.getContext().getTenant();
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         if (!serviceConfiguration.isOutboundMappingEnabled())
@@ -479,10 +482,10 @@ public class DeviceSubscriptionController {
         try {
             ManagedObjectRepresentation groupMor = c8yAgent.getManagedObjectForId(
                     contextService.getContext().getTenant(),
-                    deviceId);
+                    groupId);
             if (groupMor != null) {
                 // Remove subscription for deviceGroup
-                configurationRegistry.getNotificationSubscriber().unsubscribeDeviceGroup(groupMor);
+                configurationRegistry.getNotificationSubscriber().unsubscribeByDeviceGroup(groupMor);
 
                 // Find all devices in the group
                 List<Device> devicesInGroup = configurationRegistry.getNotificationSubscriber()
@@ -492,14 +495,15 @@ public class DeviceSubscriptionController {
                 for (Device device : devicesInGroup) {
                     ManagedObjectRepresentation deviceMor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                     if (deviceMor != null) {
-                        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, deviceMor);
+                        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant,
+                                deviceMor);
                     }
                 }
                 log.info("{} - Successfully unsubscribed {} devices from group {}", tenant, devicesInGroup.size(),
-                        deviceId);
+                        groupId);
             } else {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Could not delete subscription for device group with id " + deviceId
+                        "Could not delete subscription for device group with id " + groupId
                                 + ". Device group not found");
             }
         } catch (Exception e) {
@@ -507,5 +511,78 @@ public class DeviceSubscriptionController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
         }
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Get device type notification subscriptions", description = """
+            Retrieves current device type notification subscriptions. Shows which device types are currently subscribed for outbound mappings.
+            When devices of these types send data, outbound mappings will be triggered automatically.
+            """)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Device type subscriptions retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = C8YNotificationSubscription.class))),
+            @ApiResponse(responseCode = "404", description = "Outbound mapping is disabled", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    @GetMapping(value = "/type", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<C8YNotificationSubscription> subscriptionByDeviceTypeGet() {
+        String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        if (!serviceConfiguration.isOutboundMappingEnabled())
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
+        try {
+            C8YNotificationSubscription c8YAPISubscription = configurationRegistry.getNotificationSubscriber()
+                    .getSubscriptionsByDeviceType(contextService.getContext().getTenant());
+            return ResponseEntity.ok(c8YAPISubscription);
+        } catch (Exception e) {
+            log.error("{} - Error retrieving device type subscriptions: ", tenant, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Update device type notification subscription", description = """
+            Updates existing device type notification subscriptions by comparing the new type list with current subscriptions.
+
+            **Update Logic:**
+            1. Types in new list but not in current subscriptions → Subscribe to all devices of these types
+            2. Types in current subscriptions but not in new list → Unsubscribe from all devices of these types
+            3. Types in both lists → No change
+
+            **Prerequisites:**
+            - Outbound mapping must be enabled in service configuration
+
+            **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role.
+            """, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated device type subscription configuration", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = C8YNotificationSubscription.class), examples = @ExampleObject(name = "Updated Device Type Subscription", description = "Modified device type list for subscription", value = """
+            {
+              "api": "MEASUREMENT",
+              "subscriptionName": "sensor-types",
+              "types": [
+                "c8y_TemperatureSensor",
+                "c8y_PressureSensor",
+                "c8y_HumiditySensor"
+              ]
+            }
+            """))))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Device type subscription updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = C8YNotificationSubscription.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Outbound mapping is disabled", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
+    @PutMapping(value = "/type", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<C8YNotificationSubscription> subscriptionByDeviceTypeUpdate(
+            @Valid @RequestBody C8YNotificationSubscription subscription) {
+        String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        if (!serviceConfiguration.isOutboundMappingEnabled())
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
+        try {
+            C8YNotificationSubscription deviceTypesSubscription = configurationRegistry
+                    .getNotificationSubscriber().updateSubscriptionByType(subscription.getTypes());
+            return ResponseEntity.ok(deviceTypesSubscription);
+
+        } catch (Exception e) {
+            log.error("{} - Error updating device type subscriptions: ", tenant, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
     }
 }

@@ -59,6 +59,7 @@ import { SubstitutionRendererComponent } from './substitution/substitution-grid.
 import { DeviceSelectorSubscription2Component } from './subscription/device-selector2/device-selector-subscription2.component';
 import { AIPromptComponent } from './prompt/ai-prompt.component';
 import { DeviceSelectorSubscription3Component } from './subscription/device-selector3/device-selector-subscription3.component';
+import { DeviceSelectorSubscription4Component } from './subscription/device-selector4/device-selector-subscription4.component';
 
 @NgModule({
   declarations: [
@@ -70,6 +71,7 @@ import { DeviceSelectorSubscription3Component } from './subscription/device-sele
     DeviceSelectorSubscriptionComponent,
     DeviceSelectorSubscription2Component,
     DeviceSelectorSubscription3Component,
+    DeviceSelectorSubscription4Component,
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,
