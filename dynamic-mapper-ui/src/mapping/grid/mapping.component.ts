@@ -572,7 +572,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     mapping.targetTemplate = getExternalTemplate(mapping);
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
-        message: '10,temp,1666963367'
+        payload: '10,temp,1666963367'
       } as PayloadWrapper);
       mapping = {
         ...mapping,

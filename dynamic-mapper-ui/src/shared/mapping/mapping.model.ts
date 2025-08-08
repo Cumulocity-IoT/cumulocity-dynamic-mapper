@@ -316,7 +316,7 @@ export const MappingTypeDescriptionMap: Record<
   },
   [MappingType.FLAT_FILE]: {
     key: MappingType.FLAT_FILE,
-    description: `Mapping handles payloads in CSV format. Any separator can be defined./nUse the following expression to return the fields in an array.\nFor the expression $split(message, /,\\s*/) the result is:
+    description: `Mapping handles payloads in CSV format. Any separator can be defined./nUse the following expression to return the fields in an array.\nFor the expression $split(payload, /,\\s*/) the result is:
 			[
 				"165",
 				"14.5",
