@@ -23,6 +23,7 @@ package dynamic.mapper.notification;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceCollectionRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
@@ -30,7 +31,6 @@ import com.cumulocity.rest.representation.reliable.notification.NotificationSubs
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
-import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -81,11 +81,9 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
 
-        // We don't care about UPDATES nor DELETES and ignore notifications if connector
-        // is not connected
         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
 
-        // only check for update of managedObject
+        // check for update of managedObject -> updateSubscriptionByChangesInDeviceGroup
         if ("UPDATE".equals(notification.getOperation())) {
             C8YMessage c8yMessage = new C8YMessage();
             Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
@@ -100,24 +98,58 @@ public class ManagementSubscriptionClient implements NotificationCallback {
                 String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
                 c8yMessage.setSourceId(sourceId);
             } catch (Exception e) {
-                log.debug("Could not extract source.id: {}", e.getMessage());
+                log.warn("Could not extract source.id: {}", e.getMessage());
 
             }
             c8yMessage.setPayload(notification.getMessage());
             c8yMessage.setTenant(tenant);
             c8yMessage.setSendPayload(true);
             // TODO Return a future so it can be blocked for QoS 1 or 2
-            return manageSubscriptions(c8yMessage);
+            return updateSubscriptionByChangesInDeviceGroup(c8yMessage);
+        } else if ("CREATE".equals(notification.getOperation())) {
+        // check for creation of managedObject -> updateSubscriptionByChangesInDeviceTypes
+
+            C8YMessage c8yMessage = new C8YMessage();
+            Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
+            c8yMessage.setParsedPayload(parsedPayload);
+            c8yMessage.setApi(notification.getApi());
+            c8yMessage.setOperation(notification.getOperation());
+            String messageId = String.valueOf(parsedPayload.get("id"));
+            c8yMessage.setMessageId(messageId);
+            try {
+                var expression = jsonata(notification.getApi().identifier);
+                Object sourceIdResult = expression.evaluate(parsedPayload);
+                String sourceId = (sourceIdResult instanceof String) ? (String) sourceIdResult : null;
+                c8yMessage.setSourceId(sourceId);
+            } catch (Exception e) {
+                log.warn("Could not extract source.id: {}", e.getMessage());
+
+            }
+            c8yMessage.setPayload(notification.getMessage());
+            c8yMessage.setTenant(tenant);
+            c8yMessage.setSendPayload(true);
+            // TODO Return a future so it can be blocked for QoS 1 or 2
+            return updateSubscriptionByChangesInDeviceTypes(c8yMessage);
         }
         return result;
     }
 
-    private ProcessingResult<?> manageSubscriptions(C8YMessage c8yMessage) {
+    private ProcessingResult<?> updateSubscriptionByChangesInDeviceGroup(C8YMessage c8yMessage) {
         log.debug("{} - Update DeviceGroup: {}", tenant, c8yMessage.toString());
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
         Future<?> futureProcessingResult = virtualThreadPool.submit(
-                new UpdateSubscriptionTask(configurationRegistry,
+                new UpdateSubscriptionDeviceGroupTask(configurationRegistry,
+                        c8yMessage, groupCache));
+        return result;
+    }
+
+    private ProcessingResult<?> updateSubscriptionByChangesInDeviceTypes(C8YMessage c8yMessage) {
+        log.debug("{} - Update DeviceGroup: {}", tenant, c8yMessage.toString());
+        Qos consolidatedQos = Qos.AT_LEAST_ONCE;
+        ProcessingResult<?> result = ProcessingResult.builder().consolidatedQos(consolidatedQos).build();
+        Future<?> futureProcessingResult = virtualThreadPool.submit(
+                new UpdateSubscriptionDeviceTypeTask(configurationRegistry,
                         c8yMessage, groupCache));
         return result;
     }
@@ -140,14 +172,14 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         return notificationHeaders.get(0).split("/")[1];
     }
 
-    public static class UpdateSubscriptionTask<T>
+    public static class UpdateSubscriptionDeviceGroupTask<T>
             implements Callable<List<Future<NotificationSubscriptionRepresentation>>> {
         C8YMessage c8yMessage;
         ConfigurationRegistry configurationRegistry;
         C8YNotificationSubscriber notificationSubscriber;
         Map<String, ManagedObjectRepresentation> groupCache;
 
-        public UpdateSubscriptionTask(ConfigurationRegistry configurationRegistry,
+        public UpdateSubscriptionDeviceGroupTask(ConfigurationRegistry configurationRegistry,
                 C8YMessage c8yMessage, Map<String, ManagedObjectRepresentation> groupCache) {
             this.c8yMessage = c8yMessage;
             this.configurationRegistry = configurationRegistry;
@@ -208,12 +240,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
             // in case of changes update the cachedGroup in groupCache
 
             // Get group id from payload
-            Object groupIdObj = c8yMessage.getParsedPayload().get("id");
-            if (groupIdObj == null) {
-                log.warn("{} - No group id found in payload, skipping subscription update.", tenant);
-                return processingResult;
-            }
-            String groupId = String.valueOf(groupIdObj);
+            String groupId = c8yMessage.getSourceId();
 
             // Get cached group
             ManagedObjectRepresentation cachedGroup = groupCache.get(groupId);
@@ -327,5 +354,51 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     public void removeGroupFromCache(ManagedObjectRepresentation groupMO) {
         this.groupCache.remove(groupMO.getId().getValue());
         log.debug("{} - Removed group from cache: {}", tenant, groupMO.getId().getValue());
+    }
+
+    public static class UpdateSubscriptionDeviceTypeTask<T>
+            implements Callable<List<Future<NotificationSubscriptionRepresentation>>> {
+        C8YMessage c8yMessage;
+        ConfigurationRegistry configurationRegistry;
+        C8YNotificationSubscriber notificationSubscriber;
+        Map<String, ManagedObjectRepresentation> groupCache;
+
+        public UpdateSubscriptionDeviceTypeTask(ConfigurationRegistry configurationRegistry,
+                C8YMessage c8yMessage, Map<String, ManagedObjectRepresentation> groupCache) {
+            this.c8yMessage = c8yMessage;
+            this.configurationRegistry = configurationRegistry;
+            this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
+            this.groupCache = groupCache;
+        }
+
+        @Override
+        public List<Future<NotificationSubscriptionRepresentation>> call() throws Exception {
+            List<Future<NotificationSubscriptionRepresentation>> processingResult = new ArrayList<>();
+            String tenant = c8yMessage.getTenant();
+            String deviceId = c8yMessage.getSourceId();
+            Object typeObj = c8yMessage.getParsedPayload().get("type");
+            if (typeObj == null) {
+                log.warn("{} - No type found in payload, skipping subscription update.", tenant);
+                return processingResult;
+            }
+            String type = String.valueOf(typeObj);
+
+            // Subscribe new asset
+            try {
+                ManagedObjectRepresentation newMO = new ManagedObjectRepresentation();
+                newMO.setId(GId.asGId(deviceId));
+
+                Future<NotificationSubscriptionRepresentation> subResult = notificationSubscriber
+                        .subscribeDeviceAndConnect(tenant, newMO, c8yMessage.getApi());
+                log.info("{} - Subscribed and connected new asset {} of type {}", tenant, deviceId, type);
+
+            } catch (Exception e) {
+                log.warn("{} - Failed to subscribe/connect new asset {}: {}", tenant, deviceId, e.getMessage());
+                e.printStackTrace();
+            }
+
+            // TODO: Return a future so it can be blocked for QoS 1 or 2
+            return processingResult;
+        }
     }
 }
