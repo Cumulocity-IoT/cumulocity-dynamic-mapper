@@ -109,6 +109,10 @@ public abstract class BaseProcessorInbound<T> {
                                 context.getMapping().getTargetAPI().toString());
                         put("processingMode",
                                 ProcessingMode.PERSISTENT.toString());
+                        if (context.getMapping().createNonExistingDevice) {
+                            put("deviceName", context.getDeviceName());
+                            put("deviceType", context.getDeviceType());
+                        }
                     }
                 };
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
@@ -309,7 +313,8 @@ public abstract class BaseProcessorInbound<T> {
         ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
         sourceMor.setId(new GId(context.getSourceId()));
         context.getAlarms()
-                .forEach(alarm -> c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM, new DateTime(), sourceMor, tenant));
+                .forEach(alarm -> c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM, new DateTime(),
+                        sourceMor, tenant));
         return context;
     }
 
@@ -353,6 +358,10 @@ public abstract class BaseProcessorInbound<T> {
             context.getBinaryInfo().setData((String) substitute.value);
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".processingMode").equals(pathTarget)) {
             context.setProcessingMode(ProcessingMode.parse((String) substitute.value));
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceName").equals(pathTarget)) {
+            context.setDeviceName((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceType").equals(pathTarget)) {
+            context.setDeviceType((String) substitute.value);
         } else if ((Mapping.TOKEN_CONTEXT_DATA).equals(pathTarget)) {
             // Handle the case where substitute.value is a Map containing context data keys
             if (substitute.value instanceof Map) {
@@ -390,6 +399,16 @@ public abstract class BaseProcessorInbound<T> {
                                 context.setProcessingMode(ProcessingMode.parse((String) substitute.value));
                             }
                             break;
+                        case "deviceName":
+                            if (value instanceof String) {
+                                context.setDeviceName((String) value);
+                            }
+                            break;
+                        case "deviceType":
+                            if (value instanceof String) {
+                                context.setDeviceType((String) value);
+                            }
+                            break;
                         default:
                             // Handle unknown keys - you might want to log a warning or ignore
                             // Optional: log.warn("Unknown context data key: {}", key);
@@ -404,6 +423,17 @@ public abstract class BaseProcessorInbound<T> {
 
     protected String createAdHocDevice(ID identity, ProcessingContext<T> context) {
         Map<String, Object> request = new HashMap<String, Object>();
+        if (context.getDeviceName() != null) {
+            request.put("name", context.getDeviceName());
+        } else {
+            request.put("name", "device_" + identity.getType() + "_" + identity.getValue());
+        }
+        if (context.getDeviceType() != null) {
+            request.put("type", context.getDeviceType());
+        } else {
+            // Default device type if not specified
+            request.put("type", "c8y_GeneratedDeviceType");
+        }
         request.put("name",
                 "device_" + identity.getType() + "_" + identity.getValue());
         request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);

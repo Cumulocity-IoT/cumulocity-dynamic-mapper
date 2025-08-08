@@ -132,6 +132,10 @@ public class ProcessingContext<O> {
     @Builder.Default
     private ProcessingMode processingMode = ProcessingMode.PERSISTENT;
 
+    private String deviceName;
+
+    private String deviceType;
+
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();
 

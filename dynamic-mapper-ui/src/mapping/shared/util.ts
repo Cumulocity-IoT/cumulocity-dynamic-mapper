@@ -457,6 +457,13 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
       };
     }
 
+        if (mapping.createNonExistingDevice) {
+      result = {
+        ...result,
+        [TOKEN_CONTEXT_DATA]: { 'deviceName': 'generatedDevice', 'deviceType': 'c8y_GeneratedDeviceType' }
+      };
+    }
+
     // Handle attachment properties independently
     if (mapping.eventWithAttachment) {
       // Initialize [TOKEN_CONTEXT_DATA] if it doesn't exist yet
