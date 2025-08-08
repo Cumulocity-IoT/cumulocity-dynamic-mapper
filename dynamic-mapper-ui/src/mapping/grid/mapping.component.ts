@@ -20,6 +20,7 @@
 import {
   ChangeDetectorRef,
   Component,
+  inject,
   OnDestroy,
   OnInit,
   ViewChild,
@@ -151,12 +152,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   feature: Feature;
 
   constructor(
-    public mappingService: MappingService,
-    private sharedService: SharedService,
-    private alertService: AlertService,
-    private bsModalService: BsModalService,
-    private router: Router,
-    private route: ActivatedRoute
   ) {
     const href = this.router.url;
     this.stepperConfiguration.direction = href.includes('/mappings/inbound')
@@ -166,6 +161,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.columnsMappings = this.getColumnsMappings();
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
   }
+
+  private mappingService = inject(MappingService);
+  private sharedService = inject(SharedService);
+  private alertService = inject(AlertService);
+  private bsModalService = inject(BsModalService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   async ngOnInit() {
     this.setupActionControls();

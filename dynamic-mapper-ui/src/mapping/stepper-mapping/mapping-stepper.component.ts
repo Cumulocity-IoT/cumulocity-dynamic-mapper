@@ -114,6 +114,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
   @ViewChild('codeEditor', { static: false }) codeEditor: EditorComponent;
 
+  
   private cdr = inject(ChangeDetectorRef);
   private bsModalService = inject(BsModalService);
   private sharedService = inject(SharedService);

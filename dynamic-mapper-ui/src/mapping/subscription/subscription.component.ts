@@ -19,6 +19,7 @@
  */
 import {
   Component,
+  inject,
   OnDestroy,
   OnInit,
   ViewChild,
@@ -49,7 +50,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
-import { DeploymentMapEntry, SharedService, StepperConfiguration } from '../../shared';
+import { DeploymentMapEntry, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { C8YNotificationSubscription, Device } from '../shared/mapping.model';
 
@@ -64,25 +65,25 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
 
   constructor(
-    private mappingService: MappingService,
-    private shareService: SharedService,
-    private alertService: AlertService,
-    private bsModalService: BsModalService,
-    private router: Router,
-    private route: ActivatedRoute
   ) {
     // console.log('constructor');
     const href = this.router.url;
-    this.stepperConfiguration.direction = href.match(
-      /c8y-pkg-dynamic-mapper\/node1\/mappings\/inbound/g
+    this.static = href.match(
+      /c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/static/g
     )
-      ? Direction.INBOUND
-      : Direction.OUTBOUND;
+      ? true
+      : false;
 
-    this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
     this.loadSubscriptionDevice();
     this.loadSubscriptionDeviceGroup();
   }
+
+  private mappingService = inject(MappingService);
+  private sharedService = inject(SharedService);
+  private alertService = inject(AlertService);
+  private bsModalService = inject(BsModalService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   showConfigSubscription1: boolean = false;
   showConfigSubscription2: boolean = false;
@@ -97,7 +98,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   devices: IIdentified[] = [];
   Direction = Direction;
 
-  stepperConfiguration: StepperConfiguration = {};
+  static: boolean = false;
   titleMapping: string;
   readonly titleSubscription: string = 'Subscription devices mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
@@ -218,7 +219,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       }
     }
     this.isConnectionToMQTTEstablished = true;
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    this.mappingService.refreshMappings(Direction.OUTBOUND);
     this.subscriptionGrid.setAllItemsSelected(false);
   }
 
@@ -274,7 +275,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     this.showConfigSubscription2 = false;
   }
 
-    async onCommitSubscriptionDeviceGroup(deviceList: IIdentified[]): Promise<void> {
+  async onCommitSubscriptionDeviceGroup(deviceList: IIdentified[]): Promise<void> {
     this.subscriptionDevices = {
       api: API.ALL.name,
       devices: deviceList as Device[]
@@ -301,7 +302,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   private async reloadMappingsInBackend(): Promise<void> {
-    const response2 = await this.shareService.runOperation(
+    const response2 = await this.sharedService.runOperation(
       { operation: Operation.RELOAD_MAPPINGS }
     );
     // console.log('Activate mapping response:', response2);

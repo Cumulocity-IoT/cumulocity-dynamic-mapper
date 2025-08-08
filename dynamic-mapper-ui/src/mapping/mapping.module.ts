@@ -122,7 +122,14 @@ import { DeviceSelectorSubscription3Component } from './subscription/device-sele
       }
     }),
     hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscriptionOutbound`,
+      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/static`,
+      component: MappingSubscriptionComponent,
+      resolve: {
+        feature: featureResolver
+      }
+    }),
+        hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/dynamic`,
       component: MappingSubscriptionComponent,
       resolve: {
         feature: featureResolver
