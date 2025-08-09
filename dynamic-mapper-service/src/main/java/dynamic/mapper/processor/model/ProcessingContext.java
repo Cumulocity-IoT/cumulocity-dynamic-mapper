@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.API;
@@ -88,7 +89,11 @@ public class ProcessingContext<O> {
 
     // <pathTarget, substituteValues>
     @Builder.Default
-    private Map<String, List<SubstituteValue>> processingCache = new HashMap<String, List<SubstituteValue>>();
+    // private Map<String, List<SubstituteValue>> processingCache = new
+    // HashMap<String, List<SubstituteValue>>();
+    // sort processingCache, so that the "_CONTEXT_DATA_.deviceName" is available
+    // when creating an implicit device
+    private Map<String, List<SubstituteValue>> processingCache = new TreeMap<String, List<SubstituteValue>>();
 
     @Builder.Default
     private boolean sendPayload = false;

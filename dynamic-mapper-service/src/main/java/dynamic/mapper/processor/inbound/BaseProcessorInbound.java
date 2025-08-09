@@ -330,7 +330,7 @@ public abstract class BaseProcessorInbound<T> {
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
                 if (resolvedSourceId == null) {
                     if (mapping.createNonExistingDevice) {
-                        sourceId.value = createAdHocDevice(identity, context);
+                        sourceId.value = createImplicitDevice(identity, context);
                     }
                 } else {
                     sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
@@ -421,7 +421,7 @@ public abstract class BaseProcessorInbound<T> {
         }
     }
 
-    protected String createAdHocDevice(ID identity, ProcessingContext<T> context) {
+    protected String createImplicitDevice(ID identity, ProcessingContext<T> context) {
         Map<String, Object> request = new HashMap<String, Object>();
         if (context.getDeviceName() != null) {
             request.put("name", context.getDeviceName());

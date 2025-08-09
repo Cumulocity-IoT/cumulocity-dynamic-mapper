@@ -48,6 +48,8 @@ export interface ProcessingContext {
   sendPayload?: boolean;
   sourceId?: string;
   logs?: any[];
+  deviceName?: string;
+  deviceType?: string;
 }
 
 export enum ProcessingType {
@@ -138,39 +140,19 @@ export function getDeviceEntries(context: ProcessingContext): SubstituteValue[] 
   return deviceEntries;
 }
 
-export function substituteValueInPayload(
-  sub: SubstituteValue,
-  jsonObject: JSON,
-  keys: string,
+export function prepareAndSubstituteInPayload(
+  context: ProcessingContext,
+  substitute: SubstituteValue,
+  payloadTarget: JSON,
+  pathTarget: string,
   alert: AlertService
 ) {
-  const subValueMissingOrNull: boolean = !sub || sub.value == null;
-
-  if (keys == '$') {
-    Object.keys(getTypedValue(sub)).forEach((key) => {
-      jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
-    });
+  if (TOKEN_CONTEXT_DATA + ".deviceName" == pathTarget) {
+    context.deviceName = substitute.value;
+  } else if (TOKEN_CONTEXT_DATA + ".deviceType" == pathTarget) {
+    context.deviceType = substitute.value;
   } else {
-    if ((sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL &&
-      subValueMissingOrNull)) {
-      _.unset(jsonObject, keys);
-    } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-      // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-      // if (pathIsNested) {
-      //   throw new Error('Can only create new nodes on the root level!');
-      // }
-      // jsonObject.put("$", keys, sub.typedValue());
-      _.set(jsonObject, keys, getTypedValue(sub));
-    } else {
-      if (_.has(jsonObject, keys)) {
-        _.set(jsonObject, keys, getTypedValue(sub));
-      } else {
-        // alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
-        throw new Error(
-          `Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`
-        );
-      }
-    }
+    substituteValueInPayload(substitute, payloadTarget, pathTarget);
   }
 }
 
@@ -183,6 +165,49 @@ export const KEY_TIME = 'time';
 export const TOPIC_WILDCARD_MULTI = '#';
 export const TOPIC_WILDCARD_SINGLE = '+';
 
+
+export function substituteValueInPayload(substitute: SubstituteValue, payloadTarget: JSON, pathTarget: string) {
+  const subValueMissingOrNull: boolean = !substitute || substitute.value == null;
+
+  if (pathTarget == '$') {
+    Object.keys(getTypedValue(substitute)).forEach((key) => {
+      payloadTarget[key] = getTypedValue(substitute)[key as keyof unknown];
+    });
+  } else {
+    if ((substitute.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL &&
+      subValueMissingOrNull)) {
+      _.unset(payloadTarget, pathTarget);
+    } else if (substitute.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
+      // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
+      // if (pathIsNested) {
+      //   throw new Error('Can only create new nodes on the root level!');
+      // }
+      // jsonObject.put("$", keys, sub.typedValue());
+      _.set(payloadTarget, pathTarget, getTypedValue(substitute));
+    } else {
+      if (_.has(payloadTarget, pathTarget)) {
+        _.set(payloadTarget, pathTarget, getTypedValue(substitute));
+      } else {
+        // alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
+        throw new Error(
+          `Message could NOT be parsed, ignoring this message: Path: ${pathTarget} not found!`
+        );
+      }
+    }
+  }
+}
+
+export function sortProcessingCache(context: ProcessingContext): void {
+  // Convert Map to array of entries, sort, then create new Map
+  const sortedEntries = Array.from(context.processingCache.entries())
+    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
+  
+  // Clear the original map and repopulate with sorted entries
+  context.processingCache.clear();
+  sortedEntries.forEach(([key, value]) => {
+    context.processingCache.set(key, value);
+  });
+}
 
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
