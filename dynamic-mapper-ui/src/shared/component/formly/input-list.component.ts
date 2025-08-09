@@ -1,5 +1,5 @@
 // input-list.component.ts
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { debounceTime, Subject } from 'rxjs';
 
 @Component({
@@ -7,7 +7,7 @@ import { debounceTime, Subject } from 'rxjs';
   templateUrl: './input-list.component.html',
   standalone: false,
 })
-export class InputListComponent implements OnInit {
+export class InputListComponent implements OnInit, OnDestroy {
   @Input()
   set data(list: Record<string, string> | Array<{ key: string; value: string | undefined }> | null | undefined) {
     // Handle both object and array input
