@@ -33,24 +33,28 @@ import {
   encapsulation: ViewEncapsulation.None,
   standalone: false
 })
-export class DeviceSelectorSubscription4Component implements OnInit{
+export class DeviceSelectorSubscription4Component implements OnInit {
   @Input() set typeList(list) {
     this.typeListInternal = list;
     if (this.typeListInternal.length === 0) {
       this.add();
     }
   }
+  get typeList() {
+    return this.typeListInternal;
+  }
+
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<string[]>();
 
-  typeListInternal : string[];
+  typeListInternal: string[];
 
   trackByFn(index: any, _item: any) {
     return index;
   }
 
   ngOnInit(): void {
-    this.add();  
+    this.add();
   }
 
   add() {

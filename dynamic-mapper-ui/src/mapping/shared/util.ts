@@ -453,14 +453,21 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
     if (mapping.supportsMessageContext) {
       result = {
         ...result,
-        [TOKEN_CONTEXT_DATA]: { 'api': mapping.targetAPI, 'processingMode': 'PERSISTENT' }
+        [TOKEN_CONTEXT_DATA]: {
+          'api': mapping.targetAPI,
+          'processingMode': 'PERSISTENT'
+        }
       };
     }
 
-        if (mapping.createNonExistingDevice) {
+    if (mapping.createNonExistingDevice) {
       result = {
         ...result,
-        [TOKEN_CONTEXT_DATA]: { 'deviceName': 'generatedDevice', 'deviceType': 'c8y_GeneratedDeviceType' }
+        [TOKEN_CONTEXT_DATA]: {
+          ...result[TOKEN_CONTEXT_DATA], // Spread existing properties
+          'deviceName': 'generatedDevice',
+          'deviceType': 'c8y_GeneratedDeviceType'
+        }
       };
     }
 

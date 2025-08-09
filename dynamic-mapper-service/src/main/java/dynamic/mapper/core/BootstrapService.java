@@ -50,7 +50,7 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.http.HttpClient;
-import dynamic.mapper.notification.C8YNotificationSubscriber;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.inbound.DispatcherInbound;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -136,7 +136,7 @@ public class BootstrapService {
     }
 
     private void cleanTenantResources(String tenant) throws ConnectorRegistryException {
-        C8YNotificationSubscriber subscriber = configurationRegistry.getNotificationSubscriber();
+        NotificationSubscriber subscriber = configurationRegistry.getNotificationSubscriber();
         subscriber.disconnect(tenant);
         subscriber.unsubscribeDeviceSubscriber(tenant);
         subscriber.unsubscribeDeviceGroupSubscriber(tenant);
@@ -349,8 +349,8 @@ public class BootstrapService {
         if (!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
             disableOutboundMapping(tenant, serviceConfig);
         } else {
-            configurationRegistry.getNotificationSubscriber().initDeviceClient();
-            configurationRegistry.getNotificationSubscriber().initManagementClient();
+            configurationRegistry.getNotificationSubscriber().initializeDeviceClient();
+            configurationRegistry.getNotificationSubscriber().initializeManagementClient();
         }
     }
 

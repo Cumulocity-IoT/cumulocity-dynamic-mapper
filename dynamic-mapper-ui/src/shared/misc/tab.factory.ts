@@ -37,7 +37,7 @@ export class MappingTabFactory implements TabFactory {
     const feature = await this.sharedService.getFeatures();
 
     const tabs: Tab[] = [];
-    if (this.router.url.match(/c8y-pkg-dynamic-mapper/g)) {
+    if (this.router.url.match(/c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription/g)) {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/dynamic`,
         priority: 920,

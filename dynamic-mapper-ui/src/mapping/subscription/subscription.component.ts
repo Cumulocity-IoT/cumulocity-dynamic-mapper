@@ -52,7 +52,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { DeploymentMapEntry, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { C8YNotificationSubscription, Device } from '../shared/mapping.model';
+import { NotificationSubscriptionRequest, Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
@@ -93,8 +93,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   isConnectionToMQTTEstablished: boolean;
 
-  subscriptionDevices: C8YNotificationSubscription;
-  subscriptionDeviceGroups: C8YNotificationSubscription;
+  subscriptionDevices: NotificationSubscriptionResponse;
+  subscriptionDeviceGroups: NotificationSubscriptionResponse;
   subscribedDevices: any[];
   subscribedDeviceGroups: any[];
   subscribedDeviceTypes: string[];
@@ -268,14 +268,14 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   async onCommitSubscriptionDevice(deviceList: IIdentified[]): Promise<void> {
-    this.subscriptionDevices = {
+    const subscriptionDevices = {
       api: API.ALL.name,
       devices: deviceList as Device[]
     };
     // console.log('Changed deviceList:', this.subscription.devices);
     try {
       await this.mappingService.updateSubscriptionDevice(
-        this.subscriptionDevices
+        subscriptionDevices
       );
       this.loadSubscriptionDevice();
       this.alertService.success(gettext('Subscriptions updated successfully'));
@@ -289,13 +289,13 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   async onCommitSubscriptionByDeviceGroup(deviceList: IIdentified[]): Promise<void> {
-    this.subscriptionDevices = {
+    const subscriptionDevices = {
       api: API.ALL.name,
       devices: deviceList as Device[]
     };
     try {
       await this.mappingService.updateSubscriptionByDeviceGroup(
-        this.subscriptionDevices
+       subscriptionDevices
       );
       this.loadSubscriptionByDeviceGroup();
       this.loadSubscriptionDevice();
@@ -310,13 +310,13 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   async onCommitSubscriptionByDeviceType(typeList: string[]): Promise<void> {
-    this.subscriptionDevices = {
+    const subscriptionDevices = {
       api: API.ALL.name,
       types: typeList as string[]
     };
     try {
       await this.mappingService.updateSubscriptionByDeviceType(
-        this.subscriptionDevices
+        subscriptionDevices
       );
       this.loadSubscriptionByDeviceType();
       this.loadSubscriptionDevice();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Cumulocity GmbH.
+ * Copyright (c) 2025 Cumulocity GmbH.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -19,24 +19,15 @@
  *
  */
 
-package dynamic.mapper.processor.model;
+/*
+ * Copyright (c) 2025 Cumulocity GmbH.
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-import java.util.List;
-import java.util.concurrent.Future;
+package dynamic.mapper.exception;
 
-import dynamic.mapper.model.Qos;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-
-@Getter
-@Setter
-@Builder
-
-public class ProcessingResult<O> {
-    private Future<List<ProcessingContext<O>>> processingResult;
-    private Qos consolidatedQos;
-    private int maxCPUTimeMS;
-    private Exception error;
-    private Future future;
+public class DeviceNotFoundException extends RuntimeException {
+    public DeviceNotFoundException(String message) {
+        super(message);
+    }
 }
