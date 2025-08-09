@@ -34,10 +34,16 @@ import {
   standalone: false
 })
 export class DeviceSelectorSubscription4Component implements OnInit{
-  @Input() typeList: string[];
-
+  @Input() set typeList(list) {
+    this.typeListInternal = list;
+    if (this.typeListInternal.length === 0) {
+      this.add();
+    }
+  }
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<string[]>();
+
+  typeListInternal : string[];
 
   trackByFn(index: any, _item: any) {
     return index;
@@ -48,15 +54,15 @@ export class DeviceSelectorSubscription4Component implements OnInit{
   }
 
   add() {
-    this.typeList.push("");
+    this.typeListInternal.push("");
   }
 
   remove(index) {
-    this.typeList.splice(index, 1);
+    this.typeListInternal.splice(index, 1);
   }
 
   clickedUpdateSubscription() {
-    this.commit.emit(this.typeList);
+    this.commit.emit(this.typeListInternal);
   }
 
   clickedCancel() {

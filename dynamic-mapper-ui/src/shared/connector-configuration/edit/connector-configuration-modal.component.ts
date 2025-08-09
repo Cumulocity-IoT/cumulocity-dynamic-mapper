@@ -65,7 +65,8 @@ export class ConnectorConfigurationModalComponent implements OnInit {
     [ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, this.createSensitiveStringField.bind(this)],
     [ConnectorPropertyType.BOOLEAN_PROPERTY, this.createBooleanField.bind(this)],
     [ConnectorPropertyType.OPTION_PROPERTY, this.createOptionField.bind(this)],
-    [ConnectorPropertyType.STRING_LARGE_PROPERTY, this.createLargeStringField.bind(this)]
+    [ConnectorPropertyType.STRING_LARGE_PROPERTY, this.createLargeStringField.bind(this)],
+    [ConnectorPropertyType.MAP_PROPERTY, this.createMapField.bind(this)]
   ]);
   feature: Feature;
 
@@ -184,6 +185,33 @@ export class ConnectorConfigurationModalComponent implements OnInit {
       cols: 120,
       rows: 6
     });
+  }
+
+  private createMapField(entry: PropertyEntry): FormlyFieldConfig {
+    return {
+      fieldGroup: [{
+        className: 'col-lg-12',
+        key: `properties.${entry.key}`,
+        id: entry.key,
+        type: 'd11r-input-list',
+        wrappers: ['c8y-form-field'],
+        props: {
+          label: entry.key,
+          required: entry.property.required,
+          disabled: entry.property.readonly || this.readOnly,
+          description: entry.property.description || undefined,
+        },
+        hideExpression: (model) => {
+          if (entry.property?.condition && entry.property?.condition.anyOf) {
+            const convertedAnyOf = this.convertBooleanStrings(entry.property.condition.anyOf);
+            return !convertedAnyOf.includes(model.properties[entry.property?.condition.key]);
+          }
+          return false;
+        },
+        // Initialize with empty object if no default value
+        defaultValue: entry.property.defaultValue || {}
+      }]
+    };
   }
 
   private async createDynamicForm(connectorType: ConnectorType): Promise<void> {

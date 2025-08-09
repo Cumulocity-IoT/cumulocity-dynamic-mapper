@@ -43,6 +43,8 @@ import { FilterJsonPipe } from './misc/filter-json.pipe';
 import { FormatStringPipe } from './misc/format-string.pipe';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { Base64DecodePipe } from './misc/base64-decode.pipe';
+import { InputListComponent } from './component/formly/input-list.component';
+import { InputListFormlyComponent } from './component/formly/input-list-formly.component';
 
 @NgModule({
   declarations: [
@@ -64,6 +66,8 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
     WrapperCustomFormField,
     FieldTextareaCustom,
     FieldInputCustom,
+    InputListComponent,
+    InputListFormlyComponent
   ],
   imports: [
     CoreModule,
@@ -89,7 +93,7 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
     FieldTextareaCustom,
     FieldInputCustom,
   ],
-  providers:[FormatStringPipe,
+  providers: [FormatStringPipe,
     {
       provide: FORMLY_CONFIG,
       multi: true,
@@ -104,7 +108,11 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
             component: FieldInputCustom
           },
           { name: 'enum', extends: 'select' },
-          { name: 'boolean', extends: 'checkbox' }
+          { name: 'boolean', extends: 'checkbox' },
+          {
+            name: 'd11r-input-list',
+            component: InputListFormlyComponent // You'll need to create this wrapper component
+          }
         ],
         wrappers: [
           {
@@ -116,4 +124,4 @@ import { Base64DecodePipe } from './misc/base64-decode.pipe';
     }
   ]
 })
-export class SharedModule {}
+export class SharedModule { }
