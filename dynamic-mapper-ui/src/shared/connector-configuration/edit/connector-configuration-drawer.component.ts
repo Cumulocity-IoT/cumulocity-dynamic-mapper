@@ -40,7 +40,7 @@ interface PropertyEntry {
 }
 
 @Component({
-  selector: 'd11r-edit-connector',
+  selector: 'd11r-edit-connector-drawer',
   templateUrl: 'connector-configuration-drawer.component.html',
   standalone: false
 })

@@ -58,3 +58,11 @@
     </div>
   </div>
 </div>
+
+<div [ngClass]="{ drawerOpen: showConfigConnector }">
+  <div class="bottom-drawer">
+    <d11r-edit-connector-drawer *ngIf="showConfigConnector" (closeSubject)="showConfigConnector = false"
+     [typeList]="subscribedDeviceTypes">
+    </d11r-edit-connector-drawer>
+  </div>
+</div>

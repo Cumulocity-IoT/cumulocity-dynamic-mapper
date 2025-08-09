@@ -46,6 +46,7 @@ export class ConnectorConfigurationComponent {
   feature: Feature;
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
+  showConfigConnector: boolean = false;
 
   constructor(
     private alertService: AlertService,

@@ -114,7 +114,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
   @ViewChild('codeEditor', { static: false }) codeEditor: EditorComponent;
 
-  
+
   private cdr = inject(ChangeDetectorRef);
   private bsModalService = inject(BsModalService);
   private sharedService = inject(SharedService);
@@ -357,7 +357,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                 // !this.stepperConfiguration.allowDefiningSubstitutions,
                 !this.stepperConfiguration.allowDefiningSubstitutions || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
               placeholder: '$exists(c8y_TemperatureMeasurement)',
-              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+              description: `This expression is required and must evaluate to <code>true</code> to apply the mapping.
+              Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
               <ol>
                 <li>Check if a fragment exists:
@@ -668,7 +669,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         result: JSON.stringify(resultExpression, null, 4),
         valid: true
       };
-      if (path && !resultExpression) throw Error('The filter expression must return true');
+      if ((path && this.filterModel.filterExpression.resultType != 'Boolean')|| (path && this.filterModel.filterExpression.resultType == 'Boolean' && !resultExpression)) throw Error('The filter expression must return true');
       this.mapping.filterMapping = path;
     } catch (error) {
       this.filterModel.filterExpression.valid = false;
@@ -1000,7 +1001,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       !this.templatesInitialized
     ) {
       this.templatesInitialized = true;
-      if(this.mapping.direction === Direction.INBOUND) {
+      if (this.mapping.direction === Direction.INBOUND) {
         this.sourceTemplate = expandSource(
           JSON.parse(getExternalTemplate(this.mapping))
         );
