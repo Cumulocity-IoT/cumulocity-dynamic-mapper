@@ -434,8 +434,6 @@ public abstract class BaseProcessorInbound<T> {
             // Default device type if not specified
             request.put("type", "c8y_GeneratedDeviceType");
         }
-        request.put("name",
-                "device_" + identity.getType() + "_" + identity.getValue());
         request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
         request.put("c8y_IsDevice", null);
         request.put("com_cumulocity_model_Agent", null);
