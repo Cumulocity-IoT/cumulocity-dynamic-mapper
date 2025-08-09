@@ -156,7 +156,8 @@ export function createCompletionProvider(monaco) {
         { name: 'getGenericDeviceIdentifier', parameters: [], returnType: 'string', documentation: 'Gets the generic device identifier.' },
         { name: 'getExternalIdentifier', parameters: [], returnType: 'string', documentation: 'Gets the external identifier from the payload.' },
         { name: 'getC8YIdentifier', parameters: [], returnType: 'string', documentation: 'Gets the C8Y identifier from the payload.' },
-        { name: 'getPayload', parameters: [], returnType: 'Object', documentation: 'Gets the JSON payload.' }
+        { name: 'getPayload', parameters: [], returnType: 'Object', documentation: 'Gets the JSON payload.' },
+        { name: 'getTopic', parameters: [], returnType: 'string', documentation: 'Gets subscribe or publish topic of this mapping.' }
       ],
       documentation: 'Context for substitution operations.'
     }

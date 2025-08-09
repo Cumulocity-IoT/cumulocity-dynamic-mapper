@@ -240,7 +240,8 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
   // Serialize the SubstitutionContext object
   const serializableCtx = {
     identifier: ctx.getGenericDeviceIdentifier ? ctx.getGenericDeviceIdentifier() : ctx['deviceIdentifier'],
-    payload: ctx.getPayload ? ctx.getPayload() : ctx['payload']
+    payload: ctx.getPayload ? ctx.getPayload() : ctx['payload'],
+    topic: ctx.getTopic ? ctx.getTopic() : ctx['topic'],
   };
 
   // Define the timeout duration

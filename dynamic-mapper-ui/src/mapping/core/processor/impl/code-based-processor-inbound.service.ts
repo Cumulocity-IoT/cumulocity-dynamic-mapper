@@ -66,7 +66,7 @@ export class CodeBasedProcessorInbound extends BaseProcessorInbound {
     let substitutionTimeExists: boolean = false;
 
     try {
-      const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), JSON.stringify(context.payload));
+      const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), JSON.stringify(context.payload), context.topic);
       
       // Call our modified evaluateWithArgs
       const evalResult = await evaluateWithArgsWebWorker(codeToRun, ctx) as any;

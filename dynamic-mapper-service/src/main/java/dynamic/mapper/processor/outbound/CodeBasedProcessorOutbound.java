@@ -103,7 +103,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
 
                 final Value result = sourceValue
                         .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
-                                payloadAsString));
+                                payloadAsString, context.getTopic()));
 
                 // Convert the JavaScript result to Java objects before closing the context
                 final SubstitutionResult typedResult = result.as(SubstitutionResult.class);

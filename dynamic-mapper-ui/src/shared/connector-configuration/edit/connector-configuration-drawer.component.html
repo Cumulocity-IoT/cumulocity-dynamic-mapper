@@ -24,31 +24,34 @@
     <div class="card-header m-t-48 p-24 separator" style="justify-content: center">
       <h4 class="card-title">
         <i [c8yIcon]="'subscription'" class="icon-32 m-r-16"></i>
-        <span class="m-t-8">Select devices group to subscribe to all device for outbound mappings</span>
+        <span class="m-t-8">Edit connector configuration</span>
       </h4>
     </div>
     <div class="card-block">
-      <c8y-asset-selector-miller [(ngModel)]="deviceList" (onSelected)="selectionChanged($event)" [config]="{
-            groupsSelectable: true,
-            groupsOnly: true,
-            columnHeaders: true,
-            showFilter: true,
-            showUnassignedDevices: false,
-            showChildDevices: false,
-            search: true,
-            multi: true,
-            showSelected: true
-          }" class="bg-component"></c8y-asset-selector-miller>
-    </div>
-    <div class="card-footer text-center">
-      <div class="form-group">
-        <button type="button" name="save" class="btn btn-primary" (click)="clickedUpdateSubscription()" translate>
-          Save
-        </button>
-        <button type="button" name="cancel" class="btn btn-primary" (click)="clickedCancel()" translate>
-          Cancel
-        </button>
+      <div title="Edit connector configuration">
+        <ng-container c8y-modal-title>
+          <span [c8yIcon]="'connected'"></span>
+        </ng-container>
+        <div class="p-24 modal-inner-scroll animated fadeIn">
+          <div [formGroup]="brokerForm" *ngIf="add">
+            <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
+          </div>
+          <div [formGroup]="dynamicForm">
+            <formly-form [form]="dynamicForm" [fields]="dynamicFormFields" [model]="configuration"></formly-form>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer text-center">
+        <div class="form-group">
+          <button type="button" name="save" class="btn btn-primary" (click)="onSave()"
+            [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
+            Save
+          </button>
+          <button type="button" name="cancel" class="btn btn-primary" (click)="onDismiss()" translate>
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   </div>
-</div>

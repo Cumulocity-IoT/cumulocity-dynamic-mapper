@@ -45,6 +45,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 import { Base64DecodePipe } from './misc/base64-decode.pipe';
 import { InputListComponent } from './component/formly/input-list.component';
 import { InputListFormlyComponent } from './component/formly/input-list-formly.component';
+import { ConnectorConfigurationDrawerComponent } from './connector-configuration/edit/connector-configuration-drawer.component';
 
 @NgModule({
   declarations: [
@@ -60,6 +61,7 @@ import { InputListFormlyComponent } from './component/formly/input-list-formly.c
     ConnectorGridComponent,
     ConnectorDetailsComponent,
     ConnectorConfigurationModalComponent,
+    ConnectorConfigurationDrawerComponent,
     ConnectorStatusEnabledRendererComponent,
     ConnectorStatusRendererComponent,
     ConnectorDetailCellRendererComponent,
@@ -89,6 +91,7 @@ import { InputListFormlyComponent } from './component/formly/input-list-formly.c
     ConnectorGridComponent,
     ConnectorDetailsComponent,
     ConnectorConfigurationModalComponent,
+    ConnectorConfigurationDrawerComponent,
     WrapperCustomFormField,
     FieldTextareaCustom,
     FieldInputCustom,

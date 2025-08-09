@@ -65,7 +65,7 @@ export class CodeBasedProcessorOutbound extends BaseProcessorOutbound {
 
     try {
 
-      const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), JSON.stringify(context.payload));
+      const ctx = new SubstitutionContext(getGenericDeviceIdentifier(context.mapping), JSON.stringify(context.payload), context.topic);
 
       // Call our modified evaluateWithArgs
       const evalResult = await evaluateWithArgsWebWorker(codeToRun, ctx) as any;
