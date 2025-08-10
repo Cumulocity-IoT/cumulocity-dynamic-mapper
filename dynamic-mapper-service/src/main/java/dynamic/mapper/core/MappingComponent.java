@@ -626,10 +626,10 @@ public class MappingComponent {
 
             for (Mapping mapping : cacheMappingOutbound.get(tenant).values()) {
                 if (!mapping.active || !mapping.targetAPI.equals(api)) {
-                    if (serviceConfiguration.logPayload || mapping.debug) {
+                    if (mapping.debug) {
                         log.info(
-                                "{} - Outbound mapping not resolved, failing condition: active {}, expected API {}, actual API in message {}",
-                                tenant,
+                                "{} - Outbound mapping {}/{} not resolved , failing condition: active {}, expected API {}, actual API in message {}",
+                                tenant, mapping.name, mapping.identifier,
                                 mapping.active, mapping.targetAPI, api);
                     }
                     continue;
@@ -638,10 +638,10 @@ public class MappingComponent {
                 // Check message filter condition
                 boolean filterResult = !evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage);
                 if (filterResult) {
-                    if (serviceConfiguration.logPayload || mapping.debug) {
+                    if (mapping.debug) {
                         log.info(
-                                "{} - Outbound mapping not resolved, failing Filter mapping execution: filterResult {}",
-                                tenant,
+                                "{} - Outbound mapping {}/{} not resolved , failing Filter mapping execution: filterResult {}",
+                                 tenant, mapping.name, mapping.identifier,
                                 !filterResult);
                     }
                     continue;
@@ -653,10 +653,10 @@ public class MappingComponent {
                             c8yMessage);
                     if (c8yMessage.getSourceId() == null
                             || filterInventory) {
-                        if (serviceConfiguration.logPayload || mapping.debug) {
+                        if (mapping.debug) {
                             log.info(
-                                    "{} - Outbound mapping not resolved, failing Filter inventory execution: filterResult {}",
-                                    tenant,
+                                    "{} - Outbound mapping {}/{} not resolved , failing Filter inventory execution: filterResult {}",
+                                    tenant, mapping.name, mapping.identifier,
                                     !filterResult);
                         }
                         continue;

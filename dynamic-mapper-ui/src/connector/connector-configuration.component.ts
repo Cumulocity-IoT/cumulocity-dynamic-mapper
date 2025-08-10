@@ -40,7 +40,7 @@ import { ActivatedRoute } from '@angular/router';
   standalone: false
 })
 export class ConnectorConfigurationComponent {
-  @ViewChild(ConnectorGridComponent) connectorGrid!: ConnectorGridComponent;
+  @ViewChild(ConnectorGridComponent) connectorGridComponent!: ConnectorGridComponent;
   version: string = packageJson.version;
   monitoring$: Observable<ConnectorStatus>;
   feature: Feature;
@@ -60,7 +60,7 @@ export class ConnectorConfigurationComponent {
   }
 
   refresh() {
-    this.connectorGrid.refresh();
+    this.connectorGridComponent.refresh();
   }
 
   async clickedReconnect2NotificationEndpoint() {
@@ -76,6 +76,6 @@ export class ConnectorConfigurationComponent {
   }
 
   async onConfigurationAdd() {
-    this.connectorGrid.onConfigurationAdd();
+    this.connectorGridComponent.onConfigurationAdd();
   }
 }

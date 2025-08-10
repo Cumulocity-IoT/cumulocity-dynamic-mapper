@@ -19,7 +19,7 @@
   ~
   -->
 
-<div class="flex-col flex-nowrap no-align-items fit-h col-md-8 col-md-offset-2 c8y-stepper--no-btns">
+<div class="flex-col flex-nowrap no-align-items fit-h col-md-10 col-md-offset-1 c8y-stepper--no-btns">
   <div class="card card--fullpage m-t-16">
     <div class="card-header m-t-48 p-24 separator" style="justify-content: center">
       <h4 class="card-title">
@@ -29,9 +29,6 @@
     </div>
     <div class="card-block">
       <div title="Edit connector configuration">
-        <ng-container c8y-modal-title>
-          <span [c8yIcon]="'connected'"></span>
-        </ng-container>
         <div class="p-24 modal-inner-scroll animated fadeIn">
           <div [formGroup]="brokerForm" *ngIf="add">
             <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
@@ -42,16 +39,15 @@
         </div>
       </div>
 
-      <div class="card-footer text-center">
-        <div class="form-group">
-          <button type="button" name="save" class="btn btn-primary" (click)="onSave()"
-            [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
-            Save
-          </button>
-          <button type="button" name="cancel" class="btn btn-primary" (click)="onDismiss()" translate>
-            Cancel
-          </button>
-        </div>
+    </div>
+    <div class="card-footer text-center sticky-buttons">
+      <div class="form-group">
+        <button type="button" name="save" class="btn btn-primary" (click)="onSave()"
+          [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
+          Save
+        </button>
+        <button type="button" name="cancel" class="btn btn-primary" (click)="onDismiss()" translate>
+          Cancel
+        </button>
       </div>
     </div>
-  </div>

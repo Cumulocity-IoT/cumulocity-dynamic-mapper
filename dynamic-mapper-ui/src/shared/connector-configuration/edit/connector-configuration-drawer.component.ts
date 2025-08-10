@@ -17,7 +17,7 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, Input, OnInit, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { FormlyFieldConfig } from '@ngx-formly/core';
@@ -45,11 +45,13 @@ interface PropertyEntry {
   standalone: false
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
-  @Input() add: boolean;
-  @Input() configuration: Partial<ConnectorConfiguration>;
-  @Input() specifications: ConnectorSpecification[];
-  @Input() configurationsCount: number;
-  @Output() closeSubject = new Subject<any>();
+  @Input() initialStateDrawer: any;
+  add: boolean;
+  configuration: ConnectorConfiguration;
+  specifications: ConnectorSpecification[];
+  configurationsCount: number;
+  @Output() cancel = new EventEmitter<any>();
+  @Output() commit = new EventEmitter<ConnectorConfiguration>();
 
   brokerFormFields: FormlyFieldConfig[] = [];
   brokerForm = new FormGroup({});
@@ -77,6 +79,11 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   ) { }
 
   async ngOnInit() {
+    const { add, configuration, specifications, configurationsCount } = this.initialStateDrawer;
+    this.add = add;
+    this.configuration = configuration;
+    this.specifications = specifications;
+    this.configurationsCount = configurationsCount;
     this.feature = await this.sharedService.getFeatures();
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
@@ -302,12 +309,11 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   onDismiss(): void {
-    this.closeSubject.next(undefined);
+    this.cancel.emit(undefined);
   }
 
   onSave(): void {
-
-    this.closeSubject.next(this.configuration);
+    this.commit.emit(this.configuration);
   }
 
   onValidate(): void {
