@@ -573,7 +573,7 @@ public class DispatcherOutbound implements NotificationCallback {
         // Handle C8Y Operation Status
         if (c8yMessage.getPayload() != null) {
             try {
-                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage);
+                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage, serviceConfiguration);
                 consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
                 result.setConsolidatedQos(consolidatedQos);
 

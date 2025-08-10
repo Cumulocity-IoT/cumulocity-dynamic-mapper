@@ -59,6 +59,7 @@ import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.configuration.ConnectorId;
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
@@ -335,14 +336,13 @@ public class MappingComponent {
                             sendMappingLoadingError(tenant, mo, msg);
                             return Optional.<Mapping>empty();
                         }
-                    })
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
+                    }).filter(Optional::isPresent).map(Optional::get)
                     .filter(mapping -> direction == null | Direction.UNSPECIFIED.equals(direction) ? true
                             : mapping.direction.equals(direction))
                     .collect(Collectors.toList());
             log.debug("{} - Loaded mappings (inbound & outbound): {}", tenant, res.size());
             return res;
+
         });
         return result;
     }
@@ -617,7 +617,8 @@ public class MappingComponent {
         return updatedMappings;
     }
 
-    public List<Mapping> resolveMappingOutbound(String tenant, C8YMessage c8yMessage) throws ResolveException {
+    public List<Mapping> resolveMappingOutbound(String tenant, C8YMessage c8yMessage,
+            ServiceConfiguration serviceConfiguration) throws ResolveException {
         List<Mapping> result = new ArrayList<>();
         API api = c8yMessage.getApi();
 
@@ -625,19 +626,39 @@ public class MappingComponent {
 
             for (Mapping mapping : cacheMappingOutbound.get(tenant).values()) {
                 if (!mapping.active || !mapping.targetAPI.equals(api)) {
-                    // if (!mapping.active) {
+                    if (serviceConfiguration.logPayload || mapping.debug) {
+                        log.info(
+                                "{} - Outbound mapping not resolved, failing condition: active {}, expected API {}, actual API in message {}",
+                                tenant,
+                                mapping.active, mapping.targetAPI, api);
+                    }
                     continue;
                 }
 
                 // Check message filter condition
-                if (!evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage)) {
+                boolean filterResult = !evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage);
+                if (filterResult) {
+                    if (serviceConfiguration.logPayload || mapping.debug) {
+                        log.info(
+                                "{} - Outbound mapping not resolved, failing Filter mapping execution: filterResult {}",
+                                tenant,
+                                !filterResult);
+                    }
                     continue;
                 }
 
                 // Check inventory filter condition if specified
                 if (mapping.getFilterInventory() != null) {
+                    boolean filterInventory = !evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
+                            c8yMessage);
                     if (c8yMessage.getSourceId() == null
-                            || !evaluateInventoryFilter(tenant, mapping.getFilterInventory(), c8yMessage)) {
+                            || filterInventory) {
+                        if (serviceConfiguration.logPayload || mapping.debug) {
+                            log.info(
+                                    "{} - Outbound mapping not resolved, failing Filter inventory execution: filterResult {}",
+                                    tenant,
+                                    !filterResult);
+                        }
                         continue;
                     }
                 }
