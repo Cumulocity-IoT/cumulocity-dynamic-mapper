@@ -1,10 +1,12 @@
 // input-list.component.ts
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewEncapsulation } from '@angular/core';
 import { debounceTime, Subject } from 'rxjs';
 
 @Component({
   selector: 'd11r-input-list',
   templateUrl: './input-list.component.html',
+  styleUrls: ['../../styles/shared.css'],
+  encapsulation: ViewEncapsulation.None,
   standalone: false,
 })
 export class InputListComponent implements OnInit, OnDestroy {

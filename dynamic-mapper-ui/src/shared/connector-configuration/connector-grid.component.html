@@ -69,9 +69,9 @@
   </div>
 
   <div [ngClass]="{ drawerOpen: showConfigConnectorDrawer }">
-  <div class="bottom-drawer">
-    <d11r-edit-connector-drawer *ngIf="showConfigConnectorDrawer" (cancel)="showConfigConnectorDrawer = false"
-     [initialStateDrawer]="initialStateDrawer" (commit)="onConfigurationDrawerCommit($event)">
-    </d11r-edit-connector-drawer>
+    <div class="bottom-drawer">
+      <d11r-edit-connector-drawer *ngIf="showConfigConnectorDrawer" (cancel)="showConfigConnectorDrawer = false"
+        [initialStateDrawer]="initialStateDrawer" (commit)="onConfigurationDrawerCommit($event)">
+      </d11r-edit-connector-drawer>
+    </div>
   </div>
-</div>
