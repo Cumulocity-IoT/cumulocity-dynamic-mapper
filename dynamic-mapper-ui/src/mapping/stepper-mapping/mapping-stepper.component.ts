@@ -669,7 +669,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         result: JSON.stringify(resultExpression, null, 4),
         valid: true
       };
-      if ((path && this.filterModel.filterExpression.resultType != 'Boolean')|| (path && this.filterModel.filterExpression.resultType == 'Boolean' && !resultExpression)) throw Error('The filter expression must return true');
+      if ((path && this.filterModel.filterExpression.resultType != 'Boolean') || (path && this.filterModel.filterExpression.resultType == 'Boolean' && !resultExpression)) throw Error('The filter expression must return true');
       this.mapping.filterMapping = path;
     } catch (error) {
       this.filterModel.filterExpression.valid = false;
@@ -854,11 +854,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.mapping.extension.eventName = extensionEvent;
   }
 
-  async onStepChange(index: number): Promise<void> {
-    this.currentStepIndex = index;
+  async onStepChange(event: any): Promise<void> {
+    // previouslySelectedIndex
+    // previouslySelectedStep
+    // selectedIndex
+    // selectedStep
+    this.currentStepIndex = event['selectedIndex'];
     this.updateSubstitutionValid();
 
-    switch (index) {
+    switch (this.currentStepIndex) {
       case STEP_GENERAL_SETTINGS:
         await this.handleGeneralSettingsStep();
         break;

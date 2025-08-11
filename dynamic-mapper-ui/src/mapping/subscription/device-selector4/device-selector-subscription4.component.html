@@ -33,10 +33,8 @@
           <li class="m-b-8 fit-w" *ngFor="let item of typeList; let i = index; trackBy: trackByFn">
             <c8y-input-group-list [index]="i" (onAdd)="add()" (onRemove)="remove($event)" [minus]="typeList.length > 1">
               <div class="col-xs-11" style="padding-left:0px">
-                <!-- <c8y-form-group class="form-group--tooltip-validation"> -->
                 <input class="form-control" placeholder="{{ 'e.g.' }} placeholder" type="text" [required]="true"
                   [(ngModel)]="typeList[i]" />
-                <!-- </c8y-form-group> -->
               </div>
             </c8y-input-group-list>
           </li>
