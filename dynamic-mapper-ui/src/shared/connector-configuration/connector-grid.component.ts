@@ -260,7 +260,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       configurationsCount: this.configurations?.length,
     }
     const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
-    const resultOf = await drawer.instance.configuration;
+    const resultOf = await drawer.instance.result;
 
     if (this.initialStateDrawer.add) {
       await this.handleModalResponse(

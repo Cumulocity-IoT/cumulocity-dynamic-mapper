@@ -125,7 +125,10 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       readOnly: configuration.enabled
     };
     const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
-    const resultOf = await drawer.instance.configuration;
+    const resultOf = await drawer.instance.result;
+    if (typeof resultOf === 'object' && resultOf !== null) {
+      this.configuration = resultOf as ConnectorConfiguration;
+    }
 
     if (this.initialStateDrawer.add) {
       await this.handleModalResponse(

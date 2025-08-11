@@ -35,6 +35,8 @@ export const Java = {
         return ArrayList;
       case 'java.util.HashMap':
         return HashMap;
+     case 'java.util.HashSet':
+        return HashSet;
       default:
         throw new Error(`Unknown Java class: ${className}`);
     }
@@ -136,6 +138,89 @@ export class HashMap {
   }
 
   // Additional HashMap methods as needed
+}
+
+// HashSet simulation
+export class HashSet {
+  set;
+  
+  constructor() {
+    this.set = new Set();
+  }
+
+  add(item) {
+    this.set.add(item);
+    return true;
+  }
+
+  contains(item) {
+    return this.set.has(item);
+  }
+
+  remove(item) {
+    return this.set.delete(item);
+  }
+
+  size() {
+    return this.set.size;
+  }
+
+  isEmpty() {
+    return this.set.size === 0;
+  }
+
+  clear() {
+    this.set.clear();
+  }
+
+  toArray() {
+    return Array.from(this.set);
+  }
+
+  iterator() {
+    return this.set.values();
+  }
+
+  // For compatibility with Java's stream API
+  stream() {
+    return {
+      collect: (collector) => {
+        // Basic implementation that works with Collectors.toList()
+        if (collector.toString().includes('toList')) {
+          return Array.from(this.set);
+        }
+        throw new Error('Unsupported collector');
+      },
+      filter: (predicate) => {
+        const newSet = new HashSet();
+        for (const item of this.set) {
+          if (predicate(item)) {
+            newSet.add(item);
+          }
+        }
+        return newSet.stream();
+      },
+      map: (mapper) => {
+        const result = new ArrayList();
+        for (const item of this.set) {
+          result.add(mapper(item));
+        }
+        return {
+          collect: (collector) => {
+            if (collector.toString().includes('toList')) {
+              return result.items;
+            }
+            throw new Error('Unsupported collector');
+          }
+        };
+      }
+    };
+  }
+
+  // Convert to a string representation
+  toString() {
+    return `[${Array.from(this.set).join(', ')}]`;
+  }
 }
 
 // SubstitutionResult class
