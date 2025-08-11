@@ -628,7 +628,7 @@ public class MappingComponent {
                 if (!mapping.active || !mapping.targetAPI.equals(api)) {
                     if (mapping.debug) {
                         log.info(
-                                "{} - Outbound mapping {}/{} not resolved , failing condition: active {}, expected API {}, actual API in message {}",
+                                "{} - Outbound mapping {}/{} not resolved, failing condition: active {}, expected API {}, actual API in message {}",
                                 tenant, mapping.name, mapping.identifier,
                                 mapping.active, mapping.targetAPI, api);
                     }
@@ -636,28 +636,28 @@ public class MappingComponent {
                 }
 
                 // Check message filter condition
-                boolean filterResult = !evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage);
-                if (filterResult) {
+                boolean filterResult = evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage);
+                if (!filterResult) {
                     if (mapping.debug) {
                         log.info(
-                                "{} - Outbound mapping {}/{} not resolved , failing Filter mapping execution: filterResult {}",
-                                 tenant, mapping.name, mapping.identifier,
-                                !filterResult);
+                                "{} - Outbound mapping {}/{} not resolved, failing Filter mapping execution: filterResult {}",
+                                tenant, mapping.name, mapping.identifier,
+                                filterResult);
                     }
                     continue;
                 }
 
                 // Check inventory filter condition if specified
                 if (mapping.getFilterInventory() != null) {
-                    boolean filterInventory = !evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
+                    boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
                             c8yMessage);
                     if (c8yMessage.getSourceId() == null
-                            || filterInventory) {
+                            || !filterInventory) {
                         if (mapping.debug) {
                             log.info(
-                                    "{} - Outbound mapping {}/{} not resolved , failing Filter inventory execution: filterResult {}",
+                                    "{} - Outbound mapping {}/{} not resolved, failing Filter inventory execution: filterResult {}",
                                     tenant, mapping.name, mapping.identifier,
-                                    !filterResult);
+                                    filterInventory);
                         }
                         continue;
                     }

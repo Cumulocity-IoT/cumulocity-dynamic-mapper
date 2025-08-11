@@ -314,6 +314,7 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
               IDENTITY = "_IDENTITY_";
               #payload;  // Using private class field (equivalent to private final in Java)
               #genericDeviceIdentifier;
+              #topic;
 
               // Constants
               IDENTITY_EXTERNAL = this.IDENTITY + ".externalId";
@@ -323,10 +324,12 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
                * Constructor for the SubstitutionContext class
                * @param {string} genericDeviceIdentifier - The generic device identifier
                * @param {string} payload - The JSON object representing the data
+               * @param {string} topic - The publish/ subscribe topic
                */
-              constructor(genericDeviceIdentifier, payload) {
+              constructor(genericDeviceIdentifier, payload, topic) {
                 this.#payload = (payload || {});
                 this.#genericDeviceIdentifier = genericDeviceIdentifier;
+                this.#topic = topic;
               }
 
               /**
@@ -335,6 +338,14 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
                */
               getGenericDeviceIdentifier() {
                 return this.#genericDeviceIdentifier;
+              }
+
+              /**
+               * Gets the topic
+               * @returns {string} The topic
+               */
+              getTopic() {
+                return this.#topic;
               }
 
               /**
@@ -381,7 +392,7 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
             try {
               // Debug marker to verify code execution context
               // Create context object
-              const arg0 = new SubstitutionContext(ctx.identifier, ctx.payload);
+              const arg0 = new SubstitutionContext(ctx.identifier, ctx.payload, ctx.topic);
               
               // Use Function constructor with console explicitly passed
               const fn = new Function('arg0', 'console', code);

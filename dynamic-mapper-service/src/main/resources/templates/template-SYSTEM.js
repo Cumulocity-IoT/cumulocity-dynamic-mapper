@@ -88,6 +88,7 @@ const RepairStrategy = Java.type('dynamic.mapper.processor.model.RepairStrategy'
  *   @param {string} ctx.getGenericDeviceIdentifier() - Name of device identifier, i.e. either "_IDENTITY_.externalId" or "_IDENTITY_.c8ySourceId" 
  *   @param {string} ctx.getExternalDeviceIdentifier() - Device identifier used in external systems
  *   @param {string} ctx.getC8YDeviceIdentifier() - Cumulocity platform device identifier
+ *   @param {string} ctx.getTopic() - The publish/ subscribe topic
  * 
  * @returns {SubstitutionResult} A result object populated using method addSubstitution(result, key, value), containing:
  *   @returns {Object.<string, SubstitutionValue>} substitutions - Key-value pairs of substitution values

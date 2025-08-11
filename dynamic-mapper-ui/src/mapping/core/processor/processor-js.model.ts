@@ -268,6 +268,7 @@ export class SubstitutionContext {
    * Constructor for the SubstitutionContext class
    * @param {string} genericDeviceIdentifier - The generic device identifier
    * @param {string} payload - The JSON object representing the data
+   * @param {string} topic - The publish/ subscribe topic
    */
   constructor(genericDeviceIdentifier, payload, topic) {
     this.#payload = (payload || {});

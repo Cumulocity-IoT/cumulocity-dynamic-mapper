@@ -387,6 +387,7 @@ export class SubstitutionContext {
   IDENTITY = "_IDENTITY_";
   #payload;  // Using private class field (equivalent to private final in Java)
   #genericDeviceIdentifier;
+  #topic;
 
   // Constants
   IDENTITY_EXTERNAL = this.IDENTITY + ".externalId";
@@ -396,10 +397,12 @@ export class SubstitutionContext {
    * Constructor for the SubstitutionContext class
    * @param {string} genericDeviceIdentifier - The generic device identifier
    * @param {string} payload - The JSON object representing the data
+   * @param {string} topic - The publish/ subscribe topic
    */
-  constructor(genericDeviceIdentifier, payload) {
+  constructor(genericDeviceIdentifier, payload, topic) {
     this.#payload = (payload || {});
     this.#genericDeviceIdentifier = genericDeviceIdentifier;
+    this.#topic = topic;
   }
 
   /**
@@ -408,6 +411,14 @@ export class SubstitutionContext {
    */
   getGenericDeviceIdentifier() {
     return this.#genericDeviceIdentifier;
+  }
+
+  /**
+ * Gets the topic
+ * @returns {string} The topic
+ */
+  getTopic() {
+    return this.#topic;
   }
 
   /**
