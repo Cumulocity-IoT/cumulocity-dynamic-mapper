@@ -30,12 +30,14 @@
     <div class="card-block">
       <div class="container-fluid p-24">
         <ul class="list-unstyled p-t-16" c8yInputGroupListContainer>
-          <li class="m-b-8" *ngFor="let item of typeList; let i = index; trackBy: trackByFn">
+          <li class="m-b-8 fit-w" *ngFor="let item of typeList; let i = index; trackBy: trackByFn">
             <c8y-input-group-list [index]="i" (onAdd)="add()" (onRemove)="remove($event)" [minus]="typeList.length > 1">
-              <c8y-form-group class="form-group--tooltip-validation">
+              <div class="col-xs-11" style="padding-left:0px">
+                <!-- <c8y-form-group class="form-group--tooltip-validation"> -->
                 <input class="form-control" placeholder="{{ 'e.g.' }} placeholder" type="text" [required]="true"
                   [(ngModel)]="typeList[i]" />
-              </c8y-form-group>
+                <!-- </c8y-form-group> -->
+              </div>
             </c8y-input-group-list>
           </li>
         </ul>
