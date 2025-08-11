@@ -48,11 +48,3 @@ div a i.dlt-c8y-icon-swipe-left {
 }
 
 .dlt-c8y-icon-swipe-left*/
-
-
-[c8yinputgrouplistcontainer]>li:not(:last-child) .input-group-btn>.btn.text-primary {
-  display: unset;
-  color: white;
-  cursor: not-allowed;
-  pointer-events: none;
-}

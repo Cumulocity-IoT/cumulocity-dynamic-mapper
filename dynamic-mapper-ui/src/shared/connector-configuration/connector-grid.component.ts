@@ -23,6 +23,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, from, Observable, Subject, } from 'rxjs';
 import { filter, map, take, takeUntil } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
+
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
