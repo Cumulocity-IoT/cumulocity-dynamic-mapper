@@ -47,7 +47,7 @@ public class FlatFileProcessorInbound extends JSONProcessorInbound {
                 : "");
         // Object payloadObjectNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));
         Object payloadObjectNode = new HashMap<>(Map.ofEntries(
-            entry("message", payloadMessage)));
+            entry("payload", payloadMessage)));
         return payloadObjectNode;
     }
 }

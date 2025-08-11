@@ -23,7 +23,7 @@ export const SNOOP_TEMPLATES_MAX = 10;
 export const HOUSEKEEPING_INTERVAL_SECONDS = 30;
 
 export interface PayloadWrapper {
-  message: string;
+  payload: string;
 }
 
 export enum ValidationError {
@@ -105,12 +105,97 @@ export const ValidationFormlyError = {
   }
 };
 
-export class C8YNotificationSubscription {
-  api: string;
-  subscriptionName?: string;
-  devices: Device[];
-}
-export class Device {
+/**
+ * Device information for subscription
+ */
+export interface Device {
+  /** Unique device identifier */
   id: string;
+  /** Human-readable device name */
   name?: string;
+  /** Device type classification */
+  type?: string;
+}
+
+/**
+ * Request payload for creating or updating notification subscriptions.
+ * Either devices OR types should be provided, but not both.
+ */
+export interface NotificationSubscriptionRequest {
+  /** 
+   * Cumulocity IoT API type to subscribe to for notifications 
+   * @example NotificationAPI.MEASUREMENT
+   */
+  api: string;
+
+  /** 
+   * Optional name for the subscription to help identify it
+   * @maxLength 100
+   * @example "temperature-sensors"
+   */
+  subscriptionName?: string;
+
+  /** 
+   * List of specific devices to include in the subscription.
+   * Child devices will be automatically discovered and included.
+   * @maxItems 1000
+   * @example [{ id: "12345", name: "Temperature Sensor 01" }]
+   */
+  devices?: Device[];
+
+  /** 
+   * List of device types to monitor dynamically.
+   * All devices of these types will be automatically included.
+   * @maxItems 50
+   * @example ["c8y_TemperatureSensor", "c8y_HumiditySensor"]
+   */
+  types?: string[];
+
+}
+
+
+/**
+ * Subscription status enumeration
+ */
+export enum SubscriptionStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  ERROR = 'ERROR',
+  PENDING = 'PENDING'
+}
+
+/**
+ * Response containing notification subscription details and status
+ */
+export interface NotificationSubscriptionResponse {
+  /** Cumulocity IoT API type */
+  api?: string;
+
+  /** Name of the subscription */
+  subscriptionName?: string;
+
+  /** List of subscribed devices */
+  devices?: Device[];
+
+  /** List of subscribed device types */
+  types?: string[];
+
+  /** Unique subscription identifier */
+  subscriptionId?: string;
+
+  /** Creation timestamp */
+  createdAt?: Date;
+
+  /** Last update timestamp */
+  updatedAt?: Date;
+
+  /** Current subscription status */
+  status?: SubscriptionStatus;
+
+  /** Error message if status is ERROR */
+  errorMessage?: string;
+
+  /** Additional metadata */
+  metadata?: Record<string, any>;
+
 }

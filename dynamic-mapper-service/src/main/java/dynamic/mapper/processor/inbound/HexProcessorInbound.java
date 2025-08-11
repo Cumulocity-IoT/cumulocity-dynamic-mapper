@@ -42,7 +42,7 @@ public class HexProcessorInbound extends JSONProcessorInbound {
     @Override
     public Object deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException {
-        Object payloadObjectNode = new HashMap<>(Map.ofEntries(entry("message", "0x" + Hex.encodeHexString(message.getPayload()))));
+        Object payloadObjectNode = new HashMap<>(Map.ofEntries(entry("payload", "0x" + Hex.encodeHexString(message.getPayload()))));
         return payloadObjectNode;
     }
 }

@@ -20,6 +20,7 @@
 import {
   ChangeDetectorRef,
   Component,
+  inject,
   OnDestroy,
   OnInit,
   ViewChild,
@@ -151,12 +152,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   feature: Feature;
 
   constructor(
-    public mappingService: MappingService,
-    private sharedService: SharedService,
-    private alertService: AlertService,
-    private bsModalService: BsModalService,
-    private router: Router,
-    private route: ActivatedRoute
   ) {
     const href = this.router.url;
     this.stepperConfiguration.direction = href.includes('/mappings/inbound')
@@ -166,6 +161,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.columnsMappings = this.getColumnsMappings();
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
   }
+
+  private mappingService = inject(MappingService);
+  private sharedService = inject(SharedService);
+  private alertService = inject(AlertService);
+  private bsModalService = inject(BsModalService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   async ngOnInit() {
     this.setupActionControls();
@@ -194,7 +196,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       try {
         const mappings = await this.mappingService.getMappings(Direction.OUTBOUND);
         const numberOutboundMappings = mappings.length;
-        const { devices } = await this.mappingService.getSubscriptions();
+        const { devices } = await this.mappingService.getSubscriptionDevice();
         if (devices.length === 0 && numberOutboundMappings > 0) {
           this.alertService.warning(
             "No device subscriptions found for your outbound mappings. " +
@@ -527,7 +529,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
         snoopStatus: this.snoopStatus,
-        supportsMessageContext: this.substitutionsAsCode || false,
+        // supportsMessageContext: this.substitutionsAsCode || false,
+        supportsMessageContext: true,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -557,7 +560,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateOutbound : undefined,
         snoopStatus: this.snoopStatus,
-        supportsMessageContext: this.substitutionsAsCode || false,
+        // supportsMessageContext: this.substitutionsAsCode || false,
+        supportsMessageContext: true,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -568,7 +572,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     mapping.targetTemplate = getExternalTemplate(mapping);
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
-        message: '10,temp,1666963367'
+        payload: '10,temp,1666963367'
       } as PayloadWrapper);
       mapping = {
         ...mapping,

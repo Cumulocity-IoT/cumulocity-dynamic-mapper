@@ -32,7 +32,7 @@ public enum API {
     EVENT("EVENT", "source.id", "events"),
     EVENT_WITH_CHILDREN("EVENT", "source.id", "eventsWithChildren"),
     MEASUREMENT("MEASUREMENT", "source.id", "measurements"),
-    INVENTORY("INVENTORY", "id", "managedObjects"),
+    INVENTORY("INVENTORY", "id", "managedobjects"),
     OPERATION("OPERATION", "deviceId", "operations"),
     EMPTY("NN", "nn", "nn"),
     ALL("ALL", "*", "*");

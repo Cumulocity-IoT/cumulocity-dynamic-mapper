@@ -156,7 +156,8 @@ export function createCompletionProvider(monaco) {
         { name: 'getGenericDeviceIdentifier', parameters: [], returnType: 'string', documentation: 'Gets the generic device identifier.' },
         { name: 'getExternalIdentifier', parameters: [], returnType: 'string', documentation: 'Gets the external identifier from the payload.' },
         { name: 'getC8YIdentifier', parameters: [], returnType: 'string', documentation: 'Gets the C8Y identifier from the payload.' },
-        { name: 'getPayload', parameters: [], returnType: 'Object', documentation: 'Gets the JSON payload.' }
+        { name: 'getPayload', parameters: [], returnType: 'Object', documentation: 'Gets the JSON payload.' },
+        { name: 'getTopic', parameters: [], returnType: 'string', documentation: 'Gets subscribe or publish topic of this mapping.' }
       ],
       documentation: 'Context for substitution operations.'
     }
@@ -177,6 +178,13 @@ export function createCompletionProvider(monaco) {
       returnType: 'void',
       documentation: 'Adds a substitution value to the result for a specific key. Creates a new ArrayList for the key if it doesn\'t exist yet.',
       description: 'Add value to substitution result'
+    },
+    {
+      name: 'addError',
+      parameters: ['result', 'message'],
+      returnType: 'void',
+      documentation: 'Adds an error to the set of error messages. Creates a new HasSet for the key if it doesn\'t exist yet.',
+      description: 'Add error message to substitution result'
     }
   ];
 
@@ -376,6 +384,24 @@ export function createCompletionProvider(monaco) {
               insertText: 'ctx',
               range: range,
               sortText: '00-01' // High priority sorting
+            });
+          } else if (matchedFunc.name === 'addError') {
+            suggestions.push({
+              label: 'result',
+              kind: monaco.languages.CompletionItemKind.Variable,
+              documentation: 'The SubstitutionResult object',
+              insertText: 'result',
+              range: range,
+              sortText: '00-01' // High priority sorting
+            });
+            suggestions.push({
+              label: 'message',
+              kind: monaco.languages.CompletionItemKind.Variable,
+              documentation: 'The error message',
+              insertText: '"${1:keyName}"',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range: range,
+              sortText: '00-02' // High priority sorting
             });
           } else if (matchedFunc.name === 'addSubstitution') {
             suggestions.push({

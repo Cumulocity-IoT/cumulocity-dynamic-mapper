@@ -50,7 +50,7 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.MappingComponent;
 import dynamic.mapper.model.API;
-import dynamic.mapper.notification.C8YNotificationSubscriber;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.websocket.Notification;
 import dynamic.mapper.processor.C8YMessage;
 import dynamic.mapper.processor.ProcessingException;
@@ -93,7 +93,7 @@ public class DispatcherOutbound implements NotificationCallback {
     @Getter
     protected AConnectorClient connectorClient;
 
-    protected C8YNotificationSubscriber notificationSubscriber;
+    protected NotificationSubscriber notificationSubscriber;
 
     protected C8YAgent c8yAgent;
 
@@ -427,7 +427,8 @@ public class DispatcherOutbound implements NotificationCallback {
                             || className.equals("dynamic.mapper.processor.model.RepairStrategy")
                             // Allow base collection classes needed for return values
                             || className.equals("java.util.ArrayList") ||
-                            className.equals("java.util.HashMap"))
+                            className.equals("java.util.HashMap")||
+                            className.equals("java.util.HashSet"))
                     .build();
 
             return graalContext;
@@ -572,7 +573,7 @@ public class DispatcherOutbound implements NotificationCallback {
         // Handle C8Y Operation Status
         if (c8yMessage.getPayload() != null) {
             try {
-                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage);
+                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage, serviceConfiguration);
                 consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
                 result.setConsolidatedQos(consolidatedQos);
 

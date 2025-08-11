@@ -29,4 +29,5 @@ public enum ConnectorPropertyType {
     BOOLEAN_PROPERTY, 
     OPTION_PROPERTY,
     STRING_LARGE_PROPERTY,
+    MAP_PROPERTY,
 }

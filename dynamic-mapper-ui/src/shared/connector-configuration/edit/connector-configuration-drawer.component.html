@@ -1,0 +1,53 @@
+<!--
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
+
+<div class="flex-col flex-nowrap no-align-items fit-h col-md-10 col-md-offset-1 c8y-stepper--no-btns">
+  <div class="card card--fullpage m-t-16">
+    <div class="card-header m-t-48 p-24 separator" style="justify-content: center">
+      <h4 class="card-title">
+        <i [c8yIcon]="'subscription'" class="icon-32 m-r-16"></i>
+        <span class="m-t-8">Edit connector configuration</span>
+      </h4>
+    </div>
+    <div class="card-block">
+      <div title="Edit connector configuration">
+        <div class="p-24 modal-inner-scroll animated fadeIn">
+          <div [formGroup]="brokerForm" *ngIf="add">
+            <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
+          </div>
+          <div [formGroup]="dynamicForm">
+            <formly-form [form]="dynamicForm" [fields]="dynamicFormFields" [model]="configuration"></formly-form>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="card-footer text-center sticky-buttons">
+      <div class="form-group">
+        <button type="button" name="save" class="btn btn-primary" (click)="onSave()"
+          [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
+          Save
+        </button>
+        <button type="button" name="cancel" class="btn btn-primary" (click)="onDismiss()" translate>
+          Cancel
+        </button>
+      </div>
+    </div>

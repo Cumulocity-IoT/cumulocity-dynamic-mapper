@@ -24,6 +24,7 @@ import {
   CoreModule,
   DynamicFormsModule,
   hookNavigator,
+  hookTab,
   RealtimeModule
 } from '@c8y/ngx-components';
 import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
@@ -42,6 +43,7 @@ import { TestingModule } from './testing-device/testing.module';
 import './shared/styles/shared.css';
 import { BrokerConnectorModule } from './connector';
 import { LandingModule } from './landing/landing.module';
+import { MappingTabFactory } from './shared/misc/tab.factory';
 
 @NgModule({
   imports: [
@@ -69,6 +71,7 @@ import { LandingModule } from './landing/landing.module';
     OverviewGuard,
     BsModalService,
     hookNavigator(MappingNavigationFactory),
+    hookTab(MappingTabFactory),
   ],
 })
 export class DynamicMapperModule {

@@ -112,11 +112,11 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       priority: 380,
       preventDuplicates: true
     }),
-    subscriptionOutboundNode: new NavigatorNode({
+    subscriptionStaticNode: new NavigatorNode({
       parent: gettext('Mapping'),
       label: gettext('Subscription outbound'),
       icon: 'mail',
-      path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscriptionOutbound`,
+      path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/static`,
       priority: 380,
       preventDuplicates: true
     }),

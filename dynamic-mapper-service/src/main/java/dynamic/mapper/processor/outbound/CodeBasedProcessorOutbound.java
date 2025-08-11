@@ -103,7 +103,7 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
 
                 final Value result = sourceValue
                         .execute(new SubstitutionContext(context.getMapping().getGenericDeviceIdentifier(),
-                                payloadAsString));
+                                payloadAsString, context.getTopic()));
 
                 // Convert the JavaScript result to Java objects before closing the context
                 final SubstitutionResult typedResult = result.as(SubstitutionResult.class);
@@ -134,6 +134,12 @@ public class CodeBasedProcessorOutbound extends BaseProcessorOutbound<Object> {
                                     values.getFirst(), mapping);
                         }
                         processingCache.put(key, processingCacheEntry);
+                    }
+                    if (typedResult.alarms != null && !typedResult.alarms.isEmpty()) {
+                        for (String alarm : typedResult.alarms) {
+                            context.getAlarms().add(alarm);
+                            log.debug("{} - Alarm added: {}", context.getTenant(), alarm);
+                        }
                     }
                     if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
                         log.info(

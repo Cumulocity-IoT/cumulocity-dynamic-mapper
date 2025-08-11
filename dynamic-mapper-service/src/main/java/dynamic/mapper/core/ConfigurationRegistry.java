@@ -54,7 +54,7 @@ import dynamic.mapper.connector.webhook.WebHook;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MapperServiceRepresentation;
-import dynamic.mapper.notification.C8YNotificationSubscriber;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapper.processor.inbound.BaseProcessorInbound;
 import dynamic.mapper.processor.inbound.CodeBasedProcessorInbound;
@@ -120,10 +120,10 @@ public class ConfigurationRegistry {
     }
 
     @Getter
-    private C8YNotificationSubscriber notificationSubscriber;
+    private NotificationSubscriber notificationSubscriber;
 
     @Autowired
-    public void setNotificationSubscriber(C8YNotificationSubscriber notificationSubscriber) {
+    public void setNotificationSubscriber(NotificationSubscriber notificationSubscriber) {
         this.notificationSubscriber = notificationSubscriber;
     }
 

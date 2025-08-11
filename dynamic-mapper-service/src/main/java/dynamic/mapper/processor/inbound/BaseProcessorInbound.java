@@ -37,10 +37,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import com.cumulocity.sdk.client.ProcessingMode;
 import com.cumulocity.sdk.client.SDKException;
+
+import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
@@ -61,6 +65,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -102,6 +107,12 @@ public abstract class BaseProcessorInbound<T> {
                         put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
                         put("api",
                                 context.getMapping().getTargetAPI().toString());
+                        put("processingMode",
+                                ProcessingMode.PERSISTENT.toString());
+                        if (context.getMapping().createNonExistingDevice) {
+                            put("deviceName", context.getDeviceName());
+                            put("deviceType", context.getDeviceType());
+                        }
                     }
                 };
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
@@ -298,6 +309,12 @@ public abstract class BaseProcessorInbound<T> {
                     payloadTarget.jsonString(),
                     size);
         }
+        // Create alarms for messages reported during processing substitutions
+        ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
+        sourceMor.setId(new GId(context.getSourceId()));
+        context.getAlarms()
+                .forEach(alarm -> c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM, new DateTime(),
+                        sourceMor, tenant));
         return context;
     }
 
@@ -313,7 +330,7 @@ public abstract class BaseProcessorInbound<T> {
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
                 if (resolvedSourceId == null) {
                     if (mapping.createNonExistingDevice) {
-                        sourceId.value = createAdHocDevice(identity, context);
+                        sourceId.value = createImplicitDevice(identity, context);
                     }
                 } else {
                     sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
@@ -339,6 +356,12 @@ public abstract class BaseProcessorInbound<T> {
             context.getBinaryInfo().setType((String) substitute.value);
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Data").equals(pathTarget)) {
             context.getBinaryInfo().setData((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".processingMode").equals(pathTarget)) {
+            context.setProcessingMode(ProcessingMode.parse((String) substitute.value));
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceName").equals(pathTarget)) {
+            context.setDeviceName((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceType").equals(pathTarget)) {
+            context.setDeviceType((String) substitute.value);
         } else if ((Mapping.TOKEN_CONTEXT_DATA).equals(pathTarget)) {
             // Handle the case where substitute.value is a Map containing context data keys
             if (substitute.value instanceof Map) {
@@ -371,6 +394,21 @@ public abstract class BaseProcessorInbound<T> {
                                 context.getBinaryInfo().setData((String) value);
                             }
                             break;
+                        case "processingMode":
+                            if (value instanceof String) {
+                                context.setProcessingMode(ProcessingMode.parse((String) substitute.value));
+                            }
+                            break;
+                        case "deviceName":
+                            if (value instanceof String) {
+                                context.setDeviceName((String) value);
+                            }
+                            break;
+                        case "deviceType":
+                            if (value instanceof String) {
+                                context.setDeviceType((String) value);
+                            }
+                            break;
                         default:
                             // Handle unknown keys - you might want to log a warning or ignore
                             // Optional: log.warn("Unknown context data key: {}", key);
@@ -383,10 +421,19 @@ public abstract class BaseProcessorInbound<T> {
         }
     }
 
-    protected String createAdHocDevice(ID identity, ProcessingContext<T> context) {
+    protected String createImplicitDevice(ID identity, ProcessingContext<T> context) {
         Map<String, Object> request = new HashMap<String, Object>();
-        request.put("name",
-                "device_" + identity.getType() + "_" + identity.getValue());
+        if (context.getDeviceName() != null) {
+            request.put("name", context.getDeviceName());
+        } else {
+            request.put("name", "device_" + identity.getType() + "_" + identity.getValue());
+        }
+        if (context.getDeviceType() != null) {
+            request.put("type", context.getDeviceType());
+        } else {
+            // Default device type if not specified
+            request.put("type", "c8y_GeneratedDeviceType");
+        }
         request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
         request.put("c8y_IsDevice", null);
         request.put("com_cumulocity_model_Agent", null);

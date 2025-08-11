@@ -27,10 +27,12 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 import java.util.*;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -40,6 +42,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.util.Utils;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YRequest;
@@ -238,6 +241,12 @@ public abstract class BaseProcessorOutbound<T> {
                     payloadTarget.jsonString(),
                     1);
         }
+        // Create alarms for messages reported during processing substitutions
+        ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
+        sourceMor.setId(new GId(context.getSourceId()));
+        context.getAlarms()
+                .forEach(alarm -> c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM, new DateTime(),
+                        sourceMor, tenant));
         return context;
     }
 

@@ -50,7 +50,7 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.http.HttpClient;
-import dynamic.mapper.notification.C8YNotificationSubscriber;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.inbound.DispatcherInbound;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -136,9 +136,10 @@ public class BootstrapService {
     }
 
     private void cleanTenantResources(String tenant) throws ConnectorRegistryException {
-        C8YNotificationSubscriber subscriber = configurationRegistry.getNotificationSubscriber();
+        NotificationSubscriber subscriber = configurationRegistry.getNotificationSubscriber();
         subscriber.disconnect(tenant);
         subscriber.unsubscribeDeviceSubscriber(tenant);
+        subscriber.unsubscribeDeviceGroupSubscriber(tenant);
 
         connectorRegistry.unregisterAllClientsForTenant(tenant);
 
@@ -205,7 +206,7 @@ public class BootstrapService {
         mappingComponent.initializeResources(tenant);
         aiAgentService.initializeAIAgents();
 
-        handleOutboundMapping(tenant, serviceConfiguration);
+        initResourcesForOutbound(tenant, serviceConfiguration);
     }
 
     private ServiceConfiguration initializeServiceConfiguration(String tenant) {
@@ -338,7 +339,7 @@ public class BootstrapService {
         }
     }
 
-    private void handleOutboundMapping(String tenant, ServiceConfiguration serviceConfig) {
+    private void initResourcesForOutbound(String tenant, ServiceConfiguration serviceConfig) {
         log.info("{} - Config mappingOutbound enabled: {}", tenant, serviceConfig.isOutboundMappingEnabled());
 
         if (!serviceConfig.isOutboundMappingEnabled()) {
@@ -348,7 +349,8 @@ public class BootstrapService {
         if (!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
             disableOutboundMapping(tenant, serviceConfig);
         } else {
-            configurationRegistry.getNotificationSubscriber().initDeviceClient();
+            configurationRegistry.getNotificationSubscriber().initializeDeviceClient();
+            configurationRegistry.getNotificationSubscriber().initializeManagementClient();
         }
     }
 

@@ -39,7 +39,8 @@ import {
   SubstituteValue,
   SubstituteValueType,
   TOKEN_TOPIC_LEVEL,
-  getDeviceEntries, getTypedValue, substituteValueInPayload
+  getDeviceEntries, getTypedValue, prepareAndSubstituteInPayload,
+  sortProcessingCache
 } from './processor.model';
 
 @Injectable({ providedIn: 'root' })
@@ -101,6 +102,8 @@ export abstract class BaseProcessorInbound {
 
     const { processingCache, mapping } = context;
     const deviceEntries = getDeviceEntries(context);
+    // sort processingCache, so that the "_CONTEXT_DATA_.deviceName" is available when creating an implicit device
+    sortProcessingCache(context)
 
     let i: number = 0;
     for (const device of deviceEntries) {
@@ -170,7 +173,7 @@ export abstract class BaseProcessorInbound {
                 throw e;
               }
             }
-            substituteValueInPayload(
+            prepareAndSubstituteInPayload(context,
               sourceId,
               payloadTarget,
               transformGenericPath2C8YPath(mapping, pathTarget),
@@ -211,7 +214,7 @@ export abstract class BaseProcessorInbound {
             }
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
           }
-          substituteValueInPayload(
+          prepareAndSubstituteInPayload(context,
             sourceId,
             payloadTarget,
             transformGenericPath2C8YPath(mapping, pathTarget),
@@ -219,7 +222,7 @@ export abstract class BaseProcessorInbound {
           )
           context.sourceId = substitute.value;
         }
-        substituteValueInPayload(
+        prepareAndSubstituteInPayload(context,
           substitute,
           payloadTarget,
           pathTarget,
@@ -281,13 +284,31 @@ export abstract class BaseProcessorInbound {
   }
   async createImplicitDevice(identity: IExternalIdentity, context: ProcessingContext): Promise<string> {
     let sourceId: string;
-    let name = identity ? `device_${identity.type}_${identity.externalId}` : `device_${context.sourceId}`;
+
+    let deviceName;
+    if (context.deviceName) {
+      deviceName = context.deviceName;
+    }
+    else {
+      deviceName = identity ? `device_${identity.type}_${identity.externalId}` : `device_${context.sourceId}`;
+    }
+    let deviceType;
+
+    if (context.deviceType) {
+      deviceType = context.deviceType;
+
+    } else {
+      // Default device type if not specified
+      deviceType = MAPPING_TEST_DEVICE_TYPE
+        ;
+    }
+
     const request = {
       c8y_IsDevice: {},
-      name,
+      name: deviceName,
+      type: deviceType,
       d11r_device_generatedType: {},
       [MAPPING_TEST_DEVICE_FRAGMENT]: {},
-      type: MAPPING_TEST_DEVICE_TYPE
     };
 
     const predecessor = context.requests.length;
