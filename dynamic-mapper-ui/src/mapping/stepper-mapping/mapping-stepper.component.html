@@ -209,7 +209,7 @@
   <cdk-step label="Define substitutions" [stepControl]="templateForm">
     <div class="col-lg-12 flex-grow no-gutter">
       <div class="inner-scroll fit-h">
-        <div class="card-block p-b-0">
+        <div class="card-block p-b-0 fit-h">
           <div *ngIf="!(stepperConfiguration.showCodeEditor)">
             <div [formGroup]="templateForm">
               <div class="d-flex" #editorsTemplate>
@@ -450,58 +450,54 @@
 </ng-template>
 
 <ng-template #extensionTemplateSourceGraals let-form="form">
-  <div>
-    <div class="form-group p-b-8">
-      <div class="d-flex p-b-8">
-        <div class="col-lg-6">
-          <div class="d-flex">
-            <label translate style="margin-top:4px">JavaScript callback for creating substitutions</label>
-            <span class="hidden-xs hidden-sm">
-              <ng-template #popupTemplateCodeHelp>
-                <div [innerHtml]="codeEditorHelp"></div>
-              </ng-template>
-              <button type="button" placement="right" [popover]="popupTemplateCodeHelp" triggers="focus"
-                class="btn-help" aria-label="Help content"></button>
-            </span>
-          </div>
+  <div class="form-group p-b-8 fit-h">
+    <div class="d-flex p-b-8">
+      <div class="col-lg-6">
+        <div class="d-flex">
+          <label translate style="margin-top:4px">JavaScript callback for creating substitutions</label>
+          <span class="hidden-xs hidden-sm">
+            <ng-template #popupTemplateCodeHelp>
+              <div [innerHtml]="codeEditorHelp"></div>
+            </ng-template>
+            <button type="button" placement="right" [popover]="popupTemplateCodeHelp" triggers="focus" class="btn-help"
+              aria-label="Help content"></button>
+          </span>
         </div>
-        <div class="col-lg-2" style="padding-top: 2px;">
-          <button type="button" name="generateSubstitution" class="btn btn-default btn-sm"
-            (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions" [disabled]="
+      </div>
+      <div class="col-lg-2" style="padding-top: 2px;">
+        <button type="button" name="generateSubstitution" class="btn btn-default btn-sm"
+          (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions" [disabled]="
                           !stepperConfiguration.showEditorSource ||
                             stepperConfiguration.editorMode ===
                               EditorMode.READ_ONLY || !aiAgentDeployed
                       ">
-            <i c8yIcon="bot"></i><span id="updateButton">&nbsp;Generate substitutions</span>
-          </button>
-          <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-            popover="{{'Generate substitutions is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-            placement="right" container="body" triggers="focus" type="button" *ngIf="!aiAgentDeployed"></button>
-        </div>
+          <i c8yIcon="bot"></i><span id="updateButton">&nbsp;Generate substitutions</span>
+        </button>
+        <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+          popover="{{'Generate substitutions is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+          placement="right" container="body" triggers="focus" type="button" *ngIf="!aiAgentDeployed"></button>
+      </div>
 
-        <div class="col-lg-2">
-          <div class="c8y-select-wrapper" style="max-width: 200px; overflow: auto !important">
-            <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId"
-              name="templateSelect" required>
-              <option [ngValue]="undefined" disabled>Select template...</option>
-              <option *ngFor="let item of getCodeTemplateEntries()" [ngValue]="item.key">
-                {{ item.name | capitalCase }} ({{ item.type }})
-              </option>
-            </select>
-          </div>
-        </div>
-        <div class="col-lg-2" style="padding-top: 2px;">
-          <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()" translate>
-            Create new code template
-          </button>
+      <div class="col-lg-2">
+        <div class="c8y-select-wrapper" style="max-width: 200px; overflow: auto !important">
+          <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId" name="templateSelect"
+            required>
+            <option [ngValue]="undefined" disabled>Select template...</option>
+            <option *ngFor="let item of getCodeTemplateEntries()" [ngValue]="item.key">
+              {{ item.name | capitalCase }} ({{ item.type }})
+            </option>
+          </select>
         </div>
       </div>
-      <div>
-        <c8y-editor [editorOptions]="editorOptions" monacoEditorMarkerValidator [ngModel]="mappingCode"
-          (ngModelChange)="onValueCodeChange($event)" style="display: block;height:650px !important">
-        </c8y-editor>
+      <div class="col-lg-2" style="padding-top: 2px;">
+        <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()" translate>
+          Create new code template
+        </button>
       </div>
     </div>
+    <c8y-editor [editorOptions]="editorOptions" class="form-control fit-h"
+      monacoEditorMarkerValidator [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)">
+    </c8y-editor>
   </div>
   <div class="p-t-48" *ngIf="stepperConfiguration.showProcessorExtensionsInternal
 ">
