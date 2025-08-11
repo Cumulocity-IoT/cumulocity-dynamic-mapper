@@ -17,9 +17,8 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { ModalLabels } from '@c8y/ngx-components';
-import { Subject } from 'rxjs';
+import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
 import {
@@ -45,13 +44,10 @@ interface PropertyEntry {
   standalone: false
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
-  @Input() initialStateDrawer: any;
-  add: boolean;
-  configuration: ConnectorConfiguration;
-  specifications: ConnectorSpecification[];
-  configurationsCount: number;
-  @Output() cancel = new EventEmitter<any>();
-  @Output() commit = new EventEmitter<ConnectorConfiguration>();
+  @Input() add: boolean;
+  @Input() configuration: ConnectorConfiguration;
+  @Input() specifications: ConnectorSpecification[];
+  @Input() configurationsCount: number;
 
   brokerFormFields: FormlyFieldConfig[] = [];
   brokerForm = new FormGroup({});
@@ -60,6 +56,14 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
   description: string;
   readOnly: boolean;
+
+  private _save: (value: ConnectorConfiguration) => void;
+  private _cancel: (reason?: any) => void;
+
+  result: Promise<ConnectorConfiguration | string> = new Promise((resolve, reject) => {
+    this._save = resolve;
+    this._cancel = reject;
+  });
 
   private readonly propertyTypeToFormConfig = new Map([
     [ConnectorPropertyType.NUMERIC_PROPERTY, this.createNumericField.bind(this)],
@@ -73,17 +77,14 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   feature: Feature;
 
   constructor(
-    private cd: ChangeDetectorRef,
-    private formatStringPipe: FormatStringPipe,
-    private sharedService: SharedService
   ) { }
 
+  bottomDrawerRef = inject(BottomDrawerRef);
+  sharedService = inject(SharedService);
+  formatStringPipe = inject(FormatStringPipe);
+  cd = inject(ChangeDetectorRef);
+
   async ngOnInit() {
-    const { add, configuration, specifications, configurationsCount } = this.initialStateDrawer;
-    this.add = add;
-    this.configuration = configuration;
-    this.specifications = specifications;
-    this.configurationsCount = configurationsCount;
     this.feature = await this.sharedService.getFeatures();
     this.setConnectorDescription();
     this.initializeBrokerFormFields();
@@ -308,12 +309,14 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     return sortedFields;
   }
 
-  onDismiss(): void {
-    this.cancel.emit(undefined);
+  onCancel() {
+    this._cancel("User canceled");
+    this.bottomDrawerRef.close();
   }
 
   onSave(): void {
-    this.commit.emit(this.configuration);
+    this._save(this.configuration);
+    this.bottomDrawerRef.close();
   }
 
   onValidate(): void {

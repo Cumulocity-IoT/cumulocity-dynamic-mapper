@@ -67,11 +67,3 @@
         {{ findNameByIdent(identifier) }}</span>
     </div>
   </div>
-
-  <div [ngClass]="{ drawerOpen: showConfigConnectorDrawer }" *ngIf="showConfigConnectorDrawer">
-    <div class="bottom-drawer">
-      <d11r-edit-connector-drawer (cancel)="showConfigConnectorDrawer = false" [initialStateDrawer]="initialStateDrawer"
-        (commit)="onConfigurationDrawerCommit($event)">
-      </d11r-edit-connector-drawer>
-    </div>
-  </div>

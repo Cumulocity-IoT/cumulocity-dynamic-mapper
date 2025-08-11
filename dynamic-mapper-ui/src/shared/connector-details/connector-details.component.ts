@@ -18,8 +18,8 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-import { AlertService, gettext } from '@c8y/ngx-components';
+import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { AlertService, BottomDrawerService, gettext } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { firstValueFrom, Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
@@ -40,6 +40,7 @@ import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ActivatedRoute } from '@angular/router';
 import { HttpStatusCode } from '@angular/common/http';
+import { ConnectorConfigurationDrawerComponent } from '../connector-configuration/edit/connector-configuration-drawer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-details',
@@ -49,7 +50,7 @@ import { HttpStatusCode } from '@angular/common/http';
 })
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
-  monitorings$: Observable<ConnectorStatus>;
+  monitoring$: Observable<ConnectorStatus>;
   specifications$: Observable<ConnectorSpecification[]>;
   statusLogs$: Observable<any[]>;
   configuration: ConnectorConfiguration;
@@ -62,19 +63,18 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   LoggingEventType = LoggingEventType;
   ConnectorType = ConnectorType;
   contextSubscription: Subscription;
+  initialStateDrawer: any;
 
   private destroy$ = new Subject<void>();
 
-  constructor(
-    public bsModalService: BsModalService,
-    public connectorStatusService: ConnectorLogService,
-    public connectorConfigurationService: ConnectorConfigurationService,
-    public alertService: AlertService,
-    private route: ActivatedRoute,
-    public sharedService: SharedService,
-
-    private cdr: ChangeDetectorRef
-  ) { }
+  connectorStatusService = inject(ConnectorLogService);
+  route = inject(ActivatedRoute);
+  alertService = inject(AlertService);
+  sharedService = inject(SharedService);
+  bsModalService = inject(BsModalService);
+  bottomDrawerService = inject(BottomDrawerService);
+  connectorConfigurationService = inject(ConnectorConfigurationService);
+  cdr = inject(ChangeDetectorRef);
 
   async ngOnInit() {
     // console.log('Running version', this.version);
@@ -99,57 +99,49 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     ).subscribe({
       // next: (logs) => console.log('Received logs in component:', logs),
       error: (error) => console.error('Error receiving logs:', error),
-      complete: () => console.log('Completed') // optional
+      // complete: () => console.log('Completed') // optional
     });
     this.updateStatusLogs();
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.connectorStatusService.stopConnectorStatusLogs();
   }
 
   updateStatusLogs() {
     this.connectorStatusService.updateStatusLogs(this.filterStatusLog);
   }
 
-  async onConfigurationUpdate() {
+  async onConfigurationUpdate(): Promise<void> {
+    const configuration = _.clone(this.configuration);
 
     const specifications = await firstValueFrom(this.specifications$);
-    const configuration = _.clone(this.configuration);
-    const initialState = {
+    this.initialStateDrawer = {
       add: false,
       configuration: configuration,
       specifications: specifications,
       readOnly: configuration.enabled
     };
-    const modalRef = this.bsModalService.show(
-      ConnectorConfigurationModalComponent,
-      {
-        initialState
-      }
-    );
-    modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
-      // console.log('Configuration after edit:', editedConfiguration);
-      if (editedConfiguration) {
-        this.configuration = editedConfiguration;
-        // avoid to include status$
-        const clonedConfiguration = {
-          identifier: editedConfiguration.identifier,
-          connectorType: editedConfiguration.connectorType,
-          enabled: editedConfiguration.enabled,
-          name: editedConfiguration.name,
-          properties: editedConfiguration.properties
-        };
-        const response =
-          await this.connectorConfigurationService.updateConfiguration(
-            clonedConfiguration
-          );
-        if (response.status >= 200 && response.status < 300) {
-          this.alertService.success(gettext('Updated successfully.'));
-        } else {
-          this.alertService.danger(
-            gettext('Failed to update connector configuration')
-          );
-        }
-      }
-      this.reloadData();
-    });
+    const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
+    const resultOf = await drawer.instance.configuration;
+
+    if (this.initialStateDrawer.add) {
+      await this.handleModalResponse(
+        resultOf,
+        'Added successfully.',
+        'Failed to create connector configuration',
+        config => this.connectorConfigurationService.createConfiguration(config)
+      );
+    } else {
+      await this.handleModalResponse(
+        resultOf,
+        'Updated successfully.',
+        'Failed to update connector configuration',
+        config => this.connectorConfigurationService.updateConfiguration(config)
+      );
+    }
   }
 
   async onConfigurationToggle() {
@@ -175,13 +167,36 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     this.sharedService.refreshMappings(Direction.OUTBOUND);
   }
 
+  private async handleModalResponse(
+    response: any,
+    successMessage: string,
+    errorMessage: string,
+    action: (config: any) => Promise<any>
+  ): Promise<void> {
+    if (!response) return;
+
+    const clonedConfiguration = this.prepareConfiguration(response);
+    const apiResponse = await action(clonedConfiguration);
+
+    if (apiResponse.status < 300) {
+      this.alertService.success(gettext(successMessage));
+    } else {
+      this.alertService.danger(gettext(errorMessage));
+    }
+    this.reloadData();
+  }
+
   reloadData(): void {
     this.connectorConfigurationService.refreshConfigurations();
   }
 
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.connectorStatusService.stopConnectorStatusLogs();
+  private prepareConfiguration(config: ConnectorConfiguration): Partial<ConnectorConfiguration> {
+    return {
+      identifier: config.identifier,
+      connectorType: config.connectorType,
+      enabled: config.enabled,
+      name: config.name,
+      properties: config.properties
+    };
   }
 }

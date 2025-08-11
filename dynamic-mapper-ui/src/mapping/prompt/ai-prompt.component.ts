@@ -33,7 +33,7 @@ import { Mapping, Substitution, MappingType, SharedService } from '../../shared'
 import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
-import { CodeTemplateMap, ServiceConfiguration } from '../../configuration';
+import { ServiceConfiguration } from '../../configuration';
 import { Subject } from 'rxjs';
 import { base64ToBytes } from '../shared/util';
 
@@ -53,7 +53,6 @@ export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
   alertService = inject(AlertService);
   aiAgentService = inject(AIAgentService);
   sharedService = inject(SharedService);
-
   bottomDrawerRef = inject(BottomDrawerRef);
   deviceGridService = inject(DeviceGridService);
 

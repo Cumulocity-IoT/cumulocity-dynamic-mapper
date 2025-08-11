@@ -17,8 +17,8 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy } from '@angular/core';
-import { ActionControl, AlertService, Column, CountdownIntervalComponent, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject } from '@angular/core';
+import { ActionControl, AlertService, BottomDrawerService, Column, CountdownIntervalComponent, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, from, Observable, Subject, } from 'rxjs';
 import { filter, map, take, takeUntil } from 'rxjs/operators';
@@ -35,6 +35,7 @@ import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
 import { FormBuilder, FormGroup } from '@angular/forms';
+import { ConnectorConfigurationDrawerComponent } from './edit/connector-configuration-drawer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-grid',
@@ -79,18 +80,19 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   intervals: PollingInterval[];
   currentPollingInterval: number;
   private destroy$: Subject<void> = new Subject<void>();
-  showConfigConnectorDrawer: boolean = false;
   initialStateDrawer: any;
 
   constructor(
-    private bsModalService: BsModalService,
-    private connectorConfigurationService: ConnectorConfigurationService,
-    private alertService: AlertService,
-    private sharedService: SharedService,
-    private fb: FormBuilder,
   ) {
     this.toggleIntervalForm = this.initForm();
   }
+
+  alertService = inject(AlertService);
+  sharedService = inject(SharedService);
+  bsModalService = inject(BsModalService);
+  bottomDrawerService = inject(BottomDrawerService);
+  connectorConfigurationService = inject(ConnectorConfigurationService);
+  fb = inject(FormBuilder);
 
   async ngOnInit(): Promise<void> {
     this.initializeColumns();
@@ -251,26 +253,30 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   async onConfigurationUpdate(configuration: ConnectorConfiguration): Promise<void> {
-    return this.onConfigurationUpdateDrawer(configuration);
-    // const modalRef = this.showConfigurationModal(configuration, false);
-    // modalRef.content.closeSubject.subscribe(async editedConfiguration => {
-    //   await this.handleModalResponse(
-    //     editedConfiguration,
-    //     'Updated successfully.',
-    //     'Failed to update connector configuration',
-    //     configuration => this.connectorConfigurationService.updateConfiguration(configuration)
-    //   );
-    // });
-  }
-
-  async onConfigurationUpdateDrawer(configuration: ConnectorConfiguration): Promise<void> {
     this.initialStateDrawer = {
       add: false,
       configuration: cloneDeep(configuration),
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
     }
-    this.showConfigConnectorDrawer = !this.showConfigConnectorDrawer;
+    const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
+    const resultOf = await drawer.instance.configuration;
+
+    if (this.initialStateDrawer.add) {
+      await this.handleModalResponse(
+        resultOf,
+        'Added successfully.',
+        'Failed to create connector configuration',
+        config => this.connectorConfigurationService.createConfiguration(config)
+      );
+    } else {
+      await this.handleModalResponse(
+        resultOf,
+        'Updated successfully.',
+        'Failed to update connector configuration',
+        config => this.connectorConfigurationService.updateConfiguration(config)
+      );
+    }
   }
 
   async onConfigurationCopy(config: ConnectorConfiguration): Promise<void> {
@@ -302,23 +308,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   async onConfigurationAdd(): Promise<void> {
-    return this.onConfigurationAddDrawer();
-    // const newConfig: Partial<ConnectorConfiguration> = {
-    //   properties: {},
-    //   identifier: createCustomUuid()
-    // };
-    // const modalRef = this.showConfigurationModal(newConfig, true);
-    // modalRef.content.closeSubject.subscribe(async addedConfiguration => {
-    //   await this.handleModalResponse(
-    //     addedConfiguration,
-    //     'Added successfully.',
-    //     'Failed to create connector configuration',
-    //     config => this.connectorConfigurationService.createConfiguration(config)
-    //   );
-    // });
-  }
-
-  async onConfigurationAddDrawer(): Promise<void> {
     this.initialStateDrawer = {
       add: true,
       configuration: {
@@ -328,26 +317,23 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
     }
-    this.showConfigConnectorDrawer = !this.showConfigConnectorDrawer;
-  }
-
-  async onConfigurationDrawerCommit(configuration: ConnectorConfiguration): Promise<void> {
+    const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
+    const resultOf = await drawer.instance.result;
     if (this.initialStateDrawer.add) {
       await this.handleModalResponse(
-        configuration,
+        resultOf,
         'Added successfully.',
         'Failed to create connector configuration',
         config => this.connectorConfigurationService.createConfiguration(config)
       );
     } else {
       await this.handleModalResponse(
-        configuration,
+        resultOf,
         'Updated successfully.',
         'Failed to update connector configuration',
         config => this.connectorConfigurationService.updateConfiguration(config)
       );
     }
-    this.showConfigConnectorDrawer = false;
   }
 
   findNameByIdent(identifier: string): string {
