@@ -320,34 +320,36 @@
               </div>
 
             </div>
-            <div class="d-flex d-col p-t-8" *ngIf="expertMode">
-              <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFields"
-                [model]="substitutionModel"></formly-form>
-              <div class="d-flex">
-                <div class="col-lg-5 col-lg-offset-1">
-                  <div class="form-group m-b-4">
-                    <label translate>&nbsp;Source Result [{{
-                      substitutionModel.sourceExpression?.resultType
-                      }}]</label>
-                    <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
-                              font-size: var(--c8y-font-size-small);
-                              line-height: var(--c8y-line-height-small);
-                            ">{{
-                              substitutionModel.sourceExpression?.result
-                            }}</textarea>
+            <div class="collapse" [isAnimated]="true" [collapse]="!expertMode">
+              <div class="d-flex d-col p-t-8">
+                <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFields"
+                  [model]="substitutionModel"></formly-form>
+                <div class="d-flex">
+                  <div class="col-lg-5 col-lg-offset-1">
+                    <div class="form-group m-b-4">
+                      <label translate>&nbsp;Source Result [{{
+                        substitutionModel.sourceExpression?.resultType
+                        }}]</label>
+                      <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                                font-size: var(--c8y-font-size-small);
+                                line-height: var(--c8y-line-height-small);
+                              ">{{
+                                substitutionModel.sourceExpression?.result
+                              }}</textarea>
+                    </div>
                   </div>
-                </div>
-                <div class="col-lg-5">
-                  <div class="form-group m-b-4">
-                    <label translate>&nbsp;Target Result [{{
-                      substitutionModel.targetExpression?.resultType
-                      }}]</label>
-                    <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
-                              font-size: var(--c8y-font-size-small);
-                              line-height: var(--c8y-line-height-small);
-                            ">{{
-                              substitutionModel.targetExpression?.result
-                            }}</textarea>
+                  <div class="col-lg-5">
+                    <div class="form-group m-b-4">
+                      <label translate>&nbsp;Target Result [{{
+                        substitutionModel.targetExpression?.resultType
+                        }}]</label>
+                      <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                                font-size: var(--c8y-font-size-small);
+                                line-height: var(--c8y-line-height-small);
+                              ">{{
+                                substitutionModel.targetExpression?.result
+                              }}</textarea>
+                    </div>
                   </div>
                 </div>
               </div>

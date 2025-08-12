@@ -60,6 +60,8 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
 import { AIPromptComponent } from './prompt/ai-prompt.component';
 import { DeviceSelectorSubscription3Component } from './subscription/device-selector3/device-selector-subscription3.component';
 import { DeviceSelectorSubscription4Component } from './subscription/device-selector4/device-selector-subscription4.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { CollapseModule } from 'ngx-bootstrap/collapse';
 
 @NgModule({
   declarations: [
@@ -104,6 +106,8 @@ import { DeviceSelectorSubscription4Component } from './subscription/device-sele
     ServiceConfigurationModule,
     EditorComponent,
     DeviceGridModule,
+    BrowserAnimationsModule,
+     CollapseModule.forRoot() ,
     MonacoEditorMarkerValidatorDirective
   ],
   exports: [],
