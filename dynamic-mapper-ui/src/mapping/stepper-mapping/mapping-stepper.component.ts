@@ -633,17 +633,15 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         valid: true,
       };
       this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
-      if (this.expertMode) {
-        this.substitutionFormly.get('pathSource').setErrors(null);
-        if (
-          this.substitutionModel.sourceExpression.resultType == 'Array' &&
-          !this.substitutionModel.expandArray
-        ) {
-          const txt =
-            'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
-          this.raiseAlert({ type: 'info', text: txt });
-          // this.sourceCustomMessage$.next(txt);
-        }
+      this.substitutionFormly.get('pathSource').setErrors(null);
+      if (
+        this.substitutionModel.sourceExpression.resultType == 'Array' &&
+        !this.substitutionModel.expandArray
+      ) {
+        const txt =
+          'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
+        this.raiseAlert({ type: 'info', text: txt });
+        // this.sourceCustomMessage$.next(txt);
       }
     } catch (error) {
       this.substitutionModel.sourceExpression.valid = false;
@@ -696,19 +694,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         valid: true
       };
 
-      if (this.expertMode) {
-        this.substitutionFormly.get('pathTarget').setErrors(null);
-        // if (definesDI && this.mapping.useExternalId) {
-        //   const txt = `${API[this.mapping.targetAPI].identifier
-        //     } is resolved using the external Id ${this.mapping.externalIdType
-        //     } defined in the previous step.`;
-        //   this.targetCustomMessage$.next(txt);
-        // } else 
-        if (path == '$') {
-          const txt = `By specifying "$" you selected the root of the target 
+      this.substitutionFormly.get('pathTarget').setErrors(null);
+      // if (definesDI && this.mapping.useExternalId) {
+      //   const txt = `${API[this.mapping.targetAPI].identifier
+      //     } is resolved using the external Id ${this.mapping.externalIdType
+      //     } defined in the previous step.`;
+      //   this.targetCustomMessage$.next(txt);
+      // } else 
+      if (path == '$') {
+        const txt = `By specifying "$" you selected the root of the target 
           template and this result in merging the source expression with the target template.`;
-          this.targetCustomMessage$.next(txt);
-        }
+        this.targetCustomMessage$.next(txt);
       }
     } catch (error) {
       this.substitutionModel.targetExpression.valid = false;
@@ -731,15 +727,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onSelectedPathSourceChanged(path: string): Promise<void> {
-    if (this.expertMode) {
-      this.substitutionFormly.get('pathSource').setValue(path);
-      this.substitutionModel.pathSource = path;
-      this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
-    } else {
-      this.substitutionModel.pathSource = path;
-      this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
-      this.updateSourceExpressionResult(path);
-    }
+    this.substitutionFormly.get('pathSource').setValue(path);
+    this.substitutionModel.pathSource = path;
+    this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
+
     if (path == API[this.mapping.targetAPI].identifier) {
       const gi = getGenericDeviceIdentifier(this.mapping);
       await this.editorSourceStepSubstitution.setSelectionToPath(
@@ -758,13 +749,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onSelectedPathTargetChanged(path: string): Promise<void> {
-    if (this.expertMode) {
-      this.substitutionFormly.get('pathTarget').setValue(path);
-      this.substitutionModel.pathTarget = path;
-    } else {
-      this.substitutionModel.pathTarget = path;
-      this.updateTargetExpressionResult(path);
-    }
+    this.substitutionFormly.get('pathTarget').setValue(path);
+    this.substitutionModel.pathTarget = path;
+ 
     if (path == API[this.mapping.targetAPI].identifier) {
       const gi = getGenericDeviceIdentifier(this.mapping);
       await this.editorTargetStepSubstitution.setSelectionToPath(
@@ -828,7 +815,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       //delete this.mappingCode;
     }
     if (this.mapping.mappingType == MappingType.CODE_BASED && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
-      this.raiseAlert({type:'warning',text:"Internal error in editor. Try again!"});
+      this.raiseAlert({ type: 'warning', text: "Internal error in editor. Try again!" });
       this.commit.emit();
     }
     this.commit.emit(this.mapping);
@@ -904,7 +891,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.mapping?.extension?.extensionName) {
       if (!this.extensions[this.mapping.extension.extensionName]) {
         const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
-        this.raiseAlert({type:'warning',text:msg});
+        this.raiseAlert({ type: 'warning', text: msg });
       } else {
         this.extensionEvents$.next(
           Object.values(
@@ -1128,8 +1115,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onAddSubstitution(): void {
     if (!this.isSubstitutionValid()) {
-      this.raiseAlert({type:'warning',text:
-        'Please select two nodes: one node in the template source, one node in the template target to define a substitution.'}
+      this.raiseAlert({
+        type: 'warning', text:
+          'Please select two nodes: one node in the template source, one node in the template target to define a substitution.'
+      }
       );
       return;
     }
@@ -1370,7 +1359,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
           this.alertService.success('Generated JavaScript code successfully.');
         } else {
-          this.raiseAlert({type:'warning',text:'No valid JavaScript code was generated.'});
+          this.raiseAlert({ type: 'warning', text: 'No valid JavaScript code was generated.' });
         }
       } else {
         if (Array.isArray(resultOf) && resultOf.length > 0) {
@@ -1378,7 +1367,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.mapping.substitutions.splice(0);
           resultOf.forEach(sub => this.addSubstitution(sub));
         } else {
-          this.raiseAlert({type:'warning',text:'No substitutions were generated.'});
+          this.raiseAlert({ type: 'warning', text: 'No substitutions were generated.' });
         }
       }
     } catch (ex) {
