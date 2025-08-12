@@ -31,51 +31,47 @@
 </c8y-breadcrumb>
 <div class="card card--fullpage content-fullpage d-col">
   <div class="p-24 separator-bottom">
-    <form class="form-horizontal">
-      <div class="d-grid grid__col--6-6--md">
-        <div>
-          <c8y-form-group>
-            <label class="col-sm-3 control-label">Connector name</label>
-            <div class="col-sm-8">
-              <input class="form-control" [value]="configuration?.name" readonly />
-            </div>
-          </c8y-form-group>
-        </div>
-        <div>
-          <c8y-form-group>
-            <label class="m-l-8 c8y-switch">
-              <input type="checkbox" [checked]="configuration?.enabled" (change)="onConfigurationToggle()"
-                [disabled]="!feature?.userHasMappingAdminRole" />
-              <span></span>Enabled / Disabled</label>
-          </c8y-form-group>
-        </div>
+    <div class="row">
+      <div class="col-xs-12 col-md-4">
+        <c8y-form-group>
+          <label>Connector name</label>
+          <div class="col-sm-8">
+            <input class="form-control" [value]="configuration?.name" readonly />
+          </div>
+        </c8y-form-group>
       </div>
-      <div class="d-grid grid__col--6-6--md">
-        <div>
-          <c8y-form-group>
-            <label class="col-sm-3 control-label">Connector type</label>
-            <div class="col-sm-8">
-              <input class="form-control" [value]="configuration?.connectorType" readonly />
-            </div>
-          </c8y-form-group>
-        </div>
-        <div>
-          <button class="btn btn-default" title="{{ 'Update connector' | translate }}" (click)="onConfigurationUpdate()"
-            [disabled]="configuration?.enabled || !feature?.userHasMappingAdminRole">
-            <i c8yIcon="pencil"></i>
-            {{ 'Update connector' | translate }}
-          </button>
-          <button class="btn btn-default" title="{{ 'View connector' | translate }}" (click)="onConfigurationUpdate()"
-            [disabled]="!configuration?.enabled">
-            <i c8yIcon="eye"></i>
-            {{ 'View connector' | translate }}
-          </button>
-        </div>
+      <div class="col-xs-12 col-md-4">
+        <c8y-form-group>
+          <label>Connector type</label>
+          <div class="col-sm-8">
+            <input class="form-control" [value]="configuration?.connectorType" readonly />
+          </div>
+        </c8y-form-group>
       </div>
-    </form>
+      <div class="col-xs-12 col-md-4">
+        <c8y-form-group class="m-t-24 m-b-24">
+          <label class="c8y-switch">
+            <input type="checkbox" [checked]="configuration?.enabled" (change)="onConfigurationToggle()"
+              [disabled]="!feature?.userHasMappingAdminRole" />
+            <span></span>Enabled / Disabled</label>
+        </c8y-form-group>
+      </div>
+    </div>
+    <div class="text-center">
+      <button class="btn btn-primary" title="{{ 'Update connector' | translate }}" (click)="onConfigurationUpdate()"
+        [disabled]="configuration?.enabled || !feature?.userHasMappingAdminRole">
+        <i c8yIcon="pencil"></i>
+        {{ 'Update connector' | translate }}
+      </button>
+      <button class="btn btn-primary" title="{{ 'View connector' | translate }}" (click)="onConfigurationUpdate()"
+        [disabled]="!configuration?.enabled">
+        <i c8yIcon="eye"></i>
+        {{ 'View connector' | translate }}
+      </button>
+    </div>
   </div>
-  <div>
-    <!-- <c8y-form-group class="p-l-24 p-t-24">
+
+  <!-- <c8y-form-group class="p-l-24 p-t-24">
         <form class="form-inline">
           <label
             class="control-label m-r-8"
@@ -112,8 +108,7 @@
           </button>
         </form>
       </c8y-form-group> -->
-  </div>
-  <div class="flex-auto p-l-24" style="overflow-y: hidden">
+  <div class="flex-auto p-24" style="overflow-y: hidden">
     <div class="c8y-list__item c8y-list--timeline"
       style="background: var(--c8y-page-sticky-header-background-default)!important;">
       <div class="d-flex">
