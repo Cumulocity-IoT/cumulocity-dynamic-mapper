@@ -33,7 +33,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { EditorComponent, loadMonacoEditor } from '@c8y/ngx-components/editor';
-import { AlertService, BottomDrawerService, C8yStepper, gettext } from '@c8y/ngx-components';
+import { Alert, AlertService, BottomDrawerService, C8yStepper, gettext } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -620,6 +620,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async updateSourceExpressionResult(path): Promise<void> {
+    this.clearAlerts();
     this.sourceCustomMessage$.next(undefined);
     try {
       const r: JSON = await this.mappingService.evaluateExpression(
@@ -640,7 +641,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         ) {
           const txt =
             'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
-          this.alertService.info(txt);
+          this.raiseAlert({ type: 'info', text: txt });
           // this.sourceCustomMessage$.next(txt);
         }
       }
@@ -654,6 +655,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async updateFilterExpressionResult(path): Promise<void> {
+    this.clearAlerts();
     try {
       // const resultExpression: JSON = await this.mappingService.evaluateExpression(
       //   JSON.parse(this.mapping.sourceTemplate),
@@ -682,6 +684,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async updateTargetExpressionResult(path): Promise<void> {
+    this.clearAlerts();
     try {
       const r: JSON = await this.mappingService.evaluateExpression(
         this.editorTargetStepTemplate?.get(),
@@ -742,7 +745,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       await this.editorSourceStepSubstitution.setSelectionToPath(
         getGenericDeviceIdentifier(this.mapping)
       );
-      this.alertService.info(`Please use the selected node ${gi} to map the identity from the source`);
+      this.raiseAlert({ type: 'info', text: `Please use the selected node ${gi} to map the identity from the source` });
     }
 
   }
@@ -767,7 +770,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       await this.editorTargetStepSubstitution.setSelectionToPath(
         gi
       );
-      this.alertService.info(`Please use the selected node ${gi} to map the identity from the source`);
+      this.raiseAlert({ type: 'info', text: `Please use the selected node ${gi} to map the identity from the source` });
     }
   }
 
@@ -805,6 +808,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log("Step onTargetTemplateChanged",this.mapping.sourceTemplate,  this.mapping.targetTemplate);
   }
 
+  raiseAlert(alert: Alert) {
+    // clear all info alert
+    this.alertService.state.forEach(a => {
+      if (a.type == 'info') { this.alertService.remove(a) }
+    })
+    this.alertService.add(alert);
+  }
+
+  clearAlerts() {
+    this.alertService.clearAll();
+  }
+
   async onCommitButton(): Promise<void> {
     this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
     this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
@@ -813,7 +828,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       //delete this.mappingCode;
     }
     if (this.mapping.mappingType == MappingType.CODE_BASED && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
-      this.alertService.warning("Internal error in editor. Try again!");
+      this.raiseAlert({type:'warning',text:"Internal error in editor. Try again!"});
       this.commit.emit();
     }
     this.commit.emit(this.mapping);
@@ -889,7 +904,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (this.mapping?.extension?.extensionName) {
       if (!this.extensions[this.mapping.extension.extensionName]) {
         const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded. Please load the extension or choose a different one.`;
-        this.alertService.warning(msg);
+        this.raiseAlert({type:'warning',text:msg});
       } else {
         this.extensionEvents$.next(
           Object.values(
@@ -944,7 +959,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.stepperForward = true;
     if (this.stepperConfiguration.advanceFromStepToEndStep && this.stepperConfiguration.advanceFromStepToEndStep == this.currentStepIndex) {
       this.goToLastStep();
-      this.alertService.info('The other steps have been skipped for this mapping type!');
+      this.raiseAlert({ type: 'info', text: 'The other steps have been skipped for this mapping type!' });
     } else {
       event.stepper.next();
     }
@@ -1113,8 +1128,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   onAddSubstitution(): void {
     if (!this.isSubstitutionValid()) {
-      this.alertService.warning(
-        'Please select two nodes: one node in the template source, one node in the template target to define a substitution.'
+      this.raiseAlert({type:'warning',text:
+        'Please select two nodes: one node in the template source, one node in the template target to define a substitution.'}
       );
       return;
     }
@@ -1355,7 +1370,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
           this.alertService.success('Generated JavaScript code successfully.');
         } else {
-          this.alertService.warning('No valid JavaScript code was generated.');
+          this.raiseAlert({type:'warning',text:'No valid JavaScript code was generated.'});
         }
       } else {
         if (Array.isArray(resultOf) && resultOf.length > 0) {
@@ -1363,7 +1378,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.mapping.substitutions.splice(0);
           resultOf.forEach(sub => this.addSubstitution(sub));
         } else {
-          this.alertService.warning('No substitutions were generated.');
+          this.raiseAlert({type:'warning',text:'No substitutions were generated.'});
         }
       }
     } catch (ex) {

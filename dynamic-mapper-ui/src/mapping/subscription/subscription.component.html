@@ -60,7 +60,7 @@
     <i c8yIcon="subscription"></i>
     {{ 'Manage subscriptions (device table )' | translate }}
   </button>
-    <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+  <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Specify a device or device group using filters in the device table to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static).'
         | translate
     }}" placement="bottom" triggers="focus" type="button" *ngIf="static"></button>
