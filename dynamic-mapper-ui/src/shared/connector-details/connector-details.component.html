@@ -109,7 +109,7 @@
         </form>
       </c8y-form-group> -->
   <div class="flex-auto p-24" style="overflow-y: hidden">
-    <div class="c8y-list__item c8y-list--timeline"
+    <div class="c8y-list__item c8y-list--timeline m-b-8"
       style="background: var(--c8y-page-sticky-header-background-default)!important;">
       <div class="d-flex">
         <div class="c8y-list__item__block flex-grow">
@@ -123,7 +123,7 @@
         </div>
       </div>
     </div>
-    <c8y-list-group class="inner-scroll">
+    <c8y-list-group class="inner-scroll m-r-8">
       <c8y-li-timeline *ngFor="let event of statusLogs$ | async">
         {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
         <c8y-li>
