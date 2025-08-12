@@ -21,7 +21,6 @@ import { CdkStep } from '@angular/cdk/stepper';
 import {
   ChangeDetectorRef,
   Component,
-  ElementRef,
   EventEmitter,
   inject,
   Input,
@@ -84,6 +83,7 @@ import { ManageTemplateComponent } from '../../shared/component/code-template/ma
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
 
 let initializedMonaco = false;
 
@@ -108,6 +108,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   @ViewChild('editorSourceStepTemplate', { static: false }) editorSourceStepTemplate!: JsonEditorComponent;
   @ViewChild('editorTargetStepTemplate', { static: false }) editorTargetStepTemplate!: JsonEditorComponent;
+  @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
   @ViewChild('editorSourceStepSubstitution', { static: false }) editorSourceStepSubstitution!: JsonEditorComponent;
   @ViewChild('editorTargetStepSubstitution', { static: false }) editorTargetStepSubstitution!: JsonEditorComponent;
   @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild!: SubstitutionRendererComponent;
@@ -121,7 +122,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private mappingService = inject(MappingService);
   private extensionService = inject(ExtensionService);
   private alertService = inject(AlertService);
-  private elementRef = inject(ElementRef);
   private bottomDrawerService = inject(BottomDrawerService);
   private aiAgentService = inject(AIAgentService);
 
@@ -968,12 +968,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.step = event.step.label;
     this.stepperForward = false;
     if (this.step == 'Test mapping') {
-      const editorTestingRequestRef =
-        this.elementRef.nativeElement.querySelector('#editorTestingRequest');
-      if (editorTestingRequestRef != null) {
-        editorTestingRequestRef.setAttribute('schema', undefined);
-      }
-    } else if (this.step == 'General sesstings') {
+      this.mappingTestingStep.editorTestingRequest.setSchema({});
+    } else if (this.step == 'General settings') {
       this.templatesInitialized = false;
     } else if (this.step == 'Select templates') {
       this.templatesInitialized = false;

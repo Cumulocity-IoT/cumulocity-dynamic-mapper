@@ -280,7 +280,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.testingModel.selectedResult = index;
     this.selectedResult$.next(index + 1);
 
-    const currentResult = sortObjectKeys(this.testingModel.results[index]);
+    const currentResult = this.testingModel.results[index];
     if (currentResult) {
       this.updateTestingModelFromResult(currentResult);
     } else {
@@ -392,6 +392,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       if (result) {
         this.testMapping.createNonExistingDevice = true;
         await this.initializeTestContext(this.testMapping);
+        await this.executeTest(false);
       }
     } else {
       const m = message || (error instanceof Error ? error.message : String(error));
