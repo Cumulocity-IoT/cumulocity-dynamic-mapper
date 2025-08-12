@@ -1,5 +1,6 @@
 package dynamic.mapper.processor.model;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -61,26 +62,102 @@ public class SubstitutionEvaluation {
     public static void addNestedValue(DocumentContext jsonObject, String path, Object value) {
         String[] parts = path.split("\\.");
         StringBuilder currentPath = new StringBuilder("$");
-        
-        // Create all parent objects except the last one
+
+        // Create all parent objects/arrays except the last one
         for (int i = 0; i < parts.length - 1; i++) {
-            if (i == 0) {
-                jsonObject.put("$", parts[i], new HashMap<>());
+            String part = parts[i];
+
+            if (containsArrayIndex(part)) {
+                String[] arrayParts = parseArrayNotation(part);
+                String arrayName = arrayParts[0];
+                int index = Integer.parseInt(arrayParts[1]);
+
+                // Create the array if it doesn't exist
+                try {
+                    jsonObject.read(currentPath + "." + arrayName);
+                } catch (Exception e) {
+                    jsonObject.put(currentPath.toString(), arrayName, new ArrayList<>());
+                }
+
+                // Ensure array has enough elements
+                ensureArraySize(jsonObject, currentPath + "." + arrayName, index + 1);
+
+                // Set the array element to an empty object for nesting
+                jsonObject.set(currentPath + "." + arrayName + "[" + index + "]", new HashMap<>());
+                currentPath.append(".").append(arrayName).append("[").append(index).append("]");
             } else {
-                jsonObject.put(currentPath.toString(), parts[i], new HashMap<>());
+                // Regular object property
+                try {
+                    jsonObject.read(currentPath + "." + part);
+                } catch (Exception e) {
+                    jsonObject.put(currentPath.toString(), part, new HashMap<>());
+                }
+                currentPath.append(".").append(part);
             }
-            currentPath.append(".").append(parts[i]);
         }
-        
-        // Add the final value
-        jsonObject.put(currentPath.toString(), parts[parts.length - 1], value);
+
+        // Handle the final part (could also be an array)
+        String finalPart = parts[parts.length - 1];
+        if (containsArrayIndex(finalPart)) {
+            String[] arrayParts = parseArrayNotation(finalPart);
+            String arrayName = arrayParts[0];
+            int index = Integer.parseInt(arrayParts[1]);
+
+            // Create the array if it doesn't exist
+            try {
+                jsonObject.read(currentPath + "." + arrayName);
+            } catch (Exception e) {
+                jsonObject.put(currentPath.toString(), arrayName, new ArrayList<>());
+            }
+
+            // Ensure array has enough elements
+            ensureArraySize(jsonObject, currentPath + "." + arrayName, index + 1);
+
+            // Set the final value
+            jsonObject.set(currentPath + "." + arrayName + "[" + index + "]", value);
+        } else {
+            // Regular final property
+            jsonObject.put(currentPath.toString(), finalPart, value);
+        }
+    }
+
+    private static boolean containsArrayIndex(String part) {
+        return part.contains("[") && part.contains("]");
+    }
+
+    private static String[] parseArrayNotation(String part) {
+        int openBracket = part.indexOf('[');
+        int closeBracket = part.indexOf(']');
+
+        String arrayName = part.substring(0, openBracket);
+        String indexStr = part.substring(openBracket + 1, closeBracket);
+
+        return new String[] { arrayName, indexStr };
+    }
+
+    private static void ensureArraySize(DocumentContext jsonObject, String arrayPath, int requiredSize) {
+        try {
+            List<Object> array = jsonObject.read(arrayPath);
+            while (array.size() < requiredSize) {
+                array.add(null);
+            }
+            jsonObject.set(arrayPath, array);
+        } catch (Exception e) {
+            // Array doesn't exist, create it with required size
+            List<Object> newArray = new ArrayList<>();
+            for (int i = 0; i < requiredSize; i++) {
+                newArray.add(null);
+            }
+            jsonObject.set(arrayPath, newArray);
+        }
     }
 
     public static void processSubstitute(String tenant,
             List<SubstituteValue> processingCacheEntry,
             Object extractedSourceContent, Substitution substitution, Mapping mapping) {
         if (extractedSourceContent == null) {
-            SubstitutionEvaluation.log.warn("{} - Substitution {} not in message payload. Check your mapping {}", tenant,
+            SubstitutionEvaluation.log.warn("{} - Substitution {} not in message payload. Check your mapping {}",
+                    tenant,
                     substitution, mapping.getMappingTopic());
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
@@ -104,16 +181,17 @@ public class SubstitutionEvaluation {
         }
     }
 
-
     public static void processSubstitute(String tenant,
             List<SubstituteValue> processingCacheEntry,
-            Object extractedSourceContent, SubstituteValue substitutionValue , Mapping mapping) {
+            Object extractedSourceContent, SubstituteValue substitutionValue, Mapping mapping) {
         if (extractedSourceContent == null) {
-            SubstitutionEvaluation.log.warn("{} - Substitution {} not in message payload. Check your mapping {}", tenant,
+            SubstitutionEvaluation.log.warn("{} - Substitution {} not in message payload. Check your mapping {}",
+                    tenant,
                     substitutionValue, mapping.getMappingTopic());
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.IGNORE, substitutionValue.repairStrategy, substitutionValue.expandArray));
+                            SubstituteValue.TYPE.IGNORE, substitutionValue.repairStrategy,
+                            substitutionValue.expandArray));
         } else if (SubstitutionEvaluation.isTextual(extractedSourceContent)) {
             processingCacheEntry.add(
                     new SubstituteValue(extractedSourceContent,
@@ -121,15 +199,18 @@ public class SubstitutionEvaluation {
         } else if (SubstitutionEvaluation.isNumber(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.NUMBER, substitutionValue.repairStrategy, substitutionValue.expandArray));
+                            SubstituteValue.TYPE.NUMBER, substitutionValue.repairStrategy,
+                            substitutionValue.expandArray));
         } else if (SubstitutionEvaluation.isArray(extractedSourceContent)) {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.ARRAY, substitutionValue.repairStrategy, substitutionValue.expandArray));
+                            SubstituteValue.TYPE.ARRAY, substitutionValue.repairStrategy,
+                            substitutionValue.expandArray));
         } else {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.OBJECT, substitutionValue.repairStrategy, substitutionValue.expandArray));
+                            SubstituteValue.TYPE.OBJECT, substitutionValue.repairStrategy,
+                            substitutionValue.expandArray));
         }
     }
 
