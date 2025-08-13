@@ -30,6 +30,7 @@ import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClient;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
 import dynamic.mapper.connector.mqtt.MQTTServiceClient;
+import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
 import dynamic.mapper.core.ConnectorStatusEvent;
 
@@ -194,6 +195,7 @@ public class ConnectorRegistry {
         connectorSpecificationMap.put(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.HTTP, new HttpClient().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.PULSAR, new PulsarConnectorClient().getConnectorSpecification());
     }
 
 }

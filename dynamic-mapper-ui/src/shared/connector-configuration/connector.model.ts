@@ -40,6 +40,7 @@ export enum ConnectorType {
   KAFKA = 'KAFKA',
   HTTP = 'HTTP',
   WEB_HOOK = 'WEB_HOOK',
+  PULSAR = 'PULSAR',
 }
 
 export interface ConnectorPropertyCondition {

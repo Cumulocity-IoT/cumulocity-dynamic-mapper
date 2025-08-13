@@ -27,4 +27,5 @@ public enum ConnectorType {
     KAFKA,
     HTTP,
     WEB_HOOK,
+    PULSAR,
 }
