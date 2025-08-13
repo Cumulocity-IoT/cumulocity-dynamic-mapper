@@ -39,70 +39,70 @@ function escapeQuotesCustom(prop: string): string {
     return prop.replace(/"/g, '\\"')
 }
 
- /**
- * Parse a JSON path like 'items[3].name' or 'temp."high.value"' into a path array
- */
+/**
+* Parse a JSON path like 'items[3].name' or 'temp."high.value"' into a path array
+*/
 export function parseJSONPathCustom(pathStr: string): JSONPath {
-  const path: JSONPath = []
-  let i = 0
+    const path: JSONPath = []
+    let i = 0
 
-  while (i < pathStr.length) {
-    // Handle dot notation
-    if (pathStr[i] === '.') {
-      i++
-      
-      // Check if the next character is a quote, indicating a property with special characters
-      if (pathStr[i] === '"') {
-        i++ // Move past the opening quote
-        path.push(parseProp((c) => c === '"', true))
-        eatCharacter('"') // Consume the closing quote
-      } else {
-        path.push(parseProp((c) => c === '.' || c === '['))
-      }
-    } 
-    // Handle bracket notation
-    else if (pathStr[i] === '[') {
-      i++
+    while (i < pathStr.length) {
+        // Handle dot notation
+        if (pathStr[i] === '.') {
+            i++
 
-      if (pathStr[i] === '"') {
+            // Check if the next character is a quote, indicating a property with special characters
+            if (pathStr[i] === '"') {
+                i++ // Move past the opening quote
+                path.push(parseProp((c) => c === '"', true))
+                eatCharacter('"') // Consume the closing quote
+            } else {
+                path.push(parseProp((c) => c === '.' || c === '['))
+            }
+        }
+        // Handle bracket notation
+        else if (pathStr[i] === '[') {
+            i++
+
+            if (pathStr[i] === '"') {
+                i++
+                path.push(parseProp((c) => c === '"', true))
+                eatCharacter('"')
+            } else {
+                path.push(parseProp((c) => c === ']'))
+            }
+
+            eatCharacter(']')
+        }
+        // Handle the first segment (no leading dot)
+        else {
+            path.push(parseProp((c) => c === '.' || c === '['))
+        }
+    }
+
+    function parseProp(isEnd: (char: string) => boolean, unescape = false) {
+        let prop = ''
+
+        while (i < pathStr.length && !isEnd(pathStr[i])) {
+            if (unescape && pathStr[i] === '\\' && pathStr[i + 1] === '"') {
+                // escaped double quote
+                prop += '"'
+                i += 2
+            } else {
+                prop += pathStr[i]
+                i++
+            }
+        }
+
+        return prop
+    }
+
+    function eatCharacter(char: string) {
+        if (pathStr[i] !== char) {
+            throw new SyntaxError(`Invalid JSON path: ${char} expected at position ${i}`)
+        }
         i++
-        path.push(parseProp((c) => c === '"', true))
-        eatCharacter('"')
-      } else {
-        path.push(parseProp((c) => c === ']'))
-      }
-
-      eatCharacter(']')
-    } 
-    // Handle the first segment (no leading dot)
-    else {
-      path.push(parseProp((c) => c === '.' || c === '['))
-    }
-  }
-
-  function parseProp(isEnd: (char: string) => boolean, unescape = false) {
-    let prop = ''
-
-    while (i < pathStr.length && !isEnd(pathStr[i])) {
-      if (unescape && pathStr[i] === '\\' && pathStr[i + 1] === '"') {
-        // escaped double quote
-        prop += '"'
-        i += 2
-      } else {
-        prop += pathStr[i]
-        i++
-      }
     }
 
-    return prop
-  }
-
-  function eatCharacter(char: string) {
-    if (pathStr[i] !== char) {
-      throw new SyntaxError(`Invalid JSON path: ${char} expected at position ${i}`)
-    }
-    i++
-  }
-
-  return path
+    return path
 }
