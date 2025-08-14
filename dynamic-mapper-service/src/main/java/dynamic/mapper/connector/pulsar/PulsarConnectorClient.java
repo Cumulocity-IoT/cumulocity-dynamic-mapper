@@ -706,10 +706,13 @@ public class PulsarConnectorClient extends AConnectorClient {
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                var producerBuilder = pulsarClient.newProducer()
-                        .topic(topic);
+                // Convert MQTT topic to proper Pulsar format
+                String pulsarTopic = ensurePulsarTopicFormat(topic);
 
-                // Configure producer based on QoS requirements (your original logic)
+                var producerBuilder = pulsarClient.newProducer()
+                        .topic(pulsarTopic); // ← Use converted topic
+
+                // Configure producer based on QoS requirements
                 switch (qos) {
                     case AT_MOST_ONCE:
                         // Fire and forget - don't wait for acknowledgment
@@ -727,8 +730,8 @@ public class PulsarConnectorClient extends AConnectorClient {
                 }
 
                 Producer<byte[]> producer = producerBuilder.create();
-                log.debug("{} - Created producer for topic: {} with QoS: {} on attempt {}",
-                        tenant, topic, qos, attempt);
+                log.debug("{} - Created producer for MQTT topic '{}' → Pulsar topic '{}' with QoS: {} on attempt {}",
+                        tenant, topic, pulsarTopic, qos, attempt);
                 return producer;
 
             } catch (PulsarClientException e) {
@@ -963,7 +966,8 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     /**
-     * Ensures the topic follows Pulsar's full topic format
+     * Ensures the topic follows Pulsar's full topic format and converts MQTT-style
+     * topics
      */
     private String ensurePulsarTopicFormat(String topicPattern) {
         // If already a complete Pulsar topic, return as-is
@@ -971,12 +975,42 @@ public class PulsarConnectorClient extends AConnectorClient {
             return topicPattern;
         }
 
+        // Convert MQTT-style topic to Pulsar-compatible name
+        String pulsarTopicName = convertMqttTopicToPulsarTopicName(topicPattern);
+
         // Get default namespace from configuration or use public/default
         String tenant = (String) connectorConfiguration.getProperties().getOrDefault("pulsarTenant", "public");
         String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
 
         // Construct full Pulsar topic format
-        return String.format("persistent://%s/%s/%s", tenant, namespace, topicPattern);
+        return String.format("persistent://%s/%s/%s", tenant, namespace, pulsarTopicName);
+    }
+
+    /**
+     * Converts MQTT-style topic names to Pulsar-compatible topic names
+     */
+    private String convertMqttTopicToPulsarTopicName(String mqttTopic) {
+        if (mqttTopic == null || mqttTopic.isEmpty()) {
+            return mqttTopic;
+        }
+
+        // Replace forward slashes with hyphens
+        String pulsarTopic = mqttTopic
+                .replace("/", "-") // measurement/kobu-webhook-001 → measurement-kobu-webhook-001
+                .replace(" ", "_") // Replace spaces with underscores
+                .replaceAll("[^a-zA-Z0-9._-]", "_"); // Replace other special chars
+
+        // Ensure it doesn't start or end with special characters
+        pulsarTopic = pulsarTopic.replaceAll("^[._-]+|[._-]+$", "");
+
+        // Ensure it's not empty
+        if (pulsarTopic.isEmpty()) {
+            pulsarTopic = "default-topic";
+        }
+
+        log.debug("{} - Converted MQTT topic '{}' to Pulsar topic '{}'", tenant, mqttTopic, pulsarTopic);
+
+        return pulsarTopic;
     }
 
     /**
