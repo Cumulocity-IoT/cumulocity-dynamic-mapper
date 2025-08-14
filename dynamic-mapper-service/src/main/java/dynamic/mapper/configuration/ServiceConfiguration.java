@@ -23,6 +23,7 @@ package dynamic.mapper.configuration;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +56,7 @@ public class ServiceConfiguration implements Cloneable {
         this.inboundExternalIdCacheRetention = 1;
         this.inventoryCacheSize = 0;
         this.inventoryCacheRetention = 1;
-        this.inventoryFragmentsToCache = new ArrayList<String>();
+        this.inventoryFragmentsToCache = new ArrayList<>(Arrays.asList("type"));
         this.maxCPUTimeMS = 5000; // 5 seconds
         this.jsonataAgent = null;
         this.javaScriptAgent = null;

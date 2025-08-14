@@ -59,6 +59,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     inboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
+    inventoryFragmentsToCache: ['type'],  // always add type
     maxCPUTimeMS: 5000,  // 5 seconds
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
