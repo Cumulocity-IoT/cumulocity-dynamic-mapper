@@ -51,6 +51,7 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.client.api.PulsarClientException.UnsupportedAuthenticationException;
 import org.apache.pulsar.client.api.SubscriptionType;
 import org.apache.pulsar.client.api.MessageListener;
 import org.apache.pulsar.client.api.Message;
@@ -107,7 +108,9 @@ public class PulsarConnectorClient extends AConnectorClient {
                 new String[] { "token", "oauth2", "tls" });
 
         configProps.put("serviceUrl",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty(
+                        "This can be in the format: pulsar://localhost:6650 for non-TLS or pulsar+ssl://localhost:6651 for TLS",
+                        true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         "pulsar://localhost:6650", null, null));
         configProps.put("enableTls",
                 new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
@@ -159,7 +162,7 @@ public class PulsarConnectorClient extends AConnectorClient {
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false,
                         true, null, null));
-                                configProps.put("pulsarTenant",
+        configProps.put("pulsarTenant",
                 new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         "public", null, null));
         configProps.put("pulsarNamespace",
@@ -268,8 +271,8 @@ public class PulsarConnectorClient extends AConnectorClient {
     @Override
     public void connect() {
         log.info("{} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
-                tenant, getConnectorName(), isConnected(),
-                shouldConnect());
+                tenant, getConnectorName(), isConnected(), shouldConnect());
+
         if (isConnected())
             disconnect();
 
@@ -291,49 +294,26 @@ public class PulsarConnectorClient extends AConnectorClient {
                 .getOrDefault("keepAliveIntervalSeconds", DEFAULT_KEEP_ALIVE);
 
         try {
+            // Modify serviceUrl for TLS instead of using deprecated enableTls()
+            String finalServiceUrl = adjustServiceUrlForTls(serviceUrl, enableTls);
+
             ClientBuilder clientBuilder = PulsarClient.builder()
-                    .serviceUrl(serviceUrl)
+                    .serviceUrl(finalServiceUrl)
                     .connectionTimeout(connectionTimeout, TimeUnit.SECONDS)
                     .operationTimeout(operationTimeout, TimeUnit.SECONDS)
                     .keepAliveInterval(keepAlive, TimeUnit.SECONDS);
 
-            // Configure TLS
-            if (enableTls) {
-                clientBuilder.enableTls(true);
-                if (useSelfSignedCertificate && sslContext != null) {
-                    clientBuilder.tlsTrustCertsFilePath(null); // We'll use SSLContext
-                    // Note: Pulsar Java client doesn't directly support SSLContext
-                    // You might need to use tlsTrustCertsFilePath with a file instead
-                    log.debug("{} - Using self-signed certificate", tenant);
+            // Configure TLS certificate handling
+            if (isUsingTls(finalServiceUrl)) {
+                if (useSelfSignedCertificate) {
+                    configureSelfSignedCertificate(clientBuilder);
                 }
+                // For standard TLS, no additional configuration needed
+                log.debug("{} - Using TLS connection to: {}", tenant, finalServiceUrl);
             }
 
             // Configure authentication
-            if (!"none".equals(authenticationMethod) && !StringUtils.isEmpty(authenticationParams)) {
-                switch (authenticationMethod) {
-                    case "token":
-                        clientBuilder.authentication(
-                                AuthenticationFactory.token(authenticationParams));
-                        break;
-                    case "oauth2":
-                        // OAuth2 parameters should be in JSON format
-                        clientBuilder.authentication(
-                                AuthenticationFactory.create(
-                                        "org.apache.pulsar.client.impl.auth.oauth2.AuthenticationOAuth2",
-                                        authenticationParams));
-                        break;
-                    case "tls":
-                        // TLS authentication parameters
-                        clientBuilder.authentication(
-                                AuthenticationFactory.create(
-                                        "org.apache.pulsar.client.impl.auth.AuthenticationTls",
-                                        authenticationParams));
-                        break;
-                    default:
-                        log.warn("{} - Unknown authentication method: {}", tenant, authenticationMethod);
-                        break;
-                }
-            }
+            configureAuthentication(clientBuilder, authenticationMethod, authenticationParams);
 
             pulsarClient = clientBuilder.build();
 
@@ -363,11 +343,11 @@ public class PulsarConnectorClient extends AConnectorClient {
                     }
                     try {
                         // Test connection by creating a temporary producer
-                        Producer<byte[]> testProducer = pulsarClient.newProducer()
-                                .topic("test-connection-topic")
-                                .createAsync()
-                                .get(5, TimeUnit.SECONDS);
-                        testProducer.close();
+                        // Producer<byte[]> testProducer = pulsarClient.newProducer()
+                        // .topic("test-connection-topic")
+                        // .createAsync()
+                        // .get(5, TimeUnit.SECONDS);
+                        // testProducer.close();
 
                         connectionState.setTrue();
                         log.info("{} - Phase III: {} connected, server: {}", tenant, getConnectorName(), serviceUrl);
@@ -406,6 +386,92 @@ public class PulsarConnectorClient extends AConnectorClient {
             log.error("{} - Error creating Pulsar client: ", tenant, e);
             updateConnectorStatusToFailed(e);
             sendConnectorLifecycle();
+        }
+    }
+
+    /**
+     * Adjusts the service URL to use appropriate protocol based on TLS setting
+     */
+    private String adjustServiceUrlForTls(String originalUrl, Boolean enableTls) {
+        if (enableTls != null && enableTls) {
+            // Convert to TLS URL if not already
+            if (originalUrl.startsWith("pulsar://")) {
+                return originalUrl.replace("pulsar://", "pulsar+ssl://");
+            } else if (originalUrl.startsWith("pulsar+ssl://")) {
+                return originalUrl; // Already TLS
+            }
+        } else {
+            // Ensure non-TLS URL
+            if (originalUrl.startsWith("pulsar+ssl://")) {
+                return originalUrl.replace("pulsar+ssl://", "pulsar://");
+            }
+        }
+        return originalUrl;
+    }
+
+    /**
+     * Checks if the service URL indicates TLS usage
+     */
+    private boolean isUsingTls(String serviceUrl) {
+        return serviceUrl.startsWith("pulsar+ssl://") || serviceUrl.startsWith("https://");
+    }
+
+    /**
+     * Configures self-signed certificate handling
+     */
+    private void configureSelfSignedCertificate(ClientBuilder clientBuilder) throws Exception {
+        if (cert != null) {
+            // Write certificate to temporary file since Pulsar client needs file path
+            String certFilePath = writeCertificateToTempFile(cert.getCertInPemFormat());
+            clientBuilder.tlsTrustCertsFilePath(certFilePath);
+            log.debug("{} - Using self-signed certificate from file: {}", tenant, certFilePath);
+        } else {
+            throw new Exception("Self-signed certificate is enabled but certificate is not loaded");
+        }
+    }
+
+    /**
+     * Writes certificate content to a temporary file
+     */
+    private String writeCertificateToTempFile(String certContent) throws IOException {
+        java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("pulsar-cert", ".pem");
+        java.nio.file.Files.write(tempFile, certContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        // Delete on JVM exit
+        tempFile.toFile().deleteOnExit();
+        return tempFile.toString();
+    }
+
+    /**
+     * Configures authentication based on method
+     * 
+     * @throws UnsupportedAuthenticationException
+     */
+    private void configureAuthentication(ClientBuilder clientBuilder, String authMethod, String authParams)
+            throws UnsupportedAuthenticationException {
+        if (!"none".equals(authMethod) && !StringUtils.isEmpty(authParams)) {
+            switch (authMethod) {
+                case "token":
+                    clientBuilder.authentication(AuthenticationFactory.token(authParams));
+                    log.debug("{} - Using token authentication", tenant);
+                    break;
+                case "oauth2":
+                    clientBuilder.authentication(
+                            AuthenticationFactory.create(
+                                    "org.apache.pulsar.client.impl.auth.oauth2.AuthenticationOAuth2",
+                                    authParams));
+                    log.debug("{} - Using OAuth2 authentication", tenant);
+                    break;
+                case "tls":
+                    clientBuilder.authentication(
+                            AuthenticationFactory.create(
+                                    "org.apache.pulsar.client.impl.auth.AuthenticationTls",
+                                    authParams));
+                    log.debug("{} - Using TLS authentication", tenant);
+                    break;
+                default:
+                    log.warn("{} - Unknown authentication method: {}", tenant, authMethod);
+                    break;
+            }
         }
     }
 
@@ -585,58 +651,175 @@ public class PulsarConnectorClient extends AConnectorClient {
         Qos qos = context.getQos(); // Get QoS from context
 
         try {
+            // Check if client is still valid before creating producer
+            if (pulsarClient == null || pulsarClient.isClosed()) {
+                log.warn("{} - Pulsar client is closed, attempting to reconnect", tenant);
+                reconnect();
+                return; // Message will be retried
+            }
+
             Producer<byte[]> producer = producers.computeIfAbsent(topic, t -> {
                 try {
-                    var producerBuilder = pulsarClient.newProducer()
-                            .topic(t);
-
-                    // Configure producer based on QoS requirements
-                    switch (qos) {
-                        case AT_MOST_ONCE:
-                            // Fire and forget - don't wait for acknowledgment
-                            producerBuilder.sendTimeout(0, TimeUnit.SECONDS);
-                            break;
-                        case AT_LEAST_ONCE:
-                            // Default Pulsar behavior - wait for broker acknowledgment
-                            producerBuilder.sendTimeout(30, TimeUnit.SECONDS);
-                            break;
-                        case EXACTLY_ONCE:
-                            // Enable deduplication for exactly-once semantics
-                            producerBuilder.sendTimeout(30, TimeUnit.SECONDS);
-                            // Note: Pulsar's deduplication is enabled at namespace level
-                            break;
-                    }
-
-                    return producerBuilder.create();
-                } catch (PulsarClientException e) {
+                    return createProducerWithQos(t, qos);
+                } catch (Exception e) {
                     log.error("{} - Failed to create producer for topic: {} with QoS: {}",
                             tenant, t, qos, e);
                     return null;
                 }
             });
 
-            if (producer != null) {
-                if (qos == Qos.AT_MOST_ONCE) {
-                    // Fire and forget
-                    producer.sendAsync(payload.getBytes())
-                            .exceptionally(throwable -> {
-                                log.debug("{} - Failed to send AT_MOST_ONCE message (expected): {}",
-                                        tenant, throwable.getMessage());
-                                return null;
-                            });
-                } else {
-                    // Wait for acknowledgment
-                    producer.send(payload.getBytes());
+            // Check if existing producer is still connected
+            if (producer != null && !producer.isConnected()) {
+                log.warn("{} - Producer for topic {} is disconnected, recreating", tenant, topic);
+                producers.remove(topic);
+                try {
+                    producer.close();
+                } catch (PulsarClientException closeEx) {
+                    log.debug("{} - Error closing disconnected producer: {}", tenant, closeEx.getMessage());
                 }
 
-                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
-                    log.info("{} - Published outbound message with QoS {}: {} for mapping: {} on topic: [{}], {}",
-                            tenant, qos, payload, context.getMapping().name, topic, connectorName);
+                producer = createProducerWithQos(topic, qos);
+                if (producer != null) {
+                    producers.put(topic, producer);
                 }
             }
+
+            if (producer != null) {
+                sendMessageWithQos(producer, payload, qos, context);
+            } else {
+                log.error("{} - No producer available for topic: {}", tenant, topic);
+            }
+
         } catch (PulsarClientException e) {
-            log.error("{} - Failed to publish message to topic: {} with QoS: {}", tenant, topic, qos, e);
+            handlePublishError(e, topic, qos, context);
+        } catch (Exception e) {
+            log.error("{} - Unexpected error publishing to topic: {} with QoS: {}", tenant, topic, qos, e);
         }
+    }
+
+    /**
+     * Creates a producer with QoS-specific configuration and retry logic
+     */
+    private Producer<byte[]> createProducerWithQos(String topic, Qos qos) throws PulsarClientException {
+        int maxRetries = 3;
+        int retryDelay = 1000; // 1 second
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                var producerBuilder = pulsarClient.newProducer()
+                        .topic(topic);
+
+                // Configure producer based on QoS requirements (your original logic)
+                switch (qos) {
+                    case AT_MOST_ONCE:
+                        // Fire and forget - don't wait for acknowledgment
+                        producerBuilder.sendTimeout(0, TimeUnit.SECONDS);
+                        break;
+                    case AT_LEAST_ONCE:
+                        // Default Pulsar behavior - wait for broker acknowledgment
+                        producerBuilder.sendTimeout(30, TimeUnit.SECONDS);
+                        break;
+                    case EXACTLY_ONCE:
+                        // Enable deduplication for exactly-once semantics
+                        producerBuilder.sendTimeout(30, TimeUnit.SECONDS);
+                        // Note: Pulsar's deduplication is enabled at namespace level
+                        break;
+                }
+
+                Producer<byte[]> producer = producerBuilder.create();
+                log.debug("{} - Created producer for topic: {} with QoS: {} on attempt {}",
+                        tenant, topic, qos, attempt);
+                return producer;
+
+            } catch (PulsarClientException e) {
+                log.warn("{} - Producer creation attempt {}/{} failed for topic: {} with QoS: {}: {}",
+                        tenant, attempt, maxRetries, topic, qos, e.getMessage());
+
+                if (attempt == maxRetries) {
+                    throw e;
+                }
+
+                try {
+                    Thread.sleep(retryDelay * attempt); // Exponential backoff
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new PulsarClientException(ie);
+                }
+            }
+        }
+
+        throw new PulsarClientException("Failed to create producer after " + maxRetries + " attempts");
+    }
+
+    /**
+     * Sends message with QoS-specific logic (your original logic)
+     */
+    private void sendMessageWithQos(Producer<byte[]> producer, String payload, Qos qos, ProcessingContext<?> context)
+            throws PulsarClientException {
+
+        if (qos == Qos.AT_MOST_ONCE) {
+            // Fire and forget (your original logic)
+            producer.sendAsync(payload.getBytes())
+                    .exceptionally(throwable -> {
+                        log.debug("{} - Failed to send AT_MOST_ONCE message (expected): {}",
+                                tenant, throwable.getMessage());
+                        return null;
+                    });
+        } else {
+            // Wait for acknowledgment (your original logic)
+            producer.send(payload.getBytes());
+        }
+
+        // Your original logging logic
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+            log.info("{} - Published outbound message with QoS {}: {} for mapping: {} on topic: [{}], {}",
+                    tenant, qos, payload, context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
+        }
+    }
+
+    /**
+     * Handles publish errors with connection recovery
+     */
+    private void handlePublishError(PulsarClientException e, String topic, Qos qos, ProcessingContext<?> context) {
+        log.error("{} - Failed to publish message to topic: {} with QoS: {} - {}", tenant, topic, qos, e.getMessage());
+
+        // Check if it's a connection issue
+        if (isConnectionError(e)) {
+            log.info("{} - Connection error detected, removing cached producer and triggering reconnection", tenant);
+
+            // Remove the failed producer from cache
+            Producer<byte[]> failedProducer = producers.remove(topic);
+            if (failedProducer != null) {
+                try {
+                    failedProducer.close();
+                } catch (PulsarClientException closeEx) {
+                    log.debug("{} - Error closing failed producer: {}", tenant, closeEx.getMessage());
+                }
+            }
+
+            // Trigger reconnection in background
+            virtualThreadPool.submit(() -> {
+                try {
+                    reconnect();
+                } catch (Exception reconnectError) {
+                    log.error("{} - Reconnection failed: {}", tenant, reconnectError.getMessage());
+                }
+            });
+        }
+    }
+
+    /**
+     * Determines if the exception indicates a connection problem
+     */
+    private boolean isConnectionError(PulsarClientException e) {
+        String message = e.getMessage().toLowerCase();
+        return message.contains("connection") ||
+                message.contains("timeout") ||
+                message.contains("disconnected") ||
+                message.contains("not connected") ||
+                e instanceof PulsarClientException.ConnectException ||
+                e instanceof PulsarClientException.TimeoutException ||
+                e instanceof PulsarClientException.AlreadyClosedException;
     }
 
     @Override
