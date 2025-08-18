@@ -83,6 +83,7 @@ import {
 } from '../shared/mapping.model';
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
+import { SubscriptionService } from '../core/subscription.service';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -162,6 +163,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
   }
 
+  private subscriptionService = inject(SubscriptionService);
   private mappingService = inject(MappingService);
   private sharedService = inject(SharedService);
   private alertService = inject(AlertService);
@@ -196,7 +198,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       try {
         const mappings = await this.mappingService.getMappings(Direction.OUTBOUND);
         const numberOutboundMappings = mappings.length;
-        const { devices } = await this.mappingService.getSubscriptionDevice();
+        const { devices } = await this.subscriptionService.getSubscriptionDevice();
         if (devices.length === 0 && numberOutboundMappings > 0) {
           this.alertService.warning(
             "No device subscriptions found for your outbound mappings. " +

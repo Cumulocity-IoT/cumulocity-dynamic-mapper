@@ -53,6 +53,7 @@ import { Subject } from 'rxjs';
 import { DeploymentMapEntry, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { NotificationSubscriptionRequest, Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
+import { SubscriptionService } from '../core/subscription.service';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
@@ -80,6 +81,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   private mappingService = inject(MappingService);
+  private subscriptionService = inject(SubscriptionService);
   private sharedService = inject(SharedService);
   private alertService = inject(AlertService);
   private bsModalService = inject(BsModalService);
@@ -167,19 +169,19 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   async loadSubscriptionDevice(): Promise<void> {
-    this.subscriptionDevices = await this.mappingService.getSubscriptionDevice();
+    this.subscriptionDevices = await this.subscriptionService.getSubscriptionDevice();
     this.subscribedDevices = this.subscriptionDevices.devices;
     this.subscriptionGrid?.reload();
   }
 
   async loadSubscriptionByDeviceGroup(): Promise<void> {
-    this.subscriptionDeviceGroups = await this.mappingService.getSubscriptionByDeviceGroup();
+    this.subscriptionDeviceGroups = await this.subscriptionService.getSubscriptionByDeviceGroup();
     this.subscribedDeviceGroups = this.subscriptionDeviceGroups.devices;
     this.subscriptionGrid?.reload();
   }
 
   async loadSubscriptionByDeviceType(): Promise<void> {
-    const filter = await this.mappingService.getSubscriptionByDeviceType();
+    const filter = await this.subscriptionService.getSubscriptionByDeviceType();
     this.subscribedDeviceTypes = filter.types;
     this.subscriptionGrid?.reload();
   }
@@ -203,7 +205,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   async deleteSubscription(device: IIdentified): Promise<void> {
     // console.log('Delete device', device);
     try {
-      await this.mappingService.deleteSubscriptionDevice(device);
+      await this.subscriptionService.deleteSubscriptionDevice(device);
       this.alertService.success(
         gettext('Subscription for this device deleted successfully')
       );
@@ -274,7 +276,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     };
     // console.log('Changed deviceList:', this.subscription.devices);
     try {
-      await this.mappingService.updateSubscriptionDevice(
+      await this.subscriptionService.updateSubscriptionDevice(
         subscriptionDevices
       );
       this.loadSubscriptionDevice();
@@ -294,7 +296,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       devices: deviceList as Device[]
     };
     try {
-      await this.mappingService.updateSubscriptionByDeviceGroup(
+      await this.subscriptionService.updateSubscriptionByDeviceGroup(
        subscriptionDevices
       );
       this.loadSubscriptionByDeviceGroup();
@@ -315,7 +317,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       types: typeList as string[]
     };
     try {
-      await this.mappingService.updateSubscriptionByDeviceType(
+      await this.subscriptionService.updateSubscriptionByDeviceType(
         subscriptionDevices
       );
       this.loadSubscriptionByDeviceType();
