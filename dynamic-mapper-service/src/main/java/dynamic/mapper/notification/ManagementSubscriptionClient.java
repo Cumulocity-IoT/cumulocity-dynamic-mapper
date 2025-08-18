@@ -43,6 +43,12 @@ import java.util.*;
 import java.util.concurrent.*;
 
 @Slf4j
+/**
+ * ManagementSubscriptionClient handles notifications for management subscriptions.
+ * A ManagementSubscriptionClient is created per tenant and manages device group updates and device type subscriptions.
+ * It processes device group updates and device type subscriptions based on incoming notifications.
+ * It uses a virtual thread pool for asynchronous processing and maintains a cache of groups.
+ */
 public class ManagementSubscriptionClient implements NotificationCallback {
 
     public static final String CONNECTOR_NAME = "MANAGEMENT_SUBSCRIPTION_CONNECTOR";
@@ -57,12 +63,19 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     private final NotificationSubscriber notificationSubscriber;
     
     // Thread-safe cache with cleanup mechanism
+    // < groupID, group>
     private final Map<String, CachedGroup> groupCache = new ConcurrentHashMap<>();
     private final ScheduledExecutorService cacheCleanupExecutor;
     
     // Track processing to prevent race conditions
     private final Set<String> processingGroups = Collections.synchronizedSet(new HashSet<>());
     private final Set<String> processingDevices = Collections.synchronizedSet(new HashSet<>());
+
+    /**
+     * 
+     * @param configurationRegistry
+     * @param tenant
+     */
 
     public ManagementSubscriptionClient(ConfigurationRegistry configurationRegistry, String tenant) {
         this.tenant = tenant;
