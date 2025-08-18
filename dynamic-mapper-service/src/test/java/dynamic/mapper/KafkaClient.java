@@ -29,12 +29,12 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 public class KafkaClient {
 	KafkaProducer<String, String> testClient;
-	static String kafka_broker_host = System.getenv("kafka_broker_host");
-	static String broker_username = System.getenv("broker_username");
-	static String broker_password = System.getenv("broker_password");
-	static String group_id = System.getenv("group_id");
+	static String brokerHost = System.getenv("kafka_broker_host");
+	static String brokerUsername = System.getenv("BROKER_USERNAME");
+	static String brokerPassword = System.getenv("BROKER_PASSWORD");
+	static String groupId = System.getenv("group_id");
 	static String topic = System.getenv("topic");
-	static String sasl_mechanism = System.getenv("sasl_mechanism");
+	static String saslMechanism = System.getenv("sasl_mechanism");
 
 	public KafkaClient(KafkaProducer<String, String> sampleClient) {
 		testClient = sampleClient;
@@ -43,7 +43,7 @@ public class KafkaClient {
 	public static void main(String[] args) {
 
 		String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
-		String jaasCfg = String.format(jaasTemplate, broker_username, broker_password);
+		String jaasCfg = String.format(jaasTemplate, brokerUsername, brokerPassword);
 		System.out.println("JAASConfig: " + jaasCfg);
 		String serializer = StringSerializer.class.getName();
 
@@ -55,8 +55,8 @@ public class KafkaClient {
 		// props.put("sasl.mechanism", sasl_mechanism);
 		// props.put("linger.ms", 1);
 		// props.put("enable.idempotence", false);
-		props.put("bootstrap.servers", kafka_broker_host);
-		props.put("group.id", group_id);
+		props.put("bootstrap.servers", brokerHost);
+		props.put("group.id", groupId);
 		props.put("sasl.jaas.config", jaasCfg);
 
 		KafkaClient client = new KafkaClient(new KafkaProducer<>(props));
@@ -67,7 +67,7 @@ public class KafkaClient {
 	private void testSendMeasurement() {
 
 		String topic = KafkaClient.topic;
-		System.out.println("Connecting to Kafka broker: " + kafka_broker_host + "!");
+		System.out.println("Connecting to Kafka broker: " + brokerHost + "!");
 
 		System.out.println("Publishing message on topic: " + topic);
 

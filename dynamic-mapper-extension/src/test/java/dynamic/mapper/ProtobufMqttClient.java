@@ -40,8 +40,8 @@ public class ProtobufMqttClient {
     static String broker_host = System.getenv("broker_host");
     static Integer broker_port = Integer.valueOf(System.getenv("broker_port"));
     static String client_id = System.getenv("client_id");
-    static String broker_username = System.getenv("broker_username");
-    static String broker_password = System.getenv("broker_password");
+    static String BROKER_USERNAME = System.getenv("BROKER_USERNAME");
+    static String BROKER_PASSWORD = System.getenv("BROKER_PASSWORD");
 
     public ProtobufMqttClient(Mqtt3BlockingClient sampleClient) {
         testClient = sampleClient;
@@ -49,21 +49,21 @@ public class ProtobufMqttClient {
 
     public static void main(String[] args) {
         Mqtt3BlockingClient sampleClient;
-        if (broker_username == null || broker_username.isEmpty() ||
-                broker_password == null || broker_password.isEmpty()) {
+        if (brokerUsername == null || brokerUsername.isEmpty() ||
+                brokerPassword == null || brokerPassword.isEmpty()) {
             sampleClient = Mqtt3Client.builder()
-                    .serverHost(broker_host)
-                    .serverPort(broker_port)
-                    .identifier(client_id)
+                    .serverHost(brokerHost)
+                    .serverPort(brokerPort)
+                    .identifier(clientId)
                     .sslWithDefaultConfig()
                     .buildBlocking();
         } else {
-            Mqtt3SimpleAuth simpleAuth = Mqtt3SimpleAuth.builder().username(broker_username)
-                    .password(broker_password.getBytes()).build();
+            Mqtt3SimpleAuth simpleAuth = Mqtt3SimpleAuth.builder().username(brokerUsername)
+                    .password(brokerPassword.getBytes()).build();
             sampleClient = Mqtt3Client.builder()
-                    .serverHost(broker_host)
-                    .serverPort(broker_port)
-                    .identifier(client_id)
+                    .serverHost(brokerHost)
+                    .serverPort(brokerPort)
+                    .identifier(clientId)
                     .simpleAuth(simpleAuth)
                     .sslWithDefaultConfig()
                     .buildBlocking();
@@ -75,7 +75,7 @@ public class ProtobufMqttClient {
     private void testSendEvent() {
         String topic = "protobuf/event";
 
-        System.out.println("Connecting to server: ssl://" + broker_host + ":" + broker_port);
+        System.out.println("Connecting to server: ssl://" + brokerHost + ":" + brokerPort);
 
         // testClient.connect();
         Mqtt3ConnAck ack = testClient.connectWith()
@@ -88,7 +88,7 @@ public class ProtobufMqttClient {
             // + mqttClient.getConfig().getServerHost() + ". Error code: "
             // + ack.getReturnCode().name());
             System.out.println("Error connecting to server:"
-                    + broker_host + ". Error code: "
+                    + brokerHost + ". Error code: "
                     + ack.getReturnCode().name());
         }
 
