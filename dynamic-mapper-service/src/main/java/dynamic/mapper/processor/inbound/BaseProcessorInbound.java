@@ -271,7 +271,9 @@ public abstract class BaseProcessorInbound<T> {
                 ID identity = new ID(mapping.externalIdType, device.value.toString());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                         identity, context);
-                context.setSourceId(sourceId.getManagedObject().getId().getValue());
+                if (sourceId != null) {
+                    context.setSourceId(sourceId.getManagedObject().getId().getValue());
+                }
                 ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(tenant,
                         identity, context);
                 var response = objectMapper.writeValueAsString(adHocDevice);
