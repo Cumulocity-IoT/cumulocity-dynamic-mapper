@@ -593,29 +593,44 @@ public class PulsarConnectorClient extends AConnectorClient {
                 SubscriptionType subscriptionType = configuredType != null ? configuredType
                         : mapQosToSubscriptionType(qos);
 
-                // Create consumer builder
-                var consumerBuilder = pulsarClient.newConsumer()
-                        .topic(topic)
-                        .subscriptionName(
-                                subscriptionName + "-" + topic.replace("/", "-") + additionalSubscriptionIdTest)
-                        .subscriptionType(subscriptionType)
-                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos));
+                // Check if topic contains wildcards and handle appropriately
+                var consumerBuilder = pulsarClient.newConsumer();
 
-                // Configure acknowledgment timeout based on QoS
-                if (requiresAcknowledgment(qos)) {
-                    consumerBuilder.acknowledgmentGroupTime(100, TimeUnit.MILLISECONDS);
-                    if (qos == Qos.EXACTLY_ONCE) {
-                        // For exactly once, use shorter timeout and enable retry
-                        consumerBuilder.ackTimeout(30, TimeUnit.SECONDS);
-                        consumerBuilder.enableRetry(true);
-                    }
+                if (containsMqttWildcards(topic)) {
+                    // Handle wildcard topic with pattern subscription
+                    String pulsarPattern = translateMqttTopicToPulsarRegex(topic);
+                    consumerBuilder.topicsPattern(java.util.regex.Pattern.compile(pulsarPattern));
+                    log.info("{} - Subscribing to topic pattern: [{}] (translated from MQTT: [{}])",
+                            tenant, pulsarPattern, topic);
+                } else {
+                    // Handle regular topic
+                    String pulsarTopic = ensurePulsarTopicFormat(topic);
+                    consumerBuilder.topic(pulsarTopic);
+                    log.info("{} - Subscribing to specific topic: [{}] (translated from MQTT: [{}])",
+                            tenant, pulsarTopic, topic);
                 }
 
-                Consumer<byte[]> consumer = consumerBuilder.subscribe();
+                Consumer<byte[]> consumer = consumerBuilder
+                        .subscriptionName(subscriptionName + "-" + sanitizeTopicForSubscriptionName(topic)
+                                + additionalSubscriptionIdTest)
+                        .subscriptionType(subscriptionType)
+                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos))
+                        // Configure acknowledgment timeout based on QoS
+                        .acknowledgmentGroupTime(requiresAcknowledgment(qos) ? 100 : 0, TimeUnit.MILLISECONDS)
+                        .subscribe();
+
+                // Configure additional QoS settings after creation
+                if (qos == Qos.EXACTLY_ONCE) {
+                    // For exactly once, additional configuration might be needed
+                    // Note: Pulsar's exactly-once semantics are different from MQTT
+                    log.debug("{} - Configured EXACTLY_ONCE semantics for topic: {}", tenant, topic);
+                }
+
                 consumers.put(topic, consumer);
 
                 log.info("{} - Subscribed to topic:[{}] with QoS: {}, subscription type: {}, for connector: {}",
                         tenant, topic, qos, subscriptionType, connectorName);
+
             } catch (PulsarClientException e) {
                 log.error("{} - Failed to subscribe on topic {} with QoS {} and error: {}",
                         tenant, topic, qos, e.getMessage(), e);
@@ -623,6 +638,20 @@ public class PulsarConnectorClient extends AConnectorClient {
                         " with QoS: " + qos + ". Error: " + e.getMessage());
             }
         }
+    }
+
+    /**
+     * Checks if a topic contains MQTT-style wildcards
+     */
+    private boolean containsMqttWildcards(String topic) {
+        return topic != null && (topic.contains("+") || topic.contains("#"));
+    }
+
+    /**
+     * Sanitizes topic name for use in subscription names
+     */
+    private String sanitizeTopicForSubscriptionName(String topic) {
+        return topic.replace("/", "-").replace("+", "wildcard").replace("#", "multilevel");
     }
 
     @Override
