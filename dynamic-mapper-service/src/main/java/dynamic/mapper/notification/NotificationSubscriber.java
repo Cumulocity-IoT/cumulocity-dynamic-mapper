@@ -544,6 +544,8 @@ public class NotificationSubscriber {
 
         try {
             String mqttHost = extractMqttHost(baseUrl);
+            log.info("{} - Activating MQTT push connectivity for device {} at host {}",
+                    tenant, deviceId, mqttHost);
             Optional<MicroserviceCredentials> credentialsOpt = subscriptionsService.getCredentials(tenant);
 
             if (credentialsOpt.isEmpty()) {
@@ -559,7 +561,8 @@ public class NotificationSubscriber {
 
             Mqtt3AsyncClient client = Mqtt3Client.builder()
                     .serverHost(mqttHost)
-                    .serverPort(1883)
+                    .serverPort(8883)
+                    .sslWithDefaultConfig()
                     .identifier(deviceId)
                     .automaticReconnectWithDefaultConfig()
                     .simpleAuth(auth)
