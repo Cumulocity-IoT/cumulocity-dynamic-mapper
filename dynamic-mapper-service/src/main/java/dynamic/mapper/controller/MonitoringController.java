@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
 import jakarta.validation.constraints.NotNull;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
-
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
@@ -52,6 +49,9 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.MappingTreeNode;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import dynamic.mapper.model.MappingStatus;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -72,13 +72,13 @@ public class MonitoringController {
 	ConnectorRegistry connectorRegistry;
 
 	@Autowired
-	MappingComponent mappingComponent;
+	MappingService mappingService;
 
 	@Autowired
-	ConnectorConfigurationComponent connectorConfigurationComponent;
+	ConnectorConfigurationService connectorConfigurationService;
 
 	@Autowired
-	ServiceConfigurationComponent serviceConfigurationComponent;
+	ServiceConfigurationService serviceConfigurationService;
 
 	@Autowired
 	BootstrapService bootstrapService;
@@ -155,7 +155,7 @@ public class MonitoringController {
 		String tenant = contextService.getContext().getTenant();
 		try {
 			// initialize list with all known connectors
-			List<ConnectorConfiguration> configurationList = connectorConfigurationComponent.getConnectorConfigurations(
+			List<ConnectorConfiguration> configurationList = connectorConfigurationService.getConnectorConfigurations(
 					tenant);
 			for (ConnectorConfiguration conf : configurationList) {
 				connectorsStatus.put(conf.getIdentifier(), ConnectorStatusEvent.unknown(conf.name, conf.identifier));
@@ -199,7 +199,7 @@ public class MonitoringController {
 	@GetMapping(value = "/status/mapping/statistic", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<MappingStatus>> getMappingStatus() {
 		String tenant = contextService.getContext().getTenant();
-		List<MappingStatus> ms = mappingComponent.getMappingStatus(tenant);
+		List<MappingStatus> ms = mappingService.getMappingStatus(tenant);
 		log.info("{} - Get mapping status: {}", tenant, ms);
 		return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	}
@@ -207,7 +207,7 @@ public class MonitoringController {
     // @RequestMapping(value = "/status/mapping/error", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	// public ResponseEntity<List<MappingStatus>> getMappingLoadingError() {
 	// 	String tenant = contextService.getContext().getTenant();
-	// 	List<MappingStatus> ms = mappingComponent.getMappingLoadingError(tenant);
+	// 	List<MappingStatus> ms = mappingService.getMappingLoadingError(tenant);
 	// 	log.info("{} - Get mapping loadingError: {}", tenant, ms);
 	// 	return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
 	// }
@@ -230,7 +230,7 @@ public class MonitoringController {
 	@GetMapping(value = "/tree", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
 		String tenant = contextService.getContext().getTenant();
-		MappingTreeNode result = mappingComponent.getResolverMappingInbound(tenant);
+		MappingTreeNode result = mappingService.getResolverMappingInbound(tenant);
 		log.info("{} - Get mapping tree", tenant);
 		return ResponseEntity.status(HttpStatus.OK).body(result);
 	}

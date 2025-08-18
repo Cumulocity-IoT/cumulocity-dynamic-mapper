@@ -39,9 +39,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 
@@ -68,6 +66,9 @@ import dynamic.mapper.processor.outbound.CodeBasedProcessorOutbound;
 import dynamic.mapper.processor.outbound.DispatcherOutbound;
 import dynamic.mapper.processor.outbound.JSONProcessorOutbound;
 import dynamic.mapper.processor.processor.fixed.InternalProtobufProcessor;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -138,28 +139,28 @@ public class ConfigurationRegistry {
     }
 
     @Getter
-    private MappingComponent mappingComponent;
+    private MappingService mappingService;
 
     @Autowired
-    public void setMappingComponent(@Lazy MappingComponent mappingComponent) {
-        this.mappingComponent = mappingComponent;
+    public void setMappingComponent(@Lazy MappingService mappingService) {
+        this.mappingService = mappingService;
     }
 
     @Getter
-    private ConnectorConfigurationComponent connectorConfigurationComponent;
+    private ConnectorConfigurationService connectorConfigurationService;
 
     @Autowired
-    public void setConnectorConfigurationComponent(
-            @Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
-        this.connectorConfigurationComponent = connectorConfigurationComponent;
+    public void setConnectorConfigurationService(
+            @Lazy ConnectorConfigurationService connectorConfigurationService) {
+        this.connectorConfigurationService = connectorConfigurationService;
     }
 
     @Getter
-    public ServiceConfigurationComponent serviceConfigurationComponent;
+    public ServiceConfigurationService serviceConfigurationService;
 
     @Autowired
-    public void setServiceConfigurationComponent(@Lazy ServiceConfigurationComponent serviceConfigurationComponent) {
-        this.serviceConfigurationComponent = serviceConfigurationComponent;
+    public void setServiceConfigurationService(@Lazy ServiceConfigurationService serviceConfigurationService) {
+        this.serviceConfigurationService = serviceConfigurationService;
     }
 
     @Getter

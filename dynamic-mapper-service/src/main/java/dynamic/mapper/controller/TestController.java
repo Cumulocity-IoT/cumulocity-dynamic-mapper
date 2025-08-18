@@ -27,14 +27,15 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
-
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.*;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -62,13 +63,13 @@ public class TestController {
     ConnectorRegistry connectorRegistry;
 
     @Autowired
-    MappingComponent mappingComponent;
+    MappingService mappingService;
 
     @Autowired
-    ConnectorConfigurationComponent connectorConfigurationComponent;
+    ConnectorConfigurationService connectorConfigurationService;
 
     @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
+    ServiceConfigurationService serviceConfigurationService;
 
     @Autowired
     BootstrapService bootstrapService;

@@ -50,9 +50,10 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.service.ConnectorConfigurationService;
 
 @ExtendWith(MockitoExtension.class)
-class ConnectorConfigurationComponentTest {
+class ConnectorConfigurationServiceTest {
 
     @Mock
     private TenantOptionApi tenantOptionApi;
@@ -64,7 +65,7 @@ class ConnectorConfigurationComponentTest {
     private ObjectMapper objectMapper;
 
     @InjectMocks
-    private ConnectorConfigurationComponent configurationComponent;
+    private ConnectorConfigurationService configurationService;
 
     private static final String TEST_TENANT = "test-tenant";
     private static final String TEST_IDENTIFIER = "test-identifier";
@@ -73,15 +74,15 @@ class ConnectorConfigurationComponentTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create the component with the mocked dependencies
-        configurationComponent = new ConnectorConfigurationComponent(tenantOptionApi);
+        configurationService = new ConnectorConfigurationService(tenantOptionApi);
         
         // Use reflection to set the private subscriptionsService field
-        Field subscriptionsServiceField = ConnectorConfigurationComponent.class.getDeclaredField("subscriptionsService");
+        Field subscriptionsServiceField = ConnectorConfigurationService.class.getDeclaredField("subscriptionsService");
         subscriptionsServiceField.setAccessible(true);
-        subscriptionsServiceField.set(configurationComponent, subscriptionsService);
+        subscriptionsServiceField.set(configurationService, subscriptionsService);
         
         // Set ObjectMapper
-        configurationComponent.setObjectMapper(objectMapper);
+        configurationService.setObjectMapper(objectMapper);
     }
 
     @Test
@@ -94,7 +95,7 @@ class ConnectorConfigurationComponentTest {
         when(objectMapper.writeValueAsString(configuration)).thenReturn(jsonConfig);
 
         // Act
-        configurationComponent.saveConnectorConfiguration(configuration);
+        configurationService.saveConnectorConfiguration(configuration);
 
         // Assert
         verify(tenantOptionApi).save(any(OptionRepresentation.class));
@@ -117,7 +118,7 @@ class ConnectorConfigurationComponentTest {
         });
 
         // Act
-        ConnectorConfiguration result = configurationComponent.getConnectorConfiguration(TEST_IDENTIFIER, TEST_TENANT);
+        ConnectorConfiguration result = configurationService.getConnectorConfiguration(TEST_IDENTIFIER, TEST_TENANT);
 
         // Assert
         assertNotNull(result);
@@ -151,7 +152,7 @@ class ConnectorConfigurationComponentTest {
         }).when(subscriptionsService).runForTenant(eq(TEST_TENANT), any(Runnable.class));
 
         // Act
-        List<ConnectorConfiguration> results = configurationComponent.getConnectorConfigurations(TEST_TENANT);
+        List<ConnectorConfiguration> results = configurationService.getConnectorConfigurations(TEST_TENANT);
 
         // Assert
         assertNotNull(results);
@@ -161,7 +162,7 @@ class ConnectorConfigurationComponentTest {
     @Test
     void testDeleteConnectorConfiguration() throws Exception {
         // Act
-        configurationComponent.deleteConnectorConfiguration(TEST_IDENTIFIER);
+        configurationService.deleteConnectorConfiguration(TEST_IDENTIFIER);
 
         // Assert
         verify(tenantOptionApi).delete(any(OptionPK.class));
@@ -184,7 +185,7 @@ class ConnectorConfigurationComponentTest {
         when(subscriptionsService.getTenant()).thenReturn(TEST_TENANT);
 
         // Act
-        ConnectorConfiguration result = configurationComponent.enableConnection(TEST_IDENTIFIER, true);
+        ConnectorConfiguration result = configurationService.enableConnection(TEST_IDENTIFIER, true);
 
         // Assert
         assertNotNull(result);

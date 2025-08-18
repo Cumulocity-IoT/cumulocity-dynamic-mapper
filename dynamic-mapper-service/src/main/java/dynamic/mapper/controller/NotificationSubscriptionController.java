@@ -27,13 +27,13 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.model.NotificationSubscriptionRequest;
 import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.model.Device;
 import dynamic.mapper.exception.OutboundMappingDisabledException;
 import dynamic.mapper.exception.DeviceNotFoundException;
 import dynamic.mapper.service.NotificationSubscriptionService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.C8YAgent;
@@ -60,12 +60,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Device Subscription Controller", description = "API for managing Cumulocity IoT notification subscriptions for outbound mappings")
-public class DeviceSubscriptionController {
+public class NotificationSubscriptionController {
 
     private final C8YAgent c8yAgent;
     private final ContextService<UserCredentials> contextService;
     private final ConfigurationRegistry configurationRegistry;
-    private final ServiceConfigurationComponent serviceConfigurationComponent;
+    private final ServiceConfigurationService serviceConfigurationService;
     private final NotificationSubscriptionService subscriptionService;
 
     private static final String OUTBOUND_MAPPING_DISABLED_MESSAGE = "Outbound mapping is disabled!";
@@ -270,7 +270,7 @@ public class DeviceSubscriptionController {
     }
 
     private void validateOutboundMappingEnabled(String tenant) {
-        ServiceConfiguration config = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration config = serviceConfigurationService.getServiceConfiguration(tenant);
         if (!config.isOutboundMappingEnabled()) {
             throw new OutboundMappingDisabledException(OUTBOUND_MAPPING_DISABLED_MESSAGE);
         }

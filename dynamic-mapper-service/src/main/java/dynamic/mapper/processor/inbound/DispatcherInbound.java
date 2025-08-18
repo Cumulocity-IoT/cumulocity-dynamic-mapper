@@ -37,13 +37,13 @@ import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.core.MappingComponent;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.service.MappingService;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -85,7 +85,7 @@ public class DispatcherInbound implements GenericMessageCallback {
 
     private ExecutorService virtualThreadPool;
 
-    private MappingComponent mappingComponent;
+    private MappingService mappingService;
 
     private ConfigurationRegistry configurationRegistry;
 
@@ -93,7 +93,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.mappingComponent = configurationRegistry.getMappingComponent();
+        this.mappingService = configurationRegistry.getMappingService();
         this.configurationRegistry = configurationRegistry;
     }
 
@@ -101,7 +101,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         List<Mapping> resolvedMappings;
         Map<MappingType, BaseProcessorInbound<?>> payloadProcessorsInbound;
         ConnectorMessage connectorMessage;
-        MappingComponent mappingComponent;
+        MappingService mappingService;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
         ServiceConfiguration serviceConfiguration;
@@ -117,7 +117,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 ConnectorMessage message, AConnectorClient connectorClient) {
             this.connectorClient = connectorClient;
             this.resolvedMappings = resolvedMappings;
-            this.mappingComponent = configurationRegistry.getMappingComponent();
+            this.mappingService = configurationRegistry.getMappingService();
             this.c8yAgent = configurationRegistry.getC8yAgent();
             this.payloadProcessorsInbound = configurationRegistry.getPayloadProcessorsInbound(message.getTenant());
             this.connectorMessage = message;
@@ -143,7 +143,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             boolean sendPayload = connectorMessage.isSendPayload();
 
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
-            MappingStatus mappingStatusUnspecified = mappingComponent
+            MappingStatus mappingStatusUnspecified = mappingService
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
 
             // Track if any critical exceptions occurred that should be propagated
@@ -157,7 +157,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     continue;
                 }
 
-                MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 Context graalContext = null;
 
                 // Create a basic context that includes identifying information even if
@@ -213,7 +213,7 @@ public class DispatcherInbound implements GenericMessageCallback {
 
                     // Handle snooping or normal processing
                     if (isSnoopingEnabled(mapping)) {
-                        handleSnooping(tenant, mapping, context, mappingComponent, mappingStatus, objectMapper);
+                        handleSnooping(tenant, mapping, context, mappingService, mappingStatus, objectMapper);
                     } else {
                         processMessage(tenant, mapping, context, processor, mappingStatus);
                     }
@@ -224,7 +224,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     log.error(errorMessage, e);
                     context.addError(new ProcessingException(errorMessage, e));
                     mappingStatus.errors++;
-                    mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+                    mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
 
                     // Determine if this is a critical exception that should be propagated
                     criticalExceptions.add(e);
@@ -298,7 +298,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             context.addError(new ProcessingException(errorMessage));
             mappingStatus.errors++;
             mappingStatusUnspecified.errors++;
-            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
         private void handleDeserializationError(String tenant, Mapping mapping, Exception e,
@@ -309,7 +309,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             log.debug("{} - Deserialization error details:", tenant, e);
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
-            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
         private Context createGraalContext(Engine graalEngine)
@@ -343,7 +343,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             log.error(errorMessage, e);
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
-            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
         private void logInboundMessageReceived(String tenant, Mapping mapping, ProcessingContext<?> context,
@@ -374,7 +374,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         }
 
         private void handleSnooping(String tenant, Mapping mapping, ProcessingContext<?> context,
-                MappingComponent mappingComponent, MappingStatus mappingStatus, ObjectMapper objectMapper) {
+                MappingService mappingService, MappingStatus mappingStatus, ObjectMapper objectMapper) {
             try {
                 String serializedPayload = objectMapper.writeValueAsString(context.getPayload());
                 if (serializedPayload != null) {
@@ -384,7 +384,7 @@ public class DispatcherInbound implements GenericMessageCallback {
 
                     log.debug("{} - Adding snoopedTemplate to map: {},{},{}",
                             tenant, mapping.mappingTopic, mapping.snoopedTemplates.size(), mapping.snoopStatus);
-                    mappingComponent.addDirtyMapping(tenant, mapping);
+                    mappingService.addDirtyMapping(tenant, mapping);
                 } else {
                     log.warn("{} - Message could NOT be serialized for snooping", tenant);
                 }
@@ -425,7 +425,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 log.error(errorMessage, e);
                 context.addError(new ProcessingException(errorMessage, e));
                 mappingStatus.errors++;
-                mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
         }
 
@@ -448,7 +448,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             }
         }
 
-        MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
+        MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
 
         List<Mapping> resolvedMappings = new ArrayList<>();
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
@@ -459,7 +459,7 @@ public class DispatcherInbound implements GenericMessageCallback {
         if (topic != null && !topic.startsWith("$SYS")) {
             if (connectorMessage.getPayload() != null) {
                 try {
-                    resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
+                    resolvedMappings = mappingService.resolveMappingInbound(tenant, topic);
                     consolidatedQos = connectorClient.determineMaxQosInbound(resolvedMappings);
                     result.setConsolidatedQos(consolidatedQos);
 

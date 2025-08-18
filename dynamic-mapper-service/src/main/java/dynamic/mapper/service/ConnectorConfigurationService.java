@@ -19,13 +19,13 @@
  *
  */
 
-package dynamic.mapper.configuration;
+package dynamic.mapper.service;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.option.OptionPK;
@@ -35,14 +35,15 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Component
-public class ConnectorConfigurationComponent {
+@Service
+public class ConnectorConfigurationService {
     private static final String OPTION_KEY_CONNECTOR_PREFIX = "credentials.connection.configuration";
 
     private final TenantOptionApi tenantOptionApi;
@@ -57,7 +58,7 @@ public class ConnectorConfigurationComponent {
         this.objectMapper = objectMapper;
     }
 
-    public ConnectorConfigurationComponent(TenantOptionApi tenantOptionApi) {
+    public ConnectorConfigurationService(TenantOptionApi tenantOptionApi) {
         this.tenantOptionApi = tenantOptionApi;
     }
 

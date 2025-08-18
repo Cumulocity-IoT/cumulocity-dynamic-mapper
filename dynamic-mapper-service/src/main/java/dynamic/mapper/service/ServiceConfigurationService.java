@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.configuration;
+package dynamic.mapper.service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -34,7 +34,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.option.OptionPK;
@@ -44,12 +44,15 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapper.configuration.CodeTemplate;
+import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Component
-public class ServiceConfigurationComponent {
+@Service
+public class ServiceConfigurationService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int UUID_LENGTH = 8;
 
@@ -81,7 +84,7 @@ public class ServiceConfigurationComponent {
         this.objectMapper = objectMapper;
     }
 
-    public ServiceConfigurationComponent(TenantOptionApi tenantOptionApi) {
+    public ServiceConfigurationService(TenantOptionApi tenantOptionApi) {
         this.tenantOptionApi = tenantOptionApi;
     }
 

@@ -30,10 +30,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import jakarta.validation.Valid;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -41,7 +39,6 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.core.MappingComponent;
 import dynamic.mapper.core.Operation;
 import dynamic.mapper.core.ServiceOperation;
 
@@ -65,6 +62,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.SnoopStatus;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import dynamic.mapper.model.Mapping;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
@@ -92,13 +92,13 @@ public class OperationController {
     ConnectorRegistry connectorRegistry;
 
     @Autowired
-    MappingComponent mappingComponent;
+    MappingService mappingService;
 
     @Autowired
-    ConnectorConfigurationComponent connectorConfigurationComponent;
+    ConnectorConfigurationService connectorConfigurationService;
 
     @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
+    ServiceConfigurationService serviceConfigurationService;
 
     @Autowired
     BootstrapService bootstrapService;
@@ -358,10 +358,10 @@ public class OperationController {
             throws Exception {
         Direction direction = Direction.valueOf(parameters.get("direction"));
         if (direction.equals(Direction.INBOUND)) {
-            String samples = serviceConfigurationComponent.getSampleMappingsInbound_01();
+            String samples = serviceConfigurationService.getSampleMappingsInbound_01();
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
-            List<Mapping> existingMappings = mappingComponent.getMappings(tenant, Direction.INBOUND);
+            List<Mapping> existingMappings = mappingService.getMappings(tenant, Direction.INBOUND);
             mappings.forEach(mapping -> {
                 AtomicBoolean alreadyExits = new AtomicBoolean(false);
                 existingMappings.forEach(existingMapping -> {
@@ -370,12 +370,12 @@ public class OperationController {
                 });
                 if (!alreadyExits.get()) {
                     mapping.setActive(false);
-                    mappingComponent.createMapping(tenant, mapping);
+                    mappingService.createMapping(tenant, mapping);
                 }
             });
         } else {
-            List<Mapping> existingMappings = mappingComponent.getMappings(tenant, Direction.OUTBOUND);
-            String samples = serviceConfigurationComponent.getSampleMappingsOutbound_01();
+            List<Mapping> existingMappings = mappingService.getMappings(tenant, Direction.OUTBOUND);
+            String samples = serviceConfigurationService.getSampleMappingsOutbound_01();
             List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
             });
             mappings.forEach(mapping -> {
@@ -386,7 +386,7 @@ public class OperationController {
                 });
                 if (!alreadyExits.get()) {
                     mapping.setActive(false);
-                    mappingComponent.createMapping(tenant, mapping);
+                    mappingService.createMapping(tenant, mapping);
                 }
             });
         }
@@ -394,14 +394,14 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleInitCodeTemplates(String tenant, Map<String, String> parameters) throws Exception {
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Init system code template", tenant);
 
         // Initialize code templates from properties if not already set
-        serviceConfigurationComponent.initCodeTemplates(serviceConfiguration, true);
+        serviceConfigurationService.initCodeTemplates(serviceConfiguration, true);
 
         try {
-            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
         } catch (JsonProcessingException ex) {
             log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
@@ -415,14 +415,14 @@ public class OperationController {
             throws Exception {
         String id = parameters.get("id");
         Integer index = Integer.parseInt(parameters.get("index"));
-        mappingComponent.updateSourceTemplate(tenant, id, index);
+        mappingService.updateSourceTemplate(tenant, id, index);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
-        List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant,
+        List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant,
                 ConnectorId.INTERNAL);
-        List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
+        List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant,
                 ConnectorId.INTERNAL);
 
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
@@ -436,20 +436,20 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleResetDeploymentMap(String tenant) throws Exception {
-        mappingComponent.initializeDeploymentMap(tenant, true);
+        mappingService.initializeDeploymentMap(tenant, true);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleSnoopReset(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
-        mappingComponent.resetSnoop(tenant, id);
+        mappingService.resetSnoop(tenant, id);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleActivateMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
         Boolean activation = Boolean.parseBoolean(parameters.get("active"));
-        Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, id, activation);
+        Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation);
         Map<String, AConnectorClient> connectorMap = connectorRegistry
                 .getClientsForTenant(tenant);
         // subscribe/unsubscribe respective mappingTopic of mapping only for
@@ -476,24 +476,24 @@ public class OperationController {
     private ResponseEntity<?> handleApplyMappingFilter(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
         String filterMapping = parameters.get("filterMapping");
-        mappingComponent.setFilterMapping(tenant, id, filterMapping);
+        mappingService.setFilterMapping(tenant, id, filterMapping);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleDebugMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
         Boolean debugBoolean = Boolean.parseBoolean(parameters.get("debug"));
-        mappingComponent.setDebugMapping(tenant, id, debugBoolean);
+        mappingService.setDebugMapping(tenant, id, debugBoolean);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleRefreshStatusMapping(String tenant) throws Exception {
-        mappingComponent.sendMappingStatus(tenant);
+        mappingService.sendMappingStatus(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleResetStatusMapping(String tenant) throws Exception {
-        mappingComponent.initializeMappingStatus(tenant, true);
+        mappingService.initializeMappingStatus(tenant, true);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -510,20 +510,20 @@ public class OperationController {
     private ResponseEntity<?> handleSnoopMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
         SnoopStatus newSnoop = SnoopStatus.valueOf(parameters.get("snoopStatus"));
-        mappingComponent.setSnoopStatusMapping(tenant, id, newSnoop);
+        mappingService.setSnoopStatusMapping(tenant, id, newSnoop);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleConnect(String tenant, Map<String, String> parameters)
             throws JsonProcessingException, ConnectorRegistryException, ConnectorException {
         String connectorIdentifier = parameters.get("connectorIdentifier");
-        ConnectorConfiguration configuration = connectorConfigurationComponent
+        ConnectorConfiguration configuration = connectorConfigurationService
                 .getConnectorConfiguration(connectorIdentifier, tenant);
 
         configuration.setEnabled(true);
-        connectorConfigurationComponent.saveConnectorConfiguration(configuration);
+        connectorConfigurationService.saveConnectorConfiguration(configuration);
 
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService
                 .getServiceConfiguration(tenant);
 
         Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
@@ -548,10 +548,10 @@ public class OperationController {
     private ResponseEntity<?> handleDisconnect(String tenant, Map<String, String> parameters)
             throws JsonProcessingException, ConnectorRegistryException {
         String connectorIdentifier = parameters.get("connectorIdentifier");
-        ConnectorConfiguration configuration = connectorConfigurationComponent
+        ConnectorConfiguration configuration = connectorConfigurationService
                 .getConnectorConfiguration(connectorIdentifier, tenant);
         configuration.setEnabled(false);
-        connectorConfigurationComponent.saveConnectorConfiguration(configuration);
+        connectorConfigurationService.saveConnectorConfiguration(configuration);
 
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                 connectorIdentifier);
@@ -568,13 +568,13 @@ public class OperationController {
     private ResponseEntity<?> handleClearCache(String tenant, Map<String, String> parameters) {
         String cacheId = parameters.get("cacheId");
         if ("INBOUND_ID_CACHE".equals(cacheId)) {
-            Integer cacheSize = serviceConfigurationComponent
+            Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).inboundExternalIdCacheSize;
             configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("INVENTORY_CACHE".equals(cacheId)) {
-            Integer cacheSize = serviceConfigurationComponent
+            Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).inventoryCacheSize;
             configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);

@@ -181,9 +181,9 @@ public class PulsarConnectorClient extends AConnectorClient {
             DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
-        this.mappingComponent = configurationRegistry.getMappingComponent();
-        this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
-        this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
+        this.mappingService = configurationRegistry.getMappingService();
+        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.name;
         this.connectorIdentifier = connectorConfiguration.identifier;
@@ -353,10 +353,10 @@ public class PulsarConnectorClient extends AConnectorClient {
                         log.info("{} - Phase III: {} connected, server: {}", tenant, getConnectorName(), serviceUrl);
                         updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
 
-                        List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant,
+                        List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant,
                                 connectorId);
                         initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
-                        List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
+                        List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant,
                                 connectorId);
                         mappingOutboundCacheRebuild = true;
                         initializeSubscriptionsOutbound(updatedMappingsOutbound);
@@ -378,7 +378,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 }
 
                 if (!mappingOutboundCacheRebuild) {
-                    mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
+                    mappingService.rebuildMappingOutboundCache(tenant, connectorId);
                 }
                 successful = true;
             }
@@ -557,9 +557,9 @@ public class PulsarConnectorClient extends AConnectorClient {
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
 
-            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
+            List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant, connectorId);
             initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
-            List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
+            List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
             initializeSubscriptionsOutbound(updatedMappingsOutbound);
 
             log.info("{} - Disconnected from Pulsar", tenant);

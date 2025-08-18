@@ -26,6 +26,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -44,14 +48,11 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.SecurityUserDetails;
 
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.MappingComponent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -75,13 +76,13 @@ public class HttpConnectorController {
     ConnectorRegistry connectorRegistry;
 
     @Autowired
-    MappingComponent mappingComponent;
+    MappingService mappingService;
 
     @Autowired
-    ConnectorConfigurationComponent connectorConfigurationComponent;
+    ConnectorConfigurationService connectorConfigurationService;
 
     @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
+    ServiceConfigurationService serviceConfigurationService;
 
     @Autowired
     BootstrapService bootstrapService;

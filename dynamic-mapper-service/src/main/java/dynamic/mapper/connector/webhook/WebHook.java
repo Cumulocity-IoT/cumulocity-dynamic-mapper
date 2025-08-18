@@ -127,9 +127,9 @@ public class WebHook extends AConnectorClient {
             DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
-        this.mappingComponent = configurationRegistry.getMappingComponent();
-        this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
-        this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
+        this.mappingService = configurationRegistry.getMappingService();
+        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
         this.connectorName = connectorConfiguration.name;
@@ -273,7 +273,7 @@ public class WebHook extends AConnectorClient {
                     log.info("{} - Phase III: {} connected", tenant, getConnectorName(),
                             baseUrl);
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
+                    List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant,
                             connectorId);
                     mappingOutboundCacheRebuild = true;
                     initializeSubscriptionsOutbound(updatedMappingsOutbound);
@@ -288,7 +288,7 @@ public class WebHook extends AConnectorClient {
             }
 
             if (!mappingOutboundCacheRebuild) {
-                mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
+                mappingService.rebuildMappingOutboundCache(tenant, connectorId);
             }
             successful = true;
         }
@@ -368,9 +368,9 @@ public class WebHook extends AConnectorClient {
 
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
+            List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant, connectorId);
             initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
-            List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
+            List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
             initializeSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("{} - Disconnected from webHook endpoint II: {}", tenant,
                     baseUrl);

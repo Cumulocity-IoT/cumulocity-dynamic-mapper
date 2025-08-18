@@ -52,6 +52,9 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.inbound.DispatcherInbound;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,9 +65,9 @@ public class BootstrapService {
     private final ConnectorRegistry connectorRegistry;
     final ConfigurationRegistry configurationRegistry;
     private final C8YAgent c8YAgent;
-    private final MappingComponent mappingComponent;
-    private final ServiceConfigurationComponent serviceConfigurationComponent;
-    private final ConnectorConfigurationComponent connectorConfigurationComponent;
+    private final MappingService mappingService;
+    private final ServiceConfigurationService serviceConfigurationService;
+    private final ConnectorConfigurationService connectorConfigurationService;
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final String additionalSubscriptionIdTest;
     private final Integer inboundExternalIdCacheSize;
@@ -87,9 +90,9 @@ public class BootstrapService {
             ConnectorRegistry connectorRegistry,
             ConfigurationRegistry configurationRegistry,
             C8YAgent c8YAgent,
-            MappingComponent mappingComponent,
-            ServiceConfigurationComponent serviceConfigurationComponent,
-            ConnectorConfigurationComponent connectorConfigurationComponent,
+            MappingService mappingService,
+            ServiceConfigurationService serviceConfigurationService,
+            ConnectorConfigurationService connectorConfigurationService,
             MicroserviceSubscriptionsService subscriptionsService,
             @Value("${APP.additionalSubscriptionIdTest}") String additionalSubscriptionIdTest,
             @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize,
@@ -98,9 +101,9 @@ public class BootstrapService {
         this.connectorRegistry = connectorRegistry;
         this.configurationRegistry = configurationRegistry;
         this.c8YAgent = c8YAgent;
-        this.mappingComponent = mappingComponent;
-        this.serviceConfigurationComponent = serviceConfigurationComponent;
-        this.connectorConfigurationComponent = connectorConfigurationComponent;
+        this.mappingService = mappingService;
+        this.serviceConfigurationService = serviceConfigurationService;
+        this.connectorConfigurationService = connectorConfigurationService;
         this.subscriptionsService = subscriptionsService;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
@@ -152,7 +155,7 @@ public class BootstrapService {
         configurationRegistry.removeGraalsResources(tenant);
         configurationRegistry.removeMicroserviceCredentials(tenant);
 
-        mappingComponent.removeResources(tenant);
+        mappingService.removeResources(tenant);
 
         connectorRegistry.removeResources(tenant);
 
@@ -185,7 +188,7 @@ public class BootstrapService {
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMapperServiceRepresentation(tenant);
         
-        mappingComponent.createResources(tenant);
+        mappingService.createResources(tenant);
 
         connectorRegistry.initializeResources(tenant);
 
@@ -203,14 +206,14 @@ public class BootstrapService {
         }
         // only initialize mapping after all connectors are initialized
         // and connected
-        mappingComponent.initializeResources(tenant);
+        mappingService.initializeResources(tenant);
         aiAgentService.initializeAIAgents();
 
         initResourcesForOutbound(tenant, serviceConfiguration);
     }
 
     private ServiceConfiguration initializeServiceConfiguration(String tenant) {
-        ServiceConfiguration serviceConfig = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfig = serviceConfigurationService.getServiceConfiguration(tenant);
         boolean requiresSave = false;
 
         if (serviceConfig.inboundExternalIdCacheSize == null || serviceConfig.inboundExternalIdCacheSize == 0) {
@@ -231,13 +234,13 @@ public class BootstrapService {
         Map<String, CodeTemplate> codeTemplates = serviceConfig.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
-            serviceConfigurationComponent.initCodeTemplates(serviceConfig, false);
+            serviceConfigurationService.initCodeTemplates(serviceConfig, false);
             requiresSave = true;
         }
 
         if (requiresSave) {
             try {
-                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfig);
+                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfig);
             } catch (JsonProcessingException e) {
                 log.error("{} - Error saving service configuration: {}", tenant, e.getMessage(), e);
             }
@@ -275,7 +278,7 @@ public class BootstrapService {
 
     private List<Future<?>> setupConnectorConfigurations(String tenant, ServiceConfiguration serviceConfig)
             throws ConnectorRegistryException, ConnectorException, ExecutionException, InterruptedException {
-        List<ConnectorConfiguration> connectorConfigs = connectorConfigurationComponent
+        List<ConnectorConfiguration> connectorConfigs = connectorConfigurationService
                 .getConnectorConfigurations(tenant);
 
         ConnectorConfiguration httpConfig = null;
@@ -309,7 +312,7 @@ public class BootstrapService {
                 .forEach((key, prop) -> httpConfig.properties.put(key, prop.defaultValue));
 
         try {
-            connectorConfigurationComponent.saveConnectorConfiguration(httpConfig);
+            connectorConfigurationService.saveConnectorConfiguration(httpConfig);
             initializeConnectorByConfiguration(httpConfig, serviceConfig, tenant);
         } catch (ConnectorException | JsonProcessingException e) {
             throw new ConnectorRegistryException(e.getMessage());
@@ -321,7 +324,7 @@ public class BootstrapService {
     public void shutdownAndRemoveConnector(String tenant, String connectorIdentifier)
             throws ConnectorRegistryException {
         // connectorRegistry.unregisterClient(tenant, connectorIdentifier);
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         if (serviceConfiguration.isOutboundMappingEnabled()) {
             configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriberByConnector(tenant,
                     connectorIdentifier);
@@ -333,7 +336,7 @@ public class BootstrapService {
     // queues will be kept
     public void disableConnector(String tenant, String connectorIdentifier) throws ConnectorRegistryException {
         connectorRegistry.unregisterClient(tenant, connectorIdentifier);
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         if (serviceConfiguration.isOutboundMappingEnabled()) {
             configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdentifier);
         }
@@ -357,7 +360,7 @@ public class BootstrapService {
     private void disableOutboundMapping(String tenant, ServiceConfiguration serviceConfig) {
         try {
             serviceConfig.setOutboundMappingEnabled(false);
-            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfig);
+            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfig);
         } catch (JsonProcessingException e) {
             log.error("{} - Error saving service configuration: {}", tenant, e.getMessage(), e);
         }
@@ -402,7 +405,7 @@ public class BootstrapService {
 
     private void cleanupCachesForTenant(String tenant) {
 
-        ServiceConfiguration serviceConfig = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfig = serviceConfigurationService.getServiceConfiguration(tenant);
 
         Instant cacheRetentionStartInbound = cacheInboundExternalIdRetentionStartMap.get(tenant);
         if (cacheRetentionStartInbound != null) {

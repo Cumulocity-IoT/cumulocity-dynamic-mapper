@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.core;
+package dynamic.mapper.service;
 
 import static java.util.Map.entry;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
@@ -48,6 +48,7 @@ import org.joda.time.DateTime;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
@@ -60,6 +61,8 @@ import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
@@ -74,8 +77,8 @@ import dynamic.mapper.model.ValidationError;
 import dynamic.mapper.processor.C8YMessage;
 
 @Slf4j
-@Component
-public class MappingComponent {
+@Service
+public class MappingService {
 
     private static final Handler GRAALJS_LOG_HANDLER = new SLF4JBridgeHandler();
 

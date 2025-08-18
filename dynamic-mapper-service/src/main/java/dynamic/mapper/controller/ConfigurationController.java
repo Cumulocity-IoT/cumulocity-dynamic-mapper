@@ -30,9 +30,7 @@ import java.util.regex.Pattern;
 import jakarta.validation.Valid;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -61,7 +59,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Feature;
-
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -103,13 +103,13 @@ public class ConfigurationController {
     ConnectorRegistry connectorRegistry;
 
     @Autowired
-    MappingComponent mappingComponent;
+    MappingService mappingService;
 
     @Autowired
-    ConnectorConfigurationComponent connectorConfigurationComponent;
+    ConnectorConfigurationService connectorConfigurationService;
 
     @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
+    ServiceConfigurationService serviceConfigurationService;
 
     @Autowired
     BootstrapService bootstrapService;
@@ -143,7 +143,7 @@ public class ConfigurationController {
     @GetMapping(value = "/feature", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Get feature", tenant);
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(serviceConfiguration.isOutboundMappingEnabled());
@@ -218,7 +218,7 @@ public class ConfigurationController {
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
-            connectorConfigurationComponent.saveConnectorConfiguration(configuration);
+            connectorConfigurationService.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("{} - Error creating connector instance", tenant, ex);
@@ -252,7 +252,7 @@ public class ConfigurationController {
                 pattern = Pattern.compile("^" + escapedName + "$");
             }
 
-            List<ConnectorConfiguration> configurations = connectorConfigurationComponent
+            List<ConnectorConfiguration> configurations = connectorConfigurationService
                     .getConnectorConfigurations(tenant);
             List<ConnectorConfiguration> modifiedConfigs = new ArrayList<>();
 
@@ -286,7 +286,7 @@ public class ConfigurationController {
         log.debug("{} - Get connector instance: {}", tenant, identifier);
 
         try {
-            List<ConnectorConfiguration> configurations = connectorConfigurationComponent
+            List<ConnectorConfiguration> configurations = connectorConfigurationService
                     .getConnectorConfigurations(tenant);
             ConnectorConfiguration modifiedConfig = null;
 
@@ -335,7 +335,7 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Delete connection instance {}", tenant, identifier);
         try {
-            ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(identifier,
+            ConnectorConfiguration configuration = connectorConfigurationService.getConnectorConfiguration(identifier,
                     tenant);
             if (configuration.enabled)
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -345,8 +345,8 @@ public class ConfigurationController {
             }
             // make sure the connector is disconnected before it is deleted.
             bootstrapService.disableConnector(tenant, identifier);
-            connectorConfigurationComponent.deleteConnectorConfiguration(identifier);
-            mappingComponent.removeConnectorFromDeploymentMap(tenant, identifier);
+            connectorConfigurationService.deleteConnectorConfiguration(identifier);
+            mappingService.removeConnectorFromDeploymentMap(tenant, identifier);
             connectorRegistry.removeClientFromStatusMap(tenant, identifier);
             bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
         } catch (Exception ex) {
@@ -403,7 +403,7 @@ public class ConfigurationController {
         try {
             // check if password filed was touched, e.g. != "****", then use password from
             // new payload, otherwise copy password from previously saved configuration
-            ConnectorConfiguration originalConfiguration = connectorConfigurationComponent
+            ConnectorConfiguration originalConfiguration = connectorConfigurationService
                     .getConnectorConfiguration(configuration.identifier, tenant);
 
             for (String property : configuration.getProperties().keySet()) {
@@ -417,7 +417,7 @@ public class ConfigurationController {
                             originalConfiguration.getProperties().get(property));
                 }
             }
-            connectorConfigurationComponent.saveConnectorConfiguration(configuration);
+            connectorConfigurationService.saveConnectorConfiguration(configuration);
         } catch (Exception ex) {
             log.error("{} - Error updating connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -437,7 +437,7 @@ public class ConfigurationController {
         log.info("{} - Get service configuration", tenant);
 
         try {
-            final ServiceConfiguration configuration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+            final ServiceConfiguration configuration = serviceConfigurationService.getServiceConfiguration(tenant);
             if (configuration == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Service connection not available");
             }
@@ -471,12 +471,12 @@ public class ConfigurationController {
 
         log.info("{} - Update service configuration: {}", tenant, serviceConfiguration.toString());
         // existing code templates
-        ServiceConfiguration mergeServiceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration mergeServiceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         Map<String, CodeTemplate> codeTemplates = mergeServiceConfiguration.getCodeTemplates();
 
         try {
             serviceConfiguration.setCodeTemplates(codeTemplates);
-            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             if (!serviceConfiguration.isOutboundMappingEnabled()
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
                     && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
@@ -489,7 +489,7 @@ public class ConfigurationController {
                 // Test if OutboundMapping is switched on
                 if (serviceConfiguration.isOutboundMappingEnabled()
                         && !currentServiceConfiguration.isOutboundMappingEnabled()) {
-                    List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
+                    List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationService
                             .getConnectorConfigurations(tenant);
                     for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
                         if (bootstrapService.initializeConnectorByConfiguration(connectorConfiguration,
@@ -528,17 +528,17 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> getCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "shared") @PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Get code template: {}", tenant, id);
 
         Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
-            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration, false);
+            serviceConfigurationService.initCodeTemplates(serviceConfiguration, false);
             codeTemplates = serviceConfiguration.getCodeTemplates();
 
             try {
-                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
@@ -576,17 +576,17 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "custom-template") @PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Delete code template: {}", tenant, id);
 
         Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
-            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration, false);
+            serviceConfigurationService.initCodeTemplates(serviceConfiguration, false);
             codeTemplates = serviceConfiguration.getCodeTemplates();
 
             try {
-                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
@@ -602,7 +602,7 @@ public class ConfigurationController {
             }
 
             result = codeTemplates.remove(id);
-            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -626,7 +626,7 @@ public class ConfigurationController {
     @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, CodeTemplate>> getCodeTemplates() {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Get code templates", tenant);
 
         Map<String, CodeTemplate> codeTemplates = getCodeTemplates(tenant, serviceConfiguration);
@@ -650,11 +650,11 @@ public class ConfigurationController {
             @Valid @RequestBody CodeTemplate codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         try {
-            ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate, false);
+            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate, false);
             codeTemplates.put(id, codeTemplate);
-            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             log.debug("{} - Updated code template", tenant);
         } catch (Exception ex) {
@@ -681,14 +681,14 @@ public class ConfigurationController {
             @Valid @RequestBody CodeTemplate codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         try {
-            ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
             Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
             if (codeTemplates.containsKey(codeTemplate.id)) {
                 throw new Exception(String.format("Template with id %s already exists", codeTemplate.id));
             }
-            serviceConfigurationComponent.rectifyHeaderInCodeTemplate(codeTemplate, true);
+            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate, true);
             codeTemplates.put(codeTemplate.id, codeTemplate);
-            serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             log.debug("{} - Create code template", tenant);
         } catch (JsonProcessingException ex) {
@@ -705,11 +705,11 @@ public class ConfigurationController {
         Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
         if (codeTemplates == null || codeTemplates.isEmpty()) {
             // Initialize code templates from properties if not already set
-            serviceConfigurationComponent.initCodeTemplates(serviceConfiguration, false);
+            serviceConfigurationService.initCodeTemplates(serviceConfiguration, false);
             codeTemplates = serviceConfiguration.getCodeTemplates();
 
             try {
-                serviceConfigurationComponent.saveServiceConfiguration(tenant, serviceConfiguration);
+                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
                 configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("{} - Error saving service configuration with code templates", tenant, ex);

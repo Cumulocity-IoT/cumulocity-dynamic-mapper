@@ -40,16 +40,16 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.MappingComponent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -62,13 +62,13 @@ public class WatsonController {
     ConnectorRegistry connectorRegistry;
 
     @Autowired
-    MappingComponent mappingComponent;
+    MappingService mappingService;
 
     @Autowired
-    ConnectorConfigurationComponent connectorConfigurationComponent;
+    ConnectorConfigurationService connectorConfigurationService;
 
     @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
+    ServiceConfigurationService serviceConfigurationService;
 
     @Autowired
     BootstrapService bootstrapService;
@@ -102,9 +102,9 @@ public class WatsonController {
             log.debug("{} - Adding mapping: {}", tenant, mapping);
             // new mapping should be disabled by default
             mapping.active = false;
-            final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);
+            final Mapping createdMapping = mappingService.createMapping(tenant, mapping);
             if (Direction.OUTBOUND.equals(createdMapping.direction)) {
-                mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
+                mappingService.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
             } else {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.
@@ -112,9 +112,9 @@ public class WatsonController {
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).updateSubscriptionForInbound(createdMapping, true, false);
                 });
-                mappingComponent.removeMappingInboundFromResolver(tenant, createdMapping);
-                mappingComponent.addMappingInboundToResolver(tenant, createdMapping);
-                mappingComponent.addMappingInboundToCache(tenant, createdMapping.id, mapping);
+                mappingService.removeMappingInboundFromResolver(tenant, createdMapping);
+                mappingService.addMappingInboundToResolver(tenant, createdMapping);
+                mappingService.addMappingInboundToCache(tenant, createdMapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(createdMapping);
         } catch (Exception ex) {
