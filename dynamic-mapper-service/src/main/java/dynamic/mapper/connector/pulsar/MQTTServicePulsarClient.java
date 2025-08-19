@@ -86,8 +86,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         configProps.put("serviceUrl",
                 new ConnectorProperty(
                         "This can be in the format: pulsar://localhost:6650 for non-TLS or pulsar+ssl://localhost:6651 for TLS",
-                        true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "pulsar://localhost:6650", null, null));
+                        true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
+                        "pulsar://cumulocity:6650", null, null));
         configProps.put("enableTls",
                 new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, false, true,
                         false, null, null));

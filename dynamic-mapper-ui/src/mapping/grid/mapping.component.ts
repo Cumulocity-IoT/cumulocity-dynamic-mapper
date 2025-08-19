@@ -482,6 +482,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       direction: this.stepperConfiguration.direction
     };
     const modalRef = this.bsModalService.show(MappingTypeComponent, {
+      class: 'modal-lg',
       initialState
     });
     modalRef.content.closeSubject.subscribe((result) => {
