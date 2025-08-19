@@ -445,7 +445,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
                         Future<NotificationSubscriptionRepresentation> future = notificationSubscriber
                                 .subscribeDeviceAndConnect(tenant, childMO, c8yMessage.getApi());
                         results.add(future);
-                        log.debug("{} - Subscribed child device {} to group notifications", tenant, childId);
+                        log.info("{} - Subscribed child device {} to group notifications", tenant, childId);
                     } else {
                         log.warn("{} - Child device {} not found for subscription", tenant, childId);
                     }
@@ -462,9 +462,9 @@ public class ManagementSubscriptionClient implements NotificationCallback {
                             .getManagedObjectForId(tenant, childId);
                     if (childMO != null) {
                         notificationSubscriber.unsubscribeDeviceAndDisconnect(tenant, childMO);
-                        log.debug("{} - Unsubscribed child device {} from group notifications", tenant, childId);
+                        log.info("{} - Unsubscribed child device {} from group notifications", tenant, childId);
                     } else {
-                        log.warn("{} - Child device {} not found for unsubscription", tenant, childId);
+                        log.warn("{} - Child device {} not found for un-subscription", tenant, childId);
                     }
                 } catch (Exception e) {
                     log.error("{} - Failed to unsubscribe child device {}: {}", tenant, childId, e.getMessage(), e);
