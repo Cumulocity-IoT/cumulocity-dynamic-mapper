@@ -392,7 +392,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Adjusts the service URL to use appropriate protocol based on TLS setting
      */
-    private String adjustServiceUrlForTls(String originalUrl, Boolean enableTls) {
+    protected String adjustServiceUrlForTls(String originalUrl, Boolean enableTls) {
         if (enableTls != null && enableTls) {
             // Convert to TLS URL if not already
             if (originalUrl.startsWith("pulsar://")) {
@@ -412,14 +412,14 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Checks if the service URL indicates TLS usage
      */
-    private boolean isUsingTls(String serviceUrl) {
+    protected boolean isUsingTls(String serviceUrl) {
         return serviceUrl.startsWith("pulsar+ssl://") || serviceUrl.startsWith("https://");
     }
 
     /**
      * Configures self-signed certificate handling
      */
-    private void configureSelfSignedCertificate(ClientBuilder clientBuilder) throws Exception {
+    protected void configureSelfSignedCertificate(ClientBuilder clientBuilder) throws Exception {
         if (cert != null) {
             // Write certificate to temporary file since Pulsar client needs file path
             String certFilePath = writeCertificateToTempFile(cert.getCertInPemFormat());
@@ -433,7 +433,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Writes certificate content to a temporary file
      */
-    private String writeCertificateToTempFile(String certContent) throws IOException {
+    protected String writeCertificateToTempFile(String certContent) throws IOException {
         java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("pulsar-cert", ".pem");
         java.nio.file.Files.write(tempFile, certContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         // Delete on JVM exit
@@ -446,7 +446,7 @@ public class PulsarConnectorClient extends AConnectorClient {
      * 
      * @throws UnsupportedAuthenticationException
      */
-    private void configureAuthentication(ClientBuilder clientBuilder, String authMethod, String authParams)
+    protected void configureAuthentication(ClientBuilder clientBuilder, String authMethod, String authParams)
             throws UnsupportedAuthenticationException {
         if (!"none".equals(authMethod) && !StringUtils.isEmpty(authParams)) {
             switch (authMethod) {
@@ -643,14 +643,14 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Checks if a topic contains MQTT-style wildcards
      */
-    private boolean containsMqttWildcards(String topic) {
+    protected boolean containsMqttWildcards(String topic) {
         return topic != null && (topic.contains("+") || topic.contains("#"));
     }
 
     /**
      * Sanitizes topic name for use in subscription names
      */
-    private String sanitizeTopicForSubscriptionName(String topic) {
+    protected String sanitizeTopicForSubscriptionName(String topic) {
         return topic.replace("/", "-").replace("+", "wildcard").replace("#", "multilevel");
     }
 
@@ -729,7 +729,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Creates a producer with QoS-specific configuration and retry logic
      */
-    private Producer<byte[]> createProducerWithQos(String topic, Qos qos) throws PulsarClientException {
+    protected Producer<byte[]> createProducerWithQos(String topic, Qos qos) throws PulsarClientException {
         int maxRetries = 3;
         int retryDelay = 1000; // 1 second
 
@@ -812,8 +812,8 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Handles publish errors with connection recovery
      */
-    private void handlePublishError(PulsarClientException e, String topic, Qos qos, ProcessingContext<?> context) {
-        log.error("{} - Failed to publish message to topic: {} with QoS: {} - {}", tenant, topic, qos, e.getMessage());
+    protected void handlePublishError(PulsarClientException e, String topic, Qos qos, ProcessingContext<?> context) {
+        log.error("{} - Failed to publish message to topic: {} with QoS: {}, {}, {}", tenant, topic, qos, e.getMessage(), connectorName);
 
         // Check if it's a connection issue
         if (isConnectionError(e)) {
@@ -843,7 +843,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Determines if the exception indicates a connection problem
      */
-    private boolean isConnectionError(PulsarClientException e) {
+    protected boolean isConnectionError(PulsarClientException e) {
         String message = e.getMessage().toLowerCase();
         return message.contains("connection") ||
                 message.contains("timeout") ||
@@ -889,7 +889,7 @@ public class PulsarConnectorClient extends AConnectorClient {
         return new ArrayList<>(Arrays.asList(Direction.INBOUND, Direction.OUTBOUND));
     }
 
-    private SubscriptionType mapQosToSubscriptionType(Qos qos) {
+    protected SubscriptionType mapQosToSubscriptionType(Qos qos) {
         switch (qos) {
             case AT_MOST_ONCE:
                 return SubscriptionType.Shared; // Best effort, multiple consumers
@@ -905,7 +905,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Determines if acknowledgment should be used based on QoS
      */
-    private boolean requiresAcknowledgment(Qos qos) {
+    protected boolean requiresAcknowledgment(Qos qos) {
         return qos != Qos.AT_MOST_ONCE;
     }
 
@@ -919,7 +919,7 @@ public class PulsarConnectorClient extends AConnectorClient {
      *                  "device/#"
      * @return Pulsar regex pattern like "sensor/[^/]+/temperature" or "device/.*"
      */
-    private String translateMqttTopicToPulsarRegex(String mqttTopic) {
+    protected String translateMqttTopicToPulsarRegex(String mqttTopic) {
         if (mqttTopic == null || mqttTopic.isEmpty()) {
             return mqttTopic;
         }
@@ -998,7 +998,7 @@ public class PulsarConnectorClient extends AConnectorClient {
      * Ensures the topic follows Pulsar's full topic format and converts MQTT-style
      * topics
      */
-    private String ensurePulsarTopicFormat(String topicPattern) {
+    protected String ensurePulsarTopicFormat(String topicPattern) {
         // If already a complete Pulsar topic, return as-is
         if (topicPattern.startsWith("persistent://") || topicPattern.startsWith("non-persistent://")) {
             return topicPattern;
@@ -1018,7 +1018,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Converts MQTT-style topic names to Pulsar-compatible topic names
      */
-    private String convertMqttTopicToPulsarTopicName(String mqttTopic) {
+    protected String convertMqttTopicToPulsarTopicName(String mqttTopic) {
         if (mqttTopic == null || mqttTopic.isEmpty()) {
             return mqttTopic;
         }
@@ -1045,7 +1045,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Wrapper for PulsarCallback that handles QoS-specific acknowledgment logic
      */
-    private static class QoSAwarePulsarCallback implements MessageListener<byte[]> {
+    protected static class QoSAwarePulsarCallback implements MessageListener<byte[]> {
         private final PulsarCallback delegate;
         private final Qos qos;
 
