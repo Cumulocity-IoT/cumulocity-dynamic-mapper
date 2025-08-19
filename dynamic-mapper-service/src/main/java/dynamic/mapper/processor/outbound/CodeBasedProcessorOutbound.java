@@ -37,10 +37,8 @@ import com.dashjoin.jsonata.Functions;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
-
-import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
-
+import dynamic.mapper.processor.model.ProcessingException;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import dynamic.mapper.processor.model.SubstitutionContext;

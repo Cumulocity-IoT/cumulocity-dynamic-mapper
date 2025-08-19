@@ -35,7 +35,6 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.ProcessingException;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;

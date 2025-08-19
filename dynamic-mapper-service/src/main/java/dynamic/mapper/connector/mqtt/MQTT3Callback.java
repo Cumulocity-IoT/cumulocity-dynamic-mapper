@@ -36,8 +36,8 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingResult;
 import lombok.extern.slf4j.Slf4j;
 

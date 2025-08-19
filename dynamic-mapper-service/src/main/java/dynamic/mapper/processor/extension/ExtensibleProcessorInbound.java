@@ -21,20 +21,20 @@
 
 package dynamic.mapper.processor.extension;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Extension;
 import dynamic.mapper.model.ExtensionEntry;
 import dynamic.mapper.model.ExtensionStatus;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.BaseProcessorInbound;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingException;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapper.core.ConfigurationRegistry;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 @Slf4j
 public class ExtensibleProcessorInbound extends BaseProcessorInbound<byte[]> {

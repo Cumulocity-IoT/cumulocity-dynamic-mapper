@@ -47,7 +47,6 @@ import org.graalvm.polyglot.Context;
 import org.joda.time.DateTime;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -74,7 +73,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.ResolveException;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.ValidationError;
-import dynamic.mapper.processor.C8YMessage;
+import dynamic.mapper.processor.model.C8YMessage;
 
 @Slf4j
 @Service

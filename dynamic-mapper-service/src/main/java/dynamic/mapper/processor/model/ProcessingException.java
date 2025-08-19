@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.processor;
+package dynamic.mapper.processor.model;
 
 public class ProcessingException extends Exception {
     Throwable originException = null;

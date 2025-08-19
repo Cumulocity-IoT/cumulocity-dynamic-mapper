@@ -30,12 +30,11 @@ import com.cumulocity.rest.representation.reliable.notification.NotificationSubs
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
+import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.ProcessingResult;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.notification.websocket.Notification;
-import dynamic.mapper.processor.C8YMessage;
-
 import jakarta.annotation.PreDestroy;
 import java.net.URI;
 import java.time.LocalDateTime;

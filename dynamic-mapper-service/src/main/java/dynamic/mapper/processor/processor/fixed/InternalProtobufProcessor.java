@@ -27,9 +27,9 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.inbound.BaseProcessorInbound;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingException;
 import dynamic.mapper.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
 

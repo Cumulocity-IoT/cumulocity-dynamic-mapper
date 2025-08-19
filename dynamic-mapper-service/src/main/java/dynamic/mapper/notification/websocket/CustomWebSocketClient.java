@@ -21,7 +21,6 @@
 
 package dynamic.mapper.notification.websocket;
 
-import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +31,7 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingResult;
 
 import java.net.URI;
