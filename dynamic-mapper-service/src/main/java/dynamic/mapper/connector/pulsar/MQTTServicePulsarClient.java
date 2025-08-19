@@ -57,6 +57,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MQTTServicePulsarClient extends PulsarConnectorClient {
+    public static final String PULSAR_PROPERTY_MQTT_TOPIC = "mqttTopic";
     /**
      * Handling Pulsar connections with QoS support
      * QoS 0 (AT_MOST_ONCE): Messages are acknowledged immediately, providing
@@ -185,7 +186,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     protected AConnectorClient.Certificate cert;
-    protected PulsarCallback pulsarCallback = null;
+    protected MQTTServicePulsarCallback pulsarCallback = null;
     protected PulsarClient pulsarClient;
     private Consumer<byte[]> consumer;
     private Producer<byte[]> producer;
@@ -238,7 +239,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             configureAuthentication(clientBuilder, authenticationMethod, authenticationParams);
             pulsarClient = clientBuilder.build();
 
-            pulsarCallback = new PulsarCallback(tenant, configurationRegistry, dispatcher,
+            pulsarCallback = new MQTTServicePulsarCallback(tenant, configurationRegistry, dispatcher,
                     getConnectorIdentifier(), getConnectorName(), false);
 
             boolean successful = false;
@@ -507,7 +508,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             // Fire and forget with topic property
             producer.newMessage()
                     .value(payload.getBytes())
-                    .property("mqttTopic", originalMqttTopic) // Store original MQTT topic
+                    .property(PULSAR_PROPERTY_MQTT_TOPIC, originalMqttTopic) // Store original MQTT topic
                     .property("tenant", tenant) // Add tenant for routing
                     .property("connectorId", connectorIdentifier) // Add connector ID
                     .property("qos", qos.name()) // Add QoS level
@@ -521,7 +522,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             // Wait for acknowledgment with topic property
             producer.newMessage()
                     .value(payload.getBytes())
-                    .property("mqttTopic", originalMqttTopic) // Store original MQTT topic
+                    .property(PULSAR_PROPERTY_MQTT_TOPIC, originalMqttTopic) // Store original MQTT topic
                     .property("tenant", tenant) // Add tenant for routing
                     .property("connectorId", connectorIdentifier) // Add connector ID
                     .property("qos", qos.name()) // Add QoS level
