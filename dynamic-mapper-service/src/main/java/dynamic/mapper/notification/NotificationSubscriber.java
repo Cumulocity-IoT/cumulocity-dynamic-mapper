@@ -976,8 +976,7 @@ public class NotificationSubscriber {
                     NotificationSubscriptionRepresentation nsr = createTypeSubscription(newTypeFilter);
                     responseBuilder.types(new ArrayList<>(Utils.parseTypesFromFilter(newTypeFilter)))
                             .subscriptionId(nsr.getId().getValue())
-                            .status(NotificationSubscriptionResponse.SubscriptionStatus.ACTIVE)
-                            .updatedAt(LocalDateTime.now());
+                            .status(NotificationSubscriptionResponse.SubscriptionStatus.ACTIVE);
                     log.info("{} - Created new type subscription with {} types", tenant, types.size());
                 } else {
                     responseBuilder.types(new ArrayList<>())

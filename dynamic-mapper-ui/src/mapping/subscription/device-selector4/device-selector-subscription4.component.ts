@@ -54,7 +54,6 @@ export class DeviceSelectorSubscription4Component implements OnInit {
   }
 
   ngOnInit(): void {
-    this.add();
   }
 
   add() {

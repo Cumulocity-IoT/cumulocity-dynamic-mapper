@@ -21,8 +21,8 @@
 
 package dynamic.mapper.processor.extension;
 
+import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingException;
 
 import org.springframework.stereotype.Component;
 

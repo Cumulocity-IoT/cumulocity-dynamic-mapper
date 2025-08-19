@@ -38,10 +38,10 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.SnoopStatus;
+import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingResult;
 import dynamic.mapper.service.MappingService;
 

@@ -43,10 +43,10 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.DispatcherInbound;
 import dynamic.mapper.processor.model.C8YRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingException;
 import jakarta.ws.rs.NotSupportedException;
 
 import org.apache.commons.lang3.StringUtils;

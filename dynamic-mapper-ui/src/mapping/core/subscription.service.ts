@@ -415,9 +415,7 @@ export class SubscriptionService implements OnDestroy {
       subscriptionName: request.subscriptionName,
       devices: request.devices,
       types: request.types,
-      status,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      status
     };
   }
 

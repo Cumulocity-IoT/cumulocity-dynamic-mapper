@@ -31,9 +31,9 @@ import dynamic.mapper.model.Extension;
 import dynamic.mapper.model.ExtensionEntry;
 import dynamic.mapper.model.ExtensionStatus;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.BaseProcessorInbound;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

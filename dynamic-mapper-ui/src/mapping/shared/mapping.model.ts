@@ -183,19 +183,7 @@ export interface NotificationSubscriptionResponse {
   /** Unique subscription identifier */
   subscriptionId?: string;
 
-  /** Creation timestamp */
-  createdAt?: Date;
-
-  /** Last update timestamp */
-  updatedAt?: Date;
-
   /** Current subscription status */
   status?: SubscriptionStatus;
-
-  /** Error message if status is ERROR */
-  errorMessage?: string;
-
-  /** Additional metadata */
-  metadata?: Record<string, any>;
 
 }

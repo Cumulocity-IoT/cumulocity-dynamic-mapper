@@ -21,7 +21,6 @@
 
 package dynamic.mapper.model;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -52,12 +51,6 @@ public class NotificationSubscriptionResponse {
 
     @Schema(description = "Unique subscription identifier")
     private String subscriptionId;
-
-    @Schema(description = "Creation timestamp")
-    private LocalDateTime createdAt;
-
-    @Schema(description = "Last update timestamp")
-    private LocalDateTime updatedAt;
 
     @Schema(description = "Current subscription status")
     private SubscriptionStatus status;
