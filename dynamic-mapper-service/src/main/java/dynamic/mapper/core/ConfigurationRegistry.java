@@ -122,13 +122,6 @@ public class ConfigurationRegistry {
     @Getter
     String mqttServicePulsartUrl;
 
-    @Value("${APP.towardsDeviceTopic}")
-    @Getter
-    String towardsDeviceTopic;
-
-    @Value("${APP.towardsPlatformTopic}")
-    @Getter
-    String towardsPlatformTopic;
 
     @Autowired
     public void setC8yAgent(C8YAgent c8yAgent) {

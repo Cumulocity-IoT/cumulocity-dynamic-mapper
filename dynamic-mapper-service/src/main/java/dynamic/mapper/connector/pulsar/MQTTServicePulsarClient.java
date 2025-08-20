@@ -57,7 +57,10 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MQTTServicePulsarClient extends PulsarConnectorClient {
-    public static final String PULSAR_PROPERTY_MQTT_TOPIC = "mqttTopic";
+    public static final String PULSAR_PROPERTY_MQTT_TOPIC = "topic";
+    public static final String PULSAR_TOWARDS_DEVICE_TOPIC = "to-device";
+    public static final String PULSAR_TOWARDS_PLATFORM_TOPIC = "from-device";
+    public static final String PULSAR_NAMESPACE = "mqtt";
     /**
      * Handling Pulsar connections with QoS support
      * QoS 0 (AT_MOST_ONCE): Messages are acknowledged immediately, providing
@@ -178,8 +181,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         // Pulsar doesn't have MQTT QoS but supports reliable delivery through
         // acknowledgments
         this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE);
-        this.towardsDeviceTopic = configurationRegistry.getTowardsDeviceTopic();
-        this.towardsPlatformTopic = configurationRegistry.getTowardsPlatformTopic();
         getConnectorSpecification().getProperties().put("serviceUrl",
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         configurationRegistry.getMqttServicePulsartUrl(), null, null));
@@ -191,6 +192,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         getConnectorSpecification().getProperties().put("pulsarTenant",
                 new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         tenant, null, null));
+        getConnectorSpecification().getProperties().put("pulsarNamespace",
+                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, true, true,
+                        PULSAR_NAMESPACE, null, null));
     }
 
     protected AConnectorClient.Certificate cert;
@@ -234,6 +238,11 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 .getOrDefault("operationTimeoutSeconds", DEFAULT_OPERATION_TIMEOUT);
         Integer keepAlive = (Integer) connectorConfiguration.getProperties()
                 .getOrDefault("keepAliveIntervalSeconds", DEFAULT_KEEP_ALIVE);
+
+        String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
+
+        towardsPlatformTopic = String.format("persistent://%s/%s/%s", tenant, namespace, PULSAR_TOWARDS_PLATFORM_TOPIC);
+        towardsDeviceTopic = String.format("persistent://%s/%s/%s", tenant, namespace, PULSAR_TOWARDS_DEVICE_TOPIC);
 
         try {
             String finalServiceUrl = adjustServiceUrlForTls(serviceUrl, enableTls);
@@ -327,7 +336,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             consumer.close();
         }
 
-        String subscriptionName = generateSubscriptionName("platform");
+        String subscriptionName = (String) connectorConfiguration.getProperties().get("subscriptionName");
 
         consumer = pulsarClient.newConsumer()
                 .topic(towardsPlatformTopic)
@@ -348,21 +357,15 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             log.warn("{} - Producer already exists for towardsDeviceTopic, closing existing", tenant);
             producer.close();
         }
+        // Get default namespace from configuration or use public/default
 
+        // Construct full Pulsar topic format
         producer = pulsarClient.newProducer()
                 .topic(towardsDeviceTopic)
                 .sendTimeout(30, TimeUnit.SECONDS)
                 .create();
 
         log.info("{} - Created producer for towardsDeviceTopic: [{}]", tenant, towardsDeviceTopic);
-    }
-
-    /**
-     * Generate consistent subscription name for Cumulocity MQTT Service
-     */
-    private String generateSubscriptionName(String suffix) {
-        return String.format("cumulocity-mqtt-service-%s-%s-%s",
-                tenant, connectorIdentifier, suffix);
     }
 
     @Override
@@ -484,7 +487,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 producer = createProducerWithQos(towardsDeviceTopic, qos);
             } else if (producer == null) {
                 // Create new producer if it doesn't exist
-                log.debug("{} - Creating new producer for topic: {} with QoS: {}", tenant, towardsDeviceTopic, qos);
+                log.debug("{} - Creating new producer for towardsDeviceTopic: {} with QoS: {}", tenant,
+                        towardsDeviceTopic, qos);
                 producer = createProducerWithQos(towardsDeviceTopic, qos);
             }
 
@@ -517,9 +521,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_MQTT_TOPIC, originalMqttTopic) // Store original MQTT topic
-                    .property("tenant", tenant) // Add tenant for routing
-                    .property("connectorId", connectorIdentifier) // Add connector ID
-                    .property("qos", qos.name()) // Add QoS level
                     .sendAsync()
                     .exceptionally(throwable -> {
                         log.debug("{} - Failed to send AT_MOST_ONCE message (expected): {}",
@@ -531,9 +532,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_MQTT_TOPIC, originalMqttTopic) // Store original MQTT topic
-                    .property("tenant", tenant) // Add tenant for routing
-                    .property("connectorId", connectorIdentifier) // Add connector ID
-                    .property("qos", qos.name()) // Add QoS level
                     .send();
         }
 
