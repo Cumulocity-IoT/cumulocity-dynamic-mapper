@@ -29,6 +29,7 @@ import {
 import {
   ActionControl,
   AlertService,
+  BottomDrawerService,
   BuiltInActionType,
   BulkActionControl,
   Column,
@@ -72,7 +73,7 @@ import { TemplateType } from '../../configuration';
 import { MappingService } from '../core/mapping.service';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
 import { ImportMappingsComponent } from '../import/import-modal.component';
-import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
+import { MappingTypeModalComponent } from '../mapping-type/mapping-type-modal.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
@@ -84,6 +85,7 @@ import {
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
 import { SubscriptionService } from '../core/subscription.service';
+import { MappingTypeDrawerComponent } from '../mapping-type/mapping-type-drawer.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -168,6 +170,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   private sharedService = inject(SharedService);
   private alertService = inject(AlertService);
   private bsModalService = inject(BsModalService);
+  private bottomDrawerService = inject(BottomDrawerService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -476,27 +479,24 @@ export class MappingComponent implements OnInit, OnDestroy {
     return cols;
   }
 
-  onAddMapping() {
+  async onAddMapping() {
     this.snoopStatus = SnoopStatus.NONE;
     const initialState = {
       direction: this.stepperConfiguration.direction
     };
-    const modalRef = this.bsModalService.show(MappingTypeComponent, {
-      class: 'modal-lg',
-      initialState
-    });
-    modalRef.content.closeSubject.subscribe((result) => {
-      if (result) {
-        if (result.snoop) {
-          this.snoopStatus = SnoopStatus.ENABLED;
-          this.snoopEnabled = true;
-        }
-        this.substitutionsAsCode = result.substitutionsAsCode;
-        this.mappingType = result.mappingType;
-        this.addMapping();
+
+    const drawer = this.bottomDrawerService.openDrawer(MappingTypeDrawerComponent, { initialState: initialState });
+    const resultOf = await drawer.instance.result;
+
+    if (resultOf && typeof resultOf !== 'string') {
+      if (resultOf.snoop) {
+        this.snoopStatus = SnoopStatus.ENABLED;
+        this.snoopEnabled = true;
       }
-      modalRef.hide();
-    });
+      this.substitutionsAsCode = resultOf.substitutionsAsCode;
+      this.mappingType = resultOf.mappingType;
+      this.addMapping();
+    }
   }
 
   async addMapping() {

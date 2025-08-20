@@ -32,12 +32,12 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { Direction, MappingType, MappingTypeDescriptionMap } from '../../shared';
 
 @Component({
-  selector: 'd11r-mapping-type',
-  templateUrl: './mapping-type.component.html',
+  selector: 'd11r-mapping-type-modal',
+  templateUrl: './mapping-type-modal.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: false
 })
-export class MappingTypeComponent implements OnInit, OnDestroy {
+export class MappingTypeModalComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
 
   @ViewChild('mappingTypes') mappingTypesElement: ElementRef;

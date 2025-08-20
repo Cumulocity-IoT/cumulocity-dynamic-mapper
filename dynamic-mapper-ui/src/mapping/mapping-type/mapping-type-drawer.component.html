@@ -1,0 +1,85 @@
+<!--
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage">
+    <div class="card-header separator" style="justify-content: center">
+      <h4 class="card-title d-flex">
+        <i [c8yIcon]="'plus-circle'" class="icon-32 m-r-16"></i>
+        <span class="m-t-8"> {{
+          'Select mapping type for ' +
+          (direction === Direction.INBOUND ? 'source payload' : 'target payload') | translate
+          }}</span>
+      </h4>
+    </div>
+    <div class="card-inner-scroll fit-h">
+      <div class="card-block">
+        <form [formGroup]="formGroup">
+          <c8y-list-group class="separator-top p-b-16" role="list">
+            <ng-container *ngFor="let q of filteredMappingTypes | keyvalue">
+              <c8y-li role="listitem">
+                <c8y-li-radio title="{{ q.value }}" (onSelect)="onSelectMappingType(q.value)"
+                  [disabled]="!MappingTypeDescriptionMap[q.key].properties[direction].directionSupported"
+                  [selected]="selectedMappingType === q.value"></c8y-li-radio>
+                <span>{{ q.value | formatStringAsWords }}</span>
+              </c8y-li>
+            </ng-container>
+          </c8y-list-group>
+          <c8y-form-group class="p-l-16 p-r-16">
+            <label class="c8y-checkbox">
+              <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox" name="snoop"
+                formControlName="snoop" />
+              <span class="m-r-8"></span>
+              Enable snooping
+            </label>
+            <small class="text-muted">Before defining a complete mapping with substitutions you can
+              snoop (record) messages from the source system (Step 1). These can
+              be use in a second step (Step 2) for defining the substitutions
+              from the source payload in the target payload. To continue after
+              Step 2 to defining a complete mapping, incl. substitutions you
+              have to stop the snooping for the respective mapping.</small>
+          </c8y-form-group>
+          <c8y-form-group class="p-l-16 p-r-16">
+            <label class="c8y-checkbox">
+              <input title="{{ 'Define substitutions as JavaScript instead of JSONata' | translate }}" type="checkbox"
+                name="substitutionsAsCode" formControlName="substitutionsAsCode" />
+              <span class="m-r-8"></span>
+              Define substitutions as JavaScript
+            </label>
+          </c8y-form-group>
+          <c8y-form-group class="p-l-16 p-r-16">
+            <textarea readonly c8y-textarea-autoresize formControlName="mappingTypeDescription"
+              class="form-control no-resize"></textarea>
+          </c8y-form-group>
+        </form>
+      </div>
+    </div>
+    <div class="card-footer text-center sticky-buttons">
+      <div class="form-group">
+        <button type="button" name="save" class="btn btn-primary" (click)="onSave()" [disabled]="!valid" translate>
+          Save
+        </button>
+        <button type="button" name="cancel" class="btn btn-primary" (click)="onCancel()" translate>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

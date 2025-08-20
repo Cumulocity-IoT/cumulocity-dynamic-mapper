@@ -76,9 +76,6 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   ]);
   feature: Feature;
 
-  constructor(
-  ) { }
-
   bottomDrawerRef = inject(BottomDrawerRef);
   sharedService = inject(SharedService);
   formatStringPipe = inject(FormatStringPipe);

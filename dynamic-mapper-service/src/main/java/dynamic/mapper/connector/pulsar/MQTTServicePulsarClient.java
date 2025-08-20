@@ -183,6 +183,14 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         getConnectorSpecification().getProperties().put("serviceUrl",
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         configurationRegistry.getMqttServicePulsartUrl(), null, null));
+        getConnectorSpecification().getProperties().put("subscriptionName",
+                new ConnectorProperty(
+                        "Controls how Pulsar subscription names are generated - 'default' creates connector-specific subscriptions, 'mapping' creates separate subscriptions per mapping, 'shared' uses one subscription for all mappings, 'custom' allows user-defined patterns.",
+                        false, 11, ConnectorPropertyType.STRING_PROPERTY, false, true,
+                        getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest), null, null));
+        getConnectorSpecification().getProperties().put("pulsarTenant",
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, true, true,
+                        tenant, null, null));
     }
 
     protected AConnectorClient.Certificate cert;
@@ -535,6 +543,10 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     "{} - Published to Cumulocity MQTT Service: QoS={}, originalTopic=[{}], pulsarTopic=[{}], mapping={}, connector={}",
                     tenant, qos, originalMqttTopic, towardsDeviceTopic, context.getMapping().name, connectorName);
         }
+    }
+
+    private static String getSubscriptionName(String identifier, String suffix) {
+        return "CUMULOCITY_MQTT_SERVICE_PULSAR" + identifier + suffix;
     }
 
 }

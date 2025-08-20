@@ -813,7 +813,8 @@ public class PulsarConnectorClient extends AConnectorClient {
      * Handles publish errors with connection recovery
      */
     protected void handlePublishError(PulsarClientException e, String topic, Qos qos, ProcessingContext<?> context) {
-        log.error("{} - Failed to publish message to topic: {} with QoS: {}, {}, {}", tenant, topic, qos, e.getMessage(), connectorName);
+        log.error("{} - Failed to publish message to topic: {} with QoS: {}, {}, {}", tenant, topic, qos,
+                e.getMessage(), connectorName);
 
         // Check if it's a connection issue
         if (isConnectionError(e)) {
@@ -1070,4 +1071,5 @@ public class PulsarConnectorClient extends AConnectorClient {
             delegate.received(consumer, message);
         }
     }
+
 }
