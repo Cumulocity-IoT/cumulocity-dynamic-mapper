@@ -1102,5 +1102,67 @@
     "snoopedTemplates": [],
     "qos": "AT_LEAST_ONCE",
     "lastUpdate": 1735420127589
+  },
+  {
+    "id": "91217209",
+    "identifier": "gpw4iwxp",
+    "name": "Mapping-26",
+    "mappingTopic": "flatfile/quec_msg",
+    "mappingTopicSample": "flatfile/quec_msg",
+    "targetAPI": "EVENT",
+    "direction": "INBOUND",
+    "sourceTemplate": "{\"payload\":\"+RESP:GTFRI,740B02,862524060786163,GV350CEU,,10,10,1,0.0,0,683.1,46.764443,24.818146,20250821072739\"}",
+    "targetTemplate": "{\"text\":\"Locaition Update Event\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_LocationUpdate\",\"c8y_Position\":{\"lng\":6.95173,\"alt\":67,\"lat\":51.151977}}",
+    "mappingType": "FLAT_FILE",
+    "substitutions": [
+      {
+        "pathSource": " $split(payload,',')[2]",
+        "pathTarget": "_IDENTITY_.externalId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": " $split(payload,',')[11]",
+        "pathTarget": "c8y_Position.lng",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": " $split(payload,',')[10]",
+        "pathTarget": "c8y_Position.alt",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": " $split(payload,',')[12]",
+        "pathTarget": "c8y_Position.lat",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$replace($split(payload,',')[13], /^(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})$/, \"$1-$2-$3T$4:$5:$6.00+02:00\")",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "active": false,
+    "debug": false,
+    "tested": false,
+    "supportsMessageContext": true,
+    "eventWithAttachment": false,
+    "createNonExistingDevice": true,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "snoopStatus": "STOPPED",
+    "snoopedTemplates": [
+      "{\"payload\":\"+RESP:GTFRI,740B02,862524060786163,GV350CEU,,10,10,1,0.0,0,683.1,46.764443,24.818146,20250820150008\"}"
+    ],
+    "filterMapping": "",
+    "maxFailureCount": 0,
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1755775371542
   }
 ]
