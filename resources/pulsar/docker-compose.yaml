@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  pulsar:
+    image: apachepulsar/pulsar:4.0.6
+    container_name: pulsar-standalone
+    ports:
+      - "6650:6650"
+      - "8080:8080"
+    environment:
+      - PULSAR_STANDALONE_USE_ZOOKEEPER=1
+    volumes:
+      - pulsardata:/pulsar/data
+      - pulsarconf:/pulsar/conf
+    command: bin/pulsar standalone
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  pulsar-init:
+    image: apachepulsar/pulsar:4.0.6
+    depends_on:
+      pulsar:
+        condition: service_healthy
+    environment:
+      - TENANT=${TENANT}
+    command: >
+      bash -c "
+        echo 'Waiting for Pulsar to be ready...' &&
+        sleep 10 &&
+        echo 'Creating tenant $${TENANT}...' &&
+        bin/pulsar-admin --admin-url http://pulsar:8080 tenants create $${TENANT} --admin-roles admin --allowed-clusters standalone &&
+        echo 'Creating namespace $${TENANT}/mqtt...' &&
+        bin/pulsar-admin --admin-url http://pulsar:8080 namespaces create $${TENANT}/mqtt &&
+        echo 'Setup completed successfully!'
+      "
+
+volumes:
+  pulsardata:
+  pulsarconf:

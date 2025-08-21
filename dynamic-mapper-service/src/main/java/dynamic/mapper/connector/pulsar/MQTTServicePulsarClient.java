@@ -57,7 +57,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MQTTServicePulsarClient extends PulsarConnectorClient {
-    public static final String PULSAR_PROPERTY_MQTT_TOPIC = "topic";
+    public static final String PULSAR_PROPERTY_CHANNEL = "channel";
+    public static final String PULSAR_PROPERTY_CLIENT = "client";
     public static final String PULSAR_TOWARDS_DEVICE_TOPIC = "to-device";
     public static final String PULSAR_TOWARDS_PLATFORM_TOPIC = "from-device";
     public static final String PULSAR_NAMESPACE = "mqtt";
@@ -184,11 +185,11 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         getConnectorSpecification().getProperties().put("serviceUrl",
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         configurationRegistry.getMqttServicePulsarUrl(), null, null));
-        getConnectorSpecification().getProperties().put("subscriptionName",
-                new ConnectorProperty(
-                        "Controls how Pulsar subscription names are generated - 'default' creates connector-specific subscriptions, 'mapping' creates separate subscriptions per mapping, 'shared' uses one subscription for all mappings, 'custom' allows user-defined patterns.",
-                        false, 11, ConnectorPropertyType.STRING_PROPERTY, false, true,
-                        getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest), null, null));
+        // getConnectorSpecification().getProperties().put("subscriptionName",
+        //         new ConnectorProperty(
+        //                 "Controls how Pulsar subscription names are generated - 'default' creates connector-specific subscriptions, 'mapping' creates separate subscriptions per mapping, 'shared' uses one subscription for all mappings, 'custom' allows user-defined patterns.",
+        //                 false, 11, ConnectorPropertyType.STRING_PROPERTY, false, true,
+        //                 getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest), null, null));
         getConnectorSpecification().getProperties().put("pulsarTenant",
                 new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         tenant, null, null));
@@ -227,7 +228,13 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         if (shouldConnect())
             updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
 
-        String serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
+        String serviceUrl;
+        if (additionalSubscriptionIdTest != null && additionalSubscriptionIdTest.length() > 0) {
+            // test against local pulsar broker
+            serviceUrl = configurationRegistry.getMqttServicePulsarUrl();
+        } else {
+            serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
+        }
         Boolean enableTls = (Boolean) connectorConfiguration.getProperties().getOrDefault("enableTls", false);
         String authenticationMethod = (String) connectorConfiguration.getProperties()
                 .getOrDefault("authenticationMethod", "none");
@@ -340,7 +347,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         consumer = pulsarClient.newConsumer()
                 .topic(towardsPlatformTopic)
-                .subscriptionName(subscriptionName)
+                .subscriptionName(getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest))
                 .subscriptionType(SubscriptionType.Shared)
                 .messageListener(pulsarCallback)
                 .subscribe();
@@ -520,7 +527,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             // Fire and forget with topic property
             producer.newMessage()
                     .value(payload.getBytes())
-                    .property(PULSAR_PROPERTY_MQTT_TOPIC, originalMqttTopic) // Store original MQTT topic
+                    .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
                     .sendAsync()
                     .exceptionally(throwable -> {
                         log.debug("{} - Failed to send AT_MOST_ONCE message (expected): {}",
@@ -531,7 +538,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             // Wait for acknowledgment with topic property
             producer.newMessage()
                     .value(payload.getBytes())
-                    .property(PULSAR_PROPERTY_MQTT_TOPIC, originalMqttTopic) // Store original MQTT topic
+                    .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
                     .send();
         }
 
