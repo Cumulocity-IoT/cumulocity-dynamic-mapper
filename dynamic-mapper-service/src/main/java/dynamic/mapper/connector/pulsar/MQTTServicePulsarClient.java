@@ -183,7 +183,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE);
         getConnectorSpecification().getProperties().put("serviceUrl",
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
-                        configurationRegistry.getMqttServicePulsartUrl(), null, null));
+                        configurationRegistry.getMqttServicePulsarUrl(), null, null));
         getConnectorSpecification().getProperties().put("subscriptionName",
                 new ConnectorProperty(
                         "Controls how Pulsar subscription names are generated - 'default' creates connector-specific subscriptions, 'mapping' creates separate subscriptions per mapping, 'shared' uses one subscription for all mappings, 'custom' allows user-defined patterns.",

@@ -118,9 +118,9 @@ public class ConfigurationRegistry {
     @Getter
     String mqttServiceUrl;
 
-    @Value("${APP.mqttServicePulsartUrl}")
+    @Value("${APP.mqttServicePulsarUrl}")
     @Getter
-    String mqttServicePulsartUrl;
+    String mqttServicePulsarUrl;
 
 
     @Autowired
