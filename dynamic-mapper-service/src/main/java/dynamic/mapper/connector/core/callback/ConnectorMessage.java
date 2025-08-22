@@ -41,6 +41,8 @@ public class ConnectorMessage {
 
     private String topic;
 
+    private String client;
+
     @NotNull
     private String connectorIdentifier;
 

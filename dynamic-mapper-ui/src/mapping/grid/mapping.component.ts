@@ -73,7 +73,6 @@ import { TemplateType } from '../../configuration';
 import { MappingService } from '../core/mapping.service';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
 import { ImportMappingsComponent } from '../import/import-modal.component';
-import { MappingTypeModalComponent } from '../mapping-type/mapping-type-modal.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snooped-template.renderer.component';
@@ -527,10 +526,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
+        // mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
+        mappingType: this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
+        substitutionsAsCode: this.substitutionsAsCode,
         snoopStatus: this.snoopStatus,
         // supportsMessageContext: this.substitutionsAsCode || false,
         supportsMessageContext: true,
@@ -558,10 +559,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
+        // mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
+        mappingType: this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateOutbound : undefined,
+        substitutionsAsCode: this.substitutionsAsCode,
         snoopStatus: this.snoopStatus,
         // supportsMessageContext: this.substitutionsAsCode || false,
         supportsMessageContext: true,
@@ -655,7 +658,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         mapping.mappingType,
         this.stepperConfiguration.direction,
         mapping.active ? EditorMode.READ_ONLY : EditorMode.UPDATE,
-        mapping.mappingType == MappingType.CODE_BASED
+        mapping.mappingType == MappingType.CODE_BASED || mapping.substitutionsAsCode
       );
 
       // create deep copy of existing mapping, in case user cancels changes

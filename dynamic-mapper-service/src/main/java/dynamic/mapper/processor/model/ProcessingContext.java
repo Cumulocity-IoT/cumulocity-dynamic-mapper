@@ -63,6 +63,8 @@ public class ProcessingContext<O> {
 
     private String topic;
 
+    private String client;
+
     private API api;
 
     private Qos qos;

@@ -85,7 +85,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     // Create form with initial states
     const initialSnoopSupported = MappingTypeDescriptionMap[this.selectedMappingType]?.properties?.[this.direction]?.snoopSupported || false;
-    const initialSubstitutionsSupported = (this.selectedMappingType == MappingType.JSON || this.selectedMappingType == MappingType.CODE_BASED);
+    const initialSubstitutionsSupported = MappingTypeDescriptionMap[this.selectedMappingType]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
 
     this.formGroup = this.fb.group({
       mappingType: [this.selectedMappingType],
@@ -135,7 +135,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     
     // Calculate disabled states
     const snoopSupported = MappingTypeDescriptionMap[type]?.properties?.[this.direction]?.snoopSupported || false;
-    const substitutionsSupported = (type === MappingType.JSON || type === MappingType.CODE_BASED);
+    const substitutionsSupported =  MappingTypeDescriptionMap[type]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
     
     const snoopControl = this.formGroup.get('snoop');
     const substitutionsControl = this.formGroup.get('substitutionsAsCode');

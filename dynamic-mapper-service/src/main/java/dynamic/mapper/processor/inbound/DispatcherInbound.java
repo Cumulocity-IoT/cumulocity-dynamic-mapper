@@ -278,6 +278,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     .payload(payload)
                     .rawPayload(connectorMessage.getPayload())
                     .topic(topic)
+                    .client(connectorMessage.getClient())
                     .mappingType(mapping.mappingType)
                     .mapping(mapping)
                     .sendPayload(sendPayload)
@@ -466,7 +467,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     // Check if at least one Code based mappings exists, then we need to timeout the
                     // execution
                     for (Mapping mapping : resolvedMappings) {
-                        if (MappingType.CODE_BASED.equals(mapping.mappingType)) {
+                        if (MappingType.CODE_BASED.equals(mapping.mappingType) || mapping.substitutionsAsCode) {
                             result.setMaxCPUTimeMS(serviceConfiguration.getMaxCPUTimeMS());
                         }
                     }
