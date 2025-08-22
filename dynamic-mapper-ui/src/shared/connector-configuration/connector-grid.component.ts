@@ -137,7 +137,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       this.countdownIntervalComponent.start();
       this.connectorConfigurationService.startCountdown();
     }
-    console.log('CurrentPollingInterval', this.currentPollingInterval, this.shouldRefreshAutomatic);
+    // console.log('CurrentPollingInterval', this.currentPollingInterval, this.shouldRefreshAutomatic);
   }
 
   private onRefreshIntervalChange(interval: number): void {

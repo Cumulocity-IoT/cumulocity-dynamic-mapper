@@ -37,7 +37,7 @@
               <c8y-li role="listitem">
                 <c8y-li-radio title="{{ q.value }}" (onSelect)="onSelectMappingType(q.value)"
                   [disabled]="!MappingTypeDescriptionMap[q.key].properties[direction].directionSupported"
-                  [selected]="selectedMappingType === q.value"></c8y-li-radio>
+                  [selected]="initialMappingType === q.value"></c8y-li-radio>
                 <span>{{ q.value | formatStringAsWords }}</span>
                 <!-- <c8y-li-footer footer="List item footer"></c8y-li-footer> -->
               </c8y-li>

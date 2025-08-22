@@ -428,11 +428,9 @@ export class SubstitutionContext {
   getExternalIdentifier() {
     try {
       const parsedPayload = JSON.parse(this.#payload);
-      const identityMap = parsedPayload[this.IDENTITY];
-      return identityMap["externalId"];
+      return parsedPayload[this.IDENTITY]?.["externalId"] || null;
     } catch (e) {
-      // Optionally log the exception
-      // console.debug("Error retrieving external identifier", e);
+      console.debug("Error retrieving external identifier", e);
       return null;
     }
   }
@@ -444,11 +442,9 @@ export class SubstitutionContext {
   getC8YIdentifier() {
     try {
       const parsedPayload = JSON.parse(this.#payload);
-      const identityMap = parsedPayload[this.IDENTITY];
-      return identityMap["c8ySourceId"];
+      return parsedPayload[this.IDENTITY]?.["c8ySourceId"] || null;
     } catch (e) {
-      // Optionally log the exception
-      // console.debug("Error retrieving c8y identifier", e);
+      console.debug("Error retrieving c8y identifier", e);
       return null;
     }
   }

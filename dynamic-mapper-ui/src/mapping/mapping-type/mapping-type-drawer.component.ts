@@ -55,7 +55,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   valid: boolean = true;
 
   // Getter for template access
-  selectedMappingType: MappingType = MappingType.JSON;
+  initialMappingType: MappingType = MappingType.JSON;
 
   // New property - filtered mapping types
   filteredMappingTypes: any;
@@ -81,14 +81,14 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Initialize everything first
-    this.mappingTypeDescription = MappingTypeDescriptionMap[this.selectedMappingType]?.description || '';
+    this.mappingTypeDescription = MappingTypeDescriptionMap[this.initialMappingType]?.description || '';
 
     // Create form with initial states
-    const initialSnoopSupported = MappingTypeDescriptionMap[this.selectedMappingType]?.properties?.[this.direction]?.snoopSupported || false;
-    const initialSubstitutionsSupported = MappingTypeDescriptionMap[this.selectedMappingType]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
+    const initialSnoopSupported = MappingTypeDescriptionMap[this.initialMappingType]?.properties?.[this.direction]?.snoopSupported || false;
+    const initialSubstitutionsSupported = MappingTypeDescriptionMap[this.initialMappingType]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
 
     this.formGroup = this.fb.group({
-      mappingType: [this.selectedMappingType],
+      mappingType: [this.initialMappingType],
       mappingTypeDescription: [this.mappingTypeDescription],
       snoop: [{ value: false, disabled: !initialSnoopSupported }],
       substitutionsAsCode: [{ value: false, disabled: !initialSubstitutionsSupported }],
@@ -114,10 +114,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   onSave() {
     if (this.formGroup.valid) {
       const formValue = this.formGroup.getRawValue(); // Get all values including disabled ones
-      const { snoopSupported } = MappingTypeDescriptionMap[this.selectedMappingType].properties[this.direction];
-
+      const { snoopSupported } = MappingTypeDescriptionMap[this.initialMappingType].properties[this.direction];
+      const selectedMappingType = this.formGroup.get('mappingType').value;
       this._save({
-        mappingType: this.selectedMappingType,
+        mappingType: selectedMappingType,
         snoop: formValue.snoop && snoopSupported,
         substitutionsAsCode: formValue.substitutionsAsCode
       });
@@ -128,18 +128,18 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     // Simply update the form control - this will trigger valueChanges subscription
     this.formGroup.patchValue({ mappingType: type });
   }
-  
+
   private updateMappingTypeRelatedControls(type: MappingType) {
     // Update description
     //this.mappingTypeDescription = MappingTypeDescriptionMap[type]?.description || '';
-    
+
     // Calculate disabled states
     const snoopSupported = MappingTypeDescriptionMap[type]?.properties?.[this.direction]?.snoopSupported || false;
-    const substitutionsSupported =  MappingTypeDescriptionMap[type]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
-    
+    const substitutionsSupported = MappingTypeDescriptionMap[type]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
+
     const snoopControl = this.formGroup.get('snoop');
     const substitutionsControl = this.formGroup.get('substitutionsAsCode');
-    
+
     this.formGroup.patchValue({ mappingTypeDescription: MappingTypeDescriptionMap[type]?.description });
 
     // Update snoop control

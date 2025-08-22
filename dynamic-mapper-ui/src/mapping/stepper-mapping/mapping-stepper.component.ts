@@ -602,7 +602,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.isButtonDisabled$.next(isDisabled);
       this.supportsMessageContext =
         this.deploymentMapEntry.connectorsDetailed?.some(
-          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK || this.mapping.mappingType == MappingType.CODE_BASED
+          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK || this.mapping.mappingType == MappingType.CODE_BASED || this.mapping.substitutionsAsCode
         );
     });
   }
@@ -814,7 +814,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.code = stringToBase64(this.mappingCode);
       //delete this.mappingCode;
     }
-    if (this.mapping.mappingType == MappingType.CODE_BASED && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
+    if (this.mapping.mappingType == (MappingType.CODE_BASED || this.mapping.substitutionsAsCode) && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
       this.raiseAlert({ type: 'warning', text: "Internal error in editor. Try again!" });
       this.commit.emit();
     }
@@ -1340,7 +1340,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     try {
       const resultOf = await drawer.instance.result;
 
-      if (this.mapping.mappingType === MappingType.CODE_BASED) {
+      if (this.mapping.mappingType === MappingType.CODE_BASED || this.mapping.substitutionsAsCode) {
         if (typeof resultOf === 'string' && resultOf.trim()) {
           this.mappingCode = resultOf;
 

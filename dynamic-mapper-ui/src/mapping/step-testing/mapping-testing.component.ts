@@ -395,7 +395,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         await this.executeTest(false);
       }
     } else {
-      const m = message || (error instanceof Error ? error.message : String(error));
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const m = message + (error ? `: ${errorMsg}` : '');
       this.alertService.danger(`${m}`);
     }
   }

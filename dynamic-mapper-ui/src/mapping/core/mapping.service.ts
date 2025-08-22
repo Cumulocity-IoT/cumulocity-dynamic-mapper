@@ -322,28 +322,28 @@ export class MappingService implements OnDestroy {
   ): Promise<ProcessingContext> {
     const { mapping } = context;
     if (mapping.direction == Direction.INBOUND) {
-      if (mapping.mappingType !== MappingType.CODE_BASED) {
-        this.jsonProcessorInbound.deserializePayload(mapping, message, context);
-        this.jsonProcessorInbound.enrichPayload(context);
-        await this.jsonProcessorInbound.extractFromSource(context);
-        this.jsonProcessorInbound.validateProcessingCache(context);
-        await this.jsonProcessorInbound.substituteInTargetAndSend(context);
-      } else {
+      if (mapping.mappingType == MappingType.CODE_BASED || mapping.substitutionsAsCode) {
         this.codeBasedProcessorInbound.deserializePayload(mapping, message, context);
         this.codeBasedProcessorInbound.enrichPayload(context);
         await this.codeBasedProcessorInbound.extractFromSource(context);
         this.codeBasedProcessorInbound.validateProcessingCache(context);
         await this.codeBasedProcessorInbound.substituteInTargetAndSend(context);
+      } else {
+        this.jsonProcessorInbound.deserializePayload(mapping, message, context);
+        this.jsonProcessorInbound.enrichPayload(context);
+        await this.jsonProcessorInbound.extractFromSource(context);
+        this.jsonProcessorInbound.validateProcessingCache(context);
+        await this.jsonProcessorInbound.substituteInTargetAndSend(context);
       }
     } else {
-      if (mapping.mappingType !== MappingType.CODE_BASED) {
-        this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
-        await this.jsonProcessorOutbound.extractFromSource(context);
-        await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
-      } else {
+      if (mapping.mappingType == MappingType.CODE_BASED || mapping.substitutionsAsCode) {
         this.codeBasedProcessorOutbound.deserializePayload(mapping, message, context);
         await this.codeBasedProcessorOutbound.extractFromSource(context);
         await this.codeBasedProcessorOutbound.substituteInTargetAndSend(context);
+      } else {
+        this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
+        await this.jsonProcessorOutbound.extractFromSource(context);
+        await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
       }
     }
 

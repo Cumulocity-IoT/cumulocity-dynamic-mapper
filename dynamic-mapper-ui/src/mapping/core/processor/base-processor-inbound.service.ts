@@ -90,9 +90,13 @@ export abstract class BaseProcessorInbound {
     const deviceEntries: SubstituteValue[] = processingCache.get(
       firstPathTargetForDeviceIdentifiers
     );
-    const [toDouble] = deviceEntries;
-    while (deviceEntries.length < countMaxEntries) {
-      deviceEntries.push(toDouble);
+    if (deviceEntries) {
+      const [toDouble] = deviceEntries;
+      while (deviceEntries.length < countMaxEntries) {
+        deviceEntries.push(toDouble);
+      }
+    } else {
+      throw new Error("Device Id not defined in substitutions!")
     }
   }
 

@@ -1112,7 +1112,7 @@
     "targetAPI": "EVENT",
     "direction": "INBOUND",
     "sourceTemplate": "{\"payload\":\"+RESP:GTFRI,740B02,862524060786163,GV350CEU,,10,10,1,0.0,0,683.1,46.764443,24.818146,20250821072739\"}",
-    "targetTemplate": "{\"text\":\"Locaition Update Event\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_LocationUpdate\",\"c8y_Position\":{\"lng\":6.95173,\"alt\":67,\"lat\":51.151977}}",
+    "targetTemplate": "{\"text\":\"Location Update Event\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_LocationUpdate\",\"c8y_Position\":{\"lng\":6.95173,\"alt\":67,\"lat\":51.151977}}",
     "mappingType": "FLAT_FILE",
     "substitutions": [
       {

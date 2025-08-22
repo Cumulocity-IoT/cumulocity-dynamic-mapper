@@ -35,7 +35,7 @@ export const Java = {
         return ArrayList;
       case 'java.util.HashMap':
         return HashMap;
-     case 'java.util.HashSet':
+      case 'java.util.HashSet':
         return HashSet;
       default:
         throw new Error(`Unknown Java class: ${className}`);
@@ -143,7 +143,7 @@ export class HashMap {
 // HashSet simulation
 export class HashSet {
   set;
-  
+
   constructor() {
     this.set = new Set();
   }
@@ -302,8 +302,7 @@ export class SubstitutionContext {
       const identityMap = parsedPayload[this.IDENTITY];
       return identityMap["externalId"];
     } catch (e) {
-      // Optionally log the exception
-      // console.debug("Error retrieving external identifier", e);
+      console.debug("Error retrieving external identifier", e);
       return null;
     }
   }
@@ -315,11 +314,10 @@ export class SubstitutionContext {
   getC8YIdentifier() {
     try {
       const parsedPayload = JSON.parse(this.#payload);
-      const identityMap = parsedPayload[this.IDENTITY];
-      return identityMap["c8ySourceId"];
+      // Optional chaining will return undefined if any part of the chain is null/undefined
+      return parsedPayload[this.IDENTITY]?.["c8ySourceId"] || null;
     } catch (e) {
-      // Optionally log the exception
-      // console.debug("Error retrieving c8y identifier", e);
+      console.debug("Error retrieving c8y identifier", e);
       return null;
     }
   }

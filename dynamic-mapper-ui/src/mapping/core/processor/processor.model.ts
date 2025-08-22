@@ -355,14 +355,12 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
               getExternalIdentifier() {
                 try {
                   const parsedPayload = JSON.parse(this.#payload);
-                  const identityMap = parsedPayload[this.IDENTITY];
-                  return identityMap["externalId"];
+                  return parsedPayload[this.IDENTITY]?.["externalId"] || null;
                 } catch (e) {
                   console.debug("Error retrieving external identifier", e);
                   return null;
                 }
               }
-
               /**
                * Gets the C8Y identifier from the JSON object
                * @returns {string|null} The C8Y identifier or null if not found
@@ -370,14 +368,13 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
               getC8YIdentifier() {
                 try {
                   const parsedPayload = JSON.parse(this.#payload);
-                  const identityMap = parsedPayload[this.IDENTITY];
-                  return identityMap["c8ySourceId"];
+                  // Optional chaining will return undefined if any part of the chain is null/undefined
+                  return parsedPayload[this.IDENTITY]?.["c8ySourceId"] || null;
                 } catch (e) {
                   console.debug("Error retrieving c8y identifier", e);
                   return null;
                 }
               }
-
               /**
                * Gets the JSON object
                * @returns {Object} The JSON object

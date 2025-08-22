@@ -69,12 +69,14 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
     public void received(Consumer<byte[]> consumer, Message<byte[]> message) {
         String towardsDeviceTopic = message.getTopicName();
         String topic = message.getProperty(MQTTServicePulsarClient.PULSAR_PROPERTY_CHANNEL);
+        String client = message.getProperty(MQTTServicePulsarClient.PULSAR_PROPERTY_CLIENT);
         byte[] payloadBytes = message.getData();
 
         ConnectorMessage connectorMessage = ConnectorMessage.builder()
                 .tenant(tenant)
                 .supportsMessageContext(supportsMessageContext)
                 .topic(topic)
+                .client(client)
                 .sendPayload(true)
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
