@@ -580,7 +580,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 // Check if at least one Code based mappings exits, then we nee to timeout the
                 // execution
                 for (Mapping mapping : resolvedMappings) {
-                    if (MappingType.CODE_BASED.equals(mapping.mappingType) || mapping.substitutionsAsCode) {
+                    if (mapping.isSubstitutionsAsCode()) {
                         result.setMaxCPUTimeMS(serviceConfiguration.getMaxCPUTimeMS());
                     }
                 }

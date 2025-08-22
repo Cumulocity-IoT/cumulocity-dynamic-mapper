@@ -52,7 +52,8 @@ import {
   PATH_MAPPING_ENDPOINT,
   MappingType,
   LoggingEventTypeMap,
-  LoggingEventType
+  LoggingEventType,
+  isSubstitutionsAsCode
 } from '../../shared';
 import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
@@ -322,7 +323,7 @@ export class MappingService implements OnDestroy {
   ): Promise<ProcessingContext> {
     const { mapping } = context;
     if (mapping.direction == Direction.INBOUND) {
-      if (mapping.mappingType == MappingType.CODE_BASED || mapping.substitutionsAsCode) {
+      if (isSubstitutionsAsCode(mapping)) {
         this.codeBasedProcessorInbound.deserializePayload(mapping, message, context);
         this.codeBasedProcessorInbound.enrichPayload(context);
         await this.codeBasedProcessorInbound.extractFromSource(context);
@@ -336,7 +337,7 @@ export class MappingService implements OnDestroy {
         await this.jsonProcessorInbound.substituteInTargetAndSend(context);
       }
     } else {
-      if (mapping.mappingType == MappingType.CODE_BASED || mapping.substitutionsAsCode) {
+      if (isSubstitutionsAsCode(mapping)) {
         this.codeBasedProcessorOutbound.deserializePayload(mapping, message, context);
         await this.codeBasedProcessorOutbound.extractFromSource(context);
         await this.codeBasedProcessorOutbound.substituteInTargetAndSend(context);

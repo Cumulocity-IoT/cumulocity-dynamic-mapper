@@ -527,4 +527,7 @@ public class Mapping implements Serializable {
         return mp;
     }
 
+    public Boolean isSubstitutionsAsCode () {
+        return MappingType.CODE_BASED.equals(this.mappingType) || this.substitutionsAsCode;
+    }   
 }

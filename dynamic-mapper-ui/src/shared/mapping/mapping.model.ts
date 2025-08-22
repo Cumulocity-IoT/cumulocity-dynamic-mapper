@@ -593,3 +593,6 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
   }
 }
 
+export function isSubstitutionsAsCode(mapping: Mapping): boolean {
+  return isSubstitutionsAsCode(mapping);
+}

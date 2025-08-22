@@ -23,6 +23,8 @@ package dynamic.mapper.processor.inbound;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+
+
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -467,7 +469,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     // Check if at least one Code based mappings exists, then we need to timeout the
                     // execution
                     for (Mapping mapping : resolvedMappings) {
-                        if (MappingType.CODE_BASED.equals(mapping.mappingType) || mapping.substitutionsAsCode) {
+                        if (mapping.isSubstitutionsAsCode()) {
                             result.setMaxCPUTimeMS(serviceConfiguration.getMaxCPUTimeMS());
                         }
                     }

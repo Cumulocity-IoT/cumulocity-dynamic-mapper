@@ -61,7 +61,8 @@ import {
   MappingTypeDescriptionMap,
   SharedService,
   StepperConfiguration,
-  Feature
+  Feature,
+  isSubstitutionsAsCode
 } from '../../shared';
 
 import { HttpStatusCode } from '@angular/common/http';
@@ -658,7 +659,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         mapping.mappingType,
         this.stepperConfiguration.direction,
         mapping.active ? EditorMode.READ_ONLY : EditorMode.UPDATE,
-        mapping.mappingType == MappingType.CODE_BASED || mapping.substitutionsAsCode
+        isSubstitutionsAsCode(mapping)
       );
 
       // create deep copy of existing mapping, in case user cancels changes
