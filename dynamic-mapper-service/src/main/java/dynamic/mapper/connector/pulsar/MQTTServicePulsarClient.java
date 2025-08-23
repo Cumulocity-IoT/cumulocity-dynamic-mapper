@@ -559,7 +559,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     private String resolveDeviceToClient(ProcessingContext<?> context) {
-        // TDOD IMPLEMENTATION: Adjust if needed to map device to client ID
+        // TODO IMPLEMENTATION: Adjust if needed to map device to client ID
         return context.getSourceId();
     }
 
