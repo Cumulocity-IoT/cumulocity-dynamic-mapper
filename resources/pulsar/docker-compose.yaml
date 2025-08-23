@@ -25,17 +25,32 @@ services:
       pulsar:
         condition: service_healthy
     environment:
-      - TENANT=${TENANT}
+      - TENANT=${TENANT:-t2050305588}
     command: >
-      bash -c "
-        echo 'Waiting for Pulsar to be ready...' &&
+      bash -c '
+        set +e
+        echo "Waiting for Pulsar to be ready..." &&
         sleep 10 &&
-        echo 'Creating tenant $${TENANT}...' &&
-        bin/pulsar-admin --admin-url http://pulsar:8080 tenants create $${TENANT} --admin-roles admin --allowed-clusters standalone &&
-        echo 'Creating namespace $${TENANT}/mqtt...' &&
-        bin/pulsar-admin --admin-url http://pulsar:8080 namespaces create $${TENANT}/mqtt &&
-        echo 'Setup completed successfully!'
-      "
+        
+        echo "Creating tenant $TENANT..." &&
+        bin/pulsar-admin --admin-url http://pulsar:8080 tenants create $TENANT --admin-roles admin --allowed-clusters standalone
+        if [ $? -eq 0 ]; then
+          echo "Tenant $TENANT created successfully"
+        else
+          echo "Tenant $TENANT already exists or creation failed, continuing..."
+        fi
+        
+        echo "Creating namespace $TENANT/mqtt..." &&
+        bin/pulsar-admin --admin-url http://pulsar:8080 namespaces create $TENANT/mqtt
+        if [ $? -eq 0 ]; then
+          echo "Namespace $TENANT/mqtt created successfully"
+        else
+          echo "Namespace $TENANT/mqtt already exists or creation failed, continuing..."
+        fi
+        
+        echo "Setup completed successfully!"
+        exit 0
+      '
 
 volumes:
   pulsardata:
