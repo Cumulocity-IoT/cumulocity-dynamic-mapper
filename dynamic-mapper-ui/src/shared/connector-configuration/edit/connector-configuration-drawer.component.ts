@@ -41,6 +41,7 @@ interface PropertyEntry {
 @Component({
   selector: 'd11r-edit-connector-drawer',
   templateUrl: 'connector-configuration-drawer.component.html',
+  styleUrls:['./connector-configuration-drawer.component.css'],
   standalone: false
 })
 export class ConnectorConfigurationDrawerComponent implements OnInit {
