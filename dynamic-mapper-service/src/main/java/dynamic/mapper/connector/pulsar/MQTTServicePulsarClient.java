@@ -186,10 +186,14 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         configurationRegistry.getMqttServicePulsarUrl(), null, null));
         // getConnectorSpecification().getProperties().put("subscriptionName",
-        //         new ConnectorProperty(
-        //                 "Controls how Pulsar subscription names are generated - 'default' creates connector-specific subscriptions, 'mapping' creates separate subscriptions per mapping, 'shared' uses one subscription for all mappings, 'custom' allows user-defined patterns.",
-        //                 false, 11, ConnectorPropertyType.STRING_PROPERTY, false, true,
-        //                 getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest), null, null));
+        // new ConnectorProperty(
+        // "Controls how Pulsar subscription names are generated - 'default' creates
+        // connector-specific subscriptions, 'mapping' creates separate subscriptions
+        // per mapping, 'shared' uses one subscription for all mappings, 'custom' allows
+        // user-defined patterns.",
+        // false, 11, ConnectorPropertyType.STRING_PROPERTY, false, true,
+        // getSubscriptionName(this.connectorIdentifier,
+        // this.additionalSubscriptionIdTest), null, null));
         getConnectorSpecification().getProperties().put("pulsarTenant",
                 new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         tenant, null, null));
@@ -528,6 +532,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
+                    .property(PULSAR_PROPERTY_CLIENT, resolveDeviceToClient(context)) // Store client ID
                     .sendAsync()
                     .exceptionally(throwable -> {
                         log.debug("{} - Failed to send AT_MOST_ONCE message (expected): {}",
@@ -539,6 +544,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
+                    .property(PULSAR_PROPERTY_CLIENT, resolveDeviceToClient(context)) // Store client ID
                     .send();
         }
 
@@ -548,6 +554,11 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     "{} - Published to Cumulocity MQTT Service: QoS={}, originalTopic=[{}], pulsarTopic=[{}], mapping={}, connector={}",
                     tenant, qos, originalMqttTopic, towardsDeviceTopic, context.getMapping().name, connectorName);
         }
+    }
+
+    private String resolveDeviceToClient(ProcessingContext<?> context) {
+        // TDOD IMPLEMENTATION: Adjust if needed to map device to client ID
+        return context.getSourceId();
     }
 
     private static String getSubscriptionName(String identifier, String suffix) {
