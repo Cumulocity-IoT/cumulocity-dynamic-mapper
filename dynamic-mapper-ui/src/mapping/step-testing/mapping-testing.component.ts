@@ -40,7 +40,7 @@ import {
 } from '../../shared/';
 import { MappingService } from '../core/mapping.service';
 import { C8YRequest, ProcessingContext, TOKEN_TOPIC_LEVEL } from '../core/processor/processor.model';
-import { MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
+import { isSubstitutionsAsCode, MappingType, StepperConfiguration } from '../../shared/mapping/mapping.model';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Content } from 'vanilla-jsoneditor';
@@ -78,6 +78,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   readonly Direction = Direction;
   readonly MappingType = MappingType;
+  readonly isSubstitutionsAsCode = isSubstitutionsAsCode;
 
   private destroy$ = new BehaviorSubject<void>(undefined);
 

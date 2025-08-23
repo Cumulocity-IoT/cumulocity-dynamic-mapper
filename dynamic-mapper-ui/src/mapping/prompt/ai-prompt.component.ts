@@ -29,7 +29,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { DeviceGridService, } from '@c8y/ngx-components/device-grid';
-import { Mapping, Substitution, MappingType, SharedService } from '../../shared';
+import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode } from '../../shared';
 import { AlertService, BottomDrawerRef } from '@c8y/ngx-components';
 import { AIAgentService } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
@@ -82,7 +82,7 @@ export class AIPromptComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
-    return this.agentType === MappingType.CODE_BASED || this.mapping.substitutionsAsCode;
+    return this.agentType === MappingType.CODE_BASED || isSubstitutionsAsCode(this.mapping);
   }
 
   async ngOnInit(): Promise<void> {

@@ -527,14 +527,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        // mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
         mappingType: this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
         substitutionsAsCode: this.substitutionsAsCode,
         snoopStatus: this.snoopStatus,
-        // supportsMessageContext: this.substitutionsAsCode || false,
         supportsMessageContext: true,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
@@ -560,14 +558,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         substitutions: sub,
         useExternalId: false,
         createNonExistingDevice: false,
-        // mappingType: this.substitutionsAsCode ? MappingType.CODE_BASED : this.mappingType,
         mappingType: this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateOutbound : undefined,
         substitutionsAsCode: this.substitutionsAsCode,
         snoopStatus: this.snoopStatus,
-        // supportsMessageContext: this.substitutionsAsCode || false,
         supportsMessageContext: true,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
@@ -694,7 +690,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       mapping.mappingType,
       mapping.direction,
       EditorMode.COPY,
-      mapping.mappingType == MappingType.CODE_BASED
+      isSubstitutionsAsCode(mapping)
     );
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;

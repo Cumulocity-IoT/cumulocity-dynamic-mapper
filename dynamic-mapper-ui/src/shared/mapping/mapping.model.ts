@@ -511,7 +511,7 @@ export interface Feature {
 export function getPathTargetForDeviceIdentifiers(context: ProcessingContext): string[] {
   const { mapping } = context;
   let pss;
-  if (mapping.mappingType === MappingType.CODE_BASED || mapping.substitutionsAsCode) {
+  if (isSubstitutionsAsCode(mapping)) {
     pss = [getGenericDeviceIdentifier(mapping)];
   } else {
     pss = mapping.substitutions
@@ -594,5 +594,5 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function isSubstitutionsAsCode(mapping: Mapping): boolean {
-  return isSubstitutionsAsCode(mapping);
+  return mapping.substitutionsAsCode || MappingType.CODE_BASED === mapping.mappingType;
 }
