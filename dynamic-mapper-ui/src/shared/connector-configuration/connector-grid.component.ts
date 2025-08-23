@@ -312,7 +312,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       types.add(config.connectorType);
       return types;
     }, new Set());
-    const allowedConnectors = this.specifications.filter(sp => !sp.singleton || (configuredConnectorType.has(sp.connectorType)));
+    const allowedConnectors = this.specifications.filter(sp => !sp.singleton || (!configuredConnectorType.has(sp.connectorType))).map (sp => sp.connectorType);
     this.initialStateDrawer = {
       add: true,
       configuration: {
