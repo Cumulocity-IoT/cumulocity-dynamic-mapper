@@ -147,7 +147,8 @@ public class MQTT5Client extends AConnectorClient {
         String name = "Generic MQTT";
         String description = "Connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton, configProps,
+                false,
                 supportedDirections());
     }
 

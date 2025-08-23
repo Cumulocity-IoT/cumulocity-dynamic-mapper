@@ -110,14 +110,15 @@ public class WebHook extends AConnectorClient {
                         false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
                         null));
         configProps.put("headers",
-                new ConnectorProperty("Define additional headers", false, 7, ConnectorPropertyType.MAP_PROPERTY, false, false,
+                new ConnectorProperty("Define additional headers", false, 7, ConnectorPropertyType.MAP_PROPERTY, false,
+                        false,
                         new HashMap<String, String>(),
                         null, cumulocityInternal));
         String name = "Webhook";
         String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
         supportsMessageContext = true;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps,
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton, configProps,
                 supportsMessageContext,
                 supportedDirections());
     }
@@ -218,7 +219,6 @@ public class WebHook extends AConnectorClient {
                 "application/json");
         Map headers = (Map) connectorConfiguration.getProperties().get("headers");
 
-    
         // Create RestClient builder
         WebClient.Builder builder = WebClient.builder()
                 .baseUrl(baseUrl)

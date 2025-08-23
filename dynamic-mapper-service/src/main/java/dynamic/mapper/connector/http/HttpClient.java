@@ -76,7 +76,8 @@ public class HttpClient extends AConnectorClient {
                 + "The message must be send in a POST request.\n"
                 + "NOTE: The leading '/' is cut off from the sub path automatically. This can be configured ";
         connectorType = ConnectorType.HTTP;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton, configProps,
+                false,
                 supportedDirections());
     }
 
@@ -143,7 +144,8 @@ public class HttpClient extends AConnectorClient {
                 initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
                 successful = true;
             } catch (Exception e) {
-                log.error("{} - Phase III: {} failed to connect to http endpoint {}, {}, {}", tenant, getConnectorName(),
+                log.error("{} - Phase III: {} failed to connect to http endpoint {}, {}, {}", tenant,
+                        getConnectorName(),
                         path, e.getMessage(), connectionState.booleanValue(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();

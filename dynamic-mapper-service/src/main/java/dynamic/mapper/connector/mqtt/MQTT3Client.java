@@ -146,7 +146,8 @@ public class MQTT3Client extends AConnectorClient {
         String name = "Generic MQTT";
         String description = "Connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton, configProps,
+                false,
                 supportedDirections());
     }
 
@@ -484,7 +485,7 @@ public class MQTT3Client extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, Qos qos) throws ConnectorException {
-        if(isConnected()) {
+        if (isConnected()) {
             log.debug("{} - Subscribing on topic: [{}] for connector: {}", tenant, topic, connectorName);
             Qos usedQOS = qos;
             sendSubscriptionEvents(topic, "Subscribing");

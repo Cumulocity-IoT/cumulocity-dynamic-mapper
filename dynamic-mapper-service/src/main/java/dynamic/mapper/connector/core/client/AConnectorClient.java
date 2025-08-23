@@ -115,6 +115,10 @@ public abstract class AConnectorClient {
 
     @Getter
     @Setter
+    public boolean singleton;
+
+    @Getter
+    @Setter
     protected String tenant;
 
     @Getter

@@ -308,6 +308,11 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   async onConfigurationAdd(): Promise<void> {
+    const configuredConnectorType = this.configurations.reduce((types, config) => {
+      types.add(config.connectorType);
+      return types;
+    }, new Set());
+    const allowedConnectors = this.specifications.filter(sp => !sp.singleton || (configuredConnectorType.has(sp.connectorType)));
     this.initialStateDrawer = {
       add: true,
       configuration: {
@@ -316,6 +321,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       },
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
+      allowedConnectors: allowedConnectors
     }
     const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
     const resultOf = await drawer.instance.result;

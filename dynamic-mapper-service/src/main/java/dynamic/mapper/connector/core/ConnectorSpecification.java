@@ -57,6 +57,11 @@ public class ConnectorSpecification implements Cloneable {
 	@JsonSetter(nulls = Nulls.SKIP)
 	public ConnectorType connectorType;
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Is Connector singleton", example = "true")
+	@NotNull
+	@JsonSetter(nulls = Nulls.SKIP)
+	public boolean singleton;
+
 	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A map of properties the connector needs to establish a connection. The key is the property name and the value is the property specification", example = "{ \"protocol\": { \"description\": \"The protocol to use\", \"required\": true, \"order\": 1, \"type\": \"STRING\", \"readonly\": false } }")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)

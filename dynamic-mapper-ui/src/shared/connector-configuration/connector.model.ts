@@ -73,7 +73,8 @@ export interface ConnectorConfiguration {
 export interface ConnectorSpecification {
   name: string;
   description: string;
-  connectorType: string;
+  connectorType: ConnectorType;
+  singleton: boolean;
   supportsWildcardInTopic: boolean;
   supportsMessageContext?: boolean;
   supportedDirections?: Direction[];

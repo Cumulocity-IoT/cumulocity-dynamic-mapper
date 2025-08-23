@@ -172,7 +172,8 @@ public class PulsarConnectorClient extends AConnectorClient {
         String name = "Apache Pulsar";
         String description = "Connector for connecting to Apache Pulsar message broker.";
         connectorType = ConnectorType.PULSAR;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton, configProps,
+                false,
                 supportedDirections());
     }
 

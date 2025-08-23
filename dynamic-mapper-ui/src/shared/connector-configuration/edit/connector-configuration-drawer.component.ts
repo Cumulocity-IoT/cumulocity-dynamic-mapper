@@ -48,6 +48,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   @Input() configuration: ConnectorConfiguration;
   @Input() specifications: ConnectorSpecification[];
   @Input() configurationsCount: number;
+  @Input() allowedConnectors: ConnectorType[] = [];
 
   brokerFormFields: FormlyFieldConfig[] = [];
   brokerForm = new FormGroup({});
@@ -101,7 +102,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       wrappers: ['c8y-form-field'],
       props: {
         label: 'Connector type',
-        options: this.specifications.map(sp => ({
+        options: this.specifications.filter(sp => this.allowedConnectors.includes(sp.connectorType)).map(sp => ({
           label: sp.name,
           value: sp.connectorType
         })),
