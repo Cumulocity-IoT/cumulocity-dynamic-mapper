@@ -46,14 +46,15 @@ public class MQTTServicePulsarClientTest {
     static String BROKER_PASSWORD = System.getenv("BROKER_PASSWORD");
     static String AUTH_NAME = System.getenv().getOrDefault("AUTH_NAME", "none");
     static String AUTH_PARAMS = System.getenv("AUTH_PARAMS");
-    static String SUBSCRIPTION_NAME = System.getenv().getOrDefault("SUBSCRIPTION_NAME", "mqtt-service-test-subscription");
+    static String SUBSCRIPTION_NAME = System.getenv().getOrDefault("SUBSCRIPTION_NAME",
+            "mqtt-service-test-subscription");
     static String TENANT = System.getenv().getOrDefault("TENANT", "t2050305588");
     static String PULSAR_NAMESPACE = System.getenv().getOrDefault("PULSAR_NAMESPACE", "mqtt");
-    
+
     // Cumulocity MQTT Service specific topics (N-2 mapping model)
     static String TOWARDS_DEVICE_TOPIC;
     static String TOWARDS_PLATFORM_TOPIC;
-    
+
     // Message properties constants (from MQTTServicePulsarClient)
     public static final String PULSAR_PROPERTY_CHANNEL = "channel";
     public static final String PULSAR_PROPERTY_CLIENT = "client";
@@ -75,21 +76,22 @@ public class MQTTServicePulsarClientTest {
         System.out.println("Subscription: " + SUBSCRIPTION_NAME);
 
         MQTTServicePulsarClientTest testClient = new MQTTServicePulsarClientTest();
-        
+
         try {
             // Initialize client
             testClient.initialize();
-            
+
             // Start consumer for platform topic (inbound messages)
-            testClient.startPlatformConsumer();
-            
+            // testClient.startPlatformConsumer();
+            testClient.startDeviceConsumer();
+
             // Send test messages to device topic (outbound messages)
-            testClient.testSendMQTTServiceMessages();
-            
+            // testClient.testSendMQTTServiceMessages();
+
             // Keep consumer running for a while
             System.out.println("Consumer running... Press Ctrl+C to stop");
-            Thread.sleep(60000); // Run for 1 minute
-            
+            Thread.sleep(600000); // Run for 60 minutes
+
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
@@ -100,7 +102,7 @@ public class MQTTServicePulsarClientTest {
 
     private void initialize() throws PulsarClientException {
         System.out.println("Initializing Pulsar client for Cumulocity MQTT Service...");
-        
+
         var clientBuilder = org.apache.pulsar.client.api.PulsarClient.builder()
                 .serviceUrl(PULSAR_BROKER_HOST)
                 .connectionTimeout(30, TimeUnit.SECONDS)
@@ -117,7 +119,7 @@ public class MQTTServicePulsarClientTest {
 
     private void configureAuthentication(org.apache.pulsar.client.api.ClientBuilder clientBuilder) {
         System.out.println("Configuring authentication method: " + AUTH_NAME);
-        
+
         try {
             switch (AUTH_NAME.toLowerCase()) {
                 case "token":
@@ -137,7 +139,7 @@ public class MQTTServicePulsarClientTest {
                     break;
                 case "basic":
                     if (BROKER_USERNAME != null && BROKER_PASSWORD != null) {
-                        String basicAuth = String.format("{\"userId\":\"%s\",\"password\":\"%s\"}", 
+                        String basicAuth = String.format("{\"userId\":\"%s\",\"password\":\"%s\"}",
                                 BROKER_USERNAME, BROKER_PASSWORD);
                         clientBuilder.authentication(
                                 AuthenticationFactory.create(
@@ -155,19 +157,37 @@ public class MQTTServicePulsarClientTest {
     }
 
     /**
-     * Start consumer for towardsPlatformTopic to receive inbound messages from MQTT Service
+     * Start consumer for towardsPlatformTopic to receive inbound messages from MQTT
+     * Service
      */
     private void startPlatformConsumer() throws PulsarClientException {
         System.out.println("Starting consumer for MQTT Service platform topic: " + TOWARDS_PLATFORM_TOPIC);
-        
+
         consumer = client.newConsumer()
                 .topic(TOWARDS_PLATFORM_TOPIC)
                 .subscriptionName(SUBSCRIPTION_NAME)
                 .subscriptionType(SubscriptionType.Shared)
                 .messageListener(new MQTTServiceMessageListener())
                 .subscribe();
-        
+
         System.out.println("Consumer started successfully for platform topic!");
+    }
+
+    /**
+     * Start consumer for towardsDeviceTopic to receive inbound messages from MQTT
+     * Service
+     */
+    private void startDeviceConsumer() throws PulsarClientException {
+        System.out.println("Starting consumer for MQTT Service device topic: " + TOWARDS_DEVICE_TOPIC);
+
+        consumer = client.newConsumer()
+                .topic(TOWARDS_DEVICE_TOPIC)
+                .subscriptionName(SUBSCRIPTION_NAME)
+                .subscriptionType(SubscriptionType.Shared)
+                .messageListener(new MQTTServiceMessageListener())
+                .subscribe();
+
+        System.out.println("Consumer started successfully towards device topic!");
     }
 
     /**
@@ -188,7 +208,7 @@ public class MQTTServicePulsarClientTest {
         sendMQTTServiceMessage("measurement/kobu-webhook-002", "humidity", 65.0);
         sendMQTTServiceMessage("device/sensor-123/status", "status", "online");
         sendMQTTServiceMessage("alarm/critical/device-456", "alert", "battery_low");
-        
+
         producer.close();
         System.out.println("Producer closed");
     }
@@ -196,20 +216,21 @@ public class MQTTServicePulsarClientTest {
     /**
      * Send a message using MQTT Service model with topic as property
      */
-    private void sendMQTTServiceMessage(String mqttTopic, String measurementType, Object value) throws PulsarClientException {
-        String payload = String.format("{ \"deviceId\": \"test-device-%d\", \"timestamp\": \"%d\", \"%s\": %s }", 
+    private void sendMQTTServiceMessage(String mqttTopic, String measurementType, Object value)
+            throws PulsarClientException {
+        String payload = String.format("{ \"deviceId\": \"test-device-%d\", \"timestamp\": \"%d\", \"%s\": %s }",
                 System.currentTimeMillis() % 1000,
-                System.currentTimeMillis(), 
+                System.currentTimeMillis(),
                 measurementType,
                 value instanceof String ? "\"" + value + "\"" : value);
 
         // Send with MQTT topic as property (N-2 mapping model)
         producer.newMessage()
                 .value(payload.getBytes())
-                .property(PULSAR_PROPERTY_CHANNEL, mqttTopic)  // Original MQTT topic
-                .property(PULSAR_PROPERTY_CLIENT, "test-client-" + System.currentTimeMillis() % 100)  // Client ID
-                .property("tenant", TENANT)  // Tenant for routing
-                .property("messageType", measurementType)  // Additional metadata
+                .property(PULSAR_PROPERTY_CHANNEL, mqttTopic) // Original MQTT topic
+                .property(PULSAR_PROPERTY_CLIENT, "test-client-" + System.currentTimeMillis() % 100) // Client ID
+                .property("tenant", TENANT) // Tenant for routing
+                .property("messageType", measurementType) // Additional metadata
                 .send();
 
         System.out.println("Sent message to MQTT Service:");
@@ -224,34 +245,33 @@ public class MQTTServicePulsarClientTest {
      */
     private void simulateInboundMessages() throws PulsarClientException {
         System.out.println("Simulating inbound messages to platform topic...");
-        
+
         try (Producer<byte[]> platformProducer = client.newProducer()
                 .topic(TOWARDS_PLATFORM_TOPIC)
                 .sendTimeout(10, TimeUnit.SECONDS)
                 .create()) {
-            
+
             String[] mqttTopics = {
-                "measurement/device-001/temperature",
-                "measurement/device-002/humidity", 
-                "event/device-003/startup",
-                "alarm/device-004/battery_low"
+                    "measurement/device-001/temperature",
+                    "measurement/device-002/humidity",
+                    "event/device-003/startup",
+                    "alarm/device-004/battery_low"
             };
-            
+
             for (String mqttTopic : mqttTopics) {
                 String payload = String.format(
-                    "{ \"deviceId\": \"%s\", \"timestamp\": \"%d\", \"value\": %d, \"type\": \"inbound\" }",
-                    "device-" + (System.currentTimeMillis() % 1000),
-                    System.currentTimeMillis(),
-                    (int)(Math.random() * 100)
-                );
-                
+                        "{ \"deviceId\": \"%s\", \"timestamp\": \"%d\", \"value\": %d, \"type\": \"inbound\" }",
+                        "device-" + (System.currentTimeMillis() % 1000),
+                        System.currentTimeMillis(),
+                        (int) (Math.random() * 100));
+
                 platformProducer.newMessage()
                         .value(payload.getBytes())
                         .property(PULSAR_PROPERTY_CHANNEL, mqttTopic)
                         .property(PULSAR_PROPERTY_CLIENT, "simulated-device-" + System.currentTimeMillis() % 10)
                         .property("direction", "inbound")
                         .send();
-                
+
                 System.out.println("Sent inbound message for MQTT topic: " + mqttTopic);
                 Thread.sleep(500); // Small delay
             }
@@ -262,7 +282,7 @@ public class MQTTServicePulsarClientTest {
 
     private void cleanup() {
         System.out.println("Cleaning up resources...");
-        
+
         try {
             if (consumer != null) {
                 consumer.close();
@@ -300,7 +320,7 @@ public class MQTTServicePulsarClientTest {
                 executorService.shutdownNow();
             }
         }
-        
+
         System.out.println("Cleanup completed");
     }
 
@@ -318,25 +338,24 @@ public class MQTTServicePulsarClientTest {
                 String clientId = message.getProperty(PULSAR_PROPERTY_CLIENT);
                 String messageId = message.getMessageId().toString();
                 long publishTime = message.getPublishTime();
-                
+
                 System.out.println("=== MQTT SERVICE MESSAGE RECEIVED ===");
                 System.out.printf("Pulsar Topic: %s%n", pulsarTopic);
                 System.out.printf("MQTT Topic (property): %s%n", mqttTopic != null ? mqttTopic : "N/A");
                 System.out.printf("Client ID (property): %s%n", clientId != null ? clientId : "N/A");
                 System.out.printf("Message ID: %s%n", messageId);
                 System.out.printf("Publish Time: %d%n", publishTime);
-                
+
                 // Display all properties
                 System.out.println("Properties:");
-                message.getProperties().forEach((key, value) -> 
-                    System.out.printf("  %s: %s%n", key, value));
-                
+                message.getProperties().forEach((key, value) -> System.out.printf("  %s: %s%n", key, value));
+
                 System.out.printf("Payload: %s%n", payload);
                 System.out.println("=====================================");
-                
+
                 // Acknowledge the message
                 consumer.acknowledge(message);
-                
+
             } catch (Exception e) {
                 System.err.println("Error processing MQTT Service message: " + e.getMessage());
                 // Negative acknowledgment to retry
