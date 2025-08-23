@@ -25,7 +25,6 @@ import { firstValueFrom, Observable, Subject, Subscription, takeUntil, tap } fro
 import packageJson from '../../../package.json';
 import {
   ConnectorConfiguration,
-  ConnectorConfigurationModalComponent,
   ConnectorSpecification,
   ConnectorStatus,
   Direction,

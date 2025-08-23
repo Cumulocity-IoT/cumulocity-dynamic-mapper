@@ -28,7 +28,7 @@
           name="addConfiguration"
           id="addConfiguration"
           class="btn btn-default btn-sm m-b-24"
-          (click)="onConfigurationAdd()"
+          (click)="onConfigurationAddOrUpdate(undefined)"
           translate
           [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
           title="Add connector"

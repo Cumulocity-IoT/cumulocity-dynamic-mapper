@@ -29,7 +29,7 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
   // Edit action for admin users on disabled connectors
   {
     type: BuiltInActionType.Edit,
-    callbackName: 'onConfigurationUpdate',
+    callbackName: 'onConfigurationAddOrUpdate',
     visibilityRules: [
       { type: 'enabled', value: false },
       { type: 'readOnly', value: false },
@@ -39,7 +39,7 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
   {
     type: 'VIEW',
     icon: 'eye',
-    callbackName: 'onConfigurationUpdate',
+    callbackName: 'onConfigurationAddOrUpdate',
     visibilityRules: [
       { type: 'readOnly', value: false },
       { type: 'connectorType' },

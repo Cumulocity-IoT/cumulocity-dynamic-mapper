@@ -75,7 +75,7 @@ export class ConnectorConfigurationComponent {
     }
   }
 
-  async onConfigurationAdd() {
-    this.connectorGridComponent.onConfigurationAdd();
+  async onConfigurationAddOrUpdate(config: ConnectorConfiguration) {
+    this.connectorGridComponent.onConfigurationAddOrUpdate(config);
   }
 }

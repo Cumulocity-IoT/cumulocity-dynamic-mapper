@@ -29,7 +29,6 @@ import { ConnectorConfigurationService } from '../service/connector-configuratio
 import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
-import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingInterval } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
@@ -252,44 +251,22 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     this.connectorConfigurationService.refreshConfigurations();
   }
 
-  async onConfigurationUpdate(configuration: ConnectorConfiguration): Promise<void> {
+  async onConfigurationCopy(config: ConnectorConfiguration): Promise<void> {
+    const copiedConfig = this.prepareCopyConfiguration(config);
     this.initialStateDrawer = {
       add: false,
-      configuration: cloneDeep(configuration),
+      configuration: copiedConfig,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
     }
     const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
     const resultOf = await drawer.instance.result;
-
-    if (this.initialStateDrawer.add) {
-      await this.handleModalResponse(
-        resultOf,
-        'Added successfully.',
-        'Failed to create connector configuration',
-        config => this.connectorConfigurationService.createConfiguration(config)
-      );
-    } else {
-      await this.handleModalResponse(
-        resultOf,
-        'Updated successfully.',
-        'Failed to update connector configuration',
-        config => this.connectorConfigurationService.updateConfiguration(config)
-      );
-    }
-  }
-
-  async onConfigurationCopy(config: ConnectorConfiguration): Promise<void> {
-    const copiedConfig = this.prepareCopyConfiguration(config);
-    const modalRef = this.showConfigurationModal(copiedConfig, false);
-    modalRef.content.closeSubject.subscribe(async editedConfiguration => {
-      await this.handleModalResponse(
-        editedConfiguration,
-        'Created successfully.',
-        'Failed to create connector configuration',
-        config => this.connectorConfigurationService.createConfiguration(config)
-      );
-    });
+    await this.handleModalResponse(
+      resultOf,
+      'Added successfully.',
+      'Failed to create connector configuration',
+      config => this.connectorConfigurationService.createConfiguration(config)
+    );
   }
 
   async onConfigurationDelete(config: ConnectorConfiguration): Promise<void> {
@@ -307,18 +284,26 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     });
   }
 
-  async onConfigurationAdd(): Promise<void> {
+  async onConfigurationAddOrUpdate(config: ConnectorConfiguration): Promise<void> {
+    let add = true;
+    let configuration = {
+      properties: {},
+      identifier: createCustomUuid()
+    } as Partial<ConnectorConfiguration>;
+    if (config) {
+      add = false;
+      configuration = cloneDeep(config);
+    }
+
     const configuredConnectorType = this.configurations.reduce((types, config) => {
       types.add(config.connectorType);
       return types;
     }, new Set());
-    const allowedConnectors = this.specifications.filter(sp => !sp.singleton || (!configuredConnectorType.has(sp.connectorType))).map (sp => sp.connectorType);
+    const allowedConnectors = this.specifications.filter(sp => !sp.singleton || (!configuredConnectorType.has(sp.connectorType))).map(sp => sp.connectorType);
+
     this.initialStateDrawer = {
-      add: true,
-      configuration: {
-        properties: {},
-        identifier: createCustomUuid()
-      },
+      add,
+      configuration,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
       allowedConnectors: allowedConnectors
@@ -351,18 +336,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     return this.readOnly;
   }
 
-  // Helper methods for showing modals
-  private showConfigurationModal(configuration: Partial<ConnectorConfiguration>, isAdd: boolean): BsModalRef {
-    return this.bsModalService.show(ConnectorConfigurationModalComponent, {
-      initialState: {
-        add: isAdd,
-        configuration: cloneDeep(configuration),
-        specifications: this.specifications,
-        configurationsCount: this.configurations?.length,
-      }
-    });
-  }
-
   private showConfirmationModal(): BsModalRef {
     return this.bsModalService.show(ConfirmationModalComponent, {
       initialState: {
@@ -373,7 +346,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     });
   }
 
-  // Missing methods for the component:
   private prepareCopyConfiguration(configuration: ConnectorConfiguration): Partial<ConnectorConfiguration> {
     const copiedConfig = cloneDeep(configuration);
     copiedConfig.identifier = createCustomUuid();

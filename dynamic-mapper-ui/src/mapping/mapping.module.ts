@@ -36,7 +36,6 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import/import-modal.component';
-import { MappingTypeModalComponent } from './mapping-type/mapping-type-modal.component';
 import { MappingTypeDrawerComponent } from './mapping-type/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
@@ -86,7 +85,6 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
     MappingStatusActivationRendererComponent,
     LabelRendererComponent,
     NameRendererComponent,
-    MappingTypeModalComponent,
     MappingTypeDrawerComponent,
     MappingConnectorComponent,
     MappingSubscriptionComponent,
