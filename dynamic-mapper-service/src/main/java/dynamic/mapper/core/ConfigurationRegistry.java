@@ -112,7 +112,7 @@ public class ConfigurationRegistry {
     // Structure: < Tenant, < ExtensibleProcessorSource > >
     private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new ConcurrentHashMap<>();
 
-    // TODO perist cache 
+    // TODO persist cache as DeviceToClientRepresentation
     // Structure: < Tenant, < Device, Client > >
     private Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
 

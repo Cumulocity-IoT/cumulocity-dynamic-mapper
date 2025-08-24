@@ -196,6 +196,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public static final String CONNECTOR_FRAGMENT = "d11r_connector";
     public static final String DEPLOYMENT_MAP_FRAGMENT = "d11r_deploymentMap";
+    public static final String DEVICE_TO_CLIENT_MAP_FRAGMENT = "d11r_deviceToClientMap";
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
