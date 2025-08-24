@@ -122,119 +122,74 @@ public class OperationController {
         this.objectMapper = objectMapper;
     }
 
-    @io.swagger.v3.oas.annotations.Operation(
-        summary = "Execute a service operation", 
-        description = """
-        Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.
-        
-        **Please note:** Each operation may have specific requirements and permissions. Ensure that the user has the necessary roles to perform the requested operation.
-        `ROLE_DYNAMIC_MAPPER_CREATE` Operations:
-        - `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.
-        - `ACTIVATE_MAPPING`: Activates or deactivates a mapping.
-        - `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.
-        - `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.
-        - `SNOOP_MAPPING`: Enables or disables snooping for a mapping.
-        - `SNOOP_RESET`: Resets snooping for a mapping.
-        - `REFRESH_STATUS_MAPPING`: Refreshes the status of all mappings.
-        - `ADD_SAMPLE_MAPPINGS`: Adds sample mappings for inbound or outbound direction.
-        - `COPY_SNOOPED_SOURCE_TEMPLATE`: Copies the source template from a snooped mapping.
-        
-        
-        `ROLE_DYNAMIC_MAPPER_ADMIN` Operations:
-        - `CONNECT`: Connects a specific connector.
-        - `DISCONNECT`: Disconnects a specific connector.
-        - `RESET_STATISTICS_MAPPING`: Resets statistics for all mappings.
-        - `RESET_DEPLOYMENT_MAP`: Resets the deployment map for the current tenant.
-        - `RELOAD_EXTENSIONS`: Reloads all extensions for the current tenant.
-        - `REFRESH_NOTIFICATIONS_SUBSCRIPTIONS`: Refreshes notification subscriptions for the current tenant.
-        - `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, inventory cache).
-        - `INIT_CODE_TEMPLATES`: Initializes code templates for the current tenant.
-        
-        """,
-        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Service operation to execute with parameters",
-            required = true,
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ServiceOperation.class),
-                examples = {
-                    @ExampleObject(
-                        name = "Reload Mappings",
-                        description = "Reload all mappings for the current tenant",
-                        value = """
-                        {
-                          "operation": "RELOAD_MAPPINGS",
-                          "parameter": {}
-                        }
-                        """
-                    ),
-                    @ExampleObject(
-                        name = "Connect Connector",
-                        description = "Connect a specific connector",
-                        value = """
-                        {
-                          "operation": "CONNECT",
-                          "parameter": {
-                            "connectorIdentifier": "jrr12x"
-                          }
-                        }
-                        """
-                    ),
-                    @ExampleObject(
-                        name = "Activate Mapping",
-                        description = "Activate or deactivate a mapping",
-                        value = """
-                        {
-                          "operation": "ACTIVATE_MAPPING",
-                          "parameter": {
-                            "id": "34573838974",
-                            "active": "true"
-                          }
-                        }
-                        """
-                    ),
-                    @ExampleObject(
-                        name = "Clear Cache",
-                        description = "Clear a specific cache",
-                        value = """
-                        {
-                          "operation": "CLEAR_CACHE",
-                          "parameter": {
-                            "cacheId": "INBOUND_ID_CACHE"
-                          }
-                        }
-                        """
-                    )
-                }
-            )
-        )
-    )
+    @io.swagger.v3.oas.annotations.Operation(summary = "Execute a service operation", description = """
+            Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.
+
+            **Please note:** Each operation may have specific requirements and permissions. Ensure that the user has the necessary roles to perform the requested operation.
+            `ROLE_DYNAMIC_MAPPER_CREATE` Operations:
+            - `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.
+            - `ACTIVATE_MAPPING`: Activates or deactivates a mapping.
+            - `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.
+            - `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.
+            - `SNOOP_MAPPING`: Enables or disables snooping for a mapping.
+            - `SNOOP_RESET`: Resets snooping for a mapping.
+            - `REFRESH_STATUS_MAPPING`: Refreshes the status of all mappings.
+            - `ADD_SAMPLE_MAPPINGS`: Adds sample mappings for inbound or outbound direction.
+            - `COPY_SNOOPED_SOURCE_TEMPLATE`: Copies the source template from a snooped mapping.
+
+
+            `ROLE_DYNAMIC_MAPPER_ADMIN` Operations:
+            - `CONNECT`: Connects a specific connector.
+            - `DISCONNECT`: Disconnects a specific connector.
+            - `RESET_STATISTICS_MAPPING`: Resets statistics for all mappings.
+            - `RESET_DEPLOYMENT_MAP`: Resets the deployment map for the current tenant.
+            - `RELOAD_EXTENSIONS`: Reloads all extensions for the current tenant.
+            - `REFRESH_NOTIFICATIONS_SUBSCRIPTIONS`: Refreshes notification subscriptions for the current tenant.
+            - `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, inventory cache).
+            - `INIT_CODE_TEMPLATES`: Initializes code templates for the current tenant.
+
+            """, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Service operation to execute with parameters", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ServiceOperation.class), examples = {
+            @ExampleObject(name = "Reload Mappings", description = "Reload all mappings for the current tenant", value = """
+                    {
+                      "operation": "RELOAD_MAPPINGS",
+                      "parameter": {}
+                    }
+                    """),
+            @ExampleObject(name = "Connect Connector", description = "Connect a specific connector", value = """
+                    {
+                      "operation": "CONNECT",
+                      "parameter": {
+                        "connectorIdentifier": "jrr12x"
+                      }
+                    }
+                    """),
+            @ExampleObject(name = "Activate Mapping", description = "Activate or deactivate a mapping", value = """
+                    {
+                      "operation": "ACTIVATE_MAPPING",
+                      "parameter": {
+                        "id": "34573838974",
+                        "active": "true"
+                      }
+                    }
+                    """),
+            @ExampleObject(name = "Clear Cache", description = "Clear a specific cache", value = """
+                    {
+                      "operation": "CLEAR_CACHE",
+                      "parameter": {
+                        "cacheId": "INBOUND_ID_CACHE"
+                      }
+                    }
+                    """)
+    })))
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "201", 
-            description = "Operation executed successfully", 
-            content = @Content(mediaType = "application/json")
-        ),
-        @ApiResponse(
-            responseCode = "400", 
-            description = "Bad request - invalid operation parameters or failed connector operations", 
-            content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Map of failed connectors with their identifiers and names"))
-        ),
-        @ApiResponse(
-            responseCode = "403", 
-            description = "Forbidden - insufficient permissions for the requested operation", 
-            content = @Content
-        ),
-        @ApiResponse(
-            responseCode = "500", 
-            description = "Internal server error", 
-            content = @Content
-        )
+            @ApiResponse(responseCode = "201", description = "Operation executed successfully", content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "400", description = "Bad request - invalid operation parameters or failed connector operations", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Map of failed connectors with their identifiers and names"))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions for the requested operation", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> runOperation(
-            @Parameter(description = "Service operation to execute", required = true)
-            @Valid @RequestBody ServiceOperation operation) {
+            @Parameter(description = "Service operation to execute", required = true) @Valid @RequestBody ServiceOperation operation) {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Post operation: {}", tenant, operation);
 
@@ -345,6 +300,12 @@ public class OperationController {
                                 "User does not have permission to initialize code templates");
                     }
                     return handleInitCodeTemplates(tenant, parameters);
+                case CLEAR_CACHE_DEVICE_TO_CLIENT:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to initialize code templates");
+                    }
+                    return handleClearCacheDeviceToClient(tenant, parameters);
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
@@ -352,6 +313,11 @@ public class OperationController {
             log.error("{} - Error running operation: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
+    }
+
+    private ResponseEntity<?> handleClearCacheDeviceToClient(String tenant, Map<String, String> parameters) {
+        configurationRegistry.clearCacheDeviceToClient(tenant);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     private ResponseEntity<?> handleAddSampleMappings(String tenant, Map<String, String> parameters)

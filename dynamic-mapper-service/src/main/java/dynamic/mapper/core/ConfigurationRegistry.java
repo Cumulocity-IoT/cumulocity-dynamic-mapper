@@ -62,6 +62,7 @@ import dynamic.mapper.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapper.processor.inbound.HexProcessorInbound;
 import dynamic.mapper.processor.inbound.JSONProcessorInbound;
 import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.outbound.BaseProcessorOutbound;
 import dynamic.mapper.processor.outbound.CodeBasedProcessorOutbound;
 import dynamic.mapper.processor.outbound.DispatcherOutbound;
@@ -111,6 +112,9 @@ public class ConfigurationRegistry {
     // Structure: < Tenant, < ExtensibleProcessorSource > >
     private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new ConcurrentHashMap<>();
 
+    // Structure: < Tenant, < Device, Client > >
+    private Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
+
     @Getter
     private C8YAgent c8yAgent;
 
@@ -121,7 +125,6 @@ public class ConfigurationRegistry {
     @Value("${APP.mqttServicePulsarUrl}")
     @Getter
     String mqttServicePulsarUrl;
-
 
     @Autowired
     public void setC8yAgent(C8YAgent c8yAgent) {
@@ -484,6 +487,28 @@ public class ConfigurationRegistry {
 
         }
         return hostAccess;
+    }
+
+    public void addClient(String tenant, String deviceId, String clientId) {
+        deviceToClientPerTenant.get(tenant).put(deviceId, clientId);
+    }
+
+    public void removeClient(String tenant,String clientId) {
+        deviceToClientPerTenant.get(tenant).values().removeIf(value -> value.equals(clientId));
+    }
+
+    public void clearCacheDeviceToClient(String tenant) {
+        deviceToClientPerTenant.put(tenant, new ConcurrentHashMap<>());
+    }
+    
+    public String resolveDeviceToClient(String tenant, String deviceId) {
+        // TODO IMPLEMENTATION: Adjust if needed to map device to client ID
+        if (deviceToClientPerTenant.get(tenant).containsKey(deviceId)) {
+            return deviceToClientPerTenant.get(tenant).get(deviceId);
+        } else {
+            // TODO implement error handling
+            return deviceId;
+        }
     }
 
 }

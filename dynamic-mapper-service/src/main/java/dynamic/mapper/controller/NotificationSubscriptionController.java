@@ -19,7 +19,6 @@
  *
  */
 
-
 package dynamic.mapper.controller;
 
 import com.cumulocity.microservice.context.ContextService;
@@ -29,6 +28,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.NotificationSubscriptionRequest;
 import dynamic.mapper.model.NotificationSubscriptionResponse;
+import dynamic.mapper.model.ClientMappingRequest;
 import dynamic.mapper.model.Device;
 import dynamic.mapper.exception.OutboundMappingDisabledException;
 import dynamic.mapper.exception.DeviceNotFoundException;
@@ -49,6 +49,7 @@ import org.springframework.util.CollectionUtils;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -83,14 +84,14 @@ public class NotificationSubscriptionController {
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<NotificationSubscriptionResponse> createSubscription(
             @Valid @RequestBody NotificationSubscriptionRequest request) {
-        
+
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
         validateDeviceListNotEmpty(request.getDevices());
-        
+
         try {
             NotificationSubscriptionResponse response = subscriptionService.createDeviceSubscription(tenant, request);
-            log.info("{} - Successfully created subscription for {} devices", tenant, 
+            log.info("{} - Successfully created subscription for {} devices", tenant,
                     response.getDevices() != null ? response.getDevices().size() : 0);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -111,10 +112,10 @@ public class NotificationSubscriptionController {
     @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<NotificationSubscriptionResponse> updateSubscription(
             @Valid @RequestBody NotificationSubscriptionRequest request) {
-        
+
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
-        
+
         try {
             NotificationSubscriptionResponse response = subscriptionService.updateDeviceSubscription(tenant, request);
             log.info("{} - Successfully updated subscription", tenant);
@@ -135,7 +136,7 @@ public class NotificationSubscriptionController {
     public ResponseEntity<NotificationSubscriptionResponse> getSubscriptions() {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
-        
+
         try {
             NotificationSubscriptionResponse response = configurationRegistry.getNotificationSubscriber()
                     .getSubscriptionsDevices(tenant, null, null);
@@ -152,13 +153,13 @@ public class NotificationSubscriptionController {
     public ResponseEntity<?> deleteSubscription(@PathVariable String deviceId) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
-        
+
         try {
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId);
             if (mor == null) {
                 throw new DeviceNotFoundException("Device with id " + deviceId + " not found");
             }
-            
+
             configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor);
             log.info("{} - Successfully deleted subscription for device {}", tenant, deviceId);
             return ResponseEntity.ok().build();
@@ -175,10 +176,10 @@ public class NotificationSubscriptionController {
     @PutMapping(value = "/group", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<NotificationSubscriptionResponse> updateGroupSubscription(
             @Valid @RequestBody NotificationSubscriptionRequest request) {
-        
+
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
-        
+
         try {
             NotificationSubscriptionResponse response = subscriptionService.updateGroupSubscription(tenant, request);
             log.info("{} - Successfully updated group subscription", tenant);
@@ -194,7 +195,7 @@ public class NotificationSubscriptionController {
     public ResponseEntity<NotificationSubscriptionResponse> getGroupSubscriptions() {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
-        
+
         try {
             NotificationSubscriptionResponse response = configurationRegistry.getNotificationSubscriber()
                     .getSubscriptionsByDeviceGroup(tenant);
@@ -211,13 +212,13 @@ public class NotificationSubscriptionController {
     public ResponseEntity<?> deleteGroupSubscription(@PathVariable String groupId) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
-        
+
         try {
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, groupId);
             if (mor == null) {
                 throw new DeviceNotFoundException("Device group with id " + groupId + " not found");
             }
-            
+
             subscriptionService.deleteGroupSubscription(tenant, mor);
             log.info("{} - Successfully deleted group subscription for {}", tenant, groupId);
             return ResponseEntity.ok().build();
@@ -234,7 +235,7 @@ public class NotificationSubscriptionController {
     public ResponseEntity<NotificationSubscriptionResponse> getTypeSubscriptions() {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
-        
+
         try {
             NotificationSubscriptionResponse response = configurationRegistry.getNotificationSubscriber()
                     .getSubscriptionsByDeviceType(tenant);
@@ -250,10 +251,10 @@ public class NotificationSubscriptionController {
     @PutMapping(value = "/type", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<NotificationSubscriptionResponse> updateTypeSubscription(
             @Valid @RequestBody NotificationSubscriptionRequest request) {
-        
+
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
-        
+
         try {
             NotificationSubscriptionResponse response = configurationRegistry
                     .getNotificationSubscriber().updateSubscriptionByType(request.getTypes());
@@ -261,6 +262,130 @@ public class NotificationSubscriptionController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("{} - Error updating type subscription: {}", tenant, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Add client mapping for device")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Client mapping added successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Device not found or outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
+    @PutMapping(value = "/client/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> addClientMapping(
+            @PathVariable String deviceId,
+            @Valid @RequestBody ClientMappingRequest request) {
+
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+            // Validate device exists
+            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId);
+            if (mor == null) {
+                throw new DeviceNotFoundException("Device with id " + deviceId + " not found");
+            }
+
+            // Add client mapping
+            configurationRegistry.addClient(tenant, deviceId, request.getClientId());
+
+            log.info("{} - Successfully added client mapping: device {} -> client {}",
+                    tenant, deviceId, request.getClientId());
+
+            Map<String, String> response = Map.of(
+                    "deviceId", deviceId,
+                    "clientId", request.getClientId(),
+                    "status", "added");
+
+            return ResponseEntity.ok(response);
+
+        } catch (DeviceNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Error adding client mapping for device {}: {}", tenant, deviceId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Remove client mapping for device")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Client mapping removed successfully"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Device not found, client mapping not found, or outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
+    @DeleteMapping(value = "/client/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> removeClientMapping(@PathVariable String deviceId) {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+
+            // Check if client mapping exists before attempting to remove
+            String existingClientId = configurationRegistry.resolveDeviceToClient(tenant, deviceId);
+            if (existingClientId == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No client mapping found for device " + deviceId);
+            }
+
+            // Remove client mapping
+            configurationRegistry.removeClient(tenant, deviceId);
+
+            log.info("{} - Successfully removed client mapping: device {} (was mapped to client {})",
+                    tenant, deviceId, existingClientId);
+
+            Map<String, String> response = Map.of(
+                    "deviceId", deviceId,
+                    "previousClientId", existingClientId,
+                    "status", "removed");
+
+            return ResponseEntity.ok(response);
+
+        } catch (DeviceNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Error removing client mapping for device {}: {}", tenant, deviceId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Get client mapping for device")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Client mapping retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Device not found, client mapping not found, or outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(value = "/client/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> getClientMapping(@PathVariable String deviceId) {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+
+            // Resolve client mapping
+            String clientId = configurationRegistry.resolveDeviceToClient(tenant, deviceId);
+            if (clientId == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No client mapping found for device " + deviceId);
+            }
+
+            log.debug("{} - Retrieved client mapping: device {} -> client {}", tenant, deviceId, clientId);
+
+            Map<String, String> response = Map.of(
+                    "deviceId", deviceId,
+                    "clientId", clientId);
+
+            return ResponseEntity.ok(response);
+
+        } catch (DeviceNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Error retrieving client mapping for device {}: {}", tenant, deviceId, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
         }
     }

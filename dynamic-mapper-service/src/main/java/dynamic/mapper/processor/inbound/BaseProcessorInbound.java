@@ -73,6 +73,7 @@ public abstract class BaseProcessorInbound<T> {
     public BaseProcessorInbound(ConfigurationRegistry configurationRegistry) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.configurationRegistry = configurationRegistry;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
 
@@ -81,6 +82,8 @@ public abstract class BaseProcessorInbound<T> {
     protected ObjectMapper objectMapper;
 
     protected ExecutorService virtualThreadPool;
+
+    protected ConfigurationRegistry configurationRegistry;
 
     public abstract T deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException;
@@ -272,6 +275,10 @@ public abstract class BaseProcessorInbound<T> {
                         identity, context);
                 if (sourceId != null) {
                     context.setSourceId(sourceId.getManagedObject().getId().getValue());
+                    // cache the mapping of device to client ID
+                    if (context.getClient() != null) {
+                        configurationRegistry.addClient(tenant, context.getSourceId(), context.getClient());
+                    }
                 }
                 ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(tenant,
                         identity, context);
@@ -339,6 +346,10 @@ public abstract class BaseProcessorInbound<T> {
                 SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.value.toString());
+                // cache the mapping of device to client ID
+                if (context.getClient() != null) {
+                    configurationRegistry.addClient(tenant, sourceId.value.toString(), context.getClient());
+                }
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             }
         } else if ((Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(pathTarget)) {
@@ -348,6 +359,10 @@ public abstract class BaseProcessorInbound<T> {
             SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                     mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.value.toString());
+            // cache the mapping of device to client ID
+            if (context.getClient() != null) {
+                configurationRegistry.addClient(tenant, sourceId.value.toString(), context.getClient());
+            }
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
             context.setApi(API.fromString((String) substitute.value));

@@ -26,8 +26,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.catalina.Engine;
 import org.apache.pulsar.client.api.ClientBuilder;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Producer;
@@ -208,6 +210,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     protected MQTTServicePulsarCallback pulsarCallback = null;
     protected PulsarClient pulsarClient;
     private Consumer<byte[]> consumer;
+
     private Producer<byte[]> producer;
     private String towardsDeviceTopic;
     private String towardsPlatformTopic;
@@ -534,7 +537,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
-                    .property(PULSAR_PROPERTY_CLIENT, resolveDeviceToClient(context)) // Store client ID
+                    .property(PULSAR_PROPERTY_CLIENT, configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId())) 
                     .sendAsync()
                     .exceptionally(throwable -> {
                         log.debug("{} - Failed to send AT_MOST_ONCE message (expected): {}",
@@ -546,7 +549,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
-                    .property(PULSAR_PROPERTY_CLIENT, resolveDeviceToClient(context)) // Store client ID
+                    .property(PULSAR_PROPERTY_CLIENT, configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId())) 
                     .send();
         }
 
@@ -558,10 +561,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
     }
 
-    private String resolveDeviceToClient(ProcessingContext<?> context) {
-        // TODO IMPLEMENTATION: Adjust if needed to map device to client ID
-        return context.getSourceId();
-    }
 
     private static String getSubscriptionName(String identifier, String suffix) {
         return "CUMULOCITY_MQTT_SERVICE_PULSAR" + identifier + suffix;
