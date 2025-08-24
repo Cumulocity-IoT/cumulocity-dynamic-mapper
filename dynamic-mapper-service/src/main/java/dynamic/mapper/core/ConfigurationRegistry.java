@@ -21,10 +21,14 @@
 
 package dynamic.mapper.core;
 
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
@@ -491,25 +495,89 @@ public class ConfigurationRegistry {
     }
 
     public void addClient(String tenant, String deviceId, String clientId) {
-        deviceToClientPerTenant.get(tenant).put(deviceId, clientId);
+        deviceToClientPerTenant.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
+                .put(deviceId, clientId);
+        log.debug("Added client mapping for tenant {}: device {} -> client {}", tenant, deviceId, clientId);
     }
 
-    public void removeClient(String tenant,String clientId) {
-        deviceToClientPerTenant.get(tenant).values().removeIf(value -> value.equals(clientId));
+    public void removeClient(String tenant, String deviceId) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings != null) {
+            String removedClientId = tenantMappings.remove(deviceId);
+            if (removedClientId != null) {
+                log.debug("Removed client mapping for tenant {}: device {} (was mapped to client {})",
+                        tenant, deviceId, removedClientId);
+            }
+        }
+    }
+
+    public void removeClientById(String tenant, String clientId) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings != null) {
+            List<String> devicesToRemove = tenantMappings.entrySet().stream()
+                    .filter(entry -> clientId.equals(entry.getValue()))
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+
+            devicesToRemove.forEach(tenantMappings::remove);
+            log.debug("Removed {} device mappings for client {} in tenant {}",
+                    devicesToRemove.size(), clientId, tenant);
+        }
     }
 
     public void clearCacheDeviceToClient(String tenant) {
         deviceToClientPerTenant.put(tenant, new ConcurrentHashMap<>());
+        log.debug("Cleared all client mappings for tenant {}", tenant);
     }
-    
+
     public String resolveDeviceToClient(String tenant, String deviceId) {
-        // TODO IMPLEMENTATION: Adjust if needed to map device to client ID
-        if (deviceToClientPerTenant.get(tenant).containsKey(deviceId)) {
-            return deviceToClientPerTenant.get(tenant).get(deviceId);
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings != null && tenantMappings.containsKey(deviceId)) {
+            return tenantMappings.get(deviceId);
         } else {
-            // TODO implement error handling
-            return deviceId;
+            // Return null if no mapping exists (instead of returning deviceId)
+            // This allows proper 404 handling in the controller
+            return null;
         }
+    }
+
+    public Map<String, String> getAllClientMappings(String tenant) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        return tenantMappings != null ? new HashMap<>(tenantMappings) : new HashMap<>();
+    }
+
+    public List<String> getDevicesForClient(String tenant, String clientId) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings == null) {
+            return new ArrayList<>();
+        }
+
+        return tenantMappings.entrySet().stream()
+                .filter(entry -> clientId.equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    public List<String> getAllClients(String tenant) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings == null) {
+            return new ArrayList<>();
+        }
+
+        return tenantMappings.values().stream()
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    public int getClientMappingCount(String tenant) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        return tenantMappings != null ? tenantMappings.size() : 0;
+    }
+
+    public boolean hasClientMapping(String tenant, String deviceId) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        return tenantMappings != null && tenantMappings.containsKey(deviceId);
     }
 
 }
