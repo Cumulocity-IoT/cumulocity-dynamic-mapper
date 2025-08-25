@@ -29,15 +29,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import dynamic.mapper.core.C8YAgent;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DeviceToClientRepresentation implements Serializable {
+public class DeviceToClientMapRepresentation implements Serializable {
 
-	public static final String AGENT_NAME = "Dynamic Mapper Service";
-	public static final String AGENT_TYPE = "d11r_mappingService_type";
+	public static final String DEVICE_TO_CLIENT_MAP_NAME = "Dynamic Mapper Device To Client Map";
+	public static final String DEVICE_TO_CLIENT_MAP_TYPE = "d11r_deviceToClientMap_type";
+	public static final String DEVICE_TO_CLIENT_MAP_ID = "d11r_deviceToClientMap_id";
+    public static final String DEVICE_TO_CLIENT_MAP_FRAGMENT = "d11r_deviceToClientMap";
 
 	@JsonProperty("id")
 	private String id;
@@ -48,6 +49,6 @@ public class DeviceToClientRepresentation implements Serializable {
 	@JsonProperty(value = "name")
 	private String name;
 
-	@JsonProperty(value = C8YAgent.DEVICE_TO_CLIENT_MAP_FRAGMENT)
+	@JsonProperty(value = DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT)
 	private Map<String, String> deviceToClientMap;
 }

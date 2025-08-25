@@ -741,12 +741,17 @@ public abstract class AConnectorClient {
     private void performHousekeepingTasks() throws Exception {
         Instant now = Instant.now();
         logHousekeepingStatus(now);
+        connectorSpecificHousekeeping(tenant);
 
         mappingService.cleanDirtyMappings(tenant);
         mappingService.sendMappingStatus(tenant);
 
         updateConnectorStatusIfNeeded();
         monitorSubscriptions();
+    }
+
+    protected void connectorSpecificHousekeeping(String tenant) {
+       // Implement in specific connector if needed 
     }
 
     private void logHousekeepingStatus(Instant now) {

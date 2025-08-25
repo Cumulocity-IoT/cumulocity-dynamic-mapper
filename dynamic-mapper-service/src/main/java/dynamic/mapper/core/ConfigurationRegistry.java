@@ -55,8 +55,11 @@ import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
+import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
@@ -119,6 +122,9 @@ public class ConfigurationRegistry {
     // TODO persist cache as DeviceToClientRepresentation
     // Structure: < Tenant, < Device, Client > >
     private Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
+
+    // Structure: < Tenant , ID Map >
+    private Map<String, String> deviceToClientMapRepresentations = new ConcurrentHashMap<>();
 
     @Getter
     private C8YAgent c8yAgent;
@@ -309,11 +315,20 @@ public class ConfigurationRegistry {
 
     public MapperServiceRepresentation initializeMapperServiceRepresentation(String tenant) {
         ManagedObjectRepresentation mapperServiceMOR = c8yAgent
-                .initializeMapperServiceObject(tenant);
+                .initializeMapperServiceRepresentation(tenant);
         MapperServiceRepresentation mapperServiceRepresentation = objectMapper
                 .convertValue(mapperServiceMOR, MapperServiceRepresentation.class);
         addMapperServiceRepresentation(tenant, mapperServiceRepresentation);
         return mapperServiceRepresentation;
+    }
+
+    public DeviceToClientMapRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
+        ManagedObjectRepresentation mapperServiceMOR = c8yAgent
+                .initializeDeviceToClientMapRepresentation(tenant);
+        DeviceToClientMapRepresentation deviceToClientMapRepresentation = objectMapper
+                .convertValue(mapperServiceMOR, DeviceToClientMapRepresentation.class);
+        addDeviceToClientMapRepresentation(tenant, deviceToClientMapRepresentation);
+        return deviceToClientMapRepresentation;
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {
@@ -401,6 +416,25 @@ public class ConfigurationRegistry {
 
     public void removeMapperServiceRepresentation(String tenant) {
         mapperServiceRepresentations.remove(tenant);
+    }
+
+    private void addDeviceToClientMapRepresentation(String tenant,
+            DeviceToClientMapRepresentation deviceToClientMapRepresentation) {
+        deviceToClientMapRepresentations.put(tenant, deviceToClientMapRepresentation.getId());
+        Map<String, String> clientToDeviceMap = new ConcurrentHashMap<>();
+        if (deviceToClientMapRepresentation.getDeviceToClientMap() != null) {
+            log.debug("{} - Initializing Device To Client Map: {}, {} ", tenant,
+                    deviceToClientMapRepresentation.getDeviceToClientMap(),
+                    (deviceToClientMapRepresentation.getDeviceToClientMap() == null
+                            || deviceToClientMapRepresentation.getDeviceToClientMap().size() == 0 ? 0
+                                    : deviceToClientMapRepresentation.getDeviceToClientMap().size()));
+            clientToDeviceMap = deviceToClientMapRepresentation.getDeviceToClientMap();
+        }
+        deviceToClientPerTenant.put(tenant, clientToDeviceMap);
+    }
+
+    public String getDeviceToClientMapId(String tenant) {
+        return deviceToClientMapRepresentations.get(tenant);
     }
 
     public ExtensibleProcessorInbound getExtensibleProcessor(String tenant) {

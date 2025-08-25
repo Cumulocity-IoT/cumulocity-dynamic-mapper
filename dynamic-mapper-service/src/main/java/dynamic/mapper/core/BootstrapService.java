@@ -187,6 +187,7 @@ public class BootstrapService {
         configurationRegistry.initializeResources(tenant);
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMapperServiceRepresentation(tenant);
+        configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
         
         mappingService.createResources(tenant);
 

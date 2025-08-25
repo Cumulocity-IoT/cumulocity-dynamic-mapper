@@ -60,9 +60,9 @@ import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
+import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.MappingTreeNode;
@@ -213,7 +213,7 @@ public class MappingService {
                             ms[index].name = getMappingOutboundFromCache(tenant, ms[index].id).name;
                         }
                     }
-                    service.put(C8YAgent.MAPPING_FRAGMENT, ms);
+                    service.put(MapperServiceRepresentation.MAPPING_FRAGMENT, ms);
                     ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                     updateMor.setId(GId.asGId(mapperServiceRepresentation.getId()));
                     updateMor.setAttrs(service);
@@ -223,6 +223,26 @@ public class MappingService {
                             statusMapping.values().size(),
                             initialized);
                 }
+            });
+        }
+    }
+
+    public void sendDeviceToClientMap(String tenant) {
+        if (configurationRegistry.getAllClientMappings(tenant) == null
+                & configurationRegistry.getAllClientMappings(tenant).size() >= 0) {
+            subscriptionsService.runForTenant(tenant, () -> {
+                String deviceToClientMapId = configurationRegistry
+                        .getDeviceToClientMapId(tenant);
+                Map<String, String> clientToDeviceMap = configurationRegistry.getAllClientMappings(tenant);
+
+                log.debug("{} - Sending Device To Client Map: {}", tenant, clientToDeviceMap.values().size());
+                
+                Map<String, Object> fragment = new ConcurrentHashMap<String, Object>();
+                fragment.put(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, fragment);
+                ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
+                updateMor.setId(GId.asGId(deviceToClientMapId));
+                updateMor.setAttrs(fragment);
+                this.inventoryApi.update(updateMor);
             });
         }
     }
@@ -965,7 +985,7 @@ public class MappingService {
                     deploymentMaps.get(tenant).size());
             Map<String, Object> map = new ConcurrentHashMap<String, Object>();
             Map<String, List<String>> deploymentMapPerTenant = deploymentMaps.get(tenant);
-            map.put(C8YAgent.DEPLOYMENT_MAP_FRAGMENT, deploymentMapPerTenant);
+            map.put(MapperServiceRepresentation.DEPLOYMENT_MAP_FRAGMENT, deploymentMapPerTenant);
             ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
             updateMor.setId(GId.asGId(mapperServiceRepresentation.getId()));
             updateMor.setAttrs(map);
