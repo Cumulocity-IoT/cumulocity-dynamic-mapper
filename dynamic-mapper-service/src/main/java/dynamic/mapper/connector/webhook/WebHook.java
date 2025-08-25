@@ -615,6 +615,10 @@ public class WebHook extends AConnectorClient {
         return result;
     }
 
+    @Override
+    public void connectorSpecificHousekeeping(String tenant) {
+    }
+
     // Helper method for deep merging of objects - unlike mergeNodes, this preserves
     // all fields
     private JsonNode deepMergeObjects(JsonNode existingObj, JsonNode updateObj) {

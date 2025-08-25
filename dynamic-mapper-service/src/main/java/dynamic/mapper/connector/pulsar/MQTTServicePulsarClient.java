@@ -476,6 +476,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         log.info("{} - Unsubscription registered for topic: [{}]", tenant, topic);
     }
 
+
     @Override
     public void connectorSpecificHousekeeping(String tenant) {
         mappingService.sendDeviceToClientMap(tenant);

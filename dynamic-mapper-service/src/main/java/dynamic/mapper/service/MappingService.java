@@ -228,17 +228,17 @@ public class MappingService {
     }
 
     public void sendDeviceToClientMap(String tenant) {
-        if (configurationRegistry.getAllClientMappings(tenant) == null
-                & configurationRegistry.getAllClientMappings(tenant).size() >= 0) {
+        Map<String, String> clientToDeviceMap = configurationRegistry.getAllClientMappings(tenant);
+        if (clientToDeviceMap != null
+                && clientToDeviceMap.size() >= 0) {
             subscriptionsService.runForTenant(tenant, () -> {
                 String deviceToClientMapId = configurationRegistry
                         .getDeviceToClientMapId(tenant);
-                Map<String, String> clientToDeviceMap = configurationRegistry.getAllClientMappings(tenant);
 
-                log.debug("{} - Sending Device To Client Map: {}", tenant, clientToDeviceMap.values().size());
-                
+                log.debug("{} - Sending Device To Client Map: {}", tenant, clientToDeviceMap.size());
+
                 Map<String, Object> fragment = new ConcurrentHashMap<String, Object>();
-                fragment.put(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, fragment);
+                fragment.put(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, clientToDeviceMap);
                 ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                 updateMor.setId(GId.asGId(deviceToClientMapId));
                 updateMor.setAttrs(fragment);
