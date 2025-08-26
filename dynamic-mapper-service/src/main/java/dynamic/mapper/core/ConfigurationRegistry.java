@@ -58,8 +58,6 @@ import dynamic.mapper.connector.webhook.WebHook;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
@@ -69,7 +67,6 @@ import dynamic.mapper.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapper.processor.inbound.HexProcessorInbound;
 import dynamic.mapper.processor.inbound.JSONProcessorInbound;
 import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.outbound.BaseProcessorOutbound;
 import dynamic.mapper.processor.outbound.CodeBasedProcessorOutbound;
 import dynamic.mapper.processor.outbound.DispatcherOutbound;
@@ -119,11 +116,10 @@ public class ConfigurationRegistry {
     // Structure: < Tenant, < ExtensibleProcessorSource > >
     private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new ConcurrentHashMap<>();
 
-    // TODO persist cache as DeviceToClientRepresentation
     // Structure: < Tenant, < Device, Client > >
     private Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
 
-    // Structure: < Tenant , ID Map >
+    // Structure: < Tenant, Id ManagedObject Map >
     private Map<String, String> deviceToClientMapRepresentations = new ConcurrentHashMap<>();
 
     @Getter
