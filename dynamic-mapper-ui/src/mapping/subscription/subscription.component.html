@@ -22,48 +22,48 @@
 <c8y-title translate>Subscription outbound</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription4()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="!static">
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="path == 'dynamic'">
     <i c8yIcon="subscription"></i>
     {{ 'Manage subscriptions (by device type)' | translate }}
   </button>
   <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Specify device types. When creating a device of any of types a subscription is created (dynamic). When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
         | translate
-    }}" placement="bottom" triggers="focus" type="button" *ngIf="!static"></button>
+    }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'dynamic'"></button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription3()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="!static">
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="path == 'dynamic'">
     <i c8yIcon="subscription"></i>
     {{ 'Manage subscriptions (by device groups)' | translate }}
   </button>
   <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic).'
         | translate
-    }}" placement="bottom" triggers="focus" type="button" *ngIf="!static"></button>
+    }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'dynamic'"></button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription1()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="static">
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="path == 'static'">
     <i c8yIcon="subscription"></i>
     {{ 'Manage subscriptions (device selection)' | translate }}
   </button>
   <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Specify a device or device group to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static).'
         | translate
-    }}" placement="bottom" triggers="focus" type="button" *ngIf="static"></button>
+    }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'static'"></button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Manage subscriptions (table)' | translate }}"
     (click)="onDefineSubscription2()"
-    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="static">
+    [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole" *ngIf="path == 'static'">
     <i c8yIcon="subscription"></i>
     {{ 'Manage subscriptions (device table )' | translate }}
   </button>
   <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Specify a device or device group using filters in the device table to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static).'
         | translate
-    }}" placement="bottom" triggers="focus" type="button" *ngIf="static"></button>
+    }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'static'"></button>
 </c8y-action-bar-item>
 
 <div class="card" *ngIf="subscriptionDevices?.devices">

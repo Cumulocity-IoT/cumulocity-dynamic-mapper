@@ -52,7 +52,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { DeploymentMapEntry, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { NotificationSubscriptionRequest, Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
+import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
 import { SubscriptionService } from '../core/subscription.service';
 
 @Component({
@@ -69,11 +69,14 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   ) {
     // console.log('constructor');
     const href = this.router.url;
-    this.static = href.match(
-      /c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/static/g
-    )
-      ? true
-      : false;
+    // this.static = href.match(
+    //   /c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/static/g
+    // )
+    //   ? true
+    //   : false;
+
+    const pathMatch = href.match(/c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/(static|dynamic|deviceToClientMap)/);
+    this.path = pathMatch ? pathMatch[1] : null;
 
     this.loadSubscriptionDevice();
     this.loadSubscriptionByDeviceGroup();
@@ -104,6 +107,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   Direction = Direction;
 
   static: boolean = false;
+  path: string;
   titleMapping: string;
   readonly titleSubscription: string = 'Subscription devices mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
@@ -297,7 +301,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     };
     try {
       await this.subscriptionService.updateSubscriptionByDeviceGroup(
-       subscriptionDevices
+        subscriptionDevices
       );
       this.loadSubscriptionByDeviceGroup();
       this.loadSubscriptionDevice();

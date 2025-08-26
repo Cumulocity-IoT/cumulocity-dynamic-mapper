@@ -30,7 +30,7 @@ export class MappingTabFactory implements TabFactory {
   constructor(
     public router: Router,
     private sharedService: SharedService
-  ) {}
+  ) { }
 
   async get() {
     // console.log("MappingTabFactory",this.router.url, this.router.url.match(/c8y-pkg-dynamic-mapper/g));
@@ -50,6 +50,13 @@ export class MappingTabFactory implements TabFactory {
         priority: 930,
         label: 'Subscription static',
         icon: 'check-box',
+        orientation: 'horizontal',
+      } as Tab);
+      tabs.push({
+        path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/deviceToClientMap`,
+        priority: 910,
+        label: 'Device To Client',
+        icon: 'relay-home-automation',
         orientation: 'horizontal',
       } as Tab);
     }

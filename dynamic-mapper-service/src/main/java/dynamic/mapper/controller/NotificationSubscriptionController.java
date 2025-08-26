@@ -300,8 +300,7 @@ public class NotificationSubscriptionController {
 
             Map<String, String> response = Map.of(
                     "deviceId", deviceId,
-                    "clientId", request.getClientId(),
-                    "status", "added");
+                    "clientId", request.getClientId());
 
             return ResponseEntity.ok(response);
 
@@ -407,7 +406,6 @@ public class NotificationSubscriptionController {
             Map<String, String> allMappings = configurationRegistry.getAllClientMappings(tenant);
 
             Map<String, Object> response = Map.of(
-                    "tenant", tenant,
                     "totalMappings", allMappings.size(),
                     "mappings", allMappings);
 
