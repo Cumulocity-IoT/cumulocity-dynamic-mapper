@@ -183,12 +183,12 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     try {
       await this.subscriptionService.deleteClientRelationForDevice(device);
       this.alertService.success(
-        gettext('Subscription for this device deleted successfully')
+        gettext('Relation for this device deleted successfully')
       );
       this.loadAllClientRelations();
     } catch (error) {
       this.alertService.danger(
-        gettext('Failed to delete subscription:') + error
+        gettext('Failed to delete relation:') + error
       );
     }
   }
@@ -226,10 +226,10 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     let result: boolean = false;
     if (confirmation) {
       const initialState = {
-        title: multiple ? 'Delete subscriptions' : 'Delete subscription',
+        title: multiple ? 'Delete relations' : 'Delete relation',
         message: multiple
-          ? 'You are about to delete subscriptions. Do you want to proceed to delete ALL?'
-          : 'You are about to delete a subscription. Do you want to proceed?',
+          ? 'You are about to delete relations. Do you want to proceed to delete ALL?'
+          : 'You are about to delete a relation. Do you want to proceed?',
         labels: {
           ok: 'Delete',
           cancel: 'Cancel'

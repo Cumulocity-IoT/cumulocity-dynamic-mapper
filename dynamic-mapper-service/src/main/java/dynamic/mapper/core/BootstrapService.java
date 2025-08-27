@@ -179,16 +179,15 @@ public class BootstrapService {
         c8YAgent.createExtensibleProcessor(tenant);
         c8YAgent.loadProcessorExtensions(tenant);
 
-        
         ServiceConfiguration serviceConfiguration = initializeServiceConfiguration(tenant);
         initializeCaches(tenant, serviceConfiguration);
-        
+
         configurationRegistry.addMicroserviceCredentials(tenant, credentials);
         configurationRegistry.initializeResources(tenant);
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMapperServiceRepresentation(tenant);
         configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
-        
+
         mappingService.createResources(tenant);
 
         connectorRegistry.initializeResources(tenant);
@@ -401,6 +400,14 @@ public class BootstrapService {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
             cleanupCachesForTenant(tenant);
+        });
+    }
+
+    @Scheduled(cron = "* 30 * * * *")
+    public void sendDeviceToClientMap() {
+        subscriptionsService.runForEachTenant(() -> {
+            String tenant = subscriptionsService.getTenant();
+            mappingService.sendDeviceToClientMap(tenant);
         });
     }
 

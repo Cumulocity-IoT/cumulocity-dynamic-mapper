@@ -416,7 +416,7 @@ export class SubscriptionService implements OnDestroy {
       'getSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/relations`,
+          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/client`,
           {
             headers: {
               'content-type': 'application/json'
@@ -469,8 +469,12 @@ export class SubscriptionService implements OnDestroy {
   /**
 * Clear all client relations
 */
-  async deleteClientRelationForDevice(deviceId: string | IIdentified): Promise<any | null> {
+  async deleteClientRelationForDevice(device: string | IIdentified): Promise<any | null> {
     const features = await this.sharedService.getFeatures();
+    let deviceId = device;
+    if (typeof (device) == 'object') {
+      deviceId = device.id as string;
+    }
 
     if (!features?.outputMappingEnabled) {
       return null;
@@ -480,7 +484,7 @@ export class SubscriptionService implements OnDestroy {
       'removeClientRelationForDevice',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/device/${deviceId}/client`,
+          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/device/${deviceId}`,
           {
             headers: {
               'content-type': 'application/json'

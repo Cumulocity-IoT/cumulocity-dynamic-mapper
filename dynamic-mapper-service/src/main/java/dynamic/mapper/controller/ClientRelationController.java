@@ -115,52 +115,6 @@ public class ClientRelationController {
         }
     }
 
-    @Operation(summary = "Remove client relation for device")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Client relation removed successfully"),
-            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
-            @ApiResponse(responseCode = "404", description = "Device not found, client relation not found, or outbound mapping disabled"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PreAuthorize(ADMIN_CREATE_ROLES)
-    @DeleteMapping(value = "/client/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, String>> removeClientRelation(@PathVariable String deviceId) {
-        String tenant = getTenant();
-        validateOutboundMappingEnabled(tenant);
-
-        try {
-
-            // Check if client relation exists before attempting to remove
-            String existingClientId = configurationRegistry.resolveDeviceToClient(tenant, deviceId);
-            if (existingClientId == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "No client relation found for device " + deviceId);
-            }
-
-            // Remove client relation
-            configurationRegistry.removeClient(tenant, deviceId);
-
-            log.info("{} - Successfully removed client relation: device {} (was mapped to client {})",
-                    tenant, deviceId, existingClientId);
-
-            Map<String, String> response = Map.of(
-                    "deviceId", deviceId,
-                    "previousClientId", existingClientId,
-                    "status", "removed");
-
-            return ResponseEntity.ok(response);
-
-        } catch (DeviceNotFoundException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        } catch (ResponseStatusException e) {
-            // Let ResponseStatusException bubble up - Spring will handle it
-            throw e;
-        } catch (Exception e) {
-            log.error("{} - Error removing client relation for device {}: {}", tenant, deviceId, e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
-        }
-    }
-
     @Operation(summary = "Get client relation for device")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Client relation retrieved successfully"),
@@ -270,7 +224,7 @@ public class ClientRelationController {
 
     @Operation(summary = "Remove client mapping for specific device")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Client mapping removed successfully"),
+            @ApiResponse(responseCode = "200", description = "Client mapping deleted successfully"),
             @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
             @ApiResponse(responseCode = "404", description = "Device not found, client mapping not found, or outbound mapping disabled"),
             @ApiResponse(responseCode = "500", description = "Internal server error")

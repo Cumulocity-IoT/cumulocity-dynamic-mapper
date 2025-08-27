@@ -26,10 +26,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.catalina.Engine;
 import org.apache.pulsar.client.api.ClientBuilder;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Producer;
@@ -473,13 +471,13 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         // In Cumulocity MQTT Service model, we don't manage individual subscriptions
         // The platform topic consumer remains active
-        log.info("{} - Unsubscription registered for topic: [{}]", tenant, topic);
+        log.info("{} - Unsubscribing registered for topic: [{}]", tenant, topic);
     }
 
 
     @Override
     public void connectorSpecificHousekeeping(String tenant) {
-        mappingService.sendDeviceToClientMap(tenant);
+        //mappingService.sendDeviceToClientMap(tenant);
     }
 
     @Override
