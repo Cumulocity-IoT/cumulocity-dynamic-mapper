@@ -106,7 +106,7 @@ export class SubscriptionService implements OnDestroy {
   ): Promise<NotificationSubscriptionResponse> {
     // this.validateSubscriptionRequest(request, SubscriptionType.DEVICE);
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'updateSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
@@ -137,7 +137,7 @@ export class SubscriptionService implements OnDestroy {
   ): Promise<NotificationSubscriptionResponse> {
     // this.validateSubscriptionRequest(request, SubscriptionType.GROUP);
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'updateSubscriptionByDeviceGroup',
       async () => {
         const response = await this.client.fetch(
@@ -168,7 +168,7 @@ export class SubscriptionService implements OnDestroy {
   ): Promise<NotificationSubscriptionResponse> {
     // this.validateSubscriptionRequest(request, SubscriptionType.TYPE);
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'updateSubscriptionByDeviceType',
       async () => {
         const response = await this.client.fetch(
@@ -199,7 +199,7 @@ export class SubscriptionService implements OnDestroy {
   ): Promise<NotificationSubscriptionResponse> {
     // this.validateSubscriptionRequest(request);
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'createSubscription',
       async () => {
         const response = await this.client.fetch(
@@ -230,7 +230,7 @@ export class SubscriptionService implements OnDestroy {
       throw new ValidationError('Device ID is required for deletion');
     }
 
-    await this.handleSubscriptionOperation(
+    await this.handleOperation(
       'deleteSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
@@ -260,7 +260,7 @@ export class SubscriptionService implements OnDestroy {
       throw new ValidationError('Group ID is required for deletion');
     }
 
-    await this.handleSubscriptionOperation(
+    await this.handleOperation(
       'deleteSubscriptionDeviceGroup',
       async () => {
         const response = await this.client.fetch(
@@ -294,7 +294,7 @@ export class SubscriptionService implements OnDestroy {
       return null;
     }
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'getSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
@@ -326,7 +326,7 @@ export class SubscriptionService implements OnDestroy {
       return null;
     }
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'getSubscriptionByDeviceGroup',
       async () => {
         const response = await this.client.fetch(
@@ -358,7 +358,7 @@ export class SubscriptionService implements OnDestroy {
       return null;
     }
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'getSubscriptionByDeviceType',
       async () => {
         const response = await this.client.fetch(
@@ -402,9 +402,9 @@ export class SubscriptionService implements OnDestroy {
   }
 
 
-    /**
-   * Gets all client mappings
-   */
+  /**
+ * Gets all client relations
+ */
   async getAllClientRelations(): Promise<any | null> {
     const features = await this.sharedService.getFeatures();
 
@@ -412,16 +412,80 @@ export class SubscriptionService implements OnDestroy {
       return null;
     }
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'getSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/client`,
+          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/relations`,
           {
             headers: {
               'content-type': 'application/json'
             },
             method: 'GET'
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
+      }
+    );
+  }
+
+  /**
+  * Delete all client relations
+  */
+  async deleteAllClientRelations(): Promise<any | null> {
+    const features = await this.sharedService.getFeatures();
+
+    if (!features?.outputMappingEnabled) {
+      return null;
+    }
+
+    return this.handleOperation(
+      'deleteAllClientRelations',
+      async () => {
+        const response = await this.client.fetch(
+          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/relations`,
+          {
+            headers: {
+              'content-type': 'application/json'
+            },
+            method: 'DELETE'
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
+      }
+    );
+  }
+
+  /**
+* Clear all client relations
+*/
+  async deleteClientRelationForDevice(deviceId: string | IIdentified): Promise<any | null> {
+    const features = await this.sharedService.getFeatures();
+
+    if (!features?.outputMappingEnabled) {
+      return null;
+    }
+
+    return this.handleOperation(
+      'removeClientRelationForDevice',
+      async () => {
+        const response = await this.client.fetch(
+          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/device/${deviceId}/client`,
+          {
+            headers: {
+              'content-type': 'application/json'
+            },
+            method: 'DELETE'
           }
         );
 
@@ -560,7 +624,7 @@ export class SubscriptionService implements OnDestroy {
   /**
    * Handles subscription operations with error handling, loading states, and retry logic
    */
-  private async handleSubscriptionOperation<T>(
+  private async handleOperation<T>(
     operationName: string,
     operation: () => Promise<T>
   ): Promise<T> {

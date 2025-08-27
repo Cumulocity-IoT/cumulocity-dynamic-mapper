@@ -27,14 +27,18 @@ import {
 } from '@angular/core';
 import {
   ActionControl,
+  AlertService,
+  BuiltInActionType,
   BulkActionControl,
   Column,
   ColumnDataType,
   DataGridComponent,
   DisplayOptions,
+  gettext,
   Pagination,
 } from '@c8y/ngx-components';
 import {
+  ConfirmationModalComponent,
   Direction,
   Feature,
   MappingType,
@@ -42,8 +46,9 @@ import {
 
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { DeploymentMapEntry } from '../../shared';
 import { SubscriptionService } from '../core/subscription.service';
+import { IIdentified } from '@c8y/client';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 
 @Component({
   selector: 'd11r-mapping-device-client-map',
@@ -53,6 +58,7 @@ import { SubscriptionService } from '../core/subscription.service';
   standalone: false
 })
 export class DeviceClientMapComponent implements OnInit, OnDestroy {
+
   @ViewChild('deviceToClientGrid') deviceToClientGrid: DataGridComponent;
 
   constructor(
@@ -65,7 +71,8 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   private subscriptionService = inject(SubscriptionService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-
+  private bsModalService = inject(BsModalService);
+  private alertService = inject(AlertService);
 
   clientRelations: any;
   mapEntries: any[];
@@ -73,7 +80,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
 
   titleMapping: string;
 
-  readonly titleSubscription: string = 'Device to Client Map';
+  readonly titleRelation: string = 'Device to Client Map';
 
   readonly displayOptions: DisplayOptions = {
     bordered: true,
@@ -83,7 +90,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     hover: true
   };
 
-  columnsSubscriptions: Column[] = [
+  columnsRelations: Column[] = [
     {
       name: 'Id',
       header: 'Device ID',
@@ -109,14 +116,22 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     currentPage: 1
   };
 
-  actionControlSubscription: ActionControl[] = [];
-  bulkActionControlSubscription: BulkActionControl[] = [];
+  actionControlRelation: ActionControl[] = [];
+  bulkActionControlRelation: BulkActionControl[] = [];
   feature: Feature;
-
-
 
   ngOnInit(): void {
     this.feature = this.route.snapshot.data['feature'];
+    if (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) {
+      this.bulkActionControlRelation.push({
+        type: BuiltInActionType.Delete,
+        callback: this.deleteRelationBulkWithConfirmation.bind(this)
+      });
+      this.actionControlRelation.push({
+        type: BuiltInActionType.Delete,
+        callback: this.deleteRelationWithConfirmation.bind(this)
+      });
+    }
   }
 
   async loadAllClientRelations(): Promise<void> {
@@ -132,9 +147,105 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     this.deviceToClientGrid?.reload();
   }
 
-
   ngOnDestroy(): void {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
+  }
+
+  async onDeleteAllClientRelations() {
+    let result: boolean = false;
+    const initialState = {
+      title: 'Delete all relations ',
+      message: 'You are about to delete all relations. Do you want to proceed to delete ALL?'
+      ,
+      labels: {
+        ok: 'Delete',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      ConfirmationModalComponent,
+      { initialState }
+    );
+
+    result = await confirmDeletionModalRef.content.closeSubject.toPromise();
+    if (result) {
+      await this.subscriptionService.deleteAllClientRelations();
+      this.alertService.success(
+        gettext('Relations deleted successfully')
+      );
+      this.loadAllClientRelations();
+    }
+  }
+
+  async deleteRelation(device: IIdentified): Promise<void> {
+    // console.log('Delete device', device);
+    try {
+      await this.subscriptionService.deleteClientRelationForDevice(device);
+      this.alertService.success(
+        gettext('Subscription for this device deleted successfully')
+      );
+      this.loadAllClientRelations();
+    } catch (error) {
+      this.alertService.danger(
+        gettext('Failed to delete subscription:') + error
+      );
+    }
+  }
+
+  onAddRelations() {
+      this.alertService.info(
+        gettext('Still to be implemented!')
+      );
+  }
+
+  private async deleteRelationBulkWithConfirmation(ids: string[]): Promise<void> {
+    let continueDelete: boolean = false;
+    for (let index = 0; index < ids.length; index++) {
+      const device2Delete = this.clientRelations?.relations.find(
+        (de) => de.id == ids[index]
+      );
+      if (index == 0) {
+        continueDelete = await this.deleteRelationWithConfirmation(
+          device2Delete,
+          true,
+          true
+        );
+      } else if (continueDelete) {
+        this.deleteRelation(device2Delete);
+      }
+    }
+    this.deviceToClientGrid.setAllItemsSelected(false);
+  }
+
+  private async deleteRelationWithConfirmation(
+    device2Delete: IIdentified,
+    confirmation: boolean = true,
+    multiple: boolean = false
+  ): Promise<boolean | PromiseLike<boolean>> {
+    let result: boolean = false;
+    if (confirmation) {
+      const initialState = {
+        title: multiple ? 'Delete subscriptions' : 'Delete subscription',
+        message: multiple
+          ? 'You are about to delete subscriptions. Do you want to proceed to delete ALL?'
+          : 'You are about to delete a subscription. Do you want to proceed?',
+        labels: {
+          ok: 'Delete',
+          cancel: 'Cancel'
+        }
+      };
+      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+        ConfirmationModalComponent,
+        { initialState }
+      );
+
+      result = await confirmDeletionModalRef.content.closeSubject.toPromise();
+      if (result) {
+        await this.deleteRelation(device2Delete);
+      }
+    }
+    this.deviceToClientGrid.setAllItemsSelected(false);
+    return result;
   }
 }
