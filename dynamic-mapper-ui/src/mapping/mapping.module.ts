@@ -62,7 +62,7 @@ import { DeviceSelectorSubscription3Component } from './subscription/device-sele
 import { DeviceSelectorSubscription4Component } from './subscription/device-selector4/device-selector-subscription4.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
-import { DeviceClientMapComponent } from './subscription/device-client-map.component';
+import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
 
 @NgModule({
   declarations: [
@@ -144,7 +144,7 @@ import { DeviceClientMapComponent } from './subscription/device-client-map.compo
       }
     }),
     hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/deviceToClientMap`,
+      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
       component: DeviceClientMapComponent,
       resolve: {
         feature: featureResolver

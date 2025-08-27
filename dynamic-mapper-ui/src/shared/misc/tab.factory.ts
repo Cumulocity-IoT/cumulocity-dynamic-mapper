@@ -52,13 +52,6 @@ export class MappingTabFactory implements TabFactory {
         icon: 'check-box',
         orientation: 'horizontal',
       } as Tab);
-      tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/deviceToClientMap`,
-        priority: 910,
-        label: 'Device To Client',
-        icon: 'relay-home-automation',
-        orientation: 'horizontal',
-      } as Tab);
     }
     return tabs;
   }
