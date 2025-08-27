@@ -23,8 +23,8 @@ import { FetchClient, IIdentified } from '@c8y/client';
 import { Observable, BehaviorSubject, Subject } from 'rxjs';
 import {
   BASE_URL,
-  PATH_SUBSCRIPTIONS_ENDPOINT,
   PATH_SUBSCRIPTION_ENDPOINT,
+  PATH_RELATION_ENDPOINT,
   SharedService
 } from '../../shared';
 import {
@@ -298,7 +298,7 @@ export class SubscriptionService implements OnDestroy {
       'getSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
           {
             headers: {
               'content-type': 'application/json'
@@ -330,7 +330,7 @@ export class SubscriptionService implements OnDestroy {
       'getSubscriptionByDeviceGroup',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}/group`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/group`,
           {
             headers: {
               'content-type': 'application/json'
@@ -362,7 +362,7 @@ export class SubscriptionService implements OnDestroy {
       'getSubscriptionByDeviceType',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}/type`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/type`,
           {
             headers: {
               'content-type': 'application/json'
@@ -405,7 +405,7 @@ export class SubscriptionService implements OnDestroy {
     /**
    * Gets all client mappings
    */
-  async getAllClientMappings(): Promise<any | null> {
+  async getAllClientRelations(): Promise<any | null> {
     const features = await this.sharedService.getFeatures();
 
     if (!features?.outputMappingEnabled) {
@@ -416,7 +416,7 @@ export class SubscriptionService implements OnDestroy {
       'getSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}/client`,
+          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/client`,
           {
             headers: {
               'content-type': 'application/json'

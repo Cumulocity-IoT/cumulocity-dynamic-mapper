@@ -1,0 +1,382 @@
+/*
+ * Copyright (c) 2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
+package dynamic.mapper.controller;
+
+import com.cumulocity.microservice.context.ContextService;
+import com.cumulocity.microservice.context.credentials.UserCredentials;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+
+import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.model.ClientRelationRequest;
+import dynamic.mapper.model.MapEntry;
+import dynamic.mapper.exception.OutboundMappingDisabledException;
+import dynamic.mapper.exception.DeviceNotFoundException;
+import dynamic.mapper.service.ServiceConfigurationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConfigurationRegistry;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import jakarta.validation.Valid;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Slf4j
+@RequestMapping("/relation")
+@RestController
+@RequiredArgsConstructor
+@Tag(name = "Client Relation Controller", description = "API for managing Cumulocity IoT notification subscriptions for outbound mappings")
+public class ClientRelationController {
+
+    private final C8YAgent c8yAgent;
+    private final ContextService<UserCredentials> contextService;
+    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceConfigurationService serviceConfigurationService;
+
+    private static final String OUTBOUND_MAPPING_DISABLED_MESSAGE = "Outbound mapping is disabled!";
+    private static final String ADMIN_CREATE_ROLES = "hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')";
+
+
+    @Operation(summary = "Add client mapping for device")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Client mapping added successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Device not found or outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
+    @PutMapping(value = "/client/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> addClientRelation(
+            @PathVariable String deviceId,
+            @Valid @RequestBody ClientRelationRequest request) {
+
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+            // Validate device exists
+            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId);
+            if (mor == null) {
+                throw new DeviceNotFoundException("Device with id " + deviceId + " not found");
+            }
+
+            // Add client mapping
+            configurationRegistry.addClient(tenant, deviceId, request.getClientId());
+
+            log.info("{} - Successfully added client mapping: device {} -> client {}",
+                    tenant, deviceId, request.getClientId());
+
+            Map<String, String> response = Map.of(
+                    "deviceId", deviceId,
+                    "clientId", request.getClientId());
+
+            return ResponseEntity.ok(response);
+
+        } catch (DeviceNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Error adding client mapping for device {}: {}", tenant, deviceId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Remove client mapping for device")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Client mapping removed successfully"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Device not found, client mapping not found, or outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
+    @DeleteMapping(value = "/client/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> removeClientRelation(@PathVariable String deviceId) {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+
+            // Check if client mapping exists before attempting to remove
+            String existingClientId = configurationRegistry.resolveDeviceToClient(tenant, deviceId);
+            if (existingClientId == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No client mapping found for device " + deviceId);
+            }
+
+            // Remove client mapping
+            configurationRegistry.removeClient(tenant, deviceId);
+
+            log.info("{} - Successfully removed client mapping: device {} (was mapped to client {})",
+                    tenant, deviceId, existingClientId);
+
+            Map<String, String> response = Map.of(
+                    "deviceId", deviceId,
+                    "previousClientId", existingClientId,
+                    "status", "removed");
+
+            return ResponseEntity.ok(response);
+
+        } catch (DeviceNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Error removing client mapping for device {}: {}", tenant, deviceId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Get client mapping for device")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Client mapping retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Device not found, client mapping not found, or outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(value = "/client/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> getClientRelation(@PathVariable String deviceId) {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+
+            // Resolve client mapping
+            String clientId = configurationRegistry.resolveDeviceToClient(tenant, deviceId);
+            if (clientId == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No client mapping found for device " + deviceId);
+            }
+
+            log.debug("{} - Retrieved client mapping: device {} -> client {}", tenant, deviceId, clientId);
+
+            Map<String, String> response = Map.of(
+                    "deviceId", deviceId,
+                    "clientId", clientId);
+
+            return ResponseEntity.ok(response);
+
+        } catch (DeviceNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Error retrieving client mapping for device {}: {}", tenant, deviceId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Get all client relations")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "All client relations retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(value = "/client", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> getAllClientRelations() {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+            Map<String, String> allRelations = configurationRegistry.getAllClientRelations(tenant);
+
+            // Convert Map to List of MapEntry
+            List<MapEntry> relationsList = allRelations.entrySet().stream()
+                    .map(entry -> new MapEntry(entry.getKey(), entry.getValue()))
+                    .collect(Collectors.toList());
+
+            Map<String, Object> response = Map.of(
+                    "totalRelations", relationsList.size(),
+                    "relations", relationsList);
+
+            log.debug("{} - Retrieved {} client relations", tenant, relationsList.size());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("{} - Error retrieving all client relations: {}", tenant, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Get all devices mapped to a specific client")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Devices for client retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Client not found or outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(value = "/client/{clientId}/devices", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> getDevicesForClient(@PathVariable String clientId) {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+            List<String> devices = configurationRegistry.getDevicesForClient(tenant, clientId);
+
+            if (devices.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No devices found for client " + clientId);
+            }
+
+            Map<String, Object> response = Map.of(
+                    "clientId", clientId,
+                    "deviceCount", devices.size(),
+                    "devices", devices);
+
+            log.debug("{} - Retrieved {} devices for client {}", tenant, devices.size(), clientId);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("{} - Error retrieving devices for client {}: {}", tenant, clientId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Remove device from client relations")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Device removed successfully"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Device not found or outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
+    @DeleteMapping(value = "/device/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> removeDevice(@PathVariable String deviceId) {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+            // Check if device has client mapping
+            String existingClientId = configurationRegistry.resolveDeviceToClient(tenant, deviceId);
+            boolean hadMapping = existingClientId != null && !existingClientId.equals(deviceId);
+
+            // Remove device from client mapping if it exists
+            if (hadMapping) {
+                configurationRegistry.removeClient(tenant, deviceId);
+            }
+
+            // Remove device from notification subscriptions if it exists
+            try {
+                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId);
+                if (mor != null) {
+                    configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor);
+                }
+            } catch (Exception e) {
+                log.warn("{} - Could not remove device {} from subscriptions: {}", tenant, deviceId, e.getMessage());
+            }
+
+            log.info("{} - Successfully removed device {}{}", tenant, deviceId,
+                    hadMapping ? " (was mapped to client " + existingClientId + ")" : " (no client mapping)");
+
+            Map<String, String> response = Map.of(
+                    "deviceId", deviceId,
+                    "hadClientRelation", String.valueOf(hadMapping));
+
+            if (hadMapping) {
+                response = new HashMap<>(response);
+                response.put("previousClientId", existingClientId);
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("{} - Error removing device {}: {}", tenant, deviceId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Get all clients")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "All clients retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping(value = "/clients", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> getAllClients() {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+            List<String> allClients = configurationRegistry.getAllClients(tenant);
+
+            Map<String, Object> response = Map.of(
+                    "clientCount", allClients.size(),
+                    "clients", allClients);
+
+            log.debug("{} - Retrieved {} unique clients", tenant, allClients.size());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("{} - Error retrieving all clients: {}", tenant, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    @Operation(summary = "Clear all client relations")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "All client relations cleared successfully"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Outbound mapping disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
+    @DeleteMapping(value = "/client", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> clearAllClientRelations() {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+            int mappingCount = configurationRegistry.getAllClientRelations(tenant).size();
+            configurationRegistry.clearCacheDeviceToClient(tenant);
+
+            log.info("{} - Successfully cleared {} client relations", tenant, mappingCount);
+
+            Map<String, Object> response = Map.of(
+                    "removedMappings", mappingCount);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("{} - Error clearing all client relations: {}", tenant, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
+    private String getTenant() {
+        return contextService.getContext().getTenant();
+    }
+
+    private void validateOutboundMappingEnabled(String tenant) {
+        ServiceConfiguration config = serviceConfigurationService.getServiceConfiguration(tenant);
+        if (!config.isOutboundMappingEnabled()) {
+            throw new OutboundMappingDisabledException(OUTBOUND_MAPPING_DISABLED_MESSAGE);
+        }
+    }
+
+}

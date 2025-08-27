@@ -228,7 +228,7 @@ public class MappingService {
     }
 
     public void sendDeviceToClientMap(String tenant) {
-        Map<String, String> clientToDeviceMap = configurationRegistry.getAllClientMappings(tenant);
+        Map<String, String> clientToDeviceMap = configurationRegistry.getAllClientRelations(tenant);
         if (clientToDeviceMap != null
                 && clientToDeviceMap.size() >= 0) {
             subscriptionsService.runForTenant(tenant, () -> {

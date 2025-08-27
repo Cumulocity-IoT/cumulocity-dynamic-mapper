@@ -336,7 +336,7 @@ export const PATH_EXTENSION_ENDPOINT = 'extension';
 export const PATH_SUBSCRIPTION_ENDPOINT = 'subscription';
 export const PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT = 'deployment/effective';
 export const PATH_DEPLOYMENT_DEFINED_ENDPOINT = 'deployment/defined';
-export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscription';
+export const PATH_RELATION_ENDPOINT = 'relation';
 export const PATH_MAPPING_ENDPOINT = 'mapping';
 export const PATH_AGENT_ENDPOINT = 'agent';
 

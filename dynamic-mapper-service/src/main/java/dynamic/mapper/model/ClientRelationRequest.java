@@ -17,7 +17,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "Request object for creating/updating client mappings")
-public class ClientMappingRequest {
+public class ClientRelationRequest {
     
     @NotBlank(message = "Client ID cannot be blank")
     @Size(min = 1, max = 255, message = "Client ID must be between 1 and 255 characters")

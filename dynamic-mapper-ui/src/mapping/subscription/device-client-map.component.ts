@@ -27,32 +27,22 @@ import {
 } from '@angular/core';
 import {
   ActionControl,
-  AlertService,
-  BuiltInActionType,
   BulkActionControl,
   Column,
   ColumnDataType,
   DataGridComponent,
   DisplayOptions,
   Pagination,
-  gettext
 } from '@c8y/ngx-components';
 import {
-  API,
-  ConfirmationModalComponent,
   Direction,
   Feature,
   MappingType,
-  Operation
 } from '../../shared';
 
 import { ActivatedRoute, Router } from '@angular/router';
-import { IIdentified } from '@c8y/client';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
-import { DeploymentMapEntry, SharedService } from '../../shared';
-import { MappingService } from '../core/mapping.service';
-import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
+import { DeploymentMapEntry } from '../../shared';
 import { SubscriptionService } from '../core/subscription.service';
 
 @Component({
@@ -69,23 +59,21 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   ) {
     // console.log('constructor');
     const href = this.router.url;
-    this.loadAllClientMappings();
+    this.loadAllClientRelations();
   }
 
-  private mappingService = inject(MappingService);
   private subscriptionService = inject(SubscriptionService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
 
-  clientMappings: any;
+  clientRelations: any;
   mapEntries: any[];
   Direction = Direction;
 
   titleMapping: string;
 
   readonly titleSubscription: string = 'Device to Client Map';
-  deploymentMapEntry: DeploymentMapEntry;
 
   readonly displayOptions: DisplayOptions = {
     bordered: true,
@@ -131,29 +119,22 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     this.feature = this.route.snapshot.data['feature'];
   }
 
-async loadAllClientMappings(): Promise<void> {
-    this.clientMappings = await this.subscriptionService.getAllClientMappings();
-    
+  async loadAllClientRelations(): Promise<void> {
+    this.clientRelations = await this.subscriptionService.getAllClientRelations();
+
     // Initialize mapEntries array
     this.mapEntries = [];
-    
-    // Parse mappings object
-    if (this.clientMappings && this.clientMappings.mappings) {
-        for (const [id, client] of Object.entries(this.clientMappings.mappings)) {
-            this.mapEntries.push({
-                id: id,
-                client: client
-            });
-        }
+
+    if (this.clientRelations && this.clientRelations.relations) {
+      this.mapEntries = this.clientRelations.relations;
     }
-    
+
     this.deviceToClientGrid?.reload();
-}
+  }
 
 
   ngOnDestroy(): void {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
-    this.mappingService.stopChangedMappingEvents();
   }
 }

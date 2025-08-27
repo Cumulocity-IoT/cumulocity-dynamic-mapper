@@ -571,7 +571,7 @@ public class ConfigurationRegistry {
         }
     }
 
-    public Map<String, String> getAllClientMappings(String tenant) {
+    public Map<String, String> getAllClientRelations(String tenant) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
         return tenantMappings != null ? new HashMap<>(tenantMappings) : new HashMap<>();
     }
@@ -600,12 +600,12 @@ public class ConfigurationRegistry {
                 .collect(Collectors.toList());
     }
 
-    public int getClientMappingCount(String tenant) {
+    public int getClientRelationCount(String tenant) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
         return tenantMappings != null ? tenantMappings.size() : 0;
     }
 
-    public boolean hasClientMapping(String tenant, String deviceId) {
+    public boolean hasClientRelation(String tenant, String deviceId) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
         return tenantMappings != null && tenantMappings.containsKey(deviceId);
     }
