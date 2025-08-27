@@ -63,12 +63,14 @@ import { DeviceSelectorSubscription4Component } from './subscription/device-sele
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
+import { ClientRelationStepperComponent } from './client-relation/client-relation-stepper.component';
 
 @NgModule({
   declarations: [
     MappingComponent,
     MappingStepperComponent,
     SnoopingStepperComponent,
+    ClientRelationStepperComponent,
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
     DeviceSelectorSubscriptionComponent,

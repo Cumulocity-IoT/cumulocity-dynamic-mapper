@@ -41,6 +41,7 @@ import {
   ConfirmationModalComponent,
   Direction,
   Feature,
+  Mapping,
   MappingType,
 } from '../../shared';
 
@@ -58,6 +59,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
   standalone: false
 })
 export class DeviceClientMapComponent implements OnInit, OnDestroy {
+
 
   @ViewChild('deviceToClientGrid') deviceToClientGrid: DataGridComponent;
 
@@ -110,6 +112,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   value: string;
   mappingType: MappingType;
   destroy$: Subject<boolean> = new Subject<boolean>();
+  selectedDevices: IIdentified[]= [];
 
   readonly pagination: Pagination = {
     pageSize: 30,
@@ -119,6 +122,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   actionControlRelation: ActionControl[] = [];
   bulkActionControlRelation: BulkActionControl[] = [];
   feature: Feature;
+  showAddRelation: Boolean = false;
 
   ngOnInit(): void {
     this.feature = this.route.snapshot.data['feature'];
@@ -194,9 +198,11 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   }
 
   onAddRelations() {
-      this.alertService.info(
-        gettext('Still to be implemented!')
-      );
+    this.showAddRelation = true;
+  }
+
+  onCommitRelation($event: Mapping) {
+    throw new Error('Method not implemented.');
   }
 
   private async deleteRelationBulkWithConfirmation(ids: string[]): Promise<void> {

@@ -64,3 +64,12 @@
     </c8y-data-grid>
   </div>
 </div>
+
+<div [ngClass]="{ drawerOpen: showAddRelation }">
+  <div class="bottom-drawer">
+    <d11r-relation-stepper *ngIf="showAddRelation" (cancel)="showAddRelation = false"
+      (commit)="onCommitRelation($event)"
+      [selectedDevices]="selectedDevices">
+    </d11r-relation-stepper>
+  </div>
+</div>
