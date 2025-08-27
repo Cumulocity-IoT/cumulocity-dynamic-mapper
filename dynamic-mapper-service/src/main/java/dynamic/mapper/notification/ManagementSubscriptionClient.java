@@ -161,6 +161,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         
         message.setParsedPayload(parsedPayload);
         message.setApi(notification.getApi());
+        message.setDeviceName(String.valueOf(parsedPayload.get("name")));
         message.setOperation(notification.getOperation());
         message.setMessageId(String.valueOf(parsedPayload.get("id")));
         message.setSourceId(extractSourceId(parsedPayload, notification.getApi()));
@@ -503,6 +504,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
             List<Future<NotificationSubscriptionRepresentation>> results = new ArrayList<>();
             String tenant = c8yMessage.getTenant();
             String deviceId = c8yMessage.getSourceId();
+            String deviceName = c8yMessage.getDeviceName();
             
             if (deviceId == null || deviceId.trim().isEmpty()) {
                 log.warn("{} - No device ID found in message, skipping type subscription update", tenant);
@@ -522,6 +524,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
             try {
                 ManagedObjectRepresentation newMO = new ManagedObjectRepresentation();
                 newMO.setId(GId.asGId(deviceId));
+                newMO.setName(deviceName);
 
                 Future<NotificationSubscriptionRepresentation> future = notificationSubscriber
                         .subscribeDeviceAndConnect(tenant, newMO, c8yMessage.getApi());

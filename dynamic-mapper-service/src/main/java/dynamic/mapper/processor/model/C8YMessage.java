@@ -41,6 +41,9 @@ public class C8YMessage {
     private String sourceId; 
 
     @NotNull
+    private String deviceName; 
+
+    @NotNull
     private String messageId; 
 
     @NotNull

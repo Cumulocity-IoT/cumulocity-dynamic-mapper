@@ -391,8 +391,8 @@ public class NotificationSubscriber {
         return virtualThreadPool.submit(() -> {
             try {
                 return subscriptionsService.callForTenant(tenant, () -> {
-                    log.info("{} - Creating subscription for device {} ({})",
-                            tenant, mor.getName(), deviceId);
+                    log.info("{} - Creating subscription for device: {} {}",
+                            tenant, mor.getName() == null ? "" : mor.getName() == null, deviceId);
 
                     NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(mor, api, DEVICE_SUBSCRIPTION);
 
