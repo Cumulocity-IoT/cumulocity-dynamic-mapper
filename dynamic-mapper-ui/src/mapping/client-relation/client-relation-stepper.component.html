@@ -45,29 +45,74 @@
         </div>
       </div>
     </div>
-
     <div class="col-xs-12 flex-grow no-gutter">
-      <span>Step client selection</span>
+      <div class="col-lg-12 flex-grow no-gutter">
+        <div class="inner-scroll fit-h">
+          <div class="card-block p-b-0">
+            <div class="d-flex" #buttonsStep1>
+              <div class="col-lg-10 col-lg-offset-1">
+                <div class="form-group">
+                  <div>
+                    <label translate>Client Name</label>
+                  </div>
+                  <c8y-typeahead container="body" name="selectedClient" [placeholder]="'Search for clients...'"
+                    [allowFreeEntries]="true" [(ngModel)]="selectedClient">
+                    <c8y-li class="p-l-8 p-r-8 c8y-list__item--link" *ngFor="let client of clientsAsOptions"
+                      (click)="selectClient(client)">
+                      {{client.name}}
+                    </c8y-li>
+                  </c8y-typeahead>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <c8y-stepper-buttons [disabled]="isButtonDisabled$ | async"
+    <c8y-stepper-buttons [disabled]="isButtonDisabled"
       class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0" (onCancel)="cancel.emit()"
       (onNext)="onNextStep($event)" [labels]="labels">
     </c8y-stepper-buttons>
   </cdk-step>
-  <cdk-step label="Assign devices or device groups" state="final" [stepControl]="propertyFormly">
-    <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
-      <div class="row">
-        <div class="col-xs-12">
-          <h4 class="text-medium">
+  <cdk-step label="Assign devices or device groups" state="final">
+    <!-- <div class="row">
+      <div class="col-xs-12 col-sm-8 col-md-9">
+        <div class="card">
+          <c8y-asset-selector-miller [(ngModel)]="selectedDevices" (onSelected)="selectionChanged($event)" [config]="{
+            groupsSelectable: true,
+            columnHeaders: true,
+            showFilter: true,
+            showUnassignedDevices: true,
+            showChildDevices: true,
+            search: true,
+            multi: true,
+            showSelected: true
+          }" class="bg-component"></c8y-asset-selector-miller>
+        </div>
+      </div>
+    </div> -->
+    <div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+      <div class="card card--fullpage">
+        <div class="card-header separator" style="justify-content: center">
+          <h4 class="card-title d-flex">
             <div class="text-center">
-              <span>Step device selection</span>
+              <span>Device selection</span>
             </div>
           </h4>
         </div>
+        <!-- <div class="card-inner-scroll d-flex d-col bg-component" style="height: 350px"> -->
+          <c8y-asset-selector-miller [(ngModel)]="selectedDevices" (onSelected)="selectionChanged($event)" style="height: 500px" [config]="{
+            groupsSelectable: true,
+            columnHeaders: true,
+            showFilter: true,
+            showUnassignedDevices: true,
+            showChildDevices: true,
+            search: true,
+            multi: true,
+            showSelected: true
+          }" class="bg-component"></c8y-asset-selector-miller>
+        <!-- </div> -->
       </div>
-    </div>
-    <div class="col-xs-12 flex-grow no-gutter">
-      <span>Step device selection</span>
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCancel)="cancel.emit()" (onCustom)="onCommitButton()" [labels]="{ custom: 'Confirm' }"
@@ -75,3 +120,16 @@
     </c8y-stepper-buttons>
   </cdk-step>
 </c8y-stepper>
+
+<!-- <div class="card-block">
+  <c8y-asset-selector-miller [(ngModel)]="selectedDevices" (onSelected)="selectionChanged($event)" [config]="{
+            groupsSelectable: true,
+            columnHeaders: true,
+            showFilter: true,
+            showUnassignedDevices: true,
+            showChildDevices: true,
+            search: true,
+            multi: true,
+            showSelected: true
+          }" class="bg-component"></c8y-asset-selector-miller>
+</div> -->

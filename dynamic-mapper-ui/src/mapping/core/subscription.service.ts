@@ -403,6 +403,38 @@ export class SubscriptionService implements OnDestroy {
 
 
   /**
+* Gets all clients
+*/
+  async getAllClients(): Promise<any | null> {
+    const features = await this.sharedService.getFeatures();
+
+    if (!features?.outputMappingEnabled) {
+      return null;
+    }
+
+    return this.handleOperation(
+      'getSubscriptionDevice',
+      async () => {
+        const response = await this.client.fetch(
+          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/clients`,
+          {
+            headers: {
+              'content-type': 'application/json'
+            },
+            method: 'GET'
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
+      }
+    );
+  }
+
+  /**
  * Gets all client relations
  */
   async getAllClientRelations(): Promise<any | null> {

@@ -18,21 +18,18 @@
  * @authors Christof Strack
  */
 import { CdkStep } from '@angular/cdk/stepper';
-import { AfterViewInit, Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { FormGroup } from '@angular/forms';
-import { AlertService, C8yStepper } from '@c8y/ngx-components';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { Component, EventEmitter, inject, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AlertService, C8yStepper, ForOfFilterPipe } from '@c8y/ngx-components';
+import { BehaviorSubject, map, pipe, Subject, tap } from 'rxjs';
+import { ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 
 import {
-  ConnectorType,
-  Direction,
   Feature,
-  Mapping,
-  SAMPLE_TEMPLATES_C8Y, SharedService, SnoopStatus,
+  SharedService,
 } from '../../shared';
-import { STEP_STATE } from '@angular/cdk/stepper';
-import { EditorMode } from '../shared/stepper.model';
-import { IIdentified } from '@c8y/client';
+import { IIdentified, IResultList } from '@c8y/client';
+import { SubscriptionService } from '../core/subscription.service';
+import { AssetSelectionChangeEvent } from '@c8y/ngx-components/assets-navigator';
 
 interface StepperLabels {
   next: string;
@@ -47,29 +44,24 @@ const CONSTANTS = {
 @Component({
   selector: 'd11r-relation-stepper',
   templateUrl: 'client-relation-stepper.component.html',
-  styleUrls: ['../shared/mapping.style.css', 'client-relation-stepper.component.css'],
+  // styleUrls: ['../shared/mapping.style.css', 'client-relation-stepper.component.css'],
+  styleUrls: ['client-relation-stepper.component.css'],
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false
 })
 export class ClientRelationStepperComponent implements OnInit, OnDestroy {
-  getState(): any {
-    return STEP_STATE.ERROR
-  }
-  @Input() mapping: Mapping;
-  @Input() selectedDevices: IIdentified[];
+  @Input() selectedDevices: IIdentified[] = [];
+  @Input() clients: string[] = [];
   @Output() cancel = new EventEmitter<void>();
-  @Output() commit = new EventEmitter<Mapping>();
+  @Output() commit = new EventEmitter<any>();
 
-  Direction = Direction;
-  EditorMode = EditorMode;
-  SnoopStatus = SnoopStatus;
-
-  propertyFormly = new FormGroup({});
-  isButtonDisabled$ = new BehaviorSubject<boolean>(false);
-  supportsMessageContext: boolean;
+  isButtonDisabled$ = new BehaviorSubject<boolean>(true);
+  isButtonDisabled = true;
   private readonly destroy$ = new Subject<void>();
 
   snoopedTemplateCounter = 0;
+  clientsAsOptions: any[] = [];
 
   @ViewChild('stepper', { static: false })
   stepper: C8yStepper;
@@ -79,21 +71,17 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy {
     next: 'Next',
     cancel: 'Cancel'
   };
-  stepperForward: boolean = true;
-  currentStepIndex: number;
   feature: Feature;
+  selectedClient: any;
+  client: any;
 
-  constructor(
-    private alertService: AlertService,
-    public sharedService: SharedService,
-  ) { }
-
-
+  private readonly alertService = inject(AlertService);
+  private readonly sharedService = inject(SharedService);
+  private readonly subscriptionService = inject(SubscriptionService);
 
   async ngOnInit(): Promise<void> {
     this.feature = await this.sharedService.getFeatures();
-    this.propertyFormly.setErrors({ validationError: { message: 'You do not have permission to change this mapping.' } });
-
+    this.clients.forEach((cl, ind) => this.clientsAsOptions.push({ id: ind, name: cl }));
   }
 
   ngOnDestroy(): void {
@@ -102,24 +90,9 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy {
     this.isButtonDisabled$.complete();
   }
 
-
-  getCurrentMapping(): Mapping {
-    try {
-      return {
-        ...this.mapping,
-        targetTemplate: SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI],
-        lastUpdate: Date.now()
-      };
-    } catch (error) {
-      this.handleError('Error getting current mapping', error);
-      return this.mapping;
-    }
-  }
-
   async onCommitButton(): Promise<void> {
     try {
-      const currentMapping = this.getCurrentMapping();
-      this.commit.emit(currentMapping);
+      this.commit.emit(null);
     } catch (error) {
       this.handleError('Error committing changes', error);
     }
@@ -137,15 +110,13 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy {
     }
   }
 
-  private goToLastStep() {
-    // Mark all previous steps as completed
-    this.stepper.steps.forEach((step, index) => {
-      if (index < this.stepper.steps.length - 1) {
-        step.completed = true;
-      }
-    });
-    // Select the last step
-    this.stepper.selectedIndex = this.stepper.steps.length - 1;
+  selectionChanged(event: AssetSelectionChangeEvent) {
+    // console.log(event);
+  }
+
+  selectClient(client: any): void {
+    this.selectedClient = client;
+    this.isButtonDisabled = !client;
   }
 
   private handleError(message: string, error: Error): void {

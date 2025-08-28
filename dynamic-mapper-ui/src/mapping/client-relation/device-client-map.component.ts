@@ -112,7 +112,8 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   value: string;
   mappingType: MappingType;
   destroy$: Subject<boolean> = new Subject<boolean>();
-  selectedDevices: IIdentified[]= [];
+  selectedDevices: IIdentified[] = [];
+  clients: string[] = [];
 
   readonly pagination: Pagination = {
     pageSize: 30,
@@ -124,7 +125,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   feature: Feature;
   showAddRelation: Boolean = false;
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];
     if (this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole) {
       this.bulkActionControlRelation.push({
@@ -136,6 +137,9 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
         callback: this.deleteRelationWithConfirmation.bind(this)
       });
     }
+
+    const { clients } = await this.subscriptionService.getAllClients();
+    this.clients = clients;
   }
 
   async loadAllClientRelations(): Promise<void> {
