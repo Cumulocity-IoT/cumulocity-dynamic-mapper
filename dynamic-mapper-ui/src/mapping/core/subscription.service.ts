@@ -18,13 +18,12 @@
  * @authors Christof Strack
  */
 
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { FetchClient, IIdentified } from '@c8y/client';
-import { Observable, BehaviorSubject, Subject } from 'rxjs';
+import { Observable, BehaviorSubject } from 'rxjs';
 import {
   BASE_URL,
   PATH_SUBSCRIPTION_ENDPOINT,
-  PATH_RELATION_ENDPOINT,
   SharedService
 } from '../../shared';
 import {
@@ -73,7 +72,7 @@ interface SubscriptionServiceConfig {
 @Injectable({
   providedIn: 'root'
 })
-export class SubscriptionService implements OnDestroy {
+export class SubscriptionService  {
   // Configuration
   private readonly config: SubscriptionServiceConfig = {
     enableRetry: true,
@@ -83,18 +82,11 @@ export class SubscriptionService implements OnDestroy {
 
   // Loading states
   private readonly loadingStates = new Map<string, BehaviorSubject<boolean>>();
-  private readonly unsubscribe$ = new Subject<void>();
 
   constructor(
     private readonly client: FetchClient,
     private readonly sharedService: SharedService
   ) { }
-
-  ngOnDestroy(): void {
-    this.unsubscribe$.next();
-    this.unsubscribe$.complete();
-    this.loadingStates.clear();
-  }
 
   // ===== SUBSCRIPTION CRUD OPERATIONS =====
 
@@ -402,137 +394,6 @@ export class SubscriptionService implements OnDestroy {
   }
 
 
-  /**
-* Gets all clients
-*/
-  async getAllClients(): Promise<any | null> {
-    const features = await this.sharedService.getFeatures();
-
-    if (!features?.outputMappingEnabled) {
-      return null;
-    }
-
-    return this.handleOperation(
-      'getSubscriptionDevice',
-      async () => {
-        const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/clients`,
-          {
-            headers: {
-              'content-type': 'application/json'
-            },
-            method: 'GET'
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        return await response.json();
-      }
-    );
-  }
-
-  /**
- * Gets all client relations
- */
-  async getAllClientRelations(): Promise<any | null> {
-    const features = await this.sharedService.getFeatures();
-
-    if (!features?.outputMappingEnabled) {
-      return null;
-    }
-
-    return this.handleOperation(
-      'getSubscriptionDevice',
-      async () => {
-        const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/client`,
-          {
-            headers: {
-              'content-type': 'application/json'
-            },
-            method: 'GET'
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        return await response.json();
-      }
-    );
-  }
-
-  /**
-  * Delete all client relations
-  */
-  async deleteAllClientRelations(): Promise<any | null> {
-    const features = await this.sharedService.getFeatures();
-
-    if (!features?.outputMappingEnabled) {
-      return null;
-    }
-
-    return this.handleOperation(
-      'deleteAllClientRelations',
-      async () => {
-        const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/relations`,
-          {
-            headers: {
-              'content-type': 'application/json'
-            },
-            method: 'DELETE'
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        return await response.json();
-      }
-    );
-  }
-
-  /**
-* Clear all client relations
-*/
-  async deleteClientRelationForDevice(device: string | IIdentified): Promise<any | null> {
-    const features = await this.sharedService.getFeatures();
-    let deviceId = device;
-    if (typeof (device) == 'object') {
-      deviceId = device.id as string;
-    }
-
-    if (!features?.outputMappingEnabled) {
-      return null;
-    }
-
-    return this.handleOperation(
-      'removeClientRelationForDevice',
-      async () => {
-        const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_RELATION_ENDPOINT}/device/${deviceId}`,
-          {
-            headers: {
-              'content-type': 'application/json'
-            },
-            method: 'DELETE'
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        return await response.json();
-      }
-    );
-  }
 
   // ===== UTILITY METHODS =====
 

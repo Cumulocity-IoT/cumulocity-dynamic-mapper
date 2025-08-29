@@ -23,17 +23,14 @@ package dynamic.mapper.controller;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.model.ClientRelationRequest;
 import dynamic.mapper.model.MapEntry;
 import dynamic.mapper.exception.OutboundMappingDisabledException;
 import dynamic.mapper.exception.DeviceNotFoundException;
 import dynamic.mapper.service.ServiceConfigurationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 
 import org.springframework.http.HttpStatus;
@@ -60,7 +57,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Client Relation Controller", description = "API for managing relations from devices to MQTT clients for outbound mappings")
 public class ClientRelationController {
 
-    private final C8YAgent c8yAgent;
     private final ContextService<UserCredentials> contextService;
     private final ConfigurationRegistry configurationRegistry;
     private final ServiceConfigurationService serviceConfigurationService;
@@ -68,78 +64,34 @@ public class ClientRelationController {
     private static final String OUTBOUND_MAPPING_DISABLED_MESSAGE = "Outbound relation is disabled!";
     private static final String ADMIN_CREATE_ROLES = "hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')";
 
-    @Operation(summary = "Add client relation for device")
+    @Operation(summary = "Update client relation for client")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Client relation added successfully"),
+            @ApiResponse(responseCode = "200", description = "Client relation updated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request"),
             @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
             @ApiResponse(responseCode = "404", description = "Device not found or outbound relation disabled"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PreAuthorize(ADMIN_CREATE_ROLES)
-    @PutMapping(value = "/client/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, String>> addClientRelation(
-            @PathVariable String deviceId,
-            @Valid @RequestBody ClientRelationRequest request) {
+    @PutMapping(value = "/client/{clientId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> addOrUpdateClientRelations(
+            @PathVariable String clientId,
+            @Valid @RequestBody List<String> deviceIds) {
 
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
 
         try {
-            // Validate device exists
-            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, deviceId);
-            if (mor == null) {
-                throw new DeviceNotFoundException("Device with id " + deviceId + " not found");
-            }
 
             // Add client relation
-            configurationRegistry.addClient(tenant, deviceId, request.getClientId());
+            configurationRegistry.addOrUpdateClientRelations(tenant, clientId, deviceIds);
 
-            log.info("{} - Successfully added client relation: device {} -> client {}",
-                    tenant, deviceId, request.getClientId());
+            log.info("{} - Successfully updated client relations: client {}",
+                    tenant, clientId, deviceIds);
 
-            Map<String, String> response = Map.of(
-                    "deviceId", deviceId,
-                    "clientId", request.getClientId());
-
-            return ResponseEntity.ok(response);
-
-        } catch (DeviceNotFoundException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        } catch (ResponseStatusException e) {
-            // Let ResponseStatusException bubble up - Spring will handle it
-            throw e;
-        } catch (Exception e) {
-            log.error("{} - Error adding client relation for device {}: {}", tenant, deviceId, e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
-        }
-    }
-
-    @Operation(summary = "Get client relation for device")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Client relation retrieved successfully"),
-            @ApiResponse(responseCode = "404", description = "Device not found, client relation not found, or outbound mapping disabled"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping(value = "/client/{deviceId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, String>> getClientRelation(@PathVariable String deviceId) {
-        String tenant = getTenant();
-        validateOutboundMappingEnabled(tenant);
-
-        try {
-
-            // Resolve client relation
-            String clientId = configurationRegistry.resolveDeviceToClient(tenant, deviceId);
-            if (clientId == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "No client relation found for device " + deviceId);
-            }
-
-            log.debug("{} - Retrieved client relation: device {} -> client {}", tenant, deviceId, clientId);
-
-            Map<String, String> response = Map.of(
-                    "deviceId", deviceId,
-                    "clientId", clientId);
+            Map<String, Object> response = Map.of(
+                    "clientId", clientId,
+                    "deviceIds", deviceIds);
 
             return ResponseEntity.ok(response);
 
@@ -149,7 +101,7 @@ public class ClientRelationController {
             // Let ResponseStatusException bubble up - Spring will handle it
             throw e;
         } catch (Exception e) {
-            log.error("{} - Error retrieving client relation for device {}: {}", tenant, deviceId, e.getMessage(), e);
+            log.error("{} - Error updating relations for client {}: {}", tenant, clientId, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
         }
     }
@@ -244,7 +196,7 @@ public class ClientRelationController {
             }
 
             // Remove client mapping for this specific device
-            configurationRegistry.removeClient(tenant, deviceId);
+            configurationRegistry.removeClientRelation(tenant, deviceId);
 
             log.info("{} - Successfully removed client mapping: device {} (was mapped to client {})",
                     tenant, deviceId, existingClientId);

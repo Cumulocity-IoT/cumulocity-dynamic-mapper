@@ -75,6 +75,7 @@ import dynamic.mapper.processor.processor.fixed.InternalProtobufProcessor;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
+import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -524,13 +525,28 @@ public class ConfigurationRegistry {
         return hostAccess;
     }
 
-    public void addClient(String tenant, String deviceId, String clientId) {
+    public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
         deviceToClientPerTenant.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
                 .put(deviceId, clientId);
         log.debug("Added client mapping for tenant {}: device {} -> client {}", tenant, deviceId, clientId);
     }
 
-    public void removeClient(String tenant, String deviceId) {
+    public void addOrUpdateClientRelations(String tenant, String clientId, List<String> deviceIds) {
+        if (deviceIds == null || deviceIds.isEmpty()) {
+            log.debug("No device IDs provided for tenant {}, client {}", tenant, clientId);
+            return;
+        }
+
+        Map<String, String> tenantMappings = deviceToClientPerTenant.computeIfAbsent(tenant,
+                k -> new ConcurrentHashMap<>());
+
+        deviceIds.forEach(deviceId -> tenantMappings.put(deviceId, clientId));
+
+        log.debug("Added {} client mappings for tenant {}: devices {} -> client {}",
+                deviceIds.size(), tenant, deviceIds, clientId);
+    }
+
+    public void removeClientRelation(String tenant, String deviceId) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
         if (tenantMappings != null) {
             String removedClientId = tenantMappings.remove(deviceId);

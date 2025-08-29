@@ -277,7 +277,8 @@ public abstract class BaseProcessorInbound<T> {
                     context.setSourceId(sourceId.getManagedObject().getId().getValue());
                     // cache the mapping of device to client ID
                     if (context.getClient() != null) {
-                        configurationRegistry.addClient(tenant, context.getSourceId(), context.getClient());
+                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                                context.getSourceId());
                     }
                 }
                 ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(tenant,
@@ -348,7 +349,8 @@ public abstract class BaseProcessorInbound<T> {
                 context.setSourceId(sourceId.value.toString());
                 // cache the mapping of device to client ID
                 if (context.getClient() != null) {
-                    configurationRegistry.addClient(tenant, sourceId.value.toString(), context.getClient());
+                    configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                            sourceId.value.toString());
                 }
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             }
@@ -361,7 +363,7 @@ public abstract class BaseProcessorInbound<T> {
             context.setSourceId(sourceId.value.toString());
             // cache the mapping of device to client ID
             if (context.getClient() != null) {
-                configurationRegistry.addClient(tenant, sourceId.value.toString(), context.getClient());
+                configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(), sourceId.value.toString());
             }
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {

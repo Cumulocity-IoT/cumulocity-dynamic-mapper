@@ -41,15 +41,14 @@ import {
   ConfirmationModalComponent,
   Direction,
   Feature,
-  Mapping,
   MappingType,
 } from '../../shared';
 
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { SubscriptionService } from '../core/subscription.service';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { ClientRelationService } from '../core/client-relation.service';
 
 @Component({
   selector: 'd11r-mapping-device-client-map',
@@ -70,7 +69,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     this.loadAllClientRelations();
   }
 
-  private subscriptionService = inject(SubscriptionService);
+  private clientRelationService = inject(ClientRelationService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private bsModalService = inject(BsModalService);
@@ -112,8 +111,6 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   value: string;
   mappingType: MappingType;
   destroy$: Subject<boolean> = new Subject<boolean>();
-  selectedDevices: IIdentified[] = [];
-  clients: string[] = [];
 
   readonly pagination: Pagination = {
     pageSize: 30,
@@ -137,13 +134,10 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
         callback: this.deleteRelationWithConfirmation.bind(this)
       });
     }
-
-    const { clients } = await this.subscriptionService.getAllClients();
-    this.clients = clients;
   }
 
   async loadAllClientRelations(): Promise<void> {
-    this.clientRelations = await this.subscriptionService.getAllClientRelations();
+    this.clientRelations = await this.clientRelationService.getAllClientRelations();
 
     // Initialize mapEntries array
     this.mapEntries = [];
@@ -178,7 +172,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
 
     result = await confirmDeletionModalRef.content.closeSubject.toPromise();
     if (result) {
-      await this.subscriptionService.deleteAllClientRelations();
+      await this.clientRelationService.deleteAllClientRelations();
       this.alertService.success(
         gettext('Relations deleted successfully')
       );
@@ -189,7 +183,7 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
   async deleteRelation(device: IIdentified): Promise<void> {
     // console.log('Delete device', device);
     try {
-      await this.subscriptionService.deleteClientRelationForDevice(device);
+      await this.clientRelationService.deleteClientRelationForDevice(device);
       this.alertService.success(
         gettext('Relation for this device deleted successfully')
       );
@@ -205,8 +199,18 @@ export class DeviceClientMapComponent implements OnInit, OnDestroy {
     this.showAddRelation = true;
   }
 
-  onCommitRelation($event: Mapping) {
-    throw new Error('Method not implemented.');
+  async onCommitRelations(update: { client: string, devices: string[] }) {
+    try {
+      await this.clientRelationService.addOrUpdateClientRelations(update.client, update.devices); this.alertService.success(
+        gettext('Relations updated successfully')
+      );
+      this.loadAllClientRelations();
+    } catch (error) {
+      this.alertService.danger(
+        gettext('Failed to update relations:') + error
+      );
+    }
+    this.showAddRelation = false;
   }
 
   private async deleteRelationBulkWithConfirmation(ids: string[]): Promise<void> {

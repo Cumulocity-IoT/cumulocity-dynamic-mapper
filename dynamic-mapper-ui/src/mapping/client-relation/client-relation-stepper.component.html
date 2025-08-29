@@ -27,7 +27,7 @@
     'm-b-40',
     'p-0',
     'flex-no-shrink'
-  ]" #stepper>
+  ]" (selectionChange)="onStepChange($event)" #stepper>
 
   <!-- override icons -->
   <ng-template c8yStepperIcon="final">
@@ -56,10 +56,17 @@
                     <label translate>Client Name</label>
                   </div>
                   <c8y-typeahead container="body" name="selectedClient" [placeholder]="'Search for clients...'"
-                    [allowFreeEntries]="true" [(ngModel)]="selectedClient">
-                    <c8y-li class="p-l-8 p-r-8 c8y-list__item--link" *ngFor="let client of clientsAsOptions"
+                    [allowFreeEntries]="true" [(ngModel)]="selectedClient" (onSearch)="onSearch($event)">
+                    <c8y-li class="p-l-8 p-r-8 c8y-list__item--link" *ngFor="let client of filteredClients"
                       (click)="selectClient(client)">
-                      {{client.name}}
+                      <c8y-highlight [text]="client.name" [pattern]="pattern"></c8y-highlight>
+                    </c8y-li>
+                    <c8y-li class="bg-level-2 p-8 sticky-bottom" *ngIf="selectedClient && filteredClients.length == 0">
+                      <span translate>New client: {{selectedClient.name}}</span>
+                      <button class="btn btn-default btn-sm m-l-8" title="Add new client" type="button"
+                        (click)="addNewClient(searchTerm)" translate>
+                        Add new client
+                      </button>
                     </c8y-li>
                   </c8y-typeahead>
                 </div>
@@ -75,43 +82,23 @@
     </c8y-stepper-buttons>
   </cdk-step>
   <cdk-step label="Assign devices or device groups" state="final">
-    <!-- <div class="row">
-      <div class="col-xs-12 col-sm-8 col-md-9">
-        <div class="card">
-          <c8y-asset-selector-miller [(ngModel)]="selectedDevices" (onSelected)="selectionChanged($event)" [config]="{
-            groupsSelectable: true,
-            columnHeaders: true,
-            showFilter: true,
-            showUnassignedDevices: true,
-            showChildDevices: true,
-            search: true,
-            multi: true,
-            showSelected: true
-          }" class="bg-component"></c8y-asset-selector-miller>
-        </div>
+    <div class="d-col no-align-items p-48 fit-h fit-w c8y-stepper--no-btns">
+      <div class="card-header separator fit-w j-c-center">
+        <h4 class="card-title fit-w text-center">
+          Device selection
+        </h4>
       </div>
-    </div> -->
-    <div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-      <div class="card card--fullpage">
-        <div class="card-header separator" style="justify-content: center">
-          <h4 class="card-title d-flex">
-            <div class="text-center">
-              <span>Device selection</span>
-            </div>
-          </h4>
-        </div>
-        <!-- <div class="card-inner-scroll d-flex d-col bg-component" style="height: 350px"> -->
-          <c8y-asset-selector-miller [(ngModel)]="selectedDevices" (onSelected)="selectionChanged($event)" style="height: 500px" [config]="{
-            groupsSelectable: true,
-            columnHeaders: true,
-            showFilter: true,
-            showUnassignedDevices: true,
-            showChildDevices: true,
-            search: true,
-            multi: true,
-            showSelected: true
-          }" class="bg-component"></c8y-asset-selector-miller>
-        <!-- </div> -->
+      <div class="flex-grow">
+        <c8y-asset-selector-miller [(ngModel)]="selectedDevices" (onSelected)="selectionChanged($event)" [config]="{
+          groupsSelectable: true,
+          columnHeaders: true,
+          showFilter: true,
+          showUnassignedDevices: true,
+          showChildDevices: true,
+          search: true,
+          multi: true,
+          showSelected: true
+        }" class="bg-component"></c8y-asset-selector-miller>
       </div>
     </div>
     <c8y-stepper-buttons class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
@@ -119,17 +106,3 @@
       [class.user-no-admin-or-create-role]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     </c8y-stepper-buttons>
   </cdk-step>
-</c8y-stepper>
-
-<!-- <div class="card-block">
-  <c8y-asset-selector-miller [(ngModel)]="selectedDevices" (onSelected)="selectionChanged($event)" [config]="{
-            groupsSelectable: true,
-            columnHeaders: true,
-            showFilter: true,
-            showUnassignedDevices: true,
-            showChildDevices: true,
-            search: true,
-            multi: true,
-            showSelected: true
-          }" class="bg-component"></c8y-asset-selector-miller>
-</div> -->

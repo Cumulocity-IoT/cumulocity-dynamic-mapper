@@ -37,7 +37,7 @@
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Add relations (device selection)' | translate }}" (click)="onAddRelations()"
     [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
-    <i c8yIcon="plus"></i>
+    <i c8yIcon="add"></i>
     {{ 'Add relations' | translate }}
   </button>
   <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
@@ -68,9 +68,7 @@
 <div [ngClass]="{ drawerOpen: showAddRelation }">
   <div class="bottom-drawer">
     <d11r-relation-stepper *ngIf="showAddRelation" (cancel)="showAddRelation = false"
-      (commit)="onCommitRelation($event)"
-       [clients]="clients"
-      [selectedDevices]="selectedDevices" >
+      (commit)="onCommitRelations($event)">
     </d11r-relation-stepper>
   </div>
 </div>

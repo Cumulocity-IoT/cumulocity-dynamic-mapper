@@ -18,18 +18,18 @@
  * @authors Christof Strack
  */
 import { CdkStep } from '@angular/cdk/stepper';
-import { Component, EventEmitter, inject, Input, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { AlertService, C8yStepper, ForOfFilterPipe } from '@c8y/ngx-components';
-import { BehaviorSubject, map, pipe, Subject, tap } from 'rxjs';
-import { ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, inject, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AlertService, C8yStepper } from '@c8y/ngx-components';
+import { ChangeDetectionStrategy } from '@angular/core';
 
 import {
   Feature,
   SharedService,
 } from '../../shared';
-import { IIdentified, IResultList } from '@c8y/client';
-import { SubscriptionService } from '../core/subscription.service';
+import { IIdentified } from '@c8y/client';
 import { AssetSelectionChangeEvent } from '@c8y/ngx-components/assets-navigator';
+import { ClientRelationService } from '../core/client-relation.service';
+import { Subject } from 'rxjs';
 
 interface StepperLabels {
   next: string;
@@ -50,13 +50,11 @@ const CONSTANTS = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false
 })
-export class ClientRelationStepperComponent implements OnInit, OnDestroy {
-  @Input() selectedDevices: IIdentified[] = [];
-  @Input() clients: string[] = [];
+export class ClientRelationStepperComponent implements OnInit, OnDestroy, AfterViewInit {
+  clients: string[] = [];
   @Output() cancel = new EventEmitter<void>();
   @Output() commit = new EventEmitter<any>();
 
-  isButtonDisabled$ = new BehaviorSubject<boolean>(true);
   isButtonDisabled = true;
   private readonly destroy$ = new Subject<void>();
 
@@ -71,28 +69,53 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy {
     next: 'Next',
     cancel: 'Cancel'
   };
+
   feature: Feature;
-  selectedClient: any;
+
   client: any;
+  filteredClients: any = [];
+  selectedClient: any;
+  pattern = "";
+
+  selectedDevices: IIdentified[] = [];
+
+  searchTerm: any;
 
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
-  private readonly subscriptionService = inject(SubscriptionService);
+  private readonly clientRelationService = inject(ClientRelationService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   async ngOnInit(): Promise<void> {
     this.feature = await this.sharedService.getFeatures();
-    this.clients.forEach((cl, ind) => this.clientsAsOptions.push({ id: ind, name: cl }));
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    this.isButtonDisabled$.complete();
+  }
+
+  async ngAfterViewInit(): Promise<void> {
+    const { clients } = await this.clientRelationService.getAllClients();
+
+    if (clients?.length) {
+      this.clients = clients;
+      this.clientsAsOptions = clients.map((client, index) => ({
+        id: index,
+        name: client
+      }));
+      this.filteredClients = [...this.clientsAsOptions];
+    } else {
+      this.clients = [];
+      this.clientsAsOptions = [];
+      this.filteredClients = [];
+    }
   }
 
   async onCommitButton(): Promise<void> {
     try {
-      this.commit.emit(null);
+      const devices = this.selectedDevices?.map(d => d.id) || [];
+      this.commit.emit({ client: this.selectedClient.name, devices });
     } catch (error) {
       this.handleError('Error committing changes', error);
     }
@@ -102,11 +125,36 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy {
     this.cancel.emit();
   }
 
-  onNextStep(event: { stepper: C8yStepper; step: CdkStep }): void {
+  async onNextStep(event: { stepper: C8yStepper; step: CdkStep }): Promise<void> {
     try {
+      console.log("Step next step", event, this.selectedDevices);
+
       event.stepper.next();
     } catch (error) {
       this.handleError('Error moving to next step', error);
+    }
+  }
+
+  async onStepChange(event: any): Promise<void> {
+    const currentStepIndex = event['selectedIndex'];
+    if (currentStepIndex == 1) {
+      try {
+        const { devices } = await this.clientRelationService.getDevicesForClient(this.selectedClient.name);
+
+        // Use setTimeout to ensure the component is fully rendered
+        setTimeout(() => {
+          this.selectedDevices = devices?.map(id => ({ id })) || [];
+          console.log("Step change - devices updated", this.selectedDevices);
+          this.cdr.detectChanges();
+        }, 100); // Small delay to ensure component is ready
+
+      } catch (error) {
+        // ignore not found error
+        setTimeout(() => {
+          this.selectedDevices = [];
+          this.cdr.detectChanges();
+        }, 100);
+      }
     }
   }
 
@@ -116,6 +164,18 @@ export class ClientRelationStepperComponent implements OnInit, OnDestroy {
 
   selectClient(client: any): void {
     this.selectedClient = client;
+    this.isButtonDisabled = !client;
+  }
+
+  onSearch(term: string) {
+    this.searchTerm = term;
+    this.filteredClients = this.clientsAsOptions.filter(cl =>
+      cl.name.toLowerCase().includes(term.toLowerCase())
+    );
+  }
+
+  addNewClient(client: any) {
+    this.selectedClient = { id: client, name: client };
     this.isButtonDisabled = !client;
   }
 

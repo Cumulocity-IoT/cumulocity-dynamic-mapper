@@ -22,7 +22,6 @@ import { inject, Injectable, OnDestroy } from '@angular/core';
 import {
   FetchClient,
   IFetchResponse,
-  InventoryService,
   QueriesUtil
 } from '@c8y/client';
 import {
@@ -33,7 +32,6 @@ import {
   shareReplay,
   switchMap,
   take,
-  BehaviorSubject,
   filter,
   takeUntil
 } from 'rxjs';
@@ -50,7 +48,6 @@ import {
   PATH_DEPLOYMENT_DEFINED_ENDPOINT,
   Mapping,
   PATH_MAPPING_ENDPOINT,
-  MappingType,
   LoggingEventTypeMap,
   LoggingEventType,
   isSubstitutionsAsCode
@@ -101,6 +98,7 @@ export class MappingService implements OnDestroy {
     this.initializeMappingsEnriched();
   }
 
+  // TODO ngOnDestroy is not called for services, find alternative how to stop the realtime service
   ngOnDestroy(): void {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
