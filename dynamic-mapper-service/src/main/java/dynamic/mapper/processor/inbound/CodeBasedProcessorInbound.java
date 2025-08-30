@@ -45,7 +45,6 @@ public class CodeBasedProcessorInbound extends BaseProcessorInbound<Object> {
         return jsonObject;
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {

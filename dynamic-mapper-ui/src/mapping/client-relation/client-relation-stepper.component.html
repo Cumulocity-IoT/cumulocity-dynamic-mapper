@@ -18,7 +18,6 @@
   ~  @authors Christof Strack, Stefan Witschel
   ~
   -->
-
 <c8y-stepper class="d-col no-align-items fit-h c8y-stepper--no-btns a-i-center"
   [disableDefaultIcons]="{ edit: true, done: false }" [customClasses]="[
     'col-xs-10',
@@ -27,12 +26,12 @@
     'm-b-40',
     'p-0',
     'flex-no-shrink'
-  ]" (selectionChange)="onStepChange($event)" #stepper>
+  ]">
 
-  <!-- override icons -->
   <ng-template c8yStepperIcon="final">
     <span [c8yIcon]="'hand-peace-o'"></span>
   </ng-template>
+
   <cdk-step label="Select or create client name">
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
       <div class="row">
@@ -76,11 +75,11 @@
         </div>
       </div>
     </div>
-    <c8y-stepper-buttons [disabled]="isButtonDisabled"
-      class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0" (onCancel)="cancel.emit()"
-      (onNext)="onNextStep($event)" [labels]="labels">
+    <c8y-stepper-buttons [disabled]="false" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
+      (onCancel)="cancel.emit()" (onNext)="onNextStep($event)" [labels]="labels">
     </c8y-stepper-buttons>
   </cdk-step>
+
   <cdk-step label="Assign devices or device groups" state="final">
     <div class="d-col no-align-items p-48 fit-h fit-w c8y-stepper--no-btns">
       <div class="card-header separator fit-w j-c-center">
@@ -106,3 +105,4 @@
       [class.user-no-admin-or-create-role]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
     </c8y-stepper-buttons>
   </cdk-step>
+</c8y-stepper>

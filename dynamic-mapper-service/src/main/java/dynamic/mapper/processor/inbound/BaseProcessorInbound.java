@@ -483,7 +483,7 @@ public abstract class BaseProcessorInbound<T> {
             try {
                 var expr = jsonata(mappingFilter);
                 Object extractedSourceContent = expr.evaluate(payloadObjectNode);
-                if (!isNodeTrue(extractedSourceContent)) {
+                if (!Utils.isNodeTrue(extractedSourceContent)) {
                     log.info("{} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter,
                             payload);
                     context.setIgnoreFurtherProcessing(true);
@@ -493,21 +493,5 @@ public abstract class BaseProcessorInbound<T> {
                         payload, e);
             }
         }
-    }
-
-    private boolean isNodeTrue(Object node) {
-        // Case 1: Direct boolean value check
-        if (node instanceof Boolean) {
-            return (Boolean) node;
-        }
-
-        // Case 2: String value that can be converted to boolean
-        if (node instanceof String) {
-            String text = ((String) node).trim().toLowerCase();
-            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
-            // Add more string variations if needed
-        }
-
-        return false;
     }
 }
