@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound;
+package dynamic.mapper.processor.inbound.route;
 
 import java.util.ArrayList;
 
