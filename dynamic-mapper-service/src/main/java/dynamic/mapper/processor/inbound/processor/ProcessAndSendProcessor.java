@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound;
+package dynamic.mapper.processor.inbound.processor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,6 +10,10 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.inbound.sender.AlarmSender;
+import dynamic.mapper.processor.inbound.sender.EventSender;
+import dynamic.mapper.processor.inbound.sender.MeasurementSender;
+import dynamic.mapper.processor.inbound.sender.MessageSender;
 import dynamic.mapper.processor.model.ProcessingContext;
 
 @Component

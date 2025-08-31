@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound;
+package dynamic.mapper.processor.inbound.processor;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;

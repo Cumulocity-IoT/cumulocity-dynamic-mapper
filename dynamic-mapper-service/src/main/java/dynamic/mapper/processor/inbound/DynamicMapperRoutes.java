@@ -7,8 +7,19 @@ import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import dynamic.mapper.processor.inbound.processor.CodeExtractionProcessor;
+import dynamic.mapper.processor.inbound.processor.DeserializationProcessor;
+import dynamic.mapper.processor.inbound.processor.EnrichmentProcessor;
+import dynamic.mapper.processor.inbound.processor.JSONataExtractionProcessor;
+import dynamic.mapper.processor.inbound.processor.FilterProcessor;
+import dynamic.mapper.processor.inbound.processor.MappingContextProcessor;
+import dynamic.mapper.processor.inbound.processor.MappingResolverProcessor;
+import dynamic.mapper.processor.inbound.processor.ProcessAndSendProcessor;
+import dynamic.mapper.processor.inbound.processor.ProcessingResultProcessor;
+import dynamic.mapper.processor.inbound.processor.SubstitutionProcessor;
+import dynamic.mapper.processor.inbound.util.ProcessingContextAggregationStrategy;
+import dynamic.mapper.processor.inbound.util.ProcessingContextInitializer;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResult;
 import dynamic.mapper.service.MappingService;
 
 @Component
@@ -55,21 +66,26 @@ public class DynamicMapperRoutes extends RouteBuilder {
                 .end();
 
         // Single mapping processing pipeline
-        // Single mapping processing pipeline
         from("direct:processSingleMapping")
                 .routeId("single-mapping-processor")
                 .process(new MappingContextProcessor())
                 .process(new DeserializationProcessor())
                 .process(new EnrichmentProcessor())
-                .process(new ExtractionProcessor())
+                // Route-based decision for extraction type
+                .choice()
+                    .when(header("processingContext").method("getMapping").method("isSubstitutionsAsCode"))
+                        .process(new CodeExtractionProcessor())
+                    .otherwise()
+                        .process(new JSONataExtractionProcessor())
+                .end()
                 .process(new SubstitutionProcessor())
                 .process(new FilterProcessor())
                 .choice()
-                .when(header("processingContext").method("isIgnoreFurtherProcessing"))
-                .to("log:filtered-message?level=DEBUG")
-                .stop() // Stop processing if filtered out
-                .otherwise()
-                .process(new ProcessAndSendProcessor())
+                    .when(header("processingContext").method("isIgnoreFurtherProcessing"))
+                        .to("log:filtered-message?level=DEBUG")
+                        .stop()
+                    .otherwise()
+                        .process(new ProcessAndSendProcessor())
                 .end()
                 .process(new ProcessingResultProcessor());
 

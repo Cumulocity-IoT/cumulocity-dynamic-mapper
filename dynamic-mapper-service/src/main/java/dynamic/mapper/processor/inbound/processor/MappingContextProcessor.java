@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound;
+package dynamic.mapper.processor.inbound.processor;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;

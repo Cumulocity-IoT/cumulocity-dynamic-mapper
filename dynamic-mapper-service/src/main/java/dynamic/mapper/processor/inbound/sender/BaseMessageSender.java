@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound;
+package dynamic.mapper.processor.inbound.sender;
 
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;

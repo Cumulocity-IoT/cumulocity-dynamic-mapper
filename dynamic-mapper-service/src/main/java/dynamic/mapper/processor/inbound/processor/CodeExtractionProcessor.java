@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound;
+package dynamic.mapper.processor.inbound.processor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,6 +15,7 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.inbound.SubstitutionsAsCode;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
@@ -26,7 +27,7 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 @Slf4j
 @Component
-public class ExtractionProcessor implements Processor {
+public class CodeExtractionProcessor implements Processor {
     
     @Override
     public void process(Exchange exchange) throws Exception {

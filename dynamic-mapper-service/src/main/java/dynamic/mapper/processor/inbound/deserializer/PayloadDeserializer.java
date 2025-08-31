@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound;
+package dynamic.mapper.processor.inbound.deserializer;
 
 import java.io.IOException;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
