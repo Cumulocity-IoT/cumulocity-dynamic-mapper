@@ -13,7 +13,6 @@ import org.apache.camel.Message;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.support.DefaultExchange;
-import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -30,7 +29,6 @@ import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Component
 public class CamelDispatcherInbound implements GenericMessageCallback {
 
     private final AConnectorClient connectorClient;
@@ -41,8 +39,6 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
     private final ProducerTemplate producerTemplate;
     private final CamelContext camelContext;
 
-    private ObjectMapper objectMapper;
-
     /**
      * Constructor matching DispatcherInbound signature
      */
@@ -52,7 +48,6 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.mappingService = configurationRegistry.getMappingService();
         this.configurationRegistry = configurationRegistry;
-        this.objectMapper = configurationRegistry.getObjectMapper();
 
         // Initialize Camel components
         this.camelContext = new DefaultCamelContext();
