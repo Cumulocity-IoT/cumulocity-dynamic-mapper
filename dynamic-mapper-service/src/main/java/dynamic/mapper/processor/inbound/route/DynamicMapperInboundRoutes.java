@@ -38,6 +38,24 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 .handled(true)
                 .process(exchange -> {
                     Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+                    String routeId = exchange.getFromRouteId();
+
+                    // Safe endpoint access
+                    String endpoint = "unknown";
+                    try {
+                        if (exchange.getFromEndpoint() != null) {
+                            endpoint = exchange.getFromEndpoint().getEndpointUri();
+                        }
+                    } catch (Exception e) {
+                        // Ignore endpoint access errors
+                    }
+
+                    log.error("=== CAMEL ROUTE ERROR ===");
+                    log.error("Route ID: {}", routeId);
+                    log.error("Endpoint: {}", endpoint);
+                    log.error("Exception Type: {}", cause.getClass().getSimpleName());
+                    log.error("Exception Message: {}", cause.getMessage());
+                    log.error("Full Stack Trace: ", cause);
 
                     ProcessingResult<Object> result = ProcessingResult.builder()
                             .error(cause)
@@ -85,14 +103,26 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
 
                 // Conditional extension processing
                 .choice()
-                .when(header("processingContext").method("getMapping").method("getExtension").isNotNull())
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null &&
+                            context.getMapping() != null &&
+                            context.getMapping().getExtension() != null;
+                })
                 .process(new ExtensibleProcessor())
                 .stop() // Extensions handle their own processing
                 .end()
 
                 // Regular extraction processing
                 .choice()
-                .when(header("processingContext").method("getMapping").method("isSubstitutionsAsCode"))
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null &&
+                            context.getMapping() != null &&
+                            context.getMapping().isSubstitutionsAsCode();
+                })
                 .process(new CodeExtractionProcessor())
                 .otherwise()
                 .process(new JSONataExtractionProcessor())
@@ -102,7 +132,11 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 .process(new FilterProcessor())
 
                 .choice()
-                .when(header("processingContext").method("isIgnoreFurtherProcessing"))
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null && context.isIgnoreFurtherProcessing();
+                })
                 .to("log:filtered-message?level=DEBUG")
                 .stop()
                 .otherwise()

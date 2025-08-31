@@ -4,6 +4,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.springframework.stereotype.Component;
 
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -18,6 +19,7 @@ public class MappingContextProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         ConnectorMessage message = exchange.getIn().getHeader("originalMessage", ConnectorMessage.class);
         Mapping currentMapping = exchange.getIn().getBody(Mapping.class);
+        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader("serviceConfiguration",ServiceConfiguration.class);
         
         // Extract additional info from headers if available
         String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
@@ -28,6 +30,7 @@ public class MappingContextProcessor implements Processor {
             .topic(message.getTopic())
             .client(message.getClient())
             .tenant(message.getTenant())
+            .serviceConfiguration(serviceConfiguration)
             .sendPayload(message.isSendPayload())
             .supportsMessageContext(message.isSupportsMessageContext())
             .key(message.getKey())

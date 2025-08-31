@@ -31,6 +31,7 @@ public class DeserializationProcessor implements Processor {
         deserializers.put(MappingType.PROTOBUF_INTERNAL, new HexPayloadDeserializer());
         deserializers.put(MappingType.EXTENSION_SOURCE, new ExtensibleDeserializer());
         deserializers.put(MappingType.EXTENSION_SOURCE_TARGET, new ExtensibleDeserializer());
+        deserializers.put(MappingType.CODE_BASED, new JSONPayloadDeserializer()); 
         
         // Add more mappings as needed based on the MappingType enum values
     }
