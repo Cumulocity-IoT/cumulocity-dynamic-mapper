@@ -7,6 +7,9 @@ import org.json.JSONException;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.PathNotFoundException;
 
+import lombok.Getter;
+
+@Getter
 public class SubstituteValue implements Cloneable{
     public static enum TYPE {
          ARRAY, //                       Extracted is is an array

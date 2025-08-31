@@ -180,6 +180,23 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
+		<dependency>
+			<groupId>org.apache.camel.springboot</groupId>
+			<artifactId>camel-spring-boot-starter</artifactId>
+		</dependency>
+
+		<!-- Camel Core (included in starter but explicit for clarity) -->
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-core</artifactId>
+		</dependency>
+
+		<!-- Camel Direct component for internal routing -->
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-direct</artifactId>
+		</dependency>
 	</dependencies>
 	<build>
 		<sourceDirectory>../dynamic-mapper-service/src/main/java</sourceDirectory>

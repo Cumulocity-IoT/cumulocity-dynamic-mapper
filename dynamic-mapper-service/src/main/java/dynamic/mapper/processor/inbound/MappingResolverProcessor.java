@@ -1,5 +1,15 @@
 package dynamic.mapper.processor.inbound;
 
+import java.util.List;
+
+import org.apache.camel.Exchange;
+import org.apache.camel.Processor;
+import org.springframework.stereotype.Component;
+
+import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.model.Mapping;
+import dynamic.mapper.service.MappingService;
+
 @Component
 public class MappingResolverProcessor implements Processor {
     

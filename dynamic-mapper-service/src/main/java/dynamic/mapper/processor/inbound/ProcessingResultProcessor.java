@@ -1,5 +1,12 @@
 package dynamic.mapper.processor.inbound;
 
+import org.springframework.stereotype.Component;
+
+import dynamic.mapper.processor.model.ProcessingContext;
+
+import org.apache.camel.Exchange;
+import org.apache.camel.Processor;
+
 @Component
 public class ProcessingResultProcessor implements Processor {
     
@@ -7,9 +14,10 @@ public class ProcessingResultProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         
-        // Create success result for this mapping
-        ProcessingResult<?> result = ProcessingResult.success("Mapping processed successfully", context.getProcessedData());
-        exchange.getIn().setHeader("mappingProcessingResult", result);
-        exchange.getIn().setBody(result); // For aggregation
+        // The ProcessingContext itself contains all the processed data
+        // No need to extract a separate "processedData" - the context IS the result
+        
+        exchange.getIn().setHeader("mappingProcessingResult", context);
+        exchange.getIn().setBody(context); // For aggregation - pass the context itself
     }
 }
