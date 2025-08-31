@@ -15,7 +15,7 @@ import dynamic.mapper.processor.inbound.processor.JSONataExtractionProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterProcessor;
 import dynamic.mapper.processor.inbound.processor.MappingContextProcessor;
 import dynamic.mapper.processor.inbound.processor.MappingResolverProcessor;
-import dynamic.mapper.processor.inbound.processor.ProcessAndSendProcessor;
+import dynamic.mapper.processor.inbound.processor.InboundSendProcessor;
 import dynamic.mapper.processor.inbound.processor.ProcessingResultProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionProcessor;
 import dynamic.mapper.processor.inbound.util.ProcessingContextAggregationStrategy;
@@ -91,7 +91,7 @@ public class DynamicMapperRoutes extends RouteBuilder {
                     .to("log:filtered-message?level=DEBUG")
                     .stop()
                 .otherwise()
-                    .process(new ProcessAndSendProcessor())
+                    .process(new InboundSendProcessor())
             .end()
             .process(new ProcessingResultProcessor());
 
