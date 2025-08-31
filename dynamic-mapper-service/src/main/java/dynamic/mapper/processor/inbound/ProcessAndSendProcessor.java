@@ -40,7 +40,7 @@ public class ProcessAndSendProcessor implements Processor {
         }
         
         // Process and send - this will populate the context's requests list
-        sender.processAndSend(context);
+        sender.send(context);
         
         exchange.getIn().setHeader("processingContext", context);
     }

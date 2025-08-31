@@ -22,6 +22,7 @@
 package dynamic.mapper.processor.model;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import dynamic.mapper.model.API;
@@ -30,9 +31,12 @@ import org.springframework.web.bind.annotation.RequestMethod;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class C8YRequest {
+    @Builder.Default
     private int predecessor = -1;;
     private RequestMethod method;
+    private API api;
     private String sourceId;
     private String externalIdType;
     private String request;
