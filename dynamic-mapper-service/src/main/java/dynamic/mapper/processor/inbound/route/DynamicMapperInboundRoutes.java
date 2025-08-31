@@ -24,7 +24,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 
 @Component
-public class DynamicMapperRoutes extends RouteBuilder {
+public class DynamicMapperInboundRoutes extends RouteBuilder {
 
     @Autowired
     private MappingService mappingService;
