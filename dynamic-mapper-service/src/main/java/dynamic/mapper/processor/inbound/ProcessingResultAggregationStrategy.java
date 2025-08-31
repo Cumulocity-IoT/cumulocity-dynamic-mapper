@@ -6,43 +6,33 @@ import java.util.List;
 import org.apache.camel.AggregationStrategy;
 import org.apache.camel.Exchange;
 
-import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.ProcessingContext;
 
 public class ProcessingResultAggregationStrategy implements AggregationStrategy {
-
+    
     @Override
     public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
+        ProcessingContext<?> newContext = newExchange.getIn().getBody(ProcessingContext.class);
+        
         if (oldExchange == null) {
-            // First result
-            List<ProcessingResult<?>> results = new ArrayList<>();
-            results.add(newExchange.getIn().getBody(ProcessingResult.class));
-            newExchange.getIn().setHeader("allProcessingResults", results);
+            // First result - create initial list
+            List<ProcessingContext<Object>> contexts = new ArrayList<>();
+            contexts.add((ProcessingContext<Object>) newContext);
+            newExchange.getIn().setHeader("processedContexts", contexts);
             return newExchange;
         }
-
-        // Aggregate results
+        
+        // Aggregate contexts
         @SuppressWarnings("unchecked")
-        List<ProcessingResult<?>> existingResults = oldExchange.getIn().getHeader("allProcessingResults", List.class);
-        ProcessingResult<?> newResult = newExchange.getIn().getBody(ProcessingResult.class);
-
-        existingResults.add(newResult);
-
-        // Create combined result
-        boolean hasFailures = existingResults.stream().anyMatch(r -> !r.isSuccess());
-
-        ProcessingResult<List<ProcessingResult<?>>> combinedResult = new ProcessingResult<>();
-        combinedResult.setData(existingResults);
-
-        if (hasFailures) {
-            combinedResult.setSuccess(false);
-            combinedResult.setMessage("Some mappings failed");
-            // You might want to aggregate exception messages here
-        } else {
-            combinedResult.setSuccess(true);
-            combinedResult.setMessage("All mappings processed successfully");
+        List<ProcessingContext<Object>> existingContexts = oldExchange.getIn().getHeader("processedContexts", List.class);
+        
+        if (existingContexts == null) {
+            existingContexts = new ArrayList<>();
         }
-
-        oldExchange.getIn().setHeader("processingResult", combinedResult);
+        
+        existingContexts.add((ProcessingContext<Object>) newContext);
+        oldExchange.getIn().setHeader("processedContexts", existingContexts);
+        
         return oldExchange;
     }
 }

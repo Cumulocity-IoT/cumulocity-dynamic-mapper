@@ -21,13 +21,16 @@ public class ProcessingResultHelper {
         Qos consolidatedQos = contexts.stream()
             .map(ProcessingContext::getQos)
             .filter(qos -> qos != null)
-            .max((q1, q2) -> Integer.compare(q1.ordinal(), q2.ordinal())) // Assuming enum with ordinal priority
+            .reduce((q1, q2) -> getHigherQos(q1, q2))
             .orElse(Qos.AT_LEAST_ONCE);
+        
+        // Calculate processing time based on contexts
+        int processingTime = calculateProcessingTime(contexts);
         
         return ProcessingResult.<T>builder()
             .processingResult(future)
             .consolidatedQos(consolidatedQos)
-            .maxCPUTimeMS(calculateMaxCPUTime(contexts))
+            .maxCPUTimeMS(processingTime)
             .build();
     }
     
@@ -46,16 +49,52 @@ public class ProcessingResultHelper {
             .build();
     }
     
-    public static <T> ProcessingResult<T> empty() {
+    public static <T> ProcessingResult<T> failure(Exception error, int maxCPUTimeMS) {
         return ProcessingResult.<T>builder()
-            .processingResult(CompletableFuture.completedFuture(new ArrayList<>()))
+            .error(error)
+            .maxCPUTimeMS(maxCPUTimeMS)
+            .build();
+    }
+    
+    public static <T> ProcessingResult<T> empty() {
+        CompletableFuture<List<ProcessingContext<T>>> emptyFuture = 
+            CompletableFuture.completedFuture(new ArrayList<>());
+            
+        return ProcessingResult.<T>builder()
+            .processingResult(emptyFuture)
             .consolidatedQos(Qos.AT_MOST_ONCE)
             .maxCPUTimeMS(0)
             .build();
     }
     
-    private static <T> int calculateMaxCPUTime(List<ProcessingContext<T>> contexts) {
-        // Calculate based on number of contexts and complexity
-        return Math.max(1000, contexts.size() * 500); // Base 1s + 500ms per context
+    private static Qos getHigherQos(Qos q1, Qos q2) {
+        // Assuming QoS priority: EXACTLY_ONCE > AT_LEAST_ONCE > AT_MOST_ONCE
+        if (q1 == Qos.EXACTLY_ONCE || q2 == Qos.EXACTLY_ONCE) {
+            return Qos.EXACTLY_ONCE;
+        }
+        if (q1 == Qos.AT_LEAST_ONCE || q2 == Qos.AT_LEAST_ONCE) {
+            return Qos.AT_LEAST_ONCE;
+        }
+        return Qos.AT_MOST_ONCE;
+    }
+    
+    private static <T> int calculateProcessingTime(List<ProcessingContext<T>> contexts) {
+        if (contexts == null || contexts.isEmpty()) {
+            return 100;
+        }
+        
+        // Calculate based on complexity - number of requests, errors, etc.
+        int totalTime = contexts.stream()
+            .mapToInt(ctx -> {
+                int contextTime = 200; // Base time per context
+                contextTime += ctx.getRequests().size() * 50; // Time per request
+                if (ctx.hasError()) {
+                    contextTime += 100; // Additional time for error handling
+                }
+                return contextTime;
+            })
+            .sum();
+            
+        return Math.max(100, totalTime); // Minimum 100ms
     }
 }
