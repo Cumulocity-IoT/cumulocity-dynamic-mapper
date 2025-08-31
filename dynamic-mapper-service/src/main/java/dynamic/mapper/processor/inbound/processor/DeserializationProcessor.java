@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.inbound.deserializer.ExtensibleDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.FlatFilePayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.HexPayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.JSONPayloadDeserializer;
@@ -28,8 +29,8 @@ public class DeserializationProcessor implements Processor {
         deserializers.put(MappingType.FLAT_FILE, new FlatFilePayloadDeserializer());
         deserializers.put(MappingType.HEX, new HexPayloadDeserializer());
         deserializers.put(MappingType.PROTOBUF_INTERNAL, new HexPayloadDeserializer());
-        // TODO
-        // deserializers.put(MappingType.EXTENSION_SOURCE_TARGET, new JSONPayloadDeserializer()); // Default to JSON, could be configurable
+        deserializers.put(MappingType.EXTENSION_SOURCE, new ExtensibleDeserializer());
+        deserializers.put(MappingType.EXTENSION_SOURCE_TARGET, new ExtensibleDeserializer());
         
         // Add more mappings as needed based on the MappingType enum values
     }

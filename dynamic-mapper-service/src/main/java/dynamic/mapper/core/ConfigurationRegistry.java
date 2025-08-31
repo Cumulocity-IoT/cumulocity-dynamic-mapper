@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
+import org.apache.camel.CamelContext;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
@@ -75,7 +76,6 @@ import dynamic.mapper.processor.processor.fixed.InternalProtobufProcessor;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
-import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -184,6 +184,9 @@ public class ConfigurationRegistry {
     @Setter
     @Autowired
     private ExecutorService virtualThreadPool;
+
+    @Autowired
+    private CamelContext camelContext;
 
     public Map<MappingType, BaseProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
@@ -479,6 +482,11 @@ public class ConfigurationRegistry {
 
     public void removePayloadProcessorsOutbound(String tenant) {
         payloadProcessorsOutbound.remove(tenant);
+    }
+
+    // In ConfigurationRegistry
+    public CamelContext getCamelContext() {
+        return this.camelContext; // Assuming you have it stored
     }
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,

@@ -26,90 +26,94 @@ import dynamic.mapper.service.MappingService;
 
 @Component
 public class DynamicMapperInboundRoutes extends RouteBuilder {
-    
+
     @Autowired
     private MappingService mappingService;
 
     @Override
     public void configure() throws Exception {
-        
+
         // Global error handling
         onException(Exception.class)
-            .handled(true)
-            .process(exchange -> {
-                Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-                
-                ProcessingResult<Object> result = ProcessingResult.builder()
-                    .error(cause)
-                    .maxCPUTimeMS(0)
-                    .build();
-                
-                exchange.getIn().setHeader("processingResult", result);
-            })
-            .to("direct:errorHandling");
-            
+                .handled(true)
+                .process(exchange -> {
+                    Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+
+                    ProcessingResult<Object> result = ProcessingResult.builder()
+                            .error(cause)
+                            .maxCPUTimeMS(0)
+                            .build();
+
+                    exchange.getIn().setHeader("processingResult", result);
+                })
+                .to("direct:errorHandling");
+
         // Main processing entry point (transport agnostic)
         from("direct:processInboundMessage")
-            .routeId("inbound-message-processor")
-            .process(new MappingResolverProcessor(mappingService))
-            .choice()
+                .routeId("inbound-message-processor")
+                .log("=== ROUTE RECEIVED MESSAGE ===")
+                .process(exchange -> {
+                    log.info("MappingResolverProcessor - Processing exchange: {}", exchange);
+                })
+                .process(new MappingResolverProcessor(mappingService))
+                .choice()
                 .when(header("mappings").isNull())
-                    .process(exchange -> {
-                        // No mappings found - return empty contexts list
-                        exchange.getIn().setHeader("processedContexts", new ArrayList<ProcessingContext<Object>>());
-                    })
-                    .stop()
+                .process(exchange -> {
+                    // No mappings found - return empty contexts list
+                    exchange.getIn().setHeader("processedContexts", new ArrayList<ProcessingContext<Object>>());
+                })
+                .stop()
                 .otherwise()
-                    .to("direct:processWithMappings");
-                    
+                .to("direct:processWithMappings");
+
         // Process message with found mappings
         from("direct:processWithMappings")
-            .routeId("mapping-processor")
-            .process(new ProcessingContextInitializer())
-            .split(header("mappings"))
+                .routeId("mapping-processor")
+                .process(new ProcessingContextInitializer())
+                .split(header("mappings"))
                 .parallelProcessing(false)
                 .aggregationStrategy(new ProcessingContextAggregationStrategy())
                 .to("direct:processSingleMapping")
-            .end();
-                
+                .end();
+
         // Single mapping processing pipeline
         from("direct:processSingleMapping")
-            .routeId("single-mapping-processor")
-            .process(new MappingContextProcessor())
-            .process(new DeserializationProcessor())
-            .process(new EnrichmentProcessor())
-            
-            // Conditional extension processing
-            .choice()
+                .routeId("single-mapping-processor")
+                .process(new MappingContextProcessor())
+                .process(new DeserializationProcessor())
+                .process(new EnrichmentProcessor())
+
+                // Conditional extension processing
+                .choice()
                 .when(header("processingContext").method("getMapping").method("getExtension").isNotNull())
-                    .process(new ExtensibleProcessor())
-                    .stop() // Extensions handle their own processing
-            .end()
-            
-            // Regular extraction processing
-            .choice()
+                .process(new ExtensibleProcessor())
+                .stop() // Extensions handle their own processing
+                .end()
+
+                // Regular extraction processing
+                .choice()
                 .when(header("processingContext").method("getMapping").method("isSubstitutionsAsCode"))
-                    .process(new CodeExtractionProcessor())
+                .process(new CodeExtractionProcessor())
                 .otherwise()
-                    .process(new JSONataExtractionProcessor())
-            .end()
-            
-            .process(new SubstitutionProcessor())
-            .process(new FilterProcessor())
-            
-            .choice()
+                .process(new JSONataExtractionProcessor())
+                .end()
+
+                .process(new SubstitutionProcessor())
+                .process(new FilterProcessor())
+
+                .choice()
                 .when(header("processingContext").method("isIgnoreFurtherProcessing"))
-                    .to("log:filtered-message?level=DEBUG")
-                    .stop()
+                .to("log:filtered-message?level=DEBUG")
+                .stop()
                 .otherwise()
-                    .process(new InboundSendProcessor())
-            .end()
-            
-            .process(new ProcessingResultProcessor());
-            
+                .process(new InboundSendProcessor())
+                .end()
+
+                .process(new ProcessingResultProcessor());
+
         // Error handling route
         from("direct:errorHandling")
-            .routeId("error-handler")
-            .to("log:dynamic-mapper-error?level=ERROR&showException=true");
+                .routeId("error-handler")
+                .to("log:dynamic-mapper-error?level=ERROR&showException=true");
     }
 }

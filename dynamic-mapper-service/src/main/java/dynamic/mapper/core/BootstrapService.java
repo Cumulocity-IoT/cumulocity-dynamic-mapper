@@ -387,7 +387,7 @@ public class BootstrapService {
             // initialize AsynchronousDispatcherInbound
             // DispatcherInbound dispatcherInbound = new DispatcherInbound(configurationRegistry,
             //         connectorClient);
-            GenericMessageCallback dispatcherInbound = new CamelDispatcherInbound(configurationRegistry,connectorClient);
+            GenericMessageCallback dispatcherInbound = new CamelDispatcherInbound(configurationRegistry, connectorClient);
             connectorClient.setDispatcher(dispatcherInbound);
             // Connection is done async, future is returned to wait for the connection if
             // needed

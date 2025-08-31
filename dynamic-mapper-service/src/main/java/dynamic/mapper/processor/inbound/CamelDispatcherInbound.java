@@ -50,7 +50,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         this.configurationRegistry = configurationRegistry;
 
         // Initialize Camel components
-        this.camelContext = new DefaultCamelContext();
+        this.camelContext = configurationRegistry.getCamelContext();
         this.producerTemplate = camelContext.createProducerTemplate();
 
         // Start Camel context
