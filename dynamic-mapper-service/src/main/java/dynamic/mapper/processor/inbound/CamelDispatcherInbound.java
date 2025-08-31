@@ -160,13 +160,9 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public void onClose(String closeMessage, Throwable closeException) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'onClose'");
     }
 
     @Override
     public void onError(Throwable errorException) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'onError'");
     }
 }
