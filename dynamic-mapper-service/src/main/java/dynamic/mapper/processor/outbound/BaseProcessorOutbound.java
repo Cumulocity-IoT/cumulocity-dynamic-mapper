@@ -213,9 +213,15 @@ public abstract class BaseProcessorOutbound<T> {
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
             var newPredecessor = context.addRequest(
-                    new C8YRequest(predecessor, method, deviceSource, mapping.externalIdType,
-                            payloadTarget.jsonString(),
-                            null, mapping.targetAPI, null));
+                    C8YRequest.builder()
+                            .predecessor(predecessor)
+                            .method(method)
+                            .api(mapping.targetAPI) // Set the api field
+                            .sourceId(deviceSource)
+                            .externalIdType(mapping.externalIdType)
+                            .request(payloadTarget.jsonString())
+                            .targetAPI(mapping.targetAPI)
+                            .build());
             try {
                 if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);

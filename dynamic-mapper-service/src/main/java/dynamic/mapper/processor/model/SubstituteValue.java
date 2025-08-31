@@ -8,8 +8,10 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.PathNotFoundException;
 
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 public class SubstituteValue implements Cloneable{
     public static enum TYPE {
          ARRAY, //                       Extracted is is an array

@@ -62,6 +62,7 @@ public class DynamicMapperRoutes extends RouteBuilder {
                 .process(new DeserializationProcessor())
                 .process(new EnrichmentProcessor())
                 .process(new ExtractionProcessor())
+                .process(new SubstitutionProcessor())
                 .process(new FilterProcessor())
                 .choice()
                 .when(header("processingContext").method("isIgnoreFurtherProcessing"))
