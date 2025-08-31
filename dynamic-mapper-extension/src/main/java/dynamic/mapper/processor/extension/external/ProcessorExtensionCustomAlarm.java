@@ -155,12 +155,16 @@ public class ProcessorExtensionCustomAlarm
          */
         if (mapping.targetAPI.equals(API.INVENTORY)) {
             var newPredecessor = context.addRequest(
-                    new C8YRequest(predecessor,
-                            context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH,
-                            device.value.toString(),
-                            mapping.externalIdType,
-                            payloadTarget.jsonString(),
-                            null, API.INVENTORY, null));
+                    C8YRequest.builder()
+                            .predecessor(predecessor)
+                            .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST
+                                    : RequestMethod.PATCH)
+                            .api(API.INVENTORY)
+                            .sourceId(device.getValue().toString())
+                            .externalIdType(mapping.getExternalIdType())
+                            .request(payloadTarget.jsonString())
+                            .targetAPI(API.INVENTORY)
+                            .build());
             try {
                 ID identity = new ID(mapping.externalIdType, device.value.toString());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
@@ -178,10 +182,15 @@ public class ProcessorExtensionCustomAlarm
         } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
             AbstractExtensibleRepresentation implicitRequest = null;
             var newPredecessor = context.addRequest(
-                    new C8YRequest(predecessor, RequestMethod.POST, device.value.toString(),
-                            mapping.externalIdType,
-                            payloadTarget.jsonString(),
-                            null, mapping.targetAPI, null));
+                    C8YRequest.builder()
+                            .predecessor(predecessor)
+                            .method(RequestMethod.POST)
+                            .api(mapping.getTargetAPI()) // Set api field
+                            .sourceId(device.getValue().toString())
+                            .externalIdType(mapping.getExternalIdType())
+                            .request(payloadTarget.jsonString())
+                            .targetAPI(mapping.getTargetAPI())
+                            .build());
             try {
                 if (context.isSendPayload()) {
                     c8yAgent.createMEAO(context);
@@ -253,9 +262,16 @@ public class ProcessorExtensionCustomAlarm
             var predecessor = context.getRequests().size();
             var requestString = objectMapper.writeValueAsString(request);
             context.addRequest(
-                    new C8YRequest(predecessor,
-                            context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH, null,
-                            context.getMapping().externalIdType, requestString, null, API.INVENTORY, null));
+                    C8YRequest.builder()
+                            .predecessor(predecessor)
+                            .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST
+                                    : RequestMethod.PATCH)
+                            .api(API.INVENTORY)
+                            .sourceId(null) // Explicitly null in original
+                            .externalIdType(context.getMapping().getExternalIdType())
+                            .request(requestString)
+                            .targetAPI(API.INVENTORY)
+                            .build());
             ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(context.getTenant(),
                     identity, context);
             var response = objectMapper.writeValueAsString(implicitDevice);

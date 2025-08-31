@@ -27,11 +27,13 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.*;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingResult;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
@@ -53,6 +55,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -97,7 +101,13 @@ public class TestController {
             try {
                 AConnectorClient connectorClient = connectorRegistry
                         .getClientForTenant(tenant, connectorIdentifier);
-                result = connectorClient.test(path, send, payload);
+                String payloadMessage = new ObjectMapper().writeValueAsString(payload);
+                ConnectorMessage testMessage = createTestMessage(tenant, connectorClient, path, send, payloadMessage);
+                ProcessingResult<?> processingResult = connectorClient.getDispatcher().onMessage(testMessage);
+                if (processingResult.getProcessingResult() != null) {
+                    // Wait for the future to complete and get the result
+                    result = (List<? extends ProcessingContext<?>>) processingResult.getProcessingResult().get();
+                }
             } catch (ConnectorRegistryException e) {
                 throw new RuntimeException(e);
             }
@@ -112,10 +122,10 @@ public class TestController {
     public String echoInput(HttpServletRequest request, @RequestBody String input) {
         // Get the full URL path
         String fullPath = request.getRequestURI();
-        
+
         // Get query parameters if any
         String queryString = request.getQueryString();
-        
+
         // Log path and input
         if (queryString != null) {
             log.info("Received request at path: {} with query parameters: {}", fullPath, queryString);
@@ -123,7 +133,7 @@ public class TestController {
             log.info("Received request at path: {}", fullPath);
         }
         log.info("Received body: {}", input);
-        
+
         return input;
     }
 
@@ -131,10 +141,10 @@ public class TestController {
     public ResponseEntity<String> echoHealth(HttpServletRequest request) {
         // Get the full URL
         String url = request.getRequestURL().toString();
-        
+
         // Get query string
         String queryString = request.getQueryString();
-        
+
         // Log the full path with query parameters
         if (queryString != null) {
             log.info("Received request: {} with query parameters: {}", url, queryString);
@@ -144,5 +154,18 @@ public class TestController {
 
         // Return 200 OK with empty body
         return ResponseEntity.ok().build();
+    }
+
+    private ConnectorMessage createTestMessage(String tenant, AConnectorClient connectorClient, String topic,
+            boolean sendPayload,
+            String payloadMessage) {
+        return ConnectorMessage.builder()
+                .tenant(tenant)
+                .supportsMessageContext(connectorClient.getSupportsMessageContext())
+                .topic(topic)
+                .sendPayload(sendPayload)
+                .connectorIdentifier(connectorClient.getConnectorIdentifier())
+                .payload(payloadMessage.getBytes())
+                .build();
     }
 }

@@ -61,6 +61,7 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
@@ -70,7 +71,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
@@ -135,7 +135,7 @@ public abstract class AConnectorClient {
 
     @Getter
     @Setter
-    protected DispatcherInbound dispatcher;
+    protected GenericMessageCallback dispatcher;
 
     protected ObjectMapper objectMapper;
 
@@ -790,34 +790,6 @@ public abstract class AConnectorClient {
 
     public boolean hasError() {
         return !connectorStatus.status.equals(ConnectorStatus.FAILED);
-    }
-
-    // Event Handling Methods
-    public List<? extends ProcessingContext<?>> test(String topic, boolean sendPayload, Map<String, Object> payload)
-            throws Exception {
-        String payloadMessage = serializePayload(payload);
-        ConnectorMessage message = createTestMessage(topic, sendPayload, payloadMessage);
-        return dispatcher.processMessage(message).getProcessingResult().get();
-    }
-
-    private String serializePayload(Map<String, Object> payload) throws Exception {
-        try {
-            return objectMapper.writeValueAsString(payload);
-        } catch (Exception e) {
-            log.error("{} - Error serializing payload: {}", tenant, e.getMessage());
-            throw e;
-        }
-    }
-
-    private ConnectorMessage createTestMessage(String topic, boolean sendPayload, String payloadMessage) {
-        return ConnectorMessage.builder()
-                .tenant(tenant)
-                .supportsMessageContext(getSupportsMessageContext())
-                .topic(topic)
-                .sendPayload(sendPayload)
-                .connectorIdentifier(getConnectorIdentifier())
-                .payload(payloadMessage.getBytes())
-                .build();
     }
 
     public void collectSubscribedMappingsAll(Map<String, DeploymentMapEntry> mappingsDeployed) {

@@ -44,6 +44,7 @@ import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRe
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -51,6 +52,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.notification.NotificationSubscriber;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.inbound.DispatcherInbound;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
@@ -383,8 +385,9 @@ public class BootstrapService {
             }
             connectorRegistry.registerClient(tenant, connectorClient);
             // initialize AsynchronousDispatcherInbound
-            DispatcherInbound dispatcherInbound = new DispatcherInbound(configurationRegistry,
-                    connectorClient);
+            // DispatcherInbound dispatcherInbound = new DispatcherInbound(configurationRegistry,
+            //         connectorClient);
+            GenericMessageCallback dispatcherInbound = new CamelDispatcherInbound(configurationRegistry,connectorClient);
             connectorClient.setDispatcher(dispatcherInbound);
             // Connection is done async, future is returned to wait for the connection if
             // needed

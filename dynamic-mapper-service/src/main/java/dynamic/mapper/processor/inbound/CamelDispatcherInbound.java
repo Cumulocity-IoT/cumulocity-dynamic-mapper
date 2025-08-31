@@ -4,149 +4,205 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.ProducerTemplate;
+import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.support.DefaultExchange;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.service.MappingService;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class CamelDispatcherInbound implements GenericMessageCallback {
-    
+
+    private final AConnectorClient connectorClient;
+    private final ExecutorService virtualThreadPool;
+    private final MappingService mappingService;
+    private final ConfigurationRegistry configurationRegistry;
+
     private final ProducerTemplate producerTemplate;
     private final CamelContext camelContext;
-    private final ExecutorService executorService;
-    
-    public CamelDispatcherInbound(CamelContext camelContext) {
-        this.camelContext = camelContext;
+
+    private ObjectMapper objectMapper;
+
+    /**
+     * Constructor matching DispatcherInbound signature
+     */
+    public CamelDispatcherInbound(ConfigurationRegistry configurationRegistry,
+            AConnectorClient connectorClient) {
+        this.connectorClient = connectorClient;
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.mappingService = configurationRegistry.getMappingService();
+        this.configurationRegistry = configurationRegistry;
+        this.objectMapper = configurationRegistry.getObjectMapper();
+
+        // Initialize Camel components
+        this.camelContext = new DefaultCamelContext();
         this.producerTemplate = camelContext.createProducerTemplate();
-        this.executorService = Executors.newCachedThreadPool();
+
+        // Start Camel context
+        try {
+            camelContext.start();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to start Camel context", e);
+        }
     }
-    
+
     @Override
     public ProcessingResult<?> onMessage(ConnectorMessage message) {
-        try {
-            // For async processing
-            Future<List<ProcessingContext<Object>>> processingFuture = executorService.submit(() -> {
-                try {
-                    Exchange exchange = createExchange(message);
-                    Exchange result = producerTemplate.send("direct:processInboundMessage", exchange);
-                    
-                    @SuppressWarnings("unchecked")
-                    List<ProcessingContext<Object>> contexts = result.getIn().getHeader("processedContexts", List.class);
-                    return contexts != null ? contexts : new ArrayList<>();
-                    
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            
-            // Build ProcessingResult with correct fields
-            return ProcessingResult.<Object>builder()
-                .processingResult(processingFuture)
-                .consolidatedQos(determineQos(message))
-                .maxCPUTimeMS(5000) // 5 seconds default timeout
-                .build();
-                
-        } catch (Exception e) {
-            // Build error result
-            return ProcessingResult.<Object>builder()
-                .error(e)
-                .maxCPUTimeMS(0)
-                .build();
-        }
+        return processMessage(message);
     }
-    
-    // Alternative: Synchronous processing
-    public ProcessingResult<?> onMessageSync(ConnectorMessage message) {
-        try {
-            Exchange exchange = createExchange(message);
-            Exchange result = producerTemplate.send("direct:processInboundMessage", exchange);
-            
-            @SuppressWarnings("unchecked")
-            List<ProcessingContext<Object>> contexts = result.getIn().getHeader("processedContexts", List.class);
-            
-            // Create completed future with results
-            CompletableFuture<List<ProcessingContext<Object>>> completedFuture = 
-                CompletableFuture.completedFuture(contexts != null ? contexts : new ArrayList<>());
-            
-            return ProcessingResult.<Object>builder()
-                .processingResult(completedFuture)
-                .consolidatedQos(determineQos(message))
-                .maxCPUTimeMS(calculateProcessingTime(contexts))
-                .build();
-                
-        } catch (Exception e) {
-            return ProcessingResult.<Object>builder()
-                .error(e)
-                .maxCPUTimeMS(0)
-                .build();
-        }
+
+    @Override
+    public void onClose(String closeMessage, Throwable closeException) {
+        // Handle connection close
     }
-    
-    private Qos determineQos(ConnectorMessage message) {
-        String connectorId = message.getConnectorIdentifier();
-        if (connectorId != null) {
-            switch (connectorId.toLowerCase()) {
-                case "mqtt":
-                    return Qos.AT_LEAST_ONCE;
-                case "kafka":
-                    return Qos.EXACTLY_ONCE;
-                default:
-                    return Qos.AT_MOST_ONCE;
+
+    @Override
+    public void onError(Throwable errorException) {
+        // Handle connection errors
+        log.error("Connection error: {}", errorException.getMessage(), errorException);
+    }
+
+    /**
+     * Process message using Camel routes - matches DispatcherInbound.processMessage
+     * signature
+     */
+    public ProcessingResult<?> processMessage(ConnectorMessage connectorMessage) {
+        String topic = connectorMessage.getTopic();
+        String tenant = connectorMessage.getTenant();
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+
+        // Log incoming message if configured
+        if (serviceConfiguration.isLogPayload()) {
+            if (connectorMessage.getPayload() != null) {
+                String payload = new String(connectorMessage.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                log.info("{} - PROCESSING: message on topic: [{}], payload: {}", tenant, topic, payload);
             }
         }
-        return Qos.AT_LEAST_ONCE; // Default
-    }
-    
-    private int calculateProcessingTime(List<ProcessingContext<Object>> contexts) {
-        if (contexts == null || contexts.isEmpty()) {
-            return 100; // Minimum time
+
+        Qos consolidatedQos = Qos.AT_LEAST_ONCE;
+        ProcessingResult<?> result = ProcessingResult.builder()
+                .consolidatedQos(consolidatedQos)
+                .build();
+
+        // Early return for system topics or null payload
+        if (topic == null || topic.startsWith("$SYS") || connectorMessage.getPayload() == null) {
+            return result;
         }
-        
-        // Calculate based on number of contexts and their complexity
-        int baseTime = 500; // Base processing time
-        int perContextTime = 200; // Time per context
-        return baseTime + (contexts.size() * perContextTime);
+
+        // Declare final variables for use in lambda
+        final List<Mapping> resolvedMappings;
+        final Qos finalConsolidatedQos;
+        final int maxCPUTime;
+
+        try {
+            // Resolve mappings for the topic
+            List<Mapping> tempMappings = mappingService.resolveMappingInbound(tenant, topic);
+            resolvedMappings = tempMappings; // Now final
+
+            Qos tempQos = connectorClient.determineMaxQosInbound(resolvedMappings);
+            finalConsolidatedQos = tempQos; // Now final
+
+            result.setConsolidatedQos(finalConsolidatedQos);
+
+            // Set max CPU time if code-based mappings exist
+            int tempMaxCPUTime = 0;
+            for (Mapping mapping : resolvedMappings) {
+                if (mapping.isSubstitutionsAsCode()) {
+                    tempMaxCPUTime = serviceConfiguration.getMaxCPUTimeMS();
+                    break;
+                }
+            }
+            maxCPUTime = tempMaxCPUTime; // Now final
+            result.setMaxCPUTimeMS(maxCPUTime);
+
+        } catch (Exception e) {
+            log.warn("{} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
+                    tenant, topic);
+            log.debug(e.getMessage(), e);
+            return result;
+        }
+
+        // Process using Camel routes asynchronously
+        Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
+            try {
+                Exchange exchange = createExchange(connectorMessage, resolvedMappings); // Now can use final variable
+                Exchange resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
+
+                @SuppressWarnings("unchecked")
+                List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader("processedContexts",
+                        List.class);
+                return contexts != null ? contexts : new ArrayList<>();
+
+            } catch (Exception e) {
+                log.error("{} - Error processing message through Camel routes: {}", tenant, e.getMessage(), e);
+                throw new RuntimeException("Camel processing failed", e);
+            }
+        });
+
+        result.setProcessingResult((Future) futureProcessingResult);
+        return result;
     }
-    
-    private Exchange createExchange(ConnectorMessage message) {
+
+    /**
+     * Create Camel Exchange from ConnectorMessage and resolved mappings
+     */
+    private Exchange createExchange(ConnectorMessage message, List<Mapping> resolvedMappings) {
         Exchange exchange = new DefaultExchange(camelContext);
         Message camelMessage = exchange.getIn();
-        
+
+        // Set the ConnectorMessage as the body
         camelMessage.setBody(message);
+
+        // Set headers for processing
         camelMessage.setHeader("tenant", message.getTenant());
         camelMessage.setHeader("topic", message.getTopic());
         camelMessage.setHeader("connectorIdentifier", message.getConnectorIdentifier());
         camelMessage.setHeader("client", message.getClient());
-        
+        camelMessage.setHeader("mappings", resolvedMappings);
+        camelMessage.setHeader("originalMessage", message);
+
         // Convert headers array to map if present
         if (message.getHeaders() != null) {
             Map<String, String> headerMap = parseHeaders(message.getHeaders());
             camelMessage.setHeader("originalHeaders", headerMap);
         }
-        
-        // Set payload
+
+        // Set payload information
         camelMessage.setHeader("payloadBytes", message.getPayload());
         if (message.getPayload() != null) {
             camelMessage.setHeader("payloadString", new String(message.getPayload()));
         }
-        
+
+        // Set connector information
+        camelMessage.setHeader("connectorClient", connectorClient);
+        camelMessage.setHeader("configurationRegistry", configurationRegistry);
+
         return exchange;
     }
-    
+
+    /**
+     * Parse headers array to map
+     */
     private Map<String, String> parseHeaders(String[] headers) {
         Map<String, String> headerMap = new HashMap<>();
         for (String header : headers) {
@@ -158,11 +214,19 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         return headerMap;
     }
 
-    @Override
-    public void onClose(String closeMessage, Throwable closeException) {
-    }
-
-    @Override
-    public void onError(Throwable errorException) {
+    /**
+     * Cleanup resources
+     */
+    public void shutdown() {
+        try {
+            if (producerTemplate != null) {
+                producerTemplate.stop();
+            }
+            if (camelContext != null) {
+                camelContext.stop();
+            }
+        } catch (Exception e) {
+            log.error("Error shutting down Camel components: {}", e.getMessage(), e);
+        }
     }
 }

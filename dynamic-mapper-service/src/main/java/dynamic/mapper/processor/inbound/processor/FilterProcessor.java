@@ -9,7 +9,6 @@ import org.apache.camel.Processor;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import lombok.extern.slf4j.Slf4j;

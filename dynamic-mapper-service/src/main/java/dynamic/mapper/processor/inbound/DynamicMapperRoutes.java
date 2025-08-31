@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.processor.inbound.processor.CodeExtractionProcessor;
 import dynamic.mapper.processor.inbound.processor.DeserializationProcessor;
 import dynamic.mapper.processor.inbound.processor.EnrichmentProcessor;
+import dynamic.mapper.processor.inbound.processor.ExtensibleProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterProcessor;
 import dynamic.mapper.processor.inbound.processor.MappingContextProcessor;
@@ -67,27 +68,32 @@ public class DynamicMapperRoutes extends RouteBuilder {
 
         // Single mapping processing pipeline
         from("direct:processSingleMapping")
-                .routeId("single-mapping-processor")
-                .process(new MappingContextProcessor())
-                .process(new DeserializationProcessor())
-                .process(new EnrichmentProcessor())
-                // Route-based decision for extraction type
-                .choice()
-                    .when(header("processingContext").method("getMapping").method("isSubstitutionsAsCode"))
-                        .process(new CodeExtractionProcessor())
-                    .otherwise()
-                        .process(new JSONataExtractionProcessor())
-                .end()
-                .process(new SubstitutionProcessor())
-                .process(new FilterProcessor())
-                .choice()
-                    .when(header("processingContext").method("isIgnoreFurtherProcessing"))
-                        .to("log:filtered-message?level=DEBUG")
-                        .stop()
-                    .otherwise()
-                        .process(new ProcessAndSendProcessor())
-                .end()
-                .process(new ProcessingResultProcessor());
+            .routeId("single-mapping-processor")
+            .process(new MappingContextProcessor())
+            .process(new DeserializationProcessor())
+            .process(new EnrichmentProcessor())
+            // Conditional extension processing
+            .choice()
+                .when(header("processingContext").method("getMapping").method("getExtension").isNotNull())
+                    .process(new ExtensibleProcessor())
+            .end()
+            // Continue with regular processing
+            .choice()
+                .when(header("processingContext").method("getMapping").method("isSubstitutionsAsCode"))
+                    .process(new CodeExtractionProcessor())
+                .otherwise()
+                    .process(new JSONataExtractionProcessor())
+            .end()
+            .process(new SubstitutionProcessor())
+            .process(new FilterProcessor())
+            .choice()
+                .when(header("processingContext").method("isIgnoreFurtherProcessing"))
+                    .to("log:filtered-message?level=DEBUG")
+                    .stop()
+                .otherwise()
+                    .process(new ProcessAndSendProcessor())
+            .end()
+            .process(new ProcessingResultProcessor());
 
         // Error handling route
         from("direct:errorHandling")
