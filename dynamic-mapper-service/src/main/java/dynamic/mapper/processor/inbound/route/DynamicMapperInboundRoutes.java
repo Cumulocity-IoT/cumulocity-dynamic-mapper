@@ -20,11 +20,11 @@ import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.MappingContextInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.ProcessingResultProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
-import dynamic.mapper.processor.inbound.util.ProcessingContextAggregationStrategy;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
+import dynamic.mapper.processor.util.ResultProcessor;
 
 @Component
 public class DynamicMapperInboundRoutes extends RouteBuilder {
@@ -62,6 +62,9 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     @Autowired
     private SendInboundProcessor inboundSendProcessor;
 
+    @Autowired
+    private ResultProcessor resultProcessor;
+
     @Override
     public void configure() throws Exception {
 
@@ -96,7 +99,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
 
                     exchange.getIn().setHeader("processingResult", result);
                 })
-                .to("direct:errorHandling");
+                .to("direct:inboundErrorHandling");
 
         // Main processing entry point (transport agnostic)
         from("direct:processInboundMessage")
@@ -113,11 +116,11 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 })
                 .stop()
                 .otherwise()
-                .to("direct:processWithMappings");
+                .to("direct:processWithMappingsInbound");
 
         // Process message with found mappings
-        from("direct:processWithMappings")
-                .routeId("mapping-processor")
+        from("direct:processWithMappingsInbound")
+                .routeId("inbound-mapping-processor")
                 .process(exchange -> {
                     // Filter mappings before splitting: active and deployed
                     @SuppressWarnings("unchecked")
@@ -200,10 +203,10 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 .process(inboundSendProcessor)
                 .end()
 
-                .process(new ProcessingResultProcessor());
+                .process(resultProcessor);
 
         // Error handling route
-        from("direct:errorHandling")
+        from("direct:inboundErrorHandling")
                 .routeId("error-handler")
                 .to("log:dynamic-mapper-error?level=ERROR&showException=true");
     }
@@ -248,7 +251,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
             AConnectorClient connector = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
 
             log.debug("Cannot check deployment status for mapping {}, assuming deployed", mapping.getName());
-            return connector != null && connector.isMappingInboundDeployedInbound(mapping.getIdentifier());
+            return connector != null && connector.isMappingInboundDeployed(mapping.getIdentifier());
 
         } catch (Exception e) {
             log.warn("Error checking mapping deployment status: {}", e.getMessage());

@@ -155,7 +155,7 @@ public class DispatcherInbound implements GenericMessageCallback {
             for (Mapping mapping : resolvedMappings) {
                 // Skip inactive mappings or mappings not deployed inbound
                 if (!mapping.getActive() ||
-                        !connectorClient.isMappingInboundDeployedInbound(mapping.identifier)) {
+                        !connectorClient.isMappingInboundDeployed(mapping.identifier)) {
                     continue;
                 }
 

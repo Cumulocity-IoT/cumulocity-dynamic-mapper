@@ -1,13 +1,14 @@
-package dynamic.mapper.processor.inbound.processor;
+package dynamic.mapper.processor.util;
 
 import org.springframework.stereotype.Component;
 
+import dynamic.mapper.processor.inbound.processor.BaseProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 
 import org.apache.camel.Exchange;
 
 @Component
-public class ProcessingResultProcessor extends BaseProcessor {
+public class ResultProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {

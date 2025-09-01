@@ -72,7 +72,7 @@ import dynamic.mapper.processor.outbound.BaseProcessorOutbound;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import dynamic.mapper.processor.outbound.CodeBasedProcessorOutbound;
 import dynamic.mapper.processor.outbound.DispatcherOutbound;
-import dynamic.mapper.processor.outbound.JSONProcessorOutbound;
+import dynamic.mapper.processor.outbound.processor.JSONProcessorOutbound;
 import dynamic.mapper.processor.processor.fixed.InternalProtobufProcessor;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;

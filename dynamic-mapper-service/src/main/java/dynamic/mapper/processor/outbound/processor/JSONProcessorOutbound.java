@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.processor.outbound;
+package dynamic.mapper.processor.outbound.processor;
 
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
@@ -36,6 +36,8 @@ import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
+import dynamic.mapper.processor.outbound.BaseProcessorOutbound;
+import dynamic.mapper.processor.outbound.SubstitutionsAsCode;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.outbound;
+package dynamic.mapper.processor.outbound.processor;
 
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
@@ -14,7 +14,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.outbound.processor.BaseProcessor;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 

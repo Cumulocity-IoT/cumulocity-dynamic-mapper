@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound.util;
+package dynamic.mapper.processor.util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,14 +8,14 @@ import org.apache.camel.Exchange;
 
 import dynamic.mapper.processor.model.ProcessingContext;
 
-public class ProcessingResultAggregationStrategy implements AggregationStrategy {
+public class ProcessingContextAggregationStrategy implements AggregationStrategy {
     
     @Override
     public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
         ProcessingContext<?> newContext = newExchange.getIn().getBody(ProcessingContext.class);
         
         if (oldExchange == null) {
-            // First result - create initial list
+            // First result
             List<ProcessingContext<Object>> contexts = new ArrayList<>();
             contexts.add((ProcessingContext<Object>) newContext);
             newExchange.getIn().setHeader("processedContexts", contexts);
@@ -25,14 +25,9 @@ public class ProcessingResultAggregationStrategy implements AggregationStrategy 
         // Aggregate contexts
         @SuppressWarnings("unchecked")
         List<ProcessingContext<Object>> existingContexts = oldExchange.getIn().getHeader("processedContexts", List.class);
-        
-        if (existingContexts == null) {
-            existingContexts = new ArrayList<>();
-        }
-        
         existingContexts.add((ProcessingContext<Object>) newContext);
-        oldExchange.getIn().setHeader("processedContexts", existingContexts);
         
+        oldExchange.getIn().setHeader("processedContexts", existingContexts);
         return oldExchange;
     }
 }

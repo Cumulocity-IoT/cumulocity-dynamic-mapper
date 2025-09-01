@@ -1144,7 +1144,7 @@ public abstract class AConnectorClient {
 
     public abstract List<Direction> supportedDirections();
 
-    public boolean isMappingInboundDeployedInbound(String identifier) {
+    public boolean isMappingInboundDeployed(String identifier) {
         return mappingsDeployedInbound.containsKey(identifier);
     }
 
