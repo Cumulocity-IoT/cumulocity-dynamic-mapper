@@ -41,12 +41,15 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     private ConnectorRegistry connectorRegistry;
 
     @Autowired
+    private ExtensibleProcessor extensibleProcessor;
+
+    @Autowired
     private MappingContextProcessor mappingContextProcessor;
 
     @Autowired
     private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
 
-        @Autowired
+    @Autowired
     private SubstitutionProcessor substitutionProcessor;
 
     @Autowired
@@ -54,6 +57,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
 
     @Autowired
     private DeserializationProcessor deserializationProcessor;
+
     @Autowired
     private EnrichmentInboundProcessor enrichmentInboundProcessor;
 
@@ -105,7 +109,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
         // Main processing entry point (transport agnostic)
         from("direct:processInboundMessage")
                 .routeId("inbound-message-processor")
-                .log("=== ROUTE RECEIVED MESSAGE ===")
+                // .log("=== ROUTE RECEIVED MESSAGE ===")
                 .process(exchange -> {
                     log.info("MappingResolverProcessor - Processing exchange: {}", exchange);
                 })
@@ -151,15 +155,16 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 .process(deserializationProcessor)
                 .process(mappingContextProcessor)
                 .process(enrichmentInboundProcessor)
-                                // ADD: Check for snooping BEFORE other processing
+                // ADD: Check for snooping BEFORE other processing
                 .process(snoopingProcessor)
                 .choice()
-                    .when(exchange -> {
-                        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-                        return context != null && context.isIgnoreFurtherProcessing();
-                    })
-                        .to("log:snooping-message?level=DEBUG&showBody=false")
-                        .stop() // Stop here for snooping - no further processing
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null && context.isIgnoreFurtherProcessing();
+                })
+                .to("log:snooping-message?level=DEBUG&showBody=false")
+                .stop() // Stop here for snooping - no further processing
                 .end()
                 // Conditional extension processing
                 .choice()
@@ -170,7 +175,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                             context.getMapping() != null &&
                             context.getMapping().getExtension() != null;
                 })
-                .process(new ExtensibleProcessor())
+                .process(extensibleProcessor)
                 .stop() // Extensions handle their own processing
                 .end()
 

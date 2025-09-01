@@ -29,7 +29,7 @@ public class ExtensibleProcessor extends BaseProcessor {
     @Autowired
     private MappingService mappingService;
 
-    @Getter
+    @Autowired
     private ExtensionInboundRegistry extensionInboundRegistry;
 
     @Override

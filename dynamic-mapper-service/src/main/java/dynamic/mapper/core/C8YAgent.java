@@ -187,6 +187,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private ConfigurationRegistry configurationRegistry;
 
     @Getter
+    @Autowired
     private ExtensionInboundRegistry extensionInboundRegistry;
 
     @Autowired
