@@ -31,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class InboundSendProcessor implements Processor {
+public class InboundSendProcessor extends BaseProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
@@ -45,7 +45,7 @@ public class InboundSendProcessor implements Processor {
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContext(exchange);
+        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
         
         try {
             // Process all C8Y requests that were created by SubstitutionProcessor
@@ -231,8 +231,4 @@ public class InboundSendProcessor implements Processor {
         }
     }
     
-    @SuppressWarnings("unchecked")
-    private ProcessingContext<Object> getProcessingContext(Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-    }
 }

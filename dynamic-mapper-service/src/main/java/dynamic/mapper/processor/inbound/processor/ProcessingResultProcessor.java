@@ -8,7 +8,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 
 @Component
-public class ProcessingResultProcessor implements Processor {
+public class ProcessingResultProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {

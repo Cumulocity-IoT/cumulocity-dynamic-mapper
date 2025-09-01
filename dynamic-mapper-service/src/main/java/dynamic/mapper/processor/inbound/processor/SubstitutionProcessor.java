@@ -1,6 +1,5 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +20,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingType;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
@@ -33,7 +31,7 @@ import com.cumulocity.sdk.client.ProcessingMode;
 
 @Slf4j
 @Component
-public class SubstitutionProcessor implements Processor {
+public class SubstitutionProcessor extends BaseProcessor {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -45,7 +43,7 @@ public class SubstitutionProcessor implements Processor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContext(exchange);
+        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
 
         try {
             substituteInTargetAndCreateRequests(context);
@@ -323,8 +321,4 @@ public class SubstitutionProcessor implements Processor {
         return API.MEASUREMENT; // Default
     }
 
-    @SuppressWarnings("unchecked")
-    private ProcessingContext<Object> getProcessingContext(Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-    }
 }

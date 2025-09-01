@@ -4,7 +4,6 @@ import java.util.ArrayList;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.processor.inbound.processor.CodeExtractionProcessor;
@@ -15,20 +14,14 @@ import dynamic.mapper.processor.inbound.processor.FilterProcessor;
 import dynamic.mapper.processor.inbound.processor.InboundSendProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionProcessor;
 import dynamic.mapper.processor.inbound.processor.MappingContextProcessor;
-import dynamic.mapper.processor.inbound.processor.MappingResolverProcessor;
 import dynamic.mapper.processor.inbound.processor.ProcessingResultProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionProcessor;
 import dynamic.mapper.processor.inbound.util.ProcessingContextAggregationStrategy;
-import dynamic.mapper.processor.inbound.util.ProcessingContextInitializer;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
-import dynamic.mapper.service.MappingService;
 
 @Component
 public class DynamicMapperInboundRoutes extends RouteBuilder {
-
-    @Autowired
-    private MappingService mappingService;
 
     @Override
     public void configure() throws Exception {
@@ -73,7 +66,6 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 .process(exchange -> {
                     log.info("MappingResolverProcessor - Processing exchange: {}", exchange);
                 })
-                .process(new MappingResolverProcessor(mappingService))
                 .choice()
                 .when(header("mappings").isNull())
                 .process(exchange -> {
@@ -87,7 +79,6 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
         // Process message with found mappings
         from("direct:processWithMappings")
                 .routeId("mapping-processor")
-                .process(new ProcessingContextInitializer())
                 .split(header("mappings"))
                 .parallelProcessing(false)
                 .aggregationStrategy(new ProcessingContextAggregationStrategy())

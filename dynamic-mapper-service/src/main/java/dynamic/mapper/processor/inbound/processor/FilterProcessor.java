@@ -5,8 +5,6 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
-import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -14,12 +12,11 @@ import dynamic.mapper.processor.model.SubstituteValue;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Component
-public class FilterProcessor implements Processor {
+public class FilterProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContext(exchange);
+        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
         
         boolean shouldProcess = applyFilter(context);
         
@@ -331,8 +328,4 @@ public class FilterProcessor implements Processor {
         return value;
     }
     
-    @SuppressWarnings("unchecked")
-    private ProcessingContext<Object> getProcessingContext(Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-    }
 }

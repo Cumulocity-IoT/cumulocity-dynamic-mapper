@@ -174,7 +174,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         camelMessage.setHeader("connectorIdentifier", message.getConnectorIdentifier());
         camelMessage.setHeader("client", message.getClient());
         camelMessage.setHeader("mappings", resolvedMappings);
-        camelMessage.setHeader("originalMessage", message);
+        camelMessage.setHeader("connectorMessage", message);
         camelMessage.setHeader("serviceConfiguration", configurationRegistry.getServiceConfiguration(message.getTenant()));
 
         // Convert headers array to map if present

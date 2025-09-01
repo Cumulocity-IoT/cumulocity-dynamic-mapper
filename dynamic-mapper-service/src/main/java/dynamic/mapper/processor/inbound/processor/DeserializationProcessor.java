@@ -17,9 +17,10 @@ import dynamic.mapper.processor.inbound.deserializer.JSONPayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.PayloadDeserializer;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
+import lombok.extern.slf4j.Slf4j;
 
-@Component
-public class DeserializationProcessor implements Processor {
+@Slf4j
+public class DeserializationProcessor extends BaseProcessor {
     
     private final Map<MappingType, PayloadDeserializer<?>> deserializers = new HashMap<>();
     
@@ -39,7 +40,7 @@ public class DeserializationProcessor implements Processor {
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContext(exchange);
+        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
         Mapping mapping = context.getMapping();
         
         MappingType mappingType = getMappingType(mapping);
@@ -77,8 +78,4 @@ public class DeserializationProcessor implements Processor {
             .build();
     }
     
-    @SuppressWarnings("unchecked")
-    private ProcessingContext<Object> getProcessingContext(Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-    }
 }

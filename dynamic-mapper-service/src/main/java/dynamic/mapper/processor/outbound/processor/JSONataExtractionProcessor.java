@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound.processor;
+package dynamic.mapper.processor.outbound.processor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -6,23 +6,15 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.inbound.SubstitutionsAsCode;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
-import dynamic.mapper.processor.model.SubstituteValue.TYPE;
-import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import lombok.extern.slf4j.Slf4j;
-
-import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 @Slf4j
 @Component
@@ -49,77 +41,61 @@ public class JSONataExtractionProcessor extends BaseProcessor {
     public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
         Mapping mapping = context.getMapping();
-        if (!mapping.isSubstitutionsAsCode()) {
-            String tenant = context.getTenant();
+                  String tenant = context.getTenant();
             ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
             Object payloadObject = context.getPayload();
-            Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
-            String payload = toPrettyJsonString(payloadObject);
-            if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
-                log.info("{} - Patched payload: {}", tenant, payload);
+            Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
+            String payloadAsString = toPrettyJsonString(payloadObject);
+
+            if (serviceConfiguration.logPayload || mapping.debug) {
+                log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
+                        payloadAsString,
+                        serviceConfiguration.logPayload, mapping.debug,
+                        serviceConfiguration.logPayload || mapping.debug);
             }
 
-            boolean substitutionTimeExists = false;
-            for (Substitution substitution : mapping.getSubstitutions()) {
+            for (Substitution substitution : mapping.substitutions) {
                 Object extractedSourceContent = null;
+
                 /*
                  * step 1 extract content from inbound payload
                  */
-                try {
-                    var expr = jsonata(substitution.getPathSource());
-                    extractedSourceContent = expr.evaluate(payloadObject);
-                } catch (Exception e) {
-                    log.error("{} - Exception for: {}, {}: ", tenant, substitution.getPathSource(),
-                            payload, e);
-                }
+                extractedSourceContent = extractContent(context, mapping, payloadObject, payloadAsString,
+                        substitution.pathSource);
                 /*
-                 * step 2 analyze extracted content: textual, array
+                 * step 2 analyse extracted content: textual, array
                  */
                 List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                        substitution.getPathTarget(),
+                        substitution.pathTarget,
                         new ArrayList<>());
 
-                if (extractedSourceContent != null && SubstitutionEvaluation.isArray(extractedSourceContent)
-                        && substitution.isExpandArray()) {
+                if (dynamic.mapper.processor.model.SubstitutionEvaluation.isArray(extractedSourceContent)
+                        && substitution.expandArray) {
+                    var extractedSourceContentCollection = (Collection) extractedSourceContent;
                     // extracted result from sourcePayload is an array, so we potentially have to
                     // iterate over the result, e.g. creating multiple devices
-                    for (Object jn : (Collection) extractedSourceContent) {
-                        SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, jn,
+                    for (Object jn : extractedSourceContentCollection) {
+                        dynamic.mapper.processor.model.SubstitutionEvaluation.processSubstitute(tenant,
+                                processingCacheEntry, jn,
                                 substitution, mapping);
                     }
                 } else {
-                    SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
+                    dynamic.mapper.processor.model.SubstitutionEvaluation.processSubstitute(tenant,
+                            processingCacheEntry, extractedSourceContent,
                             substitution, mapping);
                 }
-                processingCache.put(substitution.getPathTarget(), processingCacheEntry);
-                if (serviceConfiguration.isLogSubstitution() || mapping.getDebug()) {
+                processingCache.put(substitution.pathTarget, processingCacheEntry);
+
+                if (context.getServiceConfiguration().logSubstitution || mapping.debug) {
+                    String contentAsString = extractedSourceContent != null ? extractedSourceContent.toString()
+                            : "null";
                     log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
-                            tenant,
-                            substitution.getPathSource(),
-                            extractedSourceContent == null ? null : extractedSourceContent.toString(),
-                            substitution.getPathTarget());
-                }
-
-                if (substitution.getPathTarget().equals(Mapping.KEY_TIME)) {
-                    substitutionTimeExists = true;
+                            context.getTenant(),
+                            substitution.pathSource, contentAsString, substitution.pathTarget);
                 }
             }
-
-            // no substitution for the time property exists, then use the system time
-            if (!substitutionTimeExists && mapping.getTargetAPI() != API.INVENTORY && mapping.getTargetAPI() != API.OPERATION) {
-                List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                        Mapping.KEY_TIME,
-                        new ArrayList<>());
-                processingCacheEntry.add(
-                        new SubstituteValue(new DateTime().toString(),
-                                TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false));
-                processingCache.put(Mapping.KEY_TIME, processingCacheEntry);
-            }
-        } else {
-            SubstitutionsAsCode.extractFromSource(context);
-        }
     }
     
     /**
@@ -144,5 +120,5 @@ public class JSONataExtractionProcessor extends BaseProcessor {
             return payloadObject != null ? payloadObject.toString() : "null";
         }
     }
-    
+
 }

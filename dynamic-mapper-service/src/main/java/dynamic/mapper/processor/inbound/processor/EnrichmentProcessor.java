@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
-import org.springframework.stereotype.Component;
 
 import com.cumulocity.sdk.client.ProcessingMode;
 
@@ -17,12 +15,11 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Component
-public class EnrichmentProcessor implements Processor {
+public class EnrichmentProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContext(exchange);
+        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
         
         try {
             enrichPayload(context);
@@ -90,8 +87,5 @@ public class EnrichmentProcessor implements Processor {
         }
     }
     
-    @SuppressWarnings("unchecked")
-    private ProcessingContext<Object> getProcessingContext(Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-    }
+
 }

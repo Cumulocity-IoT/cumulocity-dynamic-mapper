@@ -1,7 +1,6 @@
 package dynamic.mapper.processor.inbound.processor;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -13,7 +12,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingType;
 
 @Component 
-public class MappingContextProcessor implements Processor {
+public class MappingContextProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {
