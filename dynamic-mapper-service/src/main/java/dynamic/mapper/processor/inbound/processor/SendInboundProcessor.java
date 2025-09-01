@@ -44,7 +44,7 @@ public class SendInboundProcessor extends BaseProcessor {
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         
         try {
             // Process all C8Y requests that were created by SubstitutionProcessor

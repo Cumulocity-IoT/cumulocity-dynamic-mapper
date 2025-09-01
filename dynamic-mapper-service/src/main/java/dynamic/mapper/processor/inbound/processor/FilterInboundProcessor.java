@@ -18,7 +18,7 @@ public class FilterInboundProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         
         boolean shouldProcess = applyFilter(context);
         
@@ -29,7 +29,6 @@ public class FilterInboundProcessor extends BaseProcessor {
                 context.getMapping().getName(), context.getTopic());
         }
         
-        exchange.getIn().setHeader("processingContext", context);
     }
     
     /**

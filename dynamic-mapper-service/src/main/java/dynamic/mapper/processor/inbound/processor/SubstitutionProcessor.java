@@ -15,12 +15,14 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 import com.cumulocity.model.ID;
@@ -33,23 +35,32 @@ public class SubstitutionProcessor extends BaseProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
-    
+
     @Autowired
     private ConfigurationRegistry configurationRegistry;
 
+    @Autowired
+    private MappingService mappingService;
+
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
 
         try {
             substituteInTargetAndCreateRequests(context);
         } catch (Exception e) {
-            log.error("Error in substitution processor for mapping: {}",
-                    context.getMapping().getName(), e);
+            String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
+                    tenant, mapping.name);
+            log.error(errorMessage, e);
             context.addError(new ProcessingException("Substitution failed", e));
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+            context.addError(new ProcessingException(errorMessage, e));
+            mappingStatus.errors++;
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
-        exchange.getIn().setHeader("processingContext", context);
     }
 
     /**
@@ -119,7 +130,8 @@ public class SubstitutionProcessor extends BaseProcessor {
     /**
      * EXACT copy of BaseProcessorInbound.prepareAndSubstituteInPayload - DO NOT
      * MODIFY!
-     * @throws ProcessingException 
+     * 
+     * @throws ProcessingException
      */
     private void prepareAndSubstituteInPayload(ProcessingContext<Object> context, DocumentContext payloadTarget,
             String pathTarget, SubstituteValue substitute) throws ProcessingException {
@@ -237,7 +249,8 @@ public class SubstitutionProcessor extends BaseProcessor {
 
     /**
      * Create implicit device when needed
-     * @throws ProcessingException 
+     * 
+     * @throws ProcessingException
      */
     private String createImplicitDevice(ID identity, ProcessingContext<Object> context) throws ProcessingException {
         try {

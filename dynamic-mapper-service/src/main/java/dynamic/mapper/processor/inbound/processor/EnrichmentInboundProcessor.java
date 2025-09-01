@@ -6,37 +6,44 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.sdk.client.ProcessingMode;
 
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 public class EnrichmentInboundProcessor extends BaseProcessor {
-    
+
+    @Autowired
+    private MappingService mappingService;
+
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
-        
+        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
+
         try {
             enrichPayload(context);
         } catch (Exception e) {
-            log.error("Error in enrichment processor for mapping: {}", 
-                context.getMapping().getName(), e);
+            log.error("Error in enrichment processor for mapping: {}",
+                    context.getMapping().getName(), e);
             context.addError(new ProcessingException("Enrichment failed", e));
+            MappingStatus mappingStatus = mappingService
+                    .getMappingStatus(tenant, mapping);
+            mappingStatus.errors++;
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
-        
-        exchange.getIn().setHeader("processingContext", context);
     }
-    
-    /**
-     * EXACT copy of BaseProcessorInbound.enrichPayload - DO NOT MODIFY!
-     */
+
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public void enrichPayload(ProcessingContext<Object> context) {
         /*
@@ -88,6 +95,5 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
                     tenant);
         }
     }
-    
 
 }

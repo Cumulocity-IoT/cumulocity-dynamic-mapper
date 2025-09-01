@@ -7,11 +7,13 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.SubstitutionsAsCode;
@@ -20,6 +22,7 @@ import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
+import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
@@ -27,22 +30,29 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 @Slf4j
 @Component
 public class JSONataExtractionInboundProcessor extends BaseProcessor {
-    
+
+    @Autowired
+    private MappingService mappingService;
+
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
-        
+        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
         try {
             extractFromSource(context);
         } catch (Exception e) {
-            log.error("Error in extraction processor for mapping: {}", 
-                context.getMapping().getName(), e);
+            String errorMessage = String.format("Tenant %s - Error in extraction processor for mapping: %s,",
+                    tenant, mapping.name);
+            log.error(errorMessage, e);
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException("Extraction failed", e));
+            mappingStatus.errors++;
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
-        
-        exchange.getIn().setHeader("processingContext", context);
+
     }
-    
+
     /**
      * EXACT copy of BaseProcessorInbound.extractFromSource - DO NOT MODIFY!
      */
@@ -108,7 +118,8 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
             }
 
             // no substitution for the time property exists, then use the system time
-            if (!substitutionTimeExists && mapping.getTargetAPI() != API.INVENTORY && mapping.getTargetAPI() != API.OPERATION) {
+            if (!substitutionTimeExists && mapping.getTargetAPI() != API.INVENTORY
+                    && mapping.getTargetAPI() != API.OPERATION) {
                 List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                         Mapping.KEY_TIME,
                         new ArrayList<>());
@@ -121,7 +132,7 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
             SubstitutionsAsCode.extractFromSource(context);
         }
     }
-    
+
     /**
      * Convert payload object to pretty JSON string for logging
      */
@@ -130,19 +141,19 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
             if (payloadObject == null) {
                 return "null";
             }
-            
+
             if (payloadObject instanceof String) {
                 return (String) payloadObject;
             }
-            
+
             // Use ObjectMapper to convert to pretty JSON
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(payloadObject);
-            
+
         } catch (Exception e) {
             log.warn("Failed to convert payload to pretty JSON string: {}", e.getMessage());
             return payloadObject != null ? payloadObject.toString() : "null";
         }
     }
-    
+
 }

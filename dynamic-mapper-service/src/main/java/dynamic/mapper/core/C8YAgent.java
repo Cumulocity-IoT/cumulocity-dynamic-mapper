@@ -121,6 +121,7 @@ import dynamic.mapper.processor.extension.ProcessorExtensionSource;
 import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
 import dynamic.mapper.processor.model.C8YRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.service.ExtensionInboundRegistry;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
@@ -184,6 +185,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Getter
     private ConfigurationRegistry configurationRegistry;
+
+    @Getter
+    private ExtensionInboundRegistry extensionInboundRegistry;
 
     @Autowired
     CumulocityClientProperties clientProperties;
@@ -857,6 +861,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             throws IOException {
         ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
         extensibleProcessor.addExtension(tenant, new Extension(id, extensionName, external));
+        // manage extensions for Camel routes
+        extensionInboundRegistry.addExtension(tenant, new Extension(id, extensionName, external));
+
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
         InputStreamReader in = null;
@@ -882,7 +889,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             Class<?> clazz;
             ExtensionEntry extensionEntry = ExtensionEntry.builder().eventName(key).extensionName(extensionName)
                     .fqnClassName(newExtensions.getProperty(key)).loaded(true).message("OK").build();
+
             extensibleProcessor.addExtensionEntry(tenant, extensionName, extensionEntry);
+            // manage extensions for Camel routes
+            extensionInboundRegistry.addExtensionEntry(tenant, extensionName, extensionEntry);
 
             try {
                 clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
@@ -948,6 +958,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
         }
         extensibleProcessor.updateStatusExtension(extensionName);
+        // manage extensions for Camel routes
+        extensionInboundRegistry.updateStatusExtension(tenant, extensionName);
     }
 
     public Map<String, Extension> getProcessorExtensions(String tenant) {
@@ -968,12 +980,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 log.info("{} - Deleted extension: {} permanently!", tenant, extensionName);
             }
         }
+        // manage extensions for Camel routes
+        extensionInboundRegistry.deleteExtension(tenant, extensionName);
         return extensibleProcessor.deleteExtension(extensionName);
     }
 
     public void reloadExtensions(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
         extensibleProcessor.deleteExtensions();
+        // manage extensions for Camel routes
+        extensionInboundRegistry.deleteExtensions(tenant);
         loadProcessorExtensions(tenant);
     }
 

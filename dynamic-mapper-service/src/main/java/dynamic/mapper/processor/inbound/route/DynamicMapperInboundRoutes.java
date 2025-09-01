@@ -1,19 +1,24 @@
 package dynamic.mapper.processor.inbound.route;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.processor.CodeExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.DeserializationProcessor;
 import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.SnoopingProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.MappingContextProcessor;
 import dynamic.mapper.processor.inbound.processor.ProcessingResultProcessor;
@@ -33,13 +38,19 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     private ConfigurationRegistry configurationRegistry;
 
     @Autowired
+    private ConnectorRegistry connectorRegistry;
+
+    @Autowired
     private MappingContextProcessor mappingContextProcessor;
 
     @Autowired
     private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
 
-    @Autowired
+        @Autowired
     private SubstitutionProcessor substitutionProcessor;
+
+    @Autowired
+    private SnoopingProcessor snoopingProcessor;
 
     @Autowired
     private DeserializationProcessor deserializationProcessor;
@@ -111,6 +122,23 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
         // Process message with found mappings
         from("direct:processWithMappings")
                 .routeId("mapping-processor")
+                .process(exchange -> {
+                    // Filter mappings before splitting: active and deployed
+                    @SuppressWarnings("unchecked")
+                    List<Mapping> allMappings = exchange.getIn().getHeader("mappings", List.class);
+                    String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
+                    String tenant = exchange.getIn().getHeader("tenant", String.class);
+
+                    if (allMappings != null) {
+                        List<Mapping> validMappings = allMappings.stream()
+                                .filter(mapping -> isValidMapping(tenant, mapping, connectorIdentifier))
+                                .collect(java.util.stream.Collectors.toList());
+
+                        exchange.getIn().setHeader("mappings", validMappings);
+                        log.debug("Filtered {} mappings to {} valid mappings",
+                                allMappings.size(), validMappings.size());
+                    }
+                })
                 .split(header("mappings"))
                 .parallelProcessing(false)
                 .aggregationStrategy(new ProcessingContextAggregationStrategy())
@@ -123,6 +151,16 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 .process(deserializationProcessor)
                 .process(mappingContextProcessor)
                 .process(enrichmentInboundProcessor)
+                                // ADD: Check for snooping BEFORE other processing
+                .process(snoopingProcessor)
+                .choice()
+                    .when(exchange -> {
+                        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+                        return context != null && context.isIgnoreFurtherProcessing();
+                    })
+                        .to("log:snooping-message?level=DEBUG&showBody=false")
+                        .stop() // Stop here for snooping - no further processing
+                .end()
                 // Conditional extension processing
                 .choice()
                 .when(exchange -> {
@@ -171,5 +209,53 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
         from("direct:errorHandling")
                 .routeId("error-handler")
                 .to("log:dynamic-mapper-error?level=ERROR&showException=true");
+    }
+
+    /**
+     * Custom predicate to validate if mapping should be processed
+     */
+    private boolean isValidMapping(String tenant, Mapping mapping, String connectorIdentifier) {
+        try {
+
+            if (mapping == null) {
+                log.debug("Mapping is null, skipping");
+                return false;
+            }
+
+            // Check if mapping is active
+            if (!mapping.getActive()) {
+                log.debug("Mapping {} is inactive, skipping", mapping.getName());
+                return false;
+            }
+
+            // Check if mapping is deployed (you'll need to get connector info)
+            if (connectorIdentifier != null && !isMappingDeployed(tenant, mapping, connectorIdentifier)) {
+                log.debug("Mapping {} not deployed for connector {}, skipping",
+                        mapping.getName(), connectorIdentifier);
+                return false;
+            }
+
+            return true;
+
+        } catch (Exception e) {
+            log.error("Error validating mapping: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Check if mapping is deployed for the connector
+     */
+    private boolean isMappingDeployed(String tenant, Mapping mapping, String connectorIdentifier) {
+        try {
+            AConnectorClient connector = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
+
+            log.debug("Cannot check deployment status for mapping {}, assuming deployed", mapping.getName());
+            return connector != null && connector.isMappingInboundDeployedInbound(mapping.getIdentifier());
+
+        } catch (Exception e) {
+            log.warn("Error checking mapping deployment status: {}", e.getMessage());
+            return true; // Default to allowing processing
+        }
     }
 }
