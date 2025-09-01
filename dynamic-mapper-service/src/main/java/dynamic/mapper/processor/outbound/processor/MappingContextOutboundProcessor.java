@@ -8,11 +8,9 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
-import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.ProcessingContext;

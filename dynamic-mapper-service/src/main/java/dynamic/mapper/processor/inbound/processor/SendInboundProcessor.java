@@ -57,9 +57,9 @@ public class SendInboundProcessor extends BaseProcessor {
             log.error("Error in inbound send processor for mapping: {}", 
                 context.getMapping().getName(), e);
             context.addError(new ProcessingException("Send processing failed", e));
+            return;
         }
         
-        exchange.getIn().setHeader("processingContext", context);
     }
     
     /**

@@ -31,7 +31,7 @@ import com.cumulocity.sdk.client.ProcessingMode;
 
 @Slf4j
 @Component
-public class SubstitutionProcessor extends BaseProcessor {
+public class SubstitutionInboundProcessor extends BaseProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;

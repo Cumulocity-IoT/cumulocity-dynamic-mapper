@@ -10,6 +10,10 @@ import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+
+import static dynamic.mapper.model.Substitution.toPrettyJsonString;
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -23,8 +27,6 @@ import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
-
-import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 @Slf4j
 @Component
@@ -132,27 +134,5 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
         }
     }
 
-    /**
-     * Convert payload object to pretty JSON string for logging
-     */
-    private String toPrettyJsonString(Object payloadObject) {
-        try {
-            if (payloadObject == null) {
-                return "null";
-            }
-
-            if (payloadObject instanceof String) {
-                return (String) payloadObject;
-            }
-
-            // Use ObjectMapper to convert to pretty JSON
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(payloadObject);
-
-        } catch (Exception e) {
-            log.warn("Failed to convert payload to pretty JSON string: {}", e.getMessage());
-            return payloadObject != null ? payloadObject.toString() : "null";
-        }
-    }
 
 }

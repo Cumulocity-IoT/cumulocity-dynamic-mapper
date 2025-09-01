@@ -64,6 +64,7 @@ public class SnoopingInboundProcessor extends BaseProcessor {
         } catch (Exception e) {
             log.warn("{} - Error during snooping: {}", tenant, e.getMessage());
             log.debug("{} - Snooping error details:", tenant, e);
+            return;
         }
     }
     

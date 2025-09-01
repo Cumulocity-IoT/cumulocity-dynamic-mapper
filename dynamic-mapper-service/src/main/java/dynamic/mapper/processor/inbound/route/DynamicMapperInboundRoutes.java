@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.processor.CodeExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.DeserializationProcessor;
@@ -22,20 +21,13 @@ import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.MappingContextInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ProcessingResultProcessor;
-import dynamic.mapper.processor.inbound.processor.SubstitutionProcessor;
+import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
 import dynamic.mapper.processor.inbound.util.ProcessingContextAggregationStrategy;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
-import dynamic.mapper.service.MappingService;
 
 @Component
 public class DynamicMapperInboundRoutes extends RouteBuilder {
-
-    @Autowired
-    private MappingService mappingService;
-
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
 
     @Autowired
     private ConnectorRegistry connectorRegistry;
@@ -50,7 +42,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
 
     @Autowired
-    private SubstitutionProcessor substitutionProcessor;
+    private SubstitutionInboundProcessor substitutionProcessor;
 
     @Autowired
     private SnoopingInboundProcessor snoopingProcessor;
