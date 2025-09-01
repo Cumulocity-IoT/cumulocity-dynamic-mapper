@@ -34,13 +34,15 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
         try {
             enrichPayload(context);
         } catch (Exception e) {
-            log.error("Error in enrichment processor for mapping: {}",
-                    context.getMapping().getName(), e);
-            context.addError(new ProcessingException("Enrichment failed", e));
+            String errorMessage = String.format("%s - Error in EnrichmentInboundProcessor for mapping: {}", tenant,
+                    mapping.getName());
+            log.error(errorMessage, e);
             MappingStatus mappingStatus = mappingService
                     .getMappingStatus(tenant, mapping);
+            context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            return;
         }
     }
 

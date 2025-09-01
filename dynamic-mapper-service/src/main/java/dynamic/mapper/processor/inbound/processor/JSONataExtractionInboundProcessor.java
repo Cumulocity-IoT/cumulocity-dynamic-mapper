@@ -16,7 +16,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.inbound.SubstitutionsAsCode;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
@@ -37,29 +36,29 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
+
         try {
             extractFromSource(context);
         } catch (Exception e) {
-            String errorMessage = String.format("Tenant %s - Error in extraction processor for mapping: %s,",
+            String errorMessage = String.format("Tenant %s - Error in JSONataExtractionInboundProcessor for mapping: %s,",
                     tenant, mapping.name);
             log.error(errorMessage, e);
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-            context.addError(new ProcessingException("Extraction failed", e));
+            context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            return;
         }
 
     }
 
-    /**
-     * EXACT copy of BaseProcessorInbound.extractFromSource - DO NOT MODIFY!
-     */
     public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
-        Mapping mapping = context.getMapping();
-        if (!mapping.isSubstitutionsAsCode()) {
+        try {
+            Mapping mapping = context.getMapping();
             String tenant = context.getTenant();
             ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
@@ -128,8 +127,8 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
                                 TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false));
                 processingCache.put(Mapping.KEY_TIME, processingCacheEntry);
             }
-        } else {
-            SubstitutionsAsCode.extractFromSource(context);
+        } catch (Exception e) {
+            throw new ProcessingException(e.getMessage());
         }
     }
 

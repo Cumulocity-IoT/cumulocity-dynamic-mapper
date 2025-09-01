@@ -1,6 +1,5 @@
 package dynamic.mapper.processor.outbound.processor;
 
-
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
@@ -14,40 +13,58 @@ import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.dashjoin.jsonata.Functions;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionContext;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
 import dynamic.mapper.processor.model.SubstitutionResult;
+import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 public class CodeExtractionOutboundProcessor extends BaseProcessor {
-    
+
+    @Autowired
+    private MappingService mappingService;
+
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
-        
+
+        String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
+
         try {
             extractFromSource(context);
         } catch (Exception e) {
-            log.error("Error in extraction processor for mapping: {}", 
-                context.getMapping().getName(), e);
+            int lineNumber = 0;
+            if (e.getStackTrace().length > 0) {
+                lineNumber = e.getStackTrace()[0].getLineNumber();
+            }
+            String errorMessage = String.format("Tenant %s - Error in CodeExtractionOutboundProcessor: %s for mapping: %s, line %s",
+            tenant, mapping.name, e.getMessage(), lineNumber);
+            log.error(errorMessage, e);
+
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException("Extraction failed", e));
+            mappingStatus.errors++;
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            return;
         }
-        
-        exchange.getIn().setHeader("processingContext", context);
+
     }
-    
-     public static void extractFromSource(ProcessingContext<Object> context)
+
+    public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
         try {
             Mapping mapping = context.getMapping();
