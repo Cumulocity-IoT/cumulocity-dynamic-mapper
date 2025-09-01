@@ -69,6 +69,7 @@ import dynamic.mapper.processor.inbound.HexProcessorInbound;
 import dynamic.mapper.processor.inbound.JSONProcessorInbound;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.outbound.BaseProcessorOutbound;
+import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import dynamic.mapper.processor.outbound.CodeBasedProcessorOutbound;
 import dynamic.mapper.processor.outbound.DispatcherOutbound;
 import dynamic.mapper.processor.outbound.JSONProcessorOutbound;
@@ -495,7 +496,9 @@ public class ConfigurationRegistry {
                 && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
             // initialize AsynchronousDispatcherOutbound
             initializePayloadProcessorsOutbound(connectorClient);
-            DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
+            // DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
+            // this, connectorClient);
+            CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(
                     this, connectorClient);
             // Only initialize Connectors which are enabled
             if (connectorClient.getConnectorConfiguration().isEnabled())

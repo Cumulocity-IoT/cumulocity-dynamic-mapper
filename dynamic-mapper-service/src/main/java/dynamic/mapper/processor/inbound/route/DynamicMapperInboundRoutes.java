@@ -18,9 +18,9 @@ import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.SnoopingProcessor;
+import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.MappingContextProcessor;
+import dynamic.mapper.processor.inbound.processor.MappingContextInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ProcessingResultProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionProcessor;
 import dynamic.mapper.processor.inbound.util.ProcessingContextAggregationStrategy;
@@ -44,7 +44,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     private ExtensibleProcessor extensibleProcessor;
 
     @Autowired
-    private MappingContextProcessor mappingContextProcessor;
+    private MappingContextInboundProcessor mappingContextProcessor;
 
     @Autowired
     private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
@@ -53,7 +53,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     private SubstitutionProcessor substitutionProcessor;
 
     @Autowired
-    private SnoopingProcessor snoopingProcessor;
+    private SnoopingInboundProcessor snoopingProcessor;
 
     @Autowired
     private DeserializationProcessor deserializationProcessor;

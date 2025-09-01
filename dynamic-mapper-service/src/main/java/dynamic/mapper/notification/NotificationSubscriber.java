@@ -48,6 +48,7 @@ import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.model.Device;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
 import dynamic.mapper.notification.websocket.NotificationCallback;
+import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import dynamic.mapper.processor.outbound.DispatcherOutbound;
 import dynamic.mapper.util.Utils;
 import lombok.Getter;
@@ -112,7 +113,7 @@ public class NotificationSubscriber {
 
     // Thread-safe collections
     @Getter
-    private final Map<String, Map<String, DispatcherOutbound>> dispatcherOutboundMaps = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, CamelDispatcherOutbound>> dispatcherOutboundMaps = new ConcurrentHashMap<>();
     private final Map<String, Map<String, CustomWebSocketClient>> deviceClients = new ConcurrentHashMap<>();
     private final Map<String, CustomWebSocketClient> managementClients = new ConcurrentHashMap<>();
     private final Map<String, NotificationCallback> managementCallbacks = new ConcurrentHashMap<>();
@@ -148,7 +149,7 @@ public class NotificationSubscriber {
 
     // Lifecycle Methods
 
-    public void addSubscriber(String tenant, String identifier, DispatcherOutbound dispatcherOutbound) {
+    public void addSubscriber(String tenant, String identifier, CamelDispatcherOutbound dispatcherOutbound) {
         if (tenant == null || identifier == null || dispatcherOutbound == null) {
             log.warn("Cannot add subscriber with null parameters: tenant={}, identifier={}", tenant, identifier);
             return;
@@ -189,7 +190,7 @@ public class NotificationSubscriber {
     }
 
     private void initializeDeviceConnections(String tenant) throws URISyntaxException {
-        Map<String, DispatcherOutbound> dispatchers = dispatcherOutboundMaps.get(tenant);
+        Map<String, CamelDispatcherOutbound> dispatchers = dispatcherOutboundMaps.get(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.warn("{} - No outbound dispatchers registered", tenant);
             return;
@@ -197,7 +198,7 @@ public class NotificationSubscriber {
 
         Map<String, String> tenantDeviceTokens = deviceTokens.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
 
-        for (DispatcherOutbound dispatcher : dispatchers.values()) {
+        for (CamelDispatcherOutbound dispatcher : dispatchers.values()) {
             if (dispatcher == null ||
                     dispatcher.getConnectorClient() == null ||
                     dispatcher.getConnectorClient().getConnectorConfiguration() == null ||
@@ -1281,7 +1282,7 @@ public class NotificationSubscriber {
         log.info("{} - Removing connector {}", tenant, connectorIdentifier);
 
         // Remove from dispatcher map
-        Map<String, DispatcherOutbound> dispatchers = dispatcherOutboundMaps.get(tenant);
+        Map<String, CamelDispatcherOutbound> dispatchers = dispatcherOutboundMaps.get(tenant);
         if (dispatchers != null) {
             dispatchers.remove(connectorIdentifier);
         }
@@ -1310,7 +1311,7 @@ public class NotificationSubscriber {
         log.info("{} - Successfully removed connector {}", tenant, connectorIdentifier);
     }
 
-    public void addConnector(String tenant, String connectorIdentifier, DispatcherOutbound dispatcherOutbound) {
+    public void addConnector(String tenant, String connectorIdentifier, CamelDispatcherOutbound dispatcherOutbound) {
         if (tenant == null || connectorIdentifier == null || dispatcherOutbound == null) {
             log.warn("Cannot add connector: invalid parameters");
             return;

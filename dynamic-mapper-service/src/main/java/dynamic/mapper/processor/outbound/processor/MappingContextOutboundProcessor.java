@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound.processor;
+package dynamic.mapper.processor.outbound.processor;
 
 import java.nio.charset.StandardCharsets;
 
@@ -14,6 +14,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,7 @@ import org.graalvm.polyglot.Context;
 
 @Component
 @Slf4j
-public class MappingContextProcessor extends BaseProcessor {
+public class MappingContextOutboundProcessor extends BaseProcessor {
 
     @Autowired
     private ConfigurationRegistry configurationRegistry;
@@ -35,7 +36,7 @@ public class MappingContextProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ConnectorMessage message = exchange.getIn().getHeader("connectorMessage", ConnectorMessage.class);
+        C8YMessage message = exchange.getIn().getHeader("c8yMessage", C8YMessage.class);
         String tenant = exchange.getIn().getHeader("tenant", String.class);
         Mapping currentMapping = exchange.getIn().getBody(Mapping.class);
         ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader("serviceConfiguration",
@@ -45,12 +46,12 @@ public class MappingContextProcessor extends BaseProcessor {
 
         // Extract additional info from headers if available
         String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
-
+        
         processingContext.setServiceConfiguration(serviceConfiguration);
         processingContext.setApi(currentMapping.getTargetAPI());
         processingContext.setMapping(currentMapping);
         processingContext.setMappingType(currentMapping.mappingType);
-        processingContext.setQos(determineQos(connectorIdentifier));
+        processingContext.setQos(currentMapping.getQos());
 
         // Prepare GraalVM context if code exists
         if (currentMapping.code != null || currentMapping.substitutionsAsCode) {
@@ -72,19 +73,8 @@ public class MappingContextProcessor extends BaseProcessor {
                 return;
             }
         }
-        logInboundMessageReceived(tenant, currentMapping, connectorIdentifier, processingContext, serviceConfiguration);
+        logOutboundMessageReceived(tenant, currentMapping, connectorIdentifier, processingContext, serviceConfiguration);
 
-    }
-
-    private Qos determineQos(String connectorIdentifier) {
-        // Determine QoS based on connector type
-        if ("mqtt".equalsIgnoreCase(connectorIdentifier)) {
-            return Qos.AT_LEAST_ONCE;
-        } else if ("kafka".equalsIgnoreCase(connectorIdentifier)) {
-            return Qos.EXACTLY_ONCE;
-        } else {
-            return Qos.AT_MOST_ONCE; // Default for HTTP, etc.
-        }
     }
 
     private Context createGraalContext(Engine graalEngine)
@@ -111,7 +101,7 @@ public class MappingContextProcessor extends BaseProcessor {
         return graalContext;
     }
 
-    private void logInboundMessageReceived(String tenant, Mapping mapping, String connectorIdentifier,
+    private void logOutboundMessageReceived(String tenant, Mapping mapping, String connectorIdentifier,
             ProcessingContext<?> context,
             ServiceConfiguration serviceConfiguration) {
         if (serviceConfiguration.logPayload || mapping.debug) {

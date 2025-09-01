@@ -117,15 +117,10 @@ public class DispatcherOutbound implements NotificationCallback {
         this.mappingService = configurationRegistry.getMappingService();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.connectorClient = connectorClient;
-        // log.info("{} - HIER I {} {}", connectorClient.getTenant(),
-        // configurationRegistry.getPayloadProcessorsOutbound());
-        // log.info("{} - HIER II {} {}", connectorClient.getTenant(),
-        // configurationRegistry.getPayloadProcessorsOutbound().get(connectorClient.getTenant()));
         this.payloadProcessorsOutbound = configurationRegistry.getPayloadProcessorsOutbound(connectorClient.getTenant(),
                 connectorClient.getConnectorIdentifier());
         this.configurationRegistry = configurationRegistry;
         this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
-
     }
 
     @Override
@@ -146,15 +141,8 @@ public class DispatcherOutbound implements NotificationCallback {
         if (!connectorClient.isConnected())
             log.warn("{} - Notification message received but connector {} is not connected. Ignoring message..",
                     tenant, connectorClient.getConnectorName());
-        // log.info("{} - Notification message received {}",
-        // tenant, operation);
         if (("CREATE".equals(notification.getOperation()) || "UPDATE".equals(notification.getOperation()))
                 && connectorClient.isConnected()) {
-            // log.info("{} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant,
-            // notification.getMessage(),
-            // notification.getNotificationHeaders(),
-            // connectorClient.connectorConfiguration.name,
-            // connectorClient.isConnected());
             if ("UPDATE".equals(notification.getOperation()) && notification.getApi().equals(API.OPERATION)) {
                 log.info("{} - Update Operation message for connector: {} is received, ignoring it",
                         tenant, connectorClient.getConnectorName());
@@ -305,15 +293,17 @@ public class DispatcherOutbound implements NotificationCallback {
                     // Prepare GraalVM context if code exists
                     if (mapping.code != null) {
                         try {
-                            graalContext = createGraalContext(configurationRegistry.getGraalEngine(c8yMessage.getTenant()));
+                            graalContext = createGraalContext(
+                                    configurationRegistry.getGraalEngine(c8yMessage.getTenant()));
                             context.setGraalContext(graalContext);
-//                            context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
-//                            context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
-//                            context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant, mapping.id));
-                             context.setSharedCode(serviceConfiguration.getCodeTemplates()
-                             .get(TemplateType.SHARED.name()).getCode());
-                             context.setSystemCode(serviceConfiguration.getCodeTemplates()
-                             .get(TemplateType.SYSTEM.name()).getCode());
+                            // context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
+                            // context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
+                            // context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant,
+                            // mapping.id));
+                            context.setSharedCode(serviceConfiguration.getCodeTemplates()
+                                    .get(TemplateType.SHARED.name()).getCode());
+                            context.setSystemCode(serviceConfiguration.getCodeTemplates()
+                                    .get(TemplateType.SYSTEM.name()).getCode());
                         } catch (Exception e) {
                             handleGraalVMError(tenant, mapping, e, context, mappingStatus);
                             processingResult.add(context);
@@ -427,7 +417,7 @@ public class DispatcherOutbound implements NotificationCallback {
                             || className.equals("dynamic.mapper.processor.model.RepairStrategy")
                             // Allow base collection classes needed for return values
                             || className.equals("java.util.ArrayList") ||
-                            className.equals("java.util.HashMap")||
+                            className.equals("java.util.HashMap") ||
                             className.equals("java.util.HashSet"))
                     .build();
 
@@ -448,12 +438,12 @@ public class DispatcherOutbound implements NotificationCallback {
                 ServiceConfiguration serviceConfiguration) {
             if (serviceConfiguration.logPayload || mapping.debug) {
                 log.info(
-                        "{} - Start processing message on topic: [{}]  connector: {}, mapping : {}, wrapped message: {}",
+                        "{} - Start processing message on topic: [{}] connector: {}, mapping : {}, wrapped message: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorName(), mapping.getName(),
                         context.getPayload().toString());
             } else {
                 log.info(
-                        "{} - Start processing message on topic: [{}]  connector: {}, mapping : {}, sendPayload: {}",
+                        "{} - Start processing message on topic: [{}] connector: {}, mapping : {}, sendPayload: {}",
                         tenant, context.getTopic(), connectorClient.getConnectorName(), mapping.getName(),
                         context.isSendPayload());
             }
@@ -558,7 +548,7 @@ public class DispatcherOutbound implements NotificationCallback {
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
-        log.info("{} - PROCESSING: C8Y message, API: {}, device: {}. connector: {}, payload: {}",
+        log.info("{} - PROCESSING: C8Y message, API: {}, device: {}. connector: {}, message id: {}",
                 tenant,
                 c8yMessage.getApi(), c8yMessage.getSourceId(),
                 connectorClient.getConnectorName(),
@@ -587,8 +577,9 @@ public class DispatcherOutbound implements NotificationCallback {
             } catch (Exception e) {
                 log.warn("{} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
                         tenant, e);
-                log.debug(e.getMessage(), tenant);
+                log.debug(e.getMessage(), e);
                 mappingStatusUnspecified.errors++;
+                return result;
             }
         } else {
             return result;

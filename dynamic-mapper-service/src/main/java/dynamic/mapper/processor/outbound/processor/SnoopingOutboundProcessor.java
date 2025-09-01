@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound.processor;
+package dynamic.mapper.processor.outbound.processor;
 
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class SnoopingProcessor extends BaseProcessor {
+public class SnoopingOutboundProcessor extends BaseProcessor {
     
     @Autowired
     private MappingService mappingService;

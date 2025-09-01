@@ -52,13 +52,6 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         // Initialize Camel components
         this.camelContext = configurationRegistry.getCamelContext();
         this.producerTemplate = camelContext.createProducerTemplate();
-
-        // Start Camel context
-        try {
-            camelContext.start();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to start Camel context", e);
-        }
     }
 
     @Override
@@ -105,19 +98,14 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         }
 
         // Declare final variables for use in lambda
-        final List<Mapping> resolvedMappings;
-        final Qos finalConsolidatedQos;
-        final int maxCPUTime;
+        List<Mapping> resolvedMappings;
+        int maxCPUTime;
 
         try {
             // Resolve mappings for the topic
-            List<Mapping> tempMappings = mappingService.resolveMappingInbound(tenant, topic);
-            resolvedMappings = tempMappings; // Now final
+            resolvedMappings = mappingService.resolveMappingInbound(tenant, topic);
 
-            Qos tempQos = connectorClient.determineMaxQosInbound(resolvedMappings);
-            finalConsolidatedQos = tempQos; // Now final
-
-            result.setConsolidatedQos(finalConsolidatedQos);
+            result.setConsolidatedQos(connectorClient.determineMaxQosInbound(resolvedMappings));
 
             // Set max CPU time if code-based mappings exist
             int tempMaxCPUTime = 0;
@@ -149,7 +137,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
-                log.error("{} - Error processing message through Camel routes: {}", tenant, e.getMessage(), e);
+                log.error("{} - Error processing inbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
             }
         });
@@ -175,13 +163,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         camelMessage.setHeader("client", message.getClient());
         camelMessage.setHeader("mappings", resolvedMappings);
         camelMessage.setHeader("connectorMessage", message);
-        camelMessage.setHeader("serviceConfiguration", configurationRegistry.getServiceConfiguration(message.getTenant()));
-
-        // Convert headers array to map if present
-        if (message.getHeaders() != null) {
-            Map<String, String> headerMap = parseHeaders(message.getHeaders());
-            camelMessage.setHeader("originalHeaders", headerMap);
-        }
+        camelMessage.setHeader("serviceConfiguration",
+                configurationRegistry.getServiceConfiguration(message.getTenant()));
 
         // Set payload information
         camelMessage.setHeader("payloadBytes", message.getPayload());
@@ -189,40 +172,6 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             camelMessage.setHeader("payloadString", new String(message.getPayload()));
         }
 
-        // Set connector information
-        camelMessage.setHeader("connectorClient", connectorClient);
-        camelMessage.setHeader("configurationRegistry", configurationRegistry);
-
         return exchange;
-    }
-
-    /**
-     * Parse headers array to map
-     */
-    private Map<String, String> parseHeaders(String[] headers) {
-        Map<String, String> headerMap = new HashMap<>();
-        for (String header : headers) {
-            String[] parts = header.split(":", 2);
-            if (parts.length == 2) {
-                headerMap.put(parts[0].trim(), parts[1].trim());
-            }
-        }
-        return headerMap;
-    }
-
-    /**
-     * Cleanup resources
-     */
-    public void shutdown() {
-        try {
-            if (producerTemplate != null) {
-                producerTemplate.stop();
-            }
-            if (camelContext != null) {
-                camelContext.stop();
-            }
-        } catch (Exception e) {
-            log.error("Error shutting down Camel components: {}", e.getMessage(), e);
-        }
     }
 }
