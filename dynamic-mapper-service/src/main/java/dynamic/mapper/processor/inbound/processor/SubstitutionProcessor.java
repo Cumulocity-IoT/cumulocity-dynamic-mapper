@@ -4,12 +4,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
@@ -33,17 +31,15 @@ import com.cumulocity.sdk.client.ProcessingMode;
 @Component
 public class SubstitutionProcessor extends BaseProcessor {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     @Autowired
     private C8YAgent c8yAgent;
-
+    
     @Autowired
     private ConfigurationRegistry configurationRegistry;
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
+        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
 
         try {
             substituteInTargetAndCreateRequests(context);

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
@@ -17,8 +16,7 @@ import dynamic.mapper.processor.model.SubstituteValue;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Component
-public class JSONataExtractionProcessor extends BaseProcessor {
+public class JSONataExtractionOutboundProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {

@@ -16,7 +16,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class EnrichmentProcessor extends BaseProcessor {
+public class EnrichmentOutboundProcessor extends BaseProcessor {
     
     private C8YAgent c8yAgent;
     

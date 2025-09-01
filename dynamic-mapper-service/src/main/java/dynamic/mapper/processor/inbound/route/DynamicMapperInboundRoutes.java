@@ -4,24 +4,56 @@ import java.util.ArrayList;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import dynamic.mapper.processor.inbound.processor.CodeExtractionProcessor;
+import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.processor.inbound.processor.CodeExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.DeserializationProcessor;
-import dynamic.mapper.processor.inbound.processor.EnrichmentProcessor;
+import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleProcessor;
-import dynamic.mapper.processor.inbound.processor.FilterProcessor;
-import dynamic.mapper.processor.inbound.processor.InboundSendProcessor;
-import dynamic.mapper.processor.inbound.processor.JSONataExtractionProcessor;
+import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.MappingContextProcessor;
 import dynamic.mapper.processor.inbound.processor.ProcessingResultProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionProcessor;
 import dynamic.mapper.processor.inbound.util.ProcessingContextAggregationStrategy;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.service.MappingService;
 
 @Component
 public class DynamicMapperInboundRoutes extends RouteBuilder {
+
+    @Autowired
+    private MappingService mappingService;
+
+    @Autowired
+    private ConfigurationRegistry configurationRegistry;
+
+    @Autowired
+    private MappingContextProcessor mappingContextProcessor;
+
+    @Autowired
+    private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
+
+    @Autowired
+    private SubstitutionProcessor substitutionProcessor;
+
+    @Autowired
+    private DeserializationProcessor deserializationProcessor;
+    @Autowired
+    private EnrichmentInboundProcessor enrichmentInboundProcessor;
+
+    @Autowired
+    private JSONataExtractionInboundProcessor jsonataExtractionInboundProcessor;
+
+    @Autowired
+    private FilterInboundProcessor filterInboundProcessor;
+
+    @Autowired
+    private SendInboundProcessor inboundSendProcessor;
 
     @Override
     public void configure() throws Exception {
@@ -88,10 +120,9 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
         // Single mapping processing pipeline
         from("direct:processSingleMapping")
                 .routeId("single-mapping-processor")
-                .process(new MappingContextProcessor())
-                .process(new DeserializationProcessor())
-                .process(new EnrichmentProcessor())
-
+                .process(deserializationProcessor)
+                .process(mappingContextProcessor)
+                .process(enrichmentInboundProcessor)
                 // Conditional extension processing
                 .choice()
                 .when(exchange -> {
@@ -114,13 +145,13 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                             context.getMapping() != null &&
                             context.getMapping().isSubstitutionsAsCode();
                 })
-                .process(new CodeExtractionProcessor())
+                .process(codeExtractionInboundProcessor)
                 .otherwise()
-                .process(new JSONataExtractionProcessor())
+                .process(jsonataExtractionInboundProcessor)
                 .end()
 
-                .process(new SubstitutionProcessor())
-                .process(new FilterProcessor())
+                .process(substitutionProcessor)
+                .process(filterInboundProcessor)
 
                 .choice()
                 .when(exchange -> {
@@ -131,7 +162,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 .to("log:filtered-message?level=DEBUG")
                 .stop()
                 .otherwise()
-                .process(new InboundSendProcessor())
+                .process(inboundSendProcessor)
                 .end()
 
                 .process(new ProcessingResultProcessor());

@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class CodeExtractionProcessor extends BaseProcessor {
+public class CodeExtractionOutboundProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {

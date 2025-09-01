@@ -26,11 +26,11 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 @Slf4j
 @Component
-public class JSONataExtractionProcessor extends BaseProcessor {
+public class JSONataExtractionInboundProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
+        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
         
         try {
             extractFromSource(context);

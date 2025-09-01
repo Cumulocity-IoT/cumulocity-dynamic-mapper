@@ -14,6 +14,7 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 import org.joda.time.DateTime;
+import org.springframework.stereotype.Component;
 
 import com.dashjoin.jsonata.Functions;
 
@@ -31,11 +32,12 @@ import dynamic.mapper.processor.model.SubstitutionResult;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class CodeExtractionProcessor extends BaseProcessor {
+@Component
+public class CodeExtractionInboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = getProcessingContextAsObject(exchange);
+        ProcessingContext<?> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
 
         try {
             extractFromSource(context);

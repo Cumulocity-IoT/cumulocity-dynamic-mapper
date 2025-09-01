@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.camel.Exchange;
+import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -12,11 +13,12 @@ import dynamic.mapper.processor.model.SubstituteValue;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class FilterProcessor extends BaseProcessor {
+@Component
+public class FilterInboundProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
+        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
         
         boolean shouldProcess = applyFilter(context);
         

@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class InboundSendProcessor extends BaseProcessor {
+public class SendInboundProcessor extends BaseProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
@@ -45,7 +44,7 @@ public class InboundSendProcessor extends BaseProcessor {
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
+        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContextAsObject", ProcessingContext.class);
         
         try {
             // Process all C8Y requests that were created by SubstitutionProcessor

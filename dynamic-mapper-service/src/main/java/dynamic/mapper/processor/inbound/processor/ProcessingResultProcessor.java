@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.processor.model.ProcessingContext;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 
 @Component
 public class ProcessingResultProcessor extends BaseProcessor {
