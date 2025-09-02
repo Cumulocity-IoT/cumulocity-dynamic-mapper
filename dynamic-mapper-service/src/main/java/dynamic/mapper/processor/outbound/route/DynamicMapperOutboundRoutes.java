@@ -14,6 +14,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
 import dynamic.mapper.processor.outbound.processor.CodeExtractionOutboundProcessor;
+import dynamic.mapper.processor.outbound.processor.DeserializationOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.JSONataExtractionOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.MappingContextOutboundProcessor;
@@ -36,10 +37,13 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
     private CodeExtractionOutboundProcessor codeExtractionOutboundProcessor;
 
     @Autowired
-    private SubstitutionOutboundProcessor substitutionProcessor;
+    private SubstitutionOutboundProcessor substitutionInboundProcessor;
 
     @Autowired
-    private SnoopingOutboundProcessor snoopingProcessor;
+    private SnoopingOutboundProcessor snoopingOutboundProcessor;
+
+    @Autowired
+    private DeserializationOutboundProcessor deserializationOutboundProcessor;
 
     @Autowired
     private EnrichmentOutboundProcessor enrichmentOutboundProcessor;
@@ -49,6 +53,9 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
 
     @Autowired
     private SendOutboundProcessor outboundSendProcessor;
+
+    @Autowired
+    private ProcessingContextAggregationStrategy processingContextAggregationStrategy;
 
     @Override
     public void configure() throws Exception {
@@ -93,18 +100,18 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
                     log.info("Outbound MappingResolverProcessor - Processing exchange: {}", exchange);
                 })
                 .choice()
-                    .when(header("mappings").isNull())
-                        .process(exchange -> {
-                            // No mappings found - return empty contexts list
-                            exchange.getIn().setHeader("processedContexts", new ArrayList<ProcessingContext<Object>>());
-                        })
-                        .stop()
-                    .otherwise()
-                        .to("direct:processWithMappingsOutbound");
+                .when(header("mappings").isNull())
+                .process(exchange -> {
+                    // No mappings found - return empty contexts list
+                    exchange.getIn().setHeader("processedContexts", new ArrayList<ProcessingContext<Object>>());
+                })
+                .stop()
+                .otherwise()
+                .to("direct:processWithMappingsOutbound");
 
         // Process message with found mappings
         from("direct:processWithMappingsOutbound")
-                .routeId("outbound-mapping-processor")
+                .routeId("single-outbound-mapping-processor")
                 .process(exchange -> {
                     // Filter mappings before splitting: active and deployed
                     @SuppressWarnings("unchecked")
@@ -123,54 +130,54 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
                     }
                 })
                 .split(header("mappings"))
-                    .parallelProcessing(false)
-                    .aggregationStrategy(new ProcessingContextAggregationStrategy())
-                    .to("direct:processSingleOutboundMapping")
+                .parallelProcessing(false)
+                .aggregationStrategy(processingContextAggregationStrategy)
+                .to("direct:processSingleOutboundMapping")
                 .end();
 
         // Single mapping processing pipeline
         from("direct:processSingleOutboundMapping")
-                .routeId("single-outbound-mapping-processor")
+                .routeId("single-filtered-outbound-mapping-processor")
+                .process(deserializationOutboundProcessor)
                 .process(mappingContextProcessor)
                 .process(enrichmentOutboundProcessor)
                 // Check for snooping BEFORE other processing
-                .process(snoopingProcessor)
+                .process(snoopingOutboundProcessor)
                 .choice()
-                    .when(exchange -> {
-                        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                                ProcessingContext.class);
-                        return context != null && context.isIgnoreFurtherProcessing();
-                    })
-                        .to("log:outbound-snooping-message?level=DEBUG&showBody=false")
-                        .stop() // Stop here for snooping - no further processing
-                .end()
-                
-                
-                // Regular extraction processing
-                .choice()
-                    .when(exchange -> {
-                        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                                ProcessingContext.class);
-                        return context != null &&
-                                context.getMapping() != null &&
-                                context.getMapping().isSubstitutionsAsCode();
-                    })
-                        .process(codeExtractionOutboundProcessor)
-                    .otherwise()
-                        .process(jsonataExtractionOutboundProcessor)
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null && context.isIgnoreFurtherProcessing();
+                })
+                .to("log:outbound-snooping-message?level=DEBUG&showBody=false")
+                .stop() // Stop here for snooping - no further processing
                 .end()
 
-                .process(substitutionProcessor)
+                // Regular extraction processing
                 .choice()
-                    .when(exchange -> {
-                        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                                ProcessingContext.class);
-                        return context != null && context.isIgnoreFurtherProcessing();
-                    })
-                        .to("log:outbound-filtered-message?level=DEBUG")
-                        .stop()
-                    .otherwise()
-                        .process(outboundSendProcessor)
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null &&
+                            context.getMapping() != null &&
+                            context.getMapping().isSubstitutionsAsCode();
+                })
+                .process(codeExtractionOutboundProcessor)
+                .otherwise()
+                .process(jsonataExtractionOutboundProcessor)
+                .end()
+
+                .process(substitutionInboundProcessor)
+                .choice()
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null && context.isIgnoreFurtherProcessing();
+                })
+                .to("log:outbound-filtered-message?level=DEBUG")
+                .stop()
+                .otherwise()
+                .process(outboundSendProcessor)
                 .end()
 
                 .process(new ResultProcessor());

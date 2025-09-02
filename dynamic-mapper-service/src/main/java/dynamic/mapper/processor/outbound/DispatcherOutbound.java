@@ -385,7 +385,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     .sendPayload(sendPayload)
                     .tenant(tenant)
                     .supportsMessageContext(mapping.supportsMessageContext)
-                    .qos(mapping.qos) // use QoS from mapping
+                    .qos(mapping.qos) 
                     .serviceConfiguration(serviceConfiguration)
                     .build();
         }

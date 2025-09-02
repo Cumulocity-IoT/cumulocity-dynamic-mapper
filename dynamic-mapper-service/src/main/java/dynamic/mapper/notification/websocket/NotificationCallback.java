@@ -23,8 +23,6 @@ package dynamic.mapper.notification.websocket;
 
 import java.net.URI;
 
-import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-
 import dynamic.mapper.processor.model.ProcessingResult;
 
 /**

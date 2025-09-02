@@ -35,22 +35,16 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         C8YMessage message = exchange.getIn().getHeader("c8yMessage", C8YMessage.class);
-        String tenant = exchange.getIn().getHeader("tenant", String.class);
         Mapping currentMapping = exchange.getIn().getBody(Mapping.class);
-        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader("serviceConfiguration",
-                ServiceConfiguration.class);
         ProcessingContext<?> processingContext = exchange.getIn().getHeader("processingContext",
-                ProcessingContext.class);
+        ProcessingContext.class);
+
+        ServiceConfiguration serviceConfiguration = processingContext.getServiceConfiguration();
+        String tenant = message.getTenant();
 
         // Extract additional info from headers if available
         String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
         
-        processingContext.setServiceConfiguration(serviceConfiguration);
-        processingContext.setApi(currentMapping.getTargetAPI());
-        processingContext.setMapping(currentMapping);
-        processingContext.setMappingType(currentMapping.mappingType);
-        processingContext.setQos(currentMapping.getQos());
-
         // Prepare GraalVM context if code exists
         if (currentMapping.code != null || currentMapping.substitutionsAsCode) {
             try {
@@ -58,10 +52,6 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
                 var graalContext = createGraalContext(graalEngine);
                 processingContext.setGraalContext(graalContext);
-                // context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
-                // context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
-                // context.setMappingSource(configurationRegistry.getGraalsSourceMapping(tenant,
-                // mapping.id));
                 processingContext.setSharedCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SHARED.name()).getCode());
                 processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()

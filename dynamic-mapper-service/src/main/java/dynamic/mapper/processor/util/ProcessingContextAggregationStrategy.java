@@ -5,9 +5,11 @@ import java.util.List;
 
 import org.apache.camel.AggregationStrategy;
 import org.apache.camel.Exchange;
+import org.springframework.stereotype.Component;
 
 import dynamic.mapper.processor.model.ProcessingContext;
 
+@Component
 public class ProcessingContextAggregationStrategy implements AggregationStrategy {
     
     @Override

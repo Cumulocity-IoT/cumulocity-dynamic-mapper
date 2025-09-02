@@ -12,7 +12,7 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.processor.CodeExtractionInboundProcessor;
-import dynamic.mapper.processor.inbound.processor.DeserializationProcessor;
+import dynamic.mapper.processor.inbound.processor.DeserializationInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
@@ -42,13 +42,13 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
 
     @Autowired
-    private SubstitutionInboundProcessor substitutionProcessor;
+    private SubstitutionInboundProcessor substitutionInboundProcessor;
 
     @Autowired
-    private SnoopingInboundProcessor snoopingProcessor;
+    private SnoopingInboundProcessor snoopingInboundProcessor;
 
     @Autowired
-    private DeserializationProcessor deserializationProcessor;
+    private DeserializationInboundProcessor deserializationInboundProcessor;
 
     @Autowired
     private EnrichmentInboundProcessor enrichmentInboundProcessor;
@@ -64,6 +64,9 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
 
     @Autowired
     private ResultProcessor resultProcessor;
+
+    @Autowired
+    private ProcessingContextAggregationStrategy processingContextAggregationStrategy;
 
     @Override
     public void configure() throws Exception {
@@ -104,10 +107,6 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
         // Main processing entry point (transport agnostic)
         from("direct:processInboundMessage")
                 .routeId("inbound-message-processor")
-                // .log("=== ROUTE RECEIVED MESSAGE ===")
-                .process(exchange -> {
-                    log.info("MappingResolverProcessor - Processing exchange: {}", exchange);
-                })
                 .choice()
                 .when(header("mappings").isNull())
                 .process(exchange -> {
@@ -120,7 +119,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
 
         // Process message with found mappings
         from("direct:processWithMappingsInbound")
-                .routeId("inbound-mapping-processor")
+                .routeId("single-inbound-mapping-processor")
                 .process(exchange -> {
                     // Filter mappings before splitting: active and deployed
                     @SuppressWarnings("unchecked")
@@ -140,18 +139,18 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 })
                 .split(header("mappings"))
                 .parallelProcessing(false)
-                .aggregationStrategy(new ProcessingContextAggregationStrategy())
-                .to("direct:processSingleMapping")
+                .aggregationStrategy(processingContextAggregationStrategy)
+                .to("direct:processSingleInboundMapping")
                 .end();
 
         // Single mapping processing pipeline
-        from("direct:processSingleMapping")
-                .routeId("single-mapping-processor")
-                .process(deserializationProcessor)
+        from("direct:processSingleInboundMapping")
+                .routeId("single-filtered-inbound-mapping-processor")
+                .process(deserializationInboundProcessor)
                 .process(mappingContextProcessor)
                 .process(enrichmentInboundProcessor)
                 // ADD: Check for snooping BEFORE other processing
-                .process(snoopingProcessor)
+                .process(snoopingInboundProcessor)
                 .choice()
                 .when(exchange -> {
                     ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
@@ -188,7 +187,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 .process(jsonataExtractionInboundProcessor)
                 .end()
 
-                .process(substitutionProcessor)
+                .process(substitutionInboundProcessor)
                 .process(filterInboundProcessor)
 
                 .choice()
@@ -207,7 +206,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
 
         // Error handling route
         from("direct:inboundErrorHandling")
-                .routeId("error-handler")
+                .routeId("inbound-error-handler")
                 .to("log:dynamic-mapper-error?level=ERROR&showException=true");
     }
 

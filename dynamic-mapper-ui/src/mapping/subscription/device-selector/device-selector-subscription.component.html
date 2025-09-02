@@ -28,7 +28,7 @@
       </h4>
     </div>
     <div class="card-block">
-      <c8y-asset-selector-miller  (onSelected)="selectionChanged($event)" [config]="{
+      <c8y-asset-selector-miller [(ngModel)]="deviceList"  (onSelected)="selectionChanged($event)" [config]="{
             groupsSelectable: true,
             columnHeaders: true,
             showFilter: true,

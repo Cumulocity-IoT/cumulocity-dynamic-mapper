@@ -1,9 +1,7 @@
 package dynamic.mapper.processor.inbound;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -11,10 +9,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.support.DefaultExchange;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
@@ -157,8 +152,6 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         camelMessage.setBody(message);
 
         // Set headers for processing
-        camelMessage.setHeader("tenant", message.getTenant());
-        camelMessage.setHeader("topic", message.getTopic());
         camelMessage.setHeader("connectorIdentifier", message.getConnectorIdentifier());
         camelMessage.setHeader("client", message.getClient());
         camelMessage.setHeader("mappings", resolvedMappings);

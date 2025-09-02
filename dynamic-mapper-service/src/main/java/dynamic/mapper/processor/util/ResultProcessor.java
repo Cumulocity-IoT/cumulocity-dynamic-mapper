@@ -17,7 +17,6 @@ public class ResultProcessor extends BaseProcessor {
         // The ProcessingContext itself contains all the processed data
         // No need to extract a separate "processedData" - the context IS the result
         
-        exchange.getIn().setHeader("mappingProcessingResult", context);
         exchange.getIn().setBody(context); // For aggregation - pass the context itself
     }
 }

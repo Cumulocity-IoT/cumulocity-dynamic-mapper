@@ -25,14 +25,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class DeserializationProcessor extends BaseProcessor {
+public class DeserializationInboundProcessor extends BaseProcessor {
     
     @Autowired
     private MappingService mappingService;
 
     private final Map<MappingType, PayloadDeserializer<?>> deserializers = new HashMap<>();
 
-    public DeserializationProcessor() {
+    public DeserializationInboundProcessor() {
         // Map MappingType enum values to deserializers
         deserializers.put(MappingType.JSON, new JSONPayloadDeserializer());
         deserializers.put(MappingType.FLAT_FILE, new FlatFilePayloadDeserializer());
@@ -99,35 +99,6 @@ public class DeserializationProcessor extends BaseProcessor {
             }
         }
 
-    }
-
-    private ProcessingContext<Object> createProcessingContextAsObject(String tenant, Mapping mapping,
-            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration) {
-        return ProcessingContext.<Object>builder()
-                .rawPayload(connectorMessage.getPayload())
-                .topic(connectorMessage.getTopic())
-                .client(connectorMessage.getClient())
-                .mappingType(mapping.mappingType)
-                .mapping(mapping)
-                .sendPayload(connectorMessage.isSendPayload())
-                .tenant(tenant)
-                .supportsMessageContext(
-                        connectorMessage.isSupportsMessageContext() && mapping.supportsMessageContext)
-                .key(connectorMessage.getKey())
-                .api(mapping.targetAPI).build();
-    }
-
-    private ProcessingContext<byte[]> createProcessingContextAsByteArray(String tenant, Mapping mapping,
-            ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration) {
-        return ProcessingContext.<byte[]>builder().rawPayload(connectorMessage.getPayload())
-                .topic(connectorMessage.getTopic())
-                .client(connectorMessage.getClient())
-                .sendPayload(connectorMessage.isSendPayload())
-                .tenant(tenant)
-                .supportsMessageContext(
-                        connectorMessage.isSupportsMessageContext() && mapping.supportsMessageContext)
-                .key(connectorMessage.getKey())
-                .build();
     }
 
     private void handleMissingProcessor(String tenant, Mapping mapping, ProcessingContext<?> context) {

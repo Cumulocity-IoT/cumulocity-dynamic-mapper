@@ -49,7 +49,6 @@ import dynamic.mapper.model.Device;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
-import dynamic.mapper.processor.outbound.DispatcherOutbound;
 import dynamic.mapper.util.Utils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +63,6 @@ import jakarta.annotation.PreDestroy;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 

@@ -5,7 +5,9 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
@@ -33,5 +35,22 @@ public abstract class BaseProcessor implements Processor {
                     payloadAsString, e);
         }
         return extractedSourceContent;
+    }
+
+    protected ProcessingContext<Object> createProcessingContextAsObject(String tenant, Mapping mapping,
+            C8YMessage message, ServiceConfiguration serviceConfiguration) {
+        return ProcessingContext.<Object>builder()
+                .payload(message.getParsedPayload())
+                .topic(mapping.publishTopic)
+                .rawPayload(message.getPayload())
+                .mappingType(mapping.mappingType)
+                .mapping(mapping)
+                .sendPayload(message.isSendPayload())
+                .tenant(tenant)
+                .supportsMessageContext(
+                        mapping.supportsMessageContext)
+                .qos(mapping.qos)
+                .serviceConfiguration(serviceConfiguration)
+                .api(mapping.targetAPI).build();
     }
 }
