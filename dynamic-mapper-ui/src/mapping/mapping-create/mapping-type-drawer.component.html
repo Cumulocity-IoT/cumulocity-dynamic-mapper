@@ -57,14 +57,21 @@
               Step 2 to defining a complete mapping, incl. substitutions you
               have to stop the snooping for the respective mapping.</small>
           </c8y-form-group>
+
           <c8y-form-group class="p-l-16 p-r-16">
-            <label class="c8y-checkbox">
-              <input title="{{ 'Define substitutions as JavaScript instead of JSONata' | translate }}" type="checkbox"
-                name="substitutionsAsCode" formControlName="substitutionsAsCode" />
-              <span class="m-r-8"></span>
-              Define substitutions as JavaScript
+            <label>
+              Transformation Type
             </label>
+            <c8y-select 
+              [items]="transformationTypeOptions"
+              formControlName="transformationType"
+              labelProperty="label"
+              valueProperty="value"
+              aria-label="Transformation select">
+            </c8y-select>
+            <small class="text-muted">Defines the type of transformation from source to target payload.</small>
           </c8y-form-group>
+
           <c8y-form-group class="p-l-16 p-r-16">
             <textarea readonly c8y-textarea-autoresize formControlName="mappingTypeDescription"
               class="form-control no-resize"></textarea>

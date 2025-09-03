@@ -29,7 +29,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import dynamic.mapper.processor.model.MappingType;
-
+import dynamic.mapper.processor.model.ProcessingType;
+import dynamic.mapper.processor.model.TransformationType;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -113,9 +114,13 @@ public class Mapping implements Serializable {
     @NotNull
     public String targetTemplate;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Type of mapping transformation", implementation = MappingType.class, example = "JSON")
-    @NotNull
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Type of mapping payload", implementation = MappingType.class, example = "JSON")
+    @JsonSetter(nulls = Nulls.SKIP)
     public MappingType mappingType;
+
+    @Schema( description = "Type of processing the transformation", implementation = ProcessingType.class, example = "SUBSTITUTION_AS_CODE")
+    @NotNull
+    public TransformationType transformationType = TransformationType.DEFAULT;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Array of field substitutions for data transformation")
     @NotNull

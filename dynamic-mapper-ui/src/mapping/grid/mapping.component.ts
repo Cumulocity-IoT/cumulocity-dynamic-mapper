@@ -18,7 +18,6 @@
  * @authors Christof Strack
  */
 import {
-  ChangeDetectorRef,
   Component,
   inject,
   OnDestroy,
@@ -62,7 +61,8 @@ import {
   SharedService,
   StepperConfiguration,
   Feature,
-  isSubstitutionsAsCode
+  isSubstitutionsAsCode,
+  TransformationType
 } from '../../shared';
 
 import { HttpStatusCode } from '@angular/common/http';
@@ -85,7 +85,7 @@ import {
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
 import { SubscriptionService } from '../core/subscription.service';
-import { MappingTypeDrawerComponent } from '../mapping-type/mapping-type-drawer.component';
+import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -141,6 +141,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   ];
 
   mappingType: MappingType;
+  transformationType: TransformationType;
   destroy$ = new Subject<boolean>();
 
   pagination: Pagination = {
@@ -493,7 +494,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.snoopStatus = SnoopStatus.ENABLED;
         this.snoopEnabled = true;
       }
-      this.substitutionsAsCode = resultOf.substitutionsAsCode;
+      this.transformationType = resultOf.transformationType;
+      this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION || this.transformationType == TransformationType.SUBSTITUTION_AS_CODE;
       this.mappingType = resultOf.mappingType;
       this.addMapping();
     }
@@ -528,6 +530,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         useExternalId: false,
         createNonExistingDevice: false,
         mappingType: this.mappingType,
+        transformationType: this.transformationType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
@@ -559,6 +562,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         useExternalId: false,
         createNonExistingDevice: false,
         mappingType: this.mappingType,
+        transformationType: this.transformationType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code: this.substitutionsAsCode ? this.codeTemplateOutbound : undefined,

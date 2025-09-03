@@ -26,9 +26,9 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
+import { BottomDrawerRef, HumanizePipe, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject } from 'rxjs';
-import { Direction, MappingType, MappingTypeDescriptionMap } from '../../shared';
+import { CamelCasePipe, CapitalizeCasePipe, Direction, MappingType, MappingTypeDescriptionMap, TransformationType } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-type-drawer',
@@ -39,7 +39,7 @@ import { Direction, MappingType, MappingTypeDescriptionMap } from '../../shared'
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
 
-  labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' }; s
+  labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
   MappingTypeDescriptionMap = MappingTypeDescriptionMap;
   formGroup: FormGroup;
@@ -48,6 +48,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   substitutionsAsCodeSupported$: BehaviorSubject<boolean> = new BehaviorSubject(false);
   errorMessage: string;
   MappingType = MappingType;
+  TransformationType = TransformationType;
   Direction = Direction;
 
   // Separate properties - one for internal logic, one for display
@@ -56,21 +57,23 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   // Getter for template access
   initialMappingType: MappingType = MappingType.JSON;
+  transformationTypeOptions: { label: string; value: string }[] = [];
+  initialTransformationType: TransformationType = TransformationType.JSONATA;
 
   // New property - filtered mapping types
   filteredMappingTypes: any;
 
   private _save: (value: {
     mappingType: MappingType;
+    transformationType: TransformationType;
     snoop: boolean;
-    substitutionsAsCode: boolean;
   }) => void;
   private _cancel: (reason?: any) => void;
 
   result: Promise<{
     mappingType: MappingType;
+    transformationType: TransformationType;
     snoop: boolean;
-    substitutionsAsCode: boolean;
   } | string> = new Promise((resolve, reject) => {
     this._save = resolve;
     this._cancel = reject;
@@ -89,9 +92,9 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     this.formGroup = this.fb.group({
       mappingType: [this.initialMappingType],
+      transformationType: [this.initialTransformationType],
       mappingTypeDescription: [this.mappingTypeDescription],
-      snoop: [{ value: false, disabled: !initialSnoopSupported }],
-      substitutionsAsCode: [{ value: false, disabled: !initialSubstitutionsSupported }],
+      snoop: [{ value: false, disabled: !initialSnoopSupported }]
     });
 
     this.filteredMappingTypes = Object.entries(MappingType)
@@ -104,6 +107,11 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.formGroup.get('mappingType')?.valueChanges.subscribe((type: MappingType) => {
       this.updateMappingTypeRelatedControls(type);
     });
+
+    // Initialize transformation type options based on initial substitutionsAsCodeSupported
+    this.updateTransformationTypeOptions(initialSubstitutionsSupported);
+
+    const humanizePipe = new HumanizePipe();
   }
 
   onCancel() {
@@ -116,29 +124,28 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       const formValue = this.formGroup.getRawValue(); // Get all values including disabled ones
       const { snoopSupported } = MappingTypeDescriptionMap[this.initialMappingType].properties[this.direction];
       const selectedMappingType = this.formGroup.get('mappingType').value;
+      const selectedTransformationType = this.formGroup.get('transformationType').value;
+      
       this._save({
         mappingType: selectedMappingType,
-        snoop: formValue.snoop && snoopSupported,
-        substitutionsAsCode: formValue.substitutionsAsCode
+        transformationType: selectedTransformationType,
+        snoop: formValue.snoop && snoopSupported
       });
       this.bottomDrawerRef.close();
     }
   }
+
   onSelectMappingType(type: MappingType) {
     // Simply update the form control - this will trigger valueChanges subscription
     this.formGroup.patchValue({ mappingType: type });
   }
 
   private updateMappingTypeRelatedControls(type: MappingType) {
-    // Update description
-    //this.mappingTypeDescription = MappingTypeDescriptionMap[type]?.description || '';
-
     // Calculate disabled states
     const snoopSupported = MappingTypeDescriptionMap[type]?.properties?.[this.direction]?.snoopSupported || false;
-    const substitutionsSupported = MappingTypeDescriptionMap[type]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
+    const substitutionsAsCodeSupported = MappingTypeDescriptionMap[type]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
 
     const snoopControl = this.formGroup.get('snoop');
-    const substitutionsControl = this.formGroup.get('substitutionsAsCode');
 
     this.formGroup.patchValue({ mappingTypeDescription: MappingTypeDescriptionMap[type]?.description });
 
@@ -149,11 +156,36 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       snoopControl.disable();
     }
 
-    // Update substitutions control
-    if (substitutionsSupported && substitutionsControl?.disabled) {
-      substitutionsControl.enable();
-    } else if (!substitutionsSupported && substitutionsControl?.enabled) {
-      substitutionsControl.disable();
+    // Update transformation type options based on substitutionsAsCodeSupported
+    this.updateTransformationTypeOptions(substitutionsAsCodeSupported);
+  }
+
+  private updateTransformationTypeOptions(substitutionsAsCodeSupported: boolean) {
+    const humanizePipe = new HumanizePipe();
+    
+    if (substitutionsAsCodeSupported) {
+      // Include all options
+      this.transformationTypeOptions = Object.values(TransformationType).map(type => ({
+        label: humanizePipe.transform(type),
+        value: type
+      }));
+    } else {
+      // Include only DEFAULT and JSONATA
+      this.transformationTypeOptions = [
+        TransformationType.DEFAULT,
+        TransformationType.JSONATA
+      ].map(type => ({
+        label: humanizePipe.transform(type),
+        value: type
+      }));
+    }
+
+    // Reset transformation type to JSONATA if current selection is not available
+    const currentTransformationType = this.formGroup.get('transformationType')?.value;
+    const availableValues = this.transformationTypeOptions.map(option => option.value);
+    
+    if (!availableValues.includes(currentTransformationType)) {
+      this.formGroup.patchValue({ transformationType: TransformationType.JSONATA });
     }
   }
 

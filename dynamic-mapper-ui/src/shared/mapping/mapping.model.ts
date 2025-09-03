@@ -121,8 +121,11 @@ export interface Mapping {
    */
   targetTemplate: string;
 
-  /** Type of mapping transformation */
+  /** Type of mapping payload */
   mappingType: MappingType;
+
+    /** Type of transformation */
+  transformationType: TransformationType;
 
   /** Array of field substitutions for data transformation */
   substitutions?: Substitution[];
@@ -271,6 +274,13 @@ export interface StepperConfiguration {
   allowTestSending?: boolean;
   direction?: Direction;
   advanceFromStepToEndStep?: number;
+}
+
+export enum TransformationType {
+  DEFAULT = 'DEFAULT',
+  SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
+  SMART_FUNCTION = 'SMART_FUNCTION',
+  JSONATA = 'JSONATA'
 }
 
 export enum MappingType {
