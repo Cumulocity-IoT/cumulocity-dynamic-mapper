@@ -23,7 +23,6 @@ package dynamic.mapper.processor.model;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +35,7 @@ import dynamic.mapper.model.BinaryInfo;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.flow.FlowContext;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -142,6 +142,10 @@ public class ProcessingContext<O> {
     private String deviceName;
 
     private String deviceType;
+
+    private Object flowResult;
+
+    private FlowContext flowContext;
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();

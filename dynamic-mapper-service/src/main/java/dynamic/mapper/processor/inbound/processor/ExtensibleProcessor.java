@@ -13,11 +13,9 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionSource;
-import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
