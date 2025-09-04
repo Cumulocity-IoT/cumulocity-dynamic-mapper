@@ -148,8 +148,7 @@ public class ProcessingContext<O> {
 
     private FlowContext flowContext;
  
-    @Builder.Default
-    private Map<String, Object> flowState = new HashMap<String, Object>();
+    private Map<String, Object> flowState;
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();

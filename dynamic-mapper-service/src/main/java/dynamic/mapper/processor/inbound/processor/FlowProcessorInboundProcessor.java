@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class FlowProcessorInboundProcessor extends BaseProcessor implements FlowContext {
+public class FlowProcessorInboundProcessor extends BaseProcessor  {
 
     @Autowired
     private MappingService mappingService;
@@ -106,7 +106,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor implements Flow
             Value inputMessage = createInputMessage(graalContext, context);
 
             // Execute the JavaScript function
-            final Value result = onMessageFunction.execute(inputMessage, this);
+            final Value result = onMessageFunction.execute(inputMessage, context.getFlowContext());
 
             // Task 2: Extracting the result
             processResult(result, context, tenant);
@@ -193,122 +193,5 @@ public class FlowProcessorInboundProcessor extends BaseProcessor implements Flow
             log.info("{} - onMessage function returned {} complete messages", tenant, outputMessages.size());
         }
     }
-
-    // FlowContext implementation
-    @Override
-    public void setState(String key, Value value) {
-        if (currentContext != null) {
-            Object javaValue = JavaScriptInteropHelper.convertValueToJavaObject(value);
-            currentContext.getFlowState().put(key, javaValue);
-            log.debug("{} - Flow state set: {}={}",
-                    currentContext.getTenant(), key, javaValue);
-        } else {
-            log.warn("Cannot set state - no current context available");
-        }
-    }
-
-    @Override
-    public Value getState(String key) {
-        if (currentContext != null && currentContext.getGraalContext() != null) {
-
-            if (currentContext.getFlowState() != null && currentContext.getFlowState().containsKey(key)) {
-                Object value = currentContext.getFlowState().get(key);
-                // Convert back to GraalJS Value
-                Value graalValue = currentContext.getGraalContext().asValue(value);
-
-                log.debug("{} - Flow state retrieved: {}={}",
-                        currentContext.getTenant(), key, value);
-                return graalValue;
-            } else {
-                log.debug("{} - Flow state not found for key: {}",
-                        currentContext.getTenant(), key);
-            }
-        } else {
-            log.warn("Cannot get state - no current context or GraalJS context available");
-        }
-        return null;
-    }
-
-    @Override
-    public Value getConfig() {
-        if (currentContext != null && currentContext.getGraalContext() != null) {
-            // Convert mapping configuration to JavaScript object
-            Map<String, Object> config = new HashMap<>();
-            Mapping mapping = currentContext.getMapping();
-
-            if (mapping != null) {
-                config.put("mappingName", mapping.name);
-                config.put("targetAPI", mapping.targetAPI != null ? mapping.targetAPI.toString() : null);
-                config.put("deviceIdentifier", mapping.getGenericDeviceIdentifier());
-                config.put("mappingId", mapping.id);
-                config.put("mappingTopic", mapping.mappingTopic);
-                config.put("currentTopic", currentContext.getTopic());
-            }
-
-            // Add service configuration
-            ServiceConfiguration serviceConfig = currentContext.getServiceConfiguration();
-            if (serviceConfig != null) {
-                config.put("logPayload", serviceConfig.logPayload);
-                config.put("tenant", currentContext.getTenant());
-            }
-
-            Value configValue = currentContext.getGraalContext().asValue(config);
-
-            log.debug("{} - Flow config provided with {} properties",
-                    currentContext.getTenant(), config.size());
-
-            return configValue;
-        } else {
-            log.warn("Cannot get config - no current context or GraalJS context available");
-            return null;
-        }
-    }
-
-    @Override
-    public void logMessage(Value msg) {
-        logInfo("JS Log", msg);
-    }
-
-    @Override
-    public Value lookupDTMAssetProperties(String assetId) {
-        String tenant = currentContext != null ? currentContext.getTenant() : "unknown";
-
-        // TODO: Implement actual DTM asset lookup logic here
-        // This is a placeholder implementation
-        log.debug("{} - DTM asset lookup requested for: {}", tenant, assetId);
-
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("assetId", assetId);
-        properties.put("found", false);
-        properties.put("message", "DTM lookup not yet implemented");
-
-        // In a real implementation, you would:
-        // 1. Call your DTM service/repository
-        // 2. Look up the asset properties
-        // 3. Return the actual properties
-
-        if (currentContext != null && currentContext.getGraalContext() != null) {
-            return currentContext.getGraalContext().asValue(properties);
-        } else {
-            log.warn("Cannot lookup DTM properties - no current context available");
-            return null;
-        }
-    }
-
-    // Helper logging methods
-    private void logInfo(String prefix, Object msg) {
-        String tenant = currentContext != null ? currentContext.getTenant() : "unknown";
-        if (msg instanceof Value) {
-            Value valueMsg = (Value) msg;
-            if (valueMsg.isString()) {
-                log.info("{} - {}: {}", tenant, prefix, valueMsg.asString());
-            } else {
-                log.info("{} - {}: {}", tenant, prefix, valueMsg.toString());
-            }
-        } else {
-            log.info("{} - {}: {}", tenant, prefix, msg.toString());
-        }
-    }
-
 
 }

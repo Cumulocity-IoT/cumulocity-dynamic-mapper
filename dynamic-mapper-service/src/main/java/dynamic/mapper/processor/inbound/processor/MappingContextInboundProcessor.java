@@ -1,6 +1,8 @@
 package dynamic.mapper.processor.inbound.processor;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.processor.model.TransformationType;
@@ -64,14 +67,16 @@ public class MappingContextInboundProcessor extends BaseProcessor {
                 handleGraalVMError(tenant, currentMapping, e, processingContext);
                 return;
             }
-        } else if (currentMapping.code != null && (currentMapping.substitutionsAsCode
-                || TransformationType.FLOW_FUNCTION.equals(currentMapping.transformationType))) {
+        } else if (currentMapping.code != null && 
+                 TransformationType.FLOW_FUNCTION.equals(currentMapping.transformationType)) {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
                 var graalContext = createGraalContext(graalEngine);
                 processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.FLOW.name()).getCode());
                 processingContext.setGraalContext(graalContext);
+                processingContext.setFlowState(new HashMap<String, Object>());
+                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant));
             } catch (Exception e) {
                 handleGraalVMError(tenant, currentMapping, e, processingContext);
                 return;
