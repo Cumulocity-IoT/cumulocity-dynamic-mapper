@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class FlowSubstitutionInboundProcessor extends BaseProcessor {
+public class FlowResultInboundProcessor extends BaseProcessor {
 
     @Autowired
     private MappingService mappingService;

@@ -495,7 +495,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.snoopEnabled = true;
       }
       this.transformationType = resultOf.transformationType;
-      this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION || this.transformationType == TransformationType.SUBSTITUTION_AS_CODE;
+      this.substitutionsAsCode = this.transformationType == TransformationType.FLOW_FUNCTION || this.transformationType == TransformationType.SUBSTITUTION_AS_CODE;
       this.mappingType = resultOf.mappingType;
       this.addMapping();
     }

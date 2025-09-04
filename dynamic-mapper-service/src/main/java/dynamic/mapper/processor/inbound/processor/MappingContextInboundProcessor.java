@@ -16,6 +16,7 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.processor.model.TransformationType;
 import lombok.extern.slf4j.Slf4j;
 
 import org.graalvm.polyglot.Engine;
@@ -38,8 +39,8 @@ public class MappingContextInboundProcessor extends BaseProcessor {
         ConnectorMessage message = exchange.getIn().getHeader("connectorMessage", ConnectorMessage.class);
         Mapping currentMapping = exchange.getIn().getBody(Mapping.class);
         ProcessingContext<?> processingContext = exchange.getIn().getHeader("processingContext",
-        ProcessingContext.class);
-        
+                ProcessingContext.class);
+
         ServiceConfiguration serviceConfiguration = processingContext.getServiceConfiguration();
         String tenant = message.getTenant();
 
@@ -49,9 +50,9 @@ public class MappingContextInboundProcessor extends BaseProcessor {
         processingContext.setQos(determineQos(connectorIdentifier));
 
         // Prepare GraalVM context if code exists
-        if (currentMapping.code != null || currentMapping.substitutionsAsCode) {
+        if (currentMapping.code != null && (currentMapping.substitutionsAsCode
+                || TransformationType.SUBSTITUTION_AS_CODE.equals(currentMapping.transformationType))) {
             try {
-                // contextSemaphore.acquire();
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
                 var graalContext = createGraalContext(graalEngine);
                 processingContext.setGraalContext(graalContext);
@@ -59,6 +60,16 @@ public class MappingContextInboundProcessor extends BaseProcessor {
                         .get(TemplateType.SHARED.name()).getCode());
                 processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SYSTEM.name()).getCode());
+            } catch (Exception e) {
+                handleGraalVMError(tenant, currentMapping, e, processingContext);
+                return;
+            }
+        } else if (currentMapping.code != null && (currentMapping.substitutionsAsCode
+                || TransformationType.FLOW_FUNCTION.equals(currentMapping.transformationType))) {
+            try {
+                var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
+                var graalContext = createGraalContext(graalEngine);
+                processingContext.setGraalContext(graalContext);
             } catch (Exception e) {
                 handleGraalVMError(tenant, currentMapping, e, processingContext);
                 return;
