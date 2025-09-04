@@ -219,12 +219,12 @@ public class CamelDispatcherOutbound implements NotificationCallback {
 
         // Set headers for processing
         camelMessage.setHeader("connectorIdentifier", getConnectorClient().getConnectorIdentifier());
+        camelMessage.setHeader("tenant", message.getTenant());
         camelMessage.setHeader("source", message.getSourceId());
         camelMessage.setHeader("mappings", resolvedMappings);
         camelMessage.setHeader("c8yMessage", message);
         camelMessage.setHeader("serviceConfiguration",
                 configurationRegistry.getServiceConfiguration(message.getTenant()));
-
 
         // Set payload information
         camelMessage.setHeader("payloadBytes", message.getPayload());

@@ -44,7 +44,8 @@ export enum TemplateType {
   INBOUND = "INBOUND",
   OUTBOUND = "OUTBOUND",
   SHARED = "SHARED",
-  SYSTEM = "SYSTEM"
+  SYSTEM = "SYSTEM",
+  FLOW = "FLOW"
 }
 
 export interface CodeTemplate {

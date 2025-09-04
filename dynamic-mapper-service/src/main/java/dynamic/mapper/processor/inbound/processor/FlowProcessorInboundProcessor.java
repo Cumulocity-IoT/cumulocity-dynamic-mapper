@@ -252,15 +252,6 @@ public class FlowProcessorInboundProcessor extends BaseProcessor implements Flow
                 config.put("tenant", currentContext.getTenant());
             }
 
-            // Add logger object for context.logger.info() support
-            Map<String, Object> logger = new HashMap<>();
-            logger.put("info", new LogFunction("info"));
-            logger.put("debug", new LogFunction("debug"));
-            logger.put("warn", new LogFunction("warn"));
-            logger.put("error", new LogFunction("error"));
-
-            config.put("logger", logger);
-
             Value configValue = currentContext.getGraalContext().asValue(config);
 
             log.debug("{} - Flow config provided with {} properties",
@@ -319,91 +310,5 @@ public class FlowProcessorInboundProcessor extends BaseProcessor implements Flow
         }
     }
 
-    private void logDebug(String prefix, Object msg) {
-        String tenant = currentContext != null ? currentContext.getTenant() : "unknown";
-        if (msg instanceof Value) {
-            Value valueMsg = (Value) msg;
-            if (valueMsg.isString()) {
-                log.debug("{} - {}: {}", tenant, prefix, valueMsg.asString());
-            } else {
-                log.debug("{} - {}: {}", tenant, prefix, valueMsg.toString());
-            }
-        } else {
-            log.debug("{} - {}: {}", tenant, prefix, msg.toString());
-        }
-    }
 
-    private void logWarn(String prefix, Object msg) {
-        String tenant = currentContext != null ? currentContext.getTenant() : "unknown";
-        if (msg instanceof Value) {
-            Value valueMsg = (Value) msg;
-            if (valueMsg.isString()) {
-                log.warn("{} - {}: {}", tenant, prefix, valueMsg.asString());
-            } else {
-                log.warn("{} - {}: {}", tenant, prefix, valueMsg.toString());
-            }
-        } else {
-            log.warn("{} - {}: {}", tenant, prefix, msg.toString());
-        }
-    }
-
-    private void logError(String prefix, Object msg) {
-        String tenant = currentContext != null ? currentContext.getTenant() : "unknown";
-        if (msg instanceof Value) {
-            Value valueMsg = (Value) msg;
-            if (valueMsg.isString()) {
-                log.error("{} - {}: {}", tenant, prefix, valueMsg.asString());
-            } else {
-                log.error("{} - {}: {}", tenant, prefix, valueMsg.toString());
-            }
-        } else {
-            log.error("{} - {}: {}", tenant, prefix, msg.toString());
-        }
-    }
-
-    // Helper class for JavaScript-callable logging functions
-    private class LogFunction {
-        private final String level;
-
-        public LogFunction(String level) {
-            this.level = level;
-        }
-
-        public void apply(Object... args) {
-            StringBuilder message = new StringBuilder();
-            for (Object arg : args) {
-                if (message.length() > 0) {
-                    message.append(" ");
-                }
-                if (arg instanceof Value) {
-                    Value valueArg = (Value) arg;
-                    if (valueArg.isString()) {
-                        message.append(valueArg.asString());
-                    } else {
-                        message.append(valueArg.toString());
-                    }
-                } else {
-                    message.append(arg != null ? arg.toString() : "null");
-                }
-            }
-
-            switch (level) {
-                case "info":
-                    logInfo("JS", message.toString());
-                    break;
-                case "debug":
-                    logDebug("JS", message.toString());
-                    break;
-                case "warn":
-                    logWarn("JS", message.toString());
-                    break;
-                case "error":
-                    logError("JS", message.toString());
-                    break;
-                default:
-                    logInfo("JS", message.toString());
-                    break;
-            }
-        }
-    }
 }

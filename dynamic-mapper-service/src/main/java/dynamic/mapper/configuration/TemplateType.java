@@ -25,5 +25,6 @@ public enum TemplateType {
     INBOUND,
     OUTBOUND,
     SHARED,
-    SYSTEM
+    SYSTEM,
+    FLOW
 }

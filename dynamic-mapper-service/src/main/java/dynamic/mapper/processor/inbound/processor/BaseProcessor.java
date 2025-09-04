@@ -21,6 +21,7 @@ public abstract class BaseProcessor implements Processor {
                 .topic(connectorMessage.getTopic())
                 .client(connectorMessage.getClient())
                 .mappingType(mapping.mappingType)
+                .serviceConfiguration(serviceConfiguration)
                 .mapping(mapping)
                 .sendPayload(connectorMessage.isSendPayload())
                 .tenant(tenant)
@@ -35,6 +36,7 @@ public abstract class BaseProcessor implements Processor {
         return ProcessingContext.<byte[]>builder().rawPayload(connectorMessage.getPayload())
                 .topic(connectorMessage.getTopic())
                 .client(connectorMessage.getClient())
+                .serviceConfiguration(serviceConfiguration)
                 .sendPayload(connectorMessage.isSendPayload())
                 .tenant(tenant)
                 .supportsMessageContext(

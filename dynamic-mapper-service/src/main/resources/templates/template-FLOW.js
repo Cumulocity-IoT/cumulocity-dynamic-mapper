@@ -1,7 +1,7 @@
 /**
  * @name Flow code
  * @description Definitions used when using flow functions
- * @templateType SYSTEM
+ * @templateType FLOW
  * @defaultTemplate true
  * @internal true
  * @readonly true
