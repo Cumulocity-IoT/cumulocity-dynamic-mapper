@@ -124,7 +124,7 @@ export interface Mapping {
   /** Type of mapping payload */
   mappingType: MappingType;
 
-    /** Type of transformation */
+  /** Type of transformation */
   transformationType: TransformationType;
 
   /** Array of field substitutions for data transformation */
@@ -604,5 +604,5 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function isSubstitutionsAsCode(mapping: Mapping): boolean {
-  return mapping.substitutionsAsCode || MappingType.CODE_BASED === mapping.mappingType;
+  return mapping.substitutionsAsCode || MappingType.CODE_BASED === mapping.mappingType || mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || mapping.transformationType == TransformationType.FLOW_FUNCTION;
 }

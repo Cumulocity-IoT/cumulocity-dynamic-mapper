@@ -204,6 +204,7 @@ public class Mapping implements Serializable {
     public long lastUpdate;
 
     public static final String EXTRACT_FROM_SOURCE = "extractFromSource";
+    public static final String FLOW_FUNCTION_NAME = "onMessage";
 
     @Override
     public boolean equals(Object m) {

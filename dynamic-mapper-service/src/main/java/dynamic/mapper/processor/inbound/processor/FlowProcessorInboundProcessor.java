@@ -82,7 +82,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor implements Flow
             Context graalContext = context.getGraalContext();
 
             // Task 1: Invoking JavaScript function
-            String identifier = "onMessage_" + mapping.identifier;
+            String identifier = Mapping.FLOW_FUNCTION_NAME + "_" + mapping.identifier;
             Value bindings = graalContext.getBindings("js");
 
             // Load and execute the JavaScript code

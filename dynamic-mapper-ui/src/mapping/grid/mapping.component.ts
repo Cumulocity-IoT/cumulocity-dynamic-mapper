@@ -1024,7 +1024,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       ...(direction === Direction.OUTBOUND && this.snoopStatus === SnoopStatus.ENABLED && {
         advanceFromStepToEndStep: 0
       }),
-      ...(substitutionsAsCode && {
+      ...((substitutionsAsCode) && {
         advanceFromStepToEndStep: undefined,
         showCodeEditor: true,
         allowTestSending: false,

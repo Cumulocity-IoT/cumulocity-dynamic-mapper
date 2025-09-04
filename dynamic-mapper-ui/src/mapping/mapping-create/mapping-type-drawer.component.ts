@@ -28,7 +28,7 @@ import {
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { BottomDrawerRef, HumanizePipe, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject } from 'rxjs';
-import { CamelCasePipe, CapitalizeCasePipe, Direction, MappingType, MappingTypeDescriptionMap, TransformationType } from '../../shared';
+import { Direction, MappingType, MappingTypeDescriptionMap, TransformationType } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-type-drawer',
@@ -124,8 +124,14 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       const formValue = this.formGroup.getRawValue(); // Get all values including disabled ones
       const { snoopSupported } = MappingTypeDescriptionMap[this.initialMappingType].properties[this.direction];
       const selectedMappingType = this.formGroup.get('mappingType').value;
-      const selectedTransformationType = this.formGroup.get('transformationType').value;
-      
+
+      const { value } = this.formGroup.get('transformationType').value;
+
+      // Find the enum item where value matches the selected value
+      const selectedTransformationType = Object.values(TransformationType).find(
+        (enumValue) => enumValue === value
+      ) || TransformationType.DEFAULT; // fallback to DEFAULT if not found
+
       this._save({
         mappingType: selectedMappingType,
         transformationType: selectedTransformationType,
@@ -162,7 +168,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   private updateTransformationTypeOptions(substitutionsAsCodeSupported: boolean) {
     const humanizePipe = new HumanizePipe();
-    
+
     if (substitutionsAsCodeSupported) {
       // Include all options
       this.transformationTypeOptions = Object.values(TransformationType).map(type => ({
@@ -183,7 +189,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     // Reset transformation type to JSONATA if current selection is not available
     const currentTransformationType = this.formGroup.get('transformationType')?.value;
     const availableValues = this.transformationTypeOptions.map(option => option.value);
-    
+
     if (!availableValues.includes(currentTransformationType)) {
       this.formGroup.patchValue({ transformationType: TransformationType.JSONATA });
     }

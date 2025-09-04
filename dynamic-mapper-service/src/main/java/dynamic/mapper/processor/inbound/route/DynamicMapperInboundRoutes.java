@@ -16,6 +16,8 @@ import dynamic.mapper.processor.inbound.processor.DeserializationInboundProcesso
 import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.FlowProcessorInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.FlowResultInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
@@ -23,6 +25,7 @@ import dynamic.mapper.processor.inbound.processor.MappingContextInboundProcessor
 import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
 import dynamic.mapper.processor.util.ResultProcessor;
 
@@ -42,6 +45,9 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     private CodeExtractionInboundProcessor codeExtractionInboundProcessor;
 
     @Autowired
+    private FlowProcessorInboundProcessor flowProcessorInboundProcessor;
+
+    @Autowired
     private SubstitutionInboundProcessor substitutionInboundProcessor;
 
     @Autowired
@@ -55,6 +61,9 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
 
     @Autowired
     private JSONataExtractionInboundProcessor jsonataExtractionInboundProcessor;
+
+    @Autowired
+    private FlowResultInboundProcessor flowResultInboundProcessor;
 
     @Autowired
     private FilterInboundProcessor filterInboundProcessor;
@@ -173,21 +182,14 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                 .stop() // Extensions handle their own processing
                 .end()
 
-                // Regular extraction processing
+                // Check transformation type for processing flow
                 .choice()
-                .when(exchange -> {
-                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                            ProcessingContext.class);
-                    return context != null &&
-                            context.getMapping() != null &&
-                            context.getMapping().isSubstitutionsAsCode();
-                })
-                .process(codeExtractionInboundProcessor)
+                .when(exchange -> isFlowFunction(exchange))
+                .to("direct:processFlowFunction")
                 .otherwise()
-                .process(jsonataExtractionInboundProcessor)
+                .to("direct:processTraditionalMapping")
                 .end()
 
-                .process(substitutionInboundProcessor)
                 .process(filterInboundProcessor)
 
                 .choice()
@@ -204,10 +206,60 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
 
                 .process(resultProcessor);
 
+        // Flow function processing route
+        from("direct:processFlowFunction")
+                .routeId("flow-function-processor")
+                .to("log:flow-function-processing?level=DEBUG&showHeaders=false&showBody=false")
+                .process(flowProcessorInboundProcessor)
+                .process(flowResultInboundProcessor);
+
+        // Traditional mapping processing route  
+        from("direct:processTraditionalMapping")
+                .routeId("traditional-mapping-processor")
+                .to("log:traditional-mapping-processing?level=DEBUG&showHeaders=false&showBody=false")
+                // Regular extraction processing
+                .choice()
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null &&
+                            context.getMapping() != null &&
+                            context.getMapping().isSubstitutionsAsCode();
+                })
+                .process(codeExtractionInboundProcessor)
+                .otherwise()
+                .process(jsonataExtractionInboundProcessor)
+                .end()
+                .process(substitutionInboundProcessor);
+
         // Error handling route
         from("direct:inboundErrorHandling")
                 .routeId("inbound-error-handler")
                 .to("log:dynamic-mapper-error?level=ERROR&showException=true");
+    }
+
+    /**
+     * Check if the mapping uses flow function transformation
+     */
+    private boolean isFlowFunction(Exchange exchange) {
+        try {
+            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            if (context != null && context.getMapping() != null) {
+                TransformationType transformationType = context.getMapping().getTransformationType();
+                boolean isFlow = TransformationType.FLOW_FUNCTION.equals(transformationType);
+                
+                log.debug("Checking transformation type for mapping {}: {} (isFlow: {})", 
+                         context.getMapping().getName(), 
+                         transformationType != null ? transformationType.toString() : "null",
+                         isFlow);
+                
+                return isFlow;
+            }
+            return false;
+        } catch (Exception e) {
+            log.warn("Error checking transformation type: {}", e.getMessage());
+            return false;
+        }
     }
 
     /**
