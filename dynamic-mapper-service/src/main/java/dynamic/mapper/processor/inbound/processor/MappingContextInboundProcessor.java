@@ -72,8 +72,8 @@ public class MappingContextInboundProcessor extends BaseProcessor {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
                 var graalContext = createGraalContext(graalEngine);
-                processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
-                        .get(TemplateType.FLOW.name()).getCode());
+                // processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
+                //         .get(TemplateType.FLOW.name()).getCode());
                 processingContext.setGraalContext(graalContext);
                 processingContext.setFlowState(new HashMap<String, Object>());
                 processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant));
