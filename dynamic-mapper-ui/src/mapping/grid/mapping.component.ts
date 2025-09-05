@@ -504,6 +504,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   async addMapping() {
     this.setStepperConfiguration(
       this.mappingType,
+      this.transformationType,
       this.stepperConfiguration.direction,
       EditorMode.CREATE, this.substitutionsAsCode
     );
@@ -657,6 +658,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
       this.setStepperConfiguration(
         mapping.mappingType,
+        mapping.transformationType,
         this.stepperConfiguration.direction,
         mapping.active ? EditorMode.READ_ONLY : EditorMode.UPDATE,
         isSubstitutionsAsCode(mapping)
@@ -692,6 +694,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     this.setStepperConfiguration(
       mapping.mappingType,
+      mapping.transformationType,
       mapping.direction,
       EditorMode.COPY,
       isSubstitutionsAsCode(mapping)
@@ -1007,6 +1010,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   setStepperConfiguration(
     mappingType: MappingType,
+    transformationType: TransformationType,
     direction: Direction,
     editorMode: EditorMode,
     substitutionsAsCode: boolean
@@ -1029,6 +1033,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         showCodeEditor: true,
         allowTestSending: false,
         allowTestTransformation: true
+      }),
+      ...((transformationType == TransformationType.FLOW_FUNCTION) && {
+        showEditorTarget: false,
       })
     };
 

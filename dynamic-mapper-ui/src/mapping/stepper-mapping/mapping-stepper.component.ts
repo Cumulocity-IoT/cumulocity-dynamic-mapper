@@ -62,11 +62,12 @@ import {
   createCustomUuid,
   MappingType,
   Feature,
-  isSubstitutionsAsCode
+  isSubstitutionsAsCode,
+  TransformationType
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
-import { createCompletionProvider, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
+import { createCompletionProviderFlowFunction, createCompletionProviderSubstitutionAsCode, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
   base64ToString,
   expandC8YTemplate,
@@ -129,6 +130,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   readonly ValidationError = ValidationError;
   readonly Direction = Direction;
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
+  readonly TransformationType = TransformationType;
   readonly EditorMode = EditorMode;
   readonly SnoopStatus = SnoopStatus;
 
@@ -230,7 +232,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   stepperForward: boolean = true;
   currentStepIndex: number;
-  codeEditorHelp = 'JavaScript for creating substitutions. Please do not change the methods signature <code>function extractFromSource(ctx)</code>. <br> Define substitutions: <code>Substitution(String key, Object value, String type, String repairStrategy)</code> <br> with <code>type</code>: <code>"ARRAY"</code>, <code>"IGNORE"</code>, <code>"NUMBER"</code>, <code>"OBJECT"</code>, <code>"TEXTUAL"</code> <br>and <code>repairStrategy</code>: <br><code>"DEFAULT"</code>, <code>"USE_FIRST_VALUE_OF_ARRAY"</code>, <code>"USE_LAST_VALUE_OF_ARRAY"</code>, <code>"IGNORE"</code>, <code>"REMOVE_IF_MISSING_OR_NULL"</code>,<code>"CREATE_IF_MISSING"</code>';
+  codeEditorHelp: string;
+  codeEditorLabel: string
   targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
   feature: Feature;
   serviceConfiguration: ServiceConfiguration;
@@ -337,6 +340,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
     this.initializeFormlyFields();
     this.initializeCodeTemplates();
+
+
+    this.codeEditorHelp = this.mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || this.mapping.substitutionsAsCode || this.mapping.mappingType == MappingType.CODE_BASED ? 'JavaScript for creating substitutions. Please do not change the methods signature <code>function extractFromSource(ctx)</code>. <br> Define substitutions: <code>Substitution(String key, Object value, String type, String repairStrategy)</code> <br> with <code>type</code>: <code>"ARRAY"</code>, <code>"IGNORE"</code>, <code>"NUMBER"</code>, <code>"OBJECT"</code>, <code>"TEXTUAL"</code> <br>and <code>repairStrategy</code>: <br><code>"DEFAULT"</code>, <code>"USE_FIRST_VALUE_OF_ARRAY"</code>, <code>"USE_LAST_VALUE_OF_ARRAY"</code>, <code>"IGNORE"</code>, <code>"REMOVE_IF_MISSING_OR_NULL"</code>,<code>"CREATE_IF_MISSING"</code>' :
+      'JavaScript for creating complete payloads as Smart Functions.';
+
+    this.codeEditorLabel = this.mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || this.mapping.substitutionsAsCode || this.mapping.mappingType == MappingType.CODE_BASED ? 'JavaScript callback for creating substitutions' : 'JavaScript callback for Smart functions ';
 
   }
 
@@ -530,7 +539,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async ngAfterViewInit(): Promise<void> {
     if (!initializedMonaco) {
       const monaco = await loadMonacoEditor();
-      monaco.languages.registerCompletionItemProvider('javascript', createCompletionProvider(monaco));
+      if (this.mapping.transformationType == TransformationType.FLOW_FUNCTION) { monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderFlowFunction(monaco)); }
+      else { monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco)); }
       if (monaco) {
         initializedMonaco = true;
       }
@@ -752,7 +762,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async onSelectedPathTargetChanged(path: string): Promise<void> {
     this.substitutionFormly.get('pathTarget').setValue(path);
     this.substitutionModel.pathTarget = path;
- 
+
     if (path == API[this.mapping.targetAPI].identifier) {
       const gi = getGenericDeviceIdentifier(this.mapping);
       await this.editorTargetStepSubstitution.setSelectionToPath(
@@ -815,7 +825,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.code = stringToBase64(this.mappingCode);
       //delete this.mappingCode;
     }
-    if ( isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
+    if (isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code == null || this.mapping.code == '')) {
       this.raiseAlert({ type: 'warning', text: "Internal error in editor. Try again!" });
       this.commit.emit();
     }

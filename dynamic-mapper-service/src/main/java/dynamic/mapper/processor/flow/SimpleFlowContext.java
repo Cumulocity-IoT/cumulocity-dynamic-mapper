@@ -183,4 +183,34 @@ public class SimpleFlowContext implements FlowContext {
             }
         }
     }
+
+    @Override
+    public Value getStateAll() {
+        if (graalContext == null) {
+            return null;
+        }
+        
+        Object javaValue = state;
+        if (javaValue == null) {
+            return null;
+        }
+        
+        // Convert back to GraalJS Value
+        return graalContext.asValue(javaValue);
+    }
+
+    @Override
+    public Value getStateKeySet() {
+        if (graalContext == null) {
+            return null;
+        }
+        
+        Object javaValue = state.keySet();
+        if (javaValue == null) {
+            return null;
+        }
+        
+        // Convert back to GraalJS Value
+        return graalContext.asValue(javaValue);
+    }
 }

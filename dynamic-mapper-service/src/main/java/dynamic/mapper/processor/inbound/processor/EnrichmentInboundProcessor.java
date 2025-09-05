@@ -59,6 +59,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
          */
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
+        Mapping mapping = context.getMapping();
 
         // Process topic levels
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
@@ -73,8 +74,6 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             addToFlowContext(flowContext, context, "tenant", tenant);
             addToFlowContext(flowContext, context, "topic", context.getTopic());
             addToFlowContext(flowContext, context, "client", context.getClient());
-            addToFlowContext(flowContext, context, "sourceId", context.getSourceId());
-            Mapping mapping = context.getMapping();
             addToFlowContext(flowContext, context, "mappingName", mapping.getName());
             addToFlowContext(flowContext, context, "mappingId", mapping.getId());
             addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());
