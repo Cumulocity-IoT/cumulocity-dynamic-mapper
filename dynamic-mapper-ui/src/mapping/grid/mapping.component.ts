@@ -1036,6 +1036,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       }),
       ...((transformationType == TransformationType.FLOW_FUNCTION) && {
         showEditorTarget: false,
+        allowTestSending: false,
+        allowTestTransformation: false
       })
     };
 
