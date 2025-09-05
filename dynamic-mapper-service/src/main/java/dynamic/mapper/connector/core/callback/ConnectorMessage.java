@@ -41,7 +41,7 @@ public class ConnectorMessage {
 
     private String topic;
 
-    private String client;
+    private String clientId;
 
     @NotNull
     private String connectorIdentifier;

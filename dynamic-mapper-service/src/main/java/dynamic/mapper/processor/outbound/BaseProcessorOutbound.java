@@ -45,7 +45,7 @@ import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.util.Utils;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import jakarta.validation.constraints.NotNull;
@@ -213,7 +213,7 @@ public abstract class BaseProcessorOutbound<T> {
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
             var newPredecessor = context.addRequest(
-                    C8YRequest.builder()
+                    DynamicMapperRequest.builder()
                             .predecessor(predecessor)
                             .method(method)
                             .api(mapping.targetAPI) // Set the api field

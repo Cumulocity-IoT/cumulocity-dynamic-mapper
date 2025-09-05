@@ -11,8 +11,11 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.outbound.processor.FlowProcessorOutboundProcessor;
+import dynamic.mapper.processor.outbound.processor.FlowResultOutboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.processor.outbound.processor.CodeExtractionOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.DeserializationOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
@@ -37,6 +40,9 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
     private CodeExtractionOutboundProcessor codeExtractionOutboundProcessor;
 
     @Autowired
+    private FlowProcessorOutboundProcessor flowProcessorOutboundProcessor;
+
+    @Autowired
     private SubstitutionOutboundProcessor substitutionInboundProcessor;
 
     @Autowired
@@ -50,6 +56,9 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
 
     @Autowired
     private JSONataExtractionOutboundProcessor jsonataExtractionOutboundProcessor;
+
+    @Autowired
+    private FlowResultOutboundProcessor flowResultOutboundProcessor;
 
     @Autowired
     private SendOutboundProcessor outboundSendProcessor;
@@ -77,7 +86,7 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
                         // Ignore endpoint access errors
                     }
 
-                    log.error("=== CAMEL OUTBOUND ROUTE ERROR ==="); // Changed log message
+                    log.error("=== CAMEL OUTBOUND ROUTE ERROR ===");
                     log.error("Route ID: {}", routeId);
                     log.error("Endpoint: {}", endpoint);
                     log.error("Exception Type: {}", cause.getClass().getSimpleName());
@@ -125,7 +134,7 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
                                 .collect(java.util.stream.Collectors.toList());
 
                         exchange.getIn().setHeader("mappings", validMappings);
-                        log.debug("Filtered {} outbound mappings to {} valid mappings", // Added "outbound" for clarity
+                        log.debug("Filtered {} outbound mappings to {} valid mappings",
                                 allMappings.size(), validMappings.size());
                     }
                 })
@@ -153,21 +162,14 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
                 .stop() // Stop here for snooping - no further processing
                 .end()
 
-                // Regular extraction processing
+                // Check transformation type for processing flow
                 .choice()
-                .when(exchange -> {
-                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                            ProcessingContext.class);
-                    return context != null &&
-                            context.getMapping() != null &&
-                            context.getMapping().isSubstitutionsAsCode();
-                })
-                .process(codeExtractionOutboundProcessor)
+                .when(exchange -> isFlowFunction(exchange))
+                .to("direct:processOutboundFlowFunction")
                 .otherwise()
-                .process(jsonataExtractionOutboundProcessor)
+                .to("direct:processTraditionalOutboundMapping")
                 .end()
 
-                .process(substitutionInboundProcessor)
                 .choice()
                 .when(exchange -> {
                     ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
@@ -182,10 +184,60 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
 
                 .process(new ResultProcessor());
 
+        // Flow function processing route for OUTBOUND
+        from("direct:processOutboundFlowFunction")
+                .routeId("outbound-flow-function-processor")
+                .to("log:outbound-flow-function-processing?level=DEBUG&showHeaders=false&showBody=false")
+                .process(flowProcessorOutboundProcessor)
+                .process(flowResultOutboundProcessor);
+
+        // Traditional mapping processing route for OUTBOUND
+        from("direct:processTraditionalOutboundMapping")
+                .routeId("traditional-outbound-mapping-processor")
+                .to("log:traditional-outbound-mapping-processing?level=DEBUG&showHeaders=false&showBody=false")
+                // Regular extraction processing
+                .choice()
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null &&
+                            context.getMapping() != null &&
+                            context.getMapping().isSubstitutionsAsCode();
+                })
+                .process(codeExtractionOutboundProcessor)
+                .otherwise()
+                .process(jsonataExtractionOutboundProcessor)
+                .end()
+                .process(substitutionInboundProcessor);
+
         // Error handling route
         from("direct:outboundErrorHandling")
                 .routeId("outbound-error-handler")
                 .to("log:dynamic-mapper-outbound-error?level=ERROR&showException=true");
+    }
+
+    /**
+     * Check if the outbound mapping uses flow function transformation
+     */
+    private boolean isFlowFunction(Exchange exchange) {
+        try {
+            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            if (context != null && context.getMapping() != null) {
+                TransformationType transformationType = context.getMapping().getTransformationType();
+                boolean isFlow = TransformationType.FLOW_FUNCTION.equals(transformationType);
+                
+                log.debug("Checking outbound transformation type for mapping {}: {} (isFlow: {})", 
+                         context.getMapping().getName(), 
+                         transformationType != null ? transformationType.toString() : "null",
+                         isFlow);
+                
+                return isFlow;
+            }
+            return false;
+        } catch (Exception e) {
+            log.warn("Error checking outbound transformation type: {}", e.getMessage());
+            return false;
+        }
     }
 
     /**

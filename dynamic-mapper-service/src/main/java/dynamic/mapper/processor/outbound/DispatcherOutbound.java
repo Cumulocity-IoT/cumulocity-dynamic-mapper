@@ -39,7 +39,7 @@ import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.C8YMessage;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
@@ -487,7 +487,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     recordOutboundMetrics(c8yMessage, processor);
 
                     // Check for errors
-                    List<C8YRequest> resultRequests = context.getRequests();
+                    List<DynamicMapperRequest> resultRequests = context.getRequests();
                     if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                         mappingStatus.errors++;
                         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class C8YRequest {
+public class DynamicMapperRequest {
     @Builder.Default
     private int predecessor = -1;;
     private RequestMethod method;

@@ -17,7 +17,7 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
@@ -155,8 +155,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                         mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.getValue().toString());
                 // cache the mapping of device to client ID
-                if (context.getClient() != null) {
-                    configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                if (context.getClientId() != null) {
+                    configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                             sourceId.getValue().toString());
                 }
                 substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
@@ -169,8 +169,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                     mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.getValue().toString());
             // cache the mapping of device to client ID
-            if (context.getClient() != null) {
-                configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+            if (context.getClientId() != null) {
+                configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                         sourceId.getValue().toString());
             }
             substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
@@ -302,7 +302,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             throws Exception {
         API api = context.getApi() != null ? context.getApi() : determineDefaultAPI(mapping);
 
-        C8YRequest request = C8YRequest.builder()
+        DynamicMapperRequest request = DynamicMapperRequest.builder()
                 .api(api)
                 .method(RequestMethod.POST) // Default method
                 .sourceId(context.getSourceId())

@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound.processor;
+package dynamic.mapper.processor.outbound.processor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -28,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class FlowResultInboundProcessor extends BaseProcessor {
+public class FlowResultOutboundProcessor extends BaseProcessor {
 
     @Autowired
     private MappingService mappingService;
@@ -53,7 +54,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
             String errorMessage = String.format(
-                    "Tenant %s - Error in FlowSubstitutionInboundProcessor: %s for mapping: %s, line %s",
+                    "Tenant %s - Error in FlowResultOutboundProcessor: %s for mapping: %s, line %s",
                     tenant, mapping.name, e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
@@ -71,7 +72,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
         Mapping mapping = context.getMapping();
 
         if (flowResult == null) {
-            log.debug("{} - No flow result available, skipping Flow substitution", tenant);
+            log.debug("{} - No flow result available, skipping flow result processing", tenant);
             context.setIgnoreFurtherProcessing(true);
             return;
         }
@@ -102,10 +103,10 @@ public class FlowResultInboundProcessor extends BaseProcessor {
         }
 
         if (context.getRequests().isEmpty()) {
-            log.info("{} - No C8Y requests generated from flow result", tenant);
+            log.info("{} - No requests generated from flow result", tenant);
             context.setIgnoreFurtherProcessing(true);
         } else {
-            log.info("{} - Generated {} C8Y requests from flow result", tenant, context.getRequests().size());
+            log.info("{} - Generated {} requests from flow result", tenant, context.getRequests().size());
         }
     }
 
@@ -125,20 +126,95 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                 setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
             }
 
+            // Set resolved publish topic (from substituteInTargetAndSend logic)
+            setResolvedPublishTopic(context, payload);
+
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
-            // Create the C8Y request using the correct constructor and methods
-            DynamicMapperRequest c8yRequest = createDynamicMapperRequest(payloadJson, targetAPI, cumulocityMessage.getAction(), resolvedDeviceId);
+            // Create the request using the corrected method
+            DynamicMapperRequest request = createDynamicMapperRequest(
+                payloadJson, targetAPI, cumulocityMessage.getAction(), resolvedDeviceId, mapping);
 
             // Add the request to context
-            context.addRequest(c8yRequest);
+            context.addRequest(request);
 
-            log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
-                    tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);
+            log.debug("{} - Created outbound request: API={}, action={}, deviceId={}, topic={}",
+                    tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId, 
+                    context.getResolvedPublishTopic());
 
         } catch (Exception e) {
             throw new ProcessingException("Failed to process CumulocityMessage: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Set resolved publish topic based on topic levels in payload
+     * Logic taken from BaseProcessorOutbound.substituteInTargetAndSend
+     */
+    private void setResolvedPublishTopic(ProcessingContext<?> context, Map<String, Object> payload) {
+        String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
+
+        // Check if payload contains topic levels (similar to substituteInTargetAndSend)
+        @SuppressWarnings("unchecked")
+        List<String> topicLevels = (List<String>) payload.get(Mapping.TOKEN_TOPIC_LEVEL);
+        
+        if (topicLevels != null && topicLevels.size() > 0) {
+            // Merge the replaced topic levels (logic from substituteInTargetAndSend)
+            MutableInt c = new MutableInt(0);
+            String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
+            String[] splitTopicInAsListOriginal = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
+            
+            topicLevels.forEach(tl -> {
+                while (c.intValue() < splitTopicInAsList.length
+                        && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0)) {
+                    c.increment();
+                }
+                splitTopicInAsList[c.intValue()] = tl;
+                c.increment();
+            });
+            
+            if (mapping.getDebug() || context.getServiceConfiguration().logPayload) {
+                log.info("{} - Resolved topic from {} to {}",
+                        tenant, splitTopicInAsListOriginal, splitTopicInAsList);
+            }
+
+            StringBuilder resolvedPublishTopic = new StringBuilder();
+            for (String topicPart : splitTopicInAsList) {
+                resolvedPublishTopic.append(topicPart);
+            }
+            context.setResolvedPublishTopic(resolvedPublishTopic.toString());
+            
+            // Remove TOPIC_LEVEL from payload (as done in substituteInTargetAndSend)
+            payload.remove(Mapping.TOKEN_TOPIC_LEVEL);
+        } else {
+            // Use the mapping's publish topic as fallback
+            context.setResolvedPublishTopic(mapping.getPublishTopic());
+        }
+
+        // Handle context data for message context support (from substituteInTargetAndSend)
+        if (mapping.supportsMessageContext) {
+            @SuppressWarnings("unchecked")
+            Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
+            
+            if (contextData != null) {
+                // Extract key for message context
+                String key = contextData.get(Mapping.CONTEXT_DATA_KEY_NAME);
+                if (key != null && !key.equals("dummy")) {
+                    context.setKey(key.getBytes());
+                }
+                
+                // Extract publish topic override
+                String publishTopic = contextData.get("publishTopic");
+                if (publishTopic != null && !publishTopic.equals("")) {
+                    context.setTopic(publishTopic);
+                    context.setResolvedPublishTopic(publishTopic);
+                }
+                
+                // Remove TOKEN_CONTEXT_DATA from payload
+                payload.remove(Mapping.TOKEN_CONTEXT_DATA);
+            }
         }
     }
 
@@ -194,7 +270,11 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             return resolveFromInternalSource(cumulocityMessage.getInternalSource());
         }
 
-        // Fallback to mapping's generic device identifier
+        // Fallback to mapping's generic device identifier or context source ID
+        if (context.getSourceId() != null) {
+            return context.getSourceId();
+        }
+        
         return context.getMapping().getGenericDeviceIdentifier();
     }
 
@@ -239,7 +319,57 @@ public class FlowResultInboundProcessor extends BaseProcessor {
     }
 
     @SuppressWarnings("unchecked")
+    private Map<String, Object> clonePayload(Object payload) throws ProcessingException {
+        try {
+            if (payload instanceof Map) {
+                return new HashMap<>((Map<String, Object>) payload);
+            } else {
+                // Convert object to map using Jackson
+                return objectMapper.convertValue(payload, Map.class);
+            }
+        } catch (Exception e) {
+            throw new ProcessingException("Failed to clone payload: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Creates a DynamicMapperRequest based on the reference implementation from BaseProcessorOutbound
+     * This follows the same pattern as substituteInTargetAndSend method
+     */
+    private DynamicMapperRequest createDynamicMapperRequest(String payloadJson, API targetAPI, 
+            String action, String sourceId, Mapping mapping) throws ProcessingException {
+        try {
+            // Determine the request method based on action (from substituteInTargetAndSend)
+            RequestMethod method = RequestMethod.POST; // Default from reference
+            if ("update".equals(action)) {
+                method = RequestMethod.PUT;
+            }
+            
+            // Use -1 as predecessor for flow-generated requests (no predecessor in flow context)
+            int predecessor = -1;
+
+            // Create the request using the same pattern as BaseProcessorOutbound
+            DynamicMapperRequest request = DynamicMapperRequest.builder()
+                    .predecessor(predecessor)
+                    .method(method)
+                    .api(targetAPI)                    // Set the api field
+                    .sourceId(sourceId)                // Device/source identifier
+                    .externalIdType(mapping.externalIdType) // External ID type from mapping
+                    .request(payloadJson)              // JSON payload
+                    .targetAPI(targetAPI)              // Target API (same as api field)
+                    .build();
+
+            return request;
+
+        } catch (Exception e) {
+            throw new ProcessingException("Failed to create DynamicMapperRequest: " + e.getMessage(), e);
+        }
+    }
+
+    // Keep all existing conversion methods unchanged
+    @SuppressWarnings("unchecked")
     private List<ExternalSource> convertToExternalSourceList(Object obj) {
+        // ... (keep existing implementation)
         List<ExternalSource> result = new ArrayList<>();
 
         if (obj == null) {
@@ -254,7 +384,6 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                 if (item instanceof ExternalSource) {
                     result.add((ExternalSource) item);
                 } else if (item instanceof Map) {
-                    // Convert Map to ExternalSource
                     ExternalSource externalSource = convertMapToExternalSource((Map<String, Object>) item);
                     if (externalSource != null) {
                         result.add(externalSource);
@@ -273,6 +402,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
 
     @SuppressWarnings("unchecked")
     private List<CumulocitySource> convertToInternalSourceList(Object obj) {
+        // ... (keep existing implementation)
         List<CumulocitySource> result = new ArrayList<>();
 
         if (obj == null) {
@@ -287,7 +417,6 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                 if (item instanceof CumulocitySource) {
                     result.add((CumulocitySource) item);
                 } else if (item instanceof Map) {
-                    // Convert Map to CumulocitySource
                     CumulocitySource cumulocitySource = convertMapToCumulocitySource((Map<String, Object>) item);
                     if (cumulocitySource != null) {
                         result.add(cumulocitySource);
@@ -305,6 +434,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
     }
 
     private ExternalSource convertMapToExternalSource(Map<String, Object> map) {
+        // ... (keep existing implementation)
         if (map == null) {
             return null;
         }
@@ -339,45 +469,11 @@ public class FlowResultInboundProcessor extends BaseProcessor {
     }
 
     private CumulocitySource convertMapToCumulocitySource(Map<String, Object> map) {
+        // ... (keep existing implementation)
         if (map == null || !map.containsKey("internalId")) {
             return null;
         }
 
         return new CumulocitySource(String.valueOf(map.get("internalId")));
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> clonePayload(Object payload) throws ProcessingException {
-        try {
-            if (payload instanceof Map) {
-                return new HashMap<>((Map<String, Object>) payload);
-            } else {
-                // Convert object to map using Jackson
-                return objectMapper.convertValue(payload, Map.class);
-            }
-        } catch (Exception e) {
-            throw new ProcessingException("Failed to clone payload: " + e.getMessage(), e);
-        }
-    }
-
-    private DynamicMapperRequest createDynamicMapperRequest(String payloadJson, API targetAPI, String action, String sourceId) throws ProcessingException {
-        try {
-            // Determine the request method based on action
-            RequestMethod method = "create".equals(action) ? RequestMethod.POST : RequestMethod.PUT;
-
-            // Create the C8Y request using the builder pattern
-            DynamicMapperRequest c8yRequest = DynamicMapperRequest.builder()
-                    .method(method)
-                    .api(targetAPI)
-                    .targetAPI(targetAPI)
-                    .sourceId(sourceId)
-                    .request(payloadJson)
-                    .build();
-
-            return c8yRequest;
-
-        } catch (Exception e) {
-            throw new ProcessingException("Failed to create C8Y request: " + e.getMessage(), e);
-        }
     }
 }

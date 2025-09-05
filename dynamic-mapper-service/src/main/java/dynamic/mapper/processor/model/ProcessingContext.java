@@ -64,7 +64,7 @@ public class ProcessingContext<O> {
 
     private String topic;
 
-    private String client;
+    private String clientId;
 
     private API api;
 
@@ -80,7 +80,7 @@ public class ProcessingContext<O> {
     private Object rawPayload;
 
     @Builder.Default
-    private List<C8YRequest> requests = new ArrayList<C8YRequest>();
+    private List<DynamicMapperRequest> requests = new ArrayList<DynamicMapperRequest>();
 
     @Builder.Default
     private List<Exception> errors = new ArrayList<Exception>();
@@ -159,12 +159,12 @@ public class ProcessingContext<O> {
         return errors != null && errors.size() > 0;
     }
 
-    public int addRequest(C8YRequest c8yRequest) {
+    public int addRequest(DynamicMapperRequest c8yRequest) {
         requests.add(c8yRequest);
         return requests.size() - 1;
     }
 
-    public C8YRequest getCurrentRequest() {
+    public DynamicMapperRequest getCurrentRequest() {
         return requests.get(requests.size() - 1);
     }
 

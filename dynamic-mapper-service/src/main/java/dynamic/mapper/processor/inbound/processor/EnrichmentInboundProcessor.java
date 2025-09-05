@@ -73,7 +73,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             // Add basic context information
             addToFlowContext(flowContext, context, "tenant", tenant);
             addToFlowContext(flowContext, context, "topic", context.getTopic());
-            addToFlowContext(flowContext, context, "client", context.getClient());
+            addToFlowContext(flowContext, context, "client", context.getClientId());
             addToFlowContext(flowContext, context, "mappingName", mapping.getName());
             addToFlowContext(flowContext, context, "mappingId", mapping.getId());
             addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());

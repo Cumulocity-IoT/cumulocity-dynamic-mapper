@@ -41,7 +41,7 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
@@ -280,7 +280,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                     .payload(payload)
                     .rawPayload(connectorMessage.getPayload())
                     .topic(topic)
-                    .client(connectorMessage.getClient())
+                    .clientId(connectorMessage.getClientId())
                     .mappingType(mapping.mappingType)
                     .mapping(mapping)
                     .sendPayload(sendPayload)
@@ -413,7 +413,7 @@ public class DispatcherInbound implements GenericMessageCallback {
                 // Final processing and sending
                 if (!context.isIgnoreFurtherProcessing()) {
                     processor.substituteInTargetAndSend(context);
-                    List<C8YRequest> resultRequests = context.getRequests();
+                    List<DynamicMapperRequest> resultRequests = context.getRequests();
                     if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                         mappingStatus.errors++;
                     }

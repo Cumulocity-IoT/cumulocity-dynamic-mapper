@@ -22,7 +22,7 @@ import dynamic.mapper.model.MappingRepresentation;
 
 import org.springframework.web.bind.annotation.RequestMethod;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 
 import dynamic.mapper.util.Utils;
@@ -70,7 +70,7 @@ public class SendInboundProcessor extends BaseProcessor {
         Mapping mapping = context.getMapping();
         
         // Process each C8Y request
-        for (C8YRequest request : context.getRequests()) {
+        for (DynamicMapperRequest request : context.getRequests()) {
             try {
                 if (API.INVENTORY.equals(request.getApi())) {
                     processInventoryRequest(request, context);
@@ -94,7 +94,7 @@ public class SendInboundProcessor extends BaseProcessor {
     /**
      * Process INVENTORY API requests
      */
-    private void processInventoryRequest(C8YRequest request, ProcessingContext<Object> context) throws Exception {
+    private void processInventoryRequest(DynamicMapperRequest request, ProcessingContext<Object> context) throws Exception {
         String tenant = context.getTenant();
         
         try {
@@ -108,8 +108,8 @@ public class SendInboundProcessor extends BaseProcessor {
                     request.setSourceId(sourceId.getManagedObject().getId().getValue());
                     
                     // Cache the mapping of device to client ID
-                    if (context.getClient() != null) {
-                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                    if (context.getClientId() != null) {
+                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 context.getSourceId());
                     }
                 }
@@ -133,7 +133,7 @@ public class SendInboundProcessor extends BaseProcessor {
     /**
      * Process non-INVENTORY API requests (MEASUREMENT, EVENT, ALARM)
      */
-    private void processNonInventoryRequest(C8YRequest request, ProcessingContext<Object> context) throws Exception {
+    private void processNonInventoryRequest(DynamicMapperRequest request, ProcessingContext<Object> context) throws Exception {
         try {
             if (context.isSendPayload()) {
                 // Send the request to C8Y
@@ -201,7 +201,7 @@ public class SendInboundProcessor extends BaseProcessor {
             String requestString = objectMapper.writeValueAsString(request);
             
             // Create C8Y request for device creation
-            C8YRequest deviceRequest = C8YRequest.builder()
+            DynamicMapperRequest deviceRequest = DynamicMapperRequest.builder()
                 .predecessor(predecessor)
                 .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
                 .api(API.INVENTORY)

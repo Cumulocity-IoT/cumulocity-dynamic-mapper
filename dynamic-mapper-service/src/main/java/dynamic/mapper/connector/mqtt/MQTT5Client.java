@@ -73,7 +73,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.DispatcherInbound;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -535,7 +535,7 @@ public class MQTT5Client extends AConnectorClient {
     }
 
     public void publishMEAO(ProcessingContext<?> context) {
-        C8YRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
         Mqtt5Publish mqttMessage = Mqtt5Publish.builder().topic(context.getResolvedPublishTopic()).qos(mqttQos)

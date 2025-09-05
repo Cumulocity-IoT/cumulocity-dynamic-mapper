@@ -76,7 +76,7 @@ public class MQTTServicePulsarCallback implements MessageListener<byte[]> {
                 .tenant(tenant)
                 .supportsMessageContext(supportsMessageContext)
                 .topic(topic)
-                .client(client)
+                .clientId(client)
                 .sendPayload(true)
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)

@@ -59,7 +59,7 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
@@ -263,7 +263,7 @@ public abstract class BaseProcessorInbound<T> {
          */
         if (context.getApi().equals(API.INVENTORY)) {
             var newPredecessor = context.addRequest(
-                    C8YRequest.builder()
+                    DynamicMapperRequest.builder()
                             .predecessor(predecessor)
                             .method(context.getMapping().updateExistingDevice ? RequestMethod.POST
                                     : RequestMethod.PATCH)
@@ -282,8 +282,8 @@ public abstract class BaseProcessorInbound<T> {
                 if (sourceId != null) {
                     context.setSourceId(sourceId.getManagedObject().getId().getValue());
                     // cache the mapping of device to client ID
-                    if (context.getClient() != null) {
-                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                    if (context.getClientId() != null) {
+                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 context.getSourceId());
                     }
                 }
@@ -299,7 +299,7 @@ public abstract class BaseProcessorInbound<T> {
         } else if (!context.getApi().equals(API.INVENTORY)) {
             AbstractExtensibleRepresentation adHocRequest = null;
             var newPredecessor = context.addRequest(
-                    C8YRequest.builder()
+                    DynamicMapperRequest.builder()
                             .predecessor(predecessor)
                             .method(RequestMethod.POST)
                             .api(context.getApi())
@@ -359,8 +359,8 @@ public abstract class BaseProcessorInbound<T> {
                         mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.value.toString());
                 // cache the mapping of device to client ID
-                if (context.getClient() != null) {
-                    configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                if (context.getClientId() != null) {
+                    configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                             sourceId.value.toString());
                 }
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
@@ -373,8 +373,8 @@ public abstract class BaseProcessorInbound<T> {
                     mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.value.toString());
             // cache the mapping of device to client ID
-            if (context.getClient() != null) {
-                configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(), sourceId.value.toString());
+            if (context.getClientId() != null) {
+                configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(), sourceId.value.toString());
             }
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
@@ -470,7 +470,7 @@ public abstract class BaseProcessorInbound<T> {
             var predecessor = context.getRequests().size();
             var requestString = objectMapper.writeValueAsString(request);
             context.addRequest(
-                    C8YRequest.builder()
+                    DynamicMapperRequest.builder()
                             .predecessor(predecessor)
                             .method(context.getMapping().updateExistingDevice ? RequestMethod.POST
                                     : RequestMethod.PATCH)

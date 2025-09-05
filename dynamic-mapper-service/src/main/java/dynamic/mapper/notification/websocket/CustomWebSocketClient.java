@@ -22,7 +22,7 @@
 package dynamic.mapper.notification.websocket;
 
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
@@ -110,9 +110,9 @@ public class CustomWebSocketClient extends WebSocketClient {
                     int httpStatusCode = 0;
                     if (results != null) {
                         for (ProcessingContext<?> context : results) {
-                            List<C8YRequest> resultRequests = context.getRequests();
-                            if (context.hasError() || resultRequests.stream().anyMatch(C8YRequest::hasError)) {
-                                for (C8YRequest r : resultRequests) {
+                            List<DynamicMapperRequest> resultRequests = context.getRequests();
+                            if (context.hasError() || resultRequests.stream().anyMatch(DynamicMapperRequest::hasError)) {
+                                for (DynamicMapperRequest r : resultRequests) {
                                     if (r.hasError()) {
                                         Throwable e = r.getError();
                                         while (!(e instanceof ProcessingException) && e != e.getCause()) {

@@ -119,7 +119,7 @@ import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
 import dynamic.mapper.processor.extension.ProcessorExtensionSource;
 import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.ExtensionInboundRegistry;
 import io.micrometer.core.instrument.Counter;
@@ -444,7 +444,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return CompletableFuture.supplyAsync(() -> {
             String tenant = context.getTenant();
             StringBuffer error = new StringBuffer("");
-            C8YRequest currentRequest = context.getCurrentRequest();
+            DynamicMapperRequest currentRequest = context.getCurrentRequest();
             String payload = currentRequest.getRequest();
             API targetAPI = context.getMapping().getTargetAPI();
             AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
@@ -556,7 +556,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         // this.c8yRequestTimerMap.get(tenant);
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
-        C8YRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         API targetAPI = context.getMapping().getTargetAPI();
@@ -713,7 +713,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context)
             throws ProcessingException {
         // StringBuffer error = new StringBuffer("");
-        C8YRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getCurrentRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         API targetAPI = context.getMapping().getTargetAPI();

@@ -12,7 +12,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -60,7 +60,7 @@ public class SendOutboundProcessor extends BaseProcessor {
 
         try {
             AConnectorClient connectorClient = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-            C8YRequest request = context.getCurrentRequest();
+            DynamicMapperRequest request = context.getCurrentRequest();
             if (connectorClient.isConnected() && context.isSendPayload()) {
                 connectorClient.publishMEAO(context);
             } else {

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
+import org.graalvm.polyglot.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +18,9 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.flow.FlowContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,13 +33,13 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
     @Autowired
     private C8YAgent c8yAgent;
 
-    @Autowired 
+    @Autowired
     private ConfigurationRegistry configurationRegistry;
 
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
-                String tenant = context.getTenant();
+        String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
         try {
@@ -63,13 +66,16 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         String tenant = context.getTenant();
         Object payloadObject = context.getPayload();
         Mapping mapping = context.getMapping();
+
         String payloadAsString = toPrettyJsonString(payloadObject);
         var sourceId = extractContent(context, mapping, payloadObject, payloadAsString,
                 mapping.getTargetAPI().identifier);
         context.setSourceId(sourceId.toString());
+
         Map<String, String> identityFragment = new HashMap<>();
         identityFragment.put("c8ySourceId", sourceId.toString());
         identityFragment.put("externalIdType", mapping.getExternalIdType());
+
         if (mapping.getUseExternalId() && !("").equals(mapping.getExternalIdType())) {
             ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                     new GId(sourceId.toString()), mapping.getExternalIdType(),
@@ -83,13 +89,23 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
                 identityFragment.put("externalId", externalId.getExternalId());
             }
         }
-        if (payloadObject instanceof Map) {
-            ((Map) payloadObject).put(Mapping.TOKEN_IDENTITY, identityFragment);
+
+        // Add topic levels to FlowContext if available
+        FlowContext flowContext = context.getFlowContext();
+        if (flowContext != null && context.getGraalContext() != null
+                && TransformationType.FLOW_FUNCTION.equals(context.getMapping().getTransformationType())) {
+            addToFlowContext(flowContext, context, Mapping.TOKEN_IDENTITY, identityFragment);
             List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
-            ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+            addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         } else {
-            log.warn("{} - Parsing this message as JSONArray, no elements from the topic level can be used!",
-                    tenant);
+            if (payloadObject instanceof Map) {
+                ((Map) payloadObject).put(Mapping.TOKEN_IDENTITY, identityFragment);
+                List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
+                ((Map) payloadObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+            } else {
+                log.warn("{} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+                        tenant);
+            }
         }
     }
 
@@ -113,6 +129,21 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         } catch (Exception e) {
             log.warn("Failed to convert payload to pretty JSON string: {}", e.getMessage());
             return payloadObject != null ? payloadObject.toString() : "null";
+        }
+    }
+
+    /**
+     * Helper method to safely add values to FlowContext
+     */
+    private void addToFlowContext(FlowContext flowContext, ProcessingContext<Object> context, String key,
+            Object value) {
+        try {
+            if (context.getGraalContext() != null && value != null) {
+                Value graalValue = context.getGraalContext().asValue(value);
+                flowContext.setState(key, graalValue);
+            }
+        } catch (Exception e) {
+            log.warn("{} - Failed to add '{}' to FlowContext: {}", context.getTenant(), key, e.getMessage());
         }
     }
 

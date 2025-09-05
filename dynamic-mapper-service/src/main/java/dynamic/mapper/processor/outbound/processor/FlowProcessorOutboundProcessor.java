@@ -1,4 +1,4 @@
-package dynamic.mapper.processor.inbound.processor;
+package dynamic.mapper.processor.outbound.processor;
 
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class FlowProcessorInboundProcessor extends BaseProcessor  {
+public class FlowProcessorOutboundProcessor extends BaseProcessor  {
 
     @Autowired
     private MappingService mappingService;
@@ -134,11 +134,6 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
 
         // Set topic
         deviceMessage.setTopic(context.getTopic());
-
-        // Set transport information if available
-        if (context.getMapping() != null) {
-            deviceMessage.setClientId(context.getClientId());
-        }
 
         // Convert to JavaScript object
         return graalContext.asValue(deviceMessage);
