@@ -8,7 +8,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import org.apache.camel.Exchange;
 
 @Component
-public class ResultProcessor extends BaseProcessor {
+public class ConsolidationProcessor extends BaseProcessor {
     
     @Override
     public void process(Exchange exchange) throws Exception {

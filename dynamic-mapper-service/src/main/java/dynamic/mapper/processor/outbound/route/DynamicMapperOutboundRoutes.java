@@ -4,18 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.outbound.processor.FlowProcessorOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.FlowResultOutboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
-import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.processor.outbound.processor.CodeExtractionOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.DeserializationOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
@@ -25,13 +22,11 @@ import dynamic.mapper.processor.outbound.processor.SendOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SnoopingOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SubstitutionOutboundProcessor;
 import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
-import dynamic.mapper.processor.util.ResultProcessor;
+import dynamic.mapper.processor.util.ConsolidationProcessor;
+import dynamic.mapper.processor.util.DynamicMapperBaseRoutes;
 
 @Component
-public class DynamicMapperOutboundRoutes extends RouteBuilder {
-
-    @Autowired
-    private ConnectorRegistry connectorRegistry;
+public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private MappingContextOutboundProcessor mappingContextProcessor;
@@ -43,7 +38,7 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
     private FlowProcessorOutboundProcessor flowProcessorOutboundProcessor;
 
     @Autowired
-    private SubstitutionOutboundProcessor substitutionInboundProcessor;
+    private SubstitutionOutboundProcessor substitutionOutboundProcessor;
 
     @Autowired
     private SnoopingOutboundProcessor snoopingOutboundProcessor;
@@ -62,6 +57,9 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
 
     @Autowired
     private SendOutboundProcessor outboundSendProcessor;
+
+    @Autowired
+    private ConsolidationProcessor consolidationProcessor;
 
     @Autowired
     private ProcessingContextAggregationStrategy processingContextAggregationStrategy;
@@ -147,68 +145,97 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
         // Single mapping processing pipeline
         from("direct:processSingleOutboundMapping")
                 .routeId("single-filtered-outbound-mapping-processor")
+                // 0. Common processing for all
                 .process(deserializationOutboundProcessor)
                 .process(mappingContextProcessor)
                 .process(enrichmentOutboundProcessor)
-                // Check for snooping BEFORE other processing
-                .process(snoopingOutboundProcessor)
-                .choice()
-                .when(exchange -> {
-                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                            ProcessingContext.class);
-                    return context != null && context.isIgnoreFurtherProcessing();
-                })
-                .to("log:outbound-snooping-message?level=DEBUG&showBody=false")
-                .stop() // Stop here for snooping - no further processing
-                .end()
 
-                // Check transformation type for processing flow
+                // 1. Branch based on processing type
                 .choice()
+                // 1a. Snooping path
+                .when(exchange -> isSnooping(exchange))
+                .to("direct:processOutboundSnooping")
+
+                // 1b. Flow function path
                 .when(exchange -> isFlowFunction(exchange))
                 .to("direct:processOutboundFlowFunction")
-                .otherwise()
-                .to("direct:processTraditionalOutboundMapping")
-                .end()
 
+                // 1c. SubstitutionAsCode extraction path
+                .when(exchange -> isSubstitutionAsCode(exchange))
+                .to("direct:processOutboundSubstitutionAsCodeExtraction")
+
+                // 1d. JSONata extraction path
+                .when(exchange -> isJSONataExtraction(exchange))
+                .to("direct:processOutboundJSONataExtraction")
+
+                // Default fallback
+                .otherwise()
+                .to("direct:processOutboundJSONataExtraction") // Default to JSONata
+                .end();
+
+        // 1a. Snooping processing route
+        from("direct:processOutboundSnooping")
+                .routeId("outbound-snooping-processor")
+                .process(snoopingOutboundProcessor)
+                .to("log:outbound-snooping-message?level=DEBUG&showBody=false")
+                .process(consolidationProcessor);
+
+        // 1b. Flow function processing route
+        from("direct:processOutboundFlowFunction")
+                .routeId("outbound-flow-function-processor")
+                .process(flowProcessorOutboundProcessor)
                 .choice()
                 .when(exchange -> {
                     ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
                             ProcessingContext.class);
                     return context != null && context.isIgnoreFurtherProcessing();
                 })
-                .to("log:outbound-filtered-message?level=DEBUG")
+                .to("log:outbound-flow-function-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
+                .otherwise()
+                .process(flowResultOutboundProcessor)
+                .process(outboundSendProcessor)
+                .process(consolidationProcessor)
+                .end();
+
+        // 1c. SubstitutionAsCode extraction processing route
+        from("direct:processOutboundSubstitutionAsCodeExtraction")
+                .routeId("outbound-substitution-as-code-extraction-processor")
+                .process(codeExtractionOutboundProcessor)
+                .process(substitutionOutboundProcessor)
+                .choice()
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null && context.isIgnoreFurtherProcessing();
+                })
+                .to("log:outbound-substitution-as-code-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
                 .stop()
                 .otherwise()
                 .process(outboundSendProcessor)
-                .end()
+                .process(consolidationProcessor)
+                .end();
 
-                .process(new ResultProcessor());
-
-        // Flow function processing route for OUTBOUND
-        from("direct:processOutboundFlowFunction")
-                .routeId("outbound-flow-function-processor")
-                .to("log:outbound-flow-function-processing?level=DEBUG&showHeaders=false&showBody=false")
-                .process(flowProcessorOutboundProcessor)
-                .process(flowResultOutboundProcessor);
-
-        // Traditional mapping processing route for OUTBOUND
-        from("direct:processTraditionalOutboundMapping")
-                .routeId("traditional-outbound-mapping-processor")
-                .to("log:traditional-outbound-mapping-processing?level=DEBUG&showHeaders=false&showBody=false")
-                // Regular extraction processing
+        // 1d. JSONata extraction processing route
+        from("direct:processOutboundJSONataExtraction")
+                .routeId("outbound-jsonata-extraction-processor")
+                .process(jsonataExtractionOutboundProcessor)
+                .process(substitutionOutboundProcessor)
                 .choice()
                 .when(exchange -> {
                     ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
                             ProcessingContext.class);
-                    return context != null &&
-                            context.getMapping() != null &&
-                            context.getMapping().isSubstitutionsAsCode();
+                    return context != null && context.isIgnoreFurtherProcessing();
                 })
-                .process(codeExtractionOutboundProcessor)
+                .to("log:outbound-jsonata-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
                 .otherwise()
-                .process(jsonataExtractionOutboundProcessor)
-                .end()
-                .process(substitutionInboundProcessor);
+                .process(outboundSendProcessor)
+                .process(consolidationProcessor)
+                .end();
 
         // Error handling route
         from("direct:outboundErrorHandling")
@@ -217,64 +244,10 @@ public class DynamicMapperOutboundRoutes extends RouteBuilder {
     }
 
     /**
-     * Check if the outbound mapping uses flow function transformation
+     * Override for outbound-specific mapping deployment check
      */
-    private boolean isFlowFunction(Exchange exchange) {
-        try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-            if (context != null && context.getMapping() != null) {
-                TransformationType transformationType = context.getMapping().getTransformationType();
-                boolean isFlow = TransformationType.FLOW_FUNCTION.equals(transformationType);
-                
-                log.debug("Checking outbound transformation type for mapping {}: {} (isFlow: {})", 
-                         context.getMapping().getName(), 
-                         transformationType != null ? transformationType.toString() : "null",
-                         isFlow);
-                
-                return isFlow;
-            }
-            return false;
-        } catch (Exception e) {
-            log.warn("Error checking outbound transformation type: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Custom predicate to validate if outbound mapping should be processed
-     */
-    private boolean isValidMapping(String tenant, Mapping mapping, String connectorIdentifier) {
-        try {
-            if (mapping == null) {
-                log.debug("Outbound mapping is null, skipping");
-                return false;
-            }
-
-            // Check if mapping is active
-            if (!mapping.getActive()) {
-                log.debug("Outbound mapping {} is inactive, skipping", mapping.getName());
-                return false;
-            }
-
-            // Check if mapping is deployed
-            if (connectorIdentifier != null && !isMappingDeployed(tenant, mapping, connectorIdentifier)) {
-                log.debug("Outbound mapping {} not deployed for connector {}, skipping",
-                        mapping.getName(), connectorIdentifier);
-                return false;
-            }
-
-            return true;
-
-        } catch (Exception e) {
-            log.error("Error validating outbound mapping: {}", e.getMessage(), e);
-            return false;
-        }
-    }
-
-    /**
-     * Check if outbound mapping is deployed for the connector
-     */
-    private boolean isMappingDeployed(String tenant, Mapping mapping, String connectorIdentifier) {
+    @Override
+    public boolean isMappingDeployed(String tenant, Mapping mapping, String connectorIdentifier) {
         try {
             AConnectorClient connector = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
             return connector != null && connector.isMappingOutboundDeployed(mapping.getIdentifier());

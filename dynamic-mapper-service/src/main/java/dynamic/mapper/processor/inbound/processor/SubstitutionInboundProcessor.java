@@ -80,7 +80,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         if (processingCache == null || processingCache.isEmpty()) {
             log.debug("Processing cache is empty for mapping: {}", mapping.getName());
             // Create single request with original template
-            createC8YRequest(targetTemplate, context, mapping);
+            createDynamicMapperRequest(targetTemplate, context, mapping);
             return;
         }
 
@@ -112,7 +112,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 String processedPayload = payloadTarget.jsonString();
 
                 // Create C8Y request
-                createC8YRequest(processedPayload, context, mapping);
+                createDynamicMapperRequest(processedPayload, context, mapping);
 
                 log.debug("Created request {} of {} for mapping: {}", i + 1, cardinality, mapping.getName());
 
@@ -298,7 +298,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
     /**
      * Create C8Y request with correct structure
      */
-    private void createC8YRequest(String processedPayload, ProcessingContext<Object> context, Mapping mapping)
+    private void createDynamicMapperRequest(String processedPayload, ProcessingContext<Object> context, Mapping mapping)
             throws Exception {
         API api = context.getApi() != null ? context.getApi() : determineDefaultAPI(mapping);
 

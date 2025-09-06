@@ -4,12 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.processor.CodeExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.DeserializationInboundProcessor;
@@ -25,15 +23,12 @@ import dynamic.mapper.processor.inbound.processor.MappingContextInboundProcessor
 import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
-import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
-import dynamic.mapper.processor.util.ResultProcessor;
+import dynamic.mapper.processor.util.ConsolidationProcessor;
+import dynamic.mapper.processor.util.DynamicMapperBaseRoutes;
 
 @Component
-public class DynamicMapperInboundRoutes extends RouteBuilder {
-
-    @Autowired
-    private ConnectorRegistry connectorRegistry;
+public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private ExtensibleProcessor extensibleProcessor;
@@ -72,7 +67,7 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     private SendInboundProcessor inboundSendProcessor;
 
     @Autowired
-    private ResultProcessor resultProcessor;
+    private ConsolidationProcessor consolidationProcessor;
 
     @Autowired
     private ProcessingContextAggregationStrategy processingContextAggregationStrategy;
@@ -155,43 +150,51 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
         // Single mapping processing pipeline
         from("direct:processSingleInboundMapping")
                 .routeId("single-filtered-inbound-mapping-processor")
+                // 0. Common processing for all
                 .process(deserializationInboundProcessor)
                 .process(mappingContextProcessor)
                 .process(enrichmentInboundProcessor)
-                // ADD: Check for snooping BEFORE other processing
-                .process(snoopingInboundProcessor)
-                .choice()
-                .when(exchange -> {
-                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                            ProcessingContext.class);
-                    return context != null && context.isIgnoreFurtherProcessing();
-                })
-                .to("log:snooping-message?level=DEBUG&showBody=false")
-                .stop() // Stop here for snooping - no further processing
-                .end()
-                // Conditional extension processing
-                .choice()
-                .when(exchange -> {
-                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                            ProcessingContext.class);
-                    return context != null &&
-                            context.getMapping() != null &&
-                            context.getMapping().getExtension() != null;
-                })
-                .process(extensibleProcessor)
-                .stop() // Extensions handle their own processing
-                .end()
-
-                // Check transformation type for processing flow
-                .choice()
-                .when(exchange -> isFlowFunction(exchange))
-                .to("direct:processFlowFunction")
-                .otherwise()
-                .to("direct:processTraditionalMapping")
-                .end()
-
                 .process(filterInboundProcessor)
 
+                // 1. Branch based on processing type
+                .choice()
+                // 1a. Snooping path
+                .when(exchange -> isSnooping(exchange))
+                .to("direct:processSnooping")
+
+                // 1b. JSONata extraction path
+                .when(exchange -> isJSONataExtraction(exchange))
+                .to("direct:processJSONataExtraction")
+
+                // 1c. SubstitutionAsCode extraction path
+                .when(exchange -> isSubstitutionAsCode(exchange))
+                .to("direct:processSubstitutionAsCodeExtraction")
+
+                // 1d. Extension processing path
+                .when(exchange -> isExtension(exchange))
+                .to("direct:processExtension")
+
+                // 1e. Flow function path
+                .when(exchange -> isFlowFunction(exchange))
+                .to("direct:processFlowFunction")
+
+                // Default fallback (should not happen with proper mapping validation)
+                .otherwise()
+                .to("direct:processJSONataExtraction") // Default to JSONata
+                .end();
+
+        // 1a. Snooping processing route
+        from("direct:processSnooping")
+                .routeId("snooping-processor")
+                .process(snoopingInboundProcessor)
+                .to("log:snooping-message?level=DEBUG&showBody=false")
+                .process(consolidationProcessor);
+
+        // 1b. JSONata extraction processing route
+        from("direct:processJSONataExtraction")
+                .routeId("jsonata-extraction-processor")
+                .process(jsonataExtractionInboundProcessor)
+                .process(substitutionInboundProcessor)
                 .choice()
                 .when(exchange -> {
                     ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
@@ -199,38 +202,69 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
                     return context != null && context.isIgnoreFurtherProcessing();
                 })
                 .to("log:filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
                 .stop()
                 .otherwise()
                 .process(inboundSendProcessor)
-                .end()
+                .process(consolidationProcessor)
+                .end();
 
-                .process(resultProcessor);
-
-        // Flow function processing route
-        from("direct:processFlowFunction")
-                .routeId("flow-function-processor")
-                .to("log:flow-function-processing?level=DEBUG&showHeaders=false&showBody=false")
-                .process(flowProcessorInboundProcessor)
-                .process(flowResultInboundProcessor);
-
-        // Traditional mapping processing route  
-        from("direct:processTraditionalMapping")
-                .routeId("traditional-mapping-processor")
-                .to("log:traditional-mapping-processing?level=DEBUG&showHeaders=false&showBody=false")
-                // Regular extraction processing
+        // 1c. SubstitutionAsCode extraction processing route
+        from("direct:processSubstitutionAsCodeExtraction")
+                .routeId("substitution-as-code-extraction-processor")
+                .process(codeExtractionInboundProcessor)
+                .process(substitutionInboundProcessor)
                 .choice()
                 .when(exchange -> {
                     ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
                             ProcessingContext.class);
-                    return context != null &&
-                            context.getMapping() != null &&
-                            context.getMapping().isSubstitutionsAsCode();
+                    return context != null && context.isIgnoreFurtherProcessing();
                 })
-                .process(codeExtractionInboundProcessor)
+                .to("log:filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
                 .otherwise()
-                .process(jsonataExtractionInboundProcessor)
-                .end()
-                .process(substitutionInboundProcessor);
+                .process(inboundSendProcessor)
+                .process(consolidationProcessor)
+                .end();
+
+        // 1d. Extension processing route
+        from("direct:processExtension")
+                .routeId("extension-processor")
+                .process(extensibleProcessor)
+                .process(substitutionInboundProcessor)
+                .choice()
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null && context.isIgnoreFurtherProcessing();
+                })
+                .to("log:extension-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
+                .otherwise()
+                .process(inboundSendProcessor)
+                .process(consolidationProcessor)
+                .end();
+
+        // 1e. Flow function processing route
+        from("direct:processFlowFunction")
+                .routeId("flow-function-processor")
+                .process(flowProcessorInboundProcessor)
+                .choice()
+                .when(exchange -> {
+                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    return context != null && context.isIgnoreFurtherProcessing();
+                })
+                .to("log:flow-function-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
+                .otherwise()
+                .process(flowResultInboundProcessor)
+                .process(inboundSendProcessor)
+                .process(consolidationProcessor)
+                .end();
 
         // Error handling route
         from("direct:inboundErrorHandling")
@@ -239,69 +273,12 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
     }
 
     /**
-     * Check if the mapping uses flow function transformation
-     */
-    private boolean isFlowFunction(Exchange exchange) {
-        try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-            if (context != null && context.getMapping() != null) {
-                TransformationType transformationType = context.getMapping().getTransformationType();
-                boolean isFlow = TransformationType.FLOW_FUNCTION.equals(transformationType);
-                
-                log.debug("Checking transformation type for mapping {}: {} (isFlow: {})", 
-                         context.getMapping().getName(), 
-                         transformationType != null ? transformationType.toString() : "null",
-                         isFlow);
-                
-                return isFlow;
-            }
-            return false;
-        } catch (Exception e) {
-            log.warn("Error checking transformation type: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Custom predicate to validate if mapping should be processed
-     */
-    private boolean isValidMapping(String tenant, Mapping mapping, String connectorIdentifier) {
-        try {
-
-            if (mapping == null) {
-                log.debug("Mapping is null, skipping");
-                return false;
-            }
-
-            // Check if mapping is active
-            if (!mapping.getActive()) {
-                log.debug("Mapping {} is inactive, skipping", mapping.getName());
-                return false;
-            }
-
-            // Check if mapping is deployed (you'll need to get connector info)
-            if (connectorIdentifier != null && !isMappingDeployed(tenant, mapping, connectorIdentifier)) {
-                log.debug("Mapping {} not deployed for connector {}, skipping",
-                        mapping.getName(), connectorIdentifier);
-                return false;
-            }
-
-            return true;
-
-        } catch (Exception e) {
-            log.error("Error validating mapping: {}", e.getMessage(), e);
-            return false;
-        }
-    }
-
-    /**
      * Check if mapping is deployed for the connector
      */
-    private boolean isMappingDeployed(String tenant, Mapping mapping, String connectorIdentifier) {
+    @Override
+    public boolean isMappingDeployed(String tenant, Mapping mapping, String connectorIdentifier) {
         try {
             AConnectorClient connector = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
-
-            log.debug("Cannot check deployment status for mapping {}, assuming deployed", mapping.getName());
             return connector != null && connector.isMappingInboundDeployed(mapping.getIdentifier());
 
         } catch (Exception e) {
@@ -309,4 +286,5 @@ public class DynamicMapperInboundRoutes extends RouteBuilder {
             return true; // Default to allowing processing
         }
     }
+
 }
