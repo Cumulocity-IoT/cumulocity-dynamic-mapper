@@ -44,7 +44,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import jakarta.ws.rs.NotSupportedException;
@@ -125,7 +125,7 @@ public class WebHook extends AConnectorClient {
 
     public WebHook(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+            CamelDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingService = configurationRegistry.getMappingService();

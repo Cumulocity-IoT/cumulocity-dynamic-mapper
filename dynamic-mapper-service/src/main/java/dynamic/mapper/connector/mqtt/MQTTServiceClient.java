@@ -33,7 +33,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorType;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
@@ -112,7 +112,7 @@ public class MQTTServiceClient extends MQTT3Client {
 
     public MQTTServiceClient(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+            CamelDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingService = configurationRegistry.getMappingService();

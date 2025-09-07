@@ -52,7 +52,7 @@ import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
@@ -146,7 +146,7 @@ public class KafkaClient extends AConnectorClient {
 
     public KafkaClient(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
+            CamelDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
             throws ConnectorException {
         this();
         this.configurationRegistry = configurationRegistry;

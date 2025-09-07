@@ -49,7 +49,7 @@ import dynamic.mapper.core.ConnectorStatus;
 import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
@@ -161,7 +161,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     public MQTTServicePulsarClient(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+            CamelDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingService = configurationRegistry.getMappingService();

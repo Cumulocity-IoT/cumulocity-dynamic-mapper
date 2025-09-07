@@ -151,8 +151,6 @@ public class BootstrapService {
         // Clean up configurations
         configurationRegistry.removeServiceConfiguration(tenant);
         configurationRegistry.removeMapperServiceRepresentation(tenant);
-        configurationRegistry.removePayloadProcessorsInbound(tenant);
-        configurationRegistry.removePayloadProcessorsOutbound(tenant);
         configurationRegistry.removeExtensibleProcessor(tenant);
         configurationRegistry.removeGraalsResources(tenant);
         configurationRegistry.removeMicroserviceCredentials(tenant);

@@ -62,18 +62,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
-import dynamic.mapper.processor.inbound.BaseProcessorInbound;
-import dynamic.mapper.processor.inbound.CodeBasedProcessorInbound;
-import dynamic.mapper.processor.inbound.FlatFileProcessorInbound;
-import dynamic.mapper.processor.inbound.HexProcessorInbound;
-import dynamic.mapper.processor.inbound.JSONProcessorInbound;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.outbound.BaseProcessorOutbound;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
-import dynamic.mapper.processor.outbound.CodeBasedProcessorOutbound;
-import dynamic.mapper.processor.outbound.DispatcherOutbound;
-import dynamic.mapper.processor.outbound.processor.JSONProcessorOutbound;
-import dynamic.mapper.processor.processor.fixed.InternalProtobufProcessor;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
@@ -104,13 +93,6 @@ public class ConfigurationRegistry {
 
     // Structure: < Tenant, < MappingType, < MapperServiceRepresentation > >
     private Map<String, MapperServiceRepresentation> mapperServiceRepresentations = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, < MappingType, ProcessorInbound>>
-    private Map<String, Map<MappingType, BaseProcessorInbound<?>>> payloadProcessorsInbound = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, < ConnectorIdentifier, < MappingType, ProcessorOutbound
-    // > >>
-    private Map<String, Map<String, Map<MappingType, BaseProcessorOutbound<?>>>> payloadProcessorsOutbound = new ConcurrentHashMap<>();
 
     // Structure: < Tenant, < ServiceConfiguration > >
     private Map<String, ServiceConfiguration> serviceConfigurations = new ConcurrentHashMap<>();
@@ -188,18 +170,6 @@ public class ConfigurationRegistry {
 
     @Autowired
     private CamelContext camelContext;
-
-    public Map<MappingType, BaseProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
-        return Map.of(
-                MappingType.JSON, new JSONProcessorInbound(this),
-                MappingType.CODE_BASED, new CodeBasedProcessorInbound(this),
-                MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
-                MappingType.HEX, new HexProcessorInbound(this),
-                MappingType.PROTOBUF_INTERNAL, new InternalProtobufProcessor(this),
-                MappingType.EXTENSION_SOURCE, extensibleProcessor,
-                MappingType.EXTENSION_SOURCE_TARGET, extensibleProcessor);
-    }
 
     public static Source decodeCode(String code, String sourceCodeFileName, boolean replaceIdentifier,
             String mappingIdentifier) {
@@ -295,23 +265,7 @@ public class ConfigurationRegistry {
         return connectorClient;
     }
 
-    public Map<MappingType, BaseProcessorOutbound<?>> createPayloadProcessorsOutbound(
-            AConnectorClient connectorClient) {
-        return Map.of(
-                MappingType.JSON, new JSONProcessorOutbound(this, connectorClient),
-                MappingType.CODE_BASED, new CodeBasedProcessorOutbound(this, connectorClient));
-    }
-
     public void initializeResources(String tenant) {
-        payloadProcessorsInbound.put(tenant, createPayloadProcessorsInbound(tenant));
-        payloadProcessorsOutbound.put(tenant, new ConcurrentHashMap<>());
-    }
-
-    public void initializePayloadProcessorsOutbound(AConnectorClient connectorClient) {
-        Map<String, Map<MappingType, BaseProcessorOutbound<?>>> processorPerTenant = payloadProcessorsOutbound
-                .get(connectorClient.getTenant());
-        processorPerTenant.put(connectorClient.getConnectorIdentifier(),
-                createPayloadProcessorsOutbound(connectorClient));
     }
 
     public MapperServiceRepresentation initializeMapperServiceRepresentation(String tenant) {
@@ -458,32 +412,6 @@ public class ConfigurationRegistry {
         microserviceCredentials.remove(tenant);
     }
 
-    public void addPayloadProcessorInbound(String tenant, MappingType mappingType,
-            BaseProcessorInbound<?> payloadProcessorInbound) {
-        payloadProcessorsInbound.get(tenant).put(mappingType, payloadProcessorInbound);
-    }
-
-    public Map<MappingType, BaseProcessorInbound<?>> getPayloadProcessorsInbound(String tenant) {
-        return payloadProcessorsInbound.get(tenant);
-    }
-
-    public void removePayloadProcessorsInbound(String tenant) {
-        payloadProcessorsInbound.remove(tenant);
-    }
-
-    public Map<MappingType, BaseProcessorOutbound<?>> getPayloadProcessorsOutbound(String tenant,
-            String connectorIdentifier) {
-        return payloadProcessorsOutbound.get(tenant).get(connectorIdentifier);
-    }
-
-    public void addPayloadProcessorOutbound(String tenant, String connectorIdentifier, MappingType mappingType,
-            BaseProcessorOutbound<?> payloadProcessorOutbound) {
-        payloadProcessorsOutbound.get(tenant).get(connectorIdentifier).put(mappingType, payloadProcessorOutbound);
-    }
-
-    public void removePayloadProcessorsOutbound(String tenant) {
-        payloadProcessorsOutbound.remove(tenant);
-    }
 
     // In ConfigurationRegistry
     public CamelContext getCamelContext() {
@@ -494,8 +422,6 @@ public class ConfigurationRegistry {
             AConnectorClient connectorClient) {
         if (serviceConfiguration.isOutboundMappingEnabled()
                 && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
-            // initialize AsynchronousDispatcherOutbound
-            initializePayloadProcessorsOutbound(connectorClient);
             // DispatcherOutbound dispatcherOutbound = new DispatcherOutbound(
             // this, connectorClient);
             CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(

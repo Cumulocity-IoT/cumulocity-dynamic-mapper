@@ -39,7 +39,7 @@ import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionSource;
 import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.core.C8YAgent;
@@ -155,7 +155,7 @@ public class ProcessorExtensionCustomAlarm
          */
         if (mapping.targetAPI.equals(API.INVENTORY)) {
             var newPredecessor = context.addRequest(
-                    C8YRequest.builder()
+                    DynamicMapperRequest.builder()
                             .predecessor(predecessor)
                             .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST
                                     : RequestMethod.PATCH)
@@ -182,7 +182,7 @@ public class ProcessorExtensionCustomAlarm
         } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
             AbstractExtensibleRepresentation implicitRequest = null;
             var newPredecessor = context.addRequest(
-                    C8YRequest.builder()
+                    DynamicMapperRequest.builder()
                             .predecessor(predecessor)
                             .method(RequestMethod.POST)
                             .api(mapping.getTargetAPI()) // Set api field
@@ -262,7 +262,7 @@ public class ProcessorExtensionCustomAlarm
             var predecessor = context.getRequests().size();
             var requestString = objectMapper.writeValueAsString(request);
             context.addRequest(
-                    C8YRequest.builder()
+                    DynamicMapperRequest.builder()
                             .predecessor(predecessor)
                             .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST
                                     : RequestMethod.PATCH)
