@@ -5,7 +5,6 @@ import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.SnoopStatus;
@@ -149,7 +148,21 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     }
 
     /**
+     * Check if further processing should be ignored
+     */
+    protected boolean shouldIgnoreFurtherProcessing(Exchange exchange) {
+        try {
+            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            return context != null && context.isIgnoreFurtherProcessing();
+        } catch (Exception e) {
+            log.warn("Error checking ignore further processing: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Check if mapping is deployed for the connector
      */
     protected abstract boolean isMappingDeployed(String tenant, Mapping mapping, String connectorIdentifier);
+
 }

@@ -103,9 +103,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
         // Main processing entry point (transport agnostic)
         from("direct:processOutboundMessage")
                 .routeId("outbound-message-processor")
-                .process(exchange -> {
-                    log.info("Outbound MappingResolverProcessor - Processing exchange: {}", exchange);
-                })
                 .choice()
                 .when(header("mappings").isNull())
                 .process(exchange -> {
@@ -137,7 +134,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                     }
                 })
                 .split(header("mappings"))
-                .parallelProcessing(false)
+                .parallelProcessing(true)
                 .aggregationStrategy(processingContextAggregationStrategy)
                 .to("direct:processSingleOutboundMapping")
                 .end();
@@ -185,11 +182,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .routeId("outbound-flow-function-processor")
                 .process(flowProcessorOutboundProcessor)
                 .choice()
-                .when(exchange -> {
-                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                            ProcessingContext.class);
-                    return context != null && context.isIgnoreFurtherProcessing();
-                })
+                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:outbound-flow-function-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
@@ -205,11 +198,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .process(codeExtractionOutboundProcessor)
                 .process(substitutionOutboundProcessor)
                 .choice()
-                .when(exchange -> {
-                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                            ProcessingContext.class);
-                    return context != null && context.isIgnoreFurtherProcessing();
-                })
+                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:outbound-substitution-as-code-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
@@ -224,11 +213,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .process(jsonataExtractionOutboundProcessor)
                 .process(substitutionOutboundProcessor)
                 .choice()
-                .when(exchange -> {
-                    ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
-                            ProcessingContext.class);
-                    return context != null && context.isIgnoreFurtherProcessing();
-                })
+                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:outbound-jsonata-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
