@@ -32,7 +32,10 @@
     <div class="card-inner-scroll fit-h">
       <div class="card-block">
         <form [formGroup]="formGroup">
-          <c8y-list-group class="separator-top p-b-16" role="list">
+          <c8y-list-group class="p-l-16 p-b-16" role="list">
+            <label>
+              Mapping Type
+            </label>
             <ng-container *ngFor="let q of filteredMappingTypes | keyvalue">
               <c8y-li role="listitem">
                 <c8y-li-radio title="{{ q.value }}" (onSelect)="onSelectMappingType(q.value)"
@@ -44,7 +47,7 @@
             </ng-container>
           </c8y-list-group>
           <c8y-form-group class="p-l-16 p-r-16">
-            <label class="c8y-checkbox">
+            <label class="c8y-switch">
               <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox" name="snoop"
                 formControlName="snoop" />
               <span class="m-r-8"></span>
@@ -58,23 +61,31 @@
               have to stop the snooping for the respective mapping.</small>
           </c8y-form-group>
 
-          <c8y-form-group class="p-l-16 p-r-16">
+          <c8y-form-group class="p-l-16 p-r-16" *ngIf="showTransformationType">
             <label>
               Transformation Type
             </label>
-            <c8y-select 
-              [items]="transformationTypeOptions"
-              formControlName="transformationType"
-              labelProperty="label"
-              valueProperty="value"
-              aria-label="Transformation select">
+            <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
+              valueProperty="value" aria-label="Transformation select">
             </c8y-select>
             <small class="text-muted">Defines the type of transformation from source to target payload.</small>
           </c8y-form-group>
 
           <c8y-form-group class="p-l-16 p-r-16">
+            <label>
+              Description
+            </label>
             <textarea readonly c8y-textarea-autoresize formControlName="mappingTypeDescription"
               class="form-control no-resize"></textarea>
+          </c8y-form-group>
+
+          <c8y-form-group class="p-l-16 p-r-16">
+            <label class="c8y-switch">
+              <input title="{{ 'Show export settings ...' | translate }}" type="checkbox" name="expertMode"
+                formControlName="expertMode" />
+              <span class="m-r-8"></span>
+              ExpertMode
+            </label>
           </c8y-form-group>
         </form>
       </div>

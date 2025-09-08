@@ -57,8 +57,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   // Getter for template access
   initialMappingType: MappingType = MappingType.JSON;
+  initialExpertMode = false;
   transformationTypeOptions: { label: string; value: string }[] = [];
   initialTransformationType: TransformationType = TransformationType.JSONATA;
+  showTransformationType: boolean = false;
 
   // New property - filtered mapping types
   filteredMappingTypes: any;
@@ -91,11 +93,14 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const initialSubstitutionsSupported = MappingTypeDescriptionMap[this.initialMappingType]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
 
     this.formGroup = this.fb.group({
+      expertMode: [this.initialExpertMode],
       mappingType: [this.initialMappingType],
       transformationType: [this.initialTransformationType],
       mappingTypeDescription: [this.mappingTypeDescription],
       snoop: [{ value: false, disabled: !initialSnoopSupported }]
     });
+
+    this.showTransformationType = this.initialExpertMode;
 
     this.filteredMappingTypes = Object.entries(MappingType)
       .filter(([key, value]) => (value !== MappingType.CODE_BASED))
@@ -106,6 +111,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     this.formGroup.get('mappingType')?.valueChanges.subscribe((type: MappingType) => {
       this.updateMappingTypeRelatedControls(type);
+    });
+
+    this.formGroup.get('expertMode')?.valueChanges.subscribe((expertMode: boolean) => {
+      this.updateExpertModeRelatedControls(expertMode);
     });
 
     // Initialize transformation type options based on initial substitutionsAsCodeSupported
@@ -121,16 +130,17 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   onSave() {
     if (this.formGroup.valid) {
-      const formValue = this.formGroup.getRawValue(); // Get all values including disabled ones
+      const formValue = this.formGroup.getRawValue();
       const { snoopSupported } = MappingTypeDescriptionMap[this.initialMappingType].properties[this.direction];
       const selectedMappingType = this.formGroup.get('mappingType').value;
 
-      const { value } = this.formGroup.get('transformationType').value;
+      // Fix this line - you're trying to destructure a string value
+      const transformationTypeValue = this.formGroup.get('transformationType')?.value;
 
-      // Find the enum item where value matches the selected value
-      const selectedTransformationType = Object.values(TransformationType).find(
-        (enumValue) => enumValue === value
-      ) || TransformationType.DEFAULT; // fallback to DEFAULT if not found
+      // Handle both cases: if it's an object with value property or just a string
+      const selectedTransformationType = typeof transformationTypeValue === 'object'
+        ? transformationTypeValue.value
+        : transformationTypeValue || TransformationType.DEFAULT;
 
       this._save({
         mappingType: selectedMappingType,
@@ -153,7 +163,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     const snoopControl = this.formGroup.get('snoop');
 
-    this.formGroup.patchValue({ mappingTypeDescription: MappingTypeDescriptionMap[type]?.description });
+    // Only patch the description, not the mappingType itself to avoid loops
+    this.formGroup.patchValue({
+      mappingTypeDescription: MappingTypeDescriptionMap[type]?.description
+    });
 
     // Update snoop control
     if (snoopSupported && snoopControl?.disabled) {
@@ -164,6 +177,28 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     // Update transformation type options based on substitutionsAsCodeSupported
     this.updateTransformationTypeOptions(substitutionsAsCodeSupported);
+  }
+
+  private updateExpertModeRelatedControls(expertMode: boolean) {
+    // Update the visibility flag
+    this.showTransformationType = expertMode;
+
+    const transformationTypeControl = this.formGroup.get('transformationType');
+
+    if (expertMode) {
+      // Enable transformationTypeControl and make it visible
+      if (transformationTypeControl) {
+        transformationTypeControl.enable();
+      } else {
+        // Add the control if it doesn't exist
+        this.formGroup.addControl('transformationType', this.fb.control(this.initialTransformationType));
+      }
+    } else {
+      // Disable transformationTypeControl
+      if (transformationTypeControl) {
+        transformationTypeControl.disable();
+      }
+    }
   }
 
   private updateTransformationTypeOptions(substitutionsAsCodeSupported: boolean) {
