@@ -56,14 +56,14 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   valid: boolean = true;
 
   // Getter for template access
-  initialMappingType: MappingType = MappingType.JSON;
+  initialMappingType = { label: MappingType.JSON, value: MappingType.JSON };
   initialExpertMode = false;
   transformationTypeOptions: { label: string; value: string }[] = [];
   initialTransformationType: TransformationType = TransformationType.JSONATA;
   showTransformationType: boolean = false;
 
   // New property - filtered mapping types
-  filteredMappingTypes: any;
+  filteredMappingTypes: any = [];
 
   private _save: (value: {
     mappingType: MappingType;
@@ -85,12 +85,13 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   fb = inject(FormBuilder);
 
   ngOnInit(): void {
+    const humanizePipe = new HumanizePipe();
     // Initialize everything first
-    this.mappingTypeDescription = MappingTypeDescriptionMap[this.initialMappingType]?.description || '';
+    this.mappingTypeDescription = MappingTypeDescriptionMap[this.initialMappingType.value]?.description || '';
 
     // Create form with initial states
-    const initialSnoopSupported = MappingTypeDescriptionMap[this.initialMappingType]?.properties?.[this.direction]?.snoopSupported || false;
-    const initialSubstitutionsSupported = MappingTypeDescriptionMap[this.initialMappingType]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
+    const initialSnoopSupported = MappingTypeDescriptionMap[this.initialMappingType.value]?.properties?.[this.direction]?.snoopSupported || false;
+    const initialSubstitutionsSupported = MappingTypeDescriptionMap[this.initialMappingType.value]?.properties?.[this.direction]?.substitutionsAsCodeSupported || false;
 
     this.formGroup = this.fb.group({
       expertMode: [this.initialExpertMode],
@@ -102,12 +103,13 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     this.showTransformationType = this.initialExpertMode;
 
-    this.filteredMappingTypes = Object.entries(MappingType)
-      .filter(([key, value]) => (value !== MappingType.CODE_BASED))
-      .reduce((obj, [key, value]) => {
-        obj[key] = value;
-        return obj;
-      }, {});
+    // Include all options
+    this.filteredMappingTypes = Object.values(MappingType).filter((type) => (type !== MappingType.CODE_BASED && MappingTypeDescriptionMap[type].properties[this.direction].directionSupported)).map(value => {
+      return {
+        label: humanizePipe.transform(value),
+        value: value
+      }
+    });
 
     this.formGroup.get('mappingType')?.valueChanges.subscribe((type: MappingType) => {
       this.updateMappingTypeRelatedControls(type);
@@ -120,7 +122,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     // Initialize transformation type options based on initial substitutionsAsCodeSupported
     this.updateTransformationTypeOptions(initialSubstitutionsSupported);
 
-    const humanizePipe = new HumanizePipe();
   }
 
   onCancel() {
@@ -131,7 +132,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   onSave() {
     if (this.formGroup.valid) {
       const formValue = this.formGroup.getRawValue();
-      const { snoopSupported } = MappingTypeDescriptionMap[this.initialMappingType].properties[this.direction];
+      const { snoopSupported } = MappingTypeDescriptionMap[this.initialMappingType.value].properties[this.direction];
       const selectedMappingType = this.formGroup.get('mappingType').value;
 
       // Fix this line - you're trying to destructure a string value

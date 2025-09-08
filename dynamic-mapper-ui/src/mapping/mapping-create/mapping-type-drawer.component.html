@@ -32,20 +32,15 @@
     <div class="card-inner-scroll fit-h">
       <div class="card-block">
         <form [formGroup]="formGroup">
-          <c8y-list-group class="p-l-16 p-b-16" role="list">
+          <c8y-form-group class="p-l-16 p-r-16">
             <label>
               Mapping Type
             </label>
-            <ng-container *ngFor="let q of filteredMappingTypes | keyvalue">
-              <c8y-li role="listitem">
-                <c8y-li-radio title="{{ q.value }}" (onSelect)="onSelectMappingType(q.value)"
-                  [disabled]="!MappingTypeDescriptionMap[q.key].properties[direction].directionSupported"
-                  [selected]="initialMappingType === q.value"></c8y-li-radio>
-                <span>{{ q.value | formatStringAsWords }}</span>
-                <!-- <c8y-li-footer footer="List item footer"></c8y-li-footer> -->
-              </c8y-li>
-            </ng-container>
-          </c8y-list-group>
+            <c8y-select [items]="filteredMappingTypes" formControlName="mappingType" labelProperty="label"
+              valueProperty="value" [selected]="initialMappingType" aria-label="Mapping Type select">
+            </c8y-select>
+          </c8y-form-group>
+
           <c8y-form-group class="p-l-16 p-r-16">
             <label class="c8y-switch">
               <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox" name="snoop"
