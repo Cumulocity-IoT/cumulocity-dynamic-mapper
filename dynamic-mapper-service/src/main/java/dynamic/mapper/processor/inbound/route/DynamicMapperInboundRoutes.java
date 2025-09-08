@@ -16,6 +16,7 @@ import dynamic.mapper.processor.inbound.processor.ExtensibleProcessor;
 import dynamic.mapper.processor.inbound.processor.FilterInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowProcessorInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.FlowResultInboundProcessor;
+import dynamic.mapper.processor.inbound.processor.InternalProtobufProcessor;
 import dynamic.mapper.processor.inbound.processor.SendInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
@@ -32,6 +33,9 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private ExtensibleProcessor extensibleProcessor;
+
+    @Autowired
+    private InternalProtobufProcessor internalProtobufProcessor;
 
     @Autowired
     private MappingContextInboundProcessor mappingContextProcessor;
@@ -162,6 +166,10 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .when(exchange -> isSnooping(exchange))
                 .to("direct:processSnooping")
 
+                // 1f. Extension processing path
+                .when(exchange -> isInternalProtobuf(exchange))
+                .to("direct:processInternalProtobuf")
+
                 // 1d. Extension processing path
                 .when(exchange -> isExtension(exchange))
                 .to("direct:processExtension")
@@ -228,6 +236,21 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .choice()
                 .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
                 .to("log:extension-filtered-message?level=DEBUG")
+                .process(consolidationProcessor)
+                .stop()
+                .otherwise()
+                .process(inboundSendProcessor)
+                .process(consolidationProcessor)
+                .end();
+
+        // 1f. Extension processing route
+        from("direct:processInternalProtobuf")
+                .routeId("internal-protobuf-processor")
+                .process(internalProtobufProcessor)
+                .process(substitutionInboundProcessor)
+                .choice()
+                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .to("log:internal-protobuf-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()

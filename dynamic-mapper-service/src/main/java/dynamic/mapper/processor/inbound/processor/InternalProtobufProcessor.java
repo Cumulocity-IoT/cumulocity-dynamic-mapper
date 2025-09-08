@@ -19,32 +19,52 @@
  *
  */
 
-package dynamic.mapper.processor.processor.fixed;
+package dynamic.mapper.processor.inbound.processor;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter;
+import dynamic.mapper.service.MappingService;
+import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.inbound.BaseProcessorInbound;
-import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
+
+
+import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-public class InternalProtobufProcessor extends BaseProcessorInbound<byte[]> {
+@Slf4j
+@Component
+public class InternalProtobufProcessor extends BaseProcessor {
 
-    public InternalProtobufProcessor(ConfigurationRegistry configurationRegistry) {
-        super(configurationRegistry);
+    @Autowired
+    private MappingService mappingService;
+   
+    @Override
+    public void process(Exchange exchange) throws Exception {
+        ProcessingContext<byte[]> context = getProcessingContextAsByteArray(exchange);
+        Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
+
+        try {
+            extractFromSource(context);
+        } catch (Exception e) {
+            log.error("Error in InternalProtobufProcessor for mapping: {}",
+                    context.getMapping().getName(), e);
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+            context.addError(new ProcessingException("InternalProtobufProcessor processing failed", e));
+            mappingStatus.errors++;
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
+
     }
 
-    @Override
-    public byte[] deserializePayload(Mapping mapping, ConnectorMessage message){
-        return message.getPayload();
-    }
-
-    @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
         if (MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().mappingType)) {
@@ -60,11 +80,11 @@ public class InternalProtobufProcessor extends BaseProcessorInbound<byte[]> {
                     payloadProtobuf.getTimestamp())
                     .toString(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
             context.addSubstitution("c8y_GenericMeasurement.Module.value",
-                    payloadProtobuf.getValue(), TYPE.NUMBER, RepairStrategy.DEFAULT,false);
+                    payloadProtobuf.getValue(), TYPE.NUMBER, RepairStrategy.DEFAULT, false);
             context.addSubstitution("type",
-                    payloadProtobuf.getMeasurementType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT,false);
+                    payloadProtobuf.getMeasurementType(), TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
             context.addSubstitution("c8y_GenericMeasurement.Module.unit",
-                    payloadProtobuf.getUnit(), TYPE.NUMBER, RepairStrategy.DEFAULT,false);
+                    payloadProtobuf.getUnit(), TYPE.NUMBER, RepairStrategy.DEFAULT, false);
 
             // as the mapping uses useExternalId we have to map the id to
             // _IDENTITY_.externalId
@@ -74,6 +94,11 @@ public class InternalProtobufProcessor extends BaseProcessorInbound<byte[]> {
                     TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
 
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    ProcessingContext<byte[]> getProcessingContextAsByteArray(Exchange exchange) {
+        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
     }
 
 }

@@ -44,6 +44,7 @@ public abstract class BaseProcessor implements Processor {
                 .supportsMessageContext(
                         connectorMessage.isSupportsMessageContext() && mapping.supportsMessageContext)
                 .key(connectorMessage.getKey())
+                .api(mapping.targetAPI)
                 .build();
     }
 

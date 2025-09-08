@@ -85,7 +85,22 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
             ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
             return context != null &&
                     context.getMapping() != null &&
-                    (context.getMapping().getExtension() != null ||  MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().getMappingType()));
+                    (context.getMapping().getExtension() != null);
+        } catch (Exception e) {
+            log.warn("Error checking extension: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if this is extension processing
+     */
+    protected boolean isInternalProtobuf(Exchange exchange) {
+        try {
+            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            return context != null &&
+                    context.getMapping() != null &&
+                    (MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().getMappingType()));
         } catch (Exception e) {
             log.warn("Error checking extension: {}", e.getMessage());
             return false;
