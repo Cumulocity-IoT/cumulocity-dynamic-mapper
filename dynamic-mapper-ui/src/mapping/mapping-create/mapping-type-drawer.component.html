@@ -23,75 +23,79 @@
     <div class="card-header separator" style="justify-content: center">
       <h4 class="card-title d-flex">
         <i [c8yIcon]="'plus-circle'" class="icon-32 m-r-16"></i>
-        <span class="m-t-8"> {{
-          'Select mapping type for ' +
-          (direction === Direction.INBOUND ? 'source payload' : 'target payload') | translate
-          }}</span>
+        <span class="m-t-8">
+          {{ 'Select mapping type for ' + (direction === Direction.INBOUND ? 'source payload' : 'target payload') |
+          translate }}
+        </span>
       </h4>
     </div>
+
     <div class="card-inner-scroll fit-h">
       <div class="card-block">
         <form [formGroup]="formGroup">
+
+          <!-- Expert Mode Toggle -->
           <c8y-form-group class="p-l-16 p-r-16">
-            <label>
-              Mapping Type
+            <label class="c8y-switch">
+              <input type="checkbox" formControlName="expertMode" />
+              <span class="m-r-8"></span>
+              {{ 'Expert Mode' | translate }}
             </label>
+          </c8y-form-group>
+
+          <!-- Mapping Type Selection -->
+          <c8y-form-group class="p-l-16 p-r-16">
+            <label>{{ 'Mapping Type' | translate }}</label>
             <c8y-select [items]="filteredMappingTypes" formControlName="mappingType" labelProperty="label"
-              valueProperty="value" [selected]="initialMappingType" aria-label="Mapping Type select">
+              valueProperty="value" searchHasFocus = "false" aria-label="Mapping Type select">
             </c8y-select>
           </c8y-form-group>
 
-          <c8y-form-group class="p-l-16 p-r-16">
-            <label class="c8y-switch">
-              <input title="{{ 'Start snooping for payloads ...' | translate }}" type="checkbox" name="snoop"
-                formControlName="snoop" />
-              <span class="m-r-8"></span>
-              Enable snooping
-            </label>
-            <small class="text-muted">Before defining a complete mapping with substitutions you can
-              snoop (record) messages from the source system (Step 1). These can
-              be use in a second step (Step 2) for defining the substitutions
-              from the source payload in the target payload. To continue after
-              Step 2 to defining a complete mapping, incl. substitutions you
-              have to stop the snooping for the respective mapping.</small>
-          </c8y-form-group>
-
+          <!-- Transformation Type (Expert Mode Only) -->
           <c8y-form-group class="p-l-16 p-r-16" *ngIf="showTransformationType">
-            <label>
-              Transformation Type
-            </label>
+            <label>{{ 'Transformation Type' | translate }}</label>
             <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
-              valueProperty="value" aria-label="Transformation select">
+              valueProperty="value" searchHasFocus = "false" aria-label="Transformation select">
             </c8y-select>
-            <small class="text-muted">Defines the type of transformation from source to target payload.</small>
+            <small class="text-muted">
+              {{ 'Defines the type of transformation from source to target payload.' | translate }}
+            </small>
           </c8y-form-group>
 
+          <!-- Description -->
           <c8y-form-group class="p-l-16 p-r-16">
-            <label>
-              Description
-            </label>
+            <label>{{ 'Description' | translate }}</label>
             <textarea readonly c8y-textarea-autoresize formControlName="mappingTypeDescription"
-              class="form-control no-resize"></textarea>
+              class="form-control no-resize">
+            </textarea>
           </c8y-form-group>
 
+          <!-- Snoop Toggle -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label class="c8y-switch">
-              <input title="{{ 'Show export settings ...' | translate }}" type="checkbox" name="expertMode"
-                formControlName="expertMode" />
+              <input type="checkbox" formControlName="snoop" />
               <span class="m-r-8"></span>
-              ExpertMode
+              {{ 'Enable snooping' | translate }}
             </label>
+            <small class="text-muted">
+              {{ 'Before defining a complete mapping with substitutions you can snoop (record) messages from the source
+              system (Step 1). These can be use in a second step (Step 2) for defining the substitutions from the source
+              payload in the target payload. To continue after Step 2 to defining a complete mapping, incl.
+              substitutions you have to stop the snooping for the respective mapping.' | translate }}
+            </small>
           </c8y-form-group>
+
         </form>
       </div>
     </div>
+
     <div class="card-footer text-center sticky-buttons">
       <div class="form-group">
-        <button type="button" name="save" class="btn btn-primary" (click)="onSave()" [disabled]="!valid" translate>
-          Save
+        <button type="button" class="btn btn-primary" (click)="onSave()" [disabled]="!valid">
+          {{ 'Save' | translate }}
         </button>
-        <button type="button" name="cancel" class="btn btn-primary" (click)="onCancel()" translate>
-          Cancel
+        <button type="button" class="btn btn-default" (click)="onCancel()">
+          {{ 'Cancel' | translate }}
         </button>
       </div>
     </div>
