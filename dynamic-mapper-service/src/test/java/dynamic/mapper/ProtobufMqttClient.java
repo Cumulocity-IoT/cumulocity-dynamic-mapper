@@ -34,9 +34,9 @@ import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter.I
 
 public class ProtobufMqttClient {
     Mqtt3BlockingClient testClient;
-    static String brokerHost = System.getenv("broker_host");
-    static Integer brokerPort = Integer.valueOf(System.getenv("broker_port"));
-    static String clientId = System.getenv("client_id");
+    static String brokerHost = System.getenv("BROKER_HOST");
+    static Integer brokerPort = Integer.valueOf(System.getenv("BROKER_PORT"));
+    static String clientId = System.getenv("CLIENT_ID");
     static String brokerUsername = System.getenv("BROKER_USERNAME");
     static String brokerPassword = System.getenv("BROKER_PASSWORD");
 

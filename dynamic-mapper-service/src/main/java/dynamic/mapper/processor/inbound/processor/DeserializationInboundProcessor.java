@@ -13,7 +13,7 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.inbound.deserializer.ExtensibleDeserializer;
+import dynamic.mapper.processor.inbound.deserializer.BytePayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.FlatFilePayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.HexPayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.JSONPayloadDeserializer;
@@ -37,9 +37,9 @@ public class DeserializationInboundProcessor extends BaseProcessor {
         deserializers.put(MappingType.JSON, new JSONPayloadDeserializer());
         deserializers.put(MappingType.FLAT_FILE, new FlatFilePayloadDeserializer());
         deserializers.put(MappingType.HEX, new HexPayloadDeserializer());
-        deserializers.put(MappingType.PROTOBUF_INTERNAL, new HexPayloadDeserializer());
-        deserializers.put(MappingType.EXTENSION_SOURCE, new ExtensibleDeserializer());
-        deserializers.put(MappingType.EXTENSION_SOURCE_TARGET, new ExtensibleDeserializer());
+        deserializers.put(MappingType.PROTOBUF_INTERNAL, new BytePayloadDeserializer());
+        deserializers.put(MappingType.EXTENSION_SOURCE, new BytePayloadDeserializer());
+        deserializers.put(MappingType.EXTENSION_SOURCE_TARGET, new BytePayloadDeserializer());
         deserializers.put(MappingType.CODE_BASED, new JSONPayloadDeserializer());
 
         // Add more mappings as needed based on the MappingType enum values
@@ -70,7 +70,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                 return;
             }
             try {
-                byte[] deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage);
+                byte[] deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage); // <--- line 73
                 context.setPayload(deserializedPayload);
                 exchange.getIn().setHeader("processingContext", context);
             } catch (IOException e) {

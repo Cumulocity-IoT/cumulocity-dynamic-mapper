@@ -55,6 +55,7 @@ import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 
 import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
 import jakarta.annotation.PreDestroy;
@@ -76,6 +77,7 @@ public class BootstrapService {
     private final Integer inventoryCacheSize;
     private final Map<String, Instant> cacheInboundExternalIdRetentionStartMap;
     private final Map<String, Instant> cacheInventoryRetentionStartMap;
+    private final ExtensionInboundRegistry extensionInboundRegistry;
 
     @Qualifier("virtualThreadPool")
     private ExecutorService virtualThreadPool;
@@ -96,6 +98,7 @@ public class BootstrapService {
             ServiceConfigurationService serviceConfigurationService,
             ConnectorConfigurationService connectorConfigurationService,
             MicroserviceSubscriptionsService subscriptionsService,
+            ExtensionInboundRegistry extensionInboundRegistry,
             @Value("${APP.additionalSubscriptionIdTest}") String additionalSubscriptionIdTest,
             @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize,
             @Value("#{new Integer('${APP.inventoryCacheSize}')}") Integer inventoryCacheSize) {
@@ -107,6 +110,7 @@ public class BootstrapService {
         this.serviceConfigurationService = serviceConfigurationService;
         this.connectorConfigurationService = connectorConfigurationService;
         this.subscriptionsService = subscriptionsService;
+        this.extensionInboundRegistry = extensionInboundRegistry;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
         this.inventoryCacheSize = inventoryCacheSize;
@@ -151,9 +155,10 @@ public class BootstrapService {
         // Clean up configurations
         configurationRegistry.removeServiceConfiguration(tenant);
         configurationRegistry.removeMapperServiceRepresentation(tenant);
-        configurationRegistry.removeExtensibleProcessor(tenant);
         configurationRegistry.removeGraalsResources(tenant);
         configurationRegistry.removeMicroserviceCredentials(tenant);
+
+        extensionInboundRegistry.deleteExtensions(tenant);
 
         mappingService.removeResources(tenant);
 
@@ -187,6 +192,8 @@ public class BootstrapService {
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMapperServiceRepresentation(tenant);
         configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
+
+        extensionInboundRegistry.initializeExtensions(tenant);
 
         mappingService.createResources(tenant);
 
@@ -383,9 +390,11 @@ public class BootstrapService {
             }
             connectorRegistry.registerClient(tenant, connectorClient);
             // initialize AsynchronousDispatcherInbound
-            // DispatcherInbound dispatcherInbound = new DispatcherInbound(configurationRegistry,
-            //         connectorClient);
-            GenericMessageCallback dispatcherInbound = new CamelDispatcherInbound(configurationRegistry, connectorClient);
+            // DispatcherInbound dispatcherInbound = new
+            // DispatcherInbound(configurationRegistry,
+            // connectorClient);
+            GenericMessageCallback dispatcherInbound = new CamelDispatcherInbound(configurationRegistry,
+                    connectorClient);
             connectorClient.setDispatcher(dispatcherInbound);
             // Connection is done async, future is returned to wait for the connection if
             // needed

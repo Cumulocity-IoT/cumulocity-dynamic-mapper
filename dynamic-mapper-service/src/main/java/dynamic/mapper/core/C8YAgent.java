@@ -114,7 +114,6 @@ import dynamic.mapper.model.ExtensionType;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
 import dynamic.mapper.processor.extension.ProcessorExtensionSource;
 import dynamic.mapper.processor.extension.ProcessorExtensionTarget;
@@ -859,8 +858,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void registerExtensionInProcessor(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
             boolean external)
             throws IOException {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
-        extensibleProcessor.addExtension(tenant, new Extension(id, extensionName, external));
         // manage extensions for Camel routes
         extensionInboundRegistry.addExtension(tenant, new Extension(id, extensionName, external));
 
@@ -890,7 +887,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             ExtensionEntry extensionEntry = ExtensionEntry.builder().eventName(key).extensionName(extensionName)
                     .fqnClassName(newExtensions.getProperty(key)).loaded(true).message("OK").build();
 
-            extensibleProcessor.addExtensionEntry(tenant, extensionName, extensionEntry);
             // manage extensions for Camel routes
             extensionInboundRegistry.addExtensionEntry(tenant, extensionName, extensionEntry);
 
@@ -957,23 +953,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 extensionEntry.setLoaded(false);
             }
         }
-        extensibleProcessor.updateStatusExtension(extensionName);
         // manage extensions for Camel routes
         extensionInboundRegistry.updateStatusExtension(tenant, extensionName);
     }
 
     public Map<String, Extension> getProcessorExtensions(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
-        return extensibleProcessor.getExtensions();
+        return extensionInboundRegistry.getExtensions(tenant);
     }
 
     public Extension getProcessorExtension(String tenant, String extension) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
-        return extensibleProcessor.getExtension(extension);
+        return extensionInboundRegistry.getExtension(tenant,extension);
     }
 
     public Extension deleteProcessorExtension(String tenant, String extensionName) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
         for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
             if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
@@ -981,13 +973,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
         }
         // manage extensions for Camel routes
-        extensionInboundRegistry.deleteExtension(tenant, extensionName);
-        return extensibleProcessor.deleteExtension(extensionName);
+        return  extensionInboundRegistry.deleteExtension(tenant, extensionName);
     }
 
     public void reloadExtensions(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessor(tenant);
-        extensibleProcessor.deleteExtensions();
         // manage extensions for Camel routes
         extensionInboundRegistry.deleteExtensions(tenant);
         loadProcessorExtensions(tenant);
@@ -1092,9 +1081,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void createExtensibleProcessor(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
-        configurationRegistry.addExtensibleProcessor(tenant, extensibleProcessor);
-        log.debug("{} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
+        log.debug("{} - Create ExtensibleProcessor", tenant);
 
         // check if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();

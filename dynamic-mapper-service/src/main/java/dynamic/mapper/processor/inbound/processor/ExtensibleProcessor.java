@@ -37,14 +37,7 @@ public class ExtensibleProcessor extends BaseProcessor {
         String tenant = context.getTenant();
 
         try {
-            // Check if this mapping uses extensions
-            if (mapping.getExtension() != null) {
-                processWithExtension(context);
-            } else {
-                // No extension, skip processing
-                log.debug("No extension defined for mapping: {}, skipping extensible processing",
-                        mapping.getName());
-            }
+            processWithExtension(context);
         } catch (Exception e) {
             log.error("Error in extensible processor for mapping: {}",
                     context.getMapping().getName(), e);
@@ -84,7 +77,8 @@ public class ExtensibleProcessor extends BaseProcessor {
     public ProcessorExtensionSource<?> getProcessorExtensionSource(String tenant, ExtensionEntry extension) {
         String extensionName = extension.getExtensionName();
         String eventName = extension.getEventName();
-        return extensionInboundRegistry.getExtension(tenant,extensionName).getExtensionEntries().get(eventName).getExtensionImplSource();
+        return extensionInboundRegistry.getExtension(tenant, extensionName).getExtensionEntries().get(eventName)
+                .getExtensionImplSource();
     }
 
     private void logExtensions(String tenant) {

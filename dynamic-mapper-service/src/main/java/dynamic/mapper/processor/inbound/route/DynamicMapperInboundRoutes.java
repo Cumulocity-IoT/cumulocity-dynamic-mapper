@@ -162,6 +162,10 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .when(exchange -> isSnooping(exchange))
                 .to("direct:processSnooping")
 
+                // 1d. Extension processing path
+                .when(exchange -> isExtension(exchange))
+                .to("direct:processExtension")
+
                 // 1b. JSONata extraction path
                 .when(exchange -> isJSONataExtraction(exchange))
                 .to("direct:processJSONataExtraction")
@@ -169,10 +173,6 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 // 1c. SubstitutionAsCode extraction path
                 .when(exchange -> isSubstitutionAsCode(exchange))
                 .to("direct:processSubstitutionAsCodeExtraction")
-
-                // 1d. Extension processing path
-                .when(exchange -> isExtension(exchange))
-                .to("direct:processExtension")
 
                 // 1e. Flow function path
                 .when(exchange -> isFlowFunction(exchange))

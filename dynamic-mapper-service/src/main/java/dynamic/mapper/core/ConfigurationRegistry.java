@@ -61,7 +61,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
-import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
@@ -96,9 +95,6 @@ public class ConfigurationRegistry {
 
     // Structure: < Tenant, < ServiceConfiguration > >
     private Map<String, ServiceConfiguration> serviceConfigurations = new ConcurrentHashMap<>();
-
-    // Structure: < Tenant, < ExtensibleProcessorSource > >
-    private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new ConcurrentHashMap<>();
 
     // Structure: < Tenant, < Device, Client > >
     private Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
@@ -392,18 +388,6 @@ public class ConfigurationRegistry {
         return deviceToClientMapRepresentations.get(tenant);
     }
 
-    public ExtensibleProcessorInbound getExtensibleProcessor(String tenant) {
-        return extensibleProcessors.get(tenant);
-    }
-
-    public void addExtensibleProcessor(String tenant, ExtensibleProcessorInbound extensibleProcessor) {
-        extensibleProcessors.put(tenant, extensibleProcessor);
-    }
-
-    public void removeExtensibleProcessor(String tenant) {
-        extensibleProcessors.remove(tenant);
-    }
-
     public void addMicroserviceCredentials(String tenant, MicroserviceCredentials credentials) {
         microserviceCredentials.put(tenant, credentials);
     }
@@ -411,7 +395,6 @@ public class ConfigurationRegistry {
     public void removeMicroserviceCredentials(String tenant) {
         microserviceCredentials.remove(tenant);
     }
-
 
     // In ConfigurationRegistry
     public CamelContext getCamelContext() {

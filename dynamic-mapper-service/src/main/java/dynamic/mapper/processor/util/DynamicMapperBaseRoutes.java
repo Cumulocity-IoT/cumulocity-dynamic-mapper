@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.SnoopStatus;
+import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 
@@ -84,7 +85,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
             ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
             return context != null &&
                     context.getMapping() != null &&
-                    context.getMapping().getExtension() != null;
+                    (context.getMapping().getExtension() != null ||  MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().getMappingType()));
         } catch (Exception e) {
             log.warn("Error checking extension: {}", e.getMessage());
             return false;

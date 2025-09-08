@@ -76,8 +76,8 @@ public class ExtensionInboundRegistry {
     }
 
     public void deleteExtensions(String tenant) {
-        Map<String, Extension> extensions = getExtensions(tenant);
-        extensions = new HashMap<>();
+        tenantExtensionProcessors.put(tenant, new HashMap<>());
+
     }
 
     public void updateStatusExtension(String tenant, String extName) {
