@@ -19,14 +19,16 @@
  */
 import {
   Component,
+  ElementRef,
   inject,
   Input,
   OnDestroy,
   OnInit,
+  ViewChild,
   ViewEncapsulation
 } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
+import { BottomDrawerRef, ModalLabels, TextareaAutoresizeDirective } from '@c8y/ngx-components';
 import { Subject, takeUntil } from 'rxjs';
 import { Direction, MappingType, MappingTypeDescriptionMap, MappingTypeDescriptions, MappingTypeLabels, TransformationType, TransformationTypeDescriptions, TransformationTypeLabels } from '../../shared';
 
@@ -56,6 +58,8 @@ interface SaveResult {
 })
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
+
+  @ViewChild('descriptionTextarea') descriptionTextarea: ElementRef<HTMLTextAreaElement>;
 
   // Template constants
   readonly labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
@@ -166,6 +170,9 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       mappingTypeDescription: config.description
     });
 
+    // Trigger resize after content change
+    setTimeout(() => this.manualResize(), 0);
+
     // Update snoop control
     if (config.snoopSupported) {
       snoopControl?.enable();
@@ -255,6 +262,14 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
         value: type,
         description: MappingTypeDescriptions[type]
       }));
+  }
+
+  private manualResize() {
+    if (this.descriptionTextarea?.nativeElement) {
+      const element = this.descriptionTextarea.nativeElement;
+      element.style.height = '32px';
+      element.style.height = element.scrollHeight + 'px';
+    }
   }
 
 }
