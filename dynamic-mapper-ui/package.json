@@ -1,6 +1,9 @@
 {
   "name": "dynamic-mapper",
   "version": "6.1.0",
+  "overrides": {
+    "webpack": "5.101.3"
+  },
   "author": "christof.strack@cumulocity.com, stefan.witschel@cumulocity.com",
   "description": "Cumulocity Dynamic Mapper UI to map data from any data source to Cumulocity and vice-versa in a zero-code/low-code way. When using an AI Provider code and mappings can be generated.",
   "repository": {
@@ -20,6 +23,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
     "@ai-sdk/openai": "^1.3.22",
+    "@angular-architects/module-federation": "^19.0.3",
     "@angular/animations": "^19.2.14",
     "@angular/common": "^19.2.14",
     "@angular/compiler": "^19.2.14",
