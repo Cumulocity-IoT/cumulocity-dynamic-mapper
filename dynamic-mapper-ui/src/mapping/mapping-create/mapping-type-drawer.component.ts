@@ -157,8 +157,8 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       .subscribe(expertMode => this.onExpertModeChange(expertMode));
   }
 
-  private onMappingTypeChange(type: MappingType): void {
-    const config = this.getMappingTypeConfig(type);
+  private onMappingTypeChange(type: MappingTypeOption): void {
+    const config = this.getMappingTypeConfig(type.value);
     const snoopControl = this.formGroup.get('snoop');
 
     // Update description
