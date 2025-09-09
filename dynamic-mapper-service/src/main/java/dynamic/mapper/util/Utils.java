@@ -43,35 +43,38 @@ public class Utils {
     public static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
-     * Creates a changed type filter from the new types and return null if types from existingTypeFilter and new types are the same.
+     * Creates a changed type filter from the new types and return null if types
+     * from existingTypeFilter and new types are the same.
      * 
-     * @param newTypes List of new type names (e.g., ["firstType", "secondType", "thirdType"])
-     * @param existingTypeFilter Existing filter string in the form "'type1' or 'type2' or 'type3'"
-     * @return Combined filter string with all unique types joined by " or ", or null if no changes detected
+     * @param newTypes           List of new type names (e.g., ["firstType",
+     *                           "secondType", "thirdType"])
+     * @param existingTypeFilter Existing filter string in the form "'type1' or
+     *                           'type2' or 'type3'"
+     * @return Combined filter string with all unique types joined by " or ", or
+     *         null if no changes detected
      */
     public static String createChangedTypeFilter(List<String> newTypes, String existingTypeFilter) {
         if (newTypes == null) {
             newTypes = List.of();
         }
-        
+
         // Extract existing types from the filter string
         Set<String> existingTypes = parseTypesFromFilter(existingTypeFilter);
-        
+
         // Create a set of all new types for comparison
         Set<String> newTypesSet = new HashSet<>(newTypes);
-        
+
         // If both sets contain the same types, return null (no change)
         if (existingTypes.equals(newTypesSet)) {
             return null;
         }
-    
 
         // Create the new filter string by joining all types with " or "
         return newTypesSet.stream()
                 .map(type -> "'" + type + "'")
                 .collect(Collectors.joining(" or "));
     }
-    
+
     /**
      * Parses type names from a filter string like "'type1' or 'type2' or 'type3'".
      * 
@@ -80,22 +83,38 @@ public class Utils {
      */
     public static Set<String> parseTypesFromFilter(String filterString) {
         Set<String> types = new HashSet<>();
-        
+
         if (filterString == null || filterString.trim().isEmpty()) {
             return types;
         }
-        
+
         // Pattern to match quoted strings like 'type1', 'type2', etc.
         Pattern pattern = Pattern.compile("'([^']*)'");
         Matcher matcher = pattern.matcher(filterString);
-        
+
         while (matcher.find()) {
             String type = matcher.group(1); // Get the content inside the quotes
             if (!type.trim().isEmpty()) {
                 types.add(type);
             }
         }
-        
+
         return types;
+    }
+
+    public static boolean isNodeTrue(Object node) {
+        // Case 1: Direct boolean value check
+        if (node instanceof Boolean) {
+            return (Boolean) node;
+        }
+
+        // Case 2: String value that can be converted to boolean
+        if (node instanceof String) {
+            String text = ((String) node).trim().toLowerCase();
+            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
+            // Add more string variations if needed
+        }
+
+        return false;
     }
 }

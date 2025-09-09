@@ -107,6 +107,7 @@ import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
+import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.EventBinary;
 import dynamic.mapper.model.Extension;
 import dynamic.mapper.model.ExtensionEntry;
@@ -191,12 +192,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
         this.configurationRegistry = configurationRegistry;
     }
-
-    public static final String MAPPING_FRAGMENT = "d11r_mapping";
-
-    public static final String CONNECTOR_FRAGMENT = "d11r_connector";
-    public static final String DEPLOYMENT_MAP_FRAGMENT = "d11r_deploymentMap";
-    public static final String DEVICE_TO_CLIENT_MAP_FRAGMENT = "d11r_deviceToClientMap";
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
@@ -1014,7 +1009,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public ManagedObjectRepresentation initializeMapperServiceObject(String tenant) {
+    public ManagedObjectRepresentation initializeMapperServiceRepresentation(String tenant) {
         ExternalIDRepresentation mapperServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
                 new ID(null, MapperServiceRepresentation.AGENT_ID),
                 null);
@@ -1038,13 +1033,42 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             amo.set(agentFragments, "c8y_Agent");
             // avoid that Dynamic Mapper appears as device and can be accidentally deleted
             // amo.set(new IsDevice());
-            amo.setProperty(C8YAgent.MAPPING_FRAGMENT,
+            amo.setProperty(MapperServiceRepresentation.MAPPING_FRAGMENT,
                     new ArrayList<>());
             amo = inventoryApi.create(amo, null);
             log.info("{} - Agent has been created with ID {}", tenant, amo.getId());
             ExternalIDRepresentation externalAgentId = identityApi.create(amo,
                     new ID("c8y_Serial",
                             MapperServiceRepresentation.AGENT_ID),
+                    null);
+            log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
+        }
+        return amo;
+    }
+
+    public ManagedObjectRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
+        ExternalIDRepresentation deviceToClientMapRepresentation = resolveExternalId2GlobalId(tenant,
+                new ID(null, DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID),
+                null);
+        ;
+        ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
+
+        if (deviceToClientMapRepresentation != null) {
+            amo = inventoryApi.get(deviceToClientMapRepresentation.getManagedObject().getId());
+            log.info("{} - Dynamic Mapper Device To Client Map with external ID [{}] already exists, sourceId: {}",
+                    tenant,
+                    DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID,
+                    amo.getId().getValue());
+        } else {
+            amo.setName(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_NAME);
+            amo.setType(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_TYPE);
+            amo.setProperty(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT,
+                    new HashMap<>());
+            amo = inventoryApi.create(amo, null);
+            log.info("{} - Dynamic Mapper Device To Client Map has been created with ID {}", tenant, amo.getId());
+            ExternalIDRepresentation externalAgentId = identityApi.create(amo,
+                    new ID("c8y_Serial",
+                            DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID),
                     null);
             log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
         }

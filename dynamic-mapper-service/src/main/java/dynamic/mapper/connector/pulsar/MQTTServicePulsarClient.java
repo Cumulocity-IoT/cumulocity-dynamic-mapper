@@ -26,10 +26,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.catalina.Engine;
 import org.apache.pulsar.client.api.ClientBuilder;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Producer;
@@ -473,7 +471,13 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         // In Cumulocity MQTT Service model, we don't manage individual subscriptions
         // The platform topic consumer remains active
-        log.info("{} - Unsubscription registered for topic: [{}]", tenant, topic);
+        log.info("{} - Unsubscribing registered for topic: [{}]", tenant, topic);
+    }
+
+
+    @Override
+    public void connectorSpecificHousekeeping(String tenant) {
+        //mappingService.sendDeviceToClientMap(tenant);
     }
 
     @Override
@@ -537,7 +541,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
-                    .property(PULSAR_PROPERTY_CLIENT, configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId())) 
+                    .property(PULSAR_PROPERTY_CLIENT,
+                            configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
                     .sendAsync()
                     .exceptionally(throwable -> {
                         log.debug("{} - Failed to send AT_MOST_ONCE message (expected): {}",
@@ -549,7 +554,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
-                    .property(PULSAR_PROPERTY_CLIENT, configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId())) 
+                    .property(PULSAR_PROPERTY_CLIENT,
+                            configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
                     .send();
         }
 
@@ -560,7 +566,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     tenant, qos, originalMqttTopic, towardsDeviceTopic, context.getMapping().name, connectorName);
         }
     }
-
 
     private static String getSubscriptionName(String identifier, String suffix) {
         return "CUMULOCITY_MQTT_SERVICE_PULSAR" + identifier + suffix;

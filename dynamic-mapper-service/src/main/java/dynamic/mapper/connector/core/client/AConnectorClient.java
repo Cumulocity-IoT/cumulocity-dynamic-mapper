@@ -321,7 +321,7 @@ public abstract class AConnectorClient {
     }
 
     public void submitHousekeeping() {
-        log.debug("{} - Starting housekeeping...", tenant);
+        log.debug("{} - Starting housekeeping for {} ...", tenant, connectorName);
         housekeepingExecutor.scheduleAtFixedRate(
                 this::runHousekeeping,
                 0,
@@ -741,6 +741,7 @@ public abstract class AConnectorClient {
     private void performHousekeepingTasks() throws Exception {
         Instant now = Instant.now();
         logHousekeepingStatus(now);
+        connectorSpecificHousekeeping(tenant);
 
         mappingService.cleanDirtyMappings(tenant);
         mappingService.sendMappingStatus(tenant);
@@ -748,6 +749,8 @@ public abstract class AConnectorClient {
         updateConnectorStatusIfNeeded();
         monitorSubscriptions();
     }
+
+    protected abstract void connectorSpecificHousekeeping(String tenant);
 
     private void logHousekeepingStatus(Instant now) {
         if (Duration.between(start, now).getSeconds() < 1800) {

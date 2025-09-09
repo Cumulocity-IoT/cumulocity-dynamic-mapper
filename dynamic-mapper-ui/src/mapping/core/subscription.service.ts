@@ -18,12 +18,11 @@
  * @authors Christof Strack
  */
 
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { FetchClient, IIdentified } from '@c8y/client';
-import { Observable, BehaviorSubject, Subject } from 'rxjs';
+import { Observable, BehaviorSubject } from 'rxjs';
 import {
   BASE_URL,
-  PATH_SUBSCRIPTIONS_ENDPOINT,
   PATH_SUBSCRIPTION_ENDPOINT,
   SharedService
 } from '../../shared';
@@ -73,7 +72,7 @@ interface SubscriptionServiceConfig {
 @Injectable({
   providedIn: 'root'
 })
-export class SubscriptionService implements OnDestroy {
+export class SubscriptionService  {
   // Configuration
   private readonly config: SubscriptionServiceConfig = {
     enableRetry: true,
@@ -83,18 +82,11 @@ export class SubscriptionService implements OnDestroy {
 
   // Loading states
   private readonly loadingStates = new Map<string, BehaviorSubject<boolean>>();
-  private readonly unsubscribe$ = new Subject<void>();
 
   constructor(
     private readonly client: FetchClient,
     private readonly sharedService: SharedService
   ) { }
-
-  ngOnDestroy(): void {
-    this.unsubscribe$.next();
-    this.unsubscribe$.complete();
-    this.loadingStates.clear();
-  }
 
   // ===== SUBSCRIPTION CRUD OPERATIONS =====
 
@@ -106,7 +98,7 @@ export class SubscriptionService implements OnDestroy {
   ): Promise<NotificationSubscriptionResponse> {
     // this.validateSubscriptionRequest(request, SubscriptionType.DEVICE);
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'updateSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
@@ -137,7 +129,7 @@ export class SubscriptionService implements OnDestroy {
   ): Promise<NotificationSubscriptionResponse> {
     // this.validateSubscriptionRequest(request, SubscriptionType.GROUP);
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'updateSubscriptionByDeviceGroup',
       async () => {
         const response = await this.client.fetch(
@@ -168,7 +160,7 @@ export class SubscriptionService implements OnDestroy {
   ): Promise<NotificationSubscriptionResponse> {
     // this.validateSubscriptionRequest(request, SubscriptionType.TYPE);
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'updateSubscriptionByDeviceType',
       async () => {
         const response = await this.client.fetch(
@@ -199,7 +191,7 @@ export class SubscriptionService implements OnDestroy {
   ): Promise<NotificationSubscriptionResponse> {
     // this.validateSubscriptionRequest(request);
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'createSubscription',
       async () => {
         const response = await this.client.fetch(
@@ -230,7 +222,7 @@ export class SubscriptionService implements OnDestroy {
       throw new ValidationError('Device ID is required for deletion');
     }
 
-    await this.handleSubscriptionOperation(
+    await this.handleOperation(
       'deleteSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
@@ -260,7 +252,7 @@ export class SubscriptionService implements OnDestroy {
       throw new ValidationError('Group ID is required for deletion');
     }
 
-    await this.handleSubscriptionOperation(
+    await this.handleOperation(
       'deleteSubscriptionDeviceGroup',
       async () => {
         const response = await this.client.fetch(
@@ -294,11 +286,11 @@ export class SubscriptionService implements OnDestroy {
       return null;
     }
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'getSubscriptionDevice',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
           {
             headers: {
               'content-type': 'application/json'
@@ -326,11 +318,11 @@ export class SubscriptionService implements OnDestroy {
       return null;
     }
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'getSubscriptionByDeviceGroup',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}/group`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/group`,
           {
             headers: {
               'content-type': 'application/json'
@@ -358,11 +350,11 @@ export class SubscriptionService implements OnDestroy {
       return null;
     }
 
-    return this.handleSubscriptionOperation(
+    return this.handleOperation(
       'getSubscriptionByDeviceType',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}/type`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/type`,
           {
             headers: {
               'content-type': 'application/json'
@@ -400,6 +392,8 @@ export class SubscriptionService implements OnDestroy {
       types: types.status === 'fulfilled' ? types.value : null
     };
   }
+
+
 
   // ===== UTILITY METHODS =====
 
@@ -527,7 +521,7 @@ export class SubscriptionService implements OnDestroy {
   /**
    * Handles subscription operations with error handling, loading states, and retry logic
    */
-  private async handleSubscriptionOperation<T>(
+  private async handleOperation<T>(
     operationName: string,
     operation: () => Promise<T>
   ): Promise<T> {

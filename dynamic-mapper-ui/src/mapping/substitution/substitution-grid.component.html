@@ -23,13 +23,16 @@
   <table class="table table-condensed m-b-0">
     <thead style="position: sticky; top: 0; z-index: 10; background-color: white;">
       <tr>
-        <th class="bg-level-1"></th>
+        <th class="bg-level-1" style="width: 2%"></th>
+        <th class="bg-level-1" style="width: 2%">#</th>
         <th class="bg-level-1" style="width: 67%">
           <div class="d-flex">
-            Substitution [ pathSource &#8212;> pathTarget ]
+            Substitutions [ pathSource &#8212;> pathTarget ]
             <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       substitutionTemplateHelp
     }}" placement="bottom" triggers="focus" type="button"></button>
+            <span>&nbsp; selected # {{settings?.selectedSubstitutionIndex < 0? 0 : settings?.selectedSubstitutionIndex
+                }} of # {{mapping.substitutions?.length}} </span>
           </div>
         </th>
         <th class="bg-level-1" style="width: 12.5%">Expand as array</th>
@@ -39,16 +42,19 @@
     </thead>
   </table>
 
-  <div style="max-height: 160px; overflow-y: auto; border-top: 0px solid #ddd;">
+  <div style="max-height: 160px; overflow-y: scroll; border-top: 0px solid #ddd;">
     <table class="table table-condensed" style="margin-bottom: 0;">
       <tbody>
         <tr *ngFor="let sub of mapping.substitutions; let i = index" id="{{ 'sub-' + id + '-' + i }}">
-          <td width="4%">
+          <td width="2%">
             <label class="c8y-radio" title="Checkbox">
               <input type="radio" (click)="onSubstitutionSelect(i)"
                 [checked]="settings.selectedSubstitutionIndex == i" />
               <span></span>
             </label>
+          </td>
+          <td width="2%">
+            {{ i }}
           </td>
           <td>
             <span *ngIf="!sub['registeredType']" class="text-12">{{

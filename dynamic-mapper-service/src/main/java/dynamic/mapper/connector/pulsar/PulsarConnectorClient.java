@@ -810,6 +810,10 @@ public class PulsarConnectorClient extends AConnectorClient {
         }
     }
 
+    @Override
+    public void connectorSpecificHousekeeping(String tenant) {
+    }
+
     /**
      * Handles publish errors with connection recovery
      */

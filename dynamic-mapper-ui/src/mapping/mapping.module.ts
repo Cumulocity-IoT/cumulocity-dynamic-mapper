@@ -62,18 +62,22 @@ import { DeviceSelectorSubscription3Component } from './subscription/device-sele
 import { DeviceSelectorSubscription4Component } from './subscription/device-selector4/device-selector-subscription4.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
+import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
+import { ClientRelationStepperComponent } from './client-relation/client-relation-stepper.component';
 
 @NgModule({
   declarations: [
     MappingComponent,
     MappingStepperComponent,
     SnoopingStepperComponent,
+    ClientRelationStepperComponent,
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
     DeviceSelectorSubscriptionComponent,
     DeviceSelectorSubscription2Component,
     DeviceSelectorSubscription3Component,
     DeviceSelectorSubscription4Component,
+    DeviceClientMapComponent,
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,
@@ -107,7 +111,7 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
     EditorComponent,
     DeviceGridModule,
     BrowserAnimationsModule,
-     CollapseModule.forRoot() ,
+    CollapseModule.forRoot(),
     MonacoEditorMarkerValidatorDirective
   ],
   exports: [],
@@ -134,9 +138,16 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
         feature: featureResolver
       }
     }),
-        hookRoute({
+    hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/dynamic`,
       component: MappingSubscriptionComponent,
+      resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
+      component: DeviceClientMapComponent,
       resolve: {
         feature: featureResolver
       }

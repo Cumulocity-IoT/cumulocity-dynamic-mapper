@@ -18,49 +18,31 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
+package dynamic.mapper.model;
 
-package dynamic.mapper.processor.model;
-
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
-
-import java.util.Map;
-
-import dynamic.mapper.model.API;
-
-import jakarta.validation.constraints.NotNull;
-
-@Getter
-@Setter
-@NoArgsConstructor
-@ToString
-public class C8YMessage {
-    @NotNull
-    private String sourceId; 
-
-    @NotNull
-    private String deviceName; 
-
-    @NotNull
-    private String messageId; 
-
-    @NotNull
-    private String payload; 
-
-    @NotNull
-    private Map parsedPayload; 
+public class MapEntry {
+    private String id;
+    private String client;
     
-    @NotNull
-    private API api; 
-
-    @NotNull
-    private String tenant; 
-
-    @NotNull
-    private boolean sendPayload;
-
-    @NotNull
-    private String operation;
+    public MapEntry(String id, String client) {
+        this.id = id;
+        this.client = client;
+    }
+    
+    // Getters and setters
+    public String getId() {
+        return id;
+    }
+    
+    public void setId(String id) {
+        this.id = id;
+    }
+    
+    public String getClient() {
+        return client;
+    }
+    
+    public void setClient(String client) {
+        this.client = client;
+    }
 }

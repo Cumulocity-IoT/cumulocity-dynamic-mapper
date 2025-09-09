@@ -109,15 +109,23 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Outbound'),
       icon: 'swipe-left',
       path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`,
-      priority: 380,
+      priority: 390,
       preventDuplicates: true
     }),
-    subscriptionStaticNode: new NavigatorNode({
+    subscriptionNode: new NavigatorNode({
       parent: gettext('Mapping'),
       label: gettext('Subscription outbound'),
       icon: 'mail',
       path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/static`,
       priority: 380,
+      preventDuplicates: true
+    }),
+    relationNode: new NavigatorNode({
+      parent: gettext('Mapping'),
+      label: gettext('Client relation outbound'),
+      icon: 'relay-home-automation',
+      path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
+      priority: 370,
       preventDuplicates: true
     }),
     monitoringNode: new NavigatorNode({

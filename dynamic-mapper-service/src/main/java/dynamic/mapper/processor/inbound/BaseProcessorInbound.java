@@ -277,7 +277,8 @@ public abstract class BaseProcessorInbound<T> {
                     context.setSourceId(sourceId.getManagedObject().getId().getValue());
                     // cache the mapping of device to client ID
                     if (context.getClient() != null) {
-                        configurationRegistry.addClient(tenant, context.getSourceId(), context.getClient());
+                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                                context.getSourceId());
                     }
                 }
                 ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(tenant,
@@ -348,7 +349,8 @@ public abstract class BaseProcessorInbound<T> {
                 context.setSourceId(sourceId.value.toString());
                 // cache the mapping of device to client ID
                 if (context.getClient() != null) {
-                    configurationRegistry.addClient(tenant, sourceId.value.toString(), context.getClient());
+                    configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                            sourceId.value.toString());
                 }
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             }
@@ -361,7 +363,7 @@ public abstract class BaseProcessorInbound<T> {
             context.setSourceId(sourceId.value.toString());
             // cache the mapping of device to client ID
             if (context.getClient() != null) {
-                configurationRegistry.addClient(tenant, sourceId.value.toString(), context.getClient());
+                configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(), sourceId.value.toString());
             }
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
@@ -481,7 +483,7 @@ public abstract class BaseProcessorInbound<T> {
             try {
                 var expr = jsonata(mappingFilter);
                 Object extractedSourceContent = expr.evaluate(payloadObjectNode);
-                if (!isNodeTrue(extractedSourceContent)) {
+                if (!Utils.isNodeTrue(extractedSourceContent)) {
                     log.info("{} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter,
                             payload);
                     context.setIgnoreFurtherProcessing(true);
@@ -491,21 +493,5 @@ public abstract class BaseProcessorInbound<T> {
                         payload, e);
             }
         }
-    }
-
-    private boolean isNodeTrue(Object node) {
-        // Case 1: Direct boolean value check
-        if (node instanceof Boolean) {
-            return (Boolean) node;
-        }
-
-        // Case 2: String value that can be converted to boolean
-        if (node instanceof String) {
-            String text = ((String) node).trim().toLowerCase();
-            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
-            // Add more string variations if needed
-        }
-
-        return false;
     }
 }

@@ -393,6 +393,10 @@ public class KafkaClient extends AConnectorClient {
     }
 
     @Override
+    public void connectorSpecificHousekeeping(String tenant) {
+    }
+
+    @Override
     public void publishMEAO(ProcessingContext<?> context) {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();

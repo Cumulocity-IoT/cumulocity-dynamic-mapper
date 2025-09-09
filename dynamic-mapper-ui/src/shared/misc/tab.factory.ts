@@ -30,7 +30,7 @@ export class MappingTabFactory implements TabFactory {
   constructor(
     public router: Router,
     private sharedService: SharedService
-  ) {}
+  ) { }
 
   async get() {
     // console.log("MappingTabFactory",this.router.url, this.router.url.match(/c8y-pkg-dynamic-mapper/g));

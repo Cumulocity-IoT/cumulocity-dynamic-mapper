@@ -232,6 +232,10 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
+    public void connectorSpecificHousekeeping(String tenant) {
+    }
+
+    @Override
     public List<Direction> supportedDirections() {
         return new ArrayList<>(Arrays.asList(Direction.INBOUND));
     }

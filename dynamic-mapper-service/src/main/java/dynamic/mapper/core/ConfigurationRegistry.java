@@ -55,6 +55,7 @@ import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
+import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MapperServiceRepresentation;
@@ -66,7 +67,6 @@ import dynamic.mapper.processor.inbound.FlatFileProcessorInbound;
 import dynamic.mapper.processor.inbound.HexProcessorInbound;
 import dynamic.mapper.processor.inbound.JSONProcessorInbound;
 import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.outbound.BaseProcessorOutbound;
 import dynamic.mapper.processor.outbound.CodeBasedProcessorOutbound;
 import dynamic.mapper.processor.outbound.DispatcherOutbound;
@@ -75,6 +75,7 @@ import dynamic.mapper.processor.processor.fixed.InternalProtobufProcessor;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
+import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -116,9 +117,11 @@ public class ConfigurationRegistry {
     // Structure: < Tenant, < ExtensibleProcessorSource > >
     private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new ConcurrentHashMap<>();
 
-    // TODO persist cache as DeviceToClientRepresentation
     // Structure: < Tenant, < Device, Client > >
     private Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
+
+    // Structure: < Tenant, Id ManagedObject Map >
+    private Map<String, String> deviceToClientMapRepresentations = new ConcurrentHashMap<>();
 
     @Getter
     private C8YAgent c8yAgent;
@@ -309,11 +312,20 @@ public class ConfigurationRegistry {
 
     public MapperServiceRepresentation initializeMapperServiceRepresentation(String tenant) {
         ManagedObjectRepresentation mapperServiceMOR = c8yAgent
-                .initializeMapperServiceObject(tenant);
+                .initializeMapperServiceRepresentation(tenant);
         MapperServiceRepresentation mapperServiceRepresentation = objectMapper
                 .convertValue(mapperServiceMOR, MapperServiceRepresentation.class);
         addMapperServiceRepresentation(tenant, mapperServiceRepresentation);
         return mapperServiceRepresentation;
+    }
+
+    public DeviceToClientMapRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
+        ManagedObjectRepresentation mapperServiceMOR = c8yAgent
+                .initializeDeviceToClientMapRepresentation(tenant);
+        DeviceToClientMapRepresentation deviceToClientMapRepresentation = objectMapper
+                .convertValue(mapperServiceMOR, DeviceToClientMapRepresentation.class);
+        addDeviceToClientMapRepresentation(tenant, deviceToClientMapRepresentation);
+        return deviceToClientMapRepresentation;
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {
@@ -401,6 +413,25 @@ public class ConfigurationRegistry {
 
     public void removeMapperServiceRepresentation(String tenant) {
         mapperServiceRepresentations.remove(tenant);
+    }
+
+    private void addDeviceToClientMapRepresentation(String tenant,
+            DeviceToClientMapRepresentation deviceToClientMapRepresentation) {
+        deviceToClientMapRepresentations.put(tenant, deviceToClientMapRepresentation.getId());
+        Map<String, String> clientToDeviceMap = new ConcurrentHashMap<>();
+        if (deviceToClientMapRepresentation.getDeviceToClientMap() != null) {
+            log.debug("{} - Initializing Device To Client Map: {}, {} ", tenant,
+                    deviceToClientMapRepresentation.getDeviceToClientMap(),
+                    (deviceToClientMapRepresentation.getDeviceToClientMap() == null
+                            || deviceToClientMapRepresentation.getDeviceToClientMap().size() == 0 ? 0
+                                    : deviceToClientMapRepresentation.getDeviceToClientMap().size()));
+            clientToDeviceMap = deviceToClientMapRepresentation.getDeviceToClientMap();
+        }
+        deviceToClientPerTenant.put(tenant, clientToDeviceMap);
+    }
+
+    public String getDeviceToClientMapId(String tenant) {
+        return deviceToClientMapRepresentations.get(tenant);
     }
 
     public ExtensibleProcessorInbound getExtensibleProcessor(String tenant) {
@@ -494,13 +525,28 @@ public class ConfigurationRegistry {
         return hostAccess;
     }
 
-    public void addClient(String tenant, String deviceId, String clientId) {
+    public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
         deviceToClientPerTenant.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
                 .put(deviceId, clientId);
         log.debug("Added client mapping for tenant {}: device {} -> client {}", tenant, deviceId, clientId);
     }
 
-    public void removeClient(String tenant, String deviceId) {
+    public void addOrUpdateClientRelations(String tenant, String clientId, List<String> deviceIds) {
+        if (deviceIds == null || deviceIds.isEmpty()) {
+            log.debug("No device IDs provided for tenant {}, client {}", tenant, clientId);
+            return;
+        }
+
+        Map<String, String> tenantMappings = deviceToClientPerTenant.computeIfAbsent(tenant,
+                k -> new ConcurrentHashMap<>());
+
+        deviceIds.forEach(deviceId -> tenantMappings.put(deviceId, clientId));
+
+        log.debug("Added {} client mappings for tenant {}: devices {} -> client {}",
+                deviceIds.size(), tenant, deviceIds, clientId);
+    }
+
+    public void removeClientRelation(String tenant, String deviceId) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
         if (tenantMappings != null) {
             String removedClientId = tenantMappings.remove(deviceId);
@@ -541,7 +587,7 @@ public class ConfigurationRegistry {
         }
     }
 
-    public Map<String, String> getAllClientMappings(String tenant) {
+    public Map<String, String> getAllClientRelations(String tenant) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
         return tenantMappings != null ? new HashMap<>(tenantMappings) : new HashMap<>();
     }
@@ -570,12 +616,12 @@ public class ConfigurationRegistry {
                 .collect(Collectors.toList());
     }
 
-    public int getClientMappingCount(String tenant) {
+    public int getClientRelationCount(String tenant) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
         return tenantMappings != null ? tenantMappings.size() : 0;
     }
 
-    public boolean hasClientMapping(String tenant, String deviceId) {
+    public boolean hasClientRelation(String tenant, String deviceId) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
         return tenantMappings != null && tenantMappings.containsKey(deviceId);
     }
