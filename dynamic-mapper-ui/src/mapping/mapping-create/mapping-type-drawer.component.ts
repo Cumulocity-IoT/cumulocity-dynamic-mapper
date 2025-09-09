@@ -112,11 +112,13 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.bottomDrawerRef.close();
   }
 
+  // Update the onSave method to extract the enum value
   onSave(): void {
     if (!this.formGroup.valid) return;
 
     const formValue = this.formGroup.getRawValue();
-    const selectedMappingType = formValue.mappingType;
+    const selectedMappingTypeOption = formValue.mappingType as MappingTypeOption;
+    const selectedMappingType = selectedMappingTypeOption.value;
     const snoopSupported = this.getMappingTypeConfig(selectedMappingType).snoopSupported;
 
     this._save({
@@ -130,11 +132,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   getTransformationTypeDescription(): string {
     const currentType = this.formGroup.get('transformationType')?.value;
     return currentType ? TransformationTypeDescriptions[currentType] : '';
-  }
-
-  getMappingTypeDescription(): string {
-    const currentType = this.formGroup.get('mappingType')?.value;
-    return currentType ? MappingTypeDescriptions[currentType] : '';
   }
 
   private initializeForm(): void {
@@ -159,47 +156,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.formGroup.get('expertMode')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(expertMode => this.onExpertModeChange(expertMode));
-  }
-
-  private onMappingTypeChange(type: MappingTypeOption): void {
-    const config = this.getMappingTypeConfig(type.value);
-    const snoopControl = this.formGroup.get('snoop');
-
-    // Update description
-    this.formGroup.patchValue({
-      mappingTypeDescription: config.description
-    });
-
-    // Trigger resize after content change
-    setTimeout(() => this.manualResize(), 0);
-
-    // Update snoop control
-    if (config.snoopSupported) {
-      snoopControl?.enable();
-    } else {
-      snoopControl?.disable();
-    }
-
-    // Update transformation type options
-    this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
-  }
-
-  private onExpertModeChange(expertMode: boolean): void {
-    this.showTransformationType = expertMode;
-    this.updateDerivedState();
-
-    const transformationTypeControl = this.formGroup.get('transformationType');
-
-    if (expertMode) {
-      transformationTypeControl?.enable();
-    } else {
-      transformationTypeControl?.disable();
-    }
-
-    // Update transformation type options based on current mapping type
-    const currentMappingType = this.formGroup.get('mappingType')?.value;
-    const config = this.getMappingTypeConfig(currentMappingType);
-    this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
   }
 
   private updateDerivedState(): void {
@@ -270,6 +226,79 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       element.style.height = '32px';
       element.style.height = element.scrollHeight + 'px';
     }
+  }
+
+  private onMappingTypeChange(selectedOption: MappingTypeOption): void {
+    // The selectedOption is always a MappingTypeOption object
+    const mappingType = selectedOption.value;
+    const config = this.getMappingTypeConfig(mappingType);
+    const snoopControl = this.formGroup.get('snoop');
+
+    // Update description
+    this.formGroup.patchValue({
+      mappingTypeDescription: config.description
+    });
+
+    // Trigger resize after content change
+    setTimeout(() => this.manualResize(), 0);
+
+    // Update snoop control
+    if (config.snoopSupported) {
+      snoopControl?.enable();
+    } else {
+      snoopControl?.disable();
+      snoopControl?.patchValue(false);
+    }
+
+    // Update transformation type options
+    this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
+  }
+
+  private onExpertModeChange(expertMode: boolean): void {
+    this.showTransformationType = expertMode;
+
+    const transformationTypeControl = this.formGroup.get('transformationType');
+    const mappingTypeControl = this.formGroup.get('mappingType');
+
+    // The form control value is always a MappingTypeOption object
+    const currentMappingTypeOption = mappingTypeControl?.value as MappingTypeOption;
+    const currentMappingType = currentMappingTypeOption?.value;
+
+    if (expertMode) {
+      transformationTypeControl?.enable();
+    } else {
+      transformationTypeControl?.disable();
+
+      const patchValues: any = {
+        transformationType: this.DEFAULT_TRANSFORMATION_TYPE
+      };
+
+      // Reset mapping type if current selection is not available in non-expert mode
+      if (currentMappingType && this.EXPERT_MODE_EXCLUDED_TYPES.includes(currentMappingType)) {
+        // Find the default mapping type option object from the filtered list
+        const defaultOption = this.getFilteredMappingTypes().find(
+          option => option.value === this.DEFAULT_MAPPING_TYPE
+        );
+        patchValues.mappingType = defaultOption;
+      }
+
+      this.formGroup.patchValue(patchValues);
+    }
+
+    this.updateDerivedState();
+
+    // Update transformation type options based on current mapping type
+    const finalMappingTypeOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
+    const finalMappingType = finalMappingTypeOption?.value;
+    const config = this.getMappingTypeConfig(finalMappingType);
+    this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
+  }
+
+  // Update these methods to handle the object properly
+  getMappingTypeDescription(): string {
+    const currentOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
+    const currentType = currentOption?.value;
+    return currentType ? MappingTypeDescriptions[currentType] : '';
   }
 
 }

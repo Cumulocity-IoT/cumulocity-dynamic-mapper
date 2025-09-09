@@ -53,9 +53,9 @@
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
             <c8y-select [items]="filteredMappingTypes" formControlName="mappingType" labelProperty="label"
-              valueProperty="value" searchHasFocus="false" aria-label="Payload Format">
+              valueProperty="value" [insideClick]="false" [autoClose]="true"
+              aria-label="Payload Format">
             </c8y-select>
-            <!-- Optional: Show description of selected mapping type -->
             <small class="text-muted" *ngIf="formGroup.get('mappingType')?.value">
               {{ getMappingTypeDescription() }}
             </small>
@@ -84,7 +84,7 @@
           <!-- Description -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Description Payload Format' | translate }}</label>
-            <textarea #descriptionTextarea  readonly c8y-textarea-autoresize formControlName="mappingTypeDescription"
+            <textarea #descriptionTextarea readonly c8y-textarea-autoresize formControlName="mappingTypeDescription"
               class="form-control">
             </textarea>
           </c8y-form-group>
