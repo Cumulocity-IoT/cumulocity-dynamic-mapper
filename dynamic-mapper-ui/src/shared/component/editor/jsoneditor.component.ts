@@ -17,6 +17,7 @@
  *
  * @authors Christof Strack
  */
+
 import {
   Component,
   ElementRef,
@@ -52,6 +53,7 @@ import {
 } from 'vanilla-jsoneditor';
 
 import type { JSONPath } from 'immutable-json-patch'
+import { parseJSONPathCustom, stringifyJSONPathCustom } from './utils';
 
 @Component({
   selector: 'd11r-mapping-json-editor2',
@@ -225,11 +227,13 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     // ignore emitting change events when the path was set programmatically to avoid circles
     if (!c?.triggeredSelection) {
       if (isKeySelection(selection) || isValueSelection(selection)) {
-        const st = stringifyJSONPath((selection as any).path);
+        // const st = stringifyJSONPath((selection as any).path);
+        const st = stringifyJSONPathCustom((selection as any).path);
         this.pathChanged.emit(st);
         // console.log('Selected path:', st);
       } else if (isMultiSelection(selection)) {
-        const st = stringifyJSONPath((selection as any).anchorPath);
+        // const st = stringifyJSONPath((selection as any).anchorPath);
+        const st = stringifyJSONPathCustom((selection as any).anchorPath);
         this.pathChanged.emit(st);
         // console.log('Selected anchorPath:', st);
       }
@@ -251,7 +255,8 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
       return regex.test(str);
     }
     if (pathString && !containsSpecialChars(pathString)) {
-      const path = parseJSONPath(pathString);
+      //const path = parseJSONPath(pathString);
+      const path = parseJSONPathCustom(pathString);
       // console.log('Set selection to path:', pathString, path);
       const selection: any = createMultiSelection(path, path);
       // const selection: any = createKeySelection(path, false);
@@ -289,4 +294,5 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   updateOptions(opts) {
     this.editor?.updateProps(opts)
   }
+
 }

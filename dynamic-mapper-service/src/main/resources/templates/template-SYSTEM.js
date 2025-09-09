@@ -9,6 +9,7 @@
 
 const ArrayList = Java.type('java.util.ArrayList');
 const HashMap = Java.type('java.util.HashMap');
+const HashSet = Java.type('java.util.HashSet');
 
 /*
  * @class SubstitutionResult
@@ -87,6 +88,7 @@ const RepairStrategy = Java.type('dynamic.mapper.processor.model.RepairStrategy'
  *   @param {string} ctx.getGenericDeviceIdentifier() - Name of device identifier, i.e. either "_IDENTITY_.externalId" or "_IDENTITY_.c8ySourceId" 
  *   @param {string} ctx.getExternalDeviceIdentifier() - Device identifier used in external systems
  *   @param {string} ctx.getC8YDeviceIdentifier() - Cumulocity platform device identifier
+ *   @param {string} ctx.getTopic() - The publish/ subscribe topic
  * 
  * @returns {SubstitutionResult} A result object populated using method addSubstitution(result, key, value), containing:
  *   @returns {Object.<string, SubstitutionValue>} substitutions - Key-value pairs of substitution values
@@ -103,6 +105,44 @@ function addSubstitution(result, key, value) {
 
     // Add the value to the list
     valuesList.add(value);
+}
+
+/*
+ * Adds an alarm message to the substitution result.
+ * 
+ * This function adds an alarm message to the substitution result that can be used
+ * to indicate issues, warnings, or other notable conditions encountered during
+ * the mapping process. The alarm messages are stored in a set to avoid duplicates
+ * and can be processed by the mapping system accordingly.
+ * 
+ * @function addAlarm
+ * @param {SubstitutionResult} result - The substitution result object to add the alarm to
+ * @param {string} message - The alarm message describing the condition or issue
+ * 
+ * @example
+ * // Add an alarm for a missing required field
+ * addAlarm(result, "Temperature sensor data is missing from payload");
+ * 
+ * @example
+ * // Add an alarm for out-of-range values
+ * addAlarm(result, "Temperature value 150°C exceeds normal operating range");
+ * 
+ * @example
+ * // Multiple calls with the same message will only store it once
+ * addAlarm(result, "Duplicate sensor reading detected");
+ * addAlarm(result, "Duplicate sensor reading detected"); // Won't create duplicate
+ */
+function addAlarm(result, message) {
+    let alarmSet = result.getAlarms();
+
+    // If the set doesn't exist, create it
+    if (alarmSet === null || alarmSet === undefined) {
+        alarmSet = new HashSet();
+        result.setAlarms(alarmSet);
+    }
+
+    // Add the message to the set (duplicates will be automatically handled by Set)
+    alarmSet.add(message);
 }
 
 /*

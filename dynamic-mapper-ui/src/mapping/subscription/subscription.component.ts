@@ -19,6 +19,7 @@
  */
 import {
   Component,
+  inject,
   OnDestroy,
   OnInit,
   ViewChild,
@@ -49,9 +50,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
-import { DeploymentMapEntry, SharedService, StepperConfiguration } from '../../shared';
+import { DeploymentMapEntry, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { C8YNotificationSubscription, Device } from '../shared/mapping.model';
+import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
+import { SubscriptionService } from '../core/subscription.service';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
@@ -64,36 +66,48 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
 
   constructor(
-    private mappingService: MappingService,
-    private shareService: SharedService,
-    private alertService: AlertService,
-    private bsModalService: BsModalService,
-    private router: Router,
-    private route: ActivatedRoute
   ) {
     // console.log('constructor');
     const href = this.router.url;
-    this.stepperConfiguration.direction = href.match(
-      /c8y-pkg-dynamic-mapper\/node1\/mappings\/inbound/g
-    )
-      ? Direction.INBOUND
-      : Direction.OUTBOUND;
+    // this.static = href.match(
+    //   /c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/static/g
+    // )
+    //   ? true
+    //   : false;
 
-    this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
-    this.loadSubscriptions();
+    const pathMatch = href.match(/c8y-pkg-dynamic-mapper\/node1\/mappings\/subscription\/(static|dynamic|deviceToClientMap)/);
+    this.path = pathMatch ? pathMatch[1] : null;
+
+    this.loadSubscriptionDevice();
+    this.loadSubscriptionByDeviceGroup();
+    this.loadSubscriptionByDeviceType();
   }
 
-  showConfigSubscription: boolean = false;
+  private mappingService = inject(MappingService);
+  private subscriptionService = inject(SubscriptionService);
+  private sharedService = inject(SharedService);
+  private alertService = inject(AlertService);
+  private bsModalService = inject(BsModalService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  showConfigSubscription1: boolean = false;
   showConfigSubscription2: boolean = false;
+  showConfigSubscription3: boolean = false;
+  showConfigSubscription4: boolean = false;
 
   isConnectionToMQTTEstablished: boolean;
 
-  subscription: C8YNotificationSubscription;
-  subscriptions: any[];
+  subscriptionDevices: NotificationSubscriptionResponse;
+  subscriptionDeviceGroups: NotificationSubscriptionResponse;
+  subscribedDevices: any[];
+  subscribedDeviceGroups: any[];
+  subscribedDeviceTypes: string[];
   devices: IIdentified[] = [];
   Direction = Direction;
 
-  stepperConfiguration: StepperConfiguration = {};
+  static: boolean = false;
+  path: string;
   titleMapping: string;
   readonly titleSubscription: string = 'Subscription devices mapping outbound';
   deploymentMapEntry: DeploymentMapEntry;
@@ -158,28 +172,48 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     }
   }
 
-  async loadSubscriptions(): Promise<void> {
-    this.subscription = await this.mappingService.getSubscriptions();
-    this.subscriptions = this.subscription.devices;
+  async loadSubscriptionDevice(): Promise<void> {
+    this.subscriptionDevices = await this.subscriptionService.getSubscriptionDevice();
+    this.subscribedDevices = this.subscriptionDevices.devices;
     this.subscriptionGrid?.reload();
   }
 
-  onDefineSubscription(): void {
-    this.showConfigSubscription = !this.showConfigSubscription;
+  async loadSubscriptionByDeviceGroup(): Promise<void> {
+    this.subscriptionDeviceGroups = await this.subscriptionService.getSubscriptionByDeviceGroup();
+    this.subscribedDeviceGroups = this.subscriptionDeviceGroups.devices;
+    this.subscriptionGrid?.reload();
+  }
+
+  async loadSubscriptionByDeviceType(): Promise<void> {
+    const filter = await this.subscriptionService.getSubscriptionByDeviceType();
+    this.subscribedDeviceTypes = filter.types;
+    this.subscriptionGrid?.reload();
+  }
+
+  onDefineSubscription1(): void {
+    this.showConfigSubscription1 = !this.showConfigSubscription1;
   }
 
   onDefineSubscription2(): void {
     this.showConfigSubscription2 = !this.showConfigSubscription2;
   }
 
+  onDefineSubscription3(): void {
+    this.showConfigSubscription3 = !this.showConfigSubscription3;
+  }
+
+  onDefineSubscription4(): void {
+    this.showConfigSubscription4 = !this.showConfigSubscription4;
+  }
+
   async deleteSubscription(device: IIdentified): Promise<void> {
     // console.log('Delete device', device);
     try {
-      await this.mappingService.deleteSubscriptions(device);
+      await this.subscriptionService.deleteSubscriptionDevice(device);
       this.alertService.success(
         gettext('Subscription for this device deleted successfully')
       );
-      this.loadSubscriptions();
+      this.loadSubscriptionDevice();
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to delete subscription:') + error
@@ -190,7 +224,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   private async deleteSubscriptionBulkWithConfirmation(ids: string[]): Promise<void> {
     let continueDelete: boolean = false;
     for (let index = 0; index < ids.length; index++) {
-      const device2Delete = this.subscription?.devices.find(
+      const device2Delete = this.subscriptionDevices?.devices.find(
         (de) => de.id == ids[index]
       );
       if (index == 0) {
@@ -204,7 +238,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       }
     }
     this.isConnectionToMQTTEstablished = true;
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    this.mappingService.refreshMappings(Direction.OUTBOUND);
     this.subscriptionGrid.setAllItemsSelected(false);
   }
 
@@ -239,25 +273,67 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  async onCommitSubscriptions(deviceList: IIdentified[]): Promise<void> {
-    this.subscription = {
+  async onCommitSubscriptionDevice(deviceList: IIdentified[]): Promise<void> {
+    const subscriptionDevices = {
       api: API.ALL.name,
       devices: deviceList as Device[]
     };
     // console.log('Changed deviceList:', this.subscription.devices);
     try {
-      await this.mappingService.updateSubscriptions(
-        this.subscription
+      await this.subscriptionService.updateSubscriptionDevice(
+        subscriptionDevices
       );
-      this.loadSubscriptions();
+      this.loadSubscriptionDevice();
       this.alertService.success(gettext('Subscriptions updated successfully'));
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to update subscriptions:') + error
       );
     }
-    this.showConfigSubscription = false;
+    this.showConfigSubscription1 = false;
     this.showConfigSubscription2 = false;
+  }
+
+  async onCommitSubscriptionByDeviceGroup(deviceList: IIdentified[]): Promise<void> {
+    const subscriptionDevices = {
+      api: API.ALL.name,
+      devices: deviceList as Device[]
+    };
+    try {
+      await this.subscriptionService.updateSubscriptionByDeviceGroup(
+        subscriptionDevices
+      );
+      this.loadSubscriptionByDeviceGroup();
+      this.loadSubscriptionDevice();
+
+      this.alertService.success(gettext('Subscriptions updated successfully'));
+    } catch (error) {
+      this.alertService.danger(
+        gettext('Failed to update subscriptions:') + error
+      );
+    }
+    this.showConfigSubscription3 = false;
+  }
+
+  async onCommitSubscriptionByDeviceType(typeList: string[]): Promise<void> {
+    const subscriptionDevices = {
+      api: API.ALL.name,
+      types: typeList as string[]
+    };
+    try {
+      await this.subscriptionService.updateSubscriptionByDeviceType(
+        subscriptionDevices
+      );
+      this.loadSubscriptionByDeviceType();
+      this.loadSubscriptionDevice();
+
+      this.alertService.success(gettext('Subscriptions updated successfully'));
+    } catch (error) {
+      this.alertService.danger(
+        gettext('Failed to update subscriptions:') + error
+      );
+    }
+    this.showConfigSubscription4 = false;
   }
 
   async onReload(): Promise<void> {
@@ -265,7 +341,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   }
 
   private async reloadMappingsInBackend(): Promise<void> {
-    const response2 = await this.shareService.runOperation(
+    const response2 = await this.sharedService.runOperation(
       { operation: Operation.RELOAD_MAPPINGS }
     );
     // console.log('Activate mapping response:', response2);

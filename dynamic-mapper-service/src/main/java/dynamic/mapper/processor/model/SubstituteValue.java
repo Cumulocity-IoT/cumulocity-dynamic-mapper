@@ -33,35 +33,35 @@ public class SubstituteValue implements Cloneable{
         return new SubstituteValue(this.value, this.type, this.repairStrategy, this.expandArray);
     }
 
-    public static void substituteValueInPayload(SubstituteValue sub,
-            DocumentContext jsonObject, String keys)
+    public static void substituteValueInPayload(SubstituteValue substitute,
+            DocumentContext payloadTarget, String pathTarget)
             throws JSONException {
-        boolean subValueMissingOrNull = sub == null || sub.value == null;
-        // TOFDO fix this, we have to differentiate between {"nullField": null } and
+        boolean subValueMissingOrNull = substitute == null || substitute.value == null;
+        // TODO fix this, we have to differentiate between {"nullField": null } and
         // "nonExisting"
         try {
-            if (sub == null) return;
-            if ("$".equals(keys)) {
-                Object replacement = sub.value;
+            if (substitute == null) return;
+            if ("$".equals(pathTarget)) {
+                Object replacement = substitute.value;
                 if (replacement instanceof Map<?, ?> map) {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> rm = (Map<String, Object>) map;
                     for (Map.Entry<String, Object> entry : rm.entrySet()) {
-                        jsonObject.put("$", entry.getKey(), entry.getValue());
+                        payloadTarget.put("$", entry.getKey(), entry.getValue());
                     }
                 }
             } else {
-                if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING_OR_NULL) && subValueMissingOrNull)) {
-                    jsonObject.delete(keys);
-                } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
+                if ((substitute.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING_OR_NULL) && subValueMissingOrNull)) {
+                    payloadTarget.delete(pathTarget);
+                } else if (substitute.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
                     // jsonObject.put("$", keys, sub.value);
-                    SubstitutionEvaluation.addNestedValue(jsonObject, keys, sub.value);
+                    SubstitutionEvaluation.addNestedValue(payloadTarget, pathTarget, substitute.value);
                 } else {
-                    jsonObject.set(keys, sub.value);
+                    payloadTarget.set(pathTarget, substitute.value);
                 }
             }
         } catch (PathNotFoundException e) {
-            throw new PathNotFoundException(String.format("Path: %s not found!", keys));
+            throw new PathNotFoundException(String.format("Path: %s not found!", pathTarget));
         }
     }
 }

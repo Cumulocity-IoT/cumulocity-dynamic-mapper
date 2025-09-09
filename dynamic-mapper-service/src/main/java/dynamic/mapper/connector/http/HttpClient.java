@@ -76,7 +76,8 @@ public class HttpClient extends AConnectorClient {
                 + "The message must be send in a POST request.\n"
                 + "NOTE: The leading '/' is cut off from the sub path automatically. This can be configured ";
         connectorType = ConnectorType.HTTP;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton, configProps,
+                false,
                 supportedDirections());
     }
 
@@ -85,9 +86,9 @@ public class HttpClient extends AConnectorClient {
             DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
-        this.mappingComponent = configurationRegistry.getMappingComponent();
-        this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
-        this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
+        this.mappingService = configurationRegistry.getMappingService();
+        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
         this.connectorName = connectorConfiguration.name;
@@ -100,7 +101,6 @@ public class HttpClient extends AConnectorClient {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
@@ -140,11 +140,12 @@ public class HttpClient extends AConnectorClient {
                 log.info("{} - Phase III: {} connected, http endpoint: {}", tenant, getConnectorName(),
                         path);
                 updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
+                List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant, connectorId);
                 initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
                 successful = true;
             } catch (Exception e) {
-                log.error("{} - Phase III: {} failed to connect to http endpoint {}, {}, {}", tenant, getConnectorName(),
+                log.error("{} - Phase III: {} failed to connect to http endpoint {}, {}, {}", tenant,
+                        getConnectorName(),
                         path, e.getMessage(), connectionState.booleanValue(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
@@ -184,7 +185,7 @@ public class HttpClient extends AConnectorClient {
             });
 
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
+            List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant, connectorId);
             initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
             log.info("{} - {} disconnected, http endpoint: {}", tenant, getConnectorName(),
                     path);
@@ -228,6 +229,10 @@ public class HttpClient extends AConnectorClient {
 
     public void onMessage(ConnectorMessage message) {
         dispatcher.onMessage(message);
+    }
+
+    @Override
+    public void connectorSpecificHousekeeping(String tenant) {
     }
 
     @Override

@@ -97,10 +97,12 @@ public class MQTTServiceClient extends MQTT3Client {
         configProps.put("cleanSession",
                 new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
                         null));
-        String name = "Cumulocity MQTT Service";
+        String name = "Cumulocity MQTT Service - (tenant isolation)";
         String description = "Connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
         connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, false,
+        singleton = true;
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton, configProps,
+                false,
                 supportedDirections());
     }
 
@@ -113,9 +115,9 @@ public class MQTTServiceClient extends MQTT3Client {
             DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
-        this.mappingComponent = configurationRegistry.getMappingComponent();
-        this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
-        this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
+        this.mappingService = configurationRegistry.getMappingService();
+        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
         this.connectorIdentifier = connectorConfiguration.identifier;
@@ -128,7 +130,6 @@ public class MQTTServiceClient extends MQTT3Client {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;

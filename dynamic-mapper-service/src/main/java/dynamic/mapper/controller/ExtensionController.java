@@ -22,8 +22,6 @@
 package dynamic.mapper.controller;
 
 import java.util.Map;
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.*;
@@ -44,6 +42,9 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Extension;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import jakarta.validation.constraints.NotBlank;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -64,13 +65,13 @@ public class ExtensionController {
     ConnectorRegistry connectorRegistry;
 
     @Autowired
-    MappingComponent mappingComponent;
+    MappingService mappingService;
 
     @Autowired
-    ConnectorConfigurationComponent connectorConfigurationComponent;
+    ConnectorConfigurationService connectorConfigurationService;
 
     @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
+    ServiceConfigurationService serviceConfigurationService;
 
     @Autowired
     BootstrapService bootstrapService;

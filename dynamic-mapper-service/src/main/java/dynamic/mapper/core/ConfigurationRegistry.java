@@ -21,10 +21,14 @@
 
 package dynamic.mapper.core;
 
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
@@ -39,9 +43,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 
@@ -50,11 +52,14 @@ import dynamic.mapper.connector.kafka.KafkaClient;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
 import dynamic.mapper.connector.mqtt.MQTT5Client;
 import dynamic.mapper.connector.mqtt.MQTTServiceClient;
+import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
+import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
+import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingServiceRepresentation;
-import dynamic.mapper.notification.C8YNotificationSubscriber;
+import dynamic.mapper.model.MapperServiceRepresentation;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapper.processor.inbound.BaseProcessorInbound;
 import dynamic.mapper.processor.inbound.CodeBasedProcessorInbound;
@@ -67,6 +72,10 @@ import dynamic.mapper.processor.outbound.CodeBasedProcessorOutbound;
 import dynamic.mapper.processor.outbound.DispatcherOutbound;
 import dynamic.mapper.processor.outbound.JSONProcessorOutbound;
 import dynamic.mapper.processor.processor.fixed.InternalProtobufProcessor;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
+import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -80,19 +89,20 @@ public class ConfigurationRegistry {
 
     private Map<String, Engine> graalEngines = new ConcurrentHashMap<>();
 
-//    // Structure: < Tenant, Source>>
-//    private Map<String, Source> graalSourceShared = new ConcurrentHashMap<>();
-//
-//    // Structure: < Tenant, Source>>
-//    private Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
-//
-//    // Structure: < Tenant, < MappingIdentifier, < Source > >
-//    private Map<String, Map<String, Source>> graalSourceMapping = new ConcurrentHashMap<>();
+    // // Structure: < Tenant, Source>>
+    // private Map<String, Source> graalSourceShared = new ConcurrentHashMap<>();
+    //
+    // // Structure: < Tenant, Source>>
+    // private Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
+    //
+    // // Structure: < Tenant, < MappingIdentifier, < Source > >
+    // private Map<String, Map<String, Source>> graalSourceMapping = new
+    // ConcurrentHashMap<>();
 
     private Map<String, MicroserviceCredentials> microserviceCredentials = new ConcurrentHashMap<>();
 
-    // Structure: < Tenant, < MappingType, < MappingServiceRepresentation > >
-    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new ConcurrentHashMap<>();
+    // Structure: < Tenant, < MappingType, < MapperServiceRepresentation > >
+    private Map<String, MapperServiceRepresentation> mapperServiceRepresentations = new ConcurrentHashMap<>();
 
     // Structure: < Tenant, < MappingType, ProcessorInbound>>
     private Map<String, Map<MappingType, BaseProcessorInbound<?>>> payloadProcessorsInbound = new ConcurrentHashMap<>();
@@ -107,6 +117,12 @@ public class ConfigurationRegistry {
     // Structure: < Tenant, < ExtensibleProcessorSource > >
     private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new ConcurrentHashMap<>();
 
+    // Structure: < Tenant, < Device, Client > >
+    private Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
+
+    // Structure: < Tenant, Id ManagedObject Map >
+    private Map<String, String> deviceToClientMapRepresentations = new ConcurrentHashMap<>();
+
     @Getter
     private C8YAgent c8yAgent;
 
@@ -114,16 +130,20 @@ public class ConfigurationRegistry {
     @Getter
     String mqttServiceUrl;
 
+    @Value("${APP.mqttServicePulsarUrl}")
+    @Getter
+    String mqttServicePulsarUrl;
+
     @Autowired
     public void setC8yAgent(C8YAgent c8yAgent) {
         this.c8yAgent = c8yAgent;
     }
 
     @Getter
-    private C8YNotificationSubscriber notificationSubscriber;
+    private NotificationSubscriber notificationSubscriber;
 
     @Autowired
-    public void setNotificationSubscriber(C8YNotificationSubscriber notificationSubscriber) {
+    public void setNotificationSubscriber(NotificationSubscriber notificationSubscriber) {
         this.notificationSubscriber = notificationSubscriber;
     }
 
@@ -136,28 +156,28 @@ public class ConfigurationRegistry {
     }
 
     @Getter
-    private MappingComponent mappingComponent;
+    private MappingService mappingService;
 
     @Autowired
-    public void setMappingComponent(@Lazy MappingComponent mappingComponent) {
-        this.mappingComponent = mappingComponent;
+    public void setMappingComponent(@Lazy MappingService mappingService) {
+        this.mappingService = mappingService;
     }
 
     @Getter
-    private ConnectorConfigurationComponent connectorConfigurationComponent;
+    private ConnectorConfigurationService connectorConfigurationService;
 
     @Autowired
-    public void setConnectorConfigurationComponent(
-            @Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
-        this.connectorConfigurationComponent = connectorConfigurationComponent;
+    public void setConnectorConfigurationService(
+            @Lazy ConnectorConfigurationService connectorConfigurationService) {
+        this.connectorConfigurationService = connectorConfigurationService;
     }
 
     @Getter
-    public ServiceConfigurationComponent serviceConfigurationComponent;
+    public ServiceConfigurationService serviceConfigurationService;
 
     @Autowired
-    public void setServiceConfigurationComponent(@Lazy ServiceConfigurationComponent serviceConfigurationComponent) {
-        this.serviceConfigurationComponent = serviceConfigurationComponent;
+    public void setServiceConfigurationService(@Lazy ServiceConfigurationService serviceConfigurationService) {
+        this.serviceConfigurationService = serviceConfigurationService;
     }
 
     @Getter
@@ -212,7 +232,7 @@ public class ConfigurationRegistry {
                             null,
                             additionalSubscriptionIdTest, tenant);
                 }
-                log.info("{} - Connector MQTT {} created, identifier: {}", tenant, version,
+                log.info("{} - MQTT Connector {} created, identifier: {}", tenant, version,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -220,7 +240,7 @@ public class ConfigurationRegistry {
                 connectorClient = new MQTTServiceClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("{} - Connector MQTTService Connector created, identifier: {}", tenant,
+                log.info("{} - MQTTService Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -228,7 +248,7 @@ public class ConfigurationRegistry {
                 connectorClient = new KafkaClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("{} - Connector Kafka Connector created, identifier: {}", tenant,
+                log.info("{} - Kafka Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -236,7 +256,7 @@ public class ConfigurationRegistry {
                 connectorClient = new HttpClient(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("{} - Connector HTTP Connector created, identifier: {}", tenant,
+                log.info("{} - HTTP Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
@@ -244,10 +264,25 @@ public class ConfigurationRegistry {
                 connectorClient = new WebHook(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
-                log.info("{} - Connector WebHook created, identifier: {}", tenant,
+                log.info("{} - WebHook Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 
+            case PULSAR:
+                connectorClient = new PulsarConnectorClient(this, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("{} - Pulsar Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+
+            case CUMULOCITY_MQTT_SERVICE_PULSAR:
+                connectorClient = new MQTTServicePulsarClient(this, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
             default:
                 log.warn("{} - Unknown connector type: {}", tenant, connectorConfiguration.getConnectorType());
                 break;
@@ -275,12 +310,22 @@ public class ConfigurationRegistry {
                 createPayloadProcessorsOutbound(connectorClient));
     }
 
-    public void initializeMappingServiceRepresentation(String tenant) {
-        ManagedObjectRepresentation mappingServiceMOR = c8yAgent
-                .initializeMappingServiceObject(tenant);
-        MappingServiceRepresentation mappingServiceRepresentation = objectMapper
-                .convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
-        addMappingServiceRepresentation(tenant, mappingServiceRepresentation);
+    public MapperServiceRepresentation initializeMapperServiceRepresentation(String tenant) {
+        ManagedObjectRepresentation mapperServiceMOR = c8yAgent
+                .initializeMapperServiceRepresentation(tenant);
+        MapperServiceRepresentation mapperServiceRepresentation = objectMapper
+                .convertValue(mapperServiceMOR, MapperServiceRepresentation.class);
+        addMapperServiceRepresentation(tenant, mapperServiceRepresentation);
+        return mapperServiceRepresentation;
+    }
+
+    public DeviceToClientMapRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
+        ManagedObjectRepresentation mapperServiceMOR = c8yAgent
+                .initializeDeviceToClientMapRepresentation(tenant);
+        DeviceToClientMapRepresentation deviceToClientMapRepresentation = objectMapper
+                .convertValue(mapperServiceMOR, DeviceToClientMapRepresentation.class);
+        addDeviceToClientMapRepresentation(tenant, deviceToClientMapRepresentation);
+        return deviceToClientMapRepresentation;
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {
@@ -293,50 +338,56 @@ public class ConfigurationRegistry {
                 .build();
 
         graalEngines.put(tenant, eng);
-        //graalSourceShared.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
-        //        .get(TemplateType.SHARED.name()).getCode(), "sharedCode.js", false, null));
-        //graalSourceSystem.put(tenant, decodeCode(serviceConfiguration.getCodeTemplates()
-        //        .get(TemplateType.SYSTEM.name()).getCode(), "systemCode.js", false, null));
-        //graalSourceMapping.put(tenant, new ConcurrentHashMap<>());
+        // graalSourceShared.put(tenant,
+        // decodeCode(serviceConfiguration.getCodeTemplates()
+        // .get(TemplateType.SHARED.name()).getCode(), "sharedCode.js", false, null));
+        // graalSourceSystem.put(tenant,
+        // decodeCode(serviceConfiguration.getCodeTemplates()
+        // .get(TemplateType.SYSTEM.name()).getCode(), "systemCode.js", false, null));
+        // graalSourceMapping.put(tenant, new ConcurrentHashMap<>());
     }
 
     public Engine getGraalEngine(String tenant) {
         return graalEngines.get(tenant);
     }
 
-//    public void updateGraalsSourceShared(String tenant, String code) {
-//        graalSourceShared.put(tenant, decodeCode(code, "sharedCode.js", false, null));
-//    }
-//
-//    public Source getGraalsSourceShared(String tenant) {
-//        return graalSourceShared.get(tenant);
-//    }
-//
-//    public void updateGraalsSourceSystem(String tenant, String code) {
-//        graalSourceSystem.put(tenant, decodeCode(code, "systemCode.js", false, null));
-//    }
-//
-//    public Source getGraalsSourceSystem(String tenant) {
-//        return graalSourceSystem.get(tenant);
-//    }
-//
-//    public void updateGraalsSourceMapping(String tenant, String mappingId, String code) {
-//        graalSourceMapping.get(tenant).put(mappingId, decodeCode(code, mappingId + ".js", true, mappingId));
-//    }
-//
-//    public Source getGraalsSourceMapping(String tenant, String mappingId) {
-//        return graalSourceMapping.get(tenant).get(mappingId);
-//    }
-//
-//    public void removeGraalsSourceMapping(String tenant, String mappingId) {
-//        graalSourceMapping.get(tenant).remove(mappingId);
-//    }
+    // public void updateGraalsSourceShared(String tenant, String code) {
+    // graalSourceShared.put(tenant, decodeCode(code, "sharedCode.js", false,
+    // null));
+    // }
+    //
+    // public Source getGraalsSourceShared(String tenant) {
+    // return graalSourceShared.get(tenant);
+    // }
+    //
+    // public void updateGraalsSourceSystem(String tenant, String code) {
+    // graalSourceSystem.put(tenant, decodeCode(code, "systemCode.js", false,
+    // null));
+    // }
+    //
+    // public Source getGraalsSourceSystem(String tenant) {
+    // return graalSourceSystem.get(tenant);
+    // }
+    //
+    // public void updateGraalsSourceMapping(String tenant, String mappingId, String
+    // code) {
+    // graalSourceMapping.get(tenant).put(mappingId, decodeCode(code, mappingId +
+    // ".js", true, mappingId));
+    // }
+    //
+    // public Source getGraalsSourceMapping(String tenant, String mappingId) {
+    // return graalSourceMapping.get(tenant).get(mappingId);
+    // }
+    //
+    // public void removeGraalsSourceMapping(String tenant, String mappingId) {
+    // graalSourceMapping.get(tenant).remove(mappingId);
+    // }
 
     public void removeGraalsResources(String tenant) {
         graalEngines.remove(tenant);
-//        graalSourceShared.remove(tenant);
-//        graalSourceSystem.remove(tenant);
-//        graalSourceMapping.remove(tenant);
+        // graalSourceShared.remove(tenant);
+        // graalSourceSystem.remove(tenant);
+        // graalSourceMapping.remove(tenant);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {
@@ -351,17 +402,36 @@ public class ConfigurationRegistry {
         serviceConfigurations.remove(tenant);
     }
 
-    public void addMappingServiceRepresentation(String tenant,
-            MappingServiceRepresentation mappingServiceRepresentation) {
-        mappingServiceRepresentations.put(tenant, mappingServiceRepresentation);
+    public void addMapperServiceRepresentation(String tenant,
+            MapperServiceRepresentation mapperServiceRepresentation) {
+        mapperServiceRepresentations.put(tenant, mapperServiceRepresentation);
     }
 
-    public MappingServiceRepresentation getMappingServiceRepresentation(String tenant) {
-        return mappingServiceRepresentations.get(tenant);
+    public MapperServiceRepresentation getMapperServiceRepresentation(String tenant) {
+        return mapperServiceRepresentations.get(tenant);
     }
 
-    public void removeMappingServiceRepresentation(String tenant) {
-        mappingServiceRepresentations.remove(tenant);
+    public void removeMapperServiceRepresentation(String tenant) {
+        mapperServiceRepresentations.remove(tenant);
+    }
+
+    private void addDeviceToClientMapRepresentation(String tenant,
+            DeviceToClientMapRepresentation deviceToClientMapRepresentation) {
+        deviceToClientMapRepresentations.put(tenant, deviceToClientMapRepresentation.getId());
+        Map<String, String> clientToDeviceMap = new ConcurrentHashMap<>();
+        if (deviceToClientMapRepresentation.getDeviceToClientMap() != null) {
+            log.debug("{} - Initializing Device To Client Map: {}, {} ", tenant,
+                    deviceToClientMapRepresentation.getDeviceToClientMap(),
+                    (deviceToClientMapRepresentation.getDeviceToClientMap() == null
+                            || deviceToClientMapRepresentation.getDeviceToClientMap().size() == 0 ? 0
+                                    : deviceToClientMapRepresentation.getDeviceToClientMap().size()));
+            clientToDeviceMap = deviceToClientMapRepresentation.getDeviceToClientMap();
+        }
+        deviceToClientPerTenant.put(tenant, clientToDeviceMap);
+    }
+
+    public String getDeviceToClientMapId(String tenant) {
+        return deviceToClientMapRepresentations.get(tenant);
     }
 
     public ExtensibleProcessorInbound getExtensibleProcessor(String tenant) {
@@ -433,25 +503,127 @@ public class ConfigurationRegistry {
         if (hostAccess == null) {
             // Create a custom HostAccess configuration
             // SubstitutionContext public methods and basic collection operations
-                // Create a HostAccess instance with the desired configuration
-                // Allow access to public members of accessible classes
-                // Allow array access for basic functionality
-                // Allow List operations
-                // Allow Map operations
-                hostAccess = HostAccess.newBuilder()
-                        // Allow access to public members of accessible classes
-                        .allowPublicAccess(true)
-                        // Allow array access for basic functionality
-                        .allowArrayAccess(true)
-                        // Allow List operations
-                        .allowListAccess(true)
-                        // Allow Map operations
-                        .allowMapAccess(true)
-                        .build();
-                // log.info("HostAccess created with public access, array access, list access, and map access enabled.");
+            // Create a HostAccess instance with the desired configuration
+            // Allow access to public members of accessible classes
+            // Allow array access for basic functionality
+            // Allow List operations
+            // Allow Map operations
+            hostAccess = HostAccess.newBuilder()
+                    // Allow access to public members of accessible classes
+                    .allowPublicAccess(true)
+                    // Allow array access for basic functionality
+                    .allowArrayAccess(true)
+                    // Allow List operations
+                    .allowListAccess(true)
+                    // Allow Map operations
+                    .allowMapAccess(true)
+                    .build();
+            // log.info("HostAccess created with public access, array access, list access,
+            // and map access enabled.");
 
         }
         return hostAccess;
+    }
+
+    public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
+        deviceToClientPerTenant.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
+                .put(deviceId, clientId);
+        log.debug("Added client mapping for tenant {}: device {} -> client {}", tenant, deviceId, clientId);
+    }
+
+    public void addOrUpdateClientRelations(String tenant, String clientId, List<String> deviceIds) {
+        if (deviceIds == null || deviceIds.isEmpty()) {
+            log.debug("No device IDs provided for tenant {}, client {}", tenant, clientId);
+            return;
+        }
+
+        Map<String, String> tenantMappings = deviceToClientPerTenant.computeIfAbsent(tenant,
+                k -> new ConcurrentHashMap<>());
+
+        deviceIds.forEach(deviceId -> tenantMappings.put(deviceId, clientId));
+
+        log.debug("Added {} client mappings for tenant {}: devices {} -> client {}",
+                deviceIds.size(), tenant, deviceIds, clientId);
+    }
+
+    public void removeClientRelation(String tenant, String deviceId) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings != null) {
+            String removedClientId = tenantMappings.remove(deviceId);
+            if (removedClientId != null) {
+                log.debug("Removed client mapping for tenant {}: device {} (was mapped to client {})",
+                        tenant, deviceId, removedClientId);
+            }
+        }
+    }
+
+    public void removeClientById(String tenant, String clientId) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings != null) {
+            List<String> devicesToRemove = tenantMappings.entrySet().stream()
+                    .filter(entry -> clientId.equals(entry.getValue()))
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+
+            devicesToRemove.forEach(tenantMappings::remove);
+            log.debug("Removed {} device mappings for client {} in tenant {}",
+                    devicesToRemove.size(), clientId, tenant);
+        }
+    }
+
+    public void clearCacheDeviceToClient(String tenant) {
+        deviceToClientPerTenant.put(tenant, new ConcurrentHashMap<>());
+        log.debug("Cleared all client mappings for tenant {}", tenant);
+    }
+
+    public String resolveDeviceToClient(String tenant, String deviceId) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings != null && tenantMappings.containsKey(deviceId)) {
+            return tenantMappings.get(deviceId);
+        } else {
+            // Return null if no mapping exists (instead of returning deviceId)
+            // This allows proper 404 handling in the controller
+            return null;
+        }
+    }
+
+    public Map<String, String> getAllClientRelations(String tenant) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        return tenantMappings != null ? new HashMap<>(tenantMappings) : new HashMap<>();
+    }
+
+    public List<String> getDevicesForClient(String tenant, String clientId) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings == null) {
+            return new ArrayList<>();
+        }
+
+        return tenantMappings.entrySet().stream()
+                .filter(entry -> clientId.equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    public List<String> getAllClients(String tenant) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        if (tenantMappings == null) {
+            return new ArrayList<>();
+        }
+
+        return tenantMappings.values().stream()
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    public int getClientRelationCount(String tenant) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        return tenantMappings != null ? tenantMappings.size() : 0;
+    }
+
+    public boolean hasClientRelation(String tenant, String deviceId) {
+        Map<String, String> tenantMappings = deviceToClientPerTenant.get(tenant);
+        return tenantMappings != null && tenantMappings.containsKey(deviceId);
     }
 
 }

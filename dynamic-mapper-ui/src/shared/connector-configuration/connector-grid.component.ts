@@ -17,8 +17,8 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy } from '@angular/core';
-import { ActionControl, AlertService, Column, CountdownIntervalComponent, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject } from '@angular/core';
+import { ActionControl, AlertService, BottomDrawerService, Column, CountdownIntervalComponent, DataGridComponent, gettext, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, from, Observable, Subject, } from 'rxjs';
 import { filter, map, take, takeUntil } from 'rxjs/operators';
@@ -29,12 +29,12 @@ import { ConnectorConfigurationService } from '../service/connector-configuratio
 import { ConnectorStatus, LoggingEventType } from '../connector-log/connector-log.model';
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
-import { ConnectorConfigurationModalComponent } from './edit/connector-configuration-modal.component';
 import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingInterval } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
 import { FormBuilder, FormGroup } from '@angular/forms';
+import { ConnectorConfigurationDrawerComponent } from './edit/connector-configuration-drawer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-grid',
@@ -79,16 +79,19 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   intervals: PollingInterval[];
   currentPollingInterval: number;
   private destroy$: Subject<void> = new Subject<void>();
+  initialStateDrawer: any;
 
   constructor(
-    private bsModalService: BsModalService,
-    private connectorConfigurationService: ConnectorConfigurationService,
-    private alertService: AlertService,
-    private sharedService: SharedService,
-    private fb: FormBuilder,
   ) {
     this.toggleIntervalForm = this.initForm();
   }
+
+  alertService = inject(AlertService);
+  sharedService = inject(SharedService);
+  bsModalService = inject(BsModalService);
+  bottomDrawerService = inject(BottomDrawerService);
+  connectorConfigurationService = inject(ConnectorConfigurationService);
+  fb = inject(FormBuilder);
 
   async ngOnInit(): Promise<void> {
     this.initializeColumns();
@@ -122,7 +125,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   resetCountdown(): void {
-    console.log('resetCountdown', this.currentPollingInterval);
+    // console.log('resetCountdown', this.currentPollingInterval);
 
     this.countdownIntervalComponent?.reset();
   }
@@ -132,8 +135,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     if (this.shouldRefreshAutomatic) {
       this.countdownIntervalComponent.start();
       this.connectorConfigurationService.startCountdown();
-    } 
-    console.log('CurrentPollingInterval', this.currentPollingInterval, this.shouldRefreshAutomatic);
+    }
+    // console.log('CurrentPollingInterval', this.currentPollingInterval, this.shouldRefreshAutomatic);
   }
 
   private onRefreshIntervalChange(interval: number): void {
@@ -248,29 +251,22 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     this.connectorConfigurationService.refreshConfigurations();
   }
 
-  async onConfigurationUpdate(config: ConnectorConfiguration): Promise<void> {
-    const modalRef = this.showConfigurationModal(config, false);
-    modalRef.content.closeSubject.subscribe(async editedConfiguration => {
-      await this.handleModalResponse(
-        editedConfiguration,
-        'Updated successfully.',
-        'Failed to update connector configuration',
-        config => this.connectorConfigurationService.updateConfiguration(config)
-      );
-    });
-  }
-
   async onConfigurationCopy(config: ConnectorConfiguration): Promise<void> {
     const copiedConfig = this.prepareCopyConfiguration(config);
-    const modalRef = this.showConfigurationModal(copiedConfig, false);
-    modalRef.content.closeSubject.subscribe(async editedConfiguration => {
-      await this.handleModalResponse(
-        editedConfiguration,
-        'Created successfully.',
-        'Failed to create connector configuration',
-        config => this.connectorConfigurationService.createConfiguration(config)
-      );
-    });
+    this.initialStateDrawer = {
+      add: false,
+      configuration: copiedConfig,
+      specifications: this.specifications,
+      configurationsCount: this.configurations?.length,
+    }
+    const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
+    const resultOf = await drawer.instance.result;
+    await this.handleModalResponse(
+      resultOf,
+      'Added successfully.',
+      'Failed to create connector configuration',
+      config => this.connectorConfigurationService.createConfiguration(config)
+    );
   }
 
   async onConfigurationDelete(config: ConnectorConfiguration): Promise<void> {
@@ -288,20 +284,47 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     });
   }
 
-  async onConfigurationAdd(): Promise<void> {
-    const newConfig: Partial<ConnectorConfiguration> = {
+  async onConfigurationAddOrUpdate(config: ConnectorConfiguration): Promise<void> {
+    let add = true;
+    let configuration = {
       properties: {},
       identifier: createCustomUuid()
-    };
-    const modalRef = this.showConfigurationModal(newConfig, true);
-    modalRef.content.closeSubject.subscribe(async addedConfiguration => {
+    } as Partial<ConnectorConfiguration>;
+    if (config) {
+      add = false;
+      configuration = cloneDeep(config);
+    }
+
+    const configuredConnectorType = this.configurations.reduce((types, config) => {
+      types.add(config.connectorType);
+      return types;
+    }, new Set());
+    const allowedConnectors = this.specifications.filter(sp => !sp.singleton || (!configuredConnectorType.has(sp.connectorType))).map(sp => sp.connectorType);
+
+    this.initialStateDrawer = {
+      add,
+      configuration,
+      specifications: this.specifications,
+      configurationsCount: this.configurations?.length,
+      allowedConnectors: allowedConnectors
+    }
+    const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
+    const resultOf = await drawer.instance.result;
+    if (this.initialStateDrawer.add) {
       await this.handleModalResponse(
-        addedConfiguration,
+        resultOf,
         'Added successfully.',
         'Failed to create connector configuration',
         config => this.connectorConfigurationService.createConfiguration(config)
       );
-    });
+    } else {
+      await this.handleModalResponse(
+        resultOf,
+        'Updated successfully.',
+        'Failed to update connector configuration',
+        config => this.connectorConfigurationService.updateConfiguration(config)
+      );
+    }
   }
 
   findNameByIdent(identifier: string): string {
@@ -311,18 +334,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
   get shouldHideBulkActionsAndReadOnly(): boolean {
     //return this.selectable && this.readOnly;
     return this.readOnly;
-  }
-
-  // Helper methods for showing modals
-  private showConfigurationModal(config: Partial<ConnectorConfiguration>, isAdd: boolean): BsModalRef {
-    return this.bsModalService.show(ConnectorConfigurationModalComponent, {
-      initialState: {
-        add: isAdd,
-        configuration: cloneDeep(config),
-        specifications: this.specifications,
-        configurationsCount: this.configurations?.length,
-      }
-    });
   }
 
   private showConfirmationModal(): BsModalRef {
@@ -335,9 +346,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
     });
   }
 
-  // Missing methods for the component:
-  private prepareCopyConfiguration(config: ConnectorConfiguration): Partial<ConnectorConfiguration> {
-    const copiedConfig = cloneDeep(config);
+  private prepareCopyConfiguration(configuration: ConnectorConfiguration): Partial<ConnectorConfiguration> {
+    const copiedConfig = cloneDeep(configuration);
     copiedConfig.identifier = createCustomUuid();
     copiedConfig.name = `${copiedConfig.name}_copy`;
 
@@ -394,7 +404,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnDestroy 
       }));
   }
 
-  trackUserClickOnIntervalToggle(target: EventTarget): void {
+  trackUserClickOnIntervalToggle(event: Event): void {
+    const target = event.target;
     this.shouldRefreshAutomatic = (target as HTMLInputElement).checked;
     this.connectorConfigurationService.toggleCountdown();
     if (!this.shouldRefreshAutomatic) {

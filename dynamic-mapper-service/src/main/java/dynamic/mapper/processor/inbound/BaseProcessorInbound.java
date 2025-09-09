@@ -37,13 +37,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.cumulocity.sdk.client.SDKException;
+import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.ProcessingMode;
+import com.cumulocity.sdk.client.SDKException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.DocumentContext;
@@ -61,6 +64,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -69,6 +73,7 @@ public abstract class BaseProcessorInbound<T> {
     public BaseProcessorInbound(ConfigurationRegistry configurationRegistry) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.configurationRegistry = configurationRegistry;
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
     }
 
@@ -77,6 +82,8 @@ public abstract class BaseProcessorInbound<T> {
     protected ObjectMapper objectMapper;
 
     protected ExecutorService virtualThreadPool;
+
+    protected ConfigurationRegistry configurationRegistry;
 
     public abstract T deserializePayload(Mapping mapping, ConnectorMessage message)
             throws IOException;
@@ -102,6 +109,12 @@ public abstract class BaseProcessorInbound<T> {
                         put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
                         put("api",
                                 context.getMapping().getTargetAPI().toString());
+                        put("processingMode",
+                                ProcessingMode.PERSISTENT.toString());
+                        if (context.getMapping().createNonExistingDevice) {
+                            put("deviceName", context.getDeviceName());
+                            put("deviceType", context.getDeviceType());
+                        }
                     }
                 };
                 ((Map) payloadObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
@@ -168,7 +181,7 @@ public abstract class BaseProcessorInbound<T> {
                 // for (MappingSubstituteValue device : deviceEntries) {
                 getBuildProcessingContext(context, deviceEntries.get(i),
                         i, deviceEntries.size());
-                if(context.getCurrentRequest() != null && context.getCurrentRequest().hasError()) {
+                if (context.getCurrentRequest() != null && context.getCurrentRequest().hasError()) {
                     Exception e = context.getCurrentRequest().getError();
                     if (e instanceof ProcessingException &&
                             e.getCause() != null &&
@@ -260,14 +273,21 @@ public abstract class BaseProcessorInbound<T> {
                 ID identity = new ID(mapping.externalIdType, device.value.toString());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                         identity, context);
-                context.setSourceId(sourceId.getManagedObject().getId().getValue());
+                if (sourceId != null) {
+                    context.setSourceId(sourceId.getManagedObject().getId().getValue());
+                    // cache the mapping of device to client ID
+                    if (context.getClient() != null) {
+                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                                context.getSourceId());
+                    }
+                }
                 ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(tenant,
                         identity, context);
                 var response = objectMapper.writeValueAsString(adHocDevice);
                 context.getCurrentRequest().setResponse(response);
                 context.getCurrentRequest().setSourceId(adHocDevice.getId().getValue());
             } catch (Exception e) {
-                    context.getCurrentRequest().setError(e);
+                context.getCurrentRequest().setError(e);
             }
             predecessor = newPredecessor;
         } else if (!context.getApi().equals(API.INVENTORY)) {
@@ -298,6 +318,12 @@ public abstract class BaseProcessorInbound<T> {
                     payloadTarget.jsonString(),
                     size);
         }
+        // Create alarms for messages reported during processing substitutions
+        ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
+        sourceMor.setId(new GId(context.getSourceId()));
+        context.getAlarms()
+                .forEach(alarm -> c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM, new DateTime(),
+                        sourceMor, tenant));
         return context;
     }
 
@@ -313,7 +339,7 @@ public abstract class BaseProcessorInbound<T> {
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
                 if (resolvedSourceId == null) {
                     if (mapping.createNonExistingDevice) {
-                        sourceId.value = createAdHocDevice(identity, context);
+                        sourceId.value = createImplicitDevice(identity, context);
                     }
                 } else {
                     sourceId.value = resolvedSourceId.getManagedObject().getId().getValue();
@@ -321,6 +347,11 @@ public abstract class BaseProcessorInbound<T> {
                 SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.value.toString());
+                // cache the mapping of device to client ID
+                if (context.getClient() != null) {
+                    configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(),
+                            sourceId.value.toString());
+                }
                 substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
             }
         } else if ((Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(pathTarget)) {
@@ -330,6 +361,10 @@ public abstract class BaseProcessorInbound<T> {
             SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                     mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.value.toString());
+            // cache the mapping of device to client ID
+            if (context.getClient() != null) {
+                configurationRegistry.addOrUpdateClientRelation(tenant, context.getClient(), sourceId.value.toString());
+            }
             substitute.repairStrategy = RepairStrategy.CREATE_IF_MISSING;
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
             context.setApi(API.fromString((String) substitute.value));
@@ -339,15 +374,84 @@ public abstract class BaseProcessorInbound<T> {
             context.getBinaryInfo().setType((String) substitute.value);
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".attachment_Data").equals(pathTarget)) {
             context.getBinaryInfo().setData((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".processingMode").equals(pathTarget)) {
+            context.setProcessingMode(ProcessingMode.parse((String) substitute.value));
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceName").equals(pathTarget)) {
+            context.setDeviceName((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA + ".deviceType").equals(pathTarget)) {
+            context.setDeviceType((String) substitute.value);
+        } else if ((Mapping.TOKEN_CONTEXT_DATA).equals(pathTarget)) {
+            // Handle the case where substitute.value is a Map containing context data keys
+            if (substitute.value instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> contextDataMap = (Map<String, Object>) substitute.value;
+
+                // Process each key in the map
+                for (Map.Entry<String, Object> entry : contextDataMap.entrySet()) {
+                    String key = entry.getKey();
+                    Object value = entry.getValue();
+
+                    switch (key) {
+                        case "api":
+                            if (value instanceof String) {
+                                context.setApi(API.fromString((String) value));
+                            }
+                            break;
+                        case "attachment_Name":
+                            if (value instanceof String) {
+                                context.getBinaryInfo().setName((String) value);
+                            }
+                            break;
+                        case "attachment_Type":
+                            if (value instanceof String) {
+                                context.getBinaryInfo().setType((String) value);
+                            }
+                            break;
+                        case "attachment_Data":
+                            if (value instanceof String) {
+                                context.getBinaryInfo().setData((String) value);
+                            }
+                            break;
+                        case "processingMode":
+                            if (value instanceof String) {
+                                context.setProcessingMode(ProcessingMode.parse((String) substitute.value));
+                            }
+                            break;
+                        case "deviceName":
+                            if (value instanceof String) {
+                                context.setDeviceName((String) value);
+                            }
+                            break;
+                        case "deviceType":
+                            if (value instanceof String) {
+                                context.setDeviceType((String) value);
+                            }
+                            break;
+                        default:
+                            // Handle unknown keys - you might want to log a warning or ignore
+                            // Optional: log.warn("Unknown context data key: {}", key);
+                            break;
+                    }
+                }
+            }
         } else {
             SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
     }
 
-    protected String createAdHocDevice(ID identity, ProcessingContext<T> context) {
+    protected String createImplicitDevice(ID identity, ProcessingContext<T> context) {
         Map<String, Object> request = new HashMap<String, Object>();
-        request.put("name",
-                "device_" + identity.getType() + "_" + identity.getValue());
+        if (context.getDeviceName() != null) {
+            request.put("name", context.getDeviceName());
+        } else {
+            request.put("name", "device_" + identity.getType() + "_" + identity.getValue());
+        }
+        if (context.getDeviceType() != null) {
+            request.put("type", context.getDeviceType());
+        } else {
+            // Default device type if not specified
+            request.put("type", "c8y_GeneratedDeviceType");
+        }
         request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
         request.put("c8y_IsDevice", null);
         request.put("com_cumulocity_model_Agent", null);
@@ -379,7 +483,7 @@ public abstract class BaseProcessorInbound<T> {
             try {
                 var expr = jsonata(mappingFilter);
                 Object extractedSourceContent = expr.evaluate(payloadObjectNode);
-                if (!isNodeTrue(extractedSourceContent)) {
+                if (!Utils.isNodeTrue(extractedSourceContent)) {
                     log.info("{} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter,
                             payload);
                     context.setIgnoreFurtherProcessing(true);
@@ -389,21 +493,5 @@ public abstract class BaseProcessorInbound<T> {
                         payload, e);
             }
         }
-    }
-
-    private boolean isNodeTrue(Object node) {
-        // Case 1: Direct boolean value check
-        if (node instanceof Boolean) {
-            return (Boolean) node;
-        }
-
-        // Case 2: String value that can be converted to boolean
-        if (node instanceof String) {
-            String text = ((String) node).trim().toLowerCase();
-            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
-            // Add more string variations if needed
-        }
-
-        return false;
     }
 }

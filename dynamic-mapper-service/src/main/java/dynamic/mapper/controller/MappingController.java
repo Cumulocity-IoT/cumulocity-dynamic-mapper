@@ -44,16 +44,16 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.MappingComponent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,13 +77,13 @@ public class MappingController {
     ConnectorRegistry connectorRegistry;
 
     @Autowired
-    MappingComponent mappingComponent;
+    MappingService mappingService;
 
     @Autowired
-    ConnectorConfigurationComponent connectorConfigurationComponent;
+    ConnectorConfigurationService connectorConfigurationService;
 
     @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
+    ServiceConfigurationService serviceConfigurationService;
 
     @Autowired
     BootstrapService bootstrapService;
@@ -122,7 +122,7 @@ public class MappingController {
             @RequestParam(required = false) Direction direction) {
         String tenant = contextService.getContext().getTenant();
         log.debug("{} - Get mappings", tenant);
-        List<Mapping> result = mappingComponent.getMappings(tenant, direction);
+        List<Mapping> result = mappingService.getMappings(tenant, direction);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
@@ -154,7 +154,7 @@ public class MappingController {
     public ResponseEntity<Mapping> getMapping(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         log.debug("{} - Get mapping: {}", tenant, id);
-        Mapping result = mappingComponent.getMapping(tenant, id);
+        Mapping result = mappingService.getMapping(tenant, id);
         if (result == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
         }
@@ -197,12 +197,12 @@ public class MappingController {
         String tenant = contextService.getContext().getTenant();
         log.debug("{} - Delete mapping: {}", tenant, id);
         try {
-            final Mapping deletedMapping = mappingComponent.deleteMapping(tenant, id);
+            final Mapping deletedMapping = mappingService.deleteMapping(tenant, id);
             if (deletedMapping == null)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Mapping with id " + id + " could not be found");
 
-            mappingComponent.removeFromMappingFromCaches(tenant, deletedMapping);
+            mappingService.removeFromMappingFromCaches(tenant, deletedMapping);
 
             if (!Direction.OUTBOUND.equals(deletedMapping.direction)) {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
@@ -260,9 +260,9 @@ public class MappingController {
             log.debug("{} - Create mapping: {}", tenant, mapping);
             // new mapping should be disabled by default
             mapping.active = false;
-            final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);
+            final Mapping createdMapping = mappingService.createMapping(tenant, mapping);
             if (Direction.OUTBOUND.equals(createdMapping.direction)) {
-                mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
+                mappingService.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
             } else {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.
@@ -270,9 +270,9 @@ public class MappingController {
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).updateSubscriptionForInbound(createdMapping, true, false);
                 });
-                mappingComponent.removeMappingInboundFromResolver(tenant, createdMapping);
-                mappingComponent.addMappingInboundToResolver(tenant, createdMapping);
-                mappingComponent.addMappingInboundToCache(tenant, createdMapping.id, mapping);
+                mappingService.removeMappingInboundFromResolver(tenant, createdMapping);
+                mappingService.addMappingInboundToResolver(tenant, createdMapping);
+                mappingService.addMappingInboundToCache(tenant, createdMapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(createdMapping);
         } catch (Exception ex) {
@@ -330,17 +330,17 @@ public class MappingController {
         String tenant = contextService.getContext().getTenant();
         try {
             log.info("{} - Update mapping: {}, {}", tenant, mapping, id);
-            final Mapping updatedMapping = mappingComponent.updateMapping(tenant, mapping, false, false);
+            final Mapping updatedMapping = mappingService.updateMapping(tenant, mapping, false, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
-                mappingComponent.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
+                mappingService.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
             } else {
                 Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).updateSubscriptionForInbound(updatedMapping, false, false);
                 });
-                mappingComponent.removeMappingInboundFromResolver(tenant, mapping);
-                mappingComponent.addMappingInboundToResolver(tenant, mapping);
-                mappingComponent.addMappingInboundToCache(tenant, mapping.id, mapping);
+                mappingService.removeMappingInboundFromResolver(tenant, mapping);
+                mappingService.addMappingInboundToResolver(tenant, mapping);
+                mappingService.addMappingInboundToCache(tenant, mapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(mapping);
         } catch (Exception ex) {

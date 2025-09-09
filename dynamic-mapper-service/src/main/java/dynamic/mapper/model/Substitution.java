@@ -30,6 +30,7 @@ import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.processor.model.RepairStrategy;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Collection;
@@ -38,6 +39,7 @@ import java.util.Map;
 @Slf4j
 @Getter
 @ToString()
+@Schema(description = "Field substitution configuration for transforming data between source and target formats during mapping execution")
 public class Substitution implements Serializable {
 
     public Substitution() {
@@ -45,16 +47,51 @@ public class Substitution implements Serializable {
         this.expandArray = false;
     }
 
+    @Schema(
+        requiredMode = Schema.RequiredMode.REQUIRED,
+        description = """
+            JSONPath expression to extract data from the source payload. 
+            Supports standard JSONPath syntax including:
+            - Root reference: $
+            - Property access: $.temperature, $.device.id
+            - Array access: $.readings[0], $.sensors[*].value
+            - Wildcards: $.devices.*.name
+            - Filters: $.readings[?(@.type == 'temperature')]
+            """,
+        example = "$.device.temperature"
+    )
     @NotNull
     public String pathSource;
 
+    @Schema(
+        requiredMode = Schema.RequiredMode.REQUIRED,
+        description = """
+            JSONPath expression defining where to place the extracted data in the target payload.
+            Can reference:
+            - Static paths: $.temperature.value
+            - Device identity: _IDENTITY_.c8ySourceId, _IDENTITY_.externalId
+            - Topic levels: _TOPIC_LEVEL_[0], _TOPIC_LEVEL_[1]
+            - Context data: _CONTEXT_DATA_.timestamp
+            """,
+        example = "$.c8y_TemperatureMeasurement.T.value"
+    )
     @NotNull
     public String pathTarget;
 
+    @Schema(
+        requiredMode = Schema.RequiredMode.REQUIRED,
+        description = "Strategy to handle data extraction and transformation edge cases",
+        implementation = RepairStrategy.class,
+        example = "DEFAULT"
+    )
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public RepairStrategy repairStrategy;
 
+    @Schema(
+        description = "Whether to expand arrays by creating multiple target objects (one for each array element) instead of copying the entire array",
+        example = "false"
+    )
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean expandArray;
 

@@ -23,6 +23,8 @@ package dynamic.mapper.notification.websocket;
 
 import java.net.URI;
 
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+
 import dynamic.mapper.processor.model.ProcessingResult;
 
 /**
@@ -58,4 +60,5 @@ public interface NotificationCallback {
      * reconnection should be attempted.
      */
     void onClose(int statusCode, String reason);
+
 }

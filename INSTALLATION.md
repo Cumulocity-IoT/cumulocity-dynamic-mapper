@@ -2,33 +2,52 @@
 
 ## Prerequisites
 
-To use the mapper you must have the following:
+If you want to use the dynamic mapper, the following prerequisites must be met:
 
-- a Cumulocity Tenant with **microservice** feature subscribed (if not available please ask your contact or support)
+- a Cumulocity Tenant with **microservice** feature subscribed (if not available, please ask your contact or support)
 - Admin privileges for your user in the tenant
+
+### AI pre-requisites
+
+To leverage **AI capabilities** of the dynamic mapper, you need to have the following prerequisites:
+- **AI Agent Manager** microservice deployed in your tenant. This is currently in private preview, please contact your Cumulocity representative to get access.
+- **AI Model Provider + API key** is required which must be configured in the **AI Agent Manager** and is leveraged by the AI agents. We tested `claude-sonnet-4-20250514` model from Anthropic, but you can use any other model that supports the required functionality.
 
 ## Installation
 
-You need to install two components to your Cumulocity IoT Tenant:
+You need to install two components to your Cumulocity Tenant:
 
 1. microservice - (Java)
 2. Web App Plugin & Blueprint - (angular/Cumulocity WebSDK)
 
 Both are provided as binaries in [releases](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/releases).
-Download the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
+
+The microservice is provided in 4 variants:
+* **Starter** - Uses 0.5 CPUs and 2 GB RAM, suitable for up to 625 messages per second to be processed.
+* **Standard** - Uses 2 CPU and 4 GB RAM, suitable for up to 2500 messages per second to be processed.
+* **Performance** - Uses 8 CPU and 8 GB RAM, suitable for up to 10.000 messages per second to be processed.
+* **Max** - Uses 16 CPU and 16 GB RAM, suitable for up to 20.000 messages per second to be processed.
+
+Download the binaries from the latest release and upload them to your Cumulocity Tenant.
 
 > **_NOTE:_**
 > The screenshots show the dynamic mapper installed as a plugin in the Cumulocity Administration app. The dynamic mapper can also be installed in other Cumulocity apps, including Cockpit or Device Management, or as a standalone application.
 
 ## Permissions
 
-The solution defines one role:`ROLE_MAPPING_ADMIN` that must be assigned to the user accessing the Dynamic Mapper app.
+The solution defines the following roles:
+
+* `ROLE_DYNAMIC_MAPPER_ADMIN` that allows to manage the dynamic mapper, including the configuration of connectors and mappings.
+* `ROLE_DYNAMIC_MAPPER_CREATE` that allows the user to create/manage mappings and subscriptions only.
+* `ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE` that allows to ingest messages via the HTTP connector.
+
+Please assign the roles to the users that should be able to use the dynamic mapper.
 
 ### Microservice
 
 In your Enterprise Tenant or Tenant navigate to "Administration" App, go to "Ecosystem" -> "Microservices" and click on "Add Microservice" on the top right.
 
-Select the `dynamic-mapper-service.zip`.
+Select the `dynamic-mapper-service-*.zip`.
 Make sure that you subscribe the microservice to your tenant when prompted
 
 ### Web app

@@ -89,9 +89,9 @@ export const SAMPLE_TEMPLATES_EXTERNAL = {
    "type": "maker_Vibration_Sensor"
   }`,
   FLAT_FILE:
-    '{"message":"165, 14.5, \\"2022-08-06T00:14:50.000+02:00\\",\\"c8y_FuelMeasurement\\""}',
+    '{"payload":"165, 14.5, \\"2022-08-06T00:14:50.000+02:00\\",\\"c8y_FuelMeasurement\\""}',
   HEX:
-    '{"message":"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 "}'
+    '{"payload":"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 "}'
 };
 
 export const SCHEMA_EVENT = {
@@ -323,6 +323,7 @@ export const CONNECTOR_FRAGMENT = 'd11r_connector';
 export const MAPPING_GENERATED_TEST_DEVICE = 'd11r_device_generatedType';
 
 export const BASE_URL = 'service/dynamic-mapper-service';
+export const BASE_AI_URL = 'service/ai';
 export const PATH_OPERATION_ENDPOINT = 'operation';
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connector';
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
@@ -335,8 +336,9 @@ export const PATH_EXTENSION_ENDPOINT = 'extension';
 export const PATH_SUBSCRIPTION_ENDPOINT = 'subscription';
 export const PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT = 'deployment/effective';
 export const PATH_DEPLOYMENT_DEFINED_ENDPOINT = 'deployment/defined';
-export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscription';
+export const PATH_RELATION_ENDPOINT = 'relation';
 export const PATH_MAPPING_ENDPOINT = 'mapping';
+export const PATH_AGENT_ENDPOINT = 'agent';
 
 export const AGENT_ID = 'd11r_mappingService';
 export const COLOR_HIGHLIGHTED: string = 'lightgrey';

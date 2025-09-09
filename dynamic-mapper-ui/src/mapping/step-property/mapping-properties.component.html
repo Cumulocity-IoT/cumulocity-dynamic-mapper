@@ -18,32 +18,31 @@
   ~  @authors Christof Strack, Stefan Witschel
   ~
   -->
-
-<div class="col-lg-6 col-lg-offset-3">
-  <h4 class="text-medium">
-    <div class="text-center">
-      General settings for {{ mapping.mappingType }} mapping
-      <span *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY" class="label label-primary">{{ 'Read Only'
-        }}</span>
-      <span class="hidden-xs hidden-sm m-l-4">
-        <ng-template #popupReadOnlyHelp>
-          <div [innerHtml]="readOnlyHelp"></div>
-        </ng-template>
-        <button *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY" type="button" placement="right"
-          [popover]="popupReadOnlyHelp" triggers="focus" class="btn-help"
-          aria-label="Help content"></button>
-      </span>
+<div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
+  <div class="d-flex">
+    <div class="col-lg-6 col-lg-offset-3">
+      <h4 class="text-medium text-center">
+        General settings for {{ mapping.mappingType | formatStringAsWords }} mapping
+        <span *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY" class="label label-primary">{{ 'Read
+          Only'
+          }}</span>
+        <span class="hidden-xs hidden-sm m-l-4">
+          <ng-template #popupReadOnlyHelp>
+            <div [innerHtml]="readOnlyHelp"></div>
+          </ng-template>
+          <button *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY" type="button" placement="right"
+            [popover]="popupReadOnlyHelp" triggers="focus" class="btn-help" aria-label="Help content"></button>
+        </span>
+      </h4>
     </div>
-  </h4>
+  </div>
 </div>
-<div class="col-xs-12 flex-grow no-gutter">
-  <div class="card-inner-scroll fit-h">
-    <div class="card-block p-b-0">
-      <div class="col-md-6 col-md-offset-3 col-lg-8 col-lg-offset-2">
-        <div [formGroup]="propertyFormly">
-          <div class="legend form-block col-xs-12">Topics</div>
-          <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="mapping"></formly-form>
-        </div>
+<div class="col-xs-12 flex-grow inner-scroll">
+  <div class="card-block p-b-0">
+    <div class="col-md-6 col-md-offset-1 col-lg-10 col-lg-offset-1">
+      <div [formGroup]="propertyFormly">
+        <div class="legend form-block col-xs-12">Topics</div>
+        <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="mapping"></formly-form>
       </div>
     </div>
   </div>

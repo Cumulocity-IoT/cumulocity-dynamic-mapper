@@ -24,9 +24,11 @@ package dynamic.mapper.processor.model;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.API;
@@ -42,6 +44,8 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+
+import com.cumulocity.sdk.client.ProcessingMode;
 
 @Getter
 @Setter
@@ -59,8 +63,10 @@ public class ProcessingContext<O> {
 
     private String topic;
 
+    private String client;
+
     private API api;
-    
+
     private Qos qos;
 
     private String resolvedPublishTopic;
@@ -85,7 +91,11 @@ public class ProcessingContext<O> {
 
     // <pathTarget, substituteValues>
     @Builder.Default
-    private Map<String, List<SubstituteValue>> processingCache = new HashMap<String, List<SubstituteValue>>();
+    // private Map<String, List<SubstituteValue>> processingCache = new
+    // HashMap<String, List<SubstituteValue>>();
+    // sort processingCache, so that the "_CONTEXT_DATA_.deviceName" is available
+    // when creating an implicit device
+    private Map<String, List<SubstituteValue>> processingCache = new TreeMap<String, List<SubstituteValue>>();
 
     @Builder.Default
     private boolean sendPayload = false;
@@ -124,6 +134,16 @@ public class ProcessingContext<O> {
     private Value sourceValue;
 
     @Builder.Default
+    private Set<String> alarms = new HashSet<>();
+
+    @Builder.Default
+    private ProcessingMode processingMode = ProcessingMode.PERSISTENT;
+
+    private String deviceName;
+
+    private String deviceType;
+
+    @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();
 
     public static final String SOURCE_ID = "source.id";
@@ -159,7 +179,7 @@ public class ProcessingContext<O> {
     public List<SubstituteValue> getDeviceEntries() {
         List<String> pathsTargetForDeviceIdentifiers;
         if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
-                || MappingType.CODE_BASED.equals(mapping.getMappingType())) {
+                || mapping.isSubstitutionsAsCode()) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();
@@ -175,7 +195,7 @@ public class ProcessingContext<O> {
     public List<String> getPathsTargetForDeviceIdentifiers() {
         List<String> pathsTargetForDeviceIdentifiers;
         if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
-                || MappingType.CODE_BASED.equals(mapping.getMappingType())) {
+                || mapping.isSubstitutionsAsCode()) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();

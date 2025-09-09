@@ -84,7 +84,7 @@ function templates_init() {
   
   c8y api \
     --method POST \
-    --url "/service/dynamic-mapping-service/operation" \
+    --url "/service/dynamic-mapper-service/operation" \
     --data '{
       "operation": "INIT_CODE_TEMPLATES"
     }'

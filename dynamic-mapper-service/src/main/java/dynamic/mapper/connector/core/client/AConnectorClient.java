@@ -38,7 +38,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -50,26 +57,24 @@ import org.joda.time.DateTime;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
 import dynamic.mapper.core.ConnectorStatusEvent;
-import dynamic.mapper.core.MappingComponent;
 import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingServiceRepresentation;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.DispatcherInbound;
-import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -110,19 +115,20 @@ public abstract class AConnectorClient {
 
     @Getter
     @Setter
+    public boolean singleton;
+
+    @Getter
+    @Setter
     protected String tenant;
 
     @Getter
-    protected MappingComponent mappingComponent;
+    protected MappingService mappingService;
 
     @Getter
-    protected MappingServiceRepresentation mappingServiceRepresentation;
+    protected ConnectorConfigurationService connectorConfigurationService;
 
     @Getter
-    protected ConnectorConfigurationComponent connectorConfigurationComponent;
-
-    @Getter
-    protected ServiceConfigurationComponent serviceConfigurationComponent;
+    protected ServiceConfigurationService serviceConfigurationService;
 
     @Getter
     protected C8YAgent c8yAgent;
@@ -315,7 +321,7 @@ public abstract class AConnectorClient {
     }
 
     public void submitHousekeeping() {
-        log.debug("{} - Starting housekeeping...", tenant);
+        log.debug("{} - Starting housekeeping for {} ...", tenant, connectorName);
         housekeepingExecutor.scheduleAtFixedRate(
                 this::runHousekeeping,
                 0,
@@ -324,11 +330,11 @@ public abstract class AConnectorClient {
     }
 
     public void loadConfiguration() {
-        connectorConfiguration = connectorConfigurationComponent
+        connectorConfiguration = connectorConfigurationService
                 .getConnectorConfiguration(getConnectorIdentifier(), tenant);
         connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
 
-        serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
     }
 
@@ -401,7 +407,7 @@ public abstract class AConnectorClient {
             return false;
         }
 
-        List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
+        List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.identifier);
         boolean isDeployed = deploymentMapEntry != null &&
                 deploymentMapEntry.contains(getConnectorIdentifier());
 
@@ -496,7 +502,7 @@ public abstract class AConnectorClient {
             if (isMappingValidForDeployment(mapping) || isDeactivation) {
                 handleSubscriptionForInbound(mapping, create, activationChanged);
             } else {
-                List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
+                List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.identifier);
                 boolean isDeployed = deploymentMapEntry != null &&
                         deploymentMapEntry.contains(getConnectorIdentifier());
                 if (isDeployed) {
@@ -629,11 +635,10 @@ public abstract class AConnectorClient {
     private void createAndSendLifecycleEvent() {
         Map<String, String> statusMap = createStatusMap();
         String message = "Connector status: " + connectorStatus.status;
-        c8yAgent.createEvent(
+        c8yAgent.createOperationEvent(
                 message,
                 LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
                 DateTime.now(),
-                mappingServiceRepresentation,
                 tenant,
                 statusMap);
     }
@@ -662,11 +667,10 @@ public abstract class AConnectorClient {
         String message = action + " topic: " + topic;
         Map<String, String> eventMap = createSubscriptionEventMap(message);
 
-        c8yAgent.createEvent(
+        c8yAgent.createOperationEvent(
                 message,
                 LoggingEventType.STATUS_SUBSCRIPTION_EVENT_TYPE,
                 DateTime.now(),
-                mappingServiceRepresentation,
                 tenant,
                 eventMap);
     }
@@ -737,13 +741,16 @@ public abstract class AConnectorClient {
     private void performHousekeepingTasks() throws Exception {
         Instant now = Instant.now();
         logHousekeepingStatus(now);
+        connectorSpecificHousekeeping(tenant);
 
-        mappingComponent.cleanDirtyMappings(tenant);
-        mappingComponent.sendMappingStatus(tenant);
+        mappingService.cleanDirtyMappings(tenant);
+        mappingService.sendMappingStatus(tenant);
 
         updateConnectorStatusIfNeeded();
         monitorSubscriptions();
     }
+
+    protected abstract void connectorSpecificHousekeeping(String tenant);
 
     private void logHousekeepingStatus(Instant now) {
         if (Duration.between(start, now).getSeconds() < 1800) {
@@ -854,7 +861,7 @@ public abstract class AConnectorClient {
     }
 
     private Optional<Mapping> findActiveMappingInbound(Mapping mapping) {
-        Map<String, Mapping> cacheMappings = mappingComponent.getCacheMappingInbound(tenant);
+        Map<String, Mapping> cacheMappings = mappingService.getCacheMappingInbound(tenant);
         if (cacheMappings == null) {
             return Optional.empty();
         }
@@ -885,7 +892,7 @@ public abstract class AConnectorClient {
     }
 
     private boolean isDeployedInConnector(Mapping mapping) {
-        List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.identifier);
+        List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.identifier);
         return deploymentMapEntry != null && deploymentMapEntry.contains(getConnectorIdentifier());
     }
 

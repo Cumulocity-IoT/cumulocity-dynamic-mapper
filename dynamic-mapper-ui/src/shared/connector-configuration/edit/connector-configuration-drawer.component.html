@@ -1,0 +1,53 @@
+<!--
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
+
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage">
+    <div class="card-header separator" style="justify-content: center">
+        <h4 class="card-title d-flex">
+          <i [c8yIcon]="'connected'" class="icon-32 m-r-16"></i>
+          <span class="m-t-8">Edit connector configuration</span>
+        </h4>
+      <small class="text-muted p-t-8">Connectors of type Cumulocity MQTT Service - (device isolation) and Cumulocity MQTT Service - (tenant isolation) can only be created once.</small>
+    </div>
+    <div class="card-block">
+      <div class="p-24 modal-inner-scroll animated fadeIn">
+        <div [formGroup]="brokerForm" *ngIf="add">
+          <formly-form [form]="brokerForm" [fields]="brokerFormFields"></formly-form>
+        </div>
+        <div [formGroup]="dynamicForm">
+          <formly-form [form]="dynamicForm" [fields]="dynamicFormFields" [model]="configuration"></formly-form>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer text-center sticky-buttons">
+      <div class="form-group">
+        <button type="button" name="save" class="btn btn-primary" (click)="onSave()"
+          [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
+          Save
+        </button>
+        <button type="button" name="cancel" class="btn btn-primary" (click)="onCancel()" translate>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

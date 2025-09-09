@@ -27,12 +27,9 @@
   <div class="p-b-24 p-l-24 p-r-24">
     <div class="form-group">
       <div class="c8y-select-wrapper" style="width: 50%">
-        <select class="form-control" (change)="onSelectSnoopedTemplate($event.target.value)"
+        <select class="form-control" (change)="onSelectSnoopedTemplate($event)"
           [disabled]="mapping.snoopedTemplates?.length === 0">
-          <option [value]="i" *ngFor="
-              let t of [].constructor(mapping.snoopedTemplates?.length);
-              let i = index
-            ">
+          <option *ngFor="let template of mapping.snoopedTemplates; let i = index" [value]="i" [selected]="i === 0">
             {{ 'Template - ' + (i + 1) }}
           </option>
         </select>

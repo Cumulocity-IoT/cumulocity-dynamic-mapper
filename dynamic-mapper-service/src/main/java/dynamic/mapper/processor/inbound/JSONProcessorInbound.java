@@ -66,72 +66,77 @@ public class JSONProcessorInbound extends BaseProcessorInbound<Object> {
     @Override
     public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
-        String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
+        if (!mapping.substitutionsAsCode) {
+            String tenant = context.getTenant();
+            ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        Object payloadObject = context.getPayload();
-        Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
+            Object payloadObject = context.getPayload();
+            Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
-        String payload = toPrettyJsonString(payloadObject);
-        if (serviceConfiguration.logPayload || mapping.debug) {
-            log.info("{} - Patched payload: {}", tenant, payload);
-        }
-
-        boolean substitutionTimeExists = false;
-        for (Substitution substitution : mapping.substitutions) {
-            Object extractedSourceContent = null;
-            /*
-             * step 1 extract content from inbound payload
-             */
-            try {
-                var expr = jsonata(substitution.pathSource);
-                extractedSourceContent = expr.evaluate(payloadObject);
-            } catch (Exception e) {
-                log.error("{} - Exception for: {}, {}: ", tenant, substitution.pathSource,
-                        payload, e);
+            String payload = toPrettyJsonString(payloadObject);
+            if (serviceConfiguration.logPayload || mapping.debug) {
+                log.info("{} - Patched payload: {}", tenant, payload);
             }
-            /*
-             * step 2 analyse extracted content: textual, array
-             */
-            List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                    substitution.pathTarget,
-                    new ArrayList<>());
 
-            if (extractedSourceContent != null && SubstitutionEvaluation.isArray(extractedSourceContent) && substitution.expandArray) {
-                // extracted result from sourcePayload is an array, so we potentially have to
-                // iterate over the result, e.g. creating multiple devices
-                for (Object jn : (Collection) extractedSourceContent) {
-                    SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, jn,
+            boolean substitutionTimeExists = false;
+            for (Substitution substitution : mapping.substitutions) {
+                Object extractedSourceContent = null;
+                /*
+                 * step 1 extract content from inbound payload
+                 */
+                try {
+                    var expr = jsonata(substitution.pathSource);
+                    extractedSourceContent = expr.evaluate(payloadObject);
+                } catch (Exception e) {
+                    log.error("{} - Exception for: {}, {}: ", tenant, substitution.pathSource,
+                            payload, e);
+                }
+                /*
+                 * step 2 analyze extracted content: textual, array
+                 */
+                List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
+                        substitution.pathTarget,
+                        new ArrayList<>());
+
+                if (extractedSourceContent != null && SubstitutionEvaluation.isArray(extractedSourceContent)
+                        && substitution.expandArray) {
+                    // extracted result from sourcePayload is an array, so we potentially have to
+                    // iterate over the result, e.g. creating multiple devices
+                    for (Object jn : (Collection) extractedSourceContent) {
+                        SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, jn,
+                                substitution, mapping);
+                    }
+                } else {
+                    SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
                             substitution, mapping);
                 }
-            } else {
-                SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
-                        substitution, mapping);
-            }
-            processingCache.put(substitution.pathTarget, processingCacheEntry);
-            if (serviceConfiguration.logSubstitution || mapping.debug) {
-                log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
-                        tenant,
-                        substitution.pathSource,
-                        extractedSourceContent == null ? null : extractedSourceContent.toString(),
-                        substitution.pathTarget);
+                processingCache.put(substitution.pathTarget, processingCacheEntry);
+                if (serviceConfiguration.logSubstitution || mapping.debug) {
+                    log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
+                            tenant,
+                            substitution.pathSource,
+                            extractedSourceContent == null ? null : extractedSourceContent.toString(),
+                            substitution.pathTarget);
+                }
+
+                if (substitution.pathTarget.equals(Mapping.KEY_TIME)) {
+                    substitutionTimeExists = true;
+                }
             }
 
-            if (substitution.pathTarget.equals(Mapping.KEY_TIME)) {
-                substitutionTimeExists = true;
+            // no substitution for the time property exists, then use the system time
+            if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
+                List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
+                        Mapping.KEY_TIME,
+                        new ArrayList<>());
+                processingCacheEntry.add(
+                        new SubstituteValue(new DateTime().toString(),
+                                TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false));
+                processingCache.put(Mapping.KEY_TIME, processingCacheEntry);
             }
-        }
-
-        // no substitution for the time property exists, then use the system time
-        if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
-            List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                    Mapping.KEY_TIME,
-                    new ArrayList<>());
-            processingCacheEntry.add(
-                    new SubstituteValue(new DateTime().toString(),
-                            TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false));
-            processingCache.put(Mapping.KEY_TIME, processingCacheEntry);
+        } else {
+            SubstitutionsAsCode.extractFromSource(context);
         }
     }
 

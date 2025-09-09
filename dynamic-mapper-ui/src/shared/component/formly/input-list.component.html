@@ -1,0 +1,16 @@
+<ul c8yInputGroupListContainer class="list-unstyled">
+    <li class="m-b-8 fit-w" *ngFor="let item of dataInternal; let i = index; trackBy: trackByIndex">
+        <c8y-input-group-list [index]="i" (onAdd)="add()" (onRemove)="remove($event)">
+            <div class="col-xs-3" style="padding-left:0px">
+                <input type="text" [name]="'key-' + i" class="form-control m-r-4"
+                    placeholder="{{ 'header key' | translate }}" [(ngModel)]="item.key" [required]="true"
+                    [disabled]="disabled" (ngModelChange)="onInputChange()" #key />
+            </div>
+            <div class="col-xs-8" style="padding-left:0px">
+                <input type="text" [name]="'value-' + i" class="form-control" placeholder="{{ 'value' | translate }}"
+                    [(ngModel)]="item.value" [required]="true" [disabled]="disabled" (ngModelChange)="onInputChange()"
+                    #value />
+            </div>
+        </c8y-input-group-list>
+    </li>
+</ul>

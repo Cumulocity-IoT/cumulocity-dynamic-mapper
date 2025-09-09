@@ -68,44 +68,24 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Animated.gif'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png'
       },
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Substitution_Animated.gif'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Animated.gif'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Process.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Process.png'
-      },
-      {
-        from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.png',
-        to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.png'
-      },
-      {
-        from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.svg',
-        to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
-      },
-      {
-        from: '../resources/image/Dynamic_Mapper_Connector_Matrix.png',
-        to: 'image/Dynamic_Mapper_Connector_Matrix.png'
-      },
-      {
-        from: '../resources/image/Dynamic_Mapper_QoS_Matrix.png',
-        to: 'image/Dynamic_Mapper_QoS_Matrix.png'
-      },
-            {
-        from: '../resources/image/Dynamic_Mapper_Roles_Permissions.png',
-        to: 'image/Dynamic_Mapper_Roles_Permissions.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
       },
       {
         from: '../LICENSE',

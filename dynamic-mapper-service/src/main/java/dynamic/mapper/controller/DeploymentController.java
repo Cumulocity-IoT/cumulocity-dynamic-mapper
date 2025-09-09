@@ -41,16 +41,15 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
-import dynamic.mapper.configuration.ConnectorConfigurationComponent;
-import dynamic.mapper.configuration.ServiceConfigurationComponent;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.MappingComponent;
 import dynamic.mapper.model.DeploymentMapEntry;
-
+import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.ServiceConfigurationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -72,13 +71,13 @@ public class DeploymentController {
 	ConnectorRegistry connectorRegistry;
 
 	@Autowired
-	MappingComponent mappingComponent;
+	MappingService mappingService;
 
 	@Autowired
-	ConnectorConfigurationComponent connectorConfigurationComponent;
+	ConnectorConfigurationService connectorConfigurationService;
 
 	@Autowired
-	ServiceConfigurationComponent serviceConfigurationComponent;
+	ServiceConfigurationService serviceConfigurationService;
 
 	@Autowired
 	BootstrapService bootstrapService;
@@ -231,7 +230,7 @@ public class DeploymentController {
 		String tenant = contextService.getContext().getTenant();
 		log.info("{} - Update deployment for mapping, mappingIdentifier: {}, deployment: {}", tenant, mappingIdentifier, deployment);
 		try {
-			mappingComponent.updateDeploymentMapEntry(tenant, mappingIdentifier, deployment);
+			mappingService.updateDeploymentMapEntry(tenant, mappingIdentifier, deployment);
 			return ResponseEntity.status(HttpStatus.CREATED).build();
 		} catch (Exception ex) {
 			log.error("{} - Error updating deployment for mapping: {}", tenant, mappingIdentifier, ex);
@@ -288,7 +287,7 @@ public class DeploymentController {
 		String tenant = contextService.getContext().getTenant();
 		log.info("{} - Get deployment for mappingIdentifier: {}", tenant, mappingIdentifier);
 		try {
-			List<String> map = mappingComponent.getDeploymentMapEntry(tenant, mappingIdentifier);
+			List<String> map = mappingService.getDeploymentMapEntry(tenant, mappingIdentifier);
 			return new ResponseEntity<List<String>>(map, HttpStatus.OK);
 		} catch (Exception ex) {
 			log.error("{} - Error getting deployment for mapping: {}", tenant, mappingIdentifier, ex);
@@ -344,7 +343,7 @@ public class DeploymentController {
 		String tenant = contextService.getContext().getTenant();
 		log.info("{} - Get complete deployment", tenant);
 		try {
-			Map<String, List<String>> map = mappingComponent.getDeploymentMap(tenant);
+			Map<String, List<String>> map = mappingService.getDeploymentMap(tenant);
 			return new ResponseEntity<Map<String, List<String>>>(map, HttpStatus.OK);
 		} catch (Exception ex) {
 			log.error("{} - Error getting complete deployment!", tenant, ex);

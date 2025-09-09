@@ -26,6 +26,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { IIdentified } from '@c8y/client';
+import { AssetSelectionChangeEvent } from '@c8y/ngx-components/assets-navigator';
 
 @Component({
   selector: 'd11r-device-selector-subscription',
@@ -46,8 +47,8 @@ export class DeviceSelectorSubscriptionComponent implements OnInit {
 
   }
 
-  selectionChanged(e) {
-    console.log(e);
+  selectionChanged(event: AssetSelectionChangeEvent) {
+    // console.log(event);
   }
 
   clickedUpdateSubscription() {

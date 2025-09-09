@@ -17,163 +17,227 @@
  *
  * @authors Christof Strack
  */
-import { inject, Injectable } from '@angular/core';
+
+import { inject, Injectable, OnDestroy } from '@angular/core';
 import {
   FetchClient,
   IFetchResponse,
-  IIdentified,
-  InventoryService,
   QueriesUtil
 } from '@c8y/client';
 import {
   Observable,
   Subject,
   combineLatest,
-  filter,
   map,
   shareReplay,
   switchMap,
   take,
+  filter,
   takeUntil
 } from 'rxjs';
 import {
   BASE_URL,
-  PATH_MAPPING_ENDPOINT,
-  PATH_SUBSCRIPTIONS_ENDPOINT,
-  PATH_SUBSCRIPTION_ENDPOINT,
   Direction,
-  Mapping,
   SharedService,
-  DeploymentMapEntryDetailed,
-  PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT,
   MappingEnriched,
   MappingTypeDescriptionMap,
-  DeploymentMapEntry,
-  DeploymentMap,
-  PATH_DEPLOYMENT_DEFINED_ENDPOINT,
   Operation,
+  DeploymentMapEntryDetailed,
+  PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT,
+  DeploymentMapEntry,
+  PATH_DEPLOYMENT_DEFINED_ENDPOINT,
+  Mapping,
+  PATH_MAPPING_ENDPOINT,
   LoggingEventTypeMap,
   LoggingEventType,
-  MappingType
+  isSubstitutionsAsCode
 } from '../../shared';
 import { JSONProcessorInbound } from './processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from './processor/impl/json-processor-outbound.service';
-import {
-  ProcessingContext,
-  ProcessingType,
-  SubstituteValue
-} from './processor/processor.model';
-import { C8YNotificationSubscription } from '../shared/mapping.model';
+import { CodeBasedProcessorOutbound } from './processor/impl/code-based-processor-outbound.service';
+import { CodeBasedProcessorInbound } from './processor/impl/code-based-processor-inbound.service';
 import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
-import { CodeBasedProcessorOutbound } from './processor/impl/code-based-processor-outbound.service';
-import { CodeBasedProcessorInbound } from './processor/impl/code-based-processor-inbound.service';
+import { ProcessingContext, ProcessingType, SubstituteValue } from './processor/processor.model';
 
 @Injectable({
   providedIn: 'root'
 })
-export class MappingService {
+export class MappingService implements OnDestroy {
+  // Core dependencies
+  private readonly eventRealtimeService: EventRealtimeService;
+  private readonly queriesUtil: QueriesUtil;
+
+  // Observables and subjects
+  private readonly updateMappingEnriched$ = new Subject<MappingEnriched>();
+  private readonly unsubscribe$ = new Subject<void>();
+
+  mappingsOutboundEnriched$: Observable<MappingEnriched[]>;
+  mappingsInboundEnriched$: Observable<MappingEnriched[]>;
+  readonly reloadInbound$: Subject<void>;
+  readonly reloadOutbound$: Subject<void>;
+
+  // Cache
+  private _agentId: string;
+  private readonly JSONATA = require('jsonata');
+
   constructor(
-    private inventory: InventoryService,
-    private jsonProcessorInbound: JSONProcessorInbound,
-    private jsonProcessorOutbound: JSONProcessorOutbound,
-    private codeBasedProcessorOutbound: CodeBasedProcessorOutbound,
-    private codeBasedProcessorInbound: CodeBasedProcessorInbound,
-    private sharedService: SharedService,
-    private client: FetchClient,
+    private readonly jsonProcessorInbound: JSONProcessorInbound,
+    private readonly jsonProcessorOutbound: JSONProcessorOutbound,
+    private readonly codeBasedProcessorOutbound: CodeBasedProcessorOutbound,
+    private readonly codeBasedProcessorInbound: CodeBasedProcessorInbound,
+    private readonly sharedService: SharedService,
+    private readonly client: FetchClient
   ) {
-    this.eventRealtimeService = new EventRealtimeService(
-      inject(RealtimeSubjectService)
-    );
+    this.eventRealtimeService = new EventRealtimeService(inject(RealtimeSubjectService));
     this.queriesUtil = new QueriesUtil();
     this.reloadInbound$ = this.sharedService.reloadInbound$;
     this.reloadOutbound$ = this.sharedService.reloadOutbound$;
     this.initializeMappingsEnriched();
   }
-  private eventRealtimeService: EventRealtimeService;
-  private updateMappingEnriched$: Subject<MappingEnriched> = new Subject();
-  queriesUtil: QueriesUtil;
-  private _agentId: string;
-  protected JSONATA = require('jsonata');
 
-  //   private _mappingsInbound: Promise<Mapping[]>;
-  //   private _mappingsOutbound: Promise<Mapping[]>;
+  // TODO ngOnDestroy is not called for services, find alternative how to stop the realtime service
+  ngOnDestroy(): void {
+    this.unsubscribe$.next();
+    this.unsubscribe$.complete();
+    if (this.eventRealtimeService) {
+      this.eventRealtimeService.stop();
+    }
+  }
 
-  mappingsOutboundEnriched$: Observable<MappingEnriched[]>;
-  mappingsInboundEnriched$: Observable<MappingEnriched[]>;
-
-  reloadInbound$: Subject<void>; // = new Subject<void>();
-  reloadOutbound$: Subject<void>; // = new Subject<void>();
-
-  private unsubscribe$ = new Subject<void>();
+  // ===== MAPPING OPERATIONS =====
 
   async changeActivationMapping(parameter: any): Promise<IFetchResponse> {
-    return await this.sharedService.runOperation(
-      {
-        operation: Operation.ACTIVATE_MAPPING,
-        parameter
-      }
-    );
+    return await this.sharedService.runOperation({
+      operation: Operation.ACTIVATE_MAPPING,
+      parameter
+    });
   }
 
   async addSampleMappings(parameter: any): Promise<IFetchResponse> {
-    return await this.sharedService.runOperation(
-      {
-        operation: Operation.ADD_SAMPLE_MAPPINGS,
-        parameter
-      }
-    );
+    return await this.sharedService.runOperation({
+      operation: Operation.ADD_SAMPLE_MAPPINGS,
+      parameter
+    });
   }
 
   listenToUpdateMapping(): Observable<MappingEnriched> {
     return this.updateMappingEnriched$;
   }
-  initiateUpdateMapping(m: MappingEnriched): void {
-    this.updateMappingEnriched$.next(m);
+
+  initiateUpdateMapping(mapping: MappingEnriched): void {
+    this.updateMappingEnriched$.next(mapping);
   }
 
   async changeDebuggingMapping(parameter: any): Promise<IFetchResponse> {
-    return await this.sharedService.runOperation(
-      {
-        operation: Operation.DEBUG_MAPPING,
-        parameter
-      }
-    );
+    return await this.sharedService.runOperation({
+      operation: Operation.DEBUG_MAPPING,
+      parameter
+    });
   }
 
   async changeSnoopStatusMapping(parameter: any): Promise<IFetchResponse> {
-    return await this.sharedService.runOperation(
-      {
-        operation: Operation.SNOOP_MAPPING,
-        parameter
-      }
-    );
+    return await this.sharedService.runOperation({
+      operation: Operation.SNOOP_MAPPING,
+      parameter
+    });
   }
 
   async resetSnoop(parameter: any): Promise<IFetchResponse> {
-    return await this.sharedService.runOperation(
-      {
-        operation: Operation.SNOOP_RESET,
-        parameter
-      }
-    );
+    return await this.sharedService.runOperation({
+      operation: Operation.SNOOP_RESET,
+      parameter
+    });
   }
 
   async updateTemplate(parameter: any): Promise<IFetchResponse> {
-    return await this.sharedService.runOperation(
-      {
-        operation: Operation.COPY_SNOOPED_SOURCE_TEMPLATE,
-        parameter
-      }
-    );
+    return await this.sharedService.runOperation({
+      operation: Operation.COPY_SNOOPED_SOURCE_TEMPLATE,
+      parameter
+    });
   }
 
-  resetCache() {
-    // this._mappingsInbound = undefined;
-    // this._mappingsOutbound = undefined;
+  resetCache(): void {
+    // Implementation as needed
   }
+
+  // ===== MAPPING CRUD OPERATIONS =====
+
+  async getMappings(direction: Direction): Promise<Mapping[]> {
+    const path = direction ? `${BASE_URL}/${PATH_MAPPING_ENDPOINT}?direction=${direction}` : `${BASE_URL}/${PATH_MAPPING_ENDPOINT}`;
+    const response = await this.client.fetch(path,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    const result: Mapping[] = await response.json();
+    return result;
+  }
+
+  async deleteMapping(id: string): Promise<string> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'DELETE'
+      }
+    );
+    const data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
+    return data.text();
+  }
+
+  async updateMapping(mapping: Mapping): Promise<Mapping> {
+    const response = this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(mapping),
+        method: 'PUT'
+      }
+    );
+    const data = await response;
+    if (!data.ok) {
+      const error = await data.json();
+      throw new Error(error.message)!;
+    }
+    const m = await data.json();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
+    return m;
+  }
+
+  async createMapping(mapping: Mapping): Promise<Mapping> {
+    const response = this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(mapping),
+      method: 'POST'
+    });
+    const data = await response;
+    if (!data.ok) {
+      const errorTxt = await data.json();
+      throw new Error(errorTxt.message ?? 'Could not be imported');
+    }
+    const m = await data.json();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
+    return m;
+  }
+
+  // ===== DEPLOYMENT OPERATIONS =====
 
   async getEffectiveDeploymentMap(): Promise<DeploymentMapEntryDetailed[]> {
     const response = this.client.fetch(
@@ -213,22 +277,6 @@ export class MappingService {
     return result;
   }
 
-  async getDefinedDeploymentMap(): Promise<DeploymentMap> {
-    const response = this.client.fetch(
-      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        method: 'GET'
-      }
-    );
-    const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
-    const map: Promise<DeploymentMap> = await data.json();
-    return map;
-  }
-
   async updateDefinedDeploymentMapEntry(
     entry: DeploymentMapEntry
   ): Promise<any> {
@@ -248,226 +296,9 @@ export class MappingService {
     return m;
   }
 
-  initializeMappingsEnriched() {
-    this.mappingsInboundEnriched$ = this.reloadInbound$.pipe(
-      switchMap(() =>
-        combineLatest([
-          this.getMappings(Direction.INBOUND),
-          this.getEffectiveDeploymentMap()
-        ])
-      ),
-      map(([mappings, mappingsDeployed]) => {
-        const mappingsEnriched = [];
-        mappings.forEach((m) => {
-          mappingsEnriched.push({
-            id: m.id,
-            mapping: m,
-            snoopSupported:
-              MappingTypeDescriptionMap[m.mappingType]?.properties[
-                Direction.INBOUND
-              ].snoopSupported,
-            connectors: mappingsDeployed[m.identifier]
-          });
-        });
-        return mappingsEnriched;
-      }),
-      shareReplay(1)
-    );
-    this.mappingsOutboundEnriched$ = this.reloadOutbound$.pipe(
-      switchMap(() =>
-        combineLatest([
-          this.getMappings(Direction.OUTBOUND),
-          this.getEffectiveDeploymentMap()
-        ])
-      ),
-      map(([mappings, mappingsDeployed]) => {
-        const mappingsEnriched = [];
-        mappings?.forEach((m) => {
-          mappingsEnriched.push({
-            id: m.id,
-            mapping: m,
-            snoopSupported:
-              MappingTypeDescriptionMap[m.mappingType]?.properties[
-                Direction.OUTBOUND
-              ].snoopSupported,
-            connectors: mappingsDeployed[m.identifier]
-          });
-        });
-        return mappingsEnriched;
-      }),
-      shareReplay(1)
-    );
-    this.mappingsInboundEnriched$.pipe(take(1)).subscribe();
-    this.mappingsOutboundEnriched$.pipe(take(1)).subscribe();
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
-  }
+  // ===== PROCESSING OPERATIONS =====
 
-  getMappingsObservable(direction: Direction): Observable<MappingEnriched[]> {
-    if (direction == Direction.INBOUND) {
-      return this.mappingsInboundEnriched$;
-    } else {
-      return this.mappingsOutboundEnriched$;
-    }
-  }
-
-  refreshMappings(direction: Direction) {
-    if (direction == Direction.INBOUND) {
-      this.reloadInbound$.next();
-    } else {
-      this.reloadOutbound$.next();
-    }
-  }
-
-  async getMappings(direction: Direction): Promise<Mapping[]> {
-
-    const path = direction ? `${BASE_URL}/${PATH_MAPPING_ENDPOINT}?direction=${direction}` : `${BASE_URL}/${PATH_MAPPING_ENDPOINT}`;
-    const response = await this.client.fetch(path,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        method: 'GET'
-      }
-    );
-    const result: Mapping[] = await response.json();
-    return result;
-  }
-
-  initializeCache(dir: Direction): void {
-    if (dir == Direction.INBOUND) {
-      this.jsonProcessorInbound.initializeCache();
-    }
-  }
-
-  async updateSubscriptions(
-    sub: C8YNotificationSubscription
-  ): Promise<C8YNotificationSubscription> {
-    const response = this.client.fetch(
-      `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(sub),
-        method: 'PUT'
-      }
-    );
-    const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
-    const m = await data.json();
-    return m;
-  }
-
-  async deleteSubscriptions(device: IIdentified): Promise<any> {
-    const response = this.client.fetch(
-      `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        method: 'DELETE'
-      }
-    );
-    const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
-    const m = await data.text();
-    return m;
-  }
-
-  async getSubscriptions(): Promise<C8YNotificationSubscription> {
-    const feature = await this.sharedService.getFeatures();
-
-    if (feature?.outputMappingEnabled) {
-      const res: IFetchResponse = await this.client.fetch(
-        `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
-        {
-          headers: {
-            'content-type': 'application/json'
-          },
-          method: 'GET'
-        }
-      );
-      const data = await res.json();
-      return data;
-    } else {
-      return null;
-    }
-  }
-
-  async saveMappings(mappings: Mapping[]): Promise<void> {
-    mappings.forEach((m) => {
-      this.inventory.update({
-        d11r_mapping: m,
-        id: m.id
-      });
-    });
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
-  }
-
-  async updateMapping(mapping: Mapping): Promise<Mapping> {
-    const response = this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(mapping),
-        method: 'PUT'
-      }
-    );
-    const data = await response;
-    if (!data.ok) {
-      const error = await data.json();
-      throw new Error(error.message)!;
-    }
-    const m = await data.json();
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
-    return m;
-  }
-
-  async deleteMapping(id: string): Promise<string> {
-    // let result = this.inventory.delete(mapping.id)
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        method: 'DELETE'
-      }
-    );
-    const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
-    return data.text();
-  }
-
-  async createMapping(mapping: Mapping): Promise<Mapping> {
-    const response = this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}`, {
-      headers: {
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(mapping),
-      method: 'POST'
-    });
-    const data = await response;
-    if (!data.ok) {
-      const errorTxt = await data.json();
-      throw new Error(errorTxt.message ?? 'Could not be imported');
-    }
-    const m = await data.json();
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
-    return m;
-  }
-
-  public initializeContext(
-    mapping: Mapping,
-  ): ProcessingContext {
+  public initializeContext(mapping: Mapping): ProcessingContext {
     const ctx: ProcessingContext = {
       mapping: mapping,
       topic:
@@ -481,7 +312,6 @@ export class MappingService {
       sendPayload: false,
       requests: []
     };
-    // since the Cumulocity identifiers are not included in the sourceTemplate, we add them for local testing
     return ctx;
   }
 
@@ -491,36 +321,35 @@ export class MappingService {
   ): Promise<ProcessingContext> {
     const { mapping } = context;
     if (mapping.direction == Direction.INBOUND) {
-      if (mapping.mappingType !== MappingType.CODE_BASED) {
-        this.jsonProcessorInbound.deserializePayload(mapping, message, context);
-        this.jsonProcessorInbound.enrichPayload(context);
-        await this.jsonProcessorInbound.extractFromSource(context);
-        this.jsonProcessorInbound.validateProcessingCache(context);
-        await this.jsonProcessorInbound.substituteInTargetAndSend(context);
-      } else {
+      if (isSubstitutionsAsCode(mapping)) {
         this.codeBasedProcessorInbound.deserializePayload(mapping, message, context);
         this.codeBasedProcessorInbound.enrichPayload(context);
         await this.codeBasedProcessorInbound.extractFromSource(context);
         this.codeBasedProcessorInbound.validateProcessingCache(context);
         await this.codeBasedProcessorInbound.substituteInTargetAndSend(context);
+      } else {
+        this.jsonProcessorInbound.deserializePayload(mapping, message, context);
+        this.jsonProcessorInbound.enrichPayload(context);
+        await this.jsonProcessorInbound.extractFromSource(context);
+        this.jsonProcessorInbound.validateProcessingCache(context);
+        await this.jsonProcessorInbound.substituteInTargetAndSend(context);
       }
     } else {
-      if (mapping.mappingType !== MappingType.CODE_BASED) {
-        this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
-        await this.jsonProcessorOutbound.extractFromSource(context);
-        await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
-      } /* The above code is written in TypeScript and it is an `else` block that contains three
-      asynchronous operations: */
-      else {
+      if (isSubstitutionsAsCode(mapping)) {
         this.codeBasedProcessorOutbound.deserializePayload(mapping, message, context);
         await this.codeBasedProcessorOutbound.extractFromSource(context);
         await this.codeBasedProcessorOutbound.substituteInTargetAndSend(context);
+      } else {
+        this.jsonProcessorOutbound.deserializePayload(mapping, message, context);
+        await this.jsonProcessorOutbound.extractFromSource(context);
+        await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
       }
     }
 
-    // The producing code (this may take some time)
     return context;
   }
+
+  // ===== UTILITY METHODS =====
 
   async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = '';
@@ -544,21 +373,98 @@ export class MappingService {
     return result;
   }
 
+  initializeCache(dir: Direction): void {
+    if (dir == Direction.INBOUND) {
+      this.jsonProcessorInbound.initializeCache();
+    }
+  }
+
+  refreshMappings(direction: Direction) {
+    if (direction == Direction.INBOUND) {
+      this.reloadInbound$.next();
+    } else {
+      this.reloadOutbound$.next();
+    }
+  }
+
+  getMappingsObservable(direction: Direction): Observable<MappingEnriched[]> {
+    if (direction == Direction.INBOUND) {
+      return this.mappingsInboundEnriched$;
+    } else {
+      return this.mappingsOutboundEnriched$;
+    }
+  }
+
+  // ===== PRIVATE METHODS =====
+
+  private initializeMappingsEnriched(): void {
+    this.mappingsInboundEnriched$ = this.reloadInbound$.pipe(
+      switchMap(() =>
+        combineLatest([
+          this.getMappings(Direction.INBOUND),
+          this.getEffectiveDeploymentMap()
+        ])
+      ),
+      map(([mappings, mappingsDeployed]) => {
+        return mappings.map(mapping => ({
+          id: mapping.id,
+          mapping,
+          snoopSupported:
+            MappingTypeDescriptionMap[mapping.mappingType]?.properties[
+              Direction.INBOUND
+            ].snoopSupported,
+          connectors: mappingsDeployed[mapping.identifier]
+        }));
+      }),
+      shareReplay(1)
+    );
+
+    this.mappingsOutboundEnriched$ = this.reloadOutbound$.pipe(
+      switchMap(() =>
+        combineLatest([
+          this.getMappings(Direction.OUTBOUND),
+          this.getEffectiveDeploymentMap()
+        ])
+      ),
+      map(([mappings, mappingsDeployed]) => {
+        return mappings?.map(mapping => ({
+          id: mapping.id,
+          mapping,
+          snoopSupported:
+            MappingTypeDescriptionMap[mapping.mappingType]?.properties[
+              Direction.OUTBOUND
+            ].snoopSupported,
+          connectors: mappingsDeployed[mapping.identifier]
+        })) || [];
+      }),
+      shareReplay(1)
+    );
+
+    // Initialize subscriptions
+    this.mappingsInboundEnriched$.pipe(take(1)).subscribe();
+    this.mappingsOutboundEnriched$.pipe(take(1)).subscribe();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
+  }
+
+  async stopChangedMappingEvents() {
+    if (this.eventRealtimeService) {
+      this.eventRealtimeService.stop();
+      this.unsubscribe$.next();
+      this.unsubscribe$.complete();
+    }
+  }
+
   async startChangedMappingEvents(): Promise<void> {
     if (!this._agentId) {
       this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
-    // console.log('Started subscriptions:', this._agentId);
 
-    // subscribe to event stream
     this.eventRealtimeService.start();
     this.eventRealtimeService
       .onAll$(this._agentId)
       .pipe(
         map((p) => p['data']),
-        // tap((p) => {
-        //   console.log('New event', p);
-        // }),
         filter(
           (payload) =>
             payload['type'] ==
@@ -570,13 +476,5 @@ export class MappingService {
         this.reloadInbound$.next();
         this.reloadOutbound$.next();
       });
-  }
-
-  async stopChangedMappingEvents() {
-    if (this.eventRealtimeService) {
-      this.eventRealtimeService.stop();
-      this.unsubscribe$.next();
-      this.unsubscribe$.complete();
-    }
   }
 }

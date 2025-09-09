@@ -32,7 +32,8 @@ import {
   SubstituteValue,
   SubstituteValueType,
   TOKEN_TOPIC_LEVEL,
-  getTypedValue
+  getTypedValue,
+  prepareAndSubstituteInPayload
 } from './processor.model';
 
 @Injectable({ providedIn: 'root' })
@@ -79,20 +80,20 @@ export abstract class BaseProcessorOutbound {
     const deviceSource: string = 'undefined';
 
     for (const pathTarget of pathTargets) {
-      let substituteValue: SubstituteValue = {
+      let substitute: SubstituteValue = {
         value: 'NOT_DEFINED' as any,
         type: SubstituteValueType.TEXTUAL,
         repairStrategy: RepairStrategy.DEFAULT
       };
       if (processingCache.get(pathTarget).length > 0) {
-        substituteValue = _.clone(processingCache.get(pathTarget)[0]);
+        substitute = _.clone(processingCache.get(pathTarget)[0]);
       }
 
-      this.substituteValueInPayload(
-        mapping.mappingType,
-        substituteValue,
+      prepareAndSubstituteInPayload(context,
+        substitute,
         payloadTarget,
-        pathTarget
+        pathTarget,
+        this.alert
       );
     }
 
@@ -155,34 +156,6 @@ export abstract class BaseProcessorOutbound {
     //);
   }
 
-  substituteValueInPayload(
-    type: MappingType,
-    sub: SubstituteValue,
-    jsonObject: JSON,
-    keys: string
-  ) {
-    const subValueMissingOrNull: boolean =
-      sub.value == null || (sub.value != null && sub.value != undefined);
-
-    if (keys == '$') {
-      Object.keys(getTypedValue(sub)).forEach((key) => {
-        jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
-      });
-    } else {
-      if (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL && subValueMissingOrNull) {
-        _.unset(jsonObject, keys);
-      } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-        // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-        // if (pathIsNested) {
-        //   throw new Error('Can only create new nodes on the root level!');
-        // }
-        // jsonObject.put("$", keys, sub.typedValue());
-        _.set(jsonObject, keys, getTypedValue(sub));
-      } else {
-        _.set(jsonObject, keys, getTypedValue(sub));
-      }
-    }
-  }
 
   async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = '';

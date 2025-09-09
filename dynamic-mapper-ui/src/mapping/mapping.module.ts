@@ -36,7 +36,7 @@ import { MappingFilterComponent } from './filter/mapping-filter.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import/import-modal.component';
-import { MappingTypeComponent } from './mapping-type/mapping-type.component';
+import { MappingTypeDrawerComponent } from './mapping-type/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from './renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from './renderer/mapping-id.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
@@ -57,16 +57,27 @@ import { MappingSubscriptionComponent } from './subscription/subscription.compon
 import { EditSubstitutionComponent } from './substitution/edit/edit-substitution-modal.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 import { DeviceSelectorSubscription2Component } from './subscription/device-selector2/device-selector-subscription2.component';
+import { AIPromptComponent } from './prompt/ai-prompt.component';
+import { DeviceSelectorSubscription3Component } from './subscription/device-selector3/device-selector-subscription3.component';
+import { DeviceSelectorSubscription4Component } from './subscription/device-selector4/device-selector-subscription4.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { CollapseModule } from 'ngx-bootstrap/collapse';
+import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
+import { ClientRelationStepperComponent } from './client-relation/client-relation-stepper.component';
 
 @NgModule({
   declarations: [
     MappingComponent,
     MappingStepperComponent,
     SnoopingStepperComponent,
+    ClientRelationStepperComponent,
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
     DeviceSelectorSubscriptionComponent,
     DeviceSelectorSubscription2Component,
+    DeviceSelectorSubscription3Component,
+    DeviceSelectorSubscription4Component,
+    DeviceClientMapComponent,
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,
@@ -78,7 +89,7 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
     MappingStatusActivationRendererComponent,
     LabelRendererComponent,
     NameRendererComponent,
-    MappingTypeComponent,
+    MappingTypeDrawerComponent,
     MappingConnectorComponent,
     MappingSubscriptionComponent,
     MappingIdCellRendererComponent,
@@ -86,6 +97,7 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
     AdviceActionComponent,
     MappingFilterComponent,
     ManageTemplateComponent,
+    AIPromptComponent,
   ],
   imports: [
     CoreModule,
@@ -98,6 +110,8 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
     ServiceConfigurationModule,
     EditorComponent,
     DeviceGridModule,
+    BrowserAnimationsModule,
+    CollapseModule.forRoot(),
     MonacoEditorMarkerValidatorDirective
   ],
   exports: [],
@@ -118,8 +132,22 @@ import { DeviceSelectorSubscription2Component } from './subscription/device-sele
       }
     }),
     hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscriptionOutbound`,
+      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/static`,
       component: MappingSubscriptionComponent,
+      resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/subscription/dynamic`,
+      component: MappingSubscriptionComponent,
+      resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
+      component: DeviceClientMapComponent,
       resolve: {
         feature: featureResolver
       }

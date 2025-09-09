@@ -19,15 +19,16 @@
   ~
   -->
 
-<div class="flex-col flex-nowrap no-align-items fit-h col-md-8 col-md-offset-2 c8y-stepper--no-btns">
-  <div class="card">
-    <div class="card-header m-t-48 p-24 separator" style="justify-content: center">
-      <h4 class="card-title">
-        Select devices to subscribe to for outbound mappings
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage">
+    <div class="card-header separator" style="justify-content: center">
+      <h4 class="card-title d-flex">
+        <i [c8yIcon]="'subscription'" class="icon-32 m-r-16"></i>
+        <span>Select devices to subscribe to for outbound mappings</span>
       </h4>
     </div>
     <div class="card-block">
-      <c8y-asset-selector-miller [(ngModel)]="deviceList" (onSelected)="selectionChanged($event)" [config]="{
+      <c8y-asset-selector-miller  (onSelected)="selectionChanged($event)" [config]="{
             groupsSelectable: true,
             columnHeaders: true,
             showFilter: true,

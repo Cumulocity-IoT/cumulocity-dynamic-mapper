@@ -116,7 +116,8 @@ public class KafkaClient extends AConnectorClient {
             String description = "Connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.\n The connector uses SASL_SSL as security protocol.";
             connectorType = ConnectorType.KAFKA;
             supportsMessageContext = true;
-            connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps,
+            connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton,
+                    configProps,
                     supportsMessageContext, supportedDirections());
         } catch (IOException e) {
             throw new ConnectorException(e.getMessage());
@@ -149,9 +150,9 @@ public class KafkaClient extends AConnectorClient {
             throws ConnectorException {
         this();
         this.configurationRegistry = configurationRegistry;
-        this.mappingComponent = configurationRegistry.getMappingComponent();
-        this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
-        this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
+        this.mappingService = configurationRegistry.getMappingService();
+        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
         this.connectorName = connectorConfiguration.name;
@@ -164,7 +165,6 @@ public class KafkaClient extends AConnectorClient {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
@@ -264,14 +264,14 @@ public class KafkaClient extends AConnectorClient {
             try {
                 // test if the mqtt connection is configured and enabled
                 if (shouldConnect()) {
-                    mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
+                    mappingService.rebuildMappingOutboundCache(tenant, connectorId);
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
                     // previously used updatedMappings
                     kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
                     connectionState.setTrue();
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
+                    List<Mapping> updatedMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
                     initializeSubscriptionsInbound(updatedMappings, true, true);
                     log.info("{} - Phase III: {} connected, bootstrapServers: {}", tenant, getConnectorName(),
                             bootstrapServers);
@@ -317,7 +317,7 @@ public class KafkaClient extends AConnectorClient {
 
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
+            List<Mapping> updatedMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
             initializeSubscriptionsInbound(updatedMappings, true, true);
             kafkaProducer.close();
             log.info("{} - Disconnected from from broker: {}", tenant, getConnectorName(),
@@ -390,6 +390,10 @@ public class KafkaClient extends AConnectorClient {
     @Override
     public boolean isConfigValid(ConnectorConfiguration configuration) {
         return true;
+    }
+
+    @Override
+    public void connectorSpecificHousekeeping(String tenant) {
     }
 
     @Override

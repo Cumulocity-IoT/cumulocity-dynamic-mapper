@@ -20,7 +20,7 @@
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { getTypeOf, randomIdAsString } from '../../../mapping/shared/util';
-import { API, getPathTargetForDeviceIdentifiers, Mapping, MappingSubstitution, MappingType, RepairStrategy } from '../../../shared';
+import { API, getPathTargetForDeviceIdentifiers, Mapping, Substitution, MappingType, RepairStrategy } from '../../../shared';
 import { Java, SubstitutionContext } from './processor-js.model';
 
 export interface C8YRequest {
@@ -48,6 +48,8 @@ export interface ProcessingContext {
   sendPayload?: boolean;
   sourceId?: string;
   logs?: any[];
+  deviceName?: string;
+  deviceType?: string;
 }
 
 export enum ProcessingType {
@@ -84,7 +86,7 @@ export const isNumeric = (num: any) => (typeof num === 'number' || (typeof num =
   !isNaN(num as number);
 
 
-export function processSubstitute(processingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: MappingSubstitution) {
+export function processSubstitute(processingCacheEntry: SubstituteValue[], extractedSourceContent: any, substitution: Substitution) {
   if (getTypeOf(extractedSourceContent) == 'null') {
     processingCacheEntry.push({
       value: extractedSourceContent,
@@ -138,39 +140,19 @@ export function getDeviceEntries(context: ProcessingContext): SubstituteValue[] 
   return deviceEntries;
 }
 
-export function substituteValueInPayload(
-  sub: SubstituteValue,
-  jsonObject: JSON,
-  keys: string,
+export function prepareAndSubstituteInPayload(
+  context: ProcessingContext,
+  substitute: SubstituteValue,
+  payloadTarget: JSON,
+  pathTarget: string,
   alert: AlertService
 ) {
-  const subValueMissingOrNull: boolean = !sub || sub.value == null;
-
-  if (keys == '$') {
-    Object.keys(getTypedValue(sub)).forEach((key) => {
-      jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
-    });
+  if (TOKEN_CONTEXT_DATA + ".deviceName" == pathTarget) {
+    context.deviceName = substitute.value;
+  } else if (TOKEN_CONTEXT_DATA + ".deviceType" == pathTarget) {
+    context.deviceType = substitute.value;
   } else {
-    if ((sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL &&
-      subValueMissingOrNull)) {
-      _.unset(jsonObject, keys);
-    } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-      // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
-      // if (pathIsNested) {
-      //   throw new Error('Can only create new nodes on the root level!');
-      // }
-      // jsonObject.put("$", keys, sub.typedValue());
-      _.set(jsonObject, keys, getTypedValue(sub));
-    } else {
-      if (_.has(jsonObject, keys)) {
-        _.set(jsonObject, keys, getTypedValue(sub));
-      } else {
-        // alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
-        throw new Error(
-          `Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`
-        );
-      }
-    }
+    substituteValueInPayload(substitute, payloadTarget, pathTarget);
   }
 }
 
@@ -183,6 +165,49 @@ export const KEY_TIME = 'time';
 export const TOPIC_WILDCARD_MULTI = '#';
 export const TOPIC_WILDCARD_SINGLE = '+';
 
+
+export function substituteValueInPayload(substitute: SubstituteValue, payloadTarget: JSON, pathTarget: string) {
+  const subValueMissingOrNull: boolean = !substitute || substitute.value == null;
+
+  if (pathTarget == '$') {
+    Object.keys(getTypedValue(substitute)).forEach((key) => {
+      payloadTarget[key] = getTypedValue(substitute)[key as keyof unknown];
+    });
+  } else {
+    if ((substitute.repairStrategy == RepairStrategy.REMOVE_IF_MISSING_OR_NULL &&
+      subValueMissingOrNull)) {
+      _.unset(payloadTarget, pathTarget);
+    } else if (substitute.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
+      // const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
+      // if (pathIsNested) {
+      //   throw new Error('Can only create new nodes on the root level!');
+      // }
+      // jsonObject.put("$", keys, sub.typedValue());
+      _.set(payloadTarget, pathTarget, getTypedValue(substitute));
+    } else {
+      if (_.has(payloadTarget, pathTarget)) {
+        _.set(payloadTarget, pathTarget, getTypedValue(substitute));
+      } else {
+        // alert.warning(`Message could NOT be parsed, ignoring this message: Path: ${keys} not found!`);
+        throw new Error(
+          `Message could NOT be parsed, ignoring this message: Path: ${pathTarget} not found!`
+        );
+      }
+    }
+  }
+}
+
+export function sortProcessingCache(context: ProcessingContext): void {
+  // Convert Map to array of entries, sort, then create new Map
+  const sortedEntries = Array.from(context.processingCache.entries())
+    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
+  
+  // Clear the original map and repopulate with sorted entries
+  context.processingCache.clear();
+  sortedEntries.forEach(([key, value]) => {
+    context.processingCache.set(key, value);
+  });
+}
 
 export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   const identifier = randomIdAsString();
@@ -215,7 +240,8 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
   // Serialize the SubstitutionContext object
   const serializableCtx = {
     identifier: ctx.getGenericDeviceIdentifier ? ctx.getGenericDeviceIdentifier() : ctx['deviceIdentifier'],
-    payload: ctx.getPayload ? ctx.getPayload() : ctx['payload']
+    payload: ctx.getPayload ? ctx.getPayload() : ctx['payload'],
+    topic: ctx.getTopic ? ctx.getTopic() : ctx['topic'],
   };
 
   // Define the timeout duration
@@ -288,6 +314,7 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
               IDENTITY = "_IDENTITY_";
               #payload;  // Using private class field (equivalent to private final in Java)
               #genericDeviceIdentifier;
+              #topic;
 
               // Constants
               IDENTITY_EXTERNAL = this.IDENTITY + ".externalId";
@@ -297,10 +324,12 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
                * Constructor for the SubstitutionContext class
                * @param {string} genericDeviceIdentifier - The generic device identifier
                * @param {string} payload - The JSON object representing the data
+               * @param {string} topic - The publish/ subscribe topic
                */
-              constructor(genericDeviceIdentifier, payload) {
+              constructor(genericDeviceIdentifier, payload, topic) {
                 this.#payload = (payload || {});
                 this.#genericDeviceIdentifier = genericDeviceIdentifier;
+                this.#topic = topic;
               }
 
               /**
@@ -312,20 +341,26 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
               }
 
               /**
+               * Gets the topic
+               * @returns {string} The topic
+               */
+              getTopic() {
+                return this.#topic;
+              }
+
+              /**
                * Gets the external identifier from the JSON object
                * @returns {string|null} The external identifier or null if not found
                */
               getExternalIdentifier() {
                 try {
                   const parsedPayload = JSON.parse(this.#payload);
-                  const identityMap = parsedPayload[this.IDENTITY];
-                  return identityMap["externalId"];
+                  return parsedPayload[this.IDENTITY]?.["externalId"] || null;
                 } catch (e) {
                   console.debug("Error retrieving external identifier", e);
                   return null;
                 }
               }
-
               /**
                * Gets the C8Y identifier from the JSON object
                * @returns {string|null} The C8Y identifier or null if not found
@@ -333,14 +368,13 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
               getC8YIdentifier() {
                 try {
                   const parsedPayload = JSON.parse(this.#payload);
-                  const identityMap = parsedPayload[this.IDENTITY];
-                  return identityMap["c8ySourceId"];
+                  // Optional chaining will return undefined if any part of the chain is null/undefined
+                  return parsedPayload[this.IDENTITY]?.["c8ySourceId"] || null;
                 } catch (e) {
                   console.debug("Error retrieving c8y identifier", e);
                   return null;
                 }
               }
-
               /**
                * Gets the JSON object
                * @returns {Object} The JSON object
@@ -355,7 +389,7 @@ export function evaluateWithArgsWebWorker(codeString: string, ctx: SubstitutionC
             try {
               // Debug marker to verify code execution context
               // Create context object
-              const arg0 = new SubstitutionContext(ctx.identifier, ctx.payload);
+              const arg0 = new SubstitutionContext(ctx.identifier, ctx.payload, ctx.topic);
               
               // Use Function constructor with console explicitly passed
               const fn = new Function('arg0', 'console', code);

@@ -35,6 +35,8 @@ export const Java = {
         return ArrayList;
       case 'java.util.HashMap':
         return HashMap;
+      case 'java.util.HashSet':
+        return HashSet;
       default:
         throw new Error(`Unknown Java class: ${className}`);
     }
@@ -138,6 +140,89 @@ export class HashMap {
   // Additional HashMap methods as needed
 }
 
+// HashSet simulation
+export class HashSet {
+  set;
+
+  constructor() {
+    this.set = new Set();
+  }
+
+  add(item) {
+    this.set.add(item);
+    return true;
+  }
+
+  contains(item) {
+    return this.set.has(item);
+  }
+
+  remove(item) {
+    return this.set.delete(item);
+  }
+
+  size() {
+    return this.set.size;
+  }
+
+  isEmpty() {
+    return this.set.size === 0;
+  }
+
+  clear() {
+    this.set.clear();
+  }
+
+  toArray() {
+    return Array.from(this.set);
+  }
+
+  iterator() {
+    return this.set.values();
+  }
+
+  // For compatibility with Java's stream API
+  stream() {
+    return {
+      collect: (collector) => {
+        // Basic implementation that works with Collectors.toList()
+        if (collector.toString().includes('toList')) {
+          return Array.from(this.set);
+        }
+        throw new Error('Unsupported collector');
+      },
+      filter: (predicate) => {
+        const newSet = new HashSet();
+        for (const item of this.set) {
+          if (predicate(item)) {
+            newSet.add(item);
+          }
+        }
+        return newSet.stream();
+      },
+      map: (mapper) => {
+        const result = new ArrayList();
+        for (const item of this.set) {
+          result.add(mapper(item));
+        }
+        return {
+          collect: (collector) => {
+            if (collector.toString().includes('toList')) {
+              return result.items;
+            }
+            throw new Error('Unsupported collector');
+          }
+        };
+      }
+    };
+  }
+
+  // Convert to a string representation
+  toString() {
+    return `[${Array.from(this.set).join(', ')}]`;
+  }
+}
+
 // SubstitutionResult class
 export class SubstitutionResult {
   substitutions;
@@ -173,6 +258,7 @@ export class SubstitutionContext {
   IDENTITY = "_IDENTITY_";
   #payload;  // Using private class field (equivalent to private final in Java)
   #genericDeviceIdentifier;
+  #topic;
 
   // Constants
   IDENTITY_EXTERNAL = this.IDENTITY + ".externalId";
@@ -182,10 +268,12 @@ export class SubstitutionContext {
    * Constructor for the SubstitutionContext class
    * @param {string} genericDeviceIdentifier - The generic device identifier
    * @param {string} payload - The JSON object representing the data
+   * @param {string} topic - The publish/ subscribe topic
    */
-  constructor(genericDeviceIdentifier, payload) {
+  constructor(genericDeviceIdentifier, payload, topic) {
     this.#payload = (payload || {});
     this.#genericDeviceIdentifier = genericDeviceIdentifier;
+    this.#topic = topic;
   }
 
   /**
@@ -194,6 +282,14 @@ export class SubstitutionContext {
    */
   getGenericDeviceIdentifier() {
     return this.#genericDeviceIdentifier;
+  }
+
+  /**
+   * Gets the topic
+   * @returns {string} The topic
+   */
+  getTopic() {
+    return this.#topic;
   }
 
   /**
@@ -206,8 +302,7 @@ export class SubstitutionContext {
       const identityMap = parsedPayload[this.IDENTITY];
       return identityMap["externalId"];
     } catch (e) {
-      // Optionally log the exception
-      // console.debug("Error retrieving external identifier", e);
+      console.debug("Error retrieving external identifier", e);
       return null;
     }
   }
@@ -219,11 +314,10 @@ export class SubstitutionContext {
   getC8YIdentifier() {
     try {
       const parsedPayload = JSON.parse(this.#payload);
-      const identityMap = parsedPayload[this.IDENTITY];
-      return identityMap["c8ySourceId"];
+      // Optional chaining will return undefined if any part of the chain is null/undefined
+      return parsedPayload[this.IDENTITY]?.["c8ySourceId"] || null;
     } catch (e) {
-      // Optionally log the exception
-      // console.debug("Error retrieving c8y identifier", e);
+      console.debug("Error retrieving c8y identifier", e);
       return null;
     }
   }

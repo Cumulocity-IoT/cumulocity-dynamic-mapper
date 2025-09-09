@@ -19,21 +19,20 @@
   ~
   -->
 
-<div style="overflow-y: auto; padding-top: 16px">
-  <div class="h5 m-l-16 m-b-8">Substitutions</div>
-  <table class="table table-condensed table-head-fixed">
-    <thead>
+<div style="padding-top: 16px;">
+  <table class="table table-condensed m-b-0">
+    <thead style="position: sticky; top: 0; z-index: 10; background-color: white;">
       <tr>
-        <th class="bg-level-1"></th>
+        <th class="bg-level-1" style="width: 2%"></th>
+        <th class="bg-level-1" style="width: 2%">#</th>
         <th class="bg-level-1" style="width: 67%">
-          <div>
-            <span>Substitution [ pathSource &#8212;> pathTarget ]</span>
-            <span class="hidden-xs hidden-sm m-l-4">
-              <ng-template #popupSubstitutionTemplateHelp>
-                <div [innerHtml]="substitutionTemplateHelp"></div>
-              </ng-template>
-              <button type="button" placement="right" [popover]="popupSubstitutionTemplateHelp" triggers="focus" class="btn-help" aria-label="Help content"></button>
-            </span>
+          <div class="d-flex">
+            Substitutions [ pathSource &#8212;> pathTarget ]
+            <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+      substitutionTemplateHelp
+    }}" placement="bottom" triggers="focus" type="button"></button>
+            <span>&nbsp; selected # {{settings?.selectedSubstitutionIndex < 0? 0 : settings?.selectedSubstitutionIndex
+                }} of # {{mapping.substitutions?.length}} </span>
           </div>
         </th>
         <th class="bg-level-1" style="width: 12.5%">Expand as array</th>
@@ -41,43 +40,52 @@
         <th class="bg-level-1"></th>
       </tr>
     </thead>
-    <tbody>
-      <tr *ngFor="let sub of mapping.substitutions; let i = index" id="{{ 'sub-' + id + '-' + i }}">
-        <td width="4%">
-          <label class="c8y-radio" title="Checkbox">
-            <input type="radio" (click)="onSubstitutionSelect(i)" [checked]="settings.selectedSubstitutionIndex == i" />
-            <span></span>
-          </label>
-        </td>
-        <td>
-          <span *ngIf="!sub['registeredType']" class="text-12">{{
-            '[ ' +
-            (definesDeviceIdentifier(mapping, sub)
-            ? '* '
-            : '') +
-            sub.pathSource +
-            ' &#8212;> ' +
-            sub.pathTarget +
-            ' ]'
-            }}
-          </span>
-        </td>
-        <td width="8%">
-          {{ sub.expandArray ? 'on' : 'off' }}
-        </td>
-        <td>
-          {{ sub.repairStrategy | formatStringAsWords }}
-        </td>
-        <td width="6%">
-          <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover" style="height: 24px;padding-top: 0px !important;"
-            (click)="onSubstitutionDelete(i)" [disabled]="
+  </table>
+
+  <div style="max-height: 160px; overflow-y: scroll; border-top: 0px solid #ddd;">
+    <table class="table table-condensed" style="margin-bottom: 0;">
+      <tbody>
+        <tr *ngFor="let sub of mapping.substitutions; let i = index" id="{{ 'sub-' + id + '-' + i }}">
+          <td width="2%">
+            <label class="c8y-radio" title="Checkbox">
+              <input type="radio" (click)="onSubstitutionSelect(i)"
+                [checked]="settings.selectedSubstitutionIndex == i" />
+              <span></span>
+            </label>
+          </td>
+          <td width="2%">
+            {{ i }}
+          </td>
+          <td>
+            <span *ngIf="!sub['registeredType']" class="text-12">{{
+              '[ ' +
+              (definesDeviceIdentifier(mapping, sub)
+              ? '* '
+              : '') +
+              sub.pathSource +
+              ' &#8212;> ' +
+              sub.pathTarget +
+              ' ]'
+              }}
+            </span>
+          </td>
+          <td width="8%">
+            {{ sub.expandArray ? 'on' : 'off' }}
+          </td>
+          <td>
+            {{ sub.repairStrategy | formatStringAsWords }}
+          </td>
+          <td width="6%">
+            <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover"
+              style="height: 24px;padding-top: 0px !important;" (click)="onSubstitutionDelete(i)" [disabled]="
               settings.editorMode === EditorMode.READ_ONLY
             ">
-            <i c8yIcon="delete"></i>
-            <span class="sr-only" translate>Remove</span>
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+              <i c8yIcon="delete" class="c8y-icon dlt-c8y-icon-delete"></i>
+              <span class="sr-only" translate>Remove</span>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>

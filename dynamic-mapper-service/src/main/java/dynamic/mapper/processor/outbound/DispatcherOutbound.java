@@ -37,10 +37,13 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.notification.websocket.NotificationCallback;
+import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.C8YRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
+import dynamic.mapper.service.MappingService;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
@@ -48,12 +51,9 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.core.MappingComponent;
 import dynamic.mapper.model.API;
-import dynamic.mapper.notification.C8YNotificationSubscriber;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.websocket.Notification;
-import dynamic.mapper.processor.C8YMessage;
-import dynamic.mapper.processor.ProcessingException;
 
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Context;
@@ -93,7 +93,7 @@ public class DispatcherOutbound implements NotificationCallback {
     @Getter
     protected AConnectorClient connectorClient;
 
-    protected C8YNotificationSubscriber notificationSubscriber;
+    protected NotificationSubscriber notificationSubscriber;
 
     protected C8YAgent c8yAgent;
 
@@ -101,7 +101,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
     protected ExecutorService virtualThreadPool;
 
-    protected MappingComponent mappingComponent;
+    protected MappingService mappingService;
 
     protected ConfigurationRegistry configurationRegistry;
 
@@ -114,7 +114,7 @@ public class DispatcherOutbound implements NotificationCallback {
             AConnectorClient connectorClient) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.mappingComponent = configurationRegistry.getMappingComponent();
+        this.mappingService = configurationRegistry.getMappingService();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.connectorClient = connectorClient;
         // log.info("{} - HIER I {} {}", connectorClient.getTenant(),
@@ -207,7 +207,7 @@ public class DispatcherOutbound implements NotificationCallback {
         List<Mapping> resolvedMappings;
         Map<MappingType, BaseProcessorOutbound<T>> payloadProcessorsOutbound;
         C8YMessage c8yMessage;
-        MappingComponent mappingComponent;
+        MappingService mappingService;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
         ServiceConfiguration serviceConfiguration;
@@ -217,12 +217,12 @@ public class DispatcherOutbound implements NotificationCallback {
         ConfigurationRegistry configurationRegistry;
 
         public MappingOutboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
-                MappingComponent mappingComponent,
+                MappingService mappingService,
                 Map<MappingType, BaseProcessorOutbound<T>> payloadProcessorsOutbound,
                 C8YMessage c8yMessage, AConnectorClient connectorClient) {
             this.connectorClient = connectorClient;
             this.resolvedMappings = resolvedMappings;
-            this.mappingComponent = mappingComponent;
+            this.mappingService = mappingService;
             this.c8yAgent = configurationRegistry.getC8yAgent();
             this.outboundProcessingTimer = Timer.builder("dynmapper_outbound_processing_time")
                     .tag("tenant", connectorClient.getTenant())
@@ -245,7 +245,7 @@ public class DispatcherOutbound implements NotificationCallback {
             boolean sendPayload = c8yMessage.isSendPayload();
 
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
-            MappingStatus mappingStatusUnspecified = mappingComponent
+            MappingStatus mappingStatusUnspecified = mappingService
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
 
             // Parse operation representation if applicable
@@ -271,7 +271,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     continue;
                 }
 
-                MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 Context graalContext = null;
 
                 // Create a basic context that includes identifying information even if
@@ -328,7 +328,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
                     // Handle snooping or normal processing
                     if (isSnoopingEnabled(mapping)) {
-                        handleSnooping(tenant, mapping, context, mappingComponent, mappingStatus, objectMapper);
+                        handleSnooping(tenant, mapping, context, mappingService, mappingStatus, objectMapper);
                     } else {
                         // Process and send the message
                         processOutboundMessage(tenant, mapping, context, processor, mappingStatus, c8yMessage);
@@ -346,7 +346,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     context.addError(new ProcessingException(errorMessage, e));
                     mappingStatus.errors++;
                     criticalExceptions.add(e);
-                    mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+                    mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
                 } finally {
                     // Clean up GraalVM context
                     if (graalContext != null) {
@@ -408,7 +408,7 @@ public class DispatcherOutbound implements NotificationCallback {
             mappingStatus.errors++;
             mappingStatusUnspecified.errors++;
             context.addError(new ProcessingException(errorMessage));
-            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
 
         }
 
@@ -427,7 +427,8 @@ public class DispatcherOutbound implements NotificationCallback {
                             || className.equals("dynamic.mapper.processor.model.RepairStrategy")
                             // Allow base collection classes needed for return values
                             || className.equals("java.util.ArrayList") ||
-                            className.equals("java.util.HashMap"))
+                            className.equals("java.util.HashMap")||
+                            className.equals("java.util.HashSet"))
                     .build();
 
             return graalContext;
@@ -440,7 +441,7 @@ public class DispatcherOutbound implements NotificationCallback {
             log.error(errorMessage, e);
             context.addError(new ProcessingException(errorMessage, e));
             mappingStatus.errors++;
-            mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
 
         private void logOutboundMessageReceived(String tenant, Mapping mapping, ProcessingContext<?> context,
@@ -463,7 +464,7 @@ public class DispatcherOutbound implements NotificationCallback {
         }
 
         private void handleSnooping(String tenant, Mapping mapping, ProcessingContext<?> context,
-                MappingComponent mappingComponent, MappingStatus mappingStatus, ObjectMapper objectMapper) {
+                MappingService mappingService, MappingStatus mappingStatus, ObjectMapper objectMapper) {
             try {
                 String serializedPayload = objectMapper.writeValueAsString(context.getPayload());
                 if (serializedPayload != null) {
@@ -473,7 +474,7 @@ public class DispatcherOutbound implements NotificationCallback {
 
                     log.debug("{} - Adding snoopedTemplate to map: {},{},{}",
                             tenant, mapping.mappingTopic, mapping.snoopedTemplates.size(), mapping.snoopStatus);
-                    mappingComponent.addDirtyMapping(tenant, mapping);
+                    mappingService.addDirtyMapping(tenant, mapping);
                 } else {
                     log.warn("{} - Message could NOT be serialized for snooping, payload is null");
                 }
@@ -499,7 +500,7 @@ public class DispatcherOutbound implements NotificationCallback {
                     List<C8YRequest> resultRequests = context.getRequests();
                     if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                         mappingStatus.errors++;
-                        mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+                        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
                     }
                 }
             } catch (Exception e) {
@@ -512,7 +513,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 log.error(errorMessage, e);
                 context.addError(new ProcessingException(errorMessage, e));
                 mappingStatus.errors++;
-                mappingComponent.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
         }
 
@@ -563,7 +564,7 @@ public class DispatcherOutbound implements NotificationCallback {
                 connectorClient.getConnectorName(),
                 c8yMessage.getMessageId());
 
-        MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
+        MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         List<Mapping> resolvedMappings = new ArrayList<>();
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
@@ -572,14 +573,14 @@ public class DispatcherOutbound implements NotificationCallback {
         // Handle C8Y Operation Status
         if (c8yMessage.getPayload() != null) {
             try {
-                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, c8yMessage);
+                resolvedMappings = mappingService.resolveMappingOutbound(tenant, c8yMessage, serviceConfiguration);
                 consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
                 result.setConsolidatedQos(consolidatedQos);
 
                 // Check if at least one Code based mappings exits, then we nee to timeout the
                 // execution
                 for (Mapping mapping : resolvedMappings) {
-                    if (MappingType.CODE_BASED.equals(mapping.mappingType)) {
+                    if (mapping.isSubstitutionsAsCode()) {
                         result.setMaxCPUTimeMS(serviceConfiguration.getMaxCPUTimeMS());
                     }
                 }
@@ -593,7 +594,7 @@ public class DispatcherOutbound implements NotificationCallback {
             return result;
         }
         Future futureProcessingResult = virtualThreadPool.submit(
-                new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
+                new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingService,
                         payloadProcessorsOutbound, c8yMessage, connectorClient));
         result.setProcessingResult(futureProcessingResult);
 

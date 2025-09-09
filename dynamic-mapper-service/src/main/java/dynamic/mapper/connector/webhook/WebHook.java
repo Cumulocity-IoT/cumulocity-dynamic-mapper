@@ -109,11 +109,16 @@ public class WebHook extends AConnectorClient {
                         "When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.",
                         false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null,
                         null));
+        configProps.put("headers",
+                new ConnectorProperty("Define additional headers", false, 7, ConnectorPropertyType.MAP_PROPERTY, false,
+                        false,
+                        new HashMap<String, String>(),
+                        null, cumulocityInternal));
         String name = "Webhook";
         String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
         supportsMessageContext = true;
-        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps,
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, singleton, configProps,
                 supportsMessageContext,
                 supportedDirections());
     }
@@ -123,9 +128,9 @@ public class WebHook extends AConnectorClient {
             DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
-        this.mappingComponent = configurationRegistry.getMappingComponent();
-        this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
-        this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
+        this.mappingService = configurationRegistry.getMappingService();
+        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
         this.connectorName = connectorConfiguration.name;
@@ -139,7 +144,6 @@ public class WebHook extends AConnectorClient {
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentation(tenant);
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
@@ -213,6 +217,7 @@ public class WebHook extends AConnectorClient {
         String token = (String) connectorConfiguration.getProperties().get("token");
         String headerAccept = (String) connectorConfiguration.getProperties().getOrDefault("headerAccept",
                 "application/json");
+        Map headers = (Map) connectorConfiguration.getProperties().get("headers");
 
         // Create RestClient builder
         WebClient.Builder builder = WebClient.builder()
@@ -226,6 +231,15 @@ public class WebHook extends AConnectorClient {
             builder.defaultHeader("Authorization", "Basic " + credentials);
         } else if ("Bearer".equalsIgnoreCase(authentication) && password != null) {
             builder.defaultHeader("Authorization", "Bearer " + token);
+        }
+
+        // Add additional headers if specified
+        if (headers != null && !headers.isEmpty()) {
+            headers.forEach((key, value) -> {
+                if (value != null) {
+                    builder.defaultHeader(key.toString(), value.toString());
+                }
+            });
         }
 
         // Build the client
@@ -259,7 +273,7 @@ public class WebHook extends AConnectorClient {
                     log.info("{} - Phase III: {} connected", tenant, getConnectorName(),
                             baseUrl);
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant,
+                    List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant,
                             connectorId);
                     mappingOutboundCacheRebuild = true;
                     initializeSubscriptionsOutbound(updatedMappingsOutbound);
@@ -274,7 +288,7 @@ public class WebHook extends AConnectorClient {
             }
 
             if (!mappingOutboundCacheRebuild) {
-                mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
+                mappingService.rebuildMappingOutboundCache(tenant, connectorId);
             }
             successful = true;
         }
@@ -354,9 +368,9 @@ public class WebHook extends AConnectorClient {
 
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant, connectorId);
+            List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant, connectorId);
             initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
-            List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant, connectorId);
+            List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
             initializeSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("{} - Disconnected from webHook endpoint II: {}", tenant,
                     baseUrl);
@@ -599,6 +613,10 @@ public class WebHook extends AConnectorClient {
         });
 
         return result;
+    }
+
+    @Override
+    public void connectorSpecificHousekeeping(String tenant) {
     }
 
     // Helper method for deep merging of objects - unlike mergeNodes, this preserves

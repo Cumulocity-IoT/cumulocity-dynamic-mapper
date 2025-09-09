@@ -2,25 +2,29 @@
 
 ## Overview
 
-The Cumulocity Dynamic Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach.
-It can connect to multiple message brokers likes **MQTT**, **MQTT Service**, **Kafka** and others, subscribes to specific topics and maps the data in a graphical or code-based editor to the domain model of Cumulocity.
+The Cumulocity Dynamic Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach powered by AI agents.
+It can connect to multiple message brokers like **MQTT**, **MQTT Service**, **Kafka** and others, subscribes to specific topics and maps the data in a graphical or code-based editor to the domain model of Cumulocity.
 
-Per default the followings connectors are supported
+Per default, the following connectors are supported
 
 - **MQTT** - any MQTT Broker
-- **Cumulocity IoT MQTT Service** - Cumulocity IoT built-in MQTT Broker
+- **Cumulocity MQTT Service** - Cumulocity built-in MQTT Broker
 - **Kafka** - Kafka Broker
 - **HTTP/REST** - HTTP/REST Endpoint
 
 Using the Cumulocity Dynamic Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
 the Cumulocity IoT Domain Model in a graphical or, if you prefer code, in a web code editor.
 
+It comes with built-in **AI agents** that suggest and create mappings based on provided or snooped payloads.
+
 Here are the **core features** summarized:
 
 - **Connect** to multiple message broker of your choice at the same time.
-- **Map** any data to/from the Cumulocity IoT Domain Model in a graphical or code-based (javaScript) way.
+- **Map** any data to/from the Cumulocity Domain Model in a graphical or code-based (javaScript) way.
+- **Auto-generate** mappings using AI agents that suggest and create mappings based on provided or snooped payloads.
 - **Bidirectional mappings** are supported - so you can forward data to Cumulocity or subscribe on Cumulocity data and forward it to the broker
 - **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/) or plain JavaScript.
+- **Filter** messages either via topic subscriptions or using simple expressions or JavaScript code applied on the payload.
 - **Multiple payload formats** are supported, starting with **JSON**, **Protobuf**, **Hex**.
 - **Extend** the mapper easily by using payload extensions or the provided connector interface
 - Full support of **multi-tenancy** - deploy it in your enterprise tenant and subscribe it to sub-tenants.

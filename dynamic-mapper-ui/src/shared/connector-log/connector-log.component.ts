@@ -70,7 +70,7 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
     ).subscribe({
       // next: (logs) => console.log('Received logs in component:', logs),
       error: (error) => console.error('Error receiving logs:', error),
-      complete: () => console.log('Completed') // optional
+      // complete: () => console.log('Completed') // optional
     });
   }
 

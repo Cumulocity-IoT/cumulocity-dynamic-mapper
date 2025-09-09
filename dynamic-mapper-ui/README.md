@@ -28,8 +28,8 @@ Mappings are defined in a graphical editor using JSONata expressions:
 ![Define mappings](image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png)
 <br>
 <br>
-For the complete documentation please check the GitHub project [cumulocity-dynamic-mqtt-mapper](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mqtt-mapper).
+For the complete documentation please check the GitHub project [cumulocity-dynamic-mqtt-mapper](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper).
 
 **NOTE:** 
-* This solution requires an additional microservice. The microservice `dynamic-mapper-service.zip` can be found in the [release section](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mqtt-mapper/releases) of the github project. Instruction how to the deploy the microservice can be found in the [documentation](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper#microservice).
+* This solution requires an additional microservice. The microservice `dynamic-mapper-service.zip` can be found in the [release section](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/releases) of the github project. Instruction how to the deploy the microservice can be found in the [documentation](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper#microservice).
 * The solution was renamed from **Mqtt-mapping** to **Cumulocity Dynamic Mapper**. If you still want to use previous releases (**Mqtt-mapping** < 4.0.0) you can find them in the [release section](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/releases?page=4) on page 4.

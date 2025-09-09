@@ -1,0 +1,70 @@
+<!--
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
+
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage">
+    <div class="card-header separator" style="justify-content: center">
+      <h4 class="card-title d-flex">
+        <i [c8yIcon]="'bot'" class="icon-32 m-r-16"></i>
+        <span class="m-t-8">Generate substitutions</span>
+        <span class="label label-primary m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
+      </h4>
+    </div>
+
+    <!-- Add the ViewChild reference here -->
+    <div #cardInnerScroll class="card-inner-scroll fit-h">
+      <div class="card-block">
+        <div class="inner-scroll flex-grow d-col-reverse">
+          <div class="d-col p-16" *ngIf="aiAgent">
+            <div *ngFor="let message of getCompatibleMessages()" class="chat-message text-break-word" [ngClass]="{
+                'user-message': message.role === 'user',
+                'aiAgent-message': message.role === 'assistant',
+              }">
+              <div *ngIf="aiAgent.type === 'text' || message.role === 'user'" class="message-content text-break-word"
+                [innerHTML]="getMessageContent(message) | markdownToHtml | async"></div>
+              <div *ngIf="aiAgent.type === 'object' && message.role === 'assistant'"
+                class="message-content text-break-word"
+                [innerHTML]="'```json\n' + message.content + '\n```' | markdownToHtml | async"></div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="aiAgent" class="chat-input d-flex p-16 bg-level-1 border-top">
+          <input type="text" class="form-control flex-grow" placeholder="Type your message..." [(ngModel)]="newMessage"
+            (keyup.enter)="sendMessage()" [disabled]="isLoadingChat" />
+          <button class="btn btn-primary m-l-8" (click)="sendMessage()" [disabled]="!newMessage || isLoadingChat">
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer d-block text-center">
+      <div class="form-group">
+        <button type="button" name="update" class="btn btn-primary" (click)="save()" [disabled]="!valid" translate>
+          Save
+        </button>
+        <button type="button" name="update" class="btn btn-primary" (click)="cancel()" translate>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

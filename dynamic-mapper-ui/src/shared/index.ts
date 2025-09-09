@@ -26,7 +26,6 @@ export * from './component/renderer/label.renderer.component';
 export * from './confirmation/confirmation-modal.component';
 export * from './connector-configuration/connector-grid.component';
 export * from './connector-configuration/connector.model';
-export * from './connector-configuration/edit/connector-configuration-modal.component';
 export * from './connector-details/connector-details.component';
 export * from './connector-log/connector-log.component';
 export * from './connector-log/connector-log.model';

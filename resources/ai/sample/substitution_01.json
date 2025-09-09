@@ -1,0 +1,20 @@
+[
+      {
+        "pathSource": "mea.values[0].value",
+        "pathTarget": "c8y_ProcessLoadMeasurement.L.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      },
+      {
+        "pathSource": "mea.values[0].timestamp.$fromMillis()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      },
+      {
+        "pathSource": "mea.devicePath",
+        "pathTarget": "_IDENTITY_.externalId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      }
+    ]

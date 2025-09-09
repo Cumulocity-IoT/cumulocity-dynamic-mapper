@@ -29,6 +29,7 @@ import {
 } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import {
+  ConnectorConfiguration,
   DeploymentMapEntry,
   Direction,
   Feature,
@@ -80,8 +81,8 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
     this.feature = await this.sharedService.getFeatures();
   }
 
-  async onConfigurationAdd() {
-    this.connectorGrid.onConfigurationAdd();
+  async onConfigurationAddOrUpdate(config:ConnectorConfiguration) {
+    this.connectorGrid.onConfigurationAddOrUpdate(config);
   }
 
   refresh() {

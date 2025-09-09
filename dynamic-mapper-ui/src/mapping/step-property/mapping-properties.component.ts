@@ -20,6 +20,7 @@
 import {
   Component,
   EventEmitter,
+  inject,
   Input,
   OnChanges,
   OnDestroy,
@@ -36,6 +37,7 @@ import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
 import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, MappingType, ExtensionType, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
+import { Alert, AlertService } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -53,7 +55,7 @@ export class MappingStepPropertiesComponent
   @Input() propertyFormly: FormGroup;
   @Input() codeFormly: FormGroup;
 
-  @Output() targetAPIChanged = new EventEmitter<any>();
+  @Output() targetAPIChanged = new EventEmitter<string>();
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
   ValidationError = ValidationError;
@@ -70,11 +72,10 @@ export class MappingStepPropertiesComponent
   feature: any;
 
 
-  constructor(
-    private formatStringPipe: FormatStringPipe,
-    public mappingService: MappingService,
-    public sharedService: SharedService,
-  ) { }
+  private alertService = inject(AlertService);
+  private sharedService = inject(SharedService);
+  private mappingService = inject(MappingService);
+  private formatStringPipe = inject(FormatStringPipe);
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['supportsMessageContext']) {
@@ -227,7 +228,7 @@ export class MappingStepPropertiesComponent
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
               description:
-                'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>',
+                'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.',
               required:
                 false
             },
@@ -518,6 +519,10 @@ export class MappingStepPropertiesComponent
     ];
   }
 
+  ngOnDestroy() {
+    this.selectedResult$.complete();
+  }
+
   async updateFilterMappingExpressionResult(path) {
     try {
       const resultExpression: JSON = await this.mappingService.evaluateExpression(
@@ -545,6 +550,8 @@ export class MappingStepPropertiesComponent
   }
 
   async updateFilterInventoryExpressionResult(path) {
+    this.clearAlerts();
+    this.raiseAlert({ type: 'info', text: 'NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.' })
     try {
       const resultExpression: JSON = await this.mappingService.evaluateExpression(
         JSON.parse('{}'),
@@ -575,7 +582,15 @@ export class MappingStepPropertiesComponent
     this.targetAPIChanged.emit(targetAPI);
   }
 
-  ngOnDestroy() {
-    this.selectedResult$.complete();
+  clearAlerts() {
+    this.alertService.clearAll();
+  }
+
+  raiseAlert(alert: Alert) {
+    // clear all info alert
+    this.alertService.state.forEach(a => {
+      if (a.type == 'info') { this.alertService.remove(a) }
+    })
+    this.alertService.add(alert);
   }
 }

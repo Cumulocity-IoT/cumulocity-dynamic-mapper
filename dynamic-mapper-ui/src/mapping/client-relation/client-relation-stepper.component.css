@@ -1,0 +1,72 @@
+/* Target the custom button when user has no admin role */
+.user-no-admin-or-create-role button[data-cy="custom"],
+.user-no-admin-or-create-role button[title="Confirm"] {
+  pointer-events: none !important;
+  opacity: var(--c8y-root-component-disabled-opacity) !important;
+  cursor: not-allowed !important;
+}
+/* client-relation-stepper.component.css */
+
+/* client-relation-stepper.component.css */
+
+.full-height-stepper {
+  height: calc(100vh - 100px) !important;
+  min-height: 700px !important;
+}
+
+.asset-selector-step-content {
+  height: calc(100vh - 250px);
+  display: flex;
+  flex-direction: column;
+  min-height: 600px;
+}
+
+.asset-selector-header {
+  flex-shrink: 0;
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.asset-selector-wrapper {
+  flex: 1;
+  min-height: 500px;
+  position: relative;
+  padding: 16px;
+}
+
+.full-height-asset-selector {
+  position: absolute !important;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  height: auto !important;
+}
+
+/* Override stepper constraints */
+::ng-deep .asset-selector-step .cdk-step-content {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+}
+
+::ng-deep .full-height-stepper .mat-horizontal-stepper-content {
+  height: 100% !important;
+  overflow: visible !important;
+}
+
+::ng-deep .asset-selector-wrapper c8y-asset-selector-miller {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Ensure the miller component internals get proper height */
+::ng-deep c8y-asset-selector-miller .miller-columns {
+  height: 100% !important;
+}
+
+::ng-deep c8y-asset-selector-miller .miller-column {
+  height: 100% !important;
+}

@@ -1,0 +1,15 @@
+{
+    "readings": [
+        {
+            "asset_id": "Wide-CAN2011",
+            "pressure": 30.6,
+            "timestamp": 1751522993000
+        },
+        {
+            "asset_id": "Wide-CAN8011",
+            "pressure": 20.6,
+            "timestamp": 1751523007000
+            
+        }
+    ]
+}

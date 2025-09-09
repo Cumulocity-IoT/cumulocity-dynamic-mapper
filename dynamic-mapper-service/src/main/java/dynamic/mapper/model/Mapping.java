@@ -172,7 +172,7 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public ExtensionEntry extension;
 
-    @Schema(description = "Filter expression for mapping conditions", example = "source.type == 'temperature'")
+    @Schema(description = "Filter expression (condition) if mapping should be applied", example = "telemetry.telemetryReadings[0].value >15")
     @JsonSetter(nulls = Nulls.SKIP)
     public String filterMapping;
 
@@ -190,6 +190,9 @@ public class Mapping implements Serializable {
 
     @Schema(description = "Base64 encoded code for custom substitutions")
     public String code;
+
+    @Schema(description = "Define substitutions as JavaScript code")
+    public Boolean substitutionsAsCode = false;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Timestamp of last update", example = "1640995200000")
     @NotNull
@@ -353,6 +356,7 @@ public class Mapping implements Serializable {
                 && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE_TARGET)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_INTERNAL)
                 && !mapping.mappingType.equals(MappingType.CODE_BASED)
+                && !mapping.substitutionsAsCode
                 && !mapping.direction.equals(Direction.OUTBOUND)) {
             if (count > 1) {
                 result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
@@ -523,4 +527,7 @@ public class Mapping implements Serializable {
         return mp;
     }
 
+    public Boolean isSubstitutionsAsCode () {
+        return MappingType.CODE_BASED.equals(this.mappingType) || this.substitutionsAsCode;
+    }   
 }

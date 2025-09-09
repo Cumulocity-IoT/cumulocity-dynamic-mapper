@@ -22,13 +22,13 @@
 <div class="col-xs-12 flex-grow no-gutter">
   <div class="card-inner-scroll fit-h">
     <div class="card-block p-b-0 fit-h" style="min-height: 400px">
-      <div class="col-md-6 col-md-offset-3 col-lg-8 col-lg-offset-2">
+      <div class="col-md-8 col-md-offset-2 col-lg-10 col-lg-offset-1">
         <button
           type="button"
           name="addConfiguration"
           id="addConfiguration"
           class="btn btn-default btn-sm m-b-24"
-          (click)="onConfigurationAdd()"
+          (click)="onConfigurationAddOrUpdate(undefined)"
           translate
           [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
           title="Add connector"

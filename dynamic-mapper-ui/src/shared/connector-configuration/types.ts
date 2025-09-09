@@ -30,6 +30,6 @@ export interface ActionVisibilityRule {
     type: string | BuiltInActionType;
     icon?: string;
     text?: string;
-    callbackName: 'onConfigurationUpdate' | 'onConfigurationCopy' | 'onConfigurationDelete';
+    callbackName: 'onConfigurationAddOrUpdate' | 'onConfigurationCopy' | 'onConfigurationDelete';
     visibilityRules: ActionVisibilityRule[];
   }

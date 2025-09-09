@@ -30,7 +30,8 @@ export enum ConnectorPropertyType {
   NUMERIC_PROPERTY = 'NUMERIC_PROPERTY',
   BOOLEAN_PROPERTY = 'BOOLEAN_PROPERTY',
   OPTION_PROPERTY = 'OPTION_PROPERTY',
-  STRING_LARGE_PROPERTY = 'STRING_LARGE_PROPERTY'
+  STRING_LARGE_PROPERTY = 'STRING_LARGE_PROPERTY',
+  MAP_PROPERTY = 'MAP_PROPERTY'
 }
 
 export enum ConnectorType {
@@ -39,6 +40,8 @@ export enum ConnectorType {
   KAFKA = 'KAFKA',
   HTTP = 'HTTP',
   WEB_HOOK = 'WEB_HOOK',
+  PULSAR = 'PULSAR',
+  CUMULOCITY_MQTT_SERVICE_PULSAR = 'CUMULOCITY_MQTT_SERVICE_PULSAR',
 }
 
 export interface ConnectorPropertyCondition {
@@ -70,7 +73,8 @@ export interface ConnectorConfiguration {
 export interface ConnectorSpecification {
   name: string;
   description: string;
-  connectorType: string;
+  connectorType: ConnectorType;
+  singleton: boolean;
   supportsWildcardInTopic: boolean;
   supportsMessageContext?: boolean;
   supportedDirections?: Direction[];

@@ -1,0 +1,54 @@
+<!--
+  ~ Copyright (c) 2022-2025 Cumulocity GmbH.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~       http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  @authors Christof Strack, Stefan Witschel
+  ~
+  -->
+
+<div class="flex-col flex-nowrap no-align-items p-48 fit-h col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage">
+    <div class="card-header separator" style="justify-content: center">
+      <h4 class="card-title d-flex">
+        <i [c8yIcon]="'subscription'" class="icon-32 m-r-16"></i>
+        <span class="m-t-8">Select devices group to subscribe to all device for outbound mappings</span>
+      </h4>
+    </div>
+    <div class="card-block">
+      <c8y-asset-selector-miller [(ngModel)]="deviceList" (onSelected)="selectionChanged($event)" [config]="{
+            groupsSelectable: true,
+            groupsOnly: true,
+            columnHeaders: true,
+            showFilter: true,
+            showUnassignedDevices: false,
+            showChildDevices: false,
+            search: true,
+            multi: true,
+            showSelected: true
+          }" class="bg-component"></c8y-asset-selector-miller>
+    </div>
+    <div class="card-footer text-center">
+      <div class="form-group">
+        <button type="button" name="save" class="btn btn-primary" (click)="clickedUpdateSubscription()" translate>
+          Save
+        </button>
+        <button type="button" name="cancel" class="btn btn-primary" (click)="clickedCancel()" translate>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

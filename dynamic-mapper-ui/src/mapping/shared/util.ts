@@ -296,7 +296,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
     }
 
     // count number of "+" in publishTopic
-    const count_single = (publishTopic.value?.match(/\+/g) || []).length;
+    /*const count_single = (publishTopic.value?.match(/\+/g) || []).length;
     if (count_single > 1) {
       errors = {
         ...errors,
@@ -306,6 +306,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
         }
       };
     }
+      */
 
     // wildcard "#" can only appear at the end in mappingTopic
     if (
@@ -439,35 +440,6 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
         // c8ySourceId: '909090'
       }
     };
-    if (mapping.direction == Direction.INBOUND) {
-      // Handle message context if supported
-      if (mapping.supportsMessageContext) {
-        result = {
-          ...result,
-          [TOKEN_CONTEXT_DATA]: { 'api': mapping.targetAPI }
-        };
-      }
-      
-      // Handle attachment properties independently
-      if (mapping.eventWithAttachment) {
-        // Initialize [TOKEN_CONTEXT_DATA] if it doesn't exist yet
-        if (!result[TOKEN_CONTEXT_DATA]) {
-          result[TOKEN_CONTEXT_DATA] = {};
-        }
-        
-        // Add attachment properties
-        result[TOKEN_CONTEXT_DATA].attachment_Name = 'TestImage.jpeg';
-        result[TOKEN_CONTEXT_DATA].attachment_Type = 'image/jpeg';
-        result[TOKEN_CONTEXT_DATA].attachment_Data = '';
-      }
-    }
-
-
-
-    if (mapping.direction == Direction.OUTBOUND) {
-      result[TOKEN_IDENTITY].c8ySourceId = '909090';
-    }
-    return result;
   } else {
     result = {
       ...template,
@@ -475,9 +447,49 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
         c8ySourceId: '909090'
       }
     };
-    return result;
-
   }
+  if (mapping.direction == Direction.INBOUND) {
+    // Handle message context if supported
+    if (mapping.supportsMessageContext) {
+      result = {
+        ...result,
+        [TOKEN_CONTEXT_DATA]: {
+          'api': mapping.targetAPI,
+          'processingMode': 'PERSISTENT'
+        }
+      };
+    }
+
+    if (mapping.createNonExistingDevice) {
+      result = {
+        ...result,
+        [TOKEN_CONTEXT_DATA]: {
+          ...result[TOKEN_CONTEXT_DATA], // Spread existing properties
+          'deviceName': 'generatedDevice',
+          'deviceType': 'c8y_GeneratedDeviceType'
+        }
+      };
+    }
+
+    // Handle attachment properties independently
+    if (mapping.eventWithAttachment) {
+      // Initialize [TOKEN_CONTEXT_DATA] if it doesn't exist yet
+      if (!result[TOKEN_CONTEXT_DATA]) {
+        result[TOKEN_CONTEXT_DATA] = {};
+      }
+
+      // Add attachment properties
+      result[TOKEN_CONTEXT_DATA].attachment_Name = 'TestImage.jpeg';
+      result[TOKEN_CONTEXT_DATA].attachment_Type = 'image/jpeg';
+      result[TOKEN_CONTEXT_DATA].attachment_Data = '';
+    }
+  }
+
+  if (mapping.direction == Direction.OUTBOUND) {
+    result[TOKEN_IDENTITY].c8ySourceId = '909090';
+  }
+
+  return result;
 }
 
 export function randomIdAsString() {
