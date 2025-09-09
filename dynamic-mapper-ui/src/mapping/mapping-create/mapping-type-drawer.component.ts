@@ -26,7 +26,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { BottomDrawerRef, HumanizePipe, ModalLabels } from '@c8y/ngx-components';
+import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
 import { Subject, takeUntil } from 'rxjs';
 import { Direction, MappingType, MappingTypeDescriptionMap, MappingTypeDescriptions, MappingTypeLabels, TransformationType, TransformationTypeDescriptions, TransformationTypeLabels } from '../../shared';
 
@@ -81,7 +81,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   ];
 
   private readonly destroy$ = new Subject<void>();
-  private readonly humanizePipe = new HumanizePipe();
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly fb = inject(FormBuilder);
 

@@ -408,7 +408,7 @@
   <div
     *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
     <div class="form-group p-b-8">
-      <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
+      <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
       <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
         <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl (change)="
               onSelectExtensionName(templateForm.value.extensionName)
@@ -510,7 +510,7 @@
   <div
     *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
     <div class="form-group p-b-8">
-      <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
+      <label translate>Extensions for {{ MappingTypeDescriptions[mapping.mappingType] }}</label>
       <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
         <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
           [disabled]="stepperConfiguration.showCodeEditor" (change)="

@@ -63,7 +63,9 @@ import {
   MappingType,
   Feature,
   isSubstitutionsAsCode,
-  TransformationType
+  TransformationType,
+  MappingTypeDescriptions,
+  MappingTypeLabels
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { ValidationError } from '../shared/mapping.model';
@@ -128,6 +130,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   private aiAgentService = inject(AIAgentService);
 
   readonly ValidationError = ValidationError;
+  readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly TransformationType = TransformationType;
