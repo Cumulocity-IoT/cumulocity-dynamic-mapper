@@ -28,16 +28,24 @@ import {
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { BottomDrawerRef, HumanizePipe, ModalLabels } from '@c8y/ngx-components';
 import { Subject, takeUntil } from 'rxjs';
-import { Direction, MappingType, MappingTypeDescriptionMap, TransformationType } from '../../shared';
+import { Direction, MappingType, MappingTypeDescriptionMap, MappingTypeDescriptions, MappingTypeLabels, TransformationType, TransformationTypeDescriptions, TransformationTypeLabels } from '../../shared';
 
 interface MappingTypeOption {
   label: string;
   value: MappingType;
+  description?: string;
 }
 
 interface TransformationTypeOption {
   label: string;
   value: TransformationType;
+  description?: string;
+}
+
+interface SaveResult {
+  mappingType: MappingType;
+  transformationType: TransformationType;
+  snoop: boolean;
 }
 
 @Component({
@@ -116,6 +124,16 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.bottomDrawerRef.close();
   }
 
+  getTransformationTypeDescription(): string {
+    const currentType = this.formGroup.get('transformationType')?.value;
+    return currentType ? TransformationTypeDescriptions[currentType] : '';
+  }
+
+  getMappingTypeDescription(): string {
+    const currentType = this.formGroup.get('mappingType')?.value;
+    return currentType ? MappingTypeDescriptions[currentType] : '';
+  }
+
   private initializeForm(): void {
     const initialConfig = this.getMappingTypeConfig(this.DEFAULT_MAPPING_TYPE);
 
@@ -182,15 +200,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.filteredMappingTypes = this.getFilteredMappingTypes();
   }
 
-  private getFilteredMappingTypes(): MappingTypeOption[] {
-    return Object.values(MappingType)
-      .filter(type => this.shouldIncludeMappingType(type))
-      .map(type => ({
-        label: this.humanizePipe.transform(type),
-        value: type
-      }));
-  }
-
   private shouldIncludeMappingType(type: MappingType): boolean {
     // Always exclude CODE_BASED
     if (type === MappingType.CODE_BASED) {
@@ -217,8 +226,9 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       : [TransformationType.DEFAULT, TransformationType.JSONATA];
 
     this.transformationTypeOptions = availableTypes.map(type => ({
-      label: this.humanizePipe.transform(type),
-      value: type
+      label: TransformationTypeLabels[type],
+      value: type,
+      description: TransformationTypeDescriptions[type]
     }));
 
     // Reset if current selection is not available
@@ -237,11 +247,15 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       directionSupported: config?.directionSupported || false
     };
   }
-}
 
-// Types
-interface SaveResult {
-  mappingType: MappingType;
-  transformationType: TransformationType;
-  snoop: boolean;
+  private getFilteredMappingTypes(): MappingTypeOption[] {
+    return Object.values(MappingType)
+      .filter(type => this.shouldIncludeMappingType(type))
+      .map(type => ({
+        label: MappingTypeLabels[type],
+        value: type,
+        description: MappingTypeDescriptions[type]
+      }));
+  }
+
 }

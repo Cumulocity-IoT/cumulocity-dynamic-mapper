@@ -293,6 +293,40 @@ export enum MappingType {
   CODE_BASED = 'CODE_BASED'
 }
 
+export const TransformationTypeLabels = {
+  [TransformationType.DEFAULT]: 'Default Transformation',
+  [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as Code',
+  [TransformationType.FLOW_FUNCTION]: 'Flow Function',
+  [TransformationType.JSONATA]: 'JSONata Expression'
+} as const;
+
+export const TransformationTypeDescriptions = {
+  [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
+  [TransformationType.SUBSTITUTION_AS_CODE]: 'Allows writing custom JavaScript code for complex transformations',
+  [TransformationType.FLOW_FUNCTION]: 'Executes a predefined flow function for data transformation',
+  [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping'
+} as const;
+
+export const MappingTypeLabels = {
+  [MappingType.JSON]: 'JSON Payload',
+  [MappingType.FLAT_FILE]: 'Flat File Payload',
+  [MappingType.HEX]: 'Hexadecimal Payload',
+  [MappingType.PROTOBUF_INTERNAL]: 'Protocol Buffers (Internal)',
+  [MappingType.EXTENSION_SOURCE]: 'Payload parsed in Extension',
+  [MappingType.EXTENSION_SOURCE_TARGET]: 'Payload parsed and sent in Extension',
+  [MappingType.CODE_BASED]: 'Code-based Mapping'
+} as const;
+
+export const MappingTypeDescriptions = {
+  [MappingType.JSON]: 'Standard JSON payload transformation and mapping',
+  [MappingType.FLAT_FILE]: 'Fixed-width or delimited flat file processing',
+  [MappingType.HEX]: 'Hexadecimal data processing and conversion',
+  [MappingType.PROTOBUF_INTERNAL]: 'Internal Protocol Buffers message handling',
+  [MappingType.EXTENSION_SOURCE]: 'Custom extension for source data processing',
+  [MappingType.EXTENSION_SOURCE_TARGET]: 'Custom extension for both source and target processing',
+  [MappingType.CODE_BASED]: 'Fully customizable code-based transformation logic'
+} as const;
+
 export interface MappingTypeProperties {
   snoopSupported: boolean;
   directionSupported: boolean;

@@ -24,7 +24,7 @@
       <h4 class="card-title d-flex">
         <i [c8yIcon]="'plus-circle'" class="icon-32 m-r-16"></i>
         <span class="m-t-8">
-          {{ 'Select mapping type for ' + (direction === Direction.INBOUND ? 'source payload' : 'target payload') |
+          {{ 'Select Payload Format and Transformation Type' |
           translate }}
         </span>
       </h4>
@@ -44,21 +44,40 @@
           </c8y-form-group>
 
           <!-- Mapping Type Selection -->
-          <c8y-form-group class="p-l-16 p-r-16">
+          <!-- <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Mapping Type' | translate }}</label>
             <c8y-select [items]="filteredMappingTypes" formControlName="mappingType" labelProperty="label"
               valueProperty="value" searchHasFocus = "false" aria-label="Mapping Type select">
             </c8y-select>
+          </c8y-form-group> -->
+          <c8y-form-group class="p-l-16 p-r-16">
+            <label>{{ 'Payload Format' | translate }}</label>
+            <c8y-select [items]="filteredMappingTypes" formControlName="mappingType" labelProperty="label"
+              valueProperty="value" searchHasFocus = "false" aria-label="Mapping Type select">
+            </c8y-select>
+            <!-- Optional: Show description of selected mapping type -->
+            <small class="text-muted" *ngIf="formGroup.get('mappingType')?.value">
+              {{ getMappingTypeDescription() }}
+            </small>
           </c8y-form-group>
 
           <!-- Transformation Type (Expert Mode Only) -->
-          <c8y-form-group class="p-l-16 p-r-16" *ngIf="showTransformationType">
+          <!-- <c8y-form-group class="p-l-16 p-r-16" *ngIf="showTransformationType">
             <label>{{ 'Transformation Type' | translate }}</label>
             <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
-              valueProperty="value" searchHasFocus = "false" aria-label="Transformation select">
+              valueProperty="value" searchHasFocus="false" searchHasFocus = "false" aria-label="Transformation select">
             </c8y-select>
             <small class="text-muted">
               {{ 'Defines the type of transformation from source to target payload.' | translate }}
+            </small>
+          </c8y-form-group> -->
+          <c8y-form-group class="p-l-16 p-r-16" *ngIf="showTransformationType">
+            <label>{{ 'Transformation Type' | translate }}</label>
+            <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
+              valueProperty="value" aria-label="Transformation select">
+            </c8y-select>
+            <small class="text-muted">
+              {{ getTransformationTypeDescription() }}
             </small>
           </c8y-form-group>
 
