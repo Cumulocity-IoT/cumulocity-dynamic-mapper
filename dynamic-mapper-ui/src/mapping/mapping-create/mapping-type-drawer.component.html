@@ -53,7 +53,7 @@
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
             <c8y-select [items]="filteredMappingTypes" formControlName="mappingType" labelProperty="label"
-              valueProperty="value" searchHasFocus = "false" aria-label="Mapping Type select">
+              valueProperty="value" searchHasFocus="false" aria-label="Payload Format">
             </c8y-select>
             <!-- Optional: Show description of selected mapping type -->
             <small class="text-muted" *ngIf="formGroup.get('mappingType')?.value">
@@ -74,7 +74,7 @@
           <c8y-form-group class="p-l-16 p-r-16" *ngIf="showTransformationType">
             <label>{{ 'Transformation Type' | translate }}</label>
             <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
-              valueProperty="value" aria-label="Transformation select">
+              valueProperty="value" aria-label="Transformation Type">
             </c8y-select>
             <small class="text-muted">
               {{ getTransformationTypeDescription() }}
