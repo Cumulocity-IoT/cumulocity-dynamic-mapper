@@ -135,17 +135,44 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   }
 
   private initializeForm(): void {
-    const initialConfig = this.getMappingTypeConfig(this.DEFAULT_MAPPING_TYPE);
+    // Find the first enabled mapping type for the current direction as default
+    const enabledMappingTypes = Object.values(MappingType).filter(type => {
+      const mappingTypeConfig = MappingTypeDescriptionMap[type];
+      return mappingTypeConfig?.enabled &&
+        mappingTypeConfig.properties?.[this.direction]?.directionSupported;
+    });
+
+    const defaultMappingType = enabledMappingTypes.includes(this.DEFAULT_MAPPING_TYPE)
+      ? this.DEFAULT_MAPPING_TYPE
+      : enabledMappingTypes[0] || this.DEFAULT_MAPPING_TYPE;
+
+    const initialConfig = this.getMappingTypeConfig(defaultMappingType);
+    const supportedTransformationTypes = initialConfig.supportedTransformationTypes;
+
+    // Choose default transformation type from supported types
+    const defaultTransformationType = supportedTransformationTypes.includes(this.DEFAULT_TRANSFORMATION_TYPE)
+      ? this.DEFAULT_TRANSFORMATION_TYPE
+      : supportedTransformationTypes[0] || this.DEFAULT_TRANSFORMATION_TYPE;
+
+    // Create the initial mapping type option object
+    const initialMappingTypeOption: MappingTypeOption = {
+      label: MappingTypeLabels[defaultMappingType],
+      value: defaultMappingType,
+      description: MappingTypeDescriptions[defaultMappingType]
+    };
 
     this.formGroup = this.fb.group({
       expertMode: [false],
-      mappingType: [this.DEFAULT_MAPPING_TYPE],
-      transformationType: [this.DEFAULT_TRANSFORMATION_TYPE],
+      mappingType: [initialMappingTypeOption],
+      transformationType: [defaultTransformationType],
       mappingTypeDescription: [initialConfig.description],
       snoop: [{ value: false, disabled: !initialConfig.snoopSupported }]
     });
 
     this.updateDerivedState();
+
+    // Initialize transformation type options
+    this.updateTransformationTypeOptions(initialConfig.substitutionsAsCodeSupported);
   }
 
   private setupFormSubscriptions(): void {
@@ -160,54 +187,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   private updateDerivedState(): void {
     this.filteredMappingTypes = this.getFilteredMappingTypes();
-  }
-
-  private shouldIncludeMappingType(type: MappingType): boolean {
-    // Always exclude CODE_BASED
-    if (type === MappingType.CODE_BASED) {
-      return false;
-    }
-
-    // Check direction support
-    const config = this.getMappingTypeConfig(type);
-    if (!config.directionSupported) {
-      return false;
-    }
-
-    // In non-expert mode, exclude advanced types
-    if (!this.showTransformationType && this.EXPERT_MODE_EXCLUDED_TYPES.includes(type)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  private updateTransformationTypeOptions(substitutionsAsCodeSupported: boolean): void {
-    const availableTypes = substitutionsAsCodeSupported
-      ? Object.values(TransformationType)
-      : [TransformationType.DEFAULT, TransformationType.JSONATA];
-
-    this.transformationTypeOptions = availableTypes.map(type => ({
-      label: TransformationTypeLabels[type],
-      value: type,
-      description: TransformationTypeDescriptions[type]
-    }));
-
-    // Reset if current selection is not available
-    const currentValue = this.formGroup.get('transformationType')?.value;
-    if (!availableTypes.includes(currentValue)) {
-      this.formGroup.patchValue({ transformationType: TransformationType.JSONATA });
-    }
-  }
-
-  private getMappingTypeConfig(type: MappingType) {
-    const config = MappingTypeDescriptionMap[type]?.properties?.[this.direction];
-    return {
-      description: MappingTypeDescriptionMap[type]?.description || '',
-      snoopSupported: config?.snoopSupported || false,
-      substitutionsAsCodeSupported: config?.substitutionsAsCodeSupported || false,
-      directionSupported: config?.directionSupported || false
-    };
   }
 
   private getFilteredMappingTypes(): MappingTypeOption[] {
@@ -250,7 +229,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       snoopControl?.patchValue(false);
     }
 
-    // Update transformation type options
+    // Update transformation type options based on the new mapping type
     this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
   }
 
@@ -269,17 +248,31 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     } else {
       transformationTypeControl?.disable();
 
-      const patchValues: any = {
-        transformationType: this.DEFAULT_TRANSFORMATION_TYPE
-      };
+      const patchValues: any = {};
 
       // Reset mapping type if current selection is not available in non-expert mode
       if (currentMappingType && this.EXPERT_MODE_EXCLUDED_TYPES.includes(currentMappingType)) {
-        // Find the default mapping type option object from the filtered list
-        const defaultOption = this.getFilteredMappingTypes().find(
+        // Find the first available mapping type for non-expert mode
+        const availableMappingTypes = this.getFilteredMappingTypes();
+        const defaultOption = availableMappingTypes.find(
           option => option.value === this.DEFAULT_MAPPING_TYPE
-        );
-        patchValues.mappingType = defaultOption;
+        ) || availableMappingTypes[0];
+
+        if (defaultOption) {
+          patchValues.mappingType = defaultOption;
+        }
+      }
+
+      // Always reset transformation type when leaving expert mode
+      const finalMappingType = patchValues.mappingType?.value || currentMappingType;
+      if (finalMappingType) {
+        const config = this.getMappingTypeConfig(finalMappingType);
+        const supportedTypes = config.supportedTransformationTypes;
+        const defaultTransformationType = supportedTypes.includes(this.DEFAULT_TRANSFORMATION_TYPE)
+          ? this.DEFAULT_TRANSFORMATION_TYPE
+          : supportedTypes[0] || this.DEFAULT_TRANSFORMATION_TYPE;
+
+        patchValues.transformationType = defaultTransformationType;
       }
 
       this.formGroup.patchValue(patchValues);
@@ -290,8 +283,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     // Update transformation type options based on current mapping type
     const finalMappingTypeOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
     const finalMappingType = finalMappingTypeOption?.value;
-    const config = this.getMappingTypeConfig(finalMappingType);
-    this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
+    if (finalMappingType) {
+      const config = this.getMappingTypeConfig(finalMappingType);
+      this.updateTransformationTypeOptions(config.substitutionsAsCodeSupported);
+    }
   }
 
   // Update these methods to handle the object properly
@@ -299,6 +294,90 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const currentOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
     const currentType = currentOption?.value;
     return currentType ? MappingTypeDescriptions[currentType] : '';
+  }
+
+  shouldShowTransformationType(): boolean {
+    if (!this.showTransformationType) {
+      return false;
+    }
+
+    const currentMappingTypeOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
+    if (!currentMappingTypeOption?.value) {
+      return false;
+    }
+
+    const config = this.getMappingTypeConfig(currentMappingTypeOption.value);
+    return config.supportedTransformationTypes.length > 0;
+  }
+
+  private shouldIncludeMappingType(type: MappingType): boolean {
+    // Check if the mapping type is enabled
+    const mappingTypeConfig = MappingTypeDescriptionMap[type];
+    if (!mappingTypeConfig?.enabled) {
+      return false;
+    }
+
+    // Always exclude CODE_BASED (if you still want this logic)
+    if (type === MappingType.CODE_BASED) {
+      return false;
+    }
+
+    // Check direction support
+    const config = this.getMappingTypeConfig(type);
+    if (!config.directionSupported) {
+      return false;
+    }
+
+    // In non-expert mode, exclude advanced types
+    if (!this.showTransformationType && this.EXPERT_MODE_EXCLUDED_TYPES.includes(type)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private updateTransformationTypeOptions(substitutionsAsCodeSupported: boolean): void {
+    const currentMappingTypeOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
+    const currentMappingType = currentMappingTypeOption?.value;
+
+    if (!currentMappingType) {
+      this.transformationTypeOptions = [];
+      return;
+    }
+
+    const config = this.getMappingTypeConfig(currentMappingType);
+    const supportedTypes = config.supportedTransformationTypes || [];
+
+    this.transformationTypeOptions = supportedTypes.map(type => ({
+      label: TransformationTypeLabels[type],
+      value: type,
+      description: TransformationTypeDescriptions[type]
+    }));
+
+    // Reset if current selection is not available
+    const currentValue = this.formGroup.get('transformationType')?.value;
+    if (!supportedTypes.includes(currentValue)) {
+      // Set to the first available type or DEFAULT if available
+      const defaultType = supportedTypes.includes(TransformationType.DEFAULT)
+        ? TransformationType.DEFAULT
+        : supportedTypes[0] || TransformationType.DEFAULT;
+
+      this.formGroup.patchValue({ transformationType: defaultType });
+    }
+  }
+
+  private getMappingTypeConfig(type: MappingType) {
+    const mappingTypeConfig = MappingTypeDescriptionMap[type];
+    const config = mappingTypeConfig?.properties?.[this.direction];
+
+    return {
+      description: mappingTypeConfig?.description || '',
+      enabled: mappingTypeConfig?.enabled || false,
+      snoopSupported: config?.snoopSupported || false,
+      substitutionsAsCodeSupported: config?.substitutionsAsCodeSupported || false,
+      directionSupported: config?.directionSupported || false,
+      supportedTransformationTypes: config?.supportedTransformationTypes || []
+    };
   }
 
 }

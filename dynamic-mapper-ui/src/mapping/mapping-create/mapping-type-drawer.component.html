@@ -53,8 +53,7 @@
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
             <c8y-select [items]="filteredMappingTypes" formControlName="mappingType" labelProperty="label"
-              valueProperty="value" [insideClick]="false" [autoClose]="true"
-              aria-label="Payload Format">
+              valueProperty="value" [insideClick]="false" [autoClose]="true" aria-label="Payload Format">
             </c8y-select>
             <small class="text-muted" *ngIf="formGroup.get('mappingType')?.value">
               {{ getMappingTypeDescription() }}
@@ -71,10 +70,10 @@
               {{ 'Defines the type of transformation from source to target payload.' | translate }}
             </small>
           </c8y-form-group> -->
-          <c8y-form-group class="p-l-16 p-r-16" *ngIf="showTransformationType">
+          <c8y-form-group class="p-l-16 p-r-16" *ngIf="shouldShowTransformationType()">
             <label>{{ 'Transformation Type' | translate }}</label>
             <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
-              valueProperty="value" aria-label="Transformation Type">
+              valueProperty="value" [insideClick]="false" [autoClose]="true" aria-label="Transformation Type">
             </c8y-select>
             <small class="text-muted">
               {{ getTransformationTypeDescription() }}
