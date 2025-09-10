@@ -294,16 +294,20 @@ export enum MappingType {
 }
 
 export const TransformationTypeLabels = {
-  [TransformationType.DEFAULT]: 'Default Transformation',
-  [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as Code',
-  [TransformationType.SMART_FUNCTION]: 'Smart Function',
-  [TransformationType.JSONATA]: 'JSONata Expression'
+[Direction.INBOUND]:{  [TransformationType.DEFAULT]: 'Default Transformation',
+  [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript Code',
+  [TransformationType.SMART_FUNCTION]: 'Smart Function for Cumulocity API calls',
+  [TransformationType.JSONATA]: 'Substitution as JSONata Expression'},
+  [Direction.OUTBOUND]:{  [TransformationType.DEFAULT]: 'Default Transformation',
+  [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript Code',
+  [TransformationType.SMART_FUNCTION]: 'Smart Function to create Broker Payload',
+  [TransformationType.JSONATA]: 'Substitution as JSONata Expression'}
 } as const;
 
 export const TransformationTypeDescriptions = {
   [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
   [TransformationType.SUBSTITUTION_AS_CODE]: 'Allows writing custom JavaScript code for complex transformations',
-  [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation',
+  [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping'
 } as const;
 
@@ -311,7 +315,7 @@ export const MappingTypeLabels = {
   [MappingType.JSON]: 'JSON Payload',
   [MappingType.FLAT_FILE]: 'Flat File Payload',
   [MappingType.HEX]: 'Hexadecimal Payload',
-  [MappingType.PROTOBUF_INTERNAL]: 'Protocol Buffers (Internal)',
+  [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload',
   [MappingType.EXTENSION_SOURCE]: 'Payload parsed in Java Extension',
   [MappingType.EXTENSION_SOURCE_TARGET]: 'Payload parsed and sent in Extension',
   [MappingType.CODE_BASED]: 'Code-based Mapping'
@@ -321,7 +325,7 @@ export const MappingTypeDescriptions = {
   [MappingType.JSON]: 'Standard JSON payload transformation and mapping',
   [MappingType.FLAT_FILE]: 'Fixed-width or delimited flat file processing',
   [MappingType.HEX]: 'Hexadecimal data processing and conversion',
-  [MappingType.PROTOBUF_INTERNAL]: 'Internal Protocol Buffers message handling',
+  [MappingType.PROTOBUF_INTERNAL]: 'Payload is in PROTOBUF format and is parsed by an internal extension',
   [MappingType.EXTENSION_SOURCE]: 'Custom extension for source data processing',
   [MappingType.EXTENSION_SOURCE_TARGET]: 'Custom extension for both source and target processing',
   [MappingType.CODE_BASED]: 'Fully customizable code-based transformation logic'
@@ -474,7 +478,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
   [MappingType.PROTOBUF_INTERNAL]: {
     key: MappingType.PROTOBUF_INTERNAL,
     enabled: true,
-    description: 'Mapping handles payloads in protobuf format.',
+    description: 'Mapping parses payloads in PROTOBUF format by an internal extension.',
     properties: {
       [Direction.INBOUND]: {
         snoopSupported: false,

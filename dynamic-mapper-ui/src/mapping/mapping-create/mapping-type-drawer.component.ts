@@ -293,7 +293,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   getMappingTypeDescription(): string {
     const currentOption = this.formGroup.get('mappingType')?.value as MappingTypeOption;
     const currentType = currentOption?.value;
-    return currentType ? MappingTypeDescriptions[currentType] : '';
+    return currentType ? MappingTypeDescriptionMap[currentType]?.description : '';
   }
 
   shouldShowTransformationType(): boolean {
@@ -344,7 +344,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     const supportedTypes = config.supportedTransformationTypes || [];
 
     this.transformationTypeOptions = supportedTypes.map(type => ({
-      label: TransformationTypeLabels[type],
+      label: TransformationTypeLabels[this.direction][type],
       value: type,
       description: TransformationTypeDescriptions[type]
     }));
