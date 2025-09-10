@@ -74,7 +74,7 @@ public class FlowProcessorOutboundProcessor extends BaseProcessor  {
             Context graalContext = context.getGraalContext();
 
             // Task 1: Invoking JavaScript function
-            String identifier = Mapping.FLOW_FUNCTION_NAME + "_" + mapping.identifier;
+            String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.identifier;
             Value bindings = graalContext.getBindings("js");
 
             // Load and execute the JavaScript code

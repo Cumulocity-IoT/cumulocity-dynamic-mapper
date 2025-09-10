@@ -542,7 +542,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   async ngAfterViewInit(): Promise<void> {
     if (!initializedMonaco) {
       const monaco = await loadMonacoEditor();
-      if (this.mapping.transformationType == TransformationType.FLOW_FUNCTION) { monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderFlowFunction(monaco)); }
+      if (this.mapping.transformationType == TransformationType.SMART_FUNCTION) { monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderFlowFunction(monaco)); }
       else { monaco.languages.registerCompletionItemProvider('javascript', createCompletionProviderSubstitutionAsCode(monaco)); }
       if (monaco) {
         initializedMonaco = true;

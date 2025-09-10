@@ -63,7 +63,7 @@ public class ExtensionInboundRegistry {
     public void addExtensionEntry(String tenant, String extensionName, ExtensionEntry entry) {
         Map<String, Extension> extensions = getExtensions(tenant);
         if (!extensions.containsKey(extensionName)) {
-            log.warn("{} - Cannot add extension entry. Create first an extension!", tenant);
+            log.warn("{} - Cannot add Java Extension entry. Create first an extension!", tenant);
         } else {
             extensions.get(extensionName).getExtensionEntries().put(entry.getEventName(), entry);
         }

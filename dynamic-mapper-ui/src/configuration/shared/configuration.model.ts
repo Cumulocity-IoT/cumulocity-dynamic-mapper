@@ -45,7 +45,7 @@ export enum TemplateType {
   OUTBOUND = "OUTBOUND",
   SHARED = "SHARED",
   SYSTEM = "SYSTEM",
-  FLOW = "FLOW"
+  SMART = "SMART"
 }
 
 export interface CodeTemplate {

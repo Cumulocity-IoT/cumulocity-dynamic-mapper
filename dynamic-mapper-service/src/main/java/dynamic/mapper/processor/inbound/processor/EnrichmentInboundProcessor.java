@@ -67,7 +67,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
         // Add topic levels to FlowContext if available
         FlowContext flowContext = context.getFlowContext();
         if (flowContext != null && context.getGraalContext() != null
-                && TransformationType.FLOW_FUNCTION.equals(context.getMapping().getTransformationType())) {
+                && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
             addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
 
             // Add basic context information

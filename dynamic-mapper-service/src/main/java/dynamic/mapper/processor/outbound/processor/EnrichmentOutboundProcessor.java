@@ -93,7 +93,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         // Add topic levels to FlowContext if available
         FlowContext flowContext = context.getFlowContext();
         if (flowContext != null && context.getGraalContext() != null
-                && TransformationType.FLOW_FUNCTION.equals(context.getMapping().getTransformationType())) {
+                && TransformationType.SMART_FUNCTION.equals(context.getMapping().getTransformationType())) {
             addToFlowContext(flowContext, context, Mapping.TOKEN_IDENTITY, identityFragment);
             List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
             addToFlowContext(flowContext, context, Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);

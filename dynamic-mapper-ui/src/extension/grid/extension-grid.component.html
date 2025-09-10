@@ -39,10 +39,10 @@
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'right'">
-  <button (click)="addExtension()" class="btn btn-link" title="{{ 'Add extension' | translate }}"
+  <button (click)="addExtension()" class="btn btn-link" title="{{ 'Add Java Extension' | translate }}"
     [disabled]="!externalExtensionEnabled || !feature?.userHasMappingAdminRole">
     <i c8yIcon="plus-circle"></i>
-    {{ 'Add extension' | translate }}
+    {{ 'Add Java Extension' | translate }}
   </button>
 </c8y-action-bar-item>
 
@@ -63,7 +63,7 @@
   <h3 translate>No extension to display.</h3>
   <p translate>Add your first extension by clicking below.</p>
   <p>
-    <button (click)="addExtension()" class="btn btn-primary" title="{{ 'Add extension' | translate }}">
+    <button (click)="addExtension()" class="btn btn-primary" title="{{ 'Add Java Extension' | translate }}">
       {{ 'Add extension' | translate }}
     </button>
   </p>

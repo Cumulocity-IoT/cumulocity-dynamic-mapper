@@ -279,7 +279,7 @@ export interface StepperConfiguration {
 export enum TransformationType {
   DEFAULT = 'DEFAULT',
   SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
-  FLOW_FUNCTION = 'FLOW_FUNCTION',
+  SMART_FUNCTION = 'SMART_FUNCTION',
   JSONATA = 'JSONATA'
 }
 
@@ -296,14 +296,14 @@ export enum MappingType {
 export const TransformationTypeLabels = {
   [TransformationType.DEFAULT]: 'Default Transformation',
   [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as Code',
-  [TransformationType.FLOW_FUNCTION]: 'Flow Function',
+  [TransformationType.SMART_FUNCTION]: 'Smart Function',
   [TransformationType.JSONATA]: 'JSONata Expression'
 } as const;
 
 export const TransformationTypeDescriptions = {
   [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
   [TransformationType.SUBSTITUTION_AS_CODE]: 'Allows writing custom JavaScript code for complex transformations',
-  [TransformationType.FLOW_FUNCTION]: 'Executes a predefined flow function for data transformation',
+  [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping'
 } as const;
 
@@ -312,7 +312,7 @@ export const MappingTypeLabels = {
   [MappingType.FLAT_FILE]: 'Flat File Payload',
   [MappingType.HEX]: 'Hexadecimal Payload',
   [MappingType.PROTOBUF_INTERNAL]: 'Protocol Buffers (Internal)',
-  [MappingType.EXTENSION_SOURCE]: 'Payload parsed in Extension',
+  [MappingType.EXTENSION_SOURCE]: 'Payload parsed in Java Extension',
   [MappingType.EXTENSION_SOURCE_TARGET]: 'Payload parsed and sent in Extension',
   [MappingType.CODE_BASED]: 'Code-based Mapping'
 } as const;
@@ -359,7 +359,7 @@ export const MappingTypeDescriptionMap: Record<
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SUBSTITUTION_AS_CODE,
-          TransformationType.FLOW_FUNCTION
+          TransformationType.SMART_FUNCTION
         ]
       },
       [Direction.OUTBOUND]: {
@@ -370,7 +370,7 @@ export const MappingTypeDescriptionMap: Record<
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SUBSTITUTION_AS_CODE,
-          TransformationType.FLOW_FUNCTION
+          TransformationType.SMART_FUNCTION
         ]
       },
     },
@@ -405,7 +405,7 @@ export const MappingTypeDescriptionMap: Record<
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SUBSTITUTION_AS_CODE,
-          TransformationType.FLOW_FUNCTION
+          TransformationType.SMART_FUNCTION
         ]
       },
       [Direction.OUTBOUND]: {
@@ -416,7 +416,7 @@ export const MappingTypeDescriptionMap: Record<
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SUBSTITUTION_AS_CODE,
-          TransformationType.FLOW_FUNCTION
+          TransformationType.SMART_FUNCTION
         ]
       },
     },
@@ -445,7 +445,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SUBSTITUTION_AS_CODE,
-          TransformationType.FLOW_FUNCTION
+          TransformationType.SMART_FUNCTION
         ]
       },
       [Direction.OUTBOUND]: {
@@ -456,7 +456,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
           TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SUBSTITUTION_AS_CODE,
-          TransformationType.FLOW_FUNCTION
+          TransformationType.SMART_FUNCTION
         ]
       }
     },
@@ -747,5 +747,5 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function isSubstitutionsAsCode(mapping: Mapping): boolean {
-  return mapping.substitutionsAsCode || MappingType.CODE_BASED === mapping.mappingType || mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || mapping.transformationType == TransformationType.FLOW_FUNCTION;
+  return mapping.substitutionsAsCode || MappingType.CODE_BASED === mapping.mappingType || mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || mapping.transformationType == TransformationType.SMART_FUNCTION;
 }

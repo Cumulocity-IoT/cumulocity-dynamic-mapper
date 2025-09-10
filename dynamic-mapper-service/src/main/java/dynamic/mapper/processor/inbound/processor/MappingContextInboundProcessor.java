@@ -68,12 +68,12 @@ public class MappingContextInboundProcessor extends BaseProcessor {
                 return;
             }
         } else if (currentMapping.code != null && 
-                 TransformationType.FLOW_FUNCTION.equals(currentMapping.transformationType)) {
+                 TransformationType.SMART_FUNCTION.equals(currentMapping.transformationType)) {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
                 var graalContext = createGraalContext(graalEngine);
                 // processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
-                //         .get(TemplateType.FLOW.name()).getCode());
+                //         .get(TemplateType.SMART.name()).getCode());
                 processingContext.setGraalContext(graalContext);
                 processingContext.setFlowState(new HashMap<String, Object>());
                 processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant));

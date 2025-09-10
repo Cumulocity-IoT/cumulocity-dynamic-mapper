@@ -115,7 +115,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
             ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
             if (context != null && context.getMapping() != null) {
                 TransformationType transformationType = context.getMapping().getTransformationType();
-                boolean isFlow = TransformationType.FLOW_FUNCTION.equals(transformationType);
+                boolean isFlow = TransformationType.SMART_FUNCTION.equals(transformationType);
 
                 log.debug("Checking transformation type for mapping {}: {} (isFlow: {})",
                         context.getMapping().getName(),

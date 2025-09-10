@@ -317,11 +317,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    // Always exclude CODE_BASED (if you still want this logic)
-    if (type === MappingType.CODE_BASED) {
-      return false;
-    }
-
     // Check direction support
     const config = this.getMappingTypeConfig(type);
     if (!config.directionSupported) {

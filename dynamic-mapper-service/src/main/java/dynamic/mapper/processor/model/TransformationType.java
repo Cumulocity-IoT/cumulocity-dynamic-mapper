@@ -24,7 +24,7 @@ package dynamic.mapper.processor.model;
 public enum TransformationType {
     DEFAULT("DEFAULT"),
     SUBSTITUTION_AS_CODE("SUBSTITUTION_AS_CODE"),
-    FLOW_FUNCTION("FLOW_FUNCTION"),
+    SMART_FUNCTION("SMART_FUNCTION"),
     JSONATA("JSONATA");
 
     public final String name;
