@@ -2,6 +2,7 @@ package dynamic.mapper.processor.inbound.processor;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,12 +23,14 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 import com.cumulocity.model.ID;
-import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.ProcessingMode;
+import com.cumulocity.sdk.client.SDKException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
@@ -42,6 +45,9 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
     @Autowired
     private MappingService mappingService;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
@@ -49,6 +55,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         String tenant = context.getTenant();
 
         try {
+            validateProcessingCache(context);
             substituteInTargetAndCreateRequests(context);
         } catch (Exception e) {
             String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
@@ -68,6 +75,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
      */
     private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context) throws Exception {
         Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
 
         if (mapping.getTargetTemplate() == null || mapping.getTargetTemplate().trim().isEmpty()) {
             log.warn("No target template defined for mapping: {}", mapping.getName());
@@ -80,39 +88,37 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         if (processingCache == null || processingCache.isEmpty()) {
             log.debug("Processing cache is empty for mapping: {}", mapping.getName());
             // Create single request with original template
-            createDynamicMapperRequest(targetTemplate, context, mapping);
+            createDynamicMapperRequest(-1, targetTemplate, context, mapping);
             return;
         }
 
         // Determine cardinality based on expandArray values
-        int cardinality = determineCardinality(processingCache);
+        List<SubstituteValue> deviceEntries = context.getDeviceEntries();
+        int cardinality = deviceEntries.size();
         log.debug("Determined cardinality: {} for mapping: {}", cardinality, mapping.getName());
 
         // Create requests based on cardinality
+        // TODO: if (mapping.createNonExistingDevice) process sequentially
+        // else clone context and add multiContext to exchange
+        // then in pipeline split and process in parallel
+        
         for (int i = 0; i < cardinality; i++) {
             try {
-                DocumentContext payloadTarget = JsonPath.parse(targetTemplate);
-
-                // Apply substitutions for this index
-                for (Map.Entry<String, List<SubstituteValue>> entry : processingCache.entrySet()) {
-                    String pathTarget = entry.getKey();
-                    List<SubstituteValue> substituteValues = entry.getValue();
-
-                    if (substituteValues != null && !substituteValues.isEmpty()) {
-                        SubstituteValue substitute = getSubstituteValueForIndex(substituteValues, i);
-
-                        if (substitute != null) {
-                            // EXACT copy of prepareAndSubstituteInPayload logic
-                            prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
-                        }
+                getBuildProcessingContext(context, deviceEntries.get(i),
+                        i, deviceEntries.size());
+                if (context.getCurrentRequest() != null && context.getCurrentRequest().hasError()) {
+                    Exception e = context.getCurrentRequest().getError();
+                    if (e instanceof ProcessingException &&
+                            e.getCause() != null &&
+                            e.getCause() instanceof SDKException &&
+                            ((SDKException) e.getCause()).getHttpStatus() == 422) {
+                        ID identity = new ID(mapping.externalIdType, deviceEntries.get(i).value.toString());
+                        c8yAgent.removeDeviceFromInboundExternalIdCache(tenant, identity);
+                        context.setSourceId(null);
+                        getBuildProcessingContext(context, deviceEntries.get(i),
+                                i, deviceEntries.size());
                     }
                 }
-
-                // Convert processed payload back to string
-                String processedPayload = payloadTarget.jsonString();
-
-                // Create C8Y request
-                createDynamicMapperRequest(processedPayload, context, mapping);
 
                 log.debug("Created request {} of {} for mapping: {}", i + 1, cardinality, mapping.getName());
 
@@ -127,14 +133,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         }
     }
 
-    /**
-     * EXACT copy of BaseProcessorInbound.prepareAndSubstituteInPayload - DO NOT
-     * MODIFY!
-     * 
-     * @throws ProcessingException
-     */
     private void prepareAndSubstituteInPayload(ProcessingContext<Object> context, DocumentContext payloadTarget,
-            String pathTarget, SubstituteValue substitute) throws ProcessingException {
+            String pathTarget, SubstituteValue substitute) {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
@@ -148,7 +148,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context);
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
-                        sourceId.setValue(createImplicitDevice(identity, context));
+                        sourceId.setValue(ProcessingResultHelper.createImplicitDevice(identity, context, log, c8yAgent,
+                                objectMapper));
                     }
                 } else {
                     sourceId.setValue(resolvedSourceId.getManagedObject().getId().getValue());
@@ -249,64 +250,36 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         }
     }
 
-    /**
-     * Create implicit device when needed
-     * 
-     * @throws ProcessingException
-     */
-    private String createImplicitDevice(ID identity, ProcessingContext<Object> context) throws ProcessingException {
-        try {
-            // This would typically create a device in C8Y and return its ID
-            // Implementation depends on your C8YAgent
-            ManagedObjectRepresentation implMo = c8yAgent.upsertDevice(context.getTenant(), identity, context);
-            return implMo.getId().getName();
-        } catch (Exception e) {
-            log.error("Failed to create implicit device for identity: {}", identity, e);
-            throw new ProcessingException("Failed to create implicit device", e);
-        }
-    }
-
-    /**
-     * Get substitute value for specific index (handles array expansion)
-     */
-    private SubstituteValue getSubstituteValueForIndex(List<SubstituteValue> values, int index) {
-        if (values.size() == 1) {
-            return values.get(0);
-        } else if (index < values.size()) {
-            return values.get(index);
-        } else {
-            return values.get(values.size() - 1); // Use last value if index out of bounds
-        }
-    }
-
-    /**
-     * Determine cardinality based on expandArray values
-     */
-    private int determineCardinality(Map<String, List<SubstituteValue>> processingCache) {
-        int maxCardinality = 1;
-
-        for (List<SubstituteValue> values : processingCache.values()) {
-            if (values != null && !values.isEmpty()) {
-                SubstituteValue firstValue = values.get(0);
-                if (firstValue.isExpandArray() && values.size() > maxCardinality) {
-                    maxCardinality = values.size();
-                }
-            }
-        }
-
-        return maxCardinality;
-    }
+    // /**
+    // * Create implicit device when needed
+    // *
+    // * @throws ProcessingException
+    // */
+    // private String createImplicitDevice(ID identity, ProcessingContext<Object>
+    // context) throws ProcessingException {
+    // try {
+    // // This would typically create a device in C8Y and return its ID
+    // // Implementation depends on your C8YAgent
+    // ManagedObjectRepresentation implMo =
+    // c8yAgent.upsertDevice(context.getTenant(), identity, context);
+    // return implMo.getId().getName();
+    // } catch (Exception e) {
+    // log.error("Failed to create implicit device for identity: {}", identity, e);
+    // throw new ProcessingException("Failed to create implicit device", e);
+    // }
+    // }
 
     /**
      * Create C8Y request with correct structure
      */
-    private void createDynamicMapperRequest(String processedPayload, ProcessingContext<Object> context, Mapping mapping)
-            throws Exception {
+    private int createDynamicMapperRequest(int predecessor, String processedPayload, ProcessingContext<Object> context,
+            Mapping mapping) {
         API api = context.getApi() != null ? context.getApi() : determineDefaultAPI(mapping);
 
         DynamicMapperRequest request = DynamicMapperRequest.builder()
+                .predecessor(predecessor)
                 .api(api)
-                .method(RequestMethod.POST) // Default method
+                .method(context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH)
                 .sourceId(context.getSourceId())
                 .externalIdType(mapping.getExternalIdType())
                 .externalId(context.getExternalId())
@@ -314,8 +287,9 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 .targetAPI(api)
                 .build();
 
-        context.addRequest(request);
+        var newPredecessor = context.addRequest(request);
         log.debug("Created C8Y request for API: {} with payload: {}", api, processedPayload);
+        return newPredecessor;
     }
 
     /**
@@ -331,6 +305,55 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         }
 
         return API.MEASUREMENT; // Default
+    }
+
+    private ProcessingContext<Object> getBuildProcessingContext(ProcessingContext<Object> context,
+            SubstituteValue device, int finalI,
+            int size) {
+        Set<String> pathTargets = context.getPathTargets();
+        Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
+        int predecessor = -1;
+        DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
+        for (String pathTarget : pathTargets) {
+            SubstituteValue substitute = new SubstituteValue(
+                    "NOT_DEFINED", TYPE.TEXTUAL,
+                    RepairStrategy.DEFAULT, false);
+            List<SubstituteValue> pathTargetSubstitute = context.getFromProcessingCache(pathTarget);
+            if (finalI < pathTargetSubstitute.size()) {
+                substitute = pathTargetSubstitute.get(finalI).clone();
+            } else if (pathTargetSubstitute.size() == 1) {
+                // this is an indication that the substitution is the same for all
+                // events/alarms/measurements/inventory
+                if (substitute.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
+                        substitute.repairStrategy.equals(RepairStrategy.DEFAULT)) {
+                    substitute = pathTargetSubstitute.get(0).clone();
+                } else if (substitute.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
+                    int last = pathTargetSubstitute.size() - 1;
+                    substitute = pathTargetSubstitute.get(last).clone();
+                }
+                log.warn(
+                        "{} - Processing pathTarget: '{}', repairStrategy: '{}'.",
+                        tenant,
+                        pathTarget, substitute.repairStrategy);
+            }
+
+            /*
+             * step 4 resolve externalIds to c8ySourceIds and create adHoc devices
+             */
+            // check if the targetPath == externalId and we need to resolve an external id
+
+            prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
+        }
+        var newPredecessor = createDynamicMapperRequest(predecessor, payloadTarget.jsonString(), context, mapping);
+        predecessor = newPredecessor;
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+            log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
+                    context.getApi(),
+                    payloadTarget.jsonString(),
+                    size);
+        }
+        return context;
     }
 
 }

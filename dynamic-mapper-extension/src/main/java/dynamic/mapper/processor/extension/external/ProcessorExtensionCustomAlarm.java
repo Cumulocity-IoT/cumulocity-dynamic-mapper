@@ -172,7 +172,7 @@ public class ProcessorExtensionCustomAlarm
                         identity, context);
                 context.setSourceId(sourceId.getManagedObject().getId().getValue());
                 ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(tenant,
-                        identity, context);
+                        identity, context, newPredecessor);
                 var response = objectMapper.writeValueAsString(implicitDevice);
                 context.getCurrentRequest().setResponse(response);
                 context.getCurrentRequest().setSourceId(implicitDevice.getId().getValue());
@@ -195,7 +195,7 @@ public class ProcessorExtensionCustomAlarm
                             .build());
             try {
                 if (context.isSendPayload()) {
-                    c8yAgent.createMEAO(context);
+                    c8yAgent.createMEAO(context, newPredecessor);
                     String response = objectMapper.writeValueAsString(implicitRequest);
                     context.getCurrentRequest().setResponse(response);
                 }
@@ -263,7 +263,7 @@ public class ProcessorExtensionCustomAlarm
         try {
             var predecessor = context.getRequests().size();
             var requestString = objectMapper.writeValueAsString(request);
-            context.addRequest(
+            var newPredecessor= context.addRequest(
                     DynamicMapperRequest.builder()
                             .predecessor(predecessor)
                             .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST
@@ -276,7 +276,7 @@ public class ProcessorExtensionCustomAlarm
                             .targetAPI(API.INVENTORY)
                             .build());
             ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(context.getTenant(),
-                    identity, context);
+                    identity, context, newPredecessor);
             var response = objectMapper.writeValueAsString(implicitDevice);
             context.getCurrentRequest().setResponse(response);
             context.getCurrentRequest().setSourceId(implicitDevice.getId().getValue());

@@ -1,13 +1,25 @@
 package dynamic.mapper.processor.util;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestMethod;
 
+import com.cumulocity.model.ID;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.model.API;
+import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
 
@@ -96,5 +108,65 @@ public class ProcessingResultHelper {
             .sum();
             
         return Math.max(100, totalTime); // Minimum 100ms
+    }
+
+        /**
+     * Create implicit device when needed - extracted from original createImplicitDevice
+     */
+    public static String createImplicitDevice(ID identity, ProcessingContext<Object> context, Logger log, C8YAgent c8yAgent, ObjectMapper objectMapper) {
+        Map<String, Object> request = new HashMap<>();
+        
+        // Set device name
+        if (context.getDeviceName() != null) {
+            request.put("name", context.getDeviceName());
+        } else {
+            request.put("name", "device_" + identity.getType() + "_" + identity.getValue());
+        }
+        
+        // Set device type
+        if (context.getDeviceType() != null) {
+            request.put("type", context.getDeviceType());
+        } else {
+            request.put("type", "c8y_GeneratedDeviceType");
+        }
+        
+        // Set device properties
+        request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
+        request.put("c8y_IsDevice", null);
+        request.put("com_cumulocity_model_Agent", null);
+        
+        try {
+            int predecessor = context.getRequests().size();
+            String requestString = objectMapper.writeValueAsString(request);
+            
+            // Create C8Y request for device creation
+            DynamicMapperRequest deviceRequest = DynamicMapperRequest.builder()
+                .predecessor(predecessor)
+                .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
+                .api(API.INVENTORY)
+                .sourceId(null)
+                .externalIdType(context.getMapping().getExternalIdType())
+                .externalId(context.getExternalId())
+                .request(requestString)
+                .targetAPI(API.INVENTORY)
+                .build();
+                
+            var index = context.addRequest(deviceRequest);
+            
+            // Create the device
+            ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(context.getTenant(), identity, context, index);
+            
+            // Update request with response
+            String response = objectMapper.writeValueAsString(adHocDevice);
+            context.getCurrentRequest().setResponse(response);
+            context.getCurrentRequest().setSourceId(adHocDevice.getId().getValue());
+            
+            return adHocDevice.getId().getValue();
+            
+        } catch (Exception e) {
+            context.getCurrentRequest().setError(e);
+            log.error("Failed to create implicit device: {}", e.getMessage(), e);
+            return null;
+        }
     }
 }

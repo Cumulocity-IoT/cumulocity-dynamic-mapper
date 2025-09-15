@@ -437,12 +437,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     // TODO Change this to use ExecutorService + Virtual Threads when available
-    public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context)
+    public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context,
+            int requestIndex)
             throws ProcessingException {
         return CompletableFuture.supplyAsync(() -> {
             String tenant = context.getTenant();
             StringBuffer error = new StringBuffer("");
-            DynamicMapperRequest currentRequest = context.getCurrentRequest();
+            DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
             String payload = currentRequest.getRequest();
             API targetAPI = context.getMapping().getTargetAPI();
             AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
@@ -545,7 +546,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     }
 
-    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
+    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context, int requestIndex)
             throws ProcessingException {
         // initializeTransientApis();
         // log.info("{} - C8Y Connections available: {}",
@@ -554,7 +555,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         // this.c8yRequestTimerMap.get(tenant);
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
-        DynamicMapperRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         String payload = currentRequest.getRequest();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         API targetAPI = context.getMapping().getTargetAPI();
@@ -708,10 +709,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return result;
     }
 
-    public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context)
+    public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context,
+            int requestIndex)
             throws ProcessingException {
         // StringBuffer error = new StringBuffer("");
-        DynamicMapperRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         API targetAPI = context.getMapping().getTargetAPI();
@@ -724,7 +726,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 try {
                     // ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity,
                     // context);
-                    if (context.getSourceId() == null) {
+                    if (currentRequest.getSourceId() == null) {
                         // Device does not exist
                         // append external id to name
                         mor.setName(mor.getName());
@@ -757,7 +759,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         }
                     } else {
                         // Device exists - update needed
-                        mor.setId(new GId(context.getSourceId()));
+                        mor.setId(new GId(currentRequest.getSourceId()));
                         try {
                             c8ySemaphore.acquire();
                             mor = inventoryApi.update(mor, context);
@@ -962,7 +964,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public Extension getProcessorExtension(String tenant, String extension) {
-        return extensionInboundRegistry.getExtension(tenant,extension);
+        return extensionInboundRegistry.getExtension(tenant, extension);
     }
 
     public Extension deleteProcessorExtension(String tenant, String extensionName) {
@@ -973,7 +975,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
         }
         // manage extensions for Camel routes
-        return  extensionInboundRegistry.deleteExtension(tenant, extensionName);
+        return extensionInboundRegistry.deleteExtension(tenant, extensionName);
     }
 
     public void reloadExtensions(String tenant) {
