@@ -118,6 +118,9 @@ public class ProcessingContext<O> {
 
     private String sourceId;
 
+    private String externalId;
+
+
     private Engine graalEngine;
 
     private Context graalContext;

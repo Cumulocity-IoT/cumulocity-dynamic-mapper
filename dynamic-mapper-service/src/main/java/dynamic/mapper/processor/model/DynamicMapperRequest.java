@@ -38,6 +38,7 @@ public class DynamicMapperRequest {
     private RequestMethod method;
     private API api;
     private String sourceId;
+    private String externalId;
     private String externalIdType;
     private String request;
     private String response;

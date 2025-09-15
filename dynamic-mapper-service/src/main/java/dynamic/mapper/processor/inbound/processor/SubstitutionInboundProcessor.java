@@ -139,7 +139,9 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         String tenant = context.getTenant();
 
         if ((Mapping.TOKEN_IDENTITY + ".externalId").equals(pathTarget)) {
-            ID identity = new ID(mapping.getExternalIdType(), substitute.getValue().toString());
+            String externalId = substitute.getValue().toString();
+            context.setExternalId(externalId);
+            ID identity = new ID(mapping.getExternalIdType(), externalId);
             SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!context.getApi().equals(API.INVENTORY)) {
@@ -307,6 +309,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 .method(RequestMethod.POST) // Default method
                 .sourceId(context.getSourceId())
                 .externalIdType(mapping.getExternalIdType())
+                .externalId(context.getExternalId())
                 .request(processedPayload)
                 .targetAPI(api)
                 .build();

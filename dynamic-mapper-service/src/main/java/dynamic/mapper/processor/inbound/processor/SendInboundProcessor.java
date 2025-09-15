@@ -116,7 +116,7 @@ public class SendInboundProcessor extends BaseProcessor {
             }
             
             // Create or update device
-            ID identity = new ID(request.getExternalIdType(), request.getSourceId());
+            ID identity = new ID(request.getExternalIdType(), request.getExternalId());
             ManagedObjectRepresentation adHocDevice = c8yAgent.upsertDevice(tenant, identity, context);
             
             // Set response and update request
@@ -207,6 +207,7 @@ public class SendInboundProcessor extends BaseProcessor {
                 .api(API.INVENTORY)
                 .sourceId(null)
                 .externalIdType(context.getMapping().getExternalIdType())
+                .externalId(context.getExternalId())
                 .request(requestString)
                 .targetAPI(API.INVENTORY)
                 .build();

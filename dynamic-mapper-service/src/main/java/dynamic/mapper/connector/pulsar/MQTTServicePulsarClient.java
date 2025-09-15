@@ -150,7 +150,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, true,
                         "default", null, null));
 
-        String name = "Cumulocity MQTT Service - (device isolation)";
+        String name = "Cumulocity MQTT Service - (Device Isolation)";
         String description = "Connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
         singleton = true;
         connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR;

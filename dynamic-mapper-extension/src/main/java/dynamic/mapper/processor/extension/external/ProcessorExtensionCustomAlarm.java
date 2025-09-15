@@ -162,6 +162,7 @@ public class ProcessorExtensionCustomAlarm
                             .api(API.INVENTORY)
                             .sourceId(device.getValue().toString())
                             .externalIdType(mapping.getExternalIdType())
+                            .externalId(context.getExternalId())
                             .request(payloadTarget.jsonString())
                             .targetAPI(API.INVENTORY)
                             .build());
@@ -188,6 +189,7 @@ public class ProcessorExtensionCustomAlarm
                             .api(mapping.getTargetAPI()) // Set api field
                             .sourceId(device.getValue().toString())
                             .externalIdType(mapping.getExternalIdType())
+                            .externalId(context.getExternalId())
                             .request(payloadTarget.jsonString())
                             .targetAPI(mapping.getTargetAPI())
                             .build());
@@ -269,6 +271,7 @@ public class ProcessorExtensionCustomAlarm
                             .api(API.INVENTORY)
                             .sourceId(null) // Explicitly null in original
                             .externalIdType(context.getMapping().getExternalIdType())
+                            .externalId(context.getExternalId())
                             .request(requestString)
                             .targetAPI(API.INVENTORY)
                             .build());

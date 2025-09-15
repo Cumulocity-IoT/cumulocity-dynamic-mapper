@@ -192,6 +192,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                             .api(mapping.targetAPI) // Set the api field
                             .sourceId(deviceSource)
                             .externalIdType(mapping.externalIdType)
+                            .externalId(context.getExternalId())
                             .request(payloadTarget.jsonString())
                             .targetAPI(mapping.targetAPI)
                             .build());

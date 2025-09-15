@@ -133,14 +133,14 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             String payloadJson = objectMapper.writeValueAsString(payload);
 
             // Create the request using the corrected method
-            DynamicMapperRequest request = createDynamicMapperRequest(
-                payloadJson, targetAPI, cumulocityMessage.getAction(), resolvedDeviceId, mapping);
+            DynamicMapperRequest request = createDynamicMapperRequest(context,
+                    payloadJson, targetAPI, cumulocityMessage.getAction(), resolvedDeviceId, mapping);
 
             // Add the request to context
             context.addRequest(request);
 
             log.debug("{} - Created outbound request: API={}, action={}, deviceId={}, topic={}",
-                    tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId, 
+                    tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId,
                     context.getResolvedPublishTopic());
 
         } catch (Exception e) {
@@ -159,13 +159,13 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         // Check if payload contains topic levels (similar to substituteInTargetAndSend)
         @SuppressWarnings("unchecked")
         List<String> topicLevels = (List<String>) payload.get(Mapping.TOKEN_TOPIC_LEVEL);
-        
+
         if (topicLevels != null && topicLevels.size() > 0) {
             // Merge the replaced topic levels (logic from substituteInTargetAndSend)
             MutableInt c = new MutableInt(0);
             String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
             String[] splitTopicInAsListOriginal = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
-            
+
             topicLevels.forEach(tl -> {
                 while (c.intValue() < splitTopicInAsList.length
                         && ("/".equals(splitTopicInAsList[c.intValue()]) && c.intValue() > 0)) {
@@ -174,7 +174,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                 splitTopicInAsList[c.intValue()] = tl;
                 c.increment();
             });
-            
+
             if (mapping.getDebug() || context.getServiceConfiguration().logPayload) {
                 log.info("{} - Resolved topic from {} to {}",
                         tenant, splitTopicInAsListOriginal, splitTopicInAsList);
@@ -185,7 +185,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                 resolvedPublishTopic.append(topicPart);
             }
             context.setResolvedPublishTopic(resolvedPublishTopic.toString());
-            
+
             // Remove TOPIC_LEVEL from payload (as done in substituteInTargetAndSend)
             payload.remove(Mapping.TOKEN_TOPIC_LEVEL);
         } else {
@@ -193,25 +193,26 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             context.setResolvedPublishTopic(mapping.getPublishTopic());
         }
 
-        // Handle context data for message context support (from substituteInTargetAndSend)
+        // Handle context data for message context support (from
+        // substituteInTargetAndSend)
         if (mapping.supportsMessageContext) {
             @SuppressWarnings("unchecked")
             Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
-            
+
             if (contextData != null) {
                 // Extract key for message context
                 String key = contextData.get(Mapping.CONTEXT_DATA_KEY_NAME);
                 if (key != null && !key.equals("dummy")) {
                     context.setKey(key.getBytes());
                 }
-                
+
                 // Extract publish topic override
                 String publishTopic = contextData.get("publishTopic");
                 if (publishTopic != null && !publishTopic.equals("")) {
                     context.setTopic(publishTopic);
                     context.setResolvedPublishTopic(publishTopic);
                 }
-                
+
                 // Remove TOKEN_CONTEXT_DATA from payload
                 payload.remove(Mapping.TOKEN_CONTEXT_DATA);
             }
@@ -225,7 +226,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
     private void setHierarchicalValue(Map<String, Object> map, String path, Object value) {
         String[] keys = path.split("\\.");
         Map<String, Object> current = map;
-        
+
         // Navigate/create the hierarchy up to the last key
         for (int i = 0; i < keys.length - 1; i++) {
             String key = keys[i];
@@ -234,7 +235,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             }
             current = (Map<String, Object>) current.get(key);
         }
-        
+
         // Set the value at the final key
         current.put(keys[keys.length - 1], value);
     }
@@ -274,7 +275,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         if (context.getSourceId() != null) {
             return context.getSourceId();
         }
-        
+
         return context.getMapping().getGenericDeviceIdentifier();
     }
 
@@ -295,6 +296,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             var globalId = c8yAgent.resolveExternalId2GlobalId(tenant,
                     new ID(externalSource.getType(), externalSource.getExternalId()),
                     context);
+            context.setExternalId(externalSource.getExternalId());
 
             if (globalId != null) {
                 return globalId.getManagedObject().getId().getValue();
@@ -333,10 +335,12 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Creates a DynamicMapperRequest based on the reference implementation from BaseProcessorOutbound
+     * Creates a DynamicMapperRequest based on the reference implementation from
+     * BaseProcessorOutbound
      * This follows the same pattern as substituteInTargetAndSend method
      */
-    private DynamicMapperRequest createDynamicMapperRequest(String payloadJson, API targetAPI, 
+    private DynamicMapperRequest createDynamicMapperRequest(ProcessingContext<?> context, String payloadJson,
+            API targetAPI,
             String action, String sourceId, Mapping mapping) throws ProcessingException {
         try {
             // Determine the request method based on action (from substituteInTargetAndSend)
@@ -344,19 +348,21 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             if ("update".equals(action)) {
                 method = RequestMethod.PUT;
             }
-            
-            // Use -1 as predecessor for flow-generated requests (no predecessor in flow context)
+
+            // Use -1 as predecessor for flow-generated requests (no predecessor in flow
+            // context)
             int predecessor = -1;
 
             // Create the request using the same pattern as BaseProcessorOutbound
             DynamicMapperRequest request = DynamicMapperRequest.builder()
                     .predecessor(predecessor)
                     .method(method)
-                    .api(targetAPI)                    // Set the api field
-                    .sourceId(sourceId)                // Device/source identifier
+                    .api(targetAPI) // Set the api field
+                    .sourceId(sourceId) // Device/source identifier
                     .externalIdType(mapping.externalIdType) // External ID type from mapping
-                    .request(payloadJson)              // JSON payload
-                    .targetAPI(targetAPI)              // Target API (same as api field)
+                    .externalId(context.getExternalId())
+                    .request(payloadJson) // JSON payload
+                    .targetAPI(targetAPI) // Target API (same as api field)
                     .build();
 
             return request;
