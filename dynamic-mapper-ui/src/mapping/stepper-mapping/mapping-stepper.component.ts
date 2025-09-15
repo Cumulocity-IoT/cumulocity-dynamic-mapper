@@ -861,8 +861,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onSelectExtensionName(extensionName): void {
     this.mapping.extension.extensionName = extensionName;
     this.extensionEvents$.next(
-      Object.values(this.extensions[extensionName].extensionEntries as Map<string, ExtensionEntry>).filter(entry => entry.extensionType == this.mapping.extension.extensionType)
+      Object.values(this.extensions.get(extensionName).extensionEntries as Map<string, ExtensionEntry>).filter(entry => entry.extensionType == this.mapping.extension.extensionType)
     );
+    
     //console.log("Selected events", Object.values(this.extensions[extensionName].extensionEntries))
   }
 
@@ -909,7 +910,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       } else {
         this.extensionEvents$.next(
           Object.values(
-            //this.extensions[this.mapping.extension.extensionName].extensionEntries
             this.extensions.get(this.mapping.extension.extensionName)?.extensionEntries
           )
         );
