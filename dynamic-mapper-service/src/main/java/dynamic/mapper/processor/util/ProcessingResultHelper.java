@@ -113,7 +113,7 @@ public class ProcessingResultHelper {
         /**
      * Create implicit device when needed - extracted from original createImplicitDevice
      */
-    public static String createImplicitDevice(ID identity, ProcessingContext<Object> context, Logger log, C8YAgent c8yAgent, ObjectMapper objectMapper) {
+    public static String createImplicitDevice(ID identity, ProcessingContext<?> context, Logger log, C8YAgent c8yAgent, ObjectMapper objectMapper) {
         Map<String, Object> request = new HashMap<>();
         
         // Set device name

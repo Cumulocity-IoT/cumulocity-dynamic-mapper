@@ -19,6 +19,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.CumulocitySource;
 import dynamic.mapper.processor.flow.ExternalSource;
@@ -140,6 +141,23 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             if (resolvedDeviceId != null) {
                 setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
                 context.setSourceId(resolvedDeviceId);
+            } else if (cumulocityMessage.getExternalSource() != null) {
+                // create implicitDevice
+                if (mapping.getCreateNonExistingDevice()) {
+                    var externalSources = convertToExternalSourceList(cumulocityMessage.getExternalSource());
+                    ExternalSource externalSource = externalSources.get(0);
+
+                        if (externalSource != null && externalSource.getType() != null && externalSource.getExternalId() != null) {
+                            ID identity = new ID(externalSource.getType(),
+                                   externalSource.getExternalId());
+                            String sourceId = ProcessingResultHelper.createImplicitDevice(identity, context, log,
+                                    c8yAgent,
+                                    objectMapper);
+                            context.setSourceId(sourceId);
+                            setHierarchicalValue(payload, targetAPI.identifier, sourceId);
+                        }
+   
+                }
             }
 
             // Convert payload to JSON string for the request
@@ -237,7 +255,8 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             if (globalId != null) {
                 return globalId.getManagedObject().getId().getValue();
             } else {
-                throw new ProcessingException("Could not resolve external ID: " + externalSource.getExternalId());
+                log.warn("{} - Could not resolve external ID: {}", tenant, externalSource.getExternalId());
+                return null;
             }
 
         } catch (Exception e) {
