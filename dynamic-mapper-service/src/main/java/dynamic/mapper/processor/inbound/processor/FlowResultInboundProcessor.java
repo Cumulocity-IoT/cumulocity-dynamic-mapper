@@ -47,6 +47,22 @@ public class FlowResultInboundProcessor extends BaseProcessor {
 
         try {
             processFlowResults(context);
+
+            // Check inventory filter condition if specified
+            if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+                boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
+                        context.getSourceId());
+                if (context.getSourceId() == null
+                        || !filterInventory) {
+                    if (mapping.debug) {
+                        log.info(
+                                "{} - Inbound mapping {}/{} not processed, failing Filter inventory execution: filterResult {}",
+                                tenant, mapping.name, mapping.identifier,
+                                filterInventory);
+                    }
+                    context.setIgnoreFurtherProcessing(true);
+                }
+            }
         } catch (Exception e) {
             int lineNumber = 0;
             if (e.getStackTrace().length > 0) {
@@ -123,13 +139,15 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
             if (resolvedDeviceId != null) {
                 setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
+                context.setSourceId(resolvedDeviceId);
             }
 
             // Convert payload to JSON string for the request
             String payloadJson = objectMapper.writeValueAsString(payload);
 
             // Create the C8Y request using the correct constructor and methods
-            DynamicMapperRequest c8yRequest = createDynamicMapperRequest(payloadJson, targetAPI, cumulocityMessage.getAction(), resolvedDeviceId);
+            DynamicMapperRequest c8yRequest = createDynamicMapperRequest(payloadJson, targetAPI,
+                    cumulocityMessage.getAction(), resolvedDeviceId);
 
             // Add the request to context
             context.addRequest(c8yRequest);
@@ -149,7 +167,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
     private void setHierarchicalValue(Map<String, Object> map, String path, Object value) {
         String[] keys = path.split("\\.");
         Map<String, Object> current = map;
-        
+
         // Navigate/create the hierarchy up to the last key
         for (int i = 0; i < keys.length - 1; i++) {
             String key = keys[i];
@@ -158,7 +176,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             }
             current = (Map<String, Object>) current.get(key);
         }
-        
+
         // Set the value at the final key
         current.put(keys[keys.length - 1], value);
     }
@@ -360,7 +378,8 @@ public class FlowResultInboundProcessor extends BaseProcessor {
         }
     }
 
-    private DynamicMapperRequest createDynamicMapperRequest(String payloadJson, API targetAPI, String action, String sourceId) throws ProcessingException {
+    private DynamicMapperRequest createDynamicMapperRequest(String payloadJson, API targetAPI, String action,
+            String sourceId) throws ProcessingException {
         try {
             // Determine the request method based on action
             RequestMethod method = "create".equals(action) ? RequestMethod.POST : RequestMethod.PUT;

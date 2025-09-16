@@ -233,8 +233,8 @@ export class MappingStepPropertiesComponent
               required:
                 false
             },
-            hideExpression:
-              this.stepperConfiguration.direction == Direction.INBOUND,
+            // hideExpression:
+            //this.stepperConfiguration.direction == Direction.INBOUND,
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 field.formControl.valueChanges.pipe(

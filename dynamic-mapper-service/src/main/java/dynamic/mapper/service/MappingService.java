@@ -74,6 +74,7 @@ import dynamic.mapper.model.ResolveException;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.ValidationError;
 import dynamic.mapper.processor.model.C8YMessage;
+import dynamic.mapper.util.Utils;
 
 @Slf4j
 @Service
@@ -672,7 +673,7 @@ public class MappingService {
                 // Check inventory filter condition if specified
                 if (mapping.getFilterInventory() != null) {
                     boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                            c8yMessage);
+                            c8yMessage.getSourceId(), c8yMessage.getMessageId());
                     if (c8yMessage.getSourceId() == null
                             || !filterInventory) {
                         if (mapping.debug) {
@@ -703,7 +704,7 @@ public class MappingService {
             var expression = jsonata(filterExpression);
             Object result = expression.evaluate(message.getParsedPayload());
 
-            if (result != null && isNodeTrue(result)) {
+            if (result != null && Utils.isNodeTrue(result)) {
                 log.info("{} - Found valid mapping for filter {} in C8Y message {}",
                         tenant, filterExpression, message.getMessageId());
                 return true;
@@ -721,23 +722,23 @@ public class MappingService {
     /**
      * Evaluates an inventory filter against cached inventory data
      */
-    private boolean evaluateInventoryFilter(String tenant, String filterExpression, C8YMessage message) {
+    private boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId, String messageId) {
         try {
             Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
-                    .getMOFromInventoryCache(tenant, message.getSourceId());
+                    .getMOFromInventoryCache(tenant, sourceId);
             List<String> keyList = new ArrayList<>(cachedInventoryContent.keySet());
             log.info("{} - For object {} found following fragments in inventory cache {}",
-                    tenant, message.getSourceId(), keyList);
+                    tenant, sourceId, keyList);
             var expression = jsonata(filterExpression);
             Object result = expression.evaluate(cachedInventoryContent);
 
-            if (result != null && isNodeTrue(result)) {
+            if (result != null && Utils.isNodeTrue(result)) {
                 log.info("{} - Found valid inventory for filter {} in C8Y message {}",
-                        tenant, filterExpression, message.getMessageId());
+                        tenant, filterExpression, messageId);
                 return true;
             } else {
                 log.debug("{} - Not matching inventory filter {} for source {} in message {}",
-                        tenant, filterExpression, message.getSourceId(), message.getMessageId());
+                        tenant, filterExpression, sourceId, messageId);
                 return false;
             }
         } catch (Exception e) {
@@ -746,20 +747,7 @@ public class MappingService {
         }
     }
 
-    private boolean isNodeTrue(Object node) {
-        // Case 1: Direct boolean value check
-        if (node instanceof Boolean) {
-            return (Boolean) node;
-        }
 
-        // Case 2: String value that can be converted to boolean
-        if (node instanceof String) {
-            String text = ((String) node).trim().toLowerCase();
-            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
-            // Add more string variations if needed
-        }
-        return false;
-    }
 
     public Mapping removeFromMappingFromCaches(String tenant, Mapping mapping) {
         if (Direction.OUTBOUND.equals(mapping.direction)) {

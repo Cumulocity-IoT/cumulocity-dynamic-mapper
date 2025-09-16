@@ -1,5 +1,8 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +28,7 @@ import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 import com.cumulocity.model.ID;
@@ -57,6 +61,22 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         try {
             validateProcessingCache(context);
             substituteInTargetAndCreateRequests(context, exchange);
+
+            // Check inventory filter condition if specified
+            if (mapping.getFilterInventory() != null && !mapping.getCreateNonExistingDevice()) {
+                boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
+                        context.getSourceId());
+                if (context.getSourceId() == null
+                        || !filterInventory) {
+                    if (mapping.debug) {
+                        log.info(
+                                "{} - Inbound mapping {}/{} not processed, failing Filter inventory execution: filterResult {}",
+                                tenant, mapping.name, mapping.identifier,
+                                filterInventory);
+                    }
+                    context.setIgnoreFurtherProcessing(true);
+                }
+            }
         } catch (Exception e) {
             String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
                     tenant, mapping.name);
@@ -342,5 +362,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         }
         return context;
     }
+
 
 }

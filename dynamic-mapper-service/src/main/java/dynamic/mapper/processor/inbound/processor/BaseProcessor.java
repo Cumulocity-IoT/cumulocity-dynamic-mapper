@@ -1,22 +1,31 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
+import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class BaseProcessor implements Processor {
+
+    @Autowired
+    private ConfigurationRegistry configurationRegistry;
 
     public abstract void process(Exchange exchange) throws Exception;
 
@@ -75,6 +84,34 @@ public abstract class BaseProcessor implements Processor {
         SubstituteValue toDuplicate = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxEntries) {
             deviceEntries.add(toDuplicate);
+        }
+    }
+
+    /**
+     * Evaluates an inventory filter against cached inventory data
+     */
+    protected boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId) {
+        try {
+            Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
+                    .getMOFromInventoryCache(tenant, sourceId);
+            List<String> keyList = new ArrayList<>(cachedInventoryContent.keySet());
+            log.info("{} - For object {} found following fragments in inventory cache {}",
+                    tenant, sourceId, keyList);
+            var expression = jsonata(filterExpression);
+            Object result = expression.evaluate(cachedInventoryContent);
+
+            if (result != null && Utils.isNodeTrue(result)) {
+                log.info("{} - Found valid inventory for filter {}",
+                        tenant, filterExpression);
+                return true;
+            } else {
+                log.debug("{} - Not matching inventory filter {} for source {}",
+                        tenant, filterExpression, sourceId);
+                return false;
+            }
+        } catch (Exception e) {
+            log.debug("Inventory filter evaluation error for {}: {}", filterExpression, e.getMessage());
+            return false;
         }
     }
 

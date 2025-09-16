@@ -4,8 +4,11 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import org.apache.camel.Exchange;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class FilterInboundProcessor extends BaseProcessor {
+
+    @Autowired
+    ConfigurationRegistry configurationRegistry;
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -24,7 +30,8 @@ public class FilterInboundProcessor extends BaseProcessor {
 
     private void applyFilter(ProcessingContext<Object> context) {
         String tenant = context.getTenant();
-        String mappingFilter = context.getMapping().getFilterMapping();
+        Mapping mapping = context.getMapping();
+        String mappingFilter = mapping.getFilterMapping();
         if (mappingFilter != null && !("").equals(mappingFilter)) {
             Object payloadObjectNode = context.getPayload();
             String payload = toPrettyJsonString(payloadObjectNode);
@@ -41,6 +48,8 @@ public class FilterInboundProcessor extends BaseProcessor {
                         payload, e);
             }
         }
+
     }
+
 
 }

@@ -41,6 +41,7 @@ public class SendInboundProcessor extends BaseProcessor {
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
         Boolean parallelProcessing = exchange.getIn().getHeader("parallelProcessing", Boolean.class);
+        String tenant = context.getTenant();
 
         // Check if we have a single request from parallel processing
         DynamicMapperRequest singleRequest = exchange.getIn().getBody(DynamicMapperRequest.class);
@@ -50,7 +51,7 @@ public class SendInboundProcessor extends BaseProcessor {
             processParallelMode(context, singleRequest);
         } else if (Boolean.TRUE.equals(parallelProcessing)) {
             // This shouldn't happen - parallel requests should be split already
-            log.warn("Parallel processing flag set but no single request found");
+            log.warn("{} - Parallel processing flag set but no single request found", tenant);
             processSequentialMode(context);
         } else {
             // Sequential mode: process all requests in context
