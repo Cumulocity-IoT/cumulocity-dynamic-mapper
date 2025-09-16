@@ -181,6 +181,9 @@ public class BootstrapService {
     }
 
     private void initializeTenantResources(String tenant, MicroserviceCredentials credentials) {
+
+        extensionInboundRegistry.initializeExtensions(tenant);
+
         c8YAgent.createExtensibleProcessor(tenant);
         c8YAgent.loadProcessorExtensions(tenant);
 
@@ -192,8 +195,6 @@ public class BootstrapService {
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMapperServiceRepresentation(tenant);
         configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
-
-        extensionInboundRegistry.initializeExtensions(tenant);
 
         mappingService.createResources(tenant);
 
