@@ -22,9 +22,11 @@ import dynamic.mapper.processor.inbound.processor.SnoopingInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.JSONataExtractionInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.MappingContextInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionInboundProcessor;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResult;
 import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
+import dynamic.mapper.processor.util.RequestAggregationStrategy;
 import dynamic.mapper.processor.util.ConsolidationProcessor;
 import dynamic.mapper.processor.util.DynamicMapperBaseRoutes;
 
@@ -75,6 +77,9 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private ProcessingContextAggregationStrategy processingContextAggregationStrategy;
+
+    @Autowired
+    private RequestAggregationStrategy requestAggregationStrategy;
 
     @Override
     public void configure() throws Exception {
@@ -224,7 +229,13 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
+                // Check if parallel processing is enabled
+                .choice()
+                .when(header("parallelProcessing").isEqualTo(true))
+                .to("direct:processRequestsInParallel")
+                .otherwise()
                 .process(inboundSendProcessor)
+                .end()
                 .process(consolidationProcessor)
                 .end();
 
@@ -239,7 +250,13 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
+                // Check if parallel processing is enabled
+                .choice()
+                .when(header("parallelProcessing").isEqualTo(true))
+                .to("direct:processRequestsInParallel")
+                .otherwise()
                 .process(inboundSendProcessor)
+                .end()
                 .process(consolidationProcessor)
                 .end();
 
@@ -272,6 +289,31 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(inboundSendProcessor)
                 .process(consolidationProcessor)
                 .end();
+
+        // Add new route for parallel request processing
+        from("direct:processRequestsInParallel")
+                .routeId("parallel-requests-processor")
+                .process(exchange -> {
+                    ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext",
+                            ProcessingContext.class);
+                    log.debug("Starting parallel processing of {} requests for mapping: {}",
+                            context.getRequests().size(), context.getMapping().getName());
+                })
+                .split(simple("${header.processingContext.requests}"))
+                .parallelProcessing(true)
+                .streaming(false) // Process all in parallel, don't stream
+                .aggregationStrategy(requestAggregationStrategy)
+                .process(exchange -> {
+                    // The body now contains a single DynamicMapperRequest
+                    DynamicMapperRequest request = exchange.getIn().getBody(DynamicMapperRequest.class);
+                    log.debug("Processing request in parallel: API={}, sourceId={}",
+                            request.getApi(), request.getSourceId());
+                })
+                .process(inboundSendProcessor)
+                .end()
+                .process(exchange -> {
+                    log.debug("Completed parallel processing of all requests");
+                });
 
         // Error handling route
         from("direct:inboundErrorHandling")

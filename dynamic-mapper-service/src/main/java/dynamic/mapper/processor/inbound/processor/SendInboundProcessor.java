@@ -40,7 +40,28 @@ public class SendInboundProcessor extends BaseProcessor {
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        Boolean parallelProcessing = exchange.getIn().getHeader("parallelProcessing", Boolean.class);
 
+        // Check if we have a single request from parallel processing
+        DynamicMapperRequest singleRequest = exchange.getIn().getBody(DynamicMapperRequest.class);
+
+        if (singleRequest != null) {
+            // Parallel mode: process single request from body
+            processParallelMode(context, singleRequest);
+        } else if (Boolean.TRUE.equals(parallelProcessing)) {
+            // This shouldn't happen - parallel requests should be split already
+            log.warn("Parallel processing flag set but no single request found");
+            processSequentialMode(context);
+        } else {
+            // Sequential mode: process all requests in context
+            processSequentialMode(context);
+        }
+    }
+
+    /**
+     * Process in sequential mode (existing logic)
+     */
+    private void processSequentialMode(ProcessingContext<Object> context) throws Exception {
         try {
             // Process all C8Y requests that were created by SubstitutionProcessor
             processAndPrepareRequests(context);
@@ -52,13 +73,13 @@ public class SendInboundProcessor extends BaseProcessor {
             log.error("Error in inbound send processor for mapping: {}",
                     context.getMapping().getName(), e);
             context.addError(new ProcessingException("Send processing failed", e));
-            return;
+            throw e;
         }
-
     }
 
     /**
-     * Process and send all C8Y requests created during substitution
+     * Process and send all C8Y requests created during substitution (sequential
+     * mode)
      */
     private void processAndPrepareRequests(ProcessingContext<Object> context) {
         String tenant = context.getTenant();
@@ -76,7 +97,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
                 // Log if debug is enabled
                 if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
-                    log.info("{} - Transformed message sent: API: {}, message: {}",
+                    log.info("{} - Sequential transformed message sent: API: {}, message: {}",
                             tenant, request.getApi(), request.getRequest());
                 }
 
@@ -84,6 +105,44 @@ public class SendInboundProcessor extends BaseProcessor {
                 log.error("{} - Failed to process request: {}", tenant, e.getMessage(), e);
                 request.setError(e);
             }
+        }
+    }
+
+    /**
+     * Process in parallel mode - handle single request
+     */
+    private void processParallelMode(ProcessingContext<Object> context, DynamicMapperRequest request) throws Exception {
+        String tenant = context.getTenant();
+        Mapping mapping = context.getMapping();
+
+        try {
+            // Find the index of this request in the context
+            int requestIndex = context.getRequests().indexOf(request);
+            if (requestIndex == -1) {
+                log.warn("Request not found in context for parallel processing");
+                return;
+            }
+
+            // Process single request
+            if (API.INVENTORY.equals(request.getApi())) {
+                processInventoryRequest(context, requestIndex);
+            } else {
+                processNonInventoryRequest(context, requestIndex);
+            }
+
+            // Log if debug is enabled
+            if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
+                log.info("{} - Parallel transformed message sent: API: {}, message: {}",
+                        tenant, request.getApi(), request.getRequest());
+            }
+
+            // Create alarms for any processing issues (for this specific request)
+            createProcessingAlarmsForRequest(context, request);
+
+        } catch (Exception e) {
+            log.error("{} - Failed to process parallel request: {}", tenant, e.getMessage(), e);
+            request.setError(e);
+            throw e;
         }
     }
 
@@ -146,6 +205,27 @@ public class SendInboundProcessor extends BaseProcessor {
             context.getCurrentRequest().setError(e);
             request.setError(e);
             throw e;
+        }
+    }
+
+    /**
+     * Create alarms for a specific request (used in parallel mode)
+     */
+    private void createProcessingAlarmsForRequest(ProcessingContext<Object> context, DynamicMapperRequest request) {
+        String tenant = context.getTenant();
+
+        if (request.getSourceId() != null && !context.getAlarms().isEmpty()) {
+            ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
+            sourceMor.setId(new GId(request.getSourceId()));
+
+            context.getAlarms().forEach(alarm -> {
+                try {
+                    c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM,
+                            new DateTime(), sourceMor, tenant);
+                } catch (Exception e) {
+                    log.warn("{} - Failed to create processing alarm: {}", tenant, e.getMessage());
+                }
+            });
         }
     }
 

@@ -56,7 +56,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
 
         try {
             validateProcessingCache(context);
-            substituteInTargetAndCreateRequests(context);
+            substituteInTargetAndCreateRequests(context, exchange);
         } catch (Exception e) {
             String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
                     tenant, mapping.name);
@@ -73,7 +73,8 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
     /**
      * Perform substitution and create C8Y requests
      */
-    private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context) throws Exception {
+    private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context, Exchange exchange)
+            throws Exception {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
@@ -97,11 +98,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         int cardinality = deviceEntries.size();
         log.debug("Determined cardinality: {} for mapping: {}", cardinality, mapping.getName());
 
-        // Create requests based on cardinality
-        // TODO: if (mapping.createNonExistingDevice) process sequentially
-        // else clone context and add multiContext to exchange
-        // then in pipeline split and process in parallel
-        
         for (int i = 0; i < cardinality; i++) {
             try {
                 getBuildProcessingContext(context, deviceEntries.get(i),
@@ -129,6 +125,21 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 if (!context.isNeedsRepair()) {
                     throw e;
                 }
+            }
+
+            // Create requests based on cardinality
+            // TODO: if (mapping.createNonExistingDevice) process sequentially
+            // else clone context and add multiContext to exchange
+            // then in pipeline split and process in parallel
+            // Set processing mode flag based on createNonExistingDevice
+            if (!mapping.getCreateNonExistingDevice()) {
+                // Mark for parallel processing
+                exchange.getIn().setHeader("parallelProcessing", true);
+                log.debug("Marked requests for parallel processing for mapping: {}", mapping.getName());
+            } else {
+                // Mark for sequential processing
+                exchange.getIn().setHeader("parallelProcessing", false);
+                log.debug("Marked requests for sequential processing for mapping: {}", mapping.getName());
             }
         }
     }
@@ -250,25 +261,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         }
     }
 
-    // /**
-    // * Create implicit device when needed
-    // *
-    // * @throws ProcessingException
-    // */
-    // private String createImplicitDevice(ID identity, ProcessingContext<Object>
-    // context) throws ProcessingException {
-    // try {
-    // // This would typically create a device in C8Y and return its ID
-    // // Implementation depends on your C8YAgent
-    // ManagedObjectRepresentation implMo =
-    // c8yAgent.upsertDevice(context.getTenant(), identity, context);
-    // return implMo.getId().getName();
-    // } catch (Exception e) {
-    // log.error("Failed to create implicit device for identity: {}", identity, e);
-    // throw new ProcessingException("Failed to create implicit device", e);
-    // }
-    // }
-
     /**
      * Create C8Y request with correct structure
      */
@@ -337,11 +329,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                         tenant,
                         pathTarget, substitute.repairStrategy);
             }
-
-            /*
-             * step 4 resolve externalIds to c8ySourceIds and create adHoc devices
-             */
-            // check if the targetPath == externalId and we need to resolve an external id
 
             prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
         }
