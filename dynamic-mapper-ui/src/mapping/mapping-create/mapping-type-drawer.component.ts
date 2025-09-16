@@ -68,7 +68,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   // Form and options
   formGroup: FormGroup;
-  filteredMappingTypes: MappingTypeOption[] = [];
+  filteredMappingTypeOptions: MappingTypeOption[] = [];
   transformationTypeOptions: TransformationTypeOption[] = [];
 
   // State
@@ -123,7 +123,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     this._save({
       mappingType: selectedMappingType,
-      transformationType: formValue.transformationType || TransformationType.DEFAULT,
+      transformationType: formValue.transformationType.value || TransformationType.DEFAULT,
       snoop: formValue.snoop && snoopSupported
     });
     this.bottomDrawerRef.close();
@@ -161,10 +161,17 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       description: MappingTypeDescriptions[defaultMappingType]
     };
 
+        // Create the initial mapping type option object
+    const initialTransformationTypeOption: TransformationTypeOption = {
+      label: TransformationTypeLabels[this.direction][defaultTransformationType],
+      value: defaultTransformationType,
+      description: TransformationTypeDescriptions[defaultTransformationType]
+    };
+
     this.formGroup = this.fb.group({
       expertMode: [false],
       mappingType: [initialMappingTypeOption],
-      transformationType: [defaultTransformationType],
+      transformationType: [initialTransformationTypeOption],
       mappingTypeDescription: [initialConfig.description],
       snoop: [{ value: false, disabled: !initialConfig.snoopSupported }]
     });
@@ -186,7 +193,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   }
 
   private updateDerivedState(): void {
-    this.filteredMappingTypes = this.getFilteredMappingTypes();
+    this.filteredMappingTypeOptions = this.getFilteredMappingTypes();
   }
 
   private getFilteredMappingTypes(): MappingTypeOption[] {

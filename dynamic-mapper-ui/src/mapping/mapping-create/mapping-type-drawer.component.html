@@ -52,7 +52,7 @@
           </c8y-form-group> -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
-            <c8y-select [items]="filteredMappingTypes" formControlName="mappingType" labelProperty="label"
+            <c8y-select [items]="filteredMappingTypeOptions" formControlName="mappingType" labelProperty="label"
               valueProperty="value" [insideClick]="false" [autoClose]="true" aria-label="Payload Format">
             </c8y-select>
             <small class="text-muted" *ngIf="formGroup.get('mappingType')?.value">

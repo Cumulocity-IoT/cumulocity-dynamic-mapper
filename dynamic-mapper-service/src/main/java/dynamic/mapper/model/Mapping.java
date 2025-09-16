@@ -364,6 +364,7 @@ public class Mapping implements Serializable {
                 && !mapping.mappingType.equals(MappingType.CODE_BASED)
                 && !mapping.substitutionsAsCode
                 && !TransformationType.SMART_FUNCTION.equals(mapping.transformationType)
+                && !TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.transformationType)
                 && !mapping.direction.equals(Direction.OUTBOUND)) {
             if (count > 1) {
                 result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
