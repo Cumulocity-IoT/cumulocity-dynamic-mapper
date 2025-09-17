@@ -548,6 +548,9 @@ public class MappingService {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, mappingId).getSnoopedTemplates());
+        } else {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(getMappingOutboundFromCache(tenant, mappingId).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -659,19 +662,21 @@ public class MappingService {
                 }
 
                 // Check message filter condition
-                boolean filterResult = evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage);
-                if (!filterResult) {
-                    if (mapping.debug) {
-                        log.info(
-                                "{} - Outbound mapping {}/{} not resolved, failing Filter mapping execution: filterResult {}",
-                                tenant, mapping.name, mapping.identifier,
-                                filterResult);
+                if (!mapping.getFilterMapping().isBlank()) {
+                    boolean filterResult = evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage);
+                    if (!filterResult) {
+                        if (mapping.debug) {
+                            log.info(
+                                    "{} - Outbound mapping {}/{} not resolved, failing Filter mapping execution: filterResult {}",
+                                    tenant, mapping.name, mapping.identifier,
+                                    filterResult);
+                        }
+                        continue;
                     }
-                    continue;
                 }
 
                 // Check inventory filter condition if specified
-                if (mapping.getFilterInventory() != null) {
+                if (mapping.getFilterInventory() != null && !mapping.getFilterInventory().isBlank()) {
                     boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
                             c8yMessage.getSourceId(), c8yMessage.getMessageId());
                     if (c8yMessage.getSourceId() == null
@@ -747,8 +752,6 @@ public class MappingService {
         }
     }
 
-
-
     public Mapping removeFromMappingFromCaches(String tenant, Mapping mapping) {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             Mapping deletedMapping = removeMappingOutboundFromCache(tenant, mapping.id);
@@ -806,7 +809,7 @@ public class MappingService {
             mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         } else {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingOutboundFromCache(tenant, id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove

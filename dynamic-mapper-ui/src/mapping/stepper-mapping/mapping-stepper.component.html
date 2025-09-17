@@ -187,7 +187,7 @@
                   <label translate style="padding-left: 6px">Filter Result [{{
                     filterModel.filterExpression?.resultType
                     }}]</label>
-                  <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                  <textarea class="form-control" #filterModelFilterExpression c8y-textarea-autoresize readonly="true" style="
                               font-size: var(--c8y-font-size-small);
                               line-height: var(--c8y-line-height-small);
                             ">{{
@@ -329,7 +329,7 @@
                       <label translate>&nbsp;Source Result [{{
                         substitutionModel.sourceExpression?.resultType
                         }}]</label>
-                      <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                      <textarea class="form-control" #substitutionModelSourceExpression c8y-textarea-autoresize readonly="true" style="
                                 font-size: var(--c8y-font-size-small);
                                 line-height: var(--c8y-line-height-small);
                               ">{{
@@ -342,7 +342,7 @@
                       <label translate>&nbsp;Target Result [{{
                         substitutionModel.targetExpression?.resultType
                         }}]</label>
-                      <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                      <textarea class="form-control" #substitutionModelTargetExpression c8y-textarea-autoresize readonly="true" style="
                                 font-size: var(--c8y-font-size-small);
                                 line-height: var(--c8y-line-height-small);
                               ">{{

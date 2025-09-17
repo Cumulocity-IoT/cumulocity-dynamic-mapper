@@ -21,6 +21,7 @@ import { CdkStep } from '@angular/cdk/stepper';
 import {
   ChangeDetectorRef,
   Component,
+  ElementRef,
   EventEmitter,
   inject,
   Input,
@@ -64,7 +65,6 @@ import {
   Feature,
   isSubstitutionsAsCode,
   TransformationType,
-  MappingTypeDescriptions,
   MappingTypeLabels
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
@@ -119,6 +119,23 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
   @ViewChild('codeEditor', { static: false }) codeEditor: EditorComponent;
 
+  @ViewChild('filterModelFilterExpression') filterModelFilterExpression: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('substitutionModelSourceExpression') substitutionModelSourceExpression: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('substitutionModelTargetExpression') substitutionModelTargetExpression: ElementRef<HTMLTextAreaElement>;
+
+  private manualResize(source: string) {
+
+    let element;
+    if (source == 'filterModelFilterExpression' && this.filterModelFilterExpression?.nativeElement) {
+      element = this.filterModelFilterExpression.nativeElement;
+    } else if (source == 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
+      element = this.substitutionModelSourceExpression.nativeElement;
+    } else if (source == 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {
+      element = this.substitutionModelTargetExpression.nativeElement;
+    }
+    element.style.height = '32px';
+    element.style.height = element.scrollHeight + 'px';
+  }
 
   private cdr = inject(ChangeDetectorRef);
   private bsModalService = inject(BsModalService);
@@ -664,6 +681,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         .setErrors({ validationError: { message: error.message } });
     }
     this.substitutionModel = { ...this.substitutionModel };
+
+     // Trigger resize after content change
+    setTimeout(() => this.manualResize('substitutionModelSourceExpression'), 0);
+
   }
 
   async updateFilterExpressionResult(path): Promise<void> {
@@ -692,7 +713,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         .setErrors({ validationError: { message: error.message } });
       this.filterFormly.get('filterMapping').markAsTouched();
     }
-    this.filterModel = { ...this.filterModel };
+    this.filterModel = { ...this.filterModel }
+
+    // Trigger resize after content change
+    setTimeout(() => this.manualResize('filterModelFilterExpression'), 0);
   }
 
   async updateTargetExpressionResult(path): Promise<void> {
@@ -727,6 +751,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         .setErrors({ validationError: { message: error.message } });
     }
     this.substitutionModel = { ...this.substitutionModel };
+
+         // Trigger resize after content change
+    setTimeout(() => this.manualResize('substitutionModelTargetExpression'), 0);
   }
 
   isSubstitutionValid(): boolean {
@@ -863,7 +890,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.extensionEvents$.next(
       Object.values(this.extensions.get(extensionName).extensionEntries as Map<string, ExtensionEntry>).filter(entry => entry.extensionType == this.mapping.extension.extensionType)
     );
-    
+
     //console.log("Selected events", Object.values(this.extensions[extensionName].extensionEntries))
   }
 

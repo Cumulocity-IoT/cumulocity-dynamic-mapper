@@ -34,7 +34,6 @@
       <div class="card-block">
         <form [formGroup]="formGroup">
 
-          <!-- Expert Mode Toggle -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label class="c8y-switch">
               <input type="checkbox" formControlName="expertMode" />
@@ -43,13 +42,6 @@
             </label>
           </c8y-form-group>
 
-          <!-- Mapping Type Selection -->
-          <!-- <c8y-form-group class="p-l-16 p-r-16">
-            <label>{{ 'Mapping Type' | translate }}</label>
-            <c8y-select [items]="filteredMappingTypes" formControlName="mappingType" labelProperty="label"
-              valueProperty="value" searchHasFocus = "false" aria-label="Mapping Type select">
-            </c8y-select>
-          </c8y-form-group> -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Payload Format' | translate }}</label>
             <c8y-select [items]="filteredMappingTypeOptions" formControlName="mappingType" labelProperty="label"
@@ -60,16 +52,6 @@
             </small>
           </c8y-form-group>
 
-          <!-- Transformation Type (Expert Mode Only) -->
-          <!-- <c8y-form-group class="p-l-16 p-r-16" *ngIf="showTransformationType">
-            <label>{{ 'Transformation Type' | translate }}</label>
-            <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
-              valueProperty="value" searchHasFocus="false" searchHasFocus = "false" aria-label="Transformation select">
-            </c8y-select>
-            <small class="text-muted">
-              {{ 'Defines the type of transformation from source to target payload.' | translate }}
-            </small>
-          </c8y-form-group> -->
           <c8y-form-group class="p-l-16 p-r-16" *ngIf="shouldShowTransformationType()">
             <label>{{ 'Transformation Type' | translate }}</label>
             <c8y-select [items]="transformationTypeOptions" formControlName="transformationType" labelProperty="label"
@@ -80,7 +62,6 @@
             </small>
           </c8y-form-group>
 
-          <!-- Description -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Description Payload Format' | translate }}</label>
             <textarea #descriptionTextarea readonly c8y-textarea-autoresize formControlName="mappingTypeDescription"
@@ -88,7 +69,6 @@
             </textarea>
           </c8y-form-group>
 
-          <!-- Snoop Toggle -->
           <c8y-form-group class="p-l-16 p-r-16">
             <label class="c8y-switch">
               <input type="checkbox" formControlName="snoop" />

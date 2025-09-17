@@ -35,18 +35,19 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
     @Override
     public void process(Exchange exchange) throws Exception {
         C8YMessage message = exchange.getIn().getHeader("c8yMessage", C8YMessage.class);
-        Mapping currentMapping = exchange.getIn().getBody(Mapping.class);
+        Mapping mapping = exchange.getIn().getBody(Mapping.class);
         ProcessingContext<?> processingContext = exchange.getIn().getHeader("processingContext",
-        ProcessingContext.class);
+                ProcessingContext.class);
 
         ServiceConfiguration serviceConfiguration = processingContext.getServiceConfiguration();
         String tenant = message.getTenant();
+        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
 
         // Extract additional info from headers if available
         String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
-        
+
         // Prepare GraalVM context if code exists
-        if (currentMapping.code != null || currentMapping.substitutionsAsCode) {
+        if (mapping.code != null || mapping.substitutionsAsCode) {
             try {
                 // contextSemaphore.acquire();
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
@@ -57,11 +58,13 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
                 processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SYSTEM.name()).getCode());
             } catch (Exception e) {
-                handleGraalVMError(tenant, currentMapping, e, processingContext);
+                handleGraalVMError(tenant, mapping, e, processingContext);
                 return;
             }
         }
-        logOutboundMessageReceived(tenant, currentMapping, connectorIdentifier, processingContext, serviceConfiguration);
+
+        mappingStatus.messagesReceived++;
+        logOutboundMessageReceived(tenant, mapping, connectorIdentifier, processingContext, serviceConfiguration);
 
     }
 

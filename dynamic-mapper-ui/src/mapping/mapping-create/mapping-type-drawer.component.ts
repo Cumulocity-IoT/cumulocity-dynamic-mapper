@@ -28,7 +28,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { BottomDrawerRef, ModalLabels, TextareaAutoresizeDirective } from '@c8y/ngx-components';
+import { BottomDrawerRef, ModalLabels } from '@c8y/ngx-components';
 import { Subject, takeUntil } from 'rxjs';
 import { Direction, MappingType, MappingTypeDescriptionMap, MappingTypeDescriptions, MappingTypeLabels, TransformationType, TransformationTypeDescriptions, TransformationTypeLabels } from '../../shared';
 
