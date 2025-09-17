@@ -576,7 +576,7 @@ public class MappingService {
             mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         } else {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingOutboundFromCache(tenant, id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
