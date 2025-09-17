@@ -53,13 +53,17 @@ export class ImportMappingsComponent implements OnDestroy {
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService
-  ) {}
+  ) { }
 
-  onFileDroppedEvent(event) {
-    if (event && event.length > 0) {
-      // eslint-disable-next-line prefer-destructuring
-      const file = event[0].file;
-      this.onFile(file);
+  async onFileDroppedEvent(event) {
+    try {
+      if (event && event.length > 0) {
+        // eslint-disable-next-line prefer-destructuring
+        const file = event[0].file;
+        await this.onFile(file);
+      }
+    } catch (error) {
+      this.alertService.warning(`Import failed. Verify the format of the import file!`);
     }
   }
 

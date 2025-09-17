@@ -2,9 +2,11 @@ package dynamic.mapper.processor.inbound.route;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
@@ -32,6 +34,10 @@ import dynamic.mapper.processor.util.DynamicMapperBaseRoutes;
 
 @Component
 public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
+
+    @Autowired
+    @Qualifier("virtualThreadPool")
+    private ExecutorService virtualThreadPool;
 
     @Autowired
     private ExtensibleProcessor extensibleProcessor;
@@ -152,6 +158,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 })
                 .split(header("mappings"))
                 .parallelProcessing(true)
+                .executorService(virtualThreadPool)
                 .aggregationStrategy(processingContextAggregationStrategy)
                 .to("direct:processSingleInboundMapping")
                 .end();
@@ -301,6 +308,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 })
                 .split(simple("${header.processingContext.requests}"))
                 .parallelProcessing(true)
+                .executorService(virtualThreadPool)
                 .streaming(false) // Process all in parallel, don't stream
                 .aggregationStrategy(requestAggregationStrategy)
                 .process(exchange -> {
