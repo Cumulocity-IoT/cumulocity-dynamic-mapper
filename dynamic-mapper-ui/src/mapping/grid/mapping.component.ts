@@ -150,8 +150,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   };
   actionControls: ActionControl[] = [];
   bulkActionControls: BulkActionControl[] = [];
-  codeTemplateInbound: string;
-  codeTemplateOutbound: string;
 
   feature: Feature;
 
@@ -194,9 +192,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingService.listenToUpdateMapping().subscribe((m: MappingEnriched) => {
       this.updateMapping(m);
     });
-
-    this.codeTemplateInbound = (await this.sharedService.getCodeTemplate(Direction.INBOUND, TemplateType.SUBSTITUTION_AS_CODE,)).code;
-    this.codeTemplateOutbound = (await this.sharedService.getCodeTemplate(Direction.OUTBOUND, TemplateType.SUBSTITUTION_AS_CODE)).code;
 
     if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
       try {
@@ -513,6 +508,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     const sub: Substitution[] = [];
     let mapping: Mapping;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
+      let code;
+      if (this.substitutionsAsCode) code = (await this.sharedService.getCodeTemplate(Direction.INBOUND, this.transformationType)).code;
       mapping = {
         // name: `Mapping - ${identifier.substring(0, 7)}`,
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
@@ -534,7 +531,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         transformationType: this.transformationType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        code: this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
+        code,
         substitutionsAsCode: undefined,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: true,
@@ -545,6 +542,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         lastUpdate: Date.now()
       };
     } else {
+      let code;
+      if (this.substitutionsAsCode) code = (await this.sharedService.getCodeTemplate(Direction.OUTBOUND, this.transformationType)).code;
       mapping = {
         name: `Mapping - ${identifier.substring(0, 7)}`,
         id: identifier,
@@ -566,7 +565,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         transformationType: this.transformationType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        code: this.substitutionsAsCode ? this.codeTemplateOutbound : undefined,
+        code,
         substitutionsAsCode: undefined,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: true,

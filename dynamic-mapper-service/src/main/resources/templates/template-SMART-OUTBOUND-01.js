@@ -1,7 +1,7 @@
 /**
  * @name Default template for Smart Function
  * @description Default template for Smart Function, creates one measurement
- * @templateType OUTBOUND_SMART
+ * @templateType OUTBOUND_SMART_FUNCTION
  * @direction OUTBOUND
  * @defaultTemplate true
  * @internal true
@@ -18,21 +18,18 @@ function onMessage(inputMsg, context) {
     context.logMessage("Payload Raw:" + msg.getPayload());
     context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
 
-    return [{
-        cumulocityType: "measurement",
-        action: "create",
-        
+    return [{  
+        topic: `measurements/${payload["source"]["id"]}`,
         payload: {
             "time":  new Date().toISOString(),
-            "type": "c8y_TemperatureMeasurement",
             "c8y_Steam": {
                 "Temperature": {
                 "unit": "C",
-                "value": payload["sensorData"]["temp_val"]
+                "value": payload["c8y_TemperatureMeasurement"]["T"]["value"]
                 }
             }
         },
 
-        externalSource: [{"type":"c8y_Serial", "externalId": payload.get('clientId')}]
+        externalSource: [{"type":"c8y_Serial"}]
     }];
 }

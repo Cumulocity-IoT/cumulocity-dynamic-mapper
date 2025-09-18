@@ -21,6 +21,7 @@
 package dynamic.mapper.processor.outbound.processor;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +33,10 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
+import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -67,7 +70,8 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
         String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
 
         // Prepare GraalVM context if code exists
-        if (mapping.code != null || mapping.substitutionsAsCode) {
+        if (mapping.code != null && (mapping.substitutionsAsCode
+                || TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.transformationType))) {
             try {
                 // contextSemaphore.acquire();
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
@@ -77,6 +81,20 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
                         .get(TemplateType.SHARED.name()).getCode());
                 processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
                         .get(TemplateType.SYSTEM.name()).getCode());
+            } catch (Exception e) {
+                handleGraalVMError(tenant, mapping, e, processingContext);
+                return;
+            }
+        } else if (mapping.code != null &&
+                TransformationType.SMART_FUNCTION.equals(mapping.transformationType)) {
+            try {
+                var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
+                var graalContext = createGraalContext(graalEngine);
+                // processingContext.setSystemCode(serviceConfiguration.getCodeTemplates()
+                // .get(TemplateType.SMART.name()).getCode());
+                processingContext.setGraalContext(graalContext);
+                processingContext.setFlowState(new HashMap<String, Object>());
+                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant));
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, processingContext);
                 return;

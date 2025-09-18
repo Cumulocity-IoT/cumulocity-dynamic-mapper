@@ -63,14 +63,14 @@ import { ServiceConfigurationTraceComponent } from './service-configuration-trac
       }
     }),
         hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART`,
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
       component: CodeComponent,
       resolve: {
         feature: featureResolver
       }
     }),
     hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART`,
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
       component: CodeComponent,
       resolve: {
         feature: featureResolver

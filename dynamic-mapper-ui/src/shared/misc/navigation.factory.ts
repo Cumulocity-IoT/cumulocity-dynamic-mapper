@@ -92,7 +92,6 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     mappingNode: new NavigatorNode({
       label: gettext('Mapping'),
       icon: 'rules',
-      // path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`,
       priority: 400,
       preventDuplicates: true
     }),
@@ -120,14 +119,14 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       priority: 380,
       preventDuplicates: true
     }),
-    relationNode: new NavigatorNode({
-      parent: gettext('Mapping'),
-      label: gettext('Client relation outbound'),
-      icon: 'relay-home-automation',
-      path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
-      priority: 370,
-      preventDuplicates: true
-    }),
+    // relationNode: new NavigatorNode({
+    //   parent: gettext('Mapping'),
+    //   label: gettext('Client relation outbound'),
+    //   icon: 'relay-home-automation',
+    //   path: `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/relation/deviceToClientMap`,
+    //   priority: 370,
+    //   preventDuplicates: true
+    // }),
     monitoringNode: new NavigatorNode({
       label: gettext('Monitoring'),
       icon: 'pie-chart',

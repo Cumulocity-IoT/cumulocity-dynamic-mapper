@@ -22,7 +22,7 @@ import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { Observable, merge, mergeAll, of, toArray } from 'rxjs';
-import { NODE3 } from '../shared';
+import { Direction, NODE3, TransformationType, TransformationTypeLabels } from '../shared';
 @Injectable()
 export class CodeTemplateTabFactory implements TabFactory {
   constructor(
@@ -35,14 +35,14 @@ export class CodeTemplateTabFactory implements TabFactory {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SUBSTITUTION_AS_CODE`,
         priority: 960,
-        label: 'Inbound (Substitution as Code)',
+        label: `Inbound (${TransformationTypeLabels[Direction.INBOUND][TransformationType.SUBSTITUTION_AS_CODE]})`,
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SUBSTITUTION_AS_CODE`,
         priority: 950,
-        label: 'Outbound (Substitution as Code)',
+        label: `Outbound (${TransformationTypeLabels[Direction.OUTBOUND][TransformationType.SUBSTITUTION_AS_CODE]})`,
         icon: 'swipe-left',
         orientation: 'horizontal'
       } as Tab);
@@ -54,14 +54,14 @@ export class CodeTemplateTabFactory implements TabFactory {
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART`,
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
         priority: 930,
         label: 'Inbound (Smart Function)',
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART`,
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
         priority: 920,
         label: 'Outbound (Smart Function)',
         icon: 'swipe-left',

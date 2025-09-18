@@ -96,19 +96,19 @@ export class CodeComponent implements OnInit {
       this.direction = Direction.OUTBOUND;
       this.defaultTemplate = TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE.toString();
       this.codeEditorHelp = `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`;
-    } else if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/INBOUND_SMART/g)) {
+    } else if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/INBOUND_SMART_FUNCTION/g)) {
       // MIGRATION
       // this.templateType = TemplateType.INBOUND;
-      this.templateType = TemplateType.INBOUND_SMART;
+      this.templateType = TemplateType.INBOUND_SMART_FUNCTION;
       this.direction = Direction.INBOUND;
-      this.defaultTemplate = TemplateType.INBOUND_SMART.toString();
+      this.defaultTemplate = TemplateType.INBOUND_SMART_FUNCTION.toString();
       this.codeEditorHelp = `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`;
-    } else if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/OUTBOUND_SMART/g)) {
+    } else if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/OUTBOUND_SMART_FUNCTION/g)) {
       // MIGRATION
       // this.templateType = TemplateType.OUTBOUND;
-      this.templateType = TemplateType.OUTBOUND_SMART;
+      this.templateType = TemplateType.OUTBOUND_SMART_FUNCTION;
       this.direction = Direction.OUTBOUND;
-      this.defaultTemplate = TemplateType.OUTBOUND_SMART.toString();
+      this.defaultTemplate = TemplateType.OUTBOUND_SMART_FUNCTION.toString();
       this.codeEditorHelp = `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`;
     } else {
       this.templateType = TemplateType.SHARED;

@@ -42,6 +42,7 @@ import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.CumulocitySource;
+import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.service.MappingService;
@@ -114,8 +115,8 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
 
         // Process each message
         for (Object message : messagesToProcess) {
-            if (message instanceof CumulocityMessage) {
-                processCumulocityMessage((CumulocityMessage) message, context, tenant, mapping);
+            if (message instanceof DeviceMessage) {
+                processCumulocityMessage((DeviceMessage) message, context, tenant, mapping);
             } else {
                 log.debug("{} - Message is not a CumulocityMessage, skipping: {}", tenant,
                         message.getClass().getSimpleName());
@@ -130,21 +131,16 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         }
     }
 
-    private void processCumulocityMessage(CumulocityMessage cumulocityMessage, ProcessingContext<?> context,
+    private void processCumulocityMessage(DeviceMessage deviceMessage, ProcessingContext<?> context,
             String tenant, Mapping mapping) throws ProcessingException {
 
         try {
-            // Get the API from the cumulocityType
-            API targetAPI = getAPIFromCumulocityType(cumulocityMessage.getCumulocityType());
 
             // Clone the payload to modify it
-            Map<String, Object> payload = clonePayload(cumulocityMessage.getPayload());
+            Map<String, Object> payload = clonePayload(deviceMessage.getPayload());
 
             // Resolve device ID and set it hierarchically in the payload
-            String resolvedDeviceId = resolveDeviceIdentifier(cumulocityMessage, context, tenant);
-            if (resolvedDeviceId != null) {
-                setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
-            }
+            String resolvedExternalId = resolveExternalIdentifier(deviceMessage, context, tenant);
 
             // Set resolved publish topic (from substituteInTargetAndSend logic)
             setResolvedPublishTopic(context, payload);
@@ -154,13 +150,13 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
 
             // Create the request using the corrected method
             DynamicMapperRequest request = createDynamicMapperRequest(context,
-                    payloadJson, targetAPI, cumulocityMessage.getAction(), resolvedDeviceId, mapping);
+                    payloadJson, resolvedExternalId, mapping);
 
             // Add the request to context
             context.addRequest(request);
 
-            log.debug("{} - Created outbound request: API={}, action={}, deviceId={}, topic={}",
-                    tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId,
+            log.debug("{} - Created outbound request: deviceId={}, topic={}",
+                    tenant, resolvedExternalId,
                     context.getResolvedPublishTopic());
 
         } catch (Exception e) {
@@ -278,17 +274,12 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         }
     }
 
-    private String resolveDeviceIdentifier(CumulocityMessage cumulocityMessage, ProcessingContext<?> context,
+    private String resolveExternalIdentifier(DeviceMessage deviceMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 
         // First try externalSource
-        if (cumulocityMessage.getExternalSource() != null) {
-            return resolveFromExternalSource(cumulocityMessage.getExternalSource(), context, tenant);
-        }
-
-        // Then try internalSource
-        if (cumulocityMessage.getInternalSource() != null) {
-            return resolveFromInternalSource(cumulocityMessage.getInternalSource());
+        if (deviceMessage.getExternalSource() != null) {
+            return resolveFromExternalSource(deviceMessage.getExternalSource(), context, tenant);
         }
 
         // Fallback to mapping's generic device identifier or context source ID
@@ -360,14 +351,10 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
      * This follows the same pattern as substituteInTargetAndSend method
      */
     private DynamicMapperRequest createDynamicMapperRequest(ProcessingContext<?> context, String payloadJson,
-            API targetAPI,
-            String action, String sourceId, Mapping mapping) throws ProcessingException {
+ String sourceId, Mapping mapping) throws ProcessingException {
         try {
             // Determine the request method based on action (from substituteInTargetAndSend)
             RequestMethod method = RequestMethod.POST; // Default from reference
-            if ("update".equals(action)) {
-                method = RequestMethod.PUT;
-            }
 
             // Use -1 as predecessor for flow-generated requests (no predecessor in flow
             // context)
@@ -377,12 +364,10 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             DynamicMapperRequest request = DynamicMapperRequest.builder()
                     .predecessor(predecessor)
                     .method(method)
-                    .api(targetAPI) // Set the api field
                     .sourceId(sourceId) // Device/source identifier
                     .externalIdType(mapping.externalIdType) // External ID type from mapping
                     .externalId(context.getExternalId())
                     .request(payloadJson) // JSON payload
-                    .targetAPI(targetAPI) // Target API (same as api field)
                     .build();
 
             return request;
