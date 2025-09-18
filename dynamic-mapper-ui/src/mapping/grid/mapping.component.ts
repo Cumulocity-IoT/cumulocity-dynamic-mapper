@@ -195,8 +195,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.updateMapping(m);
     });
 
-    this.codeTemplateInbound = (await this.sharedService.getCodeTemplate(TemplateType.INBOUND.toString())).code;
-    this.codeTemplateOutbound = (await this.sharedService.getCodeTemplate(TemplateType.OUTBOUND.toString())).code;
+    this.codeTemplateInbound = (await this.sharedService.getCodeTemplate(Direction.INBOUND, TemplateType.SUBSTITUTION_AS_CODE,)).code;
+    this.codeTemplateOutbound = (await this.sharedService.getCodeTemplate(Direction.OUTBOUND, TemplateType.SUBSTITUTION_AS_CODE)).code;
 
     if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
       try {

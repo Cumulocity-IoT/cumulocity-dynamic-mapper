@@ -182,7 +182,8 @@ export class SharedService {
     return this._serviceConfiguration;
   }
 
-  async getCodeTemplate(id: string): Promise<CodeTemplate> {
+  async getCodeTemplate(direction: Direction,templateType: string): Promise<CodeTemplate> {
+    const id = direction ? `${direction}_${templateType}`: templateType;
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT}/${id}`,
       {

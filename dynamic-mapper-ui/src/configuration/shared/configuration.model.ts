@@ -1,4 +1,4 @@
-import { internalApps } from "@c8y/ngx-components";
+import { Direction } from "../../shared";
 
 /*
  * Copyright (c) 2025 Cumulocity GmbH
@@ -41,11 +41,15 @@ export interface ServiceConfiguration {
 }
 
 export enum TemplateType {
-  INBOUND = "INBOUND",
-  OUTBOUND = "OUTBOUND",
+  INBOUND = "INBOUND", // deprecated, use INBOUND_SUBSTITUTION_AS_CODE instead
+  OUTBOUND = "OUTBOUND", // deprecated, use OUTBOUND_SUBSTITUTION_AS_CODE instead
+  INBOUND_SUBSTITUTION_AS_CODE = "INBOUND_SUBSTITUTION_AS_CODE",
+  OUTBOUND_SUBSTITUTION_AS_CODE = "OUTBOUND_SUBSTITUTION_AS_CODE",
   SHARED = "SHARED",
+  SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
   SYSTEM = "SYSTEM",
-  SMART = "SMART"
+  INBOUND_SMART = "INBOUND_SMART",
+  OUTBOUND_SMART = "OUTBOUND_SMART"
 }
 
 export interface CodeTemplate {
@@ -53,6 +57,7 @@ export interface CodeTemplate {
   name: string;
   description?: string;
   templateType: TemplateType;
+  direction?: Direction;
   code: string;
   internal: boolean;
   readonly: boolean;

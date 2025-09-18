@@ -28,7 +28,7 @@ import { SharedService } from '../../shared/service/shared.service';
 import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
 import { FormGroup } from '@angular/forms';
-import { Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
+import { Direction, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { BehaviorSubject } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpStatusCode } from '@angular/common/http';
@@ -50,6 +50,7 @@ export class CodeComponent implements OnInit {
   template: string;
   defaultTemplate: string;
   templateType: TemplateType;
+  direction: Direction;
   formGroup: FormGroup;
   isLoading = true;
   errorMessage = '';
@@ -81,13 +82,33 @@ export class CodeComponent implements OnInit {
     this.feature = await this.route.snapshot.data['feature'];
     const href = this.router.url;
     // First determine the template type based on URL
-    if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/inbound/g)) {
-      this.templateType = TemplateType.INBOUND;
-      this.defaultTemplate = TemplateType.INBOUND.toString();
+    if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/INBOUND_SUBSTITUTION_AS_CODE/g)) {
+      // MIGRATION
+      // this.templateType = TemplateType.INBOUND;
+      this.templateType = TemplateType.INBOUND_SUBSTITUTION_AS_CODE;
+      this.direction = Direction.INBOUND;
+      this.defaultTemplate = TemplateType.INBOUND_SUBSTITUTION_AS_CODE.toString();
       this.codeEditorHelp = `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`;
-    } else if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/outbound/g)) {
-      this.templateType = TemplateType.OUTBOUND;
-      this.defaultTemplate = TemplateType.OUTBOUND.toString();
+    } else if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/OUTBOUND_SUBSTITUTION_AS_CODE/g)) {
+      // MIGRATION
+      // this.templateType = TemplateType.OUTBOUND;
+      this.templateType = TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE;
+      this.direction = Direction.OUTBOUND;
+      this.defaultTemplate = TemplateType.OUTBOUND_SUBSTITUTION_AS_CODE.toString();
+      this.codeEditorHelp = `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`;
+    } else if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/INBOUND_SMART/g)) {
+      // MIGRATION
+      // this.templateType = TemplateType.INBOUND;
+      this.templateType = TemplateType.INBOUND_SMART;
+      this.direction = Direction.INBOUND;
+      this.defaultTemplate = TemplateType.INBOUND_SMART.toString();
+      this.codeEditorHelp = `The templates <b>Inbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`;
+    } else if (href.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate\/OUTBOUND_SMART/g)) {
+      // MIGRATION
+      // this.templateType = TemplateType.OUTBOUND;
+      this.templateType = TemplateType.OUTBOUND_SMART;
+      this.direction = Direction.OUTBOUND;
+      this.defaultTemplate = TemplateType.OUTBOUND_SMART.toString();
       this.codeEditorHelp = `The templates <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping. They serve as sample to building substitutions in JavaScript. The function <code>function extractFromSource(ctx) {} </code> is called during the evaluation at runtime to define substitutions.`;
     } else {
       this.templateType = TemplateType.SHARED;

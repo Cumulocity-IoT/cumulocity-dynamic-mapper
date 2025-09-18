@@ -245,6 +245,9 @@ public class BootstrapService {
             serviceConfigurationService.initCodeTemplates(serviceConfig, false);
             requiresSave = true;
         }
+        //  else {
+        //     serviceConfigurationService.migrateCodeTemplates(serviceConfig);
+        // }
 
         if (requiresSave) {
             try {

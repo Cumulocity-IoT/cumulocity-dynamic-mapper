@@ -1350,10 +1350,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (codeTemplate) {
         const code = stringToBase64(this.mappingCode);
         const id = createCustomUuid();
-        const templateType = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
+        // MIGRATION
+        // const templateType = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
+        const templateType = TemplateType.SUBSTITUTION_AS_CODE;
         const response = await this.sharedService.createCodeTemplate({
           id, name: codeTemplate.name, description: codeTemplate.description,
-          templateType, code, internal: false, readonly: false, defaultTemplate: false
+          templateType, direction:this.stepperConfiguration.direction, code, internal: false, readonly: false, defaultTemplate: false
         });
         this.codeTemplates = await this.sharedService.getCodeTemplates();
         if (response.status >= 200 && response.status < 300) {
