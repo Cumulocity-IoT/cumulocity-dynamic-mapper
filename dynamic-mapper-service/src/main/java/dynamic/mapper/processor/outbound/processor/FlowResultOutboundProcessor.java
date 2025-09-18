@@ -116,7 +116,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         // Process each message
         for (Object message : messagesToProcess) {
             if (message instanceof DeviceMessage) {
-                processCumulocityMessage((DeviceMessage) message, context, tenant, mapping);
+                processDeviceMessage((DeviceMessage) message, context, tenant, mapping);
             } else {
                 log.debug("{} - Message is not a CumulocityMessage, skipping: {}", tenant,
                         message.getClass().getSimpleName());
@@ -131,7 +131,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         }
     }
 
-    private void processCumulocityMessage(DeviceMessage deviceMessage, ProcessingContext<?> context,
+    private void processDeviceMessage(DeviceMessage deviceMessage, ProcessingContext<?> context,
             String tenant, Mapping mapping) throws ProcessingException {
 
         try {
@@ -151,6 +151,9 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             // Create the request using the corrected method
             DynamicMapperRequest request = createDynamicMapperRequest(context,
                     payloadJson, resolvedExternalId, mapping);
+
+            // Set resolvedPublishTopic topic in context
+            context.setResolvedPublishTopic(deviceMessage.getTopic());
 
             // Add the request to context
             context.addRequest(request);
@@ -318,17 +321,6 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         } catch (Exception e) {
             throw new ProcessingException("Failed to resolve external ID: " + externalSource.getExternalId(), e);
         }
-    }
-
-    private String resolveFromInternalSource(Object internalSourceObj) throws ProcessingException {
-        List<CumulocitySource> internalSources = convertToInternalSourceList(internalSourceObj);
-
-        if (internalSources.isEmpty()) {
-            throw new ProcessingException("Internal source is empty");
-        }
-
-        // Use the first internal source directly
-        return internalSources.get(0).getInternalId();
     }
 
     @SuppressWarnings("unchecked")

@@ -87,8 +87,6 @@ public class SendOutboundProcessor extends BaseProcessor {
                 log.warn("{} - Not sending message: connected {}, sendPayload {}", tenant,
                         connectorClient.isConnected(), context.isSendPayload());
             }
-            // var response = objectMapper.writeValueAsString(adHocRequest);
-            // context.getCurrentRequest().setResponse(response);
 
             // Log if debug is enabled
             if (mapping.getDebug() || context.getServiceConfiguration().isLogPayload()) {
