@@ -407,7 +407,6 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             DynamicMapperRequest c8yRequest = DynamicMapperRequest.builder()
                     .method(method)
                     .api(targetAPI)
-                    .targetAPI(targetAPI)
                     .sourceId(sourceId)
                     .request(payloadJson)
                     .build();

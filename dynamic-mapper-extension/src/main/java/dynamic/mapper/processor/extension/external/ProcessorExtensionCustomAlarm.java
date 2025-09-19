@@ -164,7 +164,6 @@ public class ProcessorExtensionCustomAlarm
                             .externalIdType(mapping.getExternalIdType())
                             .externalId(context.getExternalId())
                             .request(payloadTarget.jsonString())
-                            .targetAPI(API.INVENTORY)
                             .build());
             try {
                 ID identity = new ID(mapping.externalIdType, device.value.toString());
@@ -191,7 +190,6 @@ public class ProcessorExtensionCustomAlarm
                             .externalIdType(mapping.getExternalIdType())
                             .externalId(context.getExternalId())
                             .request(payloadTarget.jsonString())
-                            .targetAPI(mapping.getTargetAPI())
                             .build());
             try {
                 if (context.isSendPayload()) {
@@ -273,7 +271,6 @@ public class ProcessorExtensionCustomAlarm
                             .externalIdType(context.getMapping().getExternalIdType())
                             .externalId(context.getExternalId())
                             .request(requestString)
-                            .targetAPI(API.INVENTORY)
                             .build());
             ManagedObjectRepresentation implicitDevice = c8yAgent.upsertDevice(context.getTenant(),
                     identity, context, newPredecessor);

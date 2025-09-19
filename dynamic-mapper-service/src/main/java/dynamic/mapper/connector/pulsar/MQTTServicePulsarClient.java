@@ -474,10 +474,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         log.info("{} - Unsubscribing registered for topic: [{}]", tenant, topic);
     }
 
-
     @Override
     public void connectorSpecificHousekeeping(String tenant) {
-        //mappingService.sendDeviceToClientMap(tenant);
+        // mappingService.sendDeviceToClientMap(tenant);
     }
 
     @Override
@@ -541,8 +540,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
-                    .property(PULSAR_PROPERTY_CLIENT,
-                            configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
+                    // DO NOT REMOVE deviceToClient feature currently disabled
+                    // .property(PULSAR_PROPERTY_CLIENT,
+                    // configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
                     .sendAsync()
                     .exceptionally(throwable -> {
                         log.debug("{} - Failed to send AT_MOST_ONCE message (expected): {}",
@@ -554,8 +554,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             producer.newMessage()
                     .value(payload.getBytes())
                     .property(PULSAR_PROPERTY_CHANNEL, originalMqttTopic) // Store original MQTT topic
-                    .property(PULSAR_PROPERTY_CLIENT,
-                            configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
+                    // DO NOT REMOVE deviceToClient feature currently disabled
+                    // .property(PULSAR_PROPERTY_CLIENT,
+                    // configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
                     .send();
         }
 

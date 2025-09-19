@@ -42,7 +42,6 @@ public class DynamicMapperRequest {
     private String externalIdType;
     private String request;
     private String response;
-    private API targetAPI;
     private Exception error;
     // this property documents if a C8Y request was already submitted and is created only for documentation/testing purpose.
     // this happens when a device is created implicitly with mapping.createNonExistingDevice == true

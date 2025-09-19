@@ -35,6 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class BaseProcessor implements Processor {
 
+    protected static final String EXTERNAL_ID_TOKEN = "_externalId_";
+
     public abstract void process(Exchange exchange) throws Exception;
 
     @SuppressWarnings("unchecked")

@@ -119,6 +119,8 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       priority: 380,
       preventDuplicates: true
     }),
+
+    // DO NOT REMOVE deviceToClient feature currently disabled 
     // relationNode: new NavigatorNode({
     //   parent: gettext('Mapping'),
     //   label: gettext('Client relation outbound'),
@@ -127,6 +129,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     //   priority: 370,
     //   preventDuplicates: true
     // }),
+    
     monitoringNode: new NavigatorNode({
       label: gettext('Monitoring'),
       icon: 'pie-chart',

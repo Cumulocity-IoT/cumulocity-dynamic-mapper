@@ -168,7 +168,6 @@ public class ProcessingResultHelper {
                 .externalIdType(context.getMapping().getExternalIdType())
                 .externalId(context.getExternalId())
                 .request(requestString)
-                .targetAPI(API.INVENTORY)
                 .build();
                 
             var index = context.addRequest(deviceRequest);

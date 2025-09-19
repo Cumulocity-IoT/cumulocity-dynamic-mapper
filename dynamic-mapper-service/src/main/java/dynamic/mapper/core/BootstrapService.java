@@ -154,6 +154,10 @@ public class BootstrapService {
 
         // Clean up configurations
         configurationRegistry.removeServiceConfiguration(tenant);
+
+        // DO NOT REMOVE deviceToClient feature currently disabled
+        // configurationRegistry.clearCacheDeviceToClient(tenant);
+
         configurationRegistry.removeMapperServiceRepresentation(tenant);
         configurationRegistry.removeGraalsResources(tenant);
         configurationRegistry.removeMicroserviceCredentials(tenant);
@@ -194,7 +198,9 @@ public class BootstrapService {
         configurationRegistry.initializeResources(tenant);
         configurationRegistry.createGraalsResources(tenant, serviceConfiguration);
         configurationRegistry.initializeMapperServiceRepresentation(tenant);
-        configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
+
+        // DO NOT REMOVE deviceToClient feature currently disabled
+        // configurationRegistry.initializeDeviceToClientMapRepresentation(tenant);
 
         mappingService.createResources(tenant);
 
@@ -245,8 +251,8 @@ public class BootstrapService {
             serviceConfigurationService.initCodeTemplates(serviceConfig, false);
             requiresSave = true;
         }
-        //  else {
-        //     serviceConfigurationService.migrateCodeTemplates(serviceConfig);
+        // else {
+        // serviceConfigurationService.migrateCodeTemplates(serviceConfig);
         // }
 
         if (requiresSave) {
@@ -417,13 +423,14 @@ public class BootstrapService {
         });
     }
 
-    @Scheduled(cron = "* 30 * * * *")
-    public void sendDeviceToClientMap() {
-        subscriptionsService.runForEachTenant(() -> {
-            String tenant = subscriptionsService.getTenant();
-            mappingService.sendDeviceToClientMap(tenant);
-        });
-    }
+    // DO NOT REMOVE deviceToClient feature currently disabled
+    // @Scheduled(cron = "* 30 * * * *")
+    // public void sendDeviceToClientMap() {
+    // subscriptionsService.runForEachTenant(() -> {
+    // String tenant = subscriptionsService.getTenant();
+    // mappingService.sendDeviceToClientMap(tenant);
+    // });
+    // }
 
     private void cleanupCachesForTenant(String tenant) {
 

@@ -1330,7 +1330,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   getCodeTemplateEntries(): { key: string; name: string, type: TemplateType }[] {
     if (!this.codeTemplates) return [];
-    const entries = Object.entries(this.codeTemplates).filter(([key, template]) => (template.templateType.toString() == this.stepperConfiguration.direction.toString())).map(([key, template]) => ({
+    const entries = Object.entries(this.codeTemplates).filter(([key, template]) => (template.templateType.toString() == `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}`)).map(([key, template]) => ({
       key,
       name: template.name,
       type: template.templateType
@@ -1339,9 +1339,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onCreateCodeTemplate(): Promise<void> {
+    const templateType = `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}` as TemplateType ;
     const initialState = {
       action: 'CREATE',
-      codeTemplate: { name: `New code template - ${this.stepperConfiguration.direction}` }
+      codeTemplate: { name: `New code template - ${templateType}`, templateType }
     };
     const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
 
@@ -1352,7 +1353,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         const id = createCustomUuid();
         // MIGRATION
         // const templateType = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
-        const templateType = TemplateType.SUBSTITUTION_AS_CODE;
         const response = await this.sharedService.createCodeTemplate({
           id, name: codeTemplate.name, description: codeTemplate.description,
           templateType, direction:this.stepperConfiguration.direction, code, internal: false, readonly: false, defaultTemplate: false

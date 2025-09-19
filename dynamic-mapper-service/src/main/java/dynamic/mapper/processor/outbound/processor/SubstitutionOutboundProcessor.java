@@ -211,7 +211,6 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                             .externalIdType(mapping.externalIdType)
                             .externalId(context.getExternalId())
                             .request(payloadTarget.jsonString())
-                            .targetAPI(mapping.targetAPI)
                             .build());
             // try {
             //     if (connectorClient.isConnected() && context.isSendPayload()) {

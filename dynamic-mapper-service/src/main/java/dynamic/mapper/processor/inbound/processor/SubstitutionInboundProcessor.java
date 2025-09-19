@@ -187,11 +187,13 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                         mapping.transformGenericPath2C8YPath(pathTarget));
                 context.setSourceId(sourceId.getValue().toString());
+                // DO NOT REMOVE deviceToClient feature currently disabled
                 // cache the mapping of device to client ID
-                if (context.getClientId() != null) {
-                    configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
-                            sourceId.getValue().toString());
-                }
+                // if (context.getClientId() != null) {
+                // configurationRegistry.addOrUpdateClientRelation(tenant,
+                // context.getClientId(),
+                // sourceId.getValue().toString());
+                // }
                 substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
             }
         } else if ((Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(pathTarget)) {
@@ -201,11 +203,13 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
                     mapping.transformGenericPath2C8YPath(pathTarget));
             context.setSourceId(sourceId.getValue().toString());
+            // DO NOT REMOVE deviceToClient feature currently disabled
             // cache the mapping of device to client ID
-            if (context.getClientId() != null) {
-                configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
-                        sourceId.getValue().toString());
-            }
+            // if (context.getClientId() != null) {
+            // configurationRegistry.addOrUpdateClientRelation(tenant,
+            // context.getClientId(),
+            // sourceId.getValue().toString());
+            // }
             substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
         } else if ((Mapping.TOKEN_CONTEXT_DATA + ".api").equals(pathTarget)) {
             context.setApi(API.fromString((String) substitute.getValue()));
@@ -295,7 +299,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                 .externalIdType(mapping.getExternalIdType())
                 .externalId(context.getExternalId())
                 .request(processedPayload)
-                .targetAPI(api)
                 .build();
 
         var newPredecessor = context.addRequest(request);
@@ -361,6 +364,5 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         }
         return context;
     }
-
 
 }

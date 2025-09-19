@@ -34,14 +34,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cumulocity.model.ID;
 
-import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.flow.CumulocityMessage;
-import dynamic.mapper.processor.flow.CumulocitySource;
 import dynamic.mapper.processor.flow.DeviceMessage;
 import dynamic.mapper.processor.flow.ExternalSource;
 import dynamic.mapper.core.C8YAgent;
@@ -153,7 +150,12 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                     payloadJson, resolvedExternalId, mapping);
 
             // Set resolvedPublishTopic topic in context
-            context.setResolvedPublishTopic(deviceMessage.getTopic());
+            String publishTopic = deviceMessage.getTopic();
+            
+            if (publishTopic != null && !publishTopic.isEmpty() && publishTopic.contains(EXTERNAL_ID_TOKEN)) {
+                publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, resolvedExternalId);
+            } 
+            context.setResolvedPublishTopic(publishTopic);
 
             // Add the request to context
             context.addRequest(request);
@@ -212,8 +214,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             context.setResolvedPublishTopic(mapping.getPublishTopic());
         }
 
-        // Handle context data for message context support (from
-        // substituteInTargetAndSend)
+        // Handle context data for message context support 
         if (mapping.supportsMessageContext) {
             @SuppressWarnings("unchecked")
             Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
@@ -238,44 +239,6 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         }
     }
 
-    /**
-     * Sets a value hierarchically in a map using dot notation
-     * E.g., "source.id" will create nested maps: {"source": {"id": value}}
-     */
-    private void setHierarchicalValue(Map<String, Object> map, String path, Object value) {
-        String[] keys = path.split("\\.");
-        Map<String, Object> current = map;
-
-        // Navigate/create the hierarchy up to the last key
-        for (int i = 0; i < keys.length - 1; i++) {
-            String key = keys[i];
-            if (!current.containsKey(key) || !(current.get(key) instanceof Map)) {
-                current.put(key, new HashMap<String, Object>());
-            }
-            current = (Map<String, Object>) current.get(key);
-        }
-
-        // Set the value at the final key
-        current.put(keys[keys.length - 1], value);
-    }
-
-    private API getAPIFromCumulocityType(String cumulocityType) throws ProcessingException {
-        switch (cumulocityType.toLowerCase()) {
-            case "measurement":
-                return API.MEASUREMENT;
-            case "alarm":
-                return API.ALARM;
-            case "event":
-                return API.EVENT;
-            case "inventory":
-            case "managedobject":
-                return API.INVENTORY;
-            case "operation":
-                return API.OPERATION;
-            default:
-                throw new ProcessingException("Unknown cumulocity type: " + cumulocityType);
-        }
-    }
 
     private String resolveExternalIdentifier(DeviceMessage deviceMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
@@ -403,39 +366,6 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         return result;
     }
 
-    @SuppressWarnings("unchecked")
-    private List<CumulocitySource> convertToInternalSourceList(Object obj) {
-        // ... (keep existing implementation)
-        List<CumulocitySource> result = new ArrayList<>();
-
-        if (obj == null) {
-            return result;
-        }
-
-        if (obj instanceof CumulocitySource) {
-            result.add((CumulocitySource) obj);
-        } else if (obj instanceof List) {
-            List<?> list = (List<?>) obj;
-            for (Object item : list) {
-                if (item instanceof CumulocitySource) {
-                    result.add((CumulocitySource) item);
-                } else if (item instanceof Map) {
-                    CumulocitySource cumulocitySource = convertMapToCumulocitySource((Map<String, Object>) item);
-                    if (cumulocitySource != null) {
-                        result.add(cumulocitySource);
-                    }
-                }
-            }
-        } else if (obj instanceof Map) {
-            CumulocitySource cumulocitySource = convertMapToCumulocitySource((Map<String, Object>) obj);
-            if (cumulocitySource != null) {
-                result.add(cumulocitySource);
-            }
-        }
-
-        return result;
-    }
-
     private ExternalSource convertMapToExternalSource(Map<String, Object> map) {
         // ... (keep existing implementation)
         if (map == null) {
@@ -471,12 +401,4 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         return null;
     }
 
-    private CumulocitySource convertMapToCumulocitySource(Map<String, Object> map) {
-        // ... (keep existing implementation)
-        if (map == null || !map.containsKey("internalId")) {
-            return null;
-        }
-
-        return new CumulocitySource(String.valueOf(map.get("internalId")));
-    }
 }

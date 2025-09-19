@@ -18,6 +18,9 @@ function onMessage(inputMsg, context) {
     context.logMessage("Payload Raw:" + msg.getPayload());
     context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
 
+    // use _externalId_ to reference the external id of the device.
+    // it is resolved automatically using the externalId type from externalSource: [{"type":"c8y_Serial"}]
+    // e.g. topic: `measurements/_externalId_`
     return [{  
         topic: `measurements/${payload["source"]["id"]}`,
         payload: {
