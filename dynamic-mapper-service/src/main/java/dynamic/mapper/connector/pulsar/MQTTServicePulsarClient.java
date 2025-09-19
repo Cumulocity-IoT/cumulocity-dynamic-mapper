@@ -116,7 +116,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                                 new AbstractMap.SimpleEntry<String, String>("none", "None"),
                                 new AbstractMap.SimpleEntry<String, String>("token", "Token"),
                                 new AbstractMap.SimpleEntry<String, String>("oauth2", "OAuth2"),
-                                new AbstractMap.SimpleEntry<String, String>("tls", "TLS")),
+                                new AbstractMap.SimpleEntry<String, String>("tls", "TLS"),
+                                new AbstractMap.SimpleEntry<String, String>("basic", "Basic")),
                         null));
         configProps.put("authenticationParams",
                 new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, true,
@@ -188,6 +189,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         // Pulsar doesn't have MQTT QoS but supports reliable delivery through
         // acknowledgments
         this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE, Qos.AT_MOST_ONCE);
+
+        // IMPORTANT: set property readonly to true, then predefined values from the
+        // specification are copied to the configuration
         getConnectorSpecification().getProperties().put("serviceUrl",
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         configurationRegistry.getMqttServicePulsarUrl(), null, null));
@@ -201,17 +205,20 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         // getSubscriptionName(this.connectorIdentifier,
         // this.additionalSubscriptionIdTest), null, null));
 
+        getConnectorSpecification().getProperties().put("authenticationMethod",
+                new ConnectorProperty(null, true, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
+                        "basic", null, null));
         MicroserviceCredentials credentials = configurationRegistry.getMicroserviceCredential(tenant);
         String authenticationParams = MessageFormat.format("'{'\"userId\":\"{0}/{1}\",\"password\":\"{2}\"'}'", tenant,
                 credentials.getUsername(), credentials.getPassword());
         getConnectorSpecification().getProperties().put("authenticationParams",
-                new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, true,
+                new ConnectorProperty(null, true, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true,
                         authenticationParams, null, null));
         getConnectorSpecification().getProperties().put("pulsarTenant",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 13, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         tenant, null, null));
         getConnectorSpecification().getProperties().put("pulsarNamespace",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, true, true,
+                new ConnectorProperty(null, true, 14, ConnectorPropertyType.STRING_PROPERTY, true, true,
                         PULSAR_NAMESPACE, null, null));
     }
 
@@ -229,7 +236,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     public boolean initialize() {
         loadConfiguration();
-        log.info("{} - Phase 0: {} initialized , connectorType: {}", tenant,
+        log.info("{} - Phase 0: {} initialized , connectorType: {}, authenticationMethod: {}", tenant,
                 getConnectorType(),
                 getConnectorName());
         return true;
@@ -361,12 +368,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             consumer.close();
         }
 
-        String subscriptionName = (String) connectorConfiguration.getProperties().get("subscriptionName");
+        String subscriptionName = getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest);
 
         consumer = pulsarClient.newConsumer()
                 .topic(towardsPlatformTopic)
-                .subscriptionName(getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest))
-                .subscriptionType(SubscriptionType.Shared)
+                .subscriptionName(subscriptionName)
+                // .subscriptionType(SubscriptionType.Shared)
                 .messageListener(pulsarCallback)
                 .subscribe();
 

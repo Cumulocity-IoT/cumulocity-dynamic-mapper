@@ -133,6 +133,9 @@ public class MQTTServiceClient extends MQTT3Client {
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
+
+        // IMPORTANT: set property readonly to true, then predefined values from the
+        // specification are copied to the configuration
         MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
         String user = String.format("%s/%s", tenant, msc.getUsername());
         getConnectorSpecification().getProperties().put("user",

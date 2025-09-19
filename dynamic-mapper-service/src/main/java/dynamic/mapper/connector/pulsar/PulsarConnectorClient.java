@@ -131,7 +131,8 @@ public class PulsarConnectorClient extends AConnectorClient {
                                 new AbstractMap.SimpleEntry<String, String>("none", "None"),
                                 new AbstractMap.SimpleEntry<String, String>("token", "Token"),
                                 new AbstractMap.SimpleEntry<String, String>("oauth2", "OAuth2"),
-                                new AbstractMap.SimpleEntry<String, String>("tls", "TLS")),
+                                new AbstractMap.SimpleEntry<String, String>("tls", "TLS"),
+                                new AbstractMap.SimpleEntry<String, String>("basic", "Basic")),
                         null));
         configProps.put("authenticationParams",
                 new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false,

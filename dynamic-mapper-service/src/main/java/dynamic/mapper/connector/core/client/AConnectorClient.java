@@ -60,7 +60,6 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.ConnectorSpecification;
-import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
