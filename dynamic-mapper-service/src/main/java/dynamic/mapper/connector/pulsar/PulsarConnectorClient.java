@@ -469,6 +469,13 @@ public class PulsarConnectorClient extends AConnectorClient {
                                     authParams));
                     log.debug("{} - Using TLS authentication", tenant);
                     break;
+                case "basic":
+                    clientBuilder.authentication(
+                            AuthenticationFactory.create(
+                                    "org.apache.pulsar.client.impl.auth.AuthenticationBasic",
+                                    authParams));
+                    log.debug("{} - Using basic authentication", tenant);
+                    break;
                 default:
                     log.warn("{} - Unknown authentication method: {}", tenant, authMethod);
                     break;

@@ -109,10 +109,11 @@ public class ConfigurationRegistry {
     @Getter
     String mqttServiceUrl;
 
-    @Value("${APP.mqttServicePulsarUrl}")
+    @Value("${C8Y_BASEURL_PULSAR}")
     @Getter
     String mqttServicePulsarUrl;
 
+    
     @Autowired
     public void setC8yAgent(C8YAgent c8yAgent) {
         this.c8yAgent = c8yAgent;
