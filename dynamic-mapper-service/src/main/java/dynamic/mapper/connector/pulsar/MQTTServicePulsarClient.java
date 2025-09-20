@@ -34,7 +34,6 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
-import org.apache.pulsar.client.api.SubscriptionType;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
@@ -145,14 +144,17 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         "Controls how Pulsar subscription names are generated - 'default' creates connector-specific subscriptions, 'mapping' creates separate subscriptions per mapping, 'shared' uses one subscription for all mappings, 'custom' allows user-defined patterns.",
                         false, 11, ConnectorPropertyType.STRING_PROPERTY, false, true,
                         null, null, null));
-        configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false,
-                        false, null, null));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
+        configProps.put("supportsWildcardInTopicOutbound",
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, false, null,
+                        null));
         configProps.put("pulsarTenant",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, false, true,
+                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, true,
                         "public", null, null));
         configProps.put("pulsarNamespace",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, true,
+                new ConnectorProperty(null, false, 15, ConnectorPropertyType.STRING_PROPERTY, false, true,
                         "default", null, null));
 
         String name = "Cumulocity MQTT Service - (Device Isolation)";

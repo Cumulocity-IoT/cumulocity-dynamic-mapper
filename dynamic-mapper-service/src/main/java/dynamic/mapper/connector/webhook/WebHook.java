@@ -114,6 +114,12 @@ public class WebHook extends AConnectorClient {
                         false,
                         new HashMap<String, String>(),
                         null, cumulocityInternal));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 8, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
         String name = "Webhook";
         String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
@@ -180,6 +186,7 @@ public class WebHook extends AConnectorClient {
                     new ConnectorProperty("health endpoint for GET request", false, 6,
                             ConnectorPropertyType.STRING_PROPERTY, true, true,
                             "http://cumulocity:8111/notification2", null, null));
+
         }
     }
 
@@ -512,8 +519,14 @@ public class WebHook extends AConnectorClient {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
-        return true;
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        if (direction == Direction.INBOUND) {
+            return Boolean.parseBoolean(
+                    connectorConfiguration.getProperties().get("supportsWildcardInTopicInbound").toString());
+        } else {
+            return Boolean.parseBoolean(
+                    connectorConfiguration.getProperties().get("supportsWildcardInTopicOutbound").toString());
+        }
     }
 
     @Override

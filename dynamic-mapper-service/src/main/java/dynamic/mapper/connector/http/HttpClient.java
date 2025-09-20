@@ -63,11 +63,14 @@ public class HttpClient extends AConnectorClient {
         configProps.put("path",
                 new ConnectorProperty(null, false, 0, ConnectorPropertyType.STRING_PROPERTY, true, false, httpPath,
                         null, null));
-        configProps.put("supportsWildcardInTopic",
+        configProps.put("supportsWildcardInTopicInbound",
                 new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
                         null));
+        configProps.put("supportsWildcardInTopicOutbound",
+                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
         configProps.put(PROPERTY_CUTOFF_LEADING_SLASH,
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                new ConnectorProperty(null, false, 3, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
                         null));
         String name = "HTTP Endpoint";
         String description = "HTTP Endpoint to receive custom payload in the body.\n"
@@ -218,8 +221,12 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
-        return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopic").toString());
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        if (direction == Direction.INBOUND) {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopicInbound").toString());
+        } else {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopicOutbound").toString());
+        }
     }
 
     @Override

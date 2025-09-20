@@ -198,7 +198,7 @@ public abstract class AConnectorClient {
 
     public abstract boolean initialize();
 
-    public abstract Boolean supportsWildcardsInTopic();
+    public abstract Boolean supportsWildcardInTopic(Direction direction);
 
     /**
      * Connect to the broker
@@ -398,7 +398,7 @@ public abstract class AConnectorClient {
      **/
     private boolean isMappingValidForDeployment(Mapping mapping) {
         boolean containsWildcards = mapping.mappingTopic.matches(".*[#+].*");
-        boolean validDeployment = supportsWildcardsInTopic() || !containsWildcards;
+        boolean validDeployment = supportsWildcardInTopic(mapping.direction) || !containsWildcards;
 
         if (!validDeployment) {
             log.warn("{} - Mapping {} contains wildcards, not supported by connector {}",

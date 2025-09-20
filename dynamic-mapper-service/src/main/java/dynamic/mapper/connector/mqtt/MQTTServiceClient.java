@@ -40,6 +40,7 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatusEvent;
+import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 
 @Slf4j
@@ -91,11 +92,14 @@ public class MQTTServiceClient extends MQTT3Client {
         configProps.put("nameCertificate",
                 new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null,
                         null));
-        configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, false, null,
+                        null));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, false, null,
                         null));
         configProps.put("cleanSession",
-                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
                         null));
         String name = "Cumulocity MQTT Service - (Tenant Isolation)";
         String description = "Connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
@@ -170,7 +174,11 @@ public class MQTTServiceClient extends MQTT3Client {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
-        return false;
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        if (direction == Direction.INBOUND) {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopicInbound").toString());
+        } else {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopicOutbound").toString());
+        }
     }
 }

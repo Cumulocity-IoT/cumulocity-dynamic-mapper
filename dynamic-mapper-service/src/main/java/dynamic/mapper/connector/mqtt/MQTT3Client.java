@@ -134,14 +134,17 @@ public class MQTT3Client extends AConnectorClient {
         configProps.put("nameCertificate",
                 new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         useSelfSignedCertificateCondition));
-        configProps.put("supportsWildcardInTopic",
+        configProps.put("supportsWildcardInTopicInbound",
                 new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
                         null));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                        null));
         configProps.put("serverPath",
-                new ConnectorProperty(null, false, 11, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         wsCondition));
         configProps.put("cleanSession",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
                         null));
         String name = "Generic MQTT";
         String description = "Connector for connecting to external MQTT broker over tcp or websocket.";
@@ -554,8 +557,14 @@ public class MQTT3Client extends AConnectorClient {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
-        return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopic").toString());
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        if (direction == Direction.INBOUND) {
+            return Boolean.parseBoolean(
+                    connectorConfiguration.getProperties().get("supportsWildcardInTopicInbound").toString());
+        } else {
+            return Boolean.parseBoolean(
+                    connectorConfiguration.getProperties().get("supportsWildcardInTopicOutbound").toString());
+        }
     }
 
     @Override

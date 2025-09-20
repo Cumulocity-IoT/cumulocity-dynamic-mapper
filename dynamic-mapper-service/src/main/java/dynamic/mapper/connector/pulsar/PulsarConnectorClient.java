@@ -160,14 +160,17 @@ public class PulsarConnectorClient extends AConnectorClient {
                         "Controls how Pulsar subscription names are generated - 'default' creates connector-specific subscriptions, 'mapping' creates separate subscriptions per mapping, 'shared' uses one subscription for all mappings, 'custom' allows user-defined patterns.",
                         false, 11, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         null, null, null));
-        configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false,
-                        true, null, null));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
+        configProps.put("supportsWildcardInTopicOutbound",
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
         configProps.put("pulsarTenant",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         "public", null, null));
         configProps.put("pulsarNamespace",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 15, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         "default", null, null));
 
         String name = "Apache Pulsar";
@@ -875,8 +878,12 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
-        return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopic").toString());
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        if (direction == Direction.INBOUND) {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopicInbound").toString());
+        } else {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopicOutbound").toString());
+        }
     }
 
     @Override

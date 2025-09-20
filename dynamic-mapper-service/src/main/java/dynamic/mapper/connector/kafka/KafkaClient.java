@@ -232,7 +232,7 @@ public class KafkaClient extends AConnectorClient {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
+    public Boolean supportsWildcardInTopic(Direction direction) {
         return false;
     }
 
