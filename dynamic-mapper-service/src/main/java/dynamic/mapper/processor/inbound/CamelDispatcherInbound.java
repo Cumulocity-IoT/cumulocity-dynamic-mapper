@@ -105,7 +105,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             // Set max CPU time if code-based mappings exist
             int tempMaxCPUTime = 0;
             for (Mapping mapping : resolvedMappings) {
-                if (mapping.isSubstitutionsAsCode()) {
+                if (mapping.isTransformationAsCode()) {
                     tempMaxCPUTime = serviceConfiguration.getMaxCPUTimeMS();
                     break;
                 }

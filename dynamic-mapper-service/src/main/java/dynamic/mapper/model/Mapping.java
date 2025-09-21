@@ -554,9 +554,9 @@ public class Mapping implements Serializable {
         return mp;
     }
 
-    public Boolean isSubstitutionsAsCode() {
+    public Boolean isTransformationAsCode() {
         return MappingType.CODE_BASED.equals(this.mappingType) ||
                 TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType) ||
-                TransformationType.JSONATA.equals(this.transformationType);
+                TransformationType.SMART_FUNCTION.equals(this.transformationType);
     }
 }

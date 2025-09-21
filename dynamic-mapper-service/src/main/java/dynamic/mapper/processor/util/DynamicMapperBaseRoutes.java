@@ -65,10 +65,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
             ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
             if (context != null && context.getMapping() != null) {
                 TransformationType transformationType = context.getMapping().getTransformationType();
-                Boolean substitutionAsCode = context.getMapping().getSubstitutionsAsCode();
-                // Fixed logic
-                return substitutionAsCode ||
-                        TransformationType.SUBSTITUTION_AS_CODE.equals(transformationType);
+                return TransformationType.SUBSTITUTION_AS_CODE.equals(transformationType);
             }
             return false; // Changed from true to false for better default
         } catch (Exception e) {

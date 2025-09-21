@@ -189,7 +189,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 // Check if at least one Code based mappings exits, then we nee to timeout the
                 // execution
                 for (Mapping mapping : resolvedMappings) {
-                    if (mapping.isSubstitutionsAsCode()) {
+                    if (mapping.isTransformationAsCode()) {
                         result.setMaxCPUTimeMS(serviceConfiguration.getMaxCPUTimeMS());
                     }
                 }

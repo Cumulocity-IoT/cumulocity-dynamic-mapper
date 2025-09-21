@@ -522,7 +522,7 @@ public class WebHook extends AConnectorClient {
     public Boolean supportsWildcardInTopic(Direction direction) {
         if (direction == Direction.INBOUND) {
             return Boolean.parseBoolean(
-                    connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicInbound","true").toString());
+                    connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicInbound","false").toString());
         } else {
             return Boolean.parseBoolean(
                     connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicOutbound","true").toString());
