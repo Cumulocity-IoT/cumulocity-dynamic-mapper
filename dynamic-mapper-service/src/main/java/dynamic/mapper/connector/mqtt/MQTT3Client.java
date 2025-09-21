@@ -560,10 +560,10 @@ public class MQTT3Client extends AConnectorClient {
     public Boolean supportsWildcardInTopic(Direction direction) {
         if (direction == Direction.INBOUND) {
             return Boolean.parseBoolean(
-                    connectorConfiguration.getProperties().get("supportsWildcardInTopicInbound").toString());
+                    connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicInbound","true").toString());
         } else {
             return Boolean.parseBoolean(
-                    connectorConfiguration.getProperties().get("supportsWildcardInTopicOutbound").toString());
+                    connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicOutbound","true").toString());
         }
     }
 

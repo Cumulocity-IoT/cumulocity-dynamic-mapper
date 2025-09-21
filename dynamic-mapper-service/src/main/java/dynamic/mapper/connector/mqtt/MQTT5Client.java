@@ -559,9 +559,9 @@ public class MQTT5Client extends AConnectorClient {
     @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
         if (direction == Direction.INBOUND) {
-            return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopicInbound").toString());
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicInbound","true").toString());
         } else {
-            return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopicOutbound").toString());
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicOutbound","true").toString());
         }
     }
 
