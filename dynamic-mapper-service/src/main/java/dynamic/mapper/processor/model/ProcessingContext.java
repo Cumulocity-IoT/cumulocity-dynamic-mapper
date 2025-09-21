@@ -120,7 +120,6 @@ public class ProcessingContext<O> {
 
     private String externalId;
 
-
     private Engine graalEngine;
 
     private Context graalContext;
@@ -150,7 +149,7 @@ public class ProcessingContext<O> {
     private Object flowResult;
 
     private FlowContext flowContext;
- 
+
     private Map<String, Object> flowState;
 
     @Builder.Default
@@ -189,7 +188,7 @@ public class ProcessingContext<O> {
     public List<SubstituteValue> getDeviceEntries() {
         List<String> pathsTargetForDeviceIdentifiers;
         if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
-                || mapping.isSubstitutionsAsCode() || TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
+                || mapping.isSubstitutionsAsCode()) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
             pathsTargetForDeviceIdentifiers = mapping.getPathTargetForDeviceIdentifiers();

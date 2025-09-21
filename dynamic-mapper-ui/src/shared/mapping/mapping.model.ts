@@ -184,9 +184,6 @@ export interface Mapping {
   /** Base64 encoded code for custom substitutions */
   code?: string;
 
-  /** Define substitutions as JavaScript code */
-  substitutionsAsCode?: boolean;
-
   /** Timestamp of last update */
   lastUpdate: number;
 }
@@ -751,5 +748,5 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function isSubstitutionsAsCode(mapping: Mapping): boolean {
-  return mapping.substitutionsAsCode || MappingType.CODE_BASED === mapping.mappingType || mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || mapping.transformationType == TransformationType.SMART_FUNCTION;
+  return  MappingType.CODE_BASED === mapping.mappingType || mapping.transformationType == TransformationType.SUBSTITUTION_AS_CODE || mapping.transformationType == TransformationType.SMART_FUNCTION;
 }

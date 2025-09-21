@@ -22,6 +22,7 @@
 package dynamic.mapper.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import lombok.Getter;
@@ -118,7 +119,7 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     public MappingType mappingType;
 
-    @Schema( description = "Type of processing the transformation", implementation = ProcessingType.class, example = "SUBSTITUTION_AS_CODE")
+    @Schema(description = "Type of processing the transformation", implementation = ProcessingType.class, example = "SUBSTITUTION_AS_CODE")
     @NotNull
     public TransformationType transformationType = TransformationType.DEFAULT;
 
@@ -196,7 +197,25 @@ public class Mapping implements Serializable {
     @Schema(description = "Base64 encoded code for custom substitutions")
     public String code;
 
+    // @Schema(description = "Define substitutions as JavaScript code")
+    // public Boolean substitutionsAsCode = false;
+
+    @JsonSetter("substitutionsAsCode")
+    @Deprecated
+    public void setSubstitutionsAsCode(Boolean substitutionsAsCode) {
+        // Migration logic when old property is used
+        if (substitutionsAsCode != null && substitutionsAsCode) {
+            // Default to SUBSTITUTION_AS_CODE when true
+            // You might want to make this configurable or use different logic
+            this.transformationType = TransformationType.SUBSTITUTION_AS_CODE;
+        }
+        // Set to null as per requirement
+        this.substitutionsAsCode = null;
+    }
+
     @Schema(description = "Define substitutions as JavaScript code")
+    @Deprecated(since = "version-6.0", forRemoval = true)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only accept on input, don't serialize on output
     public Boolean substitutionsAsCode = false;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Timestamp of last update", example = "1640995200000")
@@ -535,7 +554,9 @@ public class Mapping implements Serializable {
         return mp;
     }
 
-    public Boolean isSubstitutionsAsCode () {
-        return MappingType.CODE_BASED.equals(this.mappingType) || this.substitutionsAsCode;
-    }   
+    public Boolean isSubstitutionsAsCode() {
+        return MappingType.CODE_BASED.equals(this.mappingType) ||
+                TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType) ||
+                TransformationType.JSONATA.equals(this.transformationType);
+    }
 }

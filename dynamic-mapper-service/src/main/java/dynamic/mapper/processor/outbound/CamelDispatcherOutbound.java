@@ -177,7 +177,6 @@ public class CamelDispatcherOutbound implements NotificationCallback {
 
         // Declare final variables for use in lambda
         List<Mapping> resolvedMappings;
-        int maxCPUTime;
 
         MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
 
