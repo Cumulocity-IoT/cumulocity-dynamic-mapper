@@ -1,6 +1,5 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,7 +97,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
 
             // Process message context
             if (context.isSupportsMessageContext() && context.getKey() != null) {
-                String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
+                String keyString = context.getKey();
                 Map<String, String> contextData = new HashMap<String, String>() {
                     {
                         put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);

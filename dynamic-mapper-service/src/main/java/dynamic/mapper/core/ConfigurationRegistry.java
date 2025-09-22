@@ -50,6 +50,7 @@ import dynamic.mapper.connector.core.client.ConnectorException;
 
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClient;
+import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
 import dynamic.mapper.connector.mqtt.MQTT5Client;
 import dynamic.mapper.connector.mqtt.MQTTServiceClient;
@@ -220,6 +221,14 @@ public class ConfigurationRegistry {
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - Kafka Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+                
+            case KAFKA_V2:
+                connectorClient = new KafkaClientV2(this, connectorConfiguration,
+                        null,
+                        additionalSubscriptionIdTest, tenant);
+                log.info("{} - Kafka Connector V2 created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 

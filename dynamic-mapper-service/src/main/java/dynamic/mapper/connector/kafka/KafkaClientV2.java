@@ -191,9 +191,9 @@ public class KafkaClientV2 extends AConnectorClient {
             throw new RuntimeException("Failed to load Kafka properties files", e);
         }
 
-        String name = "Kafka";
+        String name = "Kafka V2";
         String description = "Connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.\n The connector uses SASL_SSL as security protocol.";
-        connectorSpecification = new ConnectorSpecification(name, description, ConnectorType.KAFKA,
+        connectorSpecification = new ConnectorSpecification(name, description, ConnectorType.KAFKA_V2,
                 singleton, configProps, true, // supportsMessageContext = true
                 supportedDirections());
     }
@@ -323,34 +323,75 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("{} - Kafka connector {} connecting", tenant, getConnectorName());
+        log.info("{} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
+                tenant, getConnectorName(), isConnected(),
+                shouldConnect());
+        if (shouldConnect())
+            updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
+        // stay in the loop until successful
+        boolean successful = false;
+        while (!successful) {
+            loadConfiguration();
+            String username = (String) connectorConfiguration.getProperties().get("username");
+            String password = (String) connectorConfiguration.getProperties().get("password");
+            String saslMechanism = (String) connectorConfiguration.getProperties().get("saslMechanism");
+            String groupId = (String) connectorConfiguration.getProperties().get("groupId");
+            String bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
 
-        if (!shouldConnect()) {
-            log.warn("{} - Kafka connector {} should not connect", tenant, getConnectorName());
-            return;
-        }
+            // Add null checks and default values
+            if (bootstrapServers == null) {
+                log.error("{} - bootstrapServers is null, cannot connect", tenant);
+                updateConnectorStatusToFailed(new IllegalArgumentException("bootstrapServers cannot be null"));
+                return;
+            }
 
-        updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, true);
+            // Provide default groupId if not set
+            if (groupId == null) {
+                groupId = "dynamic-mapper-" + connectorIdentifier + additionalSubscriptionIdTest;
+                log.warn("{} - groupId is null, using default: {}", tenant, groupId);
+            }
 
-        try {
-            // Create producer
-            kafkaProducer = new KafkaProducer<>(kafkaProperties);
+            String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
+            String jaasCfg = String.format(jaasTemplate, username, password);
 
-            connectionState.setTrue();
-            updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
+            // Only set SASL config if username and password are provided
+            if (username != null && password != null) {
+                defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
+                defaultPropertiesProducer.put("sasl.mechanism",
+                        saslMechanism != null ? saslMechanism : "SCRAM-SHA-256");
+            }
 
-            // Initialize subscriptions
-            List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant, connectorId);
-            initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
+            defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+            defaultPropertiesProducer.put("group.id", groupId);
 
-            List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
-            initializeSubscriptionsOutbound(updatedMappingsOutbound);
-
-            log.info("{} - Kafka connector {} connected successfully", tenant, getConnectorName());
-
-        } catch (Exception e) {
-            log.error("{} - Error connecting Kafka connector: {}", tenant, getConnectorName(), e);
-            updateConnectorStatusToFailed(e);
+            log.info("{} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
+                    getConnectorName(),
+                    shouldConnect(), bootstrapServers);
+            try {
+                // test if the mqtt connection is configured and enabled
+                if (shouldConnect()) {
+                    mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+                    // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
+                    // sync, the ActiveSubscriptionMappingInbound is build on the
+                    // previously used updatedMappings
+                    kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
+                    connectionState.setTrue();
+                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
+                    List<Mapping> updatedMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
+                    initializeSubscriptionsInbound(updatedMappings, true, true);
+                    log.info("{} - Phase III: {} connected, bootstrapServers: {}", tenant, getConnectorName(),
+                            bootstrapServers);
+                }
+                successful = true;
+            } catch (Exception e) {
+                log.error("{} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
+                updateConnectorStatusToFailed(e);
+                sendConnectorLifecycle();
+                if (serviceConfiguration.logConnectorErrorInBackend) {
+                    log.error("{} - Stacktrace: ", tenant, e);
+                }
+                successful = false;
+            }
         }
     }
 
@@ -761,22 +802,20 @@ public class KafkaClientV2 extends AConnectorClient {
             return false;
         }
 
-        // Check required properties
-        for (String property : getConnectorSpecification().getProperties().keySet()) {
-            if (getConnectorSpecification().getProperties().get(property).required
-                    && configuration.getProperties().get(property) == null) {
-                return false;
-            }
+        // Check if bootstrapServers is set (this is the only truly required property)
+        String bootstrapServers = (String) configuration.getProperties().get("bootstrapServers");
+        if (bootstrapServers == null || bootstrapServers.trim().isEmpty()) {
+            log.error("bootstrapServers is required but not set");
+            return false;
         }
 
-        // Validate security configuration
-        String securityProtocol = (String) configuration.getProperties()
-                .getOrDefault("securityProtocol", "PLAINTEXT");
+        // If username is provided, password should also be provided
+        String username = (String) configuration.getProperties().get("username");
+        String password = (String) configuration.getProperties().get("password");
 
-        if (securityProtocol.contains("SASL")) {
-            String username = (String) configuration.getProperties().get("saslUsername");
-            String password = (String) configuration.getProperties().get("saslPassword");
-            if (StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
+        if (username != null && !username.trim().isEmpty()) {
+            if (password == null || password.trim().isEmpty()) {
+                log.error("Password is required when username is provided");
                 return false;
             }
         }
@@ -787,15 +826,7 @@ public class KafkaClientV2 extends AConnectorClient {
     @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
         // Kafka doesn't support wildcards in topic subscriptions like MQTT
-        if (direction == Direction.INBOUND) {
-            return Boolean.parseBoolean(
-                    connectorConfiguration.getProperties()
-                            .getOrDefault("supportsWildcardInTopicInbound", "false").toString());
-        } else {
-            return Boolean.parseBoolean(
-                    connectorConfiguration.getProperties()
-                            .getOrDefault("supportsWildcardInTopicOutbound", "false").toString());
-        }
+        return false;
     }
 
     @Override

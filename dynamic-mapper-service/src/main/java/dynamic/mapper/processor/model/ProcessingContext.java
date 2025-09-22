@@ -114,7 +114,7 @@ public class ProcessingContext<O> {
     @Builder.Default
     private boolean ignoreFurtherProcessing = false;
 
-    private byte[] key;
+    private String key;
 
     private String sourceId;
 

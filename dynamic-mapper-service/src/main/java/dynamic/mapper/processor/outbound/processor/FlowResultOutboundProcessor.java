@@ -223,7 +223,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                 // Extract key for message context
                 String key = contextData.get(Mapping.CONTEXT_DATA_KEY_NAME);
                 if (key != null && !key.equals("dummy")) {
-                    context.setKey(key.getBytes());
+                    context.setKey(key);
                 }
 
                 // Extract publish topic override

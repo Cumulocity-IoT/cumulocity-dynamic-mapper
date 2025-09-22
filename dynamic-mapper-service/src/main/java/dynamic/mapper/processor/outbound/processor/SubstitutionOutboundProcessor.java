@@ -179,7 +179,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             if (mapping.supportsMessageContext) {
                 String key = payloadTarget
                         .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
-                context.setKey(key.getBytes());
+                context.setKey(key);
 
                 // extract method
                 try {
