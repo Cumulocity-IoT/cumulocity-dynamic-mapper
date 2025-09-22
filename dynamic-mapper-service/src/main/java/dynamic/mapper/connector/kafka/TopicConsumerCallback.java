@@ -43,7 +43,7 @@ public class TopicConsumerCallback implements TopicConsumerListener {
     }
 
     @Override
-    public void onEvent(byte[] key, byte[] event) throws Exception {
+    public void onEvent(String key, byte[] event) throws Exception {
         ConnectorMessage connectorMessage =  ConnectorMessage.builder()
         .tenant(tenant)
         .supportsMessageContext(supportsMessageContext)

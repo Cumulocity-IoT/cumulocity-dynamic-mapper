@@ -40,7 +40,7 @@ import java.util.Properties;
 public class Topic implements AutoCloseable {
 	private final TopicConfig topicConfig;
 
-	private final Consumer<byte[], byte[]> consumer;
+	private final Consumer<String, byte[]> consumer;
 
 	public Topic(final TopicConfig topicConfig) {
 		this.topicConfig = topicConfig;
@@ -85,24 +85,22 @@ public class Topic implements AutoCloseable {
 		consumer.subscribe(Arrays.asList(topicConfig.getTopic()));
 
 		while (true) {
-			final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(10));
-			for (ConsumerRecord<byte[], byte[]> record : records) {
+			final ConsumerRecords<String, byte[]> records = consumer.poll(Duration.ofSeconds(10));
+			for (ConsumerRecord<String, byte[]> record : records) {
 				try {
-					Object key = record.key();
+					String key = record.key();
 					Object event = record.value();
-					byte[] keyByte;
 					byte[] eventByte;
-					if (key instanceof String) {
-						keyByte = ((String) key).getBytes();
-					} else {
-						keyByte = record.key();
-					}
 					if (event instanceof String) {
 						eventByte = ((String) event).getBytes();
+					} else  if (event instanceof byte[]){
+						eventByte = (byte[]) event;
 					} else {
-						eventByte = record.key();
-					}
-					listener.onEvent(keyByte, eventByte);
+                        log.warn("{} - Unsupported event type {} on topic {}", topicConfig.getTenant(),
+                                event != null ? event.getClass().getName() : "null", topicConfig.getTopic());
+                        continue;
+                    }
+					listener.onEvent(key, eventByte);
 				} catch (final InterruptedException e) { // can be thrown by a blocking operation inside onEvent()
 					throw new org.apache.kafka.common.errors.InterruptException(e);
 				} catch (final Exception error) {

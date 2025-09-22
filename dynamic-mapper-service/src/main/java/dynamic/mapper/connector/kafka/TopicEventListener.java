@@ -22,5 +22,5 @@
 package dynamic.mapper.connector.kafka;
 
 public interface TopicEventListener {
-    void onEvent(byte[] key, byte[] event) throws Exception;
+    void onEvent(String key, byte[] event) throws Exception;
 }
