@@ -1,0 +1,69 @@
+services:
+  broker:
+    image: apache/kafka:latest
+    container_name: broker
+    hostname: broker
+    ports:
+      - "9092:9092"      # For external clients
+      - "9093:9093" 
+      - "9094:9094"      # For controller (if needed externally)
+    environment:
+      # KRaft configuration
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:9094  # ✅ Fixed: matches controller port
+      
+      # Listeners configuration - CORRECTED
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093,CONTROLLER://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER  # ✅ Fixed: points to CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      
+      # Log directories
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      
+      # Auto-create topics
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      
+      # JVM settings
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
+      
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 && nc -z localhost 9093 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    
+    networks:
+      - kafka-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "9090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      broker:
+        condition: service_healthy
+    networks:
+      - kafka-network
+    restart: unless-stopped
+
+volumes:
+  kafka-data:
+    driver: local
+
+networks:
+  kafka-network:
+    driver: bridge

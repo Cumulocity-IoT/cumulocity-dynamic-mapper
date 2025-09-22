@@ -70,8 +70,7 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
         String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
 
         // Prepare GraalVM context if code exists
-        if (mapping.code != null && (mapping.substitutionsAsCode
-                || TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.transformationType))) {
+        if (mapping.code != null && TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.transformationType)) {
             try {
                 // contextSemaphore.acquire();
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());

@@ -381,7 +381,6 @@ public class Mapping implements Serializable {
                 && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE_TARGET)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_INTERNAL)
                 && !mapping.mappingType.equals(MappingType.CODE_BASED)
-                && !mapping.substitutionsAsCode
                 && !TransformationType.SMART_FUNCTION.equals(mapping.transformationType)
                 && !TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.transformationType)
                 && !mapping.direction.equals(Direction.OUTBOUND)) {

@@ -24,7 +24,6 @@ package dynamic.mapper.connector.core.client;
 public enum ConnectorType {
     MQTT,
     CUMULOCITY_MQTT_SERVICE,
-    KAFKA,
     KAFKA_V2,
     HTTP,
     WEB_HOOK,

@@ -27,7 +27,6 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.http.HttpClient;
-import dynamic.mapper.connector.kafka.KafkaClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
 import dynamic.mapper.connector.mqtt.MQTTServiceClient;
@@ -194,7 +193,6 @@ public class ConnectorRegistry {
         connectorSpecificationMap.put(ConnectorType.MQTT, new MQTT3Client().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE,
                 new MQTTServiceClient().getConnectorSpecification());
-        connectorSpecificationMap.put(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.KAFKA_V2, new KafkaClientV2().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.HTTP, new HttpClient().getConnectorSpecification());

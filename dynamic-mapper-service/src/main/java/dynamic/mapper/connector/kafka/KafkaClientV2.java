@@ -32,7 +32,6 @@ import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.ListTopicsResult;
@@ -89,6 +88,8 @@ public class KafkaClientV2 extends AConnectorClient {
 
     private Properties defaultPropertiesConsumer;
     private Properties defaultPropertiesProducer;
+    private Properties kafkaConsumerProperties;
+    private Properties kafkaProducerProperties;
 
     // Consumer management
     private final Map<String, KafkaConsumerWrapper> topicConsumers = new ConcurrentHashMap<>();
@@ -97,9 +98,6 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Getter
     protected List<Qos> supportedQOS;
-
-    // Configuration properties
-    private Properties kafkaProperties;
 
     public KafkaClientV2() {
         initializeConnectorSpecification();
@@ -224,10 +222,10 @@ public class KafkaClientV2 extends AConnectorClient {
         loadConfiguration();
 
         try {
-            kafkaProperties = buildKafkaProperties();
+            buildKafkaProperties(); // This sets kafkaConsumerProperties and kafkaProducerProperties
 
             // Initialize admin client for topic operations
-            adminClient = AdminClient.create(kafkaProperties);
+            adminClient = AdminClient.create(kafkaProducerProperties);
 
             // Test connection by listing topics
             ListTopicsResult listTopics = adminClient.listTopics();
@@ -243,155 +241,146 @@ public class KafkaClientV2 extends AConnectorClient {
         }
     }
 
-    private Properties buildKafkaProperties() {
-        Properties props = new Properties();
-
-        // Basic configuration
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                connectorConfiguration.getProperties().get("bootstrapServers"));
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                connectorConfiguration.getProperties().get("bootstrapServers"));
-
-        // Security configuration
-        String securityProtocol = (String) connectorConfiguration.getProperties()
-                .getOrDefault("securityProtocol", "PLAINTEXT");
-        props.put("security.protocol", securityProtocol);
-
-        if (securityProtocol.contains("SASL")) {
-            configureSaslProperties(props);
+    private void buildKafkaProperties() {
+        // Start with the default properties loaded from files
+        Properties consumerProps = new Properties();
+        if (defaultPropertiesConsumer != null) {
+            consumerProps.putAll(defaultPropertiesConsumer);
         }
 
-        if (securityProtocol.contains("SSL")) {
-            configureSslProperties(props);
+        Properties producerProps = new Properties();
+        if (defaultPropertiesProducer != null) {
+            producerProps.putAll(defaultPropertiesProducer);
         }
 
-        // Consumer specific properties
-        props.put(ConsumerConfig.GROUP_ID_CONFIG,
-                connectorConfiguration.getProperties().get("groupId") + additionalSubscriptionIdTest);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                connectorConfiguration.getProperties().getOrDefault("autoOffsetReset", "latest"));
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,
-                connectorConfiguration.getProperties().getOrDefault("enableAutoCommit", true));
-        props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG,
-                connectorConfiguration.getProperties().getOrDefault("sessionTimeoutMs", 30000));
-        props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG,
-                connectorConfiguration.getProperties().getOrDefault("requestTimeoutMs", 40000));
-
-        // Serialization
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-
-        return props;
-    }
-
-    private void configureSaslProperties(Properties props) {
+        // Override with connector configuration
+        String bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
+        String username = (String) connectorConfiguration.getProperties().get("username");
+        String password = (String) connectorConfiguration.getProperties().get("password");
         String saslMechanism = (String) connectorConfiguration.getProperties()
-                .getOrDefault("saslMechanism", "PLAIN");
-        String username = (String) connectorConfiguration.getProperties().get("saslUsername");
-        String password = (String) connectorConfiguration.getProperties().get("saslPassword");
+                .getOrDefault("saslMechanism", "SCRAM-SHA-256");
+        String groupId = (String) connectorConfiguration.getProperties().get("groupId");
 
-        props.put("sasl.mechanism", saslMechanism);
-
-        if (username != null && password != null) {
-            String jaasTemplate = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"%s\" password=\"%s\";";
-            String jaasConfig = String.format(jaasTemplate, username, password);
-            props.put("sasl.jaas.config", jaasConfig);
+        // Provide default groupId if not set
+        if (groupId == null || groupId.trim().isEmpty()) {
+            groupId = "dynamic-mapper-" + connectorIdentifier +
+                    (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : "");
+            log.info("{} - No groupId provided, using default: {}", tenant, groupId);
         }
-    }
 
-    private void configureSslProperties(Properties props) {
-        String truststoreLocation = (String) connectorConfiguration.getProperties().get("sslTruststoreLocation");
-        String truststorePassword = (String) connectorConfiguration.getProperties().get("sslTruststorePassword");
-        String keystoreLocation = (String) connectorConfiguration.getProperties().get("sslKeystoreLocation");
-        String keystorePassword = (String) connectorConfiguration.getProperties().get("sslKeystorePassword");
+        // Apply common settings
+        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
 
-        if (!StringUtils.isEmpty(truststoreLocation)) {
-            props.put("ssl.truststore.location", truststoreLocation);
-        }
-        if (!StringUtils.isEmpty(truststorePassword)) {
-            props.put("ssl.truststore.password", truststorePassword);
-        }
-        if (!StringUtils.isEmpty(keystoreLocation)) {
-            props.put("ssl.keystore.location", keystoreLocation);
-        }
-        if (!StringUtils.isEmpty(keystorePassword)) {
-            props.put("ssl.keystore.password", keystorePassword);
-        }
-    }
+        // Configure security ONLY if username and password are provided
+        if (username != null && !username.trim().isEmpty() &&
+                password != null && !password.trim().isEmpty()) {
 
-    @Override
-    public void connect() {
-        log.info("{} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
-                tenant, getConnectorName(), isConnected(),
-                shouldConnect());
-        if (shouldConnect())
-            updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
-        // stay in the loop until successful
-        boolean successful = false;
-        while (!successful) {
-            loadConfiguration();
-            String username = (String) connectorConfiguration.getProperties().get("username");
-            String password = (String) connectorConfiguration.getProperties().get("password");
-            String saslMechanism = (String) connectorConfiguration.getProperties().get("saslMechanism");
-            String groupId = (String) connectorConfiguration.getProperties().get("groupId");
-            String bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
-
-            // Add null checks and default values
-            if (bootstrapServers == null) {
-                log.error("{} - bootstrapServers is null, cannot connect", tenant);
-                updateConnectorStatusToFailed(new IllegalArgumentException("bootstrapServers cannot be null"));
-                return;
-            }
-
-            // Provide default groupId if not set
-            if (groupId == null) {
-                groupId = "dynamic-mapper-" + connectorIdentifier + additionalSubscriptionIdTest;
-                log.warn("{} - groupId is null, using default: {}", tenant, groupId);
-            }
+            log.info("{} - Configuring SASL authentication with mechanism: {}", tenant, saslMechanism);
 
             String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
             String jaasCfg = String.format(jaasTemplate, username, password);
 
-            // Only set SASL config if username and password are provided
-            if (username != null && password != null) {
-                defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
-                defaultPropertiesProducer.put("sasl.mechanism",
-                        saslMechanism != null ? saslMechanism : "SCRAM-SHA-256");
-            }
+            // Consumer SASL config
+            consumerProps.put("sasl.jaas.config", jaasCfg);
+            consumerProps.put("sasl.mechanism", saslMechanism);
+            consumerProps.put("security.protocol", "SASL_SSL");
 
-            defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-            defaultPropertiesProducer.put("group.id", groupId);
+            // Producer SASL config
+            producerProps.put("sasl.jaas.config", jaasCfg);
+            producerProps.put("sasl.mechanism", saslMechanism);
+            producerProps.put("security.protocol", "SASL_SSL");
+        } else {
+            log.info("{} - Using PLAINTEXT security protocol (no authentication)", tenant);
 
-            log.info("{} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
-                    getConnectorName(),
-                    shouldConnect(), bootstrapServers);
-            try {
-                // test if the mqtt connection is configured and enabled
-                if (shouldConnect()) {
-                    mappingService.rebuildMappingOutboundCache(tenant, connectorId);
-                    // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
-                    // sync, the ActiveSubscriptionMappingInbound is build on the
-                    // previously used updatedMappings
-                    kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
-                    connectionState.setTrue();
-                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
-                    initializeSubscriptionsInbound(updatedMappings, true, true);
-                    log.info("{} - Phase III: {} connected, bootstrapServers: {}", tenant, getConnectorName(),
-                            bootstrapServers);
-                }
-                successful = true;
-            } catch (Exception e) {
-                log.error("{} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
-                updateConnectorStatusToFailed(e);
-                sendConnectorLifecycle();
-                if (serviceConfiguration.logConnectorErrorInBackend) {
-                    log.error("{} - Stacktrace: ", tenant, e);
-                }
-                successful = false;
-            }
+            // Explicitly set PLAINTEXT protocol
+            consumerProps.put("security.protocol", "PLAINTEXT");
+            producerProps.put("security.protocol", "PLAINTEXT");
+
+        }
+
+        // Add required serializers/deserializers
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class.getName());
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class.getName());
+
+        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class.getName());
+        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class.getName());
+
+        // Store both properties for later use
+        this.kafkaConsumerProperties = consumerProps;
+        this.kafkaProducerProperties = producerProps;
+
+        log.debug("{} - Kafka properties configured for bootstrap servers: {}", tenant, bootstrapServers);
+    }
+
+    @Override
+    public void connect() {
+        log.info("{} - Kafka connector {} connecting", tenant, getConnectorName());
+
+        if (!shouldConnect()) {
+            log.warn("{} - Kafka connector {} should not connect", tenant, getConnectorName());
+            return;
+        }
+
+        updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, true);
+
+        try {
+            // Build properties (this will set kafkaProducerProperties and
+            // kafkaConsumerProperties)
+            buildKafkaProperties();
+
+            // Create producer using the built properties
+            kafkaProducer = new KafkaProducer<>(kafkaProducerProperties);
+
+            connectionState.setTrue();
+            updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
+
+            // Initialize subscriptions
+            List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant, connectorId);
+            initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
+
+            List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            initializeSubscriptionsOutbound(updatedMappingsOutbound);
+
+            log.info("{} - Kafka connector {} connected successfully", tenant, getConnectorName());
+
+        } catch (Exception e) {
+            log.error("{} - Error connecting Kafka connector: {}", tenant, getConnectorName(), e);
+            updateConnectorStatusToFailed(e);
+        }
+    }
+
+    @Override
+    public void subscribe(String topic, Qos qos) throws ConnectorException {
+        if (!isConnected()) {
+            throw new ConnectorException("Kafka connector is not connected");
+        }
+
+        log.debug("{} - Subscribing to Kafka topic: [{}]", tenant, topic);
+        sendSubscriptionEvents(topic, "Subscribing");
+
+        try {
+            // Create consumer for this topic using the correct properties
+            KafkaConsumer<String, String> consumer = new KafkaConsumer<>(kafkaConsumerProperties);
+            consumer.subscribe(Collections.singletonList(topic));
+
+            KafkaConsumerWrapper wrapper = new KafkaConsumerWrapper(consumer, topic);
+            topicConsumers.put(topic, wrapper);
+
+            // Start consumer task
+            Future<?> consumerTask = virtualThreadPool.submit(() -> consumeMessages(wrapper));
+            consumerTasks.put(topic, consumerTask);
+
+            log.info("{} - Successfully subscribed to Kafka topic: [{}]", tenant, topic);
+
+        } catch (Exception e) {
+            log.error("{} - Error subscribing to Kafka topic: [{}]", tenant, topic, e);
+            throw new ConnectorException("Failed to subscribe to topic: " + topic, e);
         }
     }
 
@@ -467,35 +456,6 @@ public class KafkaClientV2 extends AConnectorClient {
     @Override
     public String getConnectorName() {
         return connectorName;
-    }
-
-    @Override
-    public void subscribe(String topic, Qos qos) throws ConnectorException {
-        if (!isConnected()) {
-            throw new ConnectorException("Kafka connector is not connected");
-        }
-
-        log.debug("{} - Subscribing to Kafka topic: [{}]", tenant, topic);
-        sendSubscriptionEvents(topic, "Subscribing");
-
-        try {
-            // Create consumer for this topic
-            KafkaConsumer<String, String> consumer = new KafkaConsumer<>(kafkaProperties);
-            consumer.subscribe(Collections.singletonList(topic));
-
-            KafkaConsumerWrapper wrapper = new KafkaConsumerWrapper(consumer, topic);
-            topicConsumers.put(topic, wrapper);
-
-            // Start consumer task
-            Future<?> consumerTask = virtualThreadPool.submit(() -> consumeMessages(wrapper));
-            consumerTasks.put(topic, consumerTask);
-
-            log.info("{} - Successfully subscribed to Kafka topic: [{}]", tenant, topic);
-
-        } catch (Exception e) {
-            log.error("{} - Error subscribing to Kafka topic: [{}]", tenant, topic, e);
-            throw new ConnectorException("Failed to subscribe to topic: " + topic, e);
-        }
     }
 
     @Override
@@ -776,8 +736,9 @@ public class KafkaClientV2 extends AConnectorClient {
 
         String topic = context.getResolvedPublishTopic();
         String payload = context.getCurrentRequest().getRequest();
+        String key = context.getKey();
 
-        ProducerRecord<String, String> record = new ProducerRecord<>(topic, payload);
+        ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, payload);
 
         try {
             Future<RecordMetadata> future = kafkaProducer.send(record);
