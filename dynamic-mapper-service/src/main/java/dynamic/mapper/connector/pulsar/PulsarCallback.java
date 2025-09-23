@@ -94,7 +94,7 @@ public class PulsarCallback implements MessageListener<byte[]> {
 
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "{} - WAIT_ON_RESULTS: message on topic: [{}], connector {}",
+                    "{} - PREPARING_RESULTS: message on topic: [{}], connector {}",
                     tenant, topic, connectorIdentifier);
         }
 

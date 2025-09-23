@@ -87,7 +87,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         int timeout = processedResults.getMaxCPUTimeMS();
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "{} - WAIT_ON_RESULTS: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}, QoS mappings: {}",
+                    "{} - PREPARING_RESULTS: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}, QoS mappings: {}",
                     tenant, connectorId.getName(), notification.getApi(), notification.getOperation(), mappingQos);
         }
         if (mappingQos > 0) {

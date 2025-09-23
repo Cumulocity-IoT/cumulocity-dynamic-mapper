@@ -183,7 +183,8 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesProducer.store(writerProducer,
                     "properties can only be edited in the property file: kafka-producer.properties");
             configProps.put("propertiesProducer",
-                    new ConnectorProperty("Predefined producer properties", false, 6, ConnectorPropertyType.STRING_LARGE_PROPERTY,
+                    new ConnectorProperty("Predefined producer properties", false, 6,
+                            ConnectorPropertyType.STRING_LARGE_PROPERTY,
                             true, false, removeDateCommentLine(writerProducer.getBuffer().toString()),
                             null, null));
 
@@ -193,7 +194,8 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesConsumer.store(writerConsumer,
                     "properties can only be edited in the property file: kafka-consumer.properties");
             configProps.put("propertiesConsumer",
-                    new ConnectorProperty("Predefined consumer properties", false, 8, ConnectorPropertyType.STRING_LARGE_PROPERTY,
+                    new ConnectorProperty("Predefined consumer properties", false, 8,
+                            ConnectorPropertyType.STRING_LARGE_PROPERTY,
                             true, false, removeDateCommentLine(writerConsumer.getBuffer().toString()),
                             null, null));
 
@@ -344,21 +346,32 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("{} - Kafka connector {} connecting", tenant, getConnectorName());
+        log.info("{} - Phase I: {} connecting, isConnected: {}, shouldConnect: {}",
+                tenant, getConnectorName(), isConnected(),
+                shouldConnect());
 
         if (!shouldConnect()) {
-            log.warn("{} - Kafka connector {} should not connect", tenant, getConnectorName());
             return;
         }
 
         updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, true);
 
         try {
-            // Build properties (this will set kafkaProducerProperties and
-            // kafkaConsumerProperties)
+            // Build properties
             buildKafkaProperties();
 
-            // Create producer using the built properties
+            // Test broker connectivity FIRST using AdminClient (like in initialize())
+            if (adminClient == null) {
+                adminClient = AdminClient.create(kafkaProducerProperties);
+            }
+
+            // Actually test if we can reach the broker
+            log.info("{} - Phase I: Testing connectivity {} ...", tenant, getConnectorName());
+            ListTopicsResult listTopics = adminClient.listTopics();
+            listTopics.names().get(10, TimeUnit.SECONDS); // This will fail if broker is unreachable
+            log.info("{} - Phase II: Connectivity test passed {}", tenant, getConnectorName());
+
+            // Only create producer AFTER confirming broker is reachable
             kafkaProducer = new KafkaProducer<>(kafkaProducerProperties);
 
             connectionState.setTrue();
@@ -371,11 +384,12 @@ public class KafkaClientV2 extends AConnectorClient {
             List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
             initializeSubscriptionsOutbound(updatedMappingsOutbound);
 
-            log.info("{} - Kafka connector {} connected successfully", tenant, getConnectorName());
+            log.info("{} - Phase III: Connector {} connected successfully", tenant, getConnectorName());
 
         } catch (Exception e) {
             log.error("{} - Error connecting Kafka connector: {}", tenant, getConnectorName(), e);
             updateConnectorStatusToFailed(e);
+            connectionState.setFalse(); // Make sure to set false on failure
         }
     }
 
@@ -469,7 +483,26 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Override
     public boolean isConnected() {
-        return connectionState.booleanValue() && kafkaProducer != null;
+        // Basic checks first
+        if (!connectionState.booleanValue() || kafkaProducer == null) {
+            return false;
+        }
+
+        // Optional: Periodically test actual broker connectivity
+        // (you might want to cache this to avoid testing too frequently)
+        try {
+            if (adminClient != null) {
+                // Quick test - this should be fast if broker is reachable
+                adminClient.listTopics().names().get(1, TimeUnit.SECONDS);
+                return true;
+            }
+        } catch (Exception e) {
+            log.warn("{} - Kafka broker connectivity test failed: {}", tenant, e.getMessage());
+            connectionState.setFalse();
+            return false;
+        }
+
+        return true;
     }
 
     @Override
@@ -578,7 +611,7 @@ public class KafkaClientV2 extends AConnectorClient {
         int effectiveQos = mappingQos; // Kafka doesn't have message-level QoS, so use mapping QoS
 
         if (serviceConfiguration.logPayload) {
-            log.info("{} - WAIT_ON_RESULTS: Kafka message on topic: [{}], partition: {}, offset: {}, " +
+            log.info("{} - PREPARING_RESULTS: Kafka message on topic: [{}], partition: {}, offset: {}, " +
                     "QoS effective: {}, QoS mappings: {}, connector: {}",
                     tenant, topic, record.partition(), record.offset(), effectiveQos, mappingQos, connectorIdentifier);
         }
