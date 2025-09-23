@@ -163,6 +163,18 @@ public class KafkaClientV2 extends AConnectorClient {
                 new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
                         false, false, null, null, null));
 
+        configProps.put("defaultPropertiesProducer",
+                new ConnectorProperty("Define producer properties", false, 5, ConnectorPropertyType.MAP_PROPERTY, false,
+                        false,
+                        new HashMap<String, String>(),
+                        null, null));
+
+        configProps.put("defaultPropertiesConsumer",
+                new ConnectorProperty("Define consumer properties", false, 6, ConnectorPropertyType.MAP_PROPERTY, false,
+                        false,
+                        new HashMap<String, String>(),
+                        null, null));
+
         // Load default properties from files like the original implementation
         try {
             Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
@@ -171,7 +183,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesProducer.store(writerProducer,
                     "properties can only be edited in the property file: kafka-producer.properties");
             configProps.put("propertiesProducer",
-                    new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY,
+                    new ConnectorProperty(null, false, 7, ConnectorPropertyType.STRING_LARGE_PROPERTY,
                             true, false, removeDateCommentLine(writerProducer.getBuffer().toString()),
                             null, null));
 
@@ -181,7 +193,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesConsumer.store(writerConsumer,
                     "properties can only be edited in the property file: kafka-consumer.properties");
             configProps.put("propertiesConsumer",
-                    new ConnectorProperty(null, false, 6, ConnectorPropertyType.STRING_LARGE_PROPERTY,
+                    new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_LARGE_PROPERTY,
                             true, false, removeDateCommentLine(writerConsumer.getBuffer().toString()),
                             null, null));
 
@@ -268,6 +280,9 @@ public class KafkaClientV2 extends AConnectorClient {
             log.info("{} - No groupId provided, using default: {}", tenant, groupId);
         }
 
+        Map defaultPropertiesProducer = (Map) connectorConfiguration.getProperties().get("defaultPropertiesProducer");
+        Map defaultPropertiesConsumer = (Map) connectorConfiguration.getProperties().get("defaultPropertiesConsumer");
+
         // Apply common settings
         consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -311,6 +326,15 @@ public class KafkaClientV2 extends AConnectorClient {
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 StringSerializer.class.getName());
 
+        // as a last step apply any custom properties from the configuration
+        if (defaultPropertiesConsumer != null) {
+            log.info("{} - Adding properties from defaultPropertiesConsumer", tenant, defaultPropertiesConsumer);
+            consumerProps.putAll(defaultPropertiesConsumer);
+        }
+        if (defaultPropertiesProducer != null) {
+            log.info("{} - Adding properties from defaultPropertiesProducer", tenant, defaultPropertiesProducer);
+            producerProps.putAll(defaultPropertiesProducer);
+        }
         // Store both properties for later use
         this.kafkaConsumerProperties = consumerProps;
         this.kafkaProducerProperties = producerProps;
