@@ -56,14 +56,14 @@ export class CodeTemplateTabFactory implements TabFactory {
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
         priority: 930,
-        label: 'Inbound (Smart Function)',
+        label: 'Inbound (Smart Function JavaScript)',
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
         priority: 920,
-        label: 'Outbound (Smart Function)',
+        label: 'Outbound (Smart Function JavaScript)',
         icon: 'swipe-left',
         orientation: 'horizontal'
       } as Tab);

@@ -102,7 +102,7 @@ public class KafkaClientV2 extends AConnectorClient {
     public KafkaClientV2() {
         initializeConnectorSpecification();
         this.supportedQOS = Arrays.asList(Qos.AT_MOST_ONCE); // Kafka doesn't support QoS like MQTT
-        this.connectorType = ConnectorType.KAFKA_V2;
+        this.connectorType = ConnectorType.KAFKA;
         this.singleton = false;
     }
 
@@ -160,7 +160,7 @@ public class KafkaClientV2 extends AConnectorClient {
                         saslCondition));
 
         configProps.put("groupId",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
+                new ConnectorProperty(null, true, 4, ConnectorPropertyType.STRING_PROPERTY,
                         false, false, null, null, null));
 
         configProps.put("defaultPropertiesProducer",
@@ -203,9 +203,9 @@ public class KafkaClientV2 extends AConnectorClient {
             throw new RuntimeException("Failed to load Kafka properties files", e);
         }
 
-        String name = "Kafka V2";
+        String name = "Kafka";
         String description = "Connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.\n The connector uses SASL_SSL as security protocol.";
-        connectorSpecification = new ConnectorSpecification(name, description, ConnectorType.KAFKA_V2,
+        connectorSpecification = new ConnectorSpecification(name, description, ConnectorType.KAFKA,
                 singleton, configProps, true, // supportsMessageContext = true
                 supportedDirections());
     }

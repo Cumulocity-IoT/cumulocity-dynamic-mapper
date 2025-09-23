@@ -193,7 +193,7 @@ public class ConnectorRegistry {
         connectorSpecificationMap.put(ConnectorType.MQTT, new MQTT3Client().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE,
                 new MQTTServiceClient().getConnectorSpecification());
-        connectorSpecificationMap.put(ConnectorType.KAFKA_V2, new KafkaClientV2().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.KAFKA, new KafkaClientV2().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.HTTP, new HttpClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.PULSAR, new PulsarConnectorClient().getConnectorSpecification());

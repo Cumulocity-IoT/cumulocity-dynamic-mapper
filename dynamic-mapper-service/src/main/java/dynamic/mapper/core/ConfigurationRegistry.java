@@ -215,7 +215,7 @@ public class ConfigurationRegistry {
                         connectorConfiguration.getIdentifier());
                 break;
       
-            case KAFKA_V2:
+            case KAFKA:
                 connectorClient = new KafkaClientV2(this, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);

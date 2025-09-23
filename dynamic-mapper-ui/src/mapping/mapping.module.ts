@@ -23,6 +23,7 @@ import {
   CoreModule,
   DynamicFormsModule,
   hookRoute,
+  hookTab,
   ModalModule
 } from '@c8y/ngx-components';
 import { DeviceGridModule, DeviceGridService } from '@c8y/ngx-components/device-grid';
@@ -64,6 +65,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
 import { ClientRelationStepperComponent } from './client-relation/client-relation-stepper.component';
+import { MappingTabFactory } from './mapping-tab.factory';
 
 @NgModule({
   declarations: [
@@ -152,6 +154,7 @@ import { ClientRelationStepperComponent } from './client-relation/client-relatio
         feature: featureResolver
       }
     }),
+    hookTab(MappingTabFactory),
     {
       provide: FORMLY_CONFIG,
       multi: true,
