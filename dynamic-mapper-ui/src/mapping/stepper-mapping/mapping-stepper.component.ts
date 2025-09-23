@@ -633,7 +633,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.isButtonDisabled$.next(isDisabled);
       this.supportsMessageContext =
         this.deploymentMapEntry.connectorsDetailed?.some(
-          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK || isSubstitutionsAsCode(this.mapping)
+          (con) => con.connectorType == ConnectorType.KAFKA_V2 || con.connectorType == ConnectorType.WEB_HOOK || isSubstitutionsAsCode(this.mapping)
         );
     });
   }

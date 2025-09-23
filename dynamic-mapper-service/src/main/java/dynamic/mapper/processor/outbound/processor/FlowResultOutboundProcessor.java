@@ -151,10 +151,16 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
 
             // Set resolvedPublishTopic topic in context
             String publishTopic = deviceMessage.getTopic();
-            
+
             if (publishTopic != null && !publishTopic.isEmpty() && publishTopic.contains(EXTERNAL_ID_TOKEN)) {
                 publishTopic = publishTopic.replace(EXTERNAL_ID_TOKEN, resolvedExternalId);
-            } 
+            }
+
+            // set key for Kafka messages
+            if (mapping.supportsMessageContext && deviceMessage.getTransportFields() != null) {
+                context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
+
+            }
             context.setResolvedPublishTopic(publishTopic);
 
             // Add the request to context
@@ -214,7 +220,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             context.setResolvedPublishTopic(mapping.getPublishTopic());
         }
 
-        // Handle context data for message context support 
+        // Handle context data for message context support
         if (mapping.supportsMessageContext) {
             @SuppressWarnings("unchecked")
             Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
@@ -238,7 +244,6 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             }
         }
     }
-
 
     private String resolveExternalIdentifier(DeviceMessage deviceMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
@@ -306,7 +311,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
      * This follows the same pattern as substituteInTargetAndSend method
      */
     private DynamicMapperRequest createDynamicMapperRequest(ProcessingContext<?> context, String payloadJson,
- String sourceId, Mapping mapping) throws ProcessingException {
+            String sourceId, Mapping mapping) throws ProcessingException {
         try {
             // Determine the request method based on action (from substituteInTargetAndSend)
             RequestMethod method = RequestMethod.POST; // Default from reference

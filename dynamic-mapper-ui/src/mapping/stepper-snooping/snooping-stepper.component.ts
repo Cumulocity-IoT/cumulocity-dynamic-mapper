@@ -125,7 +125,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy, AfterViewIni
     setTimeout(() => {
       this.supportsMessageContext =
         this.deploymentMapEntry.connectorsDetailed?.some(
-          (con) => con.connectorType == ConnectorType.KAFKA || con.connectorType == ConnectorType.WEB_HOOK
+          (con) => con.connectorType == ConnectorType.KAFKA_V2 || con.connectorType == ConnectorType.WEB_HOOK
         );
     });
   }
