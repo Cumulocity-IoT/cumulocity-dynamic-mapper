@@ -164,13 +164,13 @@ public class KafkaClientV2 extends AConnectorClient {
                         false, false, null, null, null));
 
         configProps.put("defaultPropertiesProducer",
-                new ConnectorProperty("Define producer properties", false, 5, ConnectorPropertyType.MAP_PROPERTY, false,
+                new ConnectorProperty("Producer properties", false, 5, ConnectorPropertyType.MAP_PROPERTY, false,
                         false,
                         new HashMap<String, String>(),
                         null, null));
 
         configProps.put("defaultPropertiesConsumer",
-                new ConnectorProperty("Define consumer properties", false, 6, ConnectorPropertyType.MAP_PROPERTY, false,
+                new ConnectorProperty("Consumer properties", false, 7, ConnectorPropertyType.MAP_PROPERTY, false,
                         false,
                         new HashMap<String, String>(),
                         null, null));
@@ -183,7 +183,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesProducer.store(writerProducer,
                     "properties can only be edited in the property file: kafka-producer.properties");
             configProps.put("propertiesProducer",
-                    new ConnectorProperty(null, false, 7, ConnectorPropertyType.STRING_LARGE_PROPERTY,
+                    new ConnectorProperty("Predefined producer properties", false, 6, ConnectorPropertyType.STRING_LARGE_PROPERTY,
                             true, false, removeDateCommentLine(writerProducer.getBuffer().toString()),
                             null, null));
 
@@ -193,7 +193,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesConsumer.store(writerConsumer,
                     "properties can only be edited in the property file: kafka-consumer.properties");
             configProps.put("propertiesConsumer",
-                    new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_LARGE_PROPERTY,
+                    new ConnectorProperty("Predefined consumer properties", false, 8, ConnectorPropertyType.STRING_LARGE_PROPERTY,
                             true, false, removeDateCommentLine(writerConsumer.getBuffer().toString()),
                             null, null));
 
