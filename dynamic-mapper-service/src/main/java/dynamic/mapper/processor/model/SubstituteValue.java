@@ -7,13 +7,18 @@ import org.json.JSONException;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.PathNotFoundException;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class SubstituteValue implements Cloneable{
     public static enum TYPE {
-         ARRAY, //                       Extracted is is an array
+         ARRAY, //                       Extracted value is an array
          IGNORE, //                      Extracted should be ignored
-         NUMBER, //                      Extracted is is a number
-         OBJECT, //                      Extracted is is an object, e.g.  {"c8y_ThreePhaseElectricityMeasurement": {"A+": { "value": 435, "unit": "kWh" }}}
-         TEXTUAL, //                     Extracted is is a text/ string
+         NUMBER, //                      Extracted value is a number
+         OBJECT, //                      Extracted value is an object, e.g.  {"c8y_ThreePhaseElectricityMeasurement": {"A+": { "value": 435, "unit": "kWh" }}}
+         TEXTUAL, //                     Extracted value is a text/ string
     }
 
     public Object value;

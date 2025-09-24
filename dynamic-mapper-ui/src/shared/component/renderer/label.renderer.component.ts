@@ -24,14 +24,14 @@ import { CellRendererContext } from '@c8y/ngx-components';
   selector: 'd11r-mapping-renderer-api',
   template: `
 <div>
-    <span *ngIf="!isArray(context.value)" class="text-10 label label-primary">
+    <span *ngIf="!isArray(context.value)" class="text-10 label">
         {{ context.value }}
     </span>
 
     <ng-container *ngIf="isArray(context.value)">
         <div *ngFor="let item of context.value" >
           <!-- <span class="text-10 label label-primary"> -->
-          <span class="text-12 tag tag--success">
+          <span class="text-12 tag">
               {{ item }}
           </span>
         </div>

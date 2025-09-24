@@ -105,7 +105,7 @@ export class ExtensionGridComponent implements OnInit, OnDestroy {
       const modalRef = this.showAddExtensionModal();
       this.handleModalClose(modalRef);
     } catch (error) {
-      this.alertService.warning('Failed to add extension', error);
+      this.alertService.warning('Failed to add Java Extension', error);
     }
   }
 

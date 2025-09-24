@@ -18,7 +18,6 @@
  * @authors Christof Strack
  */
 import {
-  ChangeDetectorRef,
   Component,
   inject,
   OnDestroy,
@@ -58,11 +57,13 @@ import {
   DeploymentMapEntry,
   ExtensionType,
   LabelRendererComponent,
+  LabelTaggedRendererComponent,
   MappingTypeDescriptionMap,
   SharedService,
   StepperConfiguration,
   Feature,
-  isSubstitutionsAsCode
+  isSubstitutionsAsCode,
+  TransformationType
 } from '../../shared';
 
 import { HttpStatusCode } from '@angular/common/http';
@@ -70,7 +71,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject, filter, finalize, switchMap, take } from 'rxjs';
-import { TemplateType } from '../../configuration';
 import { MappingService } from '../core/mapping.service';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
 import { ImportMappingsComponent } from '../import/import-modal.component';
@@ -85,7 +85,7 @@ import {
 import { AdvisorAction, EditorMode } from '../shared/stepper.model';
 import { AdviceActionComponent } from './advisor/advice-action.component';
 import { SubscriptionService } from '../core/subscription.service';
-import { MappingTypeDrawerComponent } from '../mapping-type/mapping-type-drawer.component';
+import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -141,6 +141,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   ];
 
   mappingType: MappingType;
+  transformationType: TransformationType;
   destroy$ = new Subject<boolean>();
 
   pagination: Pagination = {
@@ -149,8 +150,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   };
   actionControls: ActionControl[] = [];
   bulkActionControls: BulkActionControl[] = [];
-  codeTemplateInbound: string;
-  codeTemplateOutbound: string;
 
   feature: Feature;
 
@@ -193,9 +192,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingService.listenToUpdateMapping().subscribe((m: MappingEnriched) => {
       this.updateMapping(m);
     });
-
-    this.codeTemplateInbound = (await this.sharedService.getCodeTemplate(TemplateType.INBOUND.toString())).code;
-    this.codeTemplateOutbound = (await this.sharedService.getCodeTemplate(TemplateType.OUTBOUND.toString())).code;
 
     if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
       try {
@@ -493,7 +489,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.snoopStatus = SnoopStatus.ENABLED;
         this.snoopEnabled = true;
       }
-      this.substitutionsAsCode = resultOf.substitutionsAsCode;
+      this.transformationType = resultOf.transformationType;
+      this.substitutionsAsCode = this.transformationType == TransformationType.SMART_FUNCTION || this.transformationType == TransformationType.SUBSTITUTION_AS_CODE;
       this.mappingType = resultOf.mappingType;
       this.addMapping();
     }
@@ -502,6 +499,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   async addMapping() {
     this.setStepperConfiguration(
       this.mappingType,
+      this.transformationType,
       this.stepperConfiguration.direction,
       EditorMode.CREATE, this.substitutionsAsCode
     );
@@ -510,6 +508,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     const sub: Substitution[] = [];
     let mapping: Mapping;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
+      let code;
+      if (this.substitutionsAsCode) code = (await this.sharedService.getCodeTemplate(Direction.INBOUND, this.transformationType)).code;
       mapping = {
         // name: `Mapping - ${identifier.substring(0, 7)}`,
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
@@ -528,10 +528,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         useExternalId: false,
         createNonExistingDevice: false,
         mappingType: this.mappingType,
+        transformationType: this.transformationType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        code: this.substitutionsAsCode ? this.codeTemplateInbound : undefined,
-        substitutionsAsCode: this.substitutionsAsCode,
+        code,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: true,
         snoopedTemplates: [],
@@ -541,6 +541,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         lastUpdate: Date.now()
       };
     } else {
+      let code;
+      if (this.substitutionsAsCode) code = (await this.sharedService.getCodeTemplate(Direction.OUTBOUND, this.transformationType)).code;
       mapping = {
         name: `Mapping - ${identifier.substring(0, 7)}`,
         id: identifier,
@@ -559,10 +561,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         useExternalId: false,
         createNonExistingDevice: false,
         mappingType: this.mappingType,
+        transformationType: this.transformationType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        code: this.substitutionsAsCode ? this.codeTemplateOutbound : undefined,
-        substitutionsAsCode: this.substitutionsAsCode,
+        code,
         snoopStatus: this.snoopStatus,
         supportsMessageContext: true,
         snoopedTemplates: [],
@@ -653,6 +655,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
       this.setStepperConfiguration(
         mapping.mappingType,
+        mapping.transformationType,
         this.stepperConfiguration.direction,
         mapping.active ? EditorMode.READ_ONLY : EditorMode.UPDATE,
         isSubstitutionsAsCode(mapping)
@@ -688,6 +691,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     this.setStepperConfiguration(
       mapping.mappingType,
+      mapping.transformationType,
       mapping.direction,
       EditorMode.COPY,
       isSubstitutionsAsCode(mapping)
@@ -1003,6 +1007,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   setStepperConfiguration(
     mappingType: MappingType,
+    transformationType: TransformationType,
     direction: Direction,
     editorMode: EditorMode,
     substitutionsAsCode: boolean
@@ -1020,11 +1025,16 @@ export class MappingComponent implements OnInit, OnDestroy {
       ...(direction === Direction.OUTBOUND && this.snoopStatus === SnoopStatus.ENABLED && {
         advanceFromStepToEndStep: 0
       }),
-      ...(substitutionsAsCode && {
+      ...((substitutionsAsCode) && {
         advanceFromStepToEndStep: undefined,
         showCodeEditor: true,
         allowTestSending: false,
         allowTestTransformation: true
+      }),
+      ...((transformationType == TransformationType.SMART_FUNCTION) && {
+        showEditorTarget: false,
+        allowTestSending: false,
+        allowTestTransformation: false
       })
     };
 

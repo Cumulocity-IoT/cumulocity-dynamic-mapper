@@ -10,6 +10,7 @@
     "sourceTemplate": "{\"value\":100}",
     "targetTemplate": "{\"measure1_Type\":{\"V\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
     "mappingType": "JSON",
+    "transformationType": "JSONATA",
     "substitutions": [
       {
         "pathSource": "_TOPIC_LEVEL_[1]&\"_\"&_TOPIC_LEVEL_[2]&\"_\"&$substringBefore(_TOPIC_LEVEL_[3],\"_\")",
@@ -62,6 +63,7 @@
     "sourceTemplate": "{\"mea\":[{\"tid\":\"uuid_01\",\"psid\":\"Crest\",\"devicePath\":\"path01_80_X03_VVB001StatusB_Crest\",\"values\":[{\"value\":4.6,\"timestamp\":1744103621000}]},{\"tid\":\"uuid_02\",\"psid\":\"Crest\",\"devicePath\":\"path01_80_X03_VVB001StatusB_Crest\",\"values\":[{\"value\":5.6,\"timestamp\":1744103648000}]}]}",
     "targetTemplate": "{\"c8y_ProcessLoadMeasurement\":{\"L\":{\"value\":110,\"unit\":\"%\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_ProcessLoadMeasurement\"}",
     "mappingType": "JSON",
+    "transformationType": "JSONATA",
     "substitutions": [
       {
         "pathSource": "_TOPIC_LEVEL_[1]",
@@ -106,7 +108,8 @@
     "direction": "INBOUND",
     "sourceTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
     "targetTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
-    "mappingType": "CODE_BASED",
+    "mappingType": "JSON",
+    "transformationType": "SUBSTITUTION_AS_CODE",
     "substitutions": [],
     "active": false,
     "debug": false,

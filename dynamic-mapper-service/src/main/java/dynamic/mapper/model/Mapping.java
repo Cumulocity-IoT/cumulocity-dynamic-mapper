@@ -22,6 +22,7 @@
 package dynamic.mapper.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import lombok.Getter;
@@ -29,7 +30,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import dynamic.mapper.processor.model.MappingType;
-
+import dynamic.mapper.processor.model.ProcessingType;
+import dynamic.mapper.processor.model.TransformationType;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -113,9 +115,13 @@ public class Mapping implements Serializable {
     @NotNull
     public String targetTemplate;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Type of mapping transformation", implementation = MappingType.class, example = "JSON")
-    @NotNull
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Type of mapping payload", implementation = MappingType.class, example = "JSON")
+    @JsonSetter(nulls = Nulls.SKIP)
     public MappingType mappingType;
+
+    @Schema(description = "Type of processing the transformation", implementation = ProcessingType.class, example = "SUBSTITUTION_AS_CODE")
+    @NotNull
+    public TransformationType transformationType = TransformationType.DEFAULT;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Array of field substitutions for data transformation")
     @NotNull
@@ -191,7 +197,25 @@ public class Mapping implements Serializable {
     @Schema(description = "Base64 encoded code for custom substitutions")
     public String code;
 
+    // @Schema(description = "Define substitutions as JavaScript code")
+    // public Boolean substitutionsAsCode = false;
+
+    @JsonSetter("substitutionsAsCode")
+    @Deprecated
+    public void setSubstitutionsAsCode(Boolean substitutionsAsCode) {
+        // Migration logic when old property is used
+        if (substitutionsAsCode != null && substitutionsAsCode) {
+            // Default to SUBSTITUTION_AS_CODE when true
+            // You might want to make this configurable or use different logic
+            this.transformationType = TransformationType.SUBSTITUTION_AS_CODE;
+        }
+        // Set to null as per requirement
+        this.substitutionsAsCode = null;
+    }
+
     @Schema(description = "Define substitutions as JavaScript code")
+    @Deprecated(since = "version-6.0", forRemoval = true)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Only accept on input, don't serialize on output
     public Boolean substitutionsAsCode = false;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Timestamp of last update", example = "1640995200000")
@@ -199,6 +223,7 @@ public class Mapping implements Serializable {
     public long lastUpdate;
 
     public static final String EXTRACT_FROM_SOURCE = "extractFromSource";
+    public static final String SMART_FUNCTION_NAME = "onMessage";
 
     @Override
     public boolean equals(Object m) {
@@ -356,7 +381,8 @@ public class Mapping implements Serializable {
                 && !mapping.mappingType.equals(MappingType.EXTENSION_SOURCE_TARGET)
                 && !mapping.mappingType.equals(MappingType.PROTOBUF_INTERNAL)
                 && !mapping.mappingType.equals(MappingType.CODE_BASED)
-                && !mapping.substitutionsAsCode
+                && !TransformationType.SMART_FUNCTION.equals(mapping.transformationType)
+                && !TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.transformationType)
                 && !mapping.direction.equals(Direction.OUTBOUND)) {
             if (count > 1) {
                 result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
@@ -527,7 +553,9 @@ public class Mapping implements Serializable {
         return mp;
     }
 
-    public Boolean isSubstitutionsAsCode () {
-        return MappingType.CODE_BASED.equals(this.mappingType) || this.substitutionsAsCode;
-    }   
+    public Boolean isTransformationAsCode() {
+        return MappingType.CODE_BASED.equals(this.mappingType) ||
+                TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType) ||
+                TransformationType.SMART_FUNCTION.equals(this.transformationType);
+    }
 }

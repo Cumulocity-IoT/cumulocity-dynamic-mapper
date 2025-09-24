@@ -43,21 +43,34 @@ import { ServiceConfigurationTraceComponent } from './service-configuration-trac
   providers: [
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration`,
-      component: ServiceConfigurationComponent
-      ,
+      component: ServiceConfigurationComponent,
       resolve: {
         feature: featureResolver
       }
     }),
     hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/inbound`,
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SUBSTITUTION_AS_CODE`,
       component: CodeComponent,
       resolve: {
         feature: featureResolver
       }
     }),
     hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/outbound`,
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SUBSTITUTION_AS_CODE`,
+      component: CodeComponent,
+      resolve: {
+        feature: featureResolver
+      }
+    }),
+        hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
+      component: CodeComponent,
+      resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
       component: CodeComponent,
       resolve: {
         feature: featureResolver

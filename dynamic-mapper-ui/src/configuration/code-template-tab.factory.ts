@@ -21,28 +21,28 @@
 import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
-import { Observable, from, map, merge, mergeAll, of, toArray } from 'rxjs';
-import { NODE3 } from '../shared';
+import { Observable, merge, mergeAll, of, toArray } from 'rxjs';
+import { Direction, NODE3, TransformationType, TransformationTypeLabels } from '../shared';
 @Injectable()
 export class CodeTemplateTabFactory implements TabFactory {
   constructor(
     private router: Router,
-  ) {}
+  ) { }
 
   get(): Observable<Tab[]> {
     const tabs: Tab[] = [];
     if (this.router.url.match(/c8y-pkg-dynamic-mapper\/node3\/codeTemplate/g)) {
       tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/inbound`,
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SUBSTITUTION_AS_CODE`,
         priority: 960,
-        label: 'Inbound',
+        label: `Inbound (${TransformationTypeLabels[Direction.INBOUND][TransformationType.SUBSTITUTION_AS_CODE]})`,
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/outbound`,
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SUBSTITUTION_AS_CODE`,
         priority: 950,
-        label: 'Outbound',
+        label: `Outbound (${TransformationTypeLabels[Direction.OUTBOUND][TransformationType.SUBSTITUTION_AS_CODE]})`,
         icon: 'swipe-left',
         orientation: 'horizontal'
       } as Tab);
@@ -51,6 +51,20 @@ export class CodeTemplateTabFactory implements TabFactory {
         priority: 940,
         label: 'System, shared',
         icon: 'processor',
+        orientation: 'horizontal'
+      } as Tab);
+      tabs.push({
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
+        priority: 930,
+        label: 'Inbound (Smart Function JavaScript)',
+        icon: 'swipe-right',
+        orientation: 'horizontal'
+      } as Tab);
+      tabs.push({
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
+        priority: 920,
+        label: 'Outbound (Smart Function JavaScript)',
+        icon: 'swipe-left',
         orientation: 'horizontal'
       } as Tab);
       return merge(of(tabs)).pipe(mergeAll(), toArray());

@@ -72,8 +72,8 @@ import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -135,14 +135,17 @@ public class MQTT5Client extends AConnectorClient {
         configProps.put("nameCertificate",
                 new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         useSelfSignedCertificateCondition));
-        configProps.put("supportsWildcardInTopic",
+        configProps.put("supportsWildcardInTopicInbound",
                 new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
                         null));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                        null));
         configProps.put("serverPath",
-                new ConnectorProperty(null, false, 11, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
                         wsCondition));
         configProps.put("cleanSession",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null,
                         null));
         String name = "Generic MQTT";
         String description = "Connector for connecting to external MQTT broker over tcp or websocket.";
@@ -154,7 +157,7 @@ public class MQTT5Client extends AConnectorClient {
 
     public MQTT5Client(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+            CamelDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingService = configurationRegistry.getMappingService();
@@ -535,7 +538,7 @@ public class MQTT5Client extends AConnectorClient {
     }
 
     public void publishMEAO(ProcessingContext<?> context) {
-        C8YRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
         Mqtt5Publish mqttMessage = Mqtt5Publish.builder().topic(context.getResolvedPublishTopic()).qos(mqttQos)
@@ -554,8 +557,12 @@ public class MQTT5Client extends AConnectorClient {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
-        return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopic").toString());
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        if (direction == Direction.INBOUND) {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicInbound","true").toString());
+        } else {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicOutbound","true").toString());
+        }
     }
 
     @Override

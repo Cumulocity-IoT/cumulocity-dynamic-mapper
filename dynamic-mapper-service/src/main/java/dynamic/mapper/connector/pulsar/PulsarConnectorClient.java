@@ -71,8 +71,8 @@ import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -131,7 +131,8 @@ public class PulsarConnectorClient extends AConnectorClient {
                                 new AbstractMap.SimpleEntry<String, String>("none", "None"),
                                 new AbstractMap.SimpleEntry<String, String>("token", "Token"),
                                 new AbstractMap.SimpleEntry<String, String>("oauth2", "OAuth2"),
-                                new AbstractMap.SimpleEntry<String, String>("tls", "TLS")),
+                                new AbstractMap.SimpleEntry<String, String>("tls", "TLS"),
+                                new AbstractMap.SimpleEntry<String, String>("basic", "Basic")),
                         null));
         configProps.put("authenticationParams",
                 new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false,
@@ -159,14 +160,17 @@ public class PulsarConnectorClient extends AConnectorClient {
                         "Controls how Pulsar subscription names are generated - 'default' creates connector-specific subscriptions, 'mapping' creates separate subscriptions per mapping, 'shared' uses one subscription for all mappings, 'custom' allows user-defined patterns.",
                         false, 11, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         null, null, null));
-        configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false,
-                        true, null, null));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
+        configProps.put("supportsWildcardInTopicOutbound",
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
         configProps.put("pulsarTenant",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         "public", null, null));
         configProps.put("pulsarNamespace",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                new ConnectorProperty(null, false, 15, ConnectorPropertyType.STRING_PROPERTY, false, false,
                         "default", null, null));
 
         String name = "Apache Pulsar";
@@ -179,7 +183,7 @@ public class PulsarConnectorClient extends AConnectorClient {
 
     public PulsarConnectorClient(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+            CamelDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingService = configurationRegistry.getMappingService();
@@ -469,6 +473,13 @@ public class PulsarConnectorClient extends AConnectorClient {
                                     authParams));
                     log.debug("{} - Using TLS authentication", tenant);
                     break;
+                case "basic":
+                    clientBuilder.authentication(
+                            AuthenticationFactory.create(
+                                    "org.apache.pulsar.client.impl.auth.AuthenticationBasic",
+                                    authParams));
+                    log.debug("{} - Using basic authentication", tenant);
+                    break;
                 default:
                     log.warn("{} - Unknown authentication method: {}", tenant, authMethod);
                     break;
@@ -675,7 +686,7 @@ public class PulsarConnectorClient extends AConnectorClient {
 
     @Override
     public void publishMEAO(ProcessingContext<?> context) {
-        C8YRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         String topic = context.getResolvedPublishTopic();
         Qos qos = context.getQos(); // Get QoS from context
@@ -867,8 +878,12 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
-        return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopic").toString());
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        if (direction == Direction.INBOUND) {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicInbound","true").toString());
+        } else {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicOutbound","true").toString());
+        }
     }
 
     @Override

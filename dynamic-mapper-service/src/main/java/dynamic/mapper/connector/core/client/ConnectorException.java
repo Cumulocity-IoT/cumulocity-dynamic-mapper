@@ -27,4 +27,8 @@ public class ConnectorException extends SystemException {
     public ConnectorException(String string) {
         super(string);
     }
+
+    public ConnectorException(String string, Exception e) {
+        super(string,e);
+    }
 }

@@ -33,13 +33,14 @@ import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorType;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatusEvent;
+import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 
 @Slf4j
@@ -91,13 +92,16 @@ public class MQTTServiceClient extends MQTT3Client {
         configProps.put("nameCertificate",
                 new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, true, true, false, null,
                         null));
-        configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null,
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, false, null,
+                        null));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, false, null,
                         null));
         configProps.put("cleanSession",
-                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
                         null));
-        String name = "Cumulocity MQTT Service - (tenant isolation)";
+        String name = "Cumulocity MQTT Service - (Tenant Isolation)";
         String description = "Connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QoS 'exactly once' is reduced to 'at least once'.";
         connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE;
         singleton = true;
@@ -112,7 +116,7 @@ public class MQTTServiceClient extends MQTT3Client {
 
     public MQTTServiceClient(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+            CamelDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingService = configurationRegistry.getMappingService();
@@ -133,6 +137,9 @@ public class MQTTServiceClient extends MQTT3Client {
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
+
+        // IMPORTANT: set property readonly to true, then predefined values from the
+        // specification are copied to the configuration
         MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
         String user = String.format("%s/%s", tenant, msc.getUsername());
         getConnectorSpecification().getProperties().put("user",
@@ -167,7 +174,11 @@ public class MQTTServiceClient extends MQTT3Client {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
-        return false;
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        if (direction == Direction.INBOUND) {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicInbound","true").toString());
+        } else {
+            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicOutbound","true").toString());
+        }
     }
 }

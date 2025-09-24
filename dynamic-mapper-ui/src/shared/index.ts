@@ -18,10 +18,11 @@
  * @authors Christof Strack
  */
 export * from './component/code-template/manage-template.component';
-export * from './component/editor/jsoneditor.component';
+export * from './component/json-editor/jsoneditor.component';
 export * from './component/formly/custom-form-field-wrapper.component';
 export * from './component/formly/input-custom.type.component';
 export * from './component/formly/textarea.type.component';
+export * from './component/renderer/label-tagged.renderer.component';
 export * from './component/renderer/label.renderer.component';
 export * from './confirmation/confirmation-modal.component';
 export * from './connector-configuration/connector-grid.component';

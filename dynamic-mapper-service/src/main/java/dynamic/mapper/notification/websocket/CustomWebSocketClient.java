@@ -22,7 +22,7 @@
 package dynamic.mapper.notification.websocket;
 
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
@@ -87,7 +87,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         int timeout = processedResults.getMaxCPUTimeMS();
         if (serviceConfiguration.logPayload) {
             log.info(
-                    "{} - WAIT_ON_RESULTS: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}, QoS mappings: {}",
+                    "{} - PREPARING_RESULTS: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}, QoS mappings: {}",
                     tenant, connectorId.getName(), notification.getApi(), notification.getOperation(), mappingQos);
         }
         if (mappingQos > 0) {
@@ -110,9 +110,9 @@ public class CustomWebSocketClient extends WebSocketClient {
                     int httpStatusCode = 0;
                     if (results != null) {
                         for (ProcessingContext<?> context : results) {
-                            List<C8YRequest> resultRequests = context.getRequests();
-                            if (context.hasError() || resultRequests.stream().anyMatch(C8YRequest::hasError)) {
-                                for (C8YRequest r : resultRequests) {
+                            List<DynamicMapperRequest> resultRequests = context.getRequests();
+                            if (context.hasError() || resultRequests.stream().anyMatch(DynamicMapperRequest::hasError)) {
+                                for (DynamicMapperRequest r : resultRequests) {
                                     if (r.hasError()) {
                                         Throwable e = r.getError();
                                         while (!(e instanceof ProcessingException) && e != e.getCause()) {

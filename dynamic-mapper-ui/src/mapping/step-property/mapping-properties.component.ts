@@ -35,7 +35,7 @@ import { BehaviorSubject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { EditorMode } from '../shared/stepper.model';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
-import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, MappingType, ExtensionType, SharedService } from '../../shared';
+import { StepperConfiguration, API, Direction, Mapping, Qos, SnoopStatus, FormatStringPipe, MappingType, ExtensionType, SharedService, MappingTypeDescriptions, MappingTypeLabels } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { Alert, AlertService } from '@c8y/ngx-components';
 
@@ -59,6 +59,7 @@ export class MappingStepPropertiesComponent
   @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
   ValidationError = ValidationError;
+  MappingTypeLabels = MappingTypeLabels;
   Direction = Direction;
   EditorMode = EditorMode;
 
@@ -232,8 +233,8 @@ export class MappingStepPropertiesComponent
               required:
                 false
             },
-            hideExpression:
-              this.stepperConfiguration.direction == Direction.INBOUND,
+            // hideExpression:
+            //this.stepperConfiguration.direction == Direction.INBOUND,
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 field.formControl.valueChanges.pipe(

@@ -652,7 +652,6 @@
     "extension": {
       "extensionName": "dynamic-mapper-extension",
       "eventName": "CustomEvent",
-      "loaded": false,
       "extensionType": "EXTENSION_SOURCE"
     },
     "qos": "AT_LEAST_ONCE",

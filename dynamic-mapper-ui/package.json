@@ -1,6 +1,9 @@
 {
   "name": "dynamic-mapper",
-  "version": "6.0.1",
+  "version": "6.1.0",
+  "overrides": {
+    "webpack": "5.101.3"
+  },
   "author": "christof.strack@cumulocity.com, stefan.witschel@cumulocity.com",
   "description": "Cumulocity Dynamic Mapper UI to map data from any data source to Cumulocity and vice-versa in a zero-code/low-code way. When using an AI Provider code and mappings can be generated.",
   "repository": {
@@ -20,6 +23,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
     "@ai-sdk/openai": "^1.3.22",
+    "@angular-architects/module-federation": "^19.0.3",
     "@angular/animations": "^19.2.14",
     "@angular/common": "^19.2.14",
     "@angular/compiler": "^19.2.14",
@@ -30,20 +34,20 @@
     "@angular/platform-server": "^19.2.14",
     "@angular/router": "^19.2.14",
     "@angular/upgrade": "^19.2.14",
-    "@c8y/bootstrap": "^1022.21.3",
-    "@c8y/client": "^1022.21.3",
-    "@c8y/ngx-components": "^1022.21.3",
-    "@c8y/package-blueprint": "^1022.21.3",
-    "@c8y/style": "^1022.21.3",
+    "@c8y/bootstrap": "v1022.28.2",
+    "@c8y/client": "v1022.28.2",
+    "@c8y/ngx-components": "v1022.28.2",
+    "@c8y/package-blueprint": "v1022.28.2",
+    "@c8y/style": "v1022.28.2",
     "@ngx-translate/core": "15.0.0",
     "ai": "^4.3.16",
     "echarts": "^5.6.0",
-    "jsonata": "^2.0.6",
-    "monaco-editor": "^0.52.2",
+    "jsonata": "^2.1.0",
+    "monaco-editor": "^0.53.0",
     "ngx-bootstrap": "^19.0.2",
     "ngx-echarts": "^18.0.0",
     "rxjs": "~7.8.0",
-    "vanilla-jsoneditor": "^3.8.0",
+    "vanilla-jsoneditor": "^3.9.0",
     "zone.js": "~0.15.0"
   },
   "devDependencies": {
@@ -54,8 +58,8 @@
     "@angular/cli": "^19.2.11",
     "@angular/compiler-cli": "^19.2.0",
     "@angular/service-worker": "^19.2.14",
-    "@c8y/devkit": "^1022.21.3",
-    "@c8y/options": "^1022.21.3",
+    "@c8y/devkit": "v1022.28.2",
+    "@c8y/options": "v1022.28.2",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
     "cumulocity-cypress": "^0.9.0",
     "cypress": "^14.5.0",

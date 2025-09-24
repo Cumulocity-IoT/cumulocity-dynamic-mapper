@@ -187,7 +187,7 @@
                   <label translate style="padding-left: 6px">Filter Result [{{
                     filterModel.filterExpression?.resultType
                     }}]</label>
-                  <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                  <textarea class="form-control" #filterModelFilterExpression c8y-textarea-autoresize readonly="true" style="
                               font-size: var(--c8y-font-size-small);
                               line-height: var(--c8y-line-height-small);
                             ">{{
@@ -329,7 +329,7 @@
                       <label translate>&nbsp;Source Result [{{
                         substitutionModel.sourceExpression?.resultType
                         }}]</label>
-                      <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                      <textarea class="form-control" #substitutionModelSourceExpression c8y-textarea-autoresize readonly="true" style="
                                 font-size: var(--c8y-font-size-small);
                                 line-height: var(--c8y-line-height-small);
                               ">{{
@@ -342,7 +342,7 @@
                       <label translate>&nbsp;Target Result [{{
                         substitutionModel.targetExpression?.resultType
                         }}]</label>
-                      <textarea class="form-control" c8y-textarea-autoresize readonly="true" style="
+                      <textarea class="form-control" #substitutionModelTargetExpression c8y-textarea-autoresize readonly="true" style="
                                 font-size: var(--c8y-font-size-small);
                                 line-height: var(--c8y-line-height-small);
                               ">{{
@@ -408,7 +408,7 @@
   <div
     *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
     <div class="form-group p-b-8">
-      <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
+      <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
       <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
         <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl (change)="
               onSelectExtensionName(templateForm.value.extensionName)
@@ -454,7 +454,7 @@
     <div class="d-flex p-b-8">
       <div class="col-lg-6">
         <div class="d-flex">
-          <label translate style="margin-top:4px">JavaScript callback for creating substitutions</label>
+          <label translate style="margin-top:4px"> {{codeEditorLabel}}</label>
           <span class="hidden-xs hidden-sm">
             <ng-template #popupTemplateCodeHelp>
               <div [innerHtml]="codeEditorHelp"></div>
@@ -464,36 +464,37 @@
           </span>
         </div>
       </div>
-      <div class="col-lg-2" style="padding-top: 2px;">
-        <button type="button" name="generateSubstitution" class="btn btn-default btn-sm"
-          (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions" [disabled]="
-                          !stepperConfiguration.showEditorSource ||
-                            stepperConfiguration.editorMode ===
-                              EditorMode.READ_ONLY || !aiAgentDeployed
-                      ">
-          <i c8yIcon="bot"></i><span id="updateButton">&nbsp;Generate substitutions</span>
-        </button>
-        <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-          popover="{{'Generate substitutions is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
-          placement="right" container="body" triggers="focus" type="button" *ngIf="!aiAgentDeployed"></button>
-      </div>
-
-      <div class="col-lg-2">
-        <div class="c8y-select-wrapper" style="max-width: 200px; overflow: auto !important">
-          <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId" name="templateSelect"
-            required>
-            <option [ngValue]="undefined" disabled>Select template...</option>
-            <option *ngFor="let item of getCodeTemplateEntries()" [ngValue]="item.key">
-              {{ item.name | capitalCase }} ({{ item.type }})
-            </option>
-          </select>
+      <ng-container>
+        <div class="col-lg-2" style="padding-top: 2px;">
+          <button type="button" name="generateSubstitution" class="btn btn-default btn-sm"
+            (click)="openGenerateSubstitutionDrawer()" translate title="Generate substitutions" [disabled]="
+                            !stepperConfiguration.showEditorSource ||
+                              stepperConfiguration.editorMode ===
+                                EditorMode.READ_ONLY || !aiAgentDeployed
+                        ">
+            <i c8yIcon="bot"></i><span id="updateButton">&nbsp;Generate substitutions</span>
+          </button>
+          <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+            popover="{{'Generate substitutions is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+            placement="right" container="body" triggers="focus" type="button" *ngIf="!aiAgentDeployed"></button>
         </div>
-      </div>
-      <div class="col-lg-2" style="padding-top: 2px;">
-        <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()" translate>
-          Create new code template
-        </button>
-      </div>
+        <div class="col-lg-2">
+          <div class="c8y-select-wrapper" style="max-width: 200px; overflow: auto !important">
+            <select class="form-control" (change)="onSelectCodeTemplate()" [(ngModel)]="templateId"
+              name="templateSelect" required>
+              <option [ngValue]="undefined" disabled>Select template...</option>
+              <option *ngFor="let item of getCodeTemplateEntries()" [ngValue]="item.key">
+                {{ item.name | capitalCase }} ({{ item.type }})
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="col-lg-2" style="padding-top: 2px;">
+          <button type="button" name="update" class="btn btn-default btn-sm" (click)="onCreateCodeTemplate()" translate>
+            Create new code template
+          </button>
+        </div>
+      </ng-container>
     </div>
     <c8y-editor [editorOptions]="editorOptions" class="form-control fit-h" monacoEditorMarkerValidator
       [ngModel]="mappingCode" (ngModelChange)="onValueCodeChange($event)">
@@ -509,7 +510,7 @@
   <div
     *ngIf="stepperConfiguration.showProcessorExtensionsSource || stepperConfiguration.showProcessorExtensionsSourceTarget">
     <div class="form-group p-b-8">
-      <label translate>Extensions for {{ mapping.mappingType | formatStringAsWords }}</label>
+      <label translate>Extensions for {{ MappingTypeDescriptions[mapping.mappingType] }}</label>
       <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important">
         <select class="form-control" [formControl]="templateForm.get('extensionName')" #extensionNameControl
           [disabled]="stepperConfiguration.showCodeEditor" (change)="

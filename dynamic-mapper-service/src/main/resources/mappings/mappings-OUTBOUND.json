@@ -10,6 +10,7 @@
     "sourceTemplate": "{\"type\":\"c8y_BusEvent\",\"text\":\"Bus was stopped\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"bus_event\":\"stop_event\"}",
     "targetTemplate": "{\"deviceId\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\",\"bus_event\":\"stop_event\"}",
     "mappingType": "JSON",
+    "transformationType": "JSONATA",
     "substitutions": [
       {
         "pathSource": "_IDENTITY_.externalId",
@@ -68,6 +69,7 @@
     "sourceTemplate": "{\"bus_opp\":\"New engine restart operation!\"}",
     "targetTemplate": "{\"c8y_Id\":\"909090\",\"description\":\"dummy operation\",\"type\":\"bus_operation\"}",
     "mappingType": "JSON",
+    "transformationType": "JSONATA",
     "substitutions": [
       {
         "pathSource": "_IDENTITY_.c8ySourceId",
@@ -113,7 +115,8 @@
     "direction": "OUTBOUND",
     "sourceTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
     "targetTemplate": "{\"Temperature\":{\"value\":110,\"unit\":\"C\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"deviceId\":\"909090\"}",
-    "mappingType": "CODE_BASED",
+    "mappingType": "JSON",
+    "transformationType": "SUBSTITUTION_AS_CODE",
     "substitutions": [],
     "active": false,
     "debug": false,

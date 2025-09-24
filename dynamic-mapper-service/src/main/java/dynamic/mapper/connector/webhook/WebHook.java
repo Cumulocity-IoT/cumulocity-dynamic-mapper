@@ -44,8 +44,8 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.inbound.DispatcherInbound;
-import dynamic.mapper.processor.model.C8YRequest;
+import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import jakarta.ws.rs.NotSupportedException;
 
@@ -114,6 +114,12 @@ public class WebHook extends AConnectorClient {
                         false,
                         new HashMap<String, String>(),
                         null, cumulocityInternal));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 8, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, false, true, null,
+                        null));
         String name = "Webhook";
         String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. The publishTopic is appended to the Rest endpoint. In case the endpoint does not end with a trailing / and the publishTopic is not start with a / it is automatically added. The health endpoint is tested with a GET request.";
         connectorType = ConnectorType.WEB_HOOK;
@@ -125,7 +131,7 @@ public class WebHook extends AConnectorClient {
 
     public WebHook(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
-            DispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+            CamelDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingService = configurationRegistry.getMappingService();
@@ -180,6 +186,7 @@ public class WebHook extends AConnectorClient {
                     new ConnectorProperty("health endpoint for GET request", false, 6,
                             ConnectorPropertyType.STRING_PROPERTY, true, true,
                             "http://cumulocity:8111/notification2", null, null));
+
         }
     }
 
@@ -392,7 +399,7 @@ public class WebHook extends AConnectorClient {
     }
 
     public void publishMEAO(ProcessingContext<?> context) {
-        C8YRequest currentRequest = context.getCurrentRequest();
+        DynamicMapperRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         String contextPath = context.getResolvedPublishTopic();
 
@@ -512,8 +519,14 @@ public class WebHook extends AConnectorClient {
     }
 
     @Override
-    public Boolean supportsWildcardsInTopic() {
-        return true;
+    public Boolean supportsWildcardInTopic(Direction direction) {
+        if (direction == Direction.INBOUND) {
+            return Boolean.parseBoolean(
+                    connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicInbound","false").toString());
+        } else {
+            return Boolean.parseBoolean(
+                    connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicOutbound","true").toString());
+        }
     }
 
     @Override

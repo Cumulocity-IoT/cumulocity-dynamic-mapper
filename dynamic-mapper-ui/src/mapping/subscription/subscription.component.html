@@ -27,7 +27,7 @@
     {{ 'Manage subscriptions (by device type)' | translate }}
   </button>
   <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-      'Specify device types. When creating a device of any of types a subscription is created (dynamic). When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
+      'Specify device types. Only when CREATING a device of any of types a subscription is created (dynamic). When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
         | translate
     }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'dynamic'"></button>
 </c8y-action-bar-item>
@@ -38,7 +38,7 @@
     {{ 'Manage subscriptions (by device groups)' | translate }}
   </button>
   <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-      'Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic).'
+      'Specify device groups. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is created/deleted (dynamic). The filter applies to child assets and child devices.'
         | translate
     }}" placement="bottom" triggers="focus" type="button" *ngIf="path == 'dynamic'"></button>
 </c8y-action-bar-item>

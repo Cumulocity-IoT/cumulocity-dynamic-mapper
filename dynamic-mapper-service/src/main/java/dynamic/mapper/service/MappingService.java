@@ -74,6 +74,7 @@ import dynamic.mapper.model.ResolveException;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.ValidationError;
 import dynamic.mapper.processor.model.C8YMessage;
+import dynamic.mapper.util.Utils;
 
 @Slf4j
 @Service
@@ -547,6 +548,9 @@ public class MappingService {
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, mappingId).getSnoopedTemplates());
+        } else {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(getMappingOutboundFromCache(tenant, mappingId).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -575,7 +579,7 @@ public class MappingService {
             mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         } else {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingOutboundFromCache(tenant, id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -658,21 +662,23 @@ public class MappingService {
                 }
 
                 // Check message filter condition
-                boolean filterResult = evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage);
-                if (!filterResult) {
-                    if (mapping.debug) {
-                        log.info(
-                                "{} - Outbound mapping {}/{} not resolved, failing Filter mapping execution: filterResult {}",
-                                tenant, mapping.name, mapping.identifier,
-                                filterResult);
+                if (!mapping.getFilterMapping().isBlank()) {
+                    boolean filterResult = evaluateFilter(tenant, mapping.getFilterMapping(), c8yMessage);
+                    if (!filterResult) {
+                        if (mapping.debug) {
+                            log.info(
+                                    "{} - Outbound mapping {}/{} not resolved, failing Filter mapping execution: filterResult {}",
+                                    tenant, mapping.name, mapping.identifier,
+                                    filterResult);
+                        }
+                        continue;
                     }
-                    continue;
                 }
 
                 // Check inventory filter condition if specified
-                if (mapping.getFilterInventory() != null) {
+                if (mapping.getFilterInventory() != null && !mapping.getFilterInventory().isBlank()) {
                     boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                            c8yMessage);
+                            c8yMessage.getSourceId(), c8yMessage.getMessageId());
                     if (c8yMessage.getSourceId() == null
                             || !filterInventory) {
                         if (mapping.debug) {
@@ -703,7 +709,7 @@ public class MappingService {
             var expression = jsonata(filterExpression);
             Object result = expression.evaluate(message.getParsedPayload());
 
-            if (result != null && isNodeTrue(result)) {
+            if (result != null && Utils.isNodeTrue(result)) {
                 log.info("{} - Found valid mapping for filter {} in C8Y message {}",
                         tenant, filterExpression, message.getMessageId());
                 return true;
@@ -721,44 +727,29 @@ public class MappingService {
     /**
      * Evaluates an inventory filter against cached inventory data
      */
-    private boolean evaluateInventoryFilter(String tenant, String filterExpression, C8YMessage message) {
+    private boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId, String messageId) {
         try {
             Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
-                    .getMOFromInventoryCache(tenant, message.getSourceId());
+                    .getMOFromInventoryCache(tenant, sourceId);
             List<String> keyList = new ArrayList<>(cachedInventoryContent.keySet());
             log.info("{} - For object {} found following fragments in inventory cache {}",
-                    tenant, message.getSourceId(), keyList);
+                    tenant, sourceId, keyList);
             var expression = jsonata(filterExpression);
             Object result = expression.evaluate(cachedInventoryContent);
 
-            if (result != null && isNodeTrue(result)) {
+            if (result != null && Utils.isNodeTrue(result)) {
                 log.info("{} - Found valid inventory for filter {} in C8Y message {}",
-                        tenant, filterExpression, message.getMessageId());
+                        tenant, filterExpression, messageId);
                 return true;
             } else {
                 log.debug("{} - Not matching inventory filter {} for source {} in message {}",
-                        tenant, filterExpression, message.getSourceId(), message.getMessageId());
+                        tenant, filterExpression, sourceId, messageId);
                 return false;
             }
         } catch (Exception e) {
             log.debug("Inventory filter evaluation error for {}: {}", filterExpression, e.getMessage());
             return false;
         }
-    }
-
-    private boolean isNodeTrue(Object node) {
-        // Case 1: Direct boolean value check
-        if (node instanceof Boolean) {
-            return (Boolean) node;
-        }
-
-        // Case 2: String value that can be converted to boolean
-        if (node instanceof String) {
-            String text = ((String) node).trim().toLowerCase();
-            return "true".equals(text) || "1".equals(text) || "yes".equals(text);
-            // Add more string variations if needed
-        }
-        return false;
     }
 
     public Mapping removeFromMappingFromCaches(String tenant, Mapping mapping) {
@@ -818,7 +809,7 @@ public class MappingService {
             mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
         } else {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(getMappingInboundFromCache(tenant, id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(getMappingOutboundFromCache(tenant, id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
