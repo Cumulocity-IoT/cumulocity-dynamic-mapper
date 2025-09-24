@@ -72,6 +72,16 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
 
 export const GRID_COLUMNS: Column[] = [
   {
+    name: 'name',
+    header: 'Name',
+    path: 'name',
+    filterable: false,
+    sortOrder: 'ASC',
+    visible: true,
+    cellRendererComponent: ConnectorDetailCellRendererComponent,
+    gridTrackSize: '30%'
+  },
+  {
     name: 'status',
     header: 'Status',
     path: 'status',
@@ -88,16 +98,6 @@ export const GRID_COLUMNS: Column[] = [
     sortOrder: 'ASC',
     visible: false,
     gridTrackSize: '10%'
-  },
-  {
-    name: 'name',
-    header: 'Name',
-    path: 'name',
-    filterable: false,
-    sortOrder: 'ASC',
-    visible: true,
-    cellRendererComponent: ConnectorDetailCellRendererComponent,
-    gridTrackSize: '30%'
   },
   {
     name: 'connectorType',
