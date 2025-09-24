@@ -20,6 +20,7 @@
 // Now update action-controls.config.ts
 import { BuiltInActionType, Column } from '@c8y/ngx-components';
 import { ActionControlConfig, ActionVisibilityRule } from './types'
+import { LabelTaggedRendererComponent } from '../component/renderer/label-tagged.renderer.component';
 import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
 import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
 import { ConnectorStatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
@@ -106,7 +107,7 @@ export const GRID_COLUMNS: Column[] = [
     filterable: false,
     sortOrder: 'ASC',
     visible: true,
-    cellRendererComponent: LabelRendererComponent,
+    cellRendererComponent: LabelTaggedRendererComponent,
     gridTrackSize: '15%'
   },
   {

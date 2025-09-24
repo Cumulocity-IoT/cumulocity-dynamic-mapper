@@ -57,6 +57,7 @@ import {
   DeploymentMapEntry,
   ExtensionType,
   LabelRendererComponent,
+  LabelTaggedRendererComponent,
   MappingTypeDescriptionMap,
   SharedService,
   StepperConfiguration,
@@ -70,7 +71,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject, filter, finalize, switchMap, take } from 'rxjs';
-import { TemplateType } from '../../configuration';
 import { MappingService } from '../core/mapping.service';
 import { MappingFilterComponent } from '../filter/mapping-filter.component';
 import { ImportMappingsComponent } from '../import/import-modal.component';

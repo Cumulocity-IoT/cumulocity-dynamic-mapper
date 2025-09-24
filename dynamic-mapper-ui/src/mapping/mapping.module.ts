@@ -32,7 +32,7 @@ import { EditorComponent, MonacoEditorMarkerValidatorDirective } from '@c8y/ngx-
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { ServiceConfigurationModule } from '../configuration';
-import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule, featureResolver } from '../shared';
+import { ManageTemplateComponent, LabelRendererComponent, NODE1, SharedModule, featureResolver, LabelTaggedRendererComponent } from '../shared';
 import { MappingFilterComponent } from './filter/mapping-filter.component';
 import { AdviceActionComponent } from './grid/advisor/advice-action.component';
 import { MappingComponent } from './grid/mapping.component';
@@ -90,6 +90,7 @@ import { MappingTabFactory } from './mapping-tab.factory';
     SubstitutionRendererComponent,
     MappingStatusActivationRendererComponent,
     LabelRendererComponent,
+    LabelTaggedRendererComponent,
     NameRendererComponent,
     MappingTypeDrawerComponent,
     MappingConnectorComponent,
