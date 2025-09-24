@@ -432,7 +432,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         filterable: true,
         sortable: true,
         dataType: ColumnDataType.TextShort,
-        cellRendererComponent: LabelRendererComponent,
+        cellRendererComponent: LabelTaggedRendererComponent,
         gridTrackSize: '8%'
       },
       {
