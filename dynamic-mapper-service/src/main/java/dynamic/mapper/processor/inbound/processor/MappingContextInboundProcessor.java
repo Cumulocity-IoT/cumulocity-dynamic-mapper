@@ -2,7 +2,6 @@ package dynamic.mapper.processor.inbound.processor;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
