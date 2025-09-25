@@ -20,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -31,14 +30,15 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
-import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class JSONataExtractionInboundProcessorTest {
@@ -58,10 +58,9 @@ class JSONataExtractionInboundProcessorTest {
     private JSONataExtractionInboundProcessor processor;
 
     private static final String TEST_TENANT = "testTenant";
-    private Mapping mapping;
+
     private MappingStatus mappingStatus;
     private Map<String, List<SubstituteValue>> processingCache;
-    private Object testPayload;
     private ProcessingContext<Object> processingContext;
 
     @BeforeEach
@@ -70,11 +69,8 @@ class JSONataExtractionInboundProcessorTest {
         processor = new JSONataExtractionInboundProcessor();
         injectMappingService(processor, mappingService);
 
-        // Create test payload using different formats to test JSONata compatibility
-        testPayload = createTestPayloadAsMap(); // Try Map instead of JsonNode
-
         // Create test mapping with ALL required fields
-        mapping = createCompleteMapping();
+        Mapping mapping = createCompleteMapping();
 
         // Create real MappingStatus
         mappingStatus = new MappingStatus(
@@ -82,7 +78,7 @@ class JSONataExtractionInboundProcessorTest {
                 "test/topic", "output/topic", 0L, 0L, 0L, 0L, 0L, null);
 
         // Create ProcessingContext with payload
-        processingContext = createRealProcessingContext();
+        processingContext = createProcessingContext(mapping);
 
         // Setup mocks
         when(exchange.getIn()).thenReturn(message);
@@ -106,8 +102,8 @@ class JSONataExtractionInboundProcessorTest {
         meas.put("Product2_Flow", List.of(272.9));
         payload.put("meas", meas);
 
-        System.out.println("=== CREATED PAYLOAD AS MAP ===");
-        System.out.println("Payload: " + payload);
+        log.info("=== CREATED PAYLOAD AS MAP ===");
+        log.info("Payload: " + payload);
 
         return payload;
     }
@@ -131,10 +127,10 @@ class JSONataExtractionInboundProcessorTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> payload = mapper.readValue(payloadJson, Map.class);
 
-        System.out.println("=== CREATED PAYLOAD AS MAP FROM JSON ===");
-        System.out.println("Payload type: " + payload.getClass().getName());
-        System.out.println("ID field: " + payload.get("ID"));
-        System.out.println("ts field: " + payload.get("ts"));
+        log.info("=== CREATED PAYLOAD AS MAP FROM JSON ===");
+        log.info("Payload type: " + payload.getClass().getName());
+        log.info("ID field: " + payload.get("ID"));
+        log.info("ts field: " + payload.get("ts"));
 
         return payload;
     }
@@ -164,7 +160,9 @@ class JSONataExtractionInboundProcessorTest {
                 .build();
     }
 
-    private ProcessingContext<Object> createRealProcessingContext() {
+    private ProcessingContext<Object> createProcessingContext(Mapping mapping) {
+        // Create test payload using different formats to test JSONata compatibility
+        Object testPayload = createTestPayloadAsMap(); // Try Map instead of JsonNode
         ProcessingContext<Object> context = ProcessingContext.<Object>builder()
                 .tenant(TEST_TENANT)
                 .mapping(mapping)
@@ -215,26 +213,26 @@ class JSONataExtractionInboundProcessorTest {
     @Test
     void testJsonataDirectly() throws Exception {
         // Test JSONata directly to debug
-        System.out.println("=== DIRECT JSONATA TEST ===");
+        log.info("=== DIRECT JSONATA TEST ===");
 
         try {
             // Test with com.dashjoin.jsonata.Jsonata directly
             var expr = com.dashjoin.jsonata.Jsonata.jsonata("ID");
-            Object result = expr.evaluate(testPayload);
-            System.out.println("Direct JSONata result for 'ID': " + result);
+            Object result = expr.evaluate(processingContext.getPayload());
+            log.info("Direct JSONata result for 'ID': " + result);
 
             var expr2 = com.dashjoin.jsonata.Jsonata.jsonata("ts");
-            Object result2 = expr2.evaluate(testPayload);
-            System.out.println("Direct JSONata result for 'ts': " + result2);
+            Object result2 = expr2.evaluate(processingContext.getPayload());
+            log.info("Direct JSONata result for 'ts': " + result2);
 
             // Test with JsonNode
             Object jsonNodePayload = createTestPayloadAsJsonNode();
             var expr3 = com.dashjoin.jsonata.Jsonata.jsonata("ID");
             Object result3 = expr3.evaluate(jsonNodePayload);
-            System.out.println("Direct JSONata result with JsonNode for 'ID': " + result3);
+            log.info("Direct JSONata result with JsonNode for 'ID': " + result3);
 
         } catch (Exception e) {
-            System.out.println("Direct JSONata test failed: " + e.getMessage());
+            log.info("Direct JSONata test failed: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -244,10 +242,10 @@ class JSONataExtractionInboundProcessorTest {
 
     @Test
     void testSimpleFieldExtractionWithMap() throws Exception {
-        System.out.println("=== SIMPLE FIELD EXTRACTION WITH MAP ===");
+        log.info("=== SIMPLE FIELD EXTRACTION WITH MAP ===");
 
         // Create a simple mapping with just ID extraction
-        Mapping simpleMapping = Mapping.builder()
+        Mapping mapping = Mapping.builder()
                 .id("simple-mapping-id")
                 .identifier("simple-mapping")
                 .name("Simple Test Mapping")
@@ -276,80 +274,69 @@ class JSONataExtractionInboundProcessorTest {
                 })
                 .build();
 
-        ProcessingContext<Object> simpleContext = ProcessingContext.<Object>builder()
-                .tenant(TEST_TENANT)
-                .mapping(simpleMapping)
-                .serviceConfiguration(serviceConfiguration)
-                .payload(testPayload)
-                .build();
+        processingContext.setMapping(mapping);
 
-        System.out.println("Payload for extraction: " + testPayload);
-        System.out.println("Payload type: " + testPayload.getClass().getName());
+        log.info("Payload for extraction: " + processingContext.getPayload());
+        log.info("Payload type: " + processingContext.getPayload().getClass().getName());
 
         // When
-        processor.extractFromSource(simpleContext);
+        processor.extractFromSource(processingContext);
 
         // Then
-        Map<String, List<SubstituteValue>> simpleCache = simpleContext.getProcessingCache();
-        System.out.println("Simple extraction cache: " + simpleCache);
-        System.out.println("Simple cache keys: " + simpleCache.keySet());
+        Map<String, List<SubstituteValue>> simpleCache = processingContext.getProcessingCache();
+        log.info("Simple extraction cache: " + simpleCache);
+        log.info("Simple cache keys: " + simpleCache.keySet());
 
         assertFalse(simpleCache.isEmpty(), "Should have extracted some values");
 
         // Check each possible key
         for (String key : simpleCache.keySet()) {
             List<SubstituteValue> values = simpleCache.get(key);
-            System.out.println("Key '" + key + "' has " + values.size() + " values:");
+            log.info("Key '" + key + "' has " + values.size() + " values:");
             for (SubstituteValue value : values) {
-                System.out.println("  - Value: " + value.getValue() + " (Type: " + value.getType() + ")");
+                log.info("  - Value: " + value.getValue() + " (Type: " + value.getType() + ")");
             }
         }
     }
 
     @Test
     void testWithDifferentPayloadTypes() throws Exception {
-        System.out.println("=== TESTING DIFFERENT PAYLOAD TYPES ===");
+        log.info("=== TESTING DIFFERENT PAYLOAD TYPES ===");
 
         // Test with Map payload
-        testPayload = createTestPayloadAsMap();
-        ProcessingContext<Object> mapContext = ProcessingContext.<Object>builder()
-                .tenant(TEST_TENANT)
-                .mapping(mapping)
-                .serviceConfiguration(serviceConfiguration)
-                .payload(testPayload)
-                .build();
+        processingContext.setPayload(createTestPayloadAsMap());
 
-        processor.extractFromSource(mapContext);
-        System.out.println("Map payload results: " + mapContext.getProcessingCache());
+        processor.extractFromSource(processingContext);
+        log.info("Map payload results: " + processingContext.getProcessingCache());
 
         // Test with JsonNode payload
         Object jsonNodePayload = createTestPayloadAsJsonNode();
         ProcessingContext<Object> jsonContext = ProcessingContext.<Object>builder()
                 .tenant(TEST_TENANT)
-                .mapping(mapping)
+                .mapping(createCompleteMapping())
                 .serviceConfiguration(serviceConfiguration)
                 .payload(jsonNodePayload)
                 .build();
 
         processor.extractFromSource(jsonContext);
-        System.out.println("JsonNode payload results: " + jsonContext.getProcessingCache());
+        log.info("JsonNode payload results: " + jsonContext.getProcessingCache());
 
         // At least one should work
-        boolean mapWorked = !mapContext.getProcessingCache().isEmpty();
+        boolean mapWorked = !processingContext.getProcessingCache().isEmpty();
         boolean jsonWorked = !jsonContext.getProcessingCache().isEmpty();
 
-        System.out.println("Map worked: " + mapWorked + ", JsonNode worked: " + jsonWorked);
+        log.info("Map worked: " + mapWorked + ", JsonNode worked: " + jsonWorked);
         assertTrue(mapWorked || jsonWorked, "At least one payload type should work");
     }
 
     @Test
     void testExtractFromSourceIdSubstitution() throws Exception {
-        System.out.println("=== ID SUBSTITUTION TEST ===");
+        log.info("=== ID SUBSTITUTION TEST ===");
 
         processor.extractFromSource(processingContext);
 
-        System.out.println("Processing cache contents: " + processingCache);
-        System.out.println("Processing cache keys: " + processingCache.keySet());
+        log.info("Processing cache contents: " + processingCache);
+        log.info("Processing cache keys: " + processingCache.keySet());
 
         assertFalse(processingCache.isEmpty(), "Processing cache should not be empty");
 
@@ -359,17 +346,17 @@ class JSONataExtractionInboundProcessorTest {
                         entry.getValue().get(0).getValue() != null);
 
         if (hasAnyExtraction) {
-            System.out.println("✅ Some extractions worked!");
+            log.info("✅ Some extractions worked!");
 
             if (processingCache.containsKey("_IDENTITY_.externalId")) {
                 List<SubstituteValue> idValues = processingCache.get("_IDENTITY_.externalId");
                 SubstituteValue idValue = idValues.get(0);
-                System.out.println("ID value extracted: " + idValue.getValue());
+                log.info("ID value extracted: " + idValue.getValue());
                 assertNotNull(idValue.getValue(), "ID value should not be null");
                 assertEquals("0018", idValue.getValue(), "ID value should be '0018'");
             }
         } else {
-            System.out.println("❌ No successful extractions found");
+            log.info("❌ No successful extractions found");
             // Don't fail the test, but log the issue
             assertTrue(true, "Test completed - check logs for extraction issues");
         }
@@ -385,24 +372,24 @@ class JSONataExtractionInboundProcessorTest {
         // Just verify cache is not null
         assertNotNull(processingCache, "Processing cache should not be null");
     }
-@Test
-void testProcessWithException() throws Exception {
-    // Use a real context that won't throw exceptions during setup
-    ProcessingContext<Object> realContext = createRealProcessingContext();
-    when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(realContext);
-    
-    // Create a spy to control when exceptions are thrown
-    JSONataExtractionInboundProcessor processorSpy = spy(processor);
-    
-    // Make extractFromSource throw an exception
-    doThrow(new RuntimeException("Test exception"))
-        .when(processorSpy).extractFromSource(any(ProcessingContext.class));
-    
-    // When
-    processorSpy.process(exchange);
-    
-    // Then - verify error handling was called
-    assertTrue(realContext.getErrors().size() > 0, "Should have added error to context");
-    assertEquals(1, mappingStatus.errors);
-}
+
+    @Test
+    void testProcessWithException() throws Exception {
+
+        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
+
+        // Create a spy to control when exceptions are thrown
+        JSONataExtractionInboundProcessor processorSpy = spy(processor);
+
+        // Make extractFromSource throw an exception
+        doThrow(new RuntimeException("Test exception"))
+                .when(processorSpy).extractFromSource(any(ProcessingContext.class));
+
+        // When
+        processorSpy.process(exchange);
+
+        // Then - verify error handling was called
+        assertTrue(processingContext.getErrors().size() > 0, "Should have added error to context");
+        assertEquals(1, mappingStatus.errors);
+    }
 }

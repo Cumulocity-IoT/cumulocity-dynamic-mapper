@@ -34,6 +34,9 @@ import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.SubscriptionType;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class MQTTServicePulsarClientTest {
     private PulsarClient client;
     private Producer<byte[]> producer;
@@ -67,13 +70,13 @@ public class MQTTServicePulsarClientTest {
     }
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Starting Cumulocity MQTT Service Pulsar Test Client...");
-        System.out.println("Broker Host: " + PULSAR_BROKER_HOST);
-        System.out.println("Tenant: " + TENANT);
-        System.out.println("Namespace: " + PULSAR_NAMESPACE);
-        System.out.println("Towards Device Topic: " + TOWARDS_DEVICE_TOPIC);
-        System.out.println("Towards Platform Topic: " + TOWARDS_PLATFORM_TOPIC);
-        System.out.println("Subscription: " + SUBSCRIPTION_NAME);
+        log.info("Starting Cumulocity MQTT Service Pulsar Test Client...");
+        log.info("Broker Host: " + PULSAR_BROKER_HOST);
+        log.info("Tenant: " + TENANT);
+        log.info("Namespace: " + PULSAR_NAMESPACE);
+        log.info("Towards Device Topic: " + TOWARDS_DEVICE_TOPIC);
+        log.info("Towards Platform Topic: " + TOWARDS_PLATFORM_TOPIC);
+        log.info("Subscription: " + SUBSCRIPTION_NAME);
 
         MQTTServicePulsarClientTest testClient = new MQTTServicePulsarClientTest();
 
@@ -89,7 +92,7 @@ public class MQTTServicePulsarClientTest {
             // testClient.testSendMQTTServiceMessages();
 
             // Keep consumer running for a while
-            System.out.println("Consumer running... Press Ctrl+C to stop");
+            log.info("Consumer running... Press Ctrl+C to stop");
             Thread.sleep(600000); // Run for 60 minutes
 
         } catch (Exception e) {
@@ -101,7 +104,7 @@ public class MQTTServicePulsarClientTest {
     }
 
     private void initialize() throws PulsarClientException {
-        System.out.println("Initializing Pulsar client for Cumulocity MQTT Service...");
+        log.info("Initializing Pulsar client for Cumulocity MQTT Service...");
 
         var clientBuilder = org.apache.pulsar.client.api.PulsarClient.builder()
                 .serviceUrl(PULSAR_BROKER_HOST)
@@ -114,11 +117,11 @@ public class MQTTServicePulsarClientTest {
         }
 
         client = clientBuilder.build();
-        System.out.println("Pulsar client initialized successfully!");
+        log.info("Pulsar client initialized successfully!");
     }
 
     private void configureAuthentication(org.apache.pulsar.client.api.ClientBuilder clientBuilder) {
-        System.out.println("Configuring authentication method: " + AUTH_NAME);
+        log.info("Configuring authentication method: " + AUTH_NAME);
 
         try {
             switch (AUTH_NAME.toLowerCase()) {
@@ -148,7 +151,7 @@ public class MQTTServicePulsarClientTest {
                     }
                     break;
                 default:
-                    System.out.println("Unknown authentication method: " + AUTH_NAME);
+                    log.info("Unknown authentication method: " + AUTH_NAME);
                     break;
             }
         } catch (Exception e) {
@@ -161,7 +164,7 @@ public class MQTTServicePulsarClientTest {
      * Service
      */
     private void startPlatformConsumer() throws PulsarClientException {
-        System.out.println("Starting consumer for MQTT Service platform topic: " + TOWARDS_PLATFORM_TOPIC);
+        log.info("Starting consumer for MQTT Service platform topic: " + TOWARDS_PLATFORM_TOPIC);
 
         consumer = client.newConsumer()
                 .topic(TOWARDS_PLATFORM_TOPIC)
@@ -170,7 +173,7 @@ public class MQTTServicePulsarClientTest {
                 .messageListener(new MQTTServiceMessageListener())
                 .subscribe();
 
-        System.out.println("Consumer started successfully for platform topic!");
+        log.info("Consumer started successfully for platform topic!");
     }
 
     /**
@@ -178,7 +181,7 @@ public class MQTTServicePulsarClientTest {
      * Service
      */
     private void startDeviceConsumer() throws PulsarClientException {
-        System.out.println("Starting consumer for MQTT Service device topic: " + TOWARDS_DEVICE_TOPIC);
+        log.info("Starting consumer for MQTT Service device topic: " + TOWARDS_DEVICE_TOPIC);
 
         consumer = client.newConsumer()
                 .topic(TOWARDS_DEVICE_TOPIC)
@@ -187,7 +190,7 @@ public class MQTTServicePulsarClientTest {
                 .messageListener(new MQTTServiceMessageListener())
                 .subscribe();
 
-        System.out.println("Consumer started successfully towards device topic!");
+        log.info("Consumer started successfully towards device topic!");
     }
 
     /**
@@ -195,8 +198,8 @@ public class MQTTServicePulsarClientTest {
      * All messages go to towardsDeviceTopic with MQTT topic as property
      */
     private void testSendMQTTServiceMessages() throws PulsarClientException {
-        System.out.println("Connecting to Pulsar broker: " + PULSAR_BROKER_HOST);
-        System.out.println("Publishing messages to device topic: " + TOWARDS_DEVICE_TOPIC);
+        log.info("Connecting to Pulsar broker: " + PULSAR_BROKER_HOST);
+        log.info("Publishing messages to device topic: " + TOWARDS_DEVICE_TOPIC);
 
         producer = client.newProducer()
                 .topic(TOWARDS_DEVICE_TOPIC)
@@ -210,7 +213,7 @@ public class MQTTServicePulsarClientTest {
         sendMQTTServiceMessage("alarm/critical/device-456", "alert", "battery_low");
 
         producer.close();
-        System.out.println("Producer closed");
+        log.info("Producer closed");
     }
 
     /**
@@ -233,18 +236,18 @@ public class MQTTServicePulsarClientTest {
                 .property("messageType", measurementType) // Additional metadata
                 .send();
 
-        System.out.println("Sent message to MQTT Service:");
-        System.out.println("  MQTT Topic (property): " + mqttTopic);
-        System.out.println("  Pulsar Topic: " + TOWARDS_DEVICE_TOPIC);
-        System.out.println("  Payload: " + payload);
-        System.out.println("  ---");
+        log.info("Sent message to MQTT Service:");
+        log.info("  MQTT Topic (property): " + mqttTopic);
+        log.info("  Pulsar Topic: " + TOWARDS_DEVICE_TOPIC);
+        log.info("  Payload: " + payload);
+        log.info("  ---");
     }
 
     /**
      * Test sending messages that simulate inbound traffic from devices
      */
     private void simulateInboundMessages() throws PulsarClientException {
-        System.out.println("Simulating inbound messages to platform topic...");
+        log.info("Simulating inbound messages to platform topic...");
 
         try (Producer<byte[]> platformProducer = client.newProducer()
                 .topic(TOWARDS_PLATFORM_TOPIC)
@@ -272,7 +275,7 @@ public class MQTTServicePulsarClientTest {
                         .property("direction", "inbound")
                         .send();
 
-                System.out.println("Sent inbound message for MQTT topic: " + mqttTopic);
+                log.info("Sent inbound message for MQTT topic: " + mqttTopic);
                 Thread.sleep(500); // Small delay
             }
         } catch (InterruptedException e) {
@@ -281,12 +284,12 @@ public class MQTTServicePulsarClientTest {
     }
 
     private void cleanup() {
-        System.out.println("Cleaning up resources...");
+        log.info("Cleaning up resources...");
 
         try {
             if (consumer != null) {
                 consumer.close();
-                System.out.println("Consumer closed");
+                log.info("Consumer closed");
             }
         } catch (PulsarClientException e) {
             System.err.println("Error closing consumer: " + e.getMessage());
@@ -295,7 +298,7 @@ public class MQTTServicePulsarClientTest {
         try {
             if (producer != null) {
                 producer.close();
-                System.out.println("Producer closed");
+                log.info("Producer closed");
             }
         } catch (PulsarClientException e) {
             System.err.println("Error closing producer: " + e.getMessage());
@@ -304,7 +307,7 @@ public class MQTTServicePulsarClientTest {
         try {
             if (client != null) {
                 client.close();
-                System.out.println("Pulsar client closed");
+                log.info("Pulsar client closed");
             }
         } catch (PulsarClientException e) {
             System.err.println("Error closing client: " + e.getMessage());
@@ -321,7 +324,7 @@ public class MQTTServicePulsarClientTest {
             }
         }
 
-        System.out.println("Cleanup completed");
+        log.info("Cleanup completed");
     }
 
     /**
@@ -339,7 +342,7 @@ public class MQTTServicePulsarClientTest {
                 String messageId = message.getMessageId().toString();
                 long publishTime = message.getPublishTime();
 
-                System.out.println("=== MQTT SERVICE MESSAGE RECEIVED ===");
+                log.info("=== MQTT SERVICE MESSAGE RECEIVED ===");
                 System.out.printf("Pulsar Topic: %s%n", pulsarTopic);
                 System.out.printf("MQTT Topic (property): %s%n", mqttTopic != null ? mqttTopic : "N/A");
                 System.out.printf("Client ID (property): %s%n", clientId != null ? clientId : "N/A");
@@ -347,11 +350,11 @@ public class MQTTServicePulsarClientTest {
                 System.out.printf("Publish Time: %d%n", publishTime);
 
                 // Display all properties
-                System.out.println("Properties:");
+                log.info("Properties:");
                 message.getProperties().forEach((key, value) -> System.out.printf("  %s: %s%n", key, value));
 
                 System.out.printf("Payload: %s%n", payload);
-                System.out.println("=====================================");
+                log.info("=====================================");
 
                 // Acknowledge the message
                 consumer.acknowledge(message);

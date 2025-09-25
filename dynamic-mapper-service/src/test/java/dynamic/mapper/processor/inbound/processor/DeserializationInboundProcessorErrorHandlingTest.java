@@ -6,7 +6,6 @@ import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.camel.Exchange;
@@ -16,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -26,7 +24,9 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.inbound.deserializer.PayloadDeserializer;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.service.MappingService;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 class DeserializationInboundProcessorErrorHandlingTest {
 

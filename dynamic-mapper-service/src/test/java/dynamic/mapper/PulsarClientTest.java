@@ -35,6 +35,9 @@ import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.SubscriptionType;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class PulsarClientTest {
     private PulsarClient client;
     private Producer<byte[]> producer;
@@ -56,11 +59,11 @@ public class PulsarClientTest {
     }
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Starting Pulsar Test Client...");
-        System.out.println("Broker Host: " + PULSAR_BROKER_HOST);
-        System.out.println("Topic: " + topic);
-        System.out.println("Topic Pattern: " + TOPIC_PATTERN);
-        System.out.println("Subscription: " + SUBSCRIPTION_NAME);
+        log.info("Starting Pulsar Test Client...");
+        log.info("Broker Host: " + PULSAR_BROKER_HOST);
+        log.info("Topic: " + topic);
+        log.info("Topic Pattern: " + TOPIC_PATTERN);
+        log.info("Subscription: " + SUBSCRIPTION_NAME);
 
         PulsarClientTest testClient = new PulsarClientTest();
         
@@ -75,7 +78,7 @@ public class PulsarClientTest {
             // testClient.testSendMeasurement();
             
             // Keep consumer running for a while
-            System.out.println("Consumer running... Press Ctrl+C to stop");
+            log.info("Consumer running... Press Ctrl+C to stop");
             Thread.sleep(60000); // Run for 1 minute
             
         } catch (Exception e) {
@@ -87,7 +90,7 @@ public class PulsarClientTest {
     }
 
     private void initialize() throws PulsarClientException {
-        System.out.println("Initializing Pulsar client...");
+        log.info("Initializing Pulsar client...");
         
         var clientBuilder = org.apache.pulsar.client.api.PulsarClient.builder()
                 .serviceUrl(PULSAR_BROKER_HOST)
@@ -100,11 +103,11 @@ public class PulsarClientTest {
         }
 
         client = clientBuilder.build();
-        System.out.println("Pulsar client initialized successfully!");
+        log.info("Pulsar client initialized successfully!");
     }
 
     private void configureAuthentication(org.apache.pulsar.client.api.ClientBuilder clientBuilder) {
-        System.out.println("Configuring authentication method: " + AUTH_NAME);
+        log.info("Configuring authentication method: " + AUTH_NAME);
         
         try {
             switch (AUTH_NAME.toLowerCase()) {
@@ -134,7 +137,7 @@ public class PulsarClientTest {
                     }
                     break;
                 default:
-                    System.out.println("Unknown authentication method: " + AUTH_NAME);
+                    log.info("Unknown authentication method: " + AUTH_NAME);
                     break;
             }
         } catch (Exception e) {
@@ -143,7 +146,7 @@ public class PulsarClientTest {
     }
 
     private void startConsumer() throws PulsarClientException {
-        System.out.println("Starting consumer for topic pattern: " + TOPIC_PATTERN);
+        log.info("Starting consumer for topic pattern: " + TOPIC_PATTERN);
         
         consumer = client.newConsumer()
                 .topicsPattern(Pattern.compile(TOPIC_PATTERN))
@@ -152,12 +155,12 @@ public class PulsarClientTest {
                 .messageListener(new PulsarMessageListener())
                 .subscribe();
         
-        System.out.println("Consumer started successfully!");
+        log.info("Consumer started successfully!");
     }
 
     private void testSendMeasurement() throws PulsarClientException {
-        System.out.println("Connecting to Pulsar broker: " + PULSAR_BROKER_HOST + "!");
-        System.out.println("Publishing message on topic: " + topic);
+        log.info("Connecting to Pulsar broker: " + PULSAR_BROKER_HOST + "!");
+        log.info("Publishing message on topic: " + topic);
 
         producer = client.newProducer()
                 .topic(topic)
@@ -169,17 +172,17 @@ public class PulsarClientTest {
 
         // Send message synchronously
         producer.send(payload.getBytes());
-        System.out.println("Message published: " + payload);
+        log.info("Message published: " + payload);
 
         // Send a few more test messages to different device IDs
         sendAdditionalTestMessages();
         
         producer.close();
-        System.out.println("Producer closed");
+        log.info("Producer closed");
     }
 
     private void sendAdditionalTestMessages() throws PulsarClientException {
-        System.out.println("Sending additional test messages...");
+        log.info("Sending additional test messages...");
         
         String[] deviceIds = {"001", "002", "003", "123", "999"};
         
@@ -197,7 +200,7 @@ public class PulsarClientTest {
                         deviceId, System.currentTimeMillis(), 20 + Integer.parseInt(deviceId));
                 
                 testProducer.send(payload.getBytes());
-                System.out.println("Sent message to topic: " + testTopic);
+                log.info("Sent message to topic: " + testTopic);
                 
                 // Small delay between messages
                 Thread.sleep(100);
@@ -209,12 +212,12 @@ public class PulsarClientTest {
     }
 
     private void cleanup() {
-        System.out.println("Cleaning up resources...");
+        log.info("Cleaning up resources...");
         
         try {
             if (consumer != null) {
                 consumer.close();
-                System.out.println("Consumer closed");
+                log.info("Consumer closed");
             }
         } catch (PulsarClientException e) {
             System.err.println("Error closing consumer: " + e.getMessage());
@@ -223,7 +226,7 @@ public class PulsarClientTest {
         try {
             if (producer != null) {
                 producer.close();
-                System.out.println("Producer closed");
+                log.info("Producer closed");
             }
         } catch (PulsarClientException e) {
             System.err.println("Error closing producer: " + e.getMessage());
@@ -232,7 +235,7 @@ public class PulsarClientTest {
         try {
             if (client != null) {
                 client.close();
-                System.out.println("Pulsar client closed");
+                log.info("Pulsar client closed");
             }
         } catch (PulsarClientException e) {
             System.err.println("Error closing client: " + e.getMessage());
@@ -249,7 +252,7 @@ public class PulsarClientTest {
             }
         }
         
-        System.out.println("Cleanup completed");
+        log.info("Cleanup completed");
     }
 
     /**
@@ -267,7 +270,7 @@ public class PulsarClientTest {
                 System.out.printf("[RECEIVED] Topic: %s | MessageId: %s | PublishTime: %d%n", 
                         topic, messageId, publishTime);
                 System.out.printf("[PAYLOAD] %s%n", payload);
-                System.out.println("----------------------------------------");
+                log.info("----------------------------------------");
                 
                 // Acknowledge the message
                 consumer.acknowledge(message);

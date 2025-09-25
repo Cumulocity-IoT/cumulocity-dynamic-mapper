@@ -25,7 +25,10 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
+import lombok.extern.slf4j.Slf4j;
 
+
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class MappingContextInboundProcessorTest {
@@ -113,13 +116,13 @@ class MappingContextInboundProcessorTest {
             if (field != null) {
                 field.setAccessible(true);
                 field.set(processor, mappingService);
-                System.out.println("Successfully injected mappingService into " + processor.getClass().getSimpleName());
+                log.info("Successfully injected mappingService into " + processor.getClass().getSimpleName());
             } else {
-                System.out.println("No mappingService field found in " + processor.getClass().getSimpleName()
+                log.info("No mappingService field found in " + processor.getClass().getSimpleName()
                         + " or its parent classes");
             }
         } catch (Exception e) {
-            System.out.println("Failed to inject mappingService: " + e.getMessage());
+            log.info("Failed to inject mappingService: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -128,10 +131,10 @@ class MappingContextInboundProcessorTest {
         while (clazz != null) {
             try {
                 Field field = clazz.getDeclaredField("mappingService");
-                System.out.println("Found mappingService field in " + clazz.getSimpleName());
+                log.info("Found mappingService field in " + clazz.getSimpleName());
                 return field;
             } catch (NoSuchFieldException e) {
-                System.out.println("No mappingService field in " + clazz.getSimpleName() + ", checking parent class");
+                log.info("No mappingService field in " + clazz.getSimpleName() + ", checking parent class");
                 clazz = clazz.getSuperclass();
             }
         }
@@ -149,9 +152,9 @@ class MappingContextInboundProcessorTest {
             // If we get here without exception, the test passes
             assertTrue(true, "Process completed without exception");
         } catch (Exception e) {
-            System.out.println("Exception details:");
-            System.out.println("Message: " + e.getMessage());
-            System.out.println("Cause: " + e.getCause());
+            log.info("Exception details:");
+            log.info("Message: " + e.getMessage());
+            log.info("Cause: " + e.getCause());
             e.printStackTrace();
             fail("Unexpected exception: " + e.getMessage());
         }
@@ -181,7 +184,7 @@ class MappingContextInboundProcessorTest {
                 assertTrue(true, "Successfully processed " + type);
 
             } catch (Exception e) {
-                System.out.println("Failed to process mapping type " + type + ": " + e.getMessage());
+                log.info("Failed to process mapping type " + type + ": " + e.getMessage());
                 e.printStackTrace();
                 fail("Failed to process mapping type " + type + ": " + e.getMessage());
             }
@@ -226,8 +229,8 @@ class MappingContextInboundProcessorTest {
             processor.process(exchange);
             assertTrue(true, "Process completed successfully");
         } catch (Exception e) {
-            System.out.println("Exception during testProcessWithValidInputs:");
-            System.out.println("Message: " + e.getMessage());
+            log.info("Exception during testProcessWithValidInputs:");
+            log.info("Message: " + e.getMessage());
             e.printStackTrace();
             fail("Unexpected exception: " + e.getMessage());
         }
@@ -243,7 +246,7 @@ class MappingContextInboundProcessorTest {
             assertNotNull(injectedService, "MappingService should be injected");
             assertEquals(mappingService, injectedService, "Injected service should be our mock");
         } else {
-            System.out.println("No mappingService field found - processor might not use MappingService");
+            log.info("No mappingService field found - processor might not use MappingService");
         }
     }
 
@@ -275,10 +278,10 @@ class MappingContextInboundProcessorTest {
                 assertDoesNotThrow(() -> freshProcessor.process(exchange));
             } else {
                 // If no mappingService field exists, the processor might not need it
-                System.out.println("Processor does not have mappingService field - skipping test");
+                log.info("Processor does not have mappingService field - skipping test");
             }
         } catch (Exception e) {
-            System.out.println("Minimal mocking test failed: " + e.getMessage());
+            log.info("Minimal mocking test failed: " + e.getMessage());
             e.printStackTrace();
         }
     }
