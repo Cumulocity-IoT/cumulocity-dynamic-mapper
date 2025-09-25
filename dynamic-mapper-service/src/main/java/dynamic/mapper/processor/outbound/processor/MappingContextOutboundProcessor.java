@@ -70,7 +70,7 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
         String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
 
         // Prepare GraalVM context if code exists
-        if (mapping.code != null && TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.transformationType)) {
+        if (mapping.getCode() != null && TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
             try {
                 // contextSemaphore.acquire();
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
@@ -84,8 +84,8 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
                 handleGraalVMError(tenant, mapping, e, processingContext);
                 return;
             }
-        } else if (mapping.code != null &&
-                TransformationType.SMART_FUNCTION.equals(mapping.transformationType)) {
+        } else if (mapping.getCode() != null &&
+                TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
                 var graalContext = createGraalContext(graalEngine);
@@ -132,7 +132,7 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
     private void logOutboundMessageReceived(String tenant, Mapping mapping, String connectorIdentifier,
             ProcessingContext<?> context,
             ServiceConfiguration serviceConfiguration) {
-        if (serviceConfiguration.logPayload || mapping.debug) {
+        if (serviceConfiguration.logPayload || mapping.getDebug()) {
             Object pp = context.getPayload();
             String ppLog = null;
 

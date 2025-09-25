@@ -204,7 +204,7 @@ public class MappingController {
 
             mappingService.removeFromMappingFromCaches(tenant, deletedMapping);
 
-            if (!Direction.OUTBOUND.equals(deletedMapping.direction)) {
+            if (!Direction.OUTBOUND.equals(deletedMapping.getDirection())) {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.
                 Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
@@ -259,9 +259,9 @@ public class MappingController {
             log.info("{} - Create mapping: {}", tenant, mapping.getMappingTopic());
             log.debug("{} - Create mapping: {}", tenant, mapping);
             // new mapping should be disabled by default
-            mapping.active = false;
+            mapping.setActive(false);
             final Mapping createdMapping = mappingService.createMapping(tenant, mapping);
-            if (Direction.OUTBOUND.equals(createdMapping.direction)) {
+            if (Direction.OUTBOUND.equals(createdMapping.getDirection())) {
                 mappingService.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
             } else {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
@@ -272,7 +272,7 @@ public class MappingController {
                 });
                 mappingService.removeMappingInboundFromResolver(tenant, createdMapping);
                 mappingService.addMappingInboundToResolver(tenant, createdMapping);
-                mappingService.addMappingInboundToCache(tenant, createdMapping.id, mapping);
+                mappingService.addMappingInboundToCache(tenant, createdMapping.getId(), mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(createdMapping);
         } catch (Exception ex) {
@@ -331,7 +331,7 @@ public class MappingController {
         try {
             log.info("{} - Update mapping: {}, {}", tenant, mapping, id);
             final Mapping updatedMapping = mappingService.updateMapping(tenant, mapping, false, false);
-            if (Direction.OUTBOUND.equals(mapping.direction)) {
+            if (Direction.OUTBOUND.equals(mapping.getDirection())) {
                 mappingService.rebuildMappingOutboundCache(tenant, ConnectorId.INTERNAL);
             } else {
                 Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
@@ -340,7 +340,7 @@ public class MappingController {
                 });
                 mappingService.removeMappingInboundFromResolver(tenant, mapping);
                 mappingService.addMappingInboundToResolver(tenant, mapping);
-                mappingService.addMappingInboundToCache(tenant, mapping.id, mapping);
+                mappingService.addMappingInboundToCache(tenant, mapping.getId(), mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(mapping);
         } catch (Exception ex) {

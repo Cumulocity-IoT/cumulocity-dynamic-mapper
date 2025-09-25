@@ -63,7 +63,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
     @BeforeEach
     void setUp() {
         // Create real Mapping object
-        mapping = new Mapping();
+        mapping = Mapping.builder().build();
         
         when(exchange.getIn()).thenReturn(message);
         when(message.getBody(Mapping.class)).thenReturn(mapping);
@@ -76,7 +76,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
     @Test
     void testDeserializationIOExceptionHandling() throws Exception {
         // Given
-        mapping.mappingType = MappingType.JSON;
+        mapping.setMappingType(MappingType.JSON);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
         
         // Use reflection to replace the deserializer with a mock that throws IOException
@@ -97,7 +97,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
     @Test
     void testByteArrayDeserializationIOExceptionHandling() throws Exception {
         // Given
-        mapping.mappingType = MappingType.PROTOBUF_INTERNAL;
+        mapping.setMappingType(MappingType.PROTOBUF_INTERNAL);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
         
         // Use reflection to replace the deserializer with a mock that throws IOException

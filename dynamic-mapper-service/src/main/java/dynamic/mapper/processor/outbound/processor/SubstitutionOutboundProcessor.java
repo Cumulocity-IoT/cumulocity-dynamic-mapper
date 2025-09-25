@@ -74,7 +74,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             substituteInTargetAndCreateRequests(context);
         } catch (Exception e) {
             String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
-                    tenant, mapping.name);
+                    tenant, mapping.getName());
             log.error(errorMessage, e);
             context.addError(new ProcessingException("Substitution failed", e));
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -101,14 +101,14 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
         Set<String> pathTargets = processingCache.keySet();
 
         int predecessor = -1;
-        DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
+        DocumentContext payloadTarget = JsonPath.parse(mapping.getTargetTemplate());
         /*
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
          */
         List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic(), false);
         payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
-        if (mapping.supportsMessageContext) {
+        if (mapping.getSupportsMessageContext()) {
             Map<String, String> cod = new HashMap<String, String>() {
                 {
                     put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
@@ -118,7 +118,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             };
             payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
         }
-        if (serviceConfiguration.logPayload || mapping.debug) {
+        if (serviceConfiguration.logPayload || mapping.getDebug()) {
             String patchedPayloadTarget = payloadTarget.jsonString();
             log.info("{} - Patched payload: {}", tenant, patchedPayloadTarget);
         }
@@ -138,8 +138,8 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
         /*
          * step 4 prepare target payload for sending to mqttBroker
          */
-        if (Arrays.stream(API.values()).anyMatch(v -> mapping.targetAPI.equals(v))) {
-            // if (!mapping.targetAPI.equals(API.INVENTORY)) {
+        if (Arrays.stream(API.values()).anyMatch(v -> mapping.getTargetAPI().equals(v))) {
+            // if (!mapping.getTargetAPI().equals(API.INVENTORY)) {
             List<String> topicLevels = payloadTarget.read(Mapping.TOKEN_TOPIC_LEVEL);
             if (topicLevels != null && topicLevels.size() > 0) {
                 // now merge the replaced topic levels
@@ -172,7 +172,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             // remove TOPIC_LEVEL
             payloadTarget.delete("$." + Mapping.TOKEN_TOPIC_LEVEL);
             RequestMethod method = RequestMethod.POST;
-            if (mapping.supportsMessageContext) {
+            if (mapping.getSupportsMessageContext()) {
                 String key = payloadTarget
                         .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
                 context.setKey(key);
@@ -202,9 +202,9 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                     DynamicMapperRequest.builder()
                             .predecessor(predecessor)
                             .method(method)
-                            .api(mapping.targetAPI) // Set the api field
+                            .api(mapping.getTargetAPI()) // Set the api field
                             .sourceId(deviceSource)
-                            .externalIdType(mapping.externalIdType)
+                            .externalIdType(mapping.getExternalIdType())
                             .externalId(context.getExternalId())
                             .request(payloadTarget.jsonString())
                             .build());
@@ -224,12 +224,12 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             predecessor = newPredecessor;
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented
-            log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
+            log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.getTargetAPI(),
                     processingCache.size());
         }
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
-                    mapping.targetAPI,
+                    mapping.getTargetAPI(),
                     payloadTarget.jsonString(),
                     1);
         }

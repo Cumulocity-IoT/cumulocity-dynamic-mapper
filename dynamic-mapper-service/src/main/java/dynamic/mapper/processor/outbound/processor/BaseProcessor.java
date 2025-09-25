@@ -63,16 +63,16 @@ public abstract class BaseProcessor implements Processor {
             C8YMessage message, ServiceConfiguration serviceConfiguration) {
         return ProcessingContext.<Object>builder()
                 .payload(message.getParsedPayload())
-                .topic(mapping.publishTopic)
+                .topic(mapping.getPublishTopic())
                 .rawPayload(message.getPayload())
-                .mappingType(mapping.mappingType)
+                .mappingType(mapping.getMappingType())
                 .mapping(mapping)
                 .sendPayload(message.isSendPayload())
                 .tenant(tenant)
                 .supportsMessageContext(
-                        mapping.supportsMessageContext)
-                .qos(mapping.qos)
+                        mapping.getSupportsMessageContext())
+                .qos(mapping.getQos())
                 .serviceConfiguration(serviceConfiguration)
-                .api(mapping.targetAPI).build();
+                .api(mapping.getTargetAPI()).build();
     }
 }

@@ -73,7 +73,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             }
             String errorMessage = String.format(
                     "Tenant %s - Error in FlowResultOutboundProcessor: %s for mapping: %s, line %s",
-                    tenant, mapping.name, e.getMessage(), lineNumber);
+                    tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -157,7 +157,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
             }
 
             // set key for Kafka messages
-            if (mapping.supportsMessageContext && deviceMessage.getTransportFields() != null) {
+            if (mapping.getSupportsMessageContext() && deviceMessage.getTransportFields() != null) {
                 context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
 
             }
@@ -221,7 +221,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
         }
 
         // Handle context data for message context support
-        if (mapping.supportsMessageContext) {
+        if (mapping.getSupportsMessageContext()) {
             @SuppressWarnings("unchecked")
             Map<String, String> contextData = (Map<String, String>) payload.get(Mapping.TOKEN_CONTEXT_DATA);
 
@@ -325,7 +325,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                     .predecessor(predecessor)
                     .method(method)
                     .sourceId(sourceId) // Device/source identifier
-                    .externalIdType(mapping.externalIdType) // External ID type from mapping
+                    .externalIdType(mapping.getExternalIdType()) // External ID type from mapping
                     .externalId(context.getExternalId())
                     .request(payloadJson) // JSON payload
                     .build();

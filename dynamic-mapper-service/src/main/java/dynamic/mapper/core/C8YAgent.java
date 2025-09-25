@@ -593,7 +593,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             c8ySemaphore.release();
                         }
                         GId eventId = ((EventRepresentation) rt).getId();
-                        if (context.getMapping().eventWithAttachment) {
+                        if (context.getMapping().getEventWithAttachment()) {
                             BinaryInfo binaryInfo = context.getBinaryInfo();
                             uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }

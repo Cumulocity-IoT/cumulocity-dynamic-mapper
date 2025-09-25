@@ -547,7 +547,7 @@ public class MQTT5Client extends AConnectorClient {
 
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
             log.info("{} - Published outbound message: {} for mapping: {} on topic: [{}], {}", tenant, payload,
-                    context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
+                    context.getMapping().getName(), context.getResolvedPublishTopic(), connectorName);
         }
     }
 

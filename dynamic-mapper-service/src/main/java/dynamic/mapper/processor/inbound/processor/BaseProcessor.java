@@ -35,15 +35,15 @@ public abstract class BaseProcessor implements Processor {
                 .rawPayload(connectorMessage.getPayload())
                 .topic(connectorMessage.getTopic())
                 .clientId(connectorMessage.getClientId())
-                .mappingType(mapping.mappingType)
+                .mappingType(mapping.getMappingType())
                 .serviceConfiguration(serviceConfiguration)
                 .mapping(mapping)
                 .sendPayload(connectorMessage.isSendPayload())
                 .tenant(tenant)
                 .supportsMessageContext(
-                        connectorMessage.isSupportsMessageContext() && mapping.supportsMessageContext)
+                        connectorMessage.isSupportsMessageContext() && mapping.getSupportsMessageContext())
                 .key(connectorMessage.getKey())
-                .api(mapping.targetAPI).build();
+                .api(mapping.getTargetAPI()).build();
     }
 
     protected ProcessingContext<byte[]> createProcessingContextAsByteArray(String tenant, Mapping mapping,
@@ -51,15 +51,15 @@ public abstract class BaseProcessor implements Processor {
         return ProcessingContext.<byte[]>builder().rawPayload(connectorMessage.getPayload())
                 .topic(connectorMessage.getTopic())
                 .clientId(connectorMessage.getClientId())
-                .mappingType(mapping.mappingType)
+                .mappingType(mapping.getMappingType())
                 .serviceConfiguration(serviceConfiguration)
                 .mapping(mapping)
                 .sendPayload(connectorMessage.isSendPayload())
                 .tenant(tenant)
                 .supportsMessageContext(
-                        connectorMessage.isSupportsMessageContext() && mapping.supportsMessageContext)
+                        connectorMessage.isSupportsMessageContext() && mapping.getSupportsMessageContext())
                 .key(connectorMessage.getKey())
-                .api(mapping.targetAPI)
+                .api(mapping.getTargetAPI())
                 .build();
     }
 

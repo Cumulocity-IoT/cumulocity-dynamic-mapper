@@ -77,7 +77,7 @@ public class EnrichmentInboundProcessor extends BaseProcessor {
             addToFlowContext(flowContext, context, "mappingId", mapping.getId());
             addToFlowContext(flowContext, context, "targetAPI", mapping.getTargetAPI().toString());
             addToFlowContext(flowContext, context, "genericDeviceIdentifier", mapping.getGenericDeviceIdentifier());
-            addToFlowContext(flowContext, context, "debug", mapping.debug);
+            addToFlowContext(flowContext, context, "debug", mapping.getDebug());
 
             if (context.getMapping().getEventWithAttachment()) {
                 addToFlowContext(flowContext, context, "attachment_Name", "");

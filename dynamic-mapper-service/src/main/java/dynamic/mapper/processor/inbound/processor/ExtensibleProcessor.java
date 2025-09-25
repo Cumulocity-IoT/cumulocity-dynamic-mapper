@@ -54,7 +54,7 @@ public class ExtensibleProcessor extends BaseProcessor {
         String tenant = context.getTenant();
         ProcessorExtensionSource extension = null;
         try {
-            extension = getProcessorExtensionSource(tenant, context.getMapping().extension);
+            extension = getProcessorExtensionSource(tenant, context.getMapping().getExtension());
             if (extension == null) {
                 log.info("{} - extractFromSource ******* {}", tenant, this);
                 logExtensions(tenant);

@@ -187,7 +187,7 @@ public class ProcessingContext<O> {
 
     public List<SubstituteValue> getDeviceEntries() {
         List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
+        if (mapping.getExtension() != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
                 || mapping.isTransformationAsCode()) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {
@@ -203,7 +203,7 @@ public class ProcessingContext<O> {
 
     public List<String> getPathsTargetForDeviceIdentifiers() {
         List<String> pathsTargetForDeviceIdentifiers;
-        if (mapping.extension != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
+        if (mapping.getExtension() != null || MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
                 || mapping.isTransformationAsCode()) {
             pathsTargetForDeviceIdentifiers = new ArrayList<>(Arrays.asList(mapping.getGenericDeviceIdentifier()));
         } else {

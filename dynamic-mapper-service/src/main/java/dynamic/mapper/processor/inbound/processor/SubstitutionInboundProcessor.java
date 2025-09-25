@@ -67,10 +67,10 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                         context.getSourceId());
                 if (context.getSourceId() == null
                         || !filterInventory) {
-                    if (mapping.debug) {
+                    if (mapping.getDebug()) {
                         log.info(
                                 "{} - Inbound mapping {}/{} not processed, failing Filter inventory execution: filterResult {}",
-                                tenant, mapping.name, mapping.identifier,
+                                tenant, mapping.getName(), mapping.getIdentifier(),
                                 filterInventory);
                     }
                     context.setIgnoreFurtherProcessing(true);
@@ -78,7 +78,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
             }
         } catch (Exception e) {
             String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s",
-                    tenant, mapping.name);
+                    tenant, mapping.getName());
             log.error(errorMessage, e);
             context.addError(new ProcessingException("Substitution failed", e));
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -127,7 +127,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
                             e.getCause() != null &&
                             e.getCause() instanceof SDKException &&
                             ((SDKException) e.getCause()).getHttpStatus() == 422) {
-                        ID identity = new ID(mapping.externalIdType, deviceEntries.get(i).value.toString());
+                        ID identity = new ID(mapping.getExternalIdType(), deviceEntries.get(i).value.toString());
                         c8yAgent.removeDeviceFromInboundExternalIdCache(tenant, identity);
                         context.setSourceId(null);
                         getBuildProcessingContext(context, deviceEntries.get(i),
@@ -294,7 +294,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         DynamicMapperRequest request = DynamicMapperRequest.builder()
                 .predecessor(predecessor)
                 .api(api)
-                .method(context.getMapping().updateExistingDevice ? RequestMethod.POST : RequestMethod.PATCH)
+                .method(context.getMapping().getUpdateExistingDevice() ? RequestMethod.POST : RequestMethod.PATCH)
                 .sourceId(context.getSourceId())
                 .externalIdType(mapping.getExternalIdType())
                 .externalId(context.getExternalId())
@@ -328,7 +328,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
         int predecessor = -1;
-        DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
+        DocumentContext payloadTarget = JsonPath.parse(mapping.getTargetTemplate());
         for (String pathTarget : pathTargets) {
             SubstituteValue substitute = new SubstituteValue(
                     "NOT_DEFINED", TYPE.TEXTUAL,

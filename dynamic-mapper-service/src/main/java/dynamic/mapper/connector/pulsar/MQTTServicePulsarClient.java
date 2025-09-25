@@ -586,7 +586,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
             log.info(
                     "{} - Published to Cumulocity MQTT Service: QoS={}, originalTopic=[{}], pulsarTopic=[{}], mapping={}, connector={}",
-                    tenant, qos, originalMqttTopic, towardsDeviceTopic, context.getMapping().name, connectorName);
+                    tenant, qos, originalMqttTopic, towardsDeviceTopic, context.getMapping().getName(), connectorName);
         }
     }
 

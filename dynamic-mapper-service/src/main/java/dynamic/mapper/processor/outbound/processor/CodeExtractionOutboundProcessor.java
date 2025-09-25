@@ -72,7 +72,7 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
             String errorMessage = String.format("Tenant %s - Error in CodeExtractionOutboundProcessor: %s for mapping: %s, line %s",
-            tenant, mapping.name, e.getMessage(), lineNumber);
+            tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -95,17 +95,17 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
             Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
             String payload = toPrettyJsonString(payloadObject);
-            if (serviceConfiguration.logPayload || mapping.debug) {
+            if (serviceConfiguration.logPayload || mapping.getDebug()) {
                 log.info("{} - Patched payload: {}", tenant, payload);
             }
 
-            if (mapping.code != null) {
+            if (mapping.getCode() != null) {
                 Context graalContext = context.getGraalContext();
 
-                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+                String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
                 Value bindings = graalContext.getBindings("js");
 
-                byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+                byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
                 String decodedCode = new String(decodedBytes);
                 String decodedCodeAdapted = decodedCode.replaceFirst(
                         Mapping.EXTRACT_FROM_SOURCE,

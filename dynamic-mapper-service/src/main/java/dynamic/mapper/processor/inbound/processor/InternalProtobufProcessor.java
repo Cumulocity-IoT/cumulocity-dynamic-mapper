@@ -67,7 +67,7 @@ public class InternalProtobufProcessor extends BaseProcessor {
 
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
-        if (MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().mappingType)) {
+        if (MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().getMappingType())) {
             InternalCustomMeasurementOuter.InternalCustomMeasurement payloadProtobuf;
             try {
                 payloadProtobuf = InternalCustomMeasurementOuter.InternalCustomMeasurement

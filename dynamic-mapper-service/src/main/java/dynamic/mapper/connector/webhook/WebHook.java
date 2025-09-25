@@ -492,7 +492,7 @@ public class WebHook extends AConnectorClient {
             }
             responseEntity.doOnSuccess(response -> {
                 log.info("{} - Published outbound message: {} for mapping: {} on topic: [{}], {}, {}, {}",
-                        tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,
+                        tenant, payload, context.getMapping().getName(), context.getResolvedPublishTopic(), path,
                         connectorName, method);
             });
             responseEntity.doOnError(e -> {
@@ -502,7 +502,7 @@ public class WebHook extends AConnectorClient {
             });
             if (responseEntity.block().getStatusCode().is2xxSuccessful()) {
                 log.info("{} - Published outbound message: {} for mapping: {} on topic: [{}], {}, {}, {}",
-                        tenant, payload, context.getMapping().name, context.getResolvedPublishTopic(), path,
+                        tenant, payload, context.getMapping().getName(), context.getResolvedPublishTopic(), path,
                         connectorName, method);
             }
 

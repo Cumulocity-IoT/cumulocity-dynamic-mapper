@@ -415,7 +415,7 @@ public class OperationController {
         // outbound mapping
         Map<String, String> failed = new HashMap<>();
         for (AConnectorClient client : connectorMap.values()) {
-            if (updatedMapping.direction == Direction.INBOUND) {
+            if (updatedMapping.getDirection() == Direction.INBOUND) {
                 if (!client.updateSubscriptionForInbound(updatedMapping, false, true)) {
                     ConnectorConfiguration conf = client.getConnectorConfiguration();
                     failed.put(conf.getIdentifier(), conf.getName());

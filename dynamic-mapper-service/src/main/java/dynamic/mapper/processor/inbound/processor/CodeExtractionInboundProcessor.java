@@ -55,7 +55,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
                 lineNumber = e.getStackTrace()[0].getLineNumber();
             }
             String errorMessage = String.format("Tenant %s - Error in CodeExtractionInboundProcessor: %s for mapping: %s, line %s",
-            tenant, mapping.name, e.getMessage(), lineNumber);
+            tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
             
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -79,20 +79,20 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
         Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
         String payload = toPrettyJsonString(payloadObject);
-        if (serviceConfiguration.logPayload || mapping.debug) {
+        if (serviceConfiguration.logPayload || mapping.getDebug()) {
             log.info("{} - Patched payload: {}", tenant, payload);
         }
 
         boolean substitutionTimeExists = false;
 
-        if (mapping.code != null) {
+        if (mapping.getCode() != null) {
 
             Context graalContext = context.getGraalContext();
 
-            String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.identifier;
+            String identifier = Mapping.EXTRACT_FROM_SOURCE + "_" + mapping.getIdentifier();
             Value bindings = graalContext.getBindings("js");
 
-            byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+            byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
             String decodedCode = new String(decodedBytes);
             String decodedCodeAdapted = decodedCode.replaceFirst(
                     Mapping.EXTRACT_FROM_SOURCE,
@@ -130,7 +130,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
             ((Map) jsonObject).put(Mapping.TOKEN_TOPIC_LEVEL, splitTopicAsList);
             Map contextData = new HashMap<String, String>() {
                 {
-                    put("api", mapping.targetAPI.toString());
+                    put("api", mapping.getTargetAPI().toString());
                 }
             };
             ((Map) jsonObject).put(Mapping.TOKEN_CONTEXT_DATA, contextData);
@@ -189,7 +189,7 @@ public class CodeExtractionInboundProcessor extends BaseProcessor {
         }
 
         // no substitution for the time property exists, then use the system time
-        if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
+        if (!substitutionTimeExists && mapping.getTargetAPI() != API.INVENTORY && mapping.getTargetAPI() != API.OPERATION) {
             List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
                     Mapping.KEY_TIME,
                     new ArrayList<>());

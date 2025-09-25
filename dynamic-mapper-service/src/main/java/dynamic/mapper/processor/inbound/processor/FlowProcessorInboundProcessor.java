@@ -47,7 +47,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
             }
             String errorMessage = String.format(
                     "Tenant %s - Error in FlowProcessorInboundProcessor: %s for mapping: %s, line %s",
-                    tenant, mapping.name, e.getMessage(), lineNumber);
+                    tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
@@ -66,19 +66,19 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
         Object payloadObject = context.getPayload();
 
         String payload = toPrettyJsonString(payloadObject);
-        if (serviceConfiguration.logPayload || mapping.debug) {
+        if (serviceConfiguration.logPayload || mapping.getDebug()) {
             log.info("{} - Processing payload: {}", tenant, payload);
         }
 
-        if (mapping.code != null) {
+        if (mapping.getCode() != null) {
             Context graalContext = context.getGraalContext();
 
             // Task 1: Invoking JavaScript function
-            String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.identifier;
+            String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
             Value bindings = graalContext.getBindings("js");
 
             // Load and execute the JavaScript code
-            byte[] decodedBytes = Base64.getDecoder().decode(mapping.code);
+            byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
             String decodedCode = new String(decodedBytes);
             String decodedCodeAdapted = decodedCode.replaceFirst(
                     "onMessage",

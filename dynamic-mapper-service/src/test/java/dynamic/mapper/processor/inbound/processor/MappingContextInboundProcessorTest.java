@@ -57,34 +57,32 @@ class MappingContextInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create real Mapping object
-        mapping = new Mapping();
-        mapping.identifier = "test-mapping";
-        mapping.name = "Test Mapping";
-        mapping.debug = false;
-        mapping.qos = Qos.AT_LEAST_ONCE;
-        
+        mapping = Mapping.builder().identifier("test-mapping").name("Test Mapping").debug(false).qos(Qos.AT_LEAST_ONCE)
+                .build();
+
+
         // Create real MappingStatus object with all required fields initialized
         mappingStatus = new MappingStatus(
-            "test-id",
-            "Test Mapping",
-            "test-mapping",
-            Direction.INBOUND,
-            "test/topic",
-            "output/topic",
-            0L, // messagesReceived
-            0L, // errors
-            0L, // currentFailureCount
-            0L, // snoopedTemplatesActive
-            0L, // snoopedTemplatesTotal
-            null // loadingError
+                "test-id",
+                "Test Mapping",
+                "test-mapping",
+                Direction.INBOUND,
+                "test/topic",
+                "output/topic",
+                0L, // messagesReceived
+                0L, // errors
+                0L, // currentFailureCount
+                0L, // snoopedTemplatesActive
+                0L, // snoopedTemplatesTotal
+                null // loadingError
         );
-        
+
         // Create the processor
         processor = new MappingContextInboundProcessor();
-        
+
         // Use reflection to inject the mocked mappingService
         injectMappingServiceIfExists(processor, mappingService);
-        
+
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
         when(message.getBody(Mapping.class)).thenReturn(mapping);
@@ -92,19 +90,19 @@ class MappingContextInboundProcessorTest {
         when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
         when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
-        
+
         // Mock processing context methods to prevent null pointer exceptions
         when(processingContext.getServiceConfiguration()).thenReturn(serviceConfiguration);
         when(processingContext.getTenant()).thenReturn(TEST_TENANT);
         when(processingContext.getMapping()).thenReturn(mapping);
-        
+
         // Setup mapping status mocks - this is crucial!
         when(mappingService.getMappingStatus(eq(TEST_TENANT), eq(mapping))).thenReturn(mappingStatus);
         when(mappingService.getMappingStatus(any(String.class), any(Mapping.class))).thenReturn(mappingStatus);
-        
+
         // Also mock for null tenant case
         when(mappingService.getMappingStatus(isNull(), any(Mapping.class))).thenReturn(mappingStatus);
-        
+
         // Mock connector message
         when(connectorMessage.getPayload()).thenReturn("test payload".getBytes());
     }
@@ -117,7 +115,8 @@ class MappingContextInboundProcessorTest {
                 field.set(processor, mappingService);
                 System.out.println("Successfully injected mappingService into " + processor.getClass().getSimpleName());
             } else {
-                System.out.println("No mappingService field found in " + processor.getClass().getSimpleName() + " or its parent classes");
+                System.out.println("No mappingService field found in " + processor.getClass().getSimpleName()
+                        + " or its parent classes");
             }
         } catch (Exception e) {
             System.out.println("Failed to inject mappingService: " + e.getMessage());
@@ -142,7 +141,7 @@ class MappingContextInboundProcessorTest {
     @Test
     void testProcessWithValidProcessingContext() throws Exception {
         // Given
-        mapping.mappingType = MappingType.JSON;
+        mapping.setMappingType(MappingType.JSON);
 
         // When & Then
         try {
@@ -161,26 +160,26 @@ class MappingContextInboundProcessorTest {
     @Test
     void testProcessWithDifferentMappingTypes() throws Exception {
         MappingType[] mappingTypes = {
-            MappingType.JSON, 
-            MappingType.FLAT_FILE, 
-            MappingType.HEX,
-            MappingType.PROTOBUF_INTERNAL,
-            MappingType.EXTENSION_SOURCE,
-            MappingType.EXTENSION_SOURCE_TARGET,
-            MappingType.CODE_BASED
+                MappingType.JSON,
+                MappingType.FLAT_FILE,
+                MappingType.HEX,
+                MappingType.PROTOBUF_INTERNAL,
+                MappingType.EXTENSION_SOURCE,
+                MappingType.EXTENSION_SOURCE_TARGET,
+                MappingType.CODE_BASED
         };
 
         for (MappingType type : mappingTypes) {
             try {
                 // Given
-                mapping.mappingType = type;
+                mapping.setMappingType(type);
 
                 // When
                 processor.process(exchange);
-                
+
                 // If we get here, the processing was successful
                 assertTrue(true, "Successfully processed " + type);
-                
+
             } catch (Exception e) {
                 System.out.println("Failed to process mapping type " + type + ": " + e.getMessage());
                 e.printStackTrace();
@@ -211,7 +210,7 @@ class MappingContextInboundProcessorTest {
     void testProcessHandlesNullProcessingContext() throws Exception {
         // Given
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(null);
-        mapping.mappingType = MappingType.JSON;
+        mapping.setMappingType(MappingType.JSON);
 
         // When & Then
         assertThrows(Exception.class, () -> processor.process(exchange));
@@ -220,7 +219,7 @@ class MappingContextInboundProcessorTest {
     @Test
     void testProcessWithValidInputs() throws Exception {
         // Given
-        mapping.mappingType = MappingType.JSON;
+        mapping.setMappingType(MappingType.JSON);
 
         // When & Then
         try {
@@ -257,21 +256,21 @@ class MappingContextInboundProcessorTest {
         assertEquals(0L, status.errors, "errors should be initialized to 0");
     }
 
-    @Test 
+    @Test
     void testWithMinimalMocking() throws Exception {
         // Create a completely fresh processor with minimal mocking
         MappingContextInboundProcessor freshProcessor = new MappingContextInboundProcessor();
-        
+
         // Only inject mappingService if the field exists
         try {
             Field field = findMappingServiceField(freshProcessor.getClass());
             if (field != null) {
                 field.setAccessible(true);
                 field.set(freshProcessor, mappingService);
-                
+
                 // Given
-                mapping.mappingType = MappingType.JSON;
-                
+                mapping.setMappingType(MappingType.JSON);
+
                 // When & Then
                 assertDoesNotThrow(() -> freshProcessor.process(exchange));
             } else {

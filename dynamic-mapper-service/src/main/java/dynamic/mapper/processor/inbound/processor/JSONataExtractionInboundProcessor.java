@@ -46,7 +46,7 @@ public class JSONataExtractionInboundProcessor extends BaseProcessor {
             extractFromSource(context);
         } catch (Exception e) {
             String errorMessage = String.format("Tenant %s - Error in JSONataExtractionInboundProcessor for mapping: %s,",
-                    tenant, mapping.name);
+                    tenant, mapping.getName());
             log.error(errorMessage, e);
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));

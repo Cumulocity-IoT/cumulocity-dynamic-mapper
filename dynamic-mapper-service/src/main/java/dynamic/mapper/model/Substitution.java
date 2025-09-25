@@ -21,11 +21,15 @@
 
 package dynamic.mapper.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.internal.JsonFormatter;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -38,14 +42,11 @@ import java.util.Map;
 
 @Slf4j
 @Getter
+@Builder
 @ToString()
+@JsonDeserialize(builder = Substitution.SubstitutionBuilder.class)
 @Schema(description = "Field substitution configuration for transforming data between source and target formats during mapping execution")
 public class Substitution implements Serializable {
-
-    public Substitution() {
-        this.repairStrategy = RepairStrategy.DEFAULT;
-        this.expandArray = false;
-    }
 
     @Schema(
         requiredMode = Schema.RequiredMode.REQUIRED,
@@ -78,6 +79,7 @@ public class Substitution implements Serializable {
     @NotNull
     public String pathTarget;
 
+    @Builder.Default
     @Schema(
         requiredMode = Schema.RequiredMode.REQUIRED,
         description = "Strategy to handle data extraction and transformation edge cases",
@@ -86,14 +88,22 @@ public class Substitution implements Serializable {
     )
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public RepairStrategy repairStrategy;
+    public RepairStrategy repairStrategy = RepairStrategy.DEFAULT;
 
+        @Builder.Default
     @Schema(
         description = "Whether to expand arrays by creating multiple target objects (one for each array element) instead of copying the entire array",
         example = "false"
     )
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean expandArray;
+    public boolean expandArray = false;
+
+        // Add the builder configuration
+    @JsonPOJOBuilder(withPrefix = "", buildMethodName = "build")
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SubstitutionBuilder {
+        // Lombok will generate the builder methods
+    }
 
     public static String toPrettyJsonString(Object obj) {
         if (obj == null) {

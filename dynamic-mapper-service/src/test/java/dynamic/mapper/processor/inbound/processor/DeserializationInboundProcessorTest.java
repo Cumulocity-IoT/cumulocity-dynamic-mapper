@@ -52,32 +52,30 @@ class DeserializationInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create real Mapping object with proper initialization
-        mapping = new Mapping();
-        mapping.id = "test-mapping-id";
-        mapping.identifier = "test-mapping";
-        mapping.name = "Test Mapping";
-        
+        mapping = Mapping.builder().id("test-mapping-id")
+                .identifier("test-mapping").name("Test Mapping")
+                .build();
+
         // Create real MappingStatus objects
         mappingStatus = new MappingStatus(
-            "test-id", "Test Mapping", "test-mapping", Direction.INBOUND,
-            "test/topic", "output/topic", 0L, 0L, 0L, 0L, 0L, null
-        );
-        
+                "test-id", "Test Mapping", "test-mapping", Direction.INBOUND,
+                "test/topic", "output/topic", 0L, 0L, 0L, 0L, 0L, null);
+
         unspecifiedMappingStatus = new MappingStatus(
-            "unspec-id", "Unspecified Mapping", "UNSPECIFIED", Direction.INBOUND,
-            "#", "#", 0L, 0L, 0L, 0L, 0L, null
-        );
-        
+                "unspec-id", "Unspecified Mapping", "UNSPECIFIED", Direction.INBOUND,
+                "#", "#", 0L, 0L, 0L, 0L, 0L, null);
+
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
         when(message.getBody(Mapping.class)).thenReturn(mapping);
         when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
         when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
         when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
-        
+
         // Setup mapping status mocks
         when(mappingService.getMappingStatus(any(String.class), any(Mapping.class))).thenReturn(mappingStatus);
-        when(mappingService.getMappingStatus(TEST_TENANT, Mapping.UNSPECIFIED_MAPPING)).thenReturn(unspecifiedMappingStatus);
+        when(mappingService.getMappingStatus(TEST_TENANT, Mapping.UNSPECIFIED_MAPPING))
+                .thenReturn(unspecifiedMappingStatus);
     }
 
     private void setupValidPayload(MappingType mappingType) {
@@ -85,7 +83,8 @@ class DeserializationInboundProcessorTest {
             case JSON:
             case CODE_BASED:
                 // Provide valid JSON
-                when(connectorMessage.getPayload()).thenReturn("{\"temperature\": 25.5, \"deviceId\": \"sensor001\"}".getBytes());
+                when(connectorMessage.getPayload())
+                        .thenReturn("{\"temperature\": 25.5, \"deviceId\": \"sensor001\"}".getBytes());
                 break;
             case FLAT_FILE:
                 // Provide valid flat file data
@@ -99,7 +98,8 @@ class DeserializationInboundProcessorTest {
             case EXTENSION_SOURCE:
             case EXTENSION_SOURCE_TARGET:
                 // Provide valid binary data
-                when(connectorMessage.getPayload()).thenReturn(new byte[]{0x08, 0x74, 0x01, 0x12, 0x04, 0x74, 0x65, 0x73, 0x74});
+                when(connectorMessage.getPayload())
+                        .thenReturn(new byte[] { 0x08, 0x74, 0x01, 0x12, 0x04, 0x74, 0x65, 0x73, 0x74 });
                 break;
             default:
                 // Default to valid JSON
@@ -110,9 +110,9 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessJsonMappingTypeSuccess() throws Exception {
         // Given
-        mapping.mappingType = MappingType.JSON;
+        mapping.setMappingType(MappingType.JSON);
         setupValidPayload(MappingType.JSON);
-        
+
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
 
@@ -126,9 +126,9 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessProtobufInternalMappingTypeSuccess() throws Exception {
         // Given
-        mapping.mappingType = MappingType.PROTOBUF_INTERNAL;
+        mapping.setMappingType(MappingType.PROTOBUF_INTERNAL);
         setupValidPayload(MappingType.PROTOBUF_INTERNAL);
-        
+
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
 
@@ -142,9 +142,9 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessExtensionSourceMappingTypeSuccess() throws Exception {
         // Given
-        mapping.mappingType = MappingType.EXTENSION_SOURCE;
+        mapping.setMappingType(MappingType.EXTENSION_SOURCE);
         setupValidPayload(MappingType.EXTENSION_SOURCE);
-        
+
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
 
@@ -158,9 +158,9 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessExtensionSourceTargetMappingTypeSuccess() throws Exception {
         // Given
-        mapping.mappingType = MappingType.EXTENSION_SOURCE_TARGET;
+        mapping.setMappingType(MappingType.EXTENSION_SOURCE_TARGET);
         setupValidPayload(MappingType.EXTENSION_SOURCE_TARGET);
-        
+
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
 
@@ -174,9 +174,9 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessFlatFileMappingTypeSuccess() throws Exception {
         // Given
-        mapping.mappingType = MappingType.FLAT_FILE;
+        mapping.setMappingType(MappingType.FLAT_FILE);
         setupValidPayload(MappingType.FLAT_FILE);
-        
+
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
 
@@ -190,9 +190,9 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessHexMappingTypeSuccess() throws Exception {
         // Given
-        mapping.mappingType = MappingType.HEX;
+        mapping.setMappingType(MappingType.HEX);
         setupValidPayload(MappingType.HEX);
-        
+
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
 
@@ -206,9 +206,9 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessCodeBasedMappingTypeSuccess() throws Exception {
         // Given
-        mapping.mappingType = MappingType.CODE_BASED;
+        mapping.setMappingType(MappingType.CODE_BASED);
         setupValidPayload(MappingType.CODE_BASED);
-        
+
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
 
@@ -222,8 +222,8 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessWithNullMappingType() throws Exception {
         // Given
-        mapping.mappingType = null;
-        
+        mapping.setMappingType(null);
+
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
 
@@ -235,7 +235,7 @@ class DeserializationInboundProcessorTest {
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
         verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
-        
+
         assertEquals(1, mappingStatus.errors);
         assertEquals(1, unspecifiedMappingStatus.errors);
     }
@@ -243,10 +243,10 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessWithInvalidPayload() throws Exception {
         // Given
-        mapping.mappingType = MappingType.JSON;
+        mapping.setMappingType(MappingType.JSON);
         // Provide invalid JSON to test error handling
         when(connectorMessage.getPayload()).thenReturn("invalid json".getBytes());
-        
+
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
 
@@ -258,7 +258,7 @@ class DeserializationInboundProcessorTest {
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
         // Verify setHeader is NOT called when deserialization fails
         verify(message, never()).setHeader(eq("processingContext"), any(ProcessingContext.class));
-        
+
         assertEquals(1, mappingStatus.errors);
     }
 
@@ -266,7 +266,7 @@ class DeserializationInboundProcessorTest {
     void testProcessWithNullConnectorMessage() throws Exception {
         // Given
         when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(null);
-        mapping.mappingType = MappingType.JSON;
+        mapping.setMappingType(MappingType.JSON);
 
         DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
         injectMappingService(processor, mappingService);
@@ -299,41 +299,43 @@ class DeserializationInboundProcessorTest {
     @Test
     void testAllMappingTypesWithValidPayloads() throws Exception {
         MappingType[] mappingTypes = {
-            MappingType.JSON, 
-            MappingType.FLAT_FILE, 
-            MappingType.HEX,
-            MappingType.PROTOBUF_INTERNAL,
-            MappingType.EXTENSION_SOURCE,
-            MappingType.EXTENSION_SOURCE_TARGET,
-            MappingType.CODE_BASED
+                MappingType.JSON,
+                MappingType.FLAT_FILE,
+                MappingType.HEX,
+                MappingType.PROTOBUF_INTERNAL,
+                MappingType.EXTENSION_SOURCE,
+                MappingType.EXTENSION_SOURCE_TARGET,
+                MappingType.CODE_BASED
         };
 
         for (MappingType type : mappingTypes) {
             // Create fresh processor for each test
             DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
             injectMappingService(processor, mappingService);
-            
+
             // Reset message mock
             reset(message);
             when(exchange.getIn()).thenReturn(message);
             when(message.getBody(Mapping.class)).thenReturn(mapping);
             when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
-            when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
+            when(message.getHeader("serviceConfiguration", ServiceConfiguration.class))
+                    .thenReturn(serviceConfiguration);
             when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
-            
+
             // Given
-            mapping.mappingType = type;
+            mapping.setMappingType(type);
             setupValidPayload(type);
 
             // When
             processor.process(exchange);
-            
+
             // Then
             verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
         }
     }
 
-    private void injectMappingService(DeserializationInboundProcessor processor, MappingService mappingService) throws Exception {
+    private void injectMappingService(DeserializationInboundProcessor processor, MappingService mappingService)
+            throws Exception {
         Field field = DeserializationInboundProcessor.class.getDeclaredField("mappingService");
         field.setAccessible(true);
         field.set(processor, mappingService);

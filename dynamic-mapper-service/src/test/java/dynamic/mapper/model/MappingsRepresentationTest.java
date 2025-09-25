@@ -67,70 +67,53 @@ public class MappingsRepresentationTest {
     @Test
     void testIsMappingTopicSampleValid() {
 
-        Mapping m1 = new Mapping();
-        m1.setMappingTopic("/device/+/east/");
-        m1.setMappingTopicSample("/device/us/east/");
+        Mapping m1 = Mapping.builder().mappingTopic("/device/+/east/").mappingTopicSample("/device/us/east/").build();
         assertEquals(new ArrayList<ValidationError>(),
-                Mapping.isMappingTopicAndMappingTopicSampleValid(m1.mappingTopic, m1.mappingTopicSample));
+                Mapping.isMappingTopicAndMappingTopicSampleValid(m1.getMappingTopic(), m1.getMappingTopicSample()));
 
-        Mapping m2 = new Mapping();
-        m2.setMappingTopic("/device/#");
-        m2.setMappingTopicSample("/device/us/east/");
+        Mapping m2 = Mapping.builder().mappingTopic("/device/#").mappingTopicSample("/device/us/east/").build();
         assertEquals(new ArrayList<ValidationError>(Arrays.asList(
                 ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name)),
-                Mapping.isMappingTopicAndMappingTopicSampleValid(m2.mappingTopic, m2.mappingTopicSample));
+                Mapping.isMappingTopicAndMappingTopicSampleValid(m2.getMappingTopic(), m2.getMappingTopicSample()));
 
-        Mapping m3 = new Mapping();
-        m3.setMappingTopic("/device/");
-        m3.setMappingTopicSample("/device/");
+        Mapping m3 = Mapping.builder().mappingTopic("/device/").mappingTopicSample("/device/").build();
         assertEquals(new ArrayList<ValidationError>(),
-                Mapping.isMappingTopicAndMappingTopicSampleValid(m3.mappingTopic, m3.mappingTopicSample));
+                Mapping.isMappingTopicAndMappingTopicSampleValid(m3.getMappingTopic(), m3.getMappingTopicSample()));
     }
 
     @Test
     void testSubstitutionIsSorted() {
 
-        Mapping m1 = new Mapping();
-        m1.targetAPI = API.EVENT;
-        Substitution s1 = new Substitution();
-        s1.pathSource = "p1s";
-        s1.pathTarget = "p1t";
-        Substitution s2 = new Substitution();
-        s2.pathSource = "p2s";
-        s2.pathTarget = "source.id";
-        Substitution s3 = new Substitution();
-        s3.pathSource = "p3s";
-        s3.pathTarget = "p3t";
-        m1.substitutions = new Substitution[] { s1, s2, s3 };
+        Substitution s1 = Substitution.builder().pathSource("p1s").pathTarget("p1t").build();
+        Substitution s2 = Substitution.builder().pathSource("p2s").pathTarget("source.id").build();
+        Substitution s3 = Substitution.builder().pathSource("p3s").pathTarget("p3t").build();
+        Mapping m1 = Mapping.builder().targetAPI(API.EVENT).substitutions(new Substitution[] { s1, s2, s3 }).build();
 
-        assertEquals("p1s", m1.substitutions[0].pathSource);
+        assertEquals("p1s", m1.getSubstitutions()[0].pathSource);
         m1.sortSubstitutions();
-        log.info("My substitutions {}", Arrays.toString(m1.substitutions));
-        assertEquals("p1s", m1.substitutions[0].pathSource);
+        log.info("My substitutions {}", Arrays.toString(m1.getSubstitutions()));
+        assertEquals("p1s", m1.getSubstitutions()[0].pathSource);
 
     }
 
     void testMappingTopicMatchesMappingTopicSample() {
 
-        Mapping m1 = new Mapping();
-        m1.mappingTopic = "/plant1/+/machine1";
-        m1.mappingTopicSample = "/plant1/line1/machine1";
+        Mapping m1 = Mapping.builder().mappingTopic("/plant1/+/machine1").build();
         assertEquals(0, Mapping
-                .isMappingTopicAndMappingTopicSampleValid(m1.mappingTopic, m1.mappingTopicSample).size() == 0);
+                .isMappingTopicAndMappingTopicSampleValid(m1.getMappingTopic(), m1.getMappingTopicSample()).size() == 0);
 
-        Mapping m2 = new Mapping();
-        m2.mappingTopic = "/plant2/+/machine1";
-        m2.mappingTopicSample = "/plant1/line1/machine1";
+        Mapping m2 = Mapping.builder().mappingTopic("/plant2/+/machine1").mappingTopicSample("/plant1/line1/machine1")
+                .build();
+
         assertEquals(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
-                Mapping.isMappingTopicAndMappingTopicSampleValid(m2.mappingTopic, m2.mappingTopicSample)
+                Mapping.isMappingTopicAndMappingTopicSampleValid(m2.getMappingTopic(), m2.getMappingTopicSample())
                         .get(0));
 
-        Mapping m3 = new Mapping();
-        m3.mappingTopic = "/plant1/+/machine1/modul1";
-        m3.mappingTopicSample = "/plant1/line1/machine1";
+        Mapping m3 = Mapping.builder().mappingTopic("/plant1/+/machine1/modul1")
+                .mappingTopicSample("/plant1/line1/machine1").build();
         assertEquals(
                 ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
-                Mapping.isMappingTopicAndMappingTopicSampleValid(m3.mappingTopic, m3.mappingTopicSample)
+                Mapping.isMappingTopicAndMappingTopicSampleValid(m3.getMappingTopic(), m3.getMappingTopicSample())
                         .get(0));
 
     }

@@ -817,7 +817,7 @@ public class PulsarConnectorClient extends AConnectorClient {
         // Your original logging logic
         if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
             log.info("{} - Published outbound message with QoS {}: {} for mapping: {} on topic: [{}], {}",
-                    tenant, qos, payload, context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
+                    tenant, qos, payload, context.getMapping().getName(), context.getResolvedPublishTopic(), connectorName);
         }
     }
 

@@ -55,10 +55,10 @@ public class FlowResultInboundProcessor extends BaseProcessor {
                         context.getSourceId());
                 if (context.getSourceId() == null
                         || !filterInventory) {
-                    if (mapping.debug) {
+                    if (mapping.getDebug()) {
                         log.info(
                                 "{} - Inbound mapping {}/{} not processed, failing Filter inventory execution: filterResult {}",
-                                tenant, mapping.name, mapping.identifier,
+                                tenant, mapping.getName(), mapping.getIdentifier(),
                                 filterInventory);
                     }
                     context.setIgnoreFurtherProcessing(true);
@@ -71,7 +71,7 @@ public class FlowResultInboundProcessor extends BaseProcessor {
             }
             String errorMessage = String.format(
                     "Tenant %s - Error in FlowSubstitutionInboundProcessor: %s for mapping: %s, line %s",
-                    tenant, mapping.name, e.getMessage(), lineNumber);
+                    tenant, mapping.getName(), e.getMessage(), lineNumber);
             log.error(errorMessage, e);
 
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);

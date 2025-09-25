@@ -56,14 +56,14 @@ public class DeserializationInboundProcessor extends BaseProcessor {
 
         // Create a ConnectorMessage from the context for deserialization
 
-        if (MappingType.PROTOBUF_INTERNAL.equals(mapping.mappingType)
-                || MappingType.EXTENSION_SOURCE.equals(mapping.mappingType)
-                || MappingType.EXTENSION_SOURCE_TARGET.equals(mapping.mappingType)) {
+        if (MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
+                || MappingType.EXTENSION_SOURCE.equals(mapping.getMappingType())
+                || MappingType.EXTENSION_SOURCE_TARGET.equals(mapping.getMappingType())) {
             ProcessingContext<byte[]> context = createProcessingContextAsByteArray(tenant, mapping, connectorMessage,
                     serviceConfiguration);
 
             PayloadDeserializer<byte[]> deserializer = (PayloadDeserializer<byte[]>) deserializers
-                    .get(mapping.mappingType);
+                    .get(mapping.getMappingType());
             if (deserializer == null) {
                 handleMissingProcessor(tenant, mapping, context);
                 exchange.getIn().setHeader("processingContext", context); // Set context with error
@@ -82,7 +82,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                     serviceConfiguration);
 
             PayloadDeserializer<Object> deserializer = (PayloadDeserializer<Object>) deserializers
-                    .get(mapping.mappingType);
+                    .get(mapping.getMappingType());
             if (deserializer == null) {
                 handleMissingProcessor(tenant, mapping, context);
                 exchange.getIn().setHeader("processingContext", context); // Set context with error
@@ -107,7 +107,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
         MappingStatus mappingStatus = mappingService
                 .getMappingStatus(tenant, mapping);
         String errorMessage = String.format("Tenant %s - No processor for MessageType: %s registered",
-                tenant, mapping.mappingType);
+                tenant, mapping.getMappingType());
         log.error(errorMessage);
         context.addError(new ProcessingException(errorMessage));
         mappingStatus.errors++;

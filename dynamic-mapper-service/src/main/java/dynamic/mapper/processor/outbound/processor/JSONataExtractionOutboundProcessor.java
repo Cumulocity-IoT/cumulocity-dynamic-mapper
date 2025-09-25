@@ -60,7 +60,7 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
         } catch (Exception e) {
             String errorMessage = String.format(
                     "Tenant %s - Error in JSONataExtractionOutboundProcessor for mapping: %s,",
-                    tenant, mapping.name);
+                    tenant, mapping.getName());
             log.error(errorMessage, e);
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));
@@ -70,9 +70,6 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
         }
     }
 
-    /**
-     * EXACT copy of BaseProcessorInbound.extractFromSource - DO NOT MODIFY!
-     */
     public void extractFromSource(ProcessingContext<Object> context)
             throws ProcessingException {
         try {
@@ -85,14 +82,14 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
             Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
             String payloadAsString = toPrettyJsonString(payloadObject);
 
-            if (serviceConfiguration.logPayload || mapping.debug) {
+            if (serviceConfiguration.logPayload || mapping.getDebug()) {
                 log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
                         payloadAsString,
-                        serviceConfiguration.logPayload, mapping.debug,
-                        serviceConfiguration.logPayload || mapping.debug);
+                        serviceConfiguration.logPayload, mapping.getDebug(),
+                        serviceConfiguration.logPayload || mapping.getDebug());
             }
 
-            for (Substitution substitution : mapping.substitutions) {
+            for (Substitution substitution : mapping.getSubstitutions()) {
                 Object extractedSourceContent = null;
 
                 /*
@@ -124,7 +121,7 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
                 }
                 processingCache.put(substitution.pathTarget, processingCacheEntry);
 
-                if (context.getServiceConfiguration().logSubstitution || mapping.debug) {
+                if (context.getServiceConfiguration().logSubstitution || mapping.getDebug()) {
                     String contentAsString = extractedSourceContent != null ? extractedSourceContent.toString()
                             : "null";
                     log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",

@@ -803,12 +803,12 @@ public class KafkaClientV2 extends AConnectorClient {
 
             if (context.getMapping().getDebug() || serviceConfiguration.logPayload) {
                 log.info("{} - Published outbound message to Kafka topic: [{}], partition: {}, offset: {}, mapping: {}",
-                        tenant, topic, metadata.partition(), metadata.offset(), context.getMapping().name);
+                        tenant, topic, metadata.partition(), metadata.offset(), context.getMapping().getName());
             }
 
         } catch (Exception e) {
             String errorMessage = String.format("%s - Error publishing message to Kafka topic: [%s], mapping: %s",
-                    tenant, topic, context.getMapping().name);
+                    tenant, topic, context.getMapping().getName());
             log.error(errorMessage, e);
             context.addError(new ProcessingException(errorMessage, e));
         }
