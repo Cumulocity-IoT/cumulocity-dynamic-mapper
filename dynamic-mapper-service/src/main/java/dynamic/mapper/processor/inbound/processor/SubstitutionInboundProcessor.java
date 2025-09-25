@@ -1,8 +1,5 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import static com.dashjoin.jsonata.Jsonata.jsonata;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,7 +13,6 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -41,9 +37,6 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
 
     @Autowired
     private C8YAgent c8yAgent;
-
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
 
     @Autowired
     private MappingService mappingService;

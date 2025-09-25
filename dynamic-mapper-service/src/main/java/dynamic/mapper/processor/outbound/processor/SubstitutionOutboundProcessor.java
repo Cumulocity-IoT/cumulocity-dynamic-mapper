@@ -208,19 +208,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                             .externalId(context.getExternalId())
                             .request(payloadTarget.jsonString())
                             .build());
-            // try {
-            //     if (connectorClient.isConnected() && context.isSendPayload()) {
-            //         connectorClient.publishMEAO(context);
-            //     } else {
-            //         log.warn("{} - Not sending message: connected {}, sendPayload {}", tenant,
-            //                 connectorClient.isConnected(), context.isSendPayload());
-            //     }
-            //     // var response = objectMapper.writeValueAsString(adHocRequest);
-            //     // context.getCurrentRequest().setResponse(response);
-            // } catch (Exception e) {
-            //     context.getCurrentRequest().setError(e);
-            //     log.error("{} - Error during publishing outbound message: ", tenant, e);
-            // }
+
             predecessor = newPredecessor;
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented

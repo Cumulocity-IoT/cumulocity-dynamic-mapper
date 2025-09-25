@@ -728,7 +728,7 @@ public class MappingService {
     /**
      * Evaluates an inventory filter against cached inventory data
      */
-    private boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId, String messageId) {
+    public boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId, String messageId) {
         try {
             Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
                     .getMOFromInventoryCache(tenant, sourceId);

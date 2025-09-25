@@ -28,9 +28,9 @@ import java.util.Map;
 
 public enum API {
     ALARM("ALARM", "source.id", "alarms"),
-    ALARM_WITH_CHILDREN("ALARM", "source.id", "alarmsWithChildren"),
+    ALARM_WITH_CHILDREN("ALARM_WITH_CHILDREN", "source.id", "alarmsWithChildren"),
     EVENT("EVENT", "source.id", "events"),
-    EVENT_WITH_CHILDREN("EVENT", "source.id", "eventsWithChildren"),
+    EVENT_WITH_CHILDREN("EVENT_WITH_CHILDREN", "source.id", "eventsWithChildren"),
     MEASUREMENT("MEASUREMENT", "source.id", "measurements"),
     INVENTORY("INVENTORY", "id", "managedobjects"),
     OPERATION("OPERATION", "deviceId", "operations"),
