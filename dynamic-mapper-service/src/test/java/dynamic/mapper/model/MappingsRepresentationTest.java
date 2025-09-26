@@ -89,10 +89,10 @@ public class MappingsRepresentationTest {
         Substitution s3 = Substitution.builder().pathSource("p3s").pathTarget("p3t").build();
         Mapping m1 = Mapping.builder().targetAPI(API.EVENT).substitutions(new Substitution[] { s1, s2, s3 }).build();
 
-        assertEquals("p1s", m1.getSubstitutions()[0].pathSource);
+        assertEquals("p1s", m1.getSubstitutions()[0].getPathSource());
         m1.sortSubstitutions();
         log.info("My substitutions {}", Arrays.toString(m1.getSubstitutions()));
-        assertEquals("p1s", m1.getSubstitutions()[0].pathSource);
+        assertEquals("p1s", m1.getSubstitutions()[0].getPathSource());
 
     }
 

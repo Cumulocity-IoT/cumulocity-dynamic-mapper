@@ -96,16 +96,16 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
                  * step 1 extract content from inbound payload
                  */
                 extractedSourceContent = extractContent(context, mapping, payloadObject, payloadAsString,
-                        substitution.pathSource);
+                        substitution.getPathSource());
                 /*
                  * step 2 analyse extracted content: textual, array
                  */
                 List<SubstituteValue> processingCacheEntry = processingCache.getOrDefault(
-                        substitution.pathTarget,
+                        substitution.getPathTarget(),
                         new ArrayList<>());
 
                 if (dynamic.mapper.processor.model.SubstitutionEvaluation.isArray(extractedSourceContent)
-                        && substitution.expandArray) {
+                        && substitution.isExpandArray()) {
                     var extractedSourceContentCollection = (Collection) extractedSourceContent;
                     // extracted result from sourcePayload is an array, so we potentially have to
                     // iterate over the result, e.g. creating multiple devices
@@ -119,14 +119,14 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
                             processingCacheEntry, extractedSourceContent,
                             substitution, mapping);
                 }
-                processingCache.put(substitution.pathTarget, processingCacheEntry);
+                processingCache.put(substitution.getPathTarget(), processingCacheEntry);
 
                 if (context.getServiceConfiguration().isLogSubstitution() || mapping.getDebug()) {
                     String contentAsString = extractedSourceContent != null ? extractedSourceContent.toString()
                             : "null";
                     log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",
                             context.getTenant(),
-                            substitution.pathSource, contentAsString, substitution.pathTarget);
+                            substitution.getPathSource(), contentAsString, substitution.getPathTarget());
                 }
             }
         } catch (Exception e) {

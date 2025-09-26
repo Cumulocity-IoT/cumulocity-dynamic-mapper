@@ -195,7 +195,7 @@ public class Mapping implements Serializable {
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "List of templates captured during snooping")
     @NotNull
-    private ArrayList<String> snoopedTemplates;
+    private List<String> snoopedTemplates;
 
     @Schema(description = "Extension configuration for custom processing")
     @JsonSetter(nulls = Nulls.SKIP)
@@ -269,15 +269,15 @@ public class Mapping implements Serializable {
             Substitution sub) {
         if (Direction.INBOUND.equals(direction)) {
             if (useExternalId && !("").equals(externalIdType)) {
-                return (Mapping.TOKEN_IDENTITY + ".externalId").equals(sub.pathTarget);
+                return (Mapping.TOKEN_IDENTITY + ".externalId").equals(sub.getPathTarget());
             } else {
-                return (Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(sub.pathTarget);
+                return (Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(sub.getPathTarget());
             }
         } else {
             if (useExternalId && !("").equals(externalIdType)) {
-                return (Mapping.TOKEN_IDENTITY + ".externalId").equals(sub.pathSource);
+                return (Mapping.TOKEN_IDENTITY + ".externalId").equals(sub.getPathSource());
             } else {
-                return (Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(sub.pathSource);
+                return (Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(sub.getPathSource());
             }
         }
     }
@@ -332,7 +332,7 @@ public class Mapping implements Serializable {
     public List<String> getPathTargetForDeviceIdentifiers() {
         List<String> pss = Arrays.stream(substitutions)
                 .filter(sub -> definesDeviceIdentifier(sub))
-                .map(sub -> sub.pathTarget)
+                .map(sub -> sub.getPathTarget())
                 .toList();
         return pss;
     }
