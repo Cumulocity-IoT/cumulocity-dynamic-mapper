@@ -505,7 +505,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         String payload = currentRequest.getRequest();
         String topic = context.getResolvedPublishTopic();
 
-        Qos qos = context.getQos(); // Get QoS from context
+        Qos qos =  Qos.AT_LEAST_ONCE ; // context.getQos(); // Get QoS from context
 
         try {
             // Check if client is still valid before creating producer

@@ -751,40 +751,65 @@ public class PulsarConnectorClient extends AConnectorClient {
                 String pulsarTopic = ensurePulsarTopicFormat(topic);
 
                 var producerBuilder = pulsarClient.newProducer()
-                        .topic(pulsarTopic); // ← Use converted topic
+                        .topic(pulsarTopic);
 
                 // Configure producer based on QoS requirements
                 switch (qos) {
                     case AT_MOST_ONCE:
-                        // Fire and forget - don't wait for acknowledgment
                         producerBuilder.sendTimeout(0, TimeUnit.SECONDS);
                         break;
                     case AT_LEAST_ONCE:
-                        // Default Pulsar behavior - wait for broker acknowledgment
                         producerBuilder.sendTimeout(30, TimeUnit.SECONDS);
                         break;
                     case EXACTLY_ONCE:
-                        // Enable deduplication for exactly-once semantics
                         producerBuilder.sendTimeout(30, TimeUnit.SECONDS);
-                        // Note: Pulsar's deduplication is enabled at namespace level
                         break;
                 }
 
-                Producer<byte[]> producer = producerBuilder.create();
-                log.debug("{} - Created producer for MQTT topic '{}' → Pulsar topic '{}' with QoS: {} on attempt {}",
-                        tenant, topic, pulsarTopic, qos, attempt);
-                return producer;
+                try {
+                    Producer<byte[]> producer = producerBuilder.create();
+                    log.debug(
+                            "{} - Created producer for MQTT topic '{}' → Pulsar topic '{}' with QoS: {} on attempt {}",
+                            tenant, topic, pulsarTopic, qos, attempt);
+                    return producer;
+                } catch (PulsarClientException.FeatureNotSupportedException e) {
+                    if (e.getMessage().contains("PIP-344")) {
+                        log.warn("{} - Broker doesn't support PIP-344, falling back to async creation for topic: {}",
+                                tenant, pulsarTopic);
 
-            } catch (PulsarClientException e) {
+                        // Fallback: use async creation which may work around the issue
+                        Producer<byte[]> producer = producerBuilder.createAsync()
+                                .get(30, TimeUnit.SECONDS);
+
+                        log.debug("{} - Created producer via async fallback for topic '{}' with QoS: {}",
+                                tenant, pulsarTopic, qos);
+                        return producer;
+                    } else {
+                        throw e;
+                    }
+                }
+
+            } catch (PulsarClientException.FeatureNotSupportedException e) {
+                // If async also fails with PIP-344, this is a broker limitation
+                if (attempt == maxRetries) {
+                    log.error("{} - Cannot create producer for topic '{}' - broker requires PIP-344 support. " +
+                            "Please upgrade Pulsar broker or pre-create the topic.", tenant, topic);
+                    throw e;
+                }
+            } catch (Exception e) {
                 log.warn("{} - Producer creation attempt {}/{} failed for topic: {} with QoS: {}: {}",
                         tenant, attempt, maxRetries, topic, qos, e.getMessage());
 
                 if (attempt == maxRetries) {
-                    throw e;
+                    if (e instanceof PulsarClientException) {
+                        throw (PulsarClientException) e;
+                    } else {
+                        throw new PulsarClientException(e);
+                    }
                 }
 
                 try {
-                    Thread.sleep(retryDelay * attempt); // Exponential backoff
+                    Thread.sleep(retryDelay * attempt);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new PulsarClientException(ie);
@@ -817,7 +842,8 @@ public class PulsarConnectorClient extends AConnectorClient {
         // Your original logging logic
         if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Published outbound message with QoS {}: {} for mapping: {} on topic: [{}], {}",
-                    tenant, qos, payload, context.getMapping().getName(), context.getResolvedPublishTopic(), connectorName);
+                    tenant, qos, payload, context.getMapping().getName(), context.getResolvedPublishTopic(),
+                    connectorName);
         }
     }
 
@@ -880,9 +906,11 @@ public class PulsarConnectorClient extends AConnectorClient {
     @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
         if (direction == Direction.INBOUND) {
-            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicInbound","true").toString());
+            return Boolean.parseBoolean(connectorConfiguration.getProperties()
+                    .getOrDefault("supportsWildcardInTopicInbound", "true").toString());
         } else {
-            return Boolean.parseBoolean(connectorConfiguration.getProperties().getOrDefault("supportsWildcardInTopicOutbound","true").toString());
+            return Boolean.parseBoolean(connectorConfiguration.getProperties()
+                    .getOrDefault("supportsWildcardInTopicOutbound", "true").toString());
         }
     }
 
