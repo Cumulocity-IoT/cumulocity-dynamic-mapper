@@ -117,13 +117,13 @@ public class KafkaClientV2 extends AConnectorClient {
         this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
         this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
-        this.connectorName = connectorConfiguration.name;
-        this.connectorIdentifier = connectorConfiguration.identifier;
-        this.connectorId = new ConnectorId(connectorConfiguration.name,
-                connectorConfiguration.identifier,
+        this.connectorName = connectorConfiguration.getName();
+        this.connectorIdentifier = connectorConfiguration.getIdentifier();
+        this.connectorId = new ConnectorId(connectorConfiguration.getName(),
+                connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
-                connectorConfiguration.identifier);
+        this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.getName(),
+                connectorConfiguration.getIdentifier());
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
@@ -595,7 +595,7 @@ public class KafkaClientV2 extends AConnectorClient {
                 .payload(payloadBytes)
                 .build();
 
-        if (serviceConfiguration.logPayload) {
+        if (serviceConfiguration.isLogPayload()) {
             log.info("{} - INITIAL: Kafka message on topic: [{}], partition: {}, offset: {}, connector: {}",
                     tenant, topic, record.partition(), record.offset(), connectorName);
         }
@@ -610,7 +610,7 @@ public class KafkaClientV2 extends AConnectorClient {
         int timeout = processedResults.getMaxCPUTimeMS();
         int effectiveQos = mappingQos; // Kafka doesn't have message-level QoS, so use mapping QoS
 
-        if (serviceConfiguration.logPayload) {
+        if (serviceConfiguration.isLogPayload()) {
             log.info("{} - PREPARING_RESULTS: Kafka message on topic: [{}], partition: {}, offset: {}, " +
                     "QoS effective: {}, QoS mappings: {}, connector: {}",
                     tenant, topic, record.partition(), record.offset(), effectiveQos, mappingQos, connectorIdentifier);
@@ -658,7 +658,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     if (!hasErrors) {
                         // No errors found - for Kafka, we can commit the offset if auto-commit is
                         // disabled
-                        if (serviceConfiguration.logPayload) {
+                        if (serviceConfiguration.isLogPayload()) {
                             log.info("{} - END: Successfully processed Kafka message: topic: [{}], partition: {}, " +
                                     "offset: {}, connector: {}",
                                     tenant, topic, record.partition(), record.offset(), connectorIdentifier);
@@ -698,7 +698,7 @@ public class KafkaClientV2 extends AConnectorClient {
             });
         } else {
             // For QoS 0 (or equivalent), process immediately without waiting
-            if (serviceConfiguration.logPayload) {
+            if (serviceConfiguration.isLogPayload()) {
                 log.info(
                         "{} - END: Immediate processing for Kafka message: topic: [{}], partition: {}, offset: {}, connector: {}",
                         tenant, topic, record.partition(), record.offset(), connectorIdentifier);
@@ -725,7 +725,7 @@ public class KafkaClientV2 extends AConnectorClient {
                                     new org.apache.kafka.clients.consumer.OffsetAndMetadata(record.offset() + 1));
                     wrapper.getConsumer().commitSync(offsetsToCommit);
 
-                    if (serviceConfiguration.logPayload) {
+                    if (serviceConfiguration.isLogPayload()) {
                         log.debug("{} - Manually committed offset for topic: [{}], partition: {}, offset: {}",
                                 tenant, record.topic(), record.partition(), record.offset() + 1);
                     }
@@ -801,7 +801,7 @@ public class KafkaClientV2 extends AConnectorClient {
             Future<RecordMetadata> future = kafkaProducer.send(record);
             RecordMetadata metadata = future.get(10, TimeUnit.SECONDS);
 
-            if (context.getMapping().getDebug() || serviceConfiguration.logPayload) {
+            if (context.getMapping().getDebug() || serviceConfiguration.isLogPayload()) {
                 log.info("{} - Published outbound message to Kafka topic: [{}], partition: {}, offset: {}, mapping: {}",
                         tenant, topic, metadata.partition(), metadata.offset(), context.getMapping().getName());
             }

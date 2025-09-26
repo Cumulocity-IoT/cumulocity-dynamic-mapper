@@ -95,7 +95,7 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
             Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
 
             String payload = toPrettyJsonString(payloadObject);
-            if (serviceConfiguration.logPayload || mapping.getDebug()) {
+            if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
                 log.info("{} - Patched payload: {}", tenant, payload);
             }
 
@@ -178,7 +178,7 @@ public class CodeExtractionOutboundProcessor extends BaseProcessor {
                             log.debug("{} - Alarm added: {}", context.getTenant(), alarm);
                         }
                     }
-                    if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                    if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
                         log.info(
                                 "{} - Extraction of source in CodeBasedProcessorOutbound.extractFromSource returned {} results, payload: {} ",
                                 context.getTenant(),

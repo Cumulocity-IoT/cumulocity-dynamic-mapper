@@ -357,7 +357,7 @@ public class ServiceConfigurationService {
                     rt = objectMapper.readValue(optionRepresentation.getValue(),
                             ServiceConfiguration.class);
                 }
-                log.debug("{} - Returning service configuration found: {}:", tenant, rt.logPayload);
+                log.debug("{} - Returning service configuration found: {}:", tenant, rt.isLogPayload());
                 log.debug("{} - Found connection configuration: {}", tenant, rt);
             } catch (SDKException exception) {
                 log.warn("{} - No configuration found, returning empty element!", tenant);

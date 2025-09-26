@@ -81,7 +81,7 @@ public class PulsarCallback implements MessageListener<byte[]> {
                 .payload(payloadBytes)
                 .build();
 
-        if (serviceConfiguration.logPayload) {
+        if (serviceConfiguration.isLogPayload()) {
             log.info(
                     "{} - INITIAL: message on topic: [{}], connector: {}, {}",
                     tenant, topic, connectorName, connectorIdentifier);
@@ -92,7 +92,7 @@ public class PulsarCallback implements MessageListener<byte[]> {
 
         int timeout = processedResults.getMaxCPUTimeMS();
 
-        if (serviceConfiguration.logPayload) {
+        if (serviceConfiguration.isLogPayload()) {
             log.info(
                     "{} - PREPARING_RESULTS: message on topic: [{}], connector {}",
                     tenant, topic, connectorIdentifier);
@@ -135,7 +135,7 @@ public class PulsarCallback implements MessageListener<byte[]> {
 
                 if (!hasErrors) {
                     // No errors found, acknowledge based on original QoS requirements
-                    if (serviceConfiguration.logPayload) {
+                    if (serviceConfiguration.isLogPayload()) {
                         log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
                                 tenant, topic, connectorIdentifier);
                     }

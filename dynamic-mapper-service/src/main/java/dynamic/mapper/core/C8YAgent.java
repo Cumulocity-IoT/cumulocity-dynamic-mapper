@@ -597,7 +597,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             BinaryInfo binaryInfo = context.getBinaryInfo();
                             uploadEventAttachment(binaryInfo, eventId.getValue(), false);
                         }
-                        if (serviceConfiguration.logPayload)
+                        if (serviceConfiguration.isLogPayload())
                             log.info("{} - SEND: event posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: event posted with Id {}", tenant,
@@ -631,7 +631,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.logPayload)
+                        if (serviceConfiguration.isLogPayload())
                             log.info("{} - SEND: alarm posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: alarm posted with Id {}", tenant,
@@ -668,7 +668,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.logPayload)
+                        if (serviceConfiguration.isLogPayload())
                             log.info("{} - SEND: measurement posted: {}", tenant, rt);
                         else
                             log.info("{} - SEND: measurement posted with Id {}", tenant,
@@ -747,7 +747,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             c8ySemaphore.acquire();
                             mor = inventoryApi.create(mor, context);
                             // TODO Add/Update new managed object to IdentityCache
-                            if (serviceConfiguration.logPayload)
+                            if (serviceConfiguration.isLogPayload())
                                 log.info("{} - New device created: {}", tenant, mor);
                             else
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
@@ -768,7 +768,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         } finally {
                             c8ySemaphore.release();
                         }
-                        if (serviceConfiguration.logPayload)
+                        if (serviceConfiguration.isLogPayload())
                             log.info("{} - Device updated: {}", tenant, mor);
                         else
                             log.info("{} - Device {} updated.", tenant, mor.getId().getValue());
@@ -1105,7 +1105,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (configurationRegistry.getServiceConfiguration(tenant).sendNotificationLifecycle
+        if (configurationRegistry.getServiceConfiguration(tenant).isSendNotificationLifecycle()
                 && !(connectorStatus.equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

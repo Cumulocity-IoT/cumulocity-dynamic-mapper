@@ -50,45 +50,29 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	@JsonProperty("identifier")
-	public String identifier;
+	private String identifier;
 
 	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The type of a connector. Must be one of MQTT, CUMULOCITY_MQTT_SERVICE, KAFKA, HTTP, WEB_HOOK", example = "MQTT")
 	@NotNull
 	@JsonSetter(nulls = Nulls.SKIP)
 	@JsonProperty("connectorType")
-	public ConnectorType connectorType;
+	private ConnectorType connectorType;
 
 	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Flag if the connector is enabled or not", example = "false")
 	@NotNull
 	@JsonProperty("enabled")
-	public boolean enabled;
+	private boolean enabled;
 
 	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "A meaningful name of the connector", example = "MQTT Connector")
 	@NotNull
 	@JsonProperty("name")
-	public String name;
+	private String name;
 
 	@Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "The properties of the connector used to establish a connection", example = "{ \"protocol\": \"mqtt://\", \"mqttHost\": \"mqtt.example.com\" , \"mqttPort\": 1883, \"clientId\": \"dynamic_mapper_client1\" }")
 	@NotNull
 	@JsonProperty("properties")
-	public Map<String, Object> properties = new HashMap<>();
+	private Map<String, Object> properties = new HashMap<>();
 
-	/*
-	 * @JsonAnySetter
-	 * public void add(String key, Object value) {
-	 * properties.put(key, value);
-	 * }
-	 * 
-	 * @JsonAnyGetter
-	 * public Map<String, Object> getProperties() {
-	 * return properties;
-	 * }
-	 * 
-	 */
-
-	public boolean isEnabled() {
-		return this.enabled;
-	}
 
 	public Object clone() {
 		Object result = null;

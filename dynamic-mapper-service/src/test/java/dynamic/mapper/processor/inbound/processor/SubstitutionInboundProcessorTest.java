@@ -67,9 +67,6 @@ class SubstitutionInboundProcessorTest {
     private C8YAgent c8yAgent;
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
-
-    @Mock
     private ObjectMapper objectMapper;
 
     private SubstitutionInboundProcessor processor;
@@ -127,7 +124,6 @@ class SubstitutionInboundProcessorTest {
     private void injectDependencies() throws Exception {
         injectField("mappingService", mappingService);
         injectField("c8yAgent", c8yAgent);
-        injectField("configurationRegistry", configurationRegistry);
         injectField("objectMapper", objectMapper);
     }
 

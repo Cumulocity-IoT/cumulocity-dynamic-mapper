@@ -82,11 +82,11 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
             Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
             String payloadAsString = toPrettyJsonString(payloadObject);
 
-            if (serviceConfiguration.logPayload || mapping.getDebug()) {
+            if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
                 log.info("{} - Incoming payload (patched) in extractFromSource(): {} {} {} {}", tenant,
                         payloadAsString,
-                        serviceConfiguration.logPayload, mapping.getDebug(),
-                        serviceConfiguration.logPayload || mapping.getDebug());
+                        serviceConfiguration.isLogPayload(), mapping.getDebug(),
+                        serviceConfiguration.isLogPayload() || mapping.getDebug());
             }
 
             for (Substitution substitution : mapping.getSubstitutions()) {
@@ -121,7 +121,7 @@ public class JSONataExtractionOutboundProcessor extends BaseProcessor {
                 }
                 processingCache.put(substitution.pathTarget, processingCacheEntry);
 
-                if (context.getServiceConfiguration().logSubstitution || mapping.getDebug()) {
+                if (context.getServiceConfiguration().isLogSubstitution() || mapping.getDebug()) {
                     String contentAsString = extractedSourceContent != null ? extractedSourceContent.toString()
                             : "null";
                     log.debug("{} - Evaluated substitution (pathSource:substitute)/({}: {}), (pathTarget)/({})",

@@ -82,7 +82,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
                 .build();
-        if (serviceConfiguration.logPayload) {
+        if (serviceConfiguration.isLogPayload()) {
             log.info(
                     "{} - INITIAL: message on topic: [{}], QoS message: {}, connector: {},{}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(),
@@ -96,7 +96,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
         int timeout = processedResults.getMaxCPUTimeMS();
         int effectiveQos = Math.min(publishQos, mappingQos);
-        if (serviceConfiguration.logPayload) {
+        if (serviceConfiguration.isLogPayload()) {
             log.info(
                     "{} - PREPARING_RESULTS: message on topic: [{}], QoS message: {}, QoS effective: {}, QoS mappings: {}, connector {}",
                     tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), effectiveQos, mappingQos,
@@ -175,7 +175,7 @@ public class MQTT3Callback implements Consumer<Mqtt3Publish> {
             // For QoS 0 (or downgraded to 0), no need for special handling
 
             // Acknowledge message with QoS=0
-            if (serviceConfiguration.logPayload) {
+            if (serviceConfiguration.isLogPayload()) {
                 log.info("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
                         tenant, mqttMessage.getTopic(), mqttMessage.getQos().ordinal(), connectorIdentifier);
             }

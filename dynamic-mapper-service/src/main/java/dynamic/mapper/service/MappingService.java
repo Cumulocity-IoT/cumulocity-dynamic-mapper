@@ -184,7 +184,7 @@ public class MappingService {
         boolean initialized = this.initializedMappingStatus != null
                 ? this.initializedMappingStatus.getOrDefault(tenant, false)
                 : false;
-        if (configurationRegistry.getServiceConfiguration(tenant).sendMappingStatus & initialized) {
+        if (configurationRegistry.getServiceConfiguration(tenant).isSendMappingStatus() & initialized) {
             subscriptionsService.runForTenant(tenant, () -> {
                 Map<String, MappingStatus> statusMapping = mappingStatusS.get(tenant);
                 MapperServiceRepresentation mapperServiceRepresentation = configurationRegistry

@@ -627,7 +627,7 @@ public abstract class AConnectorClient {
     }
 
     private boolean shouldSendLifecycleEvent() {
-        return serviceConfiguration.sendConnectorLifecycle &&
+        return serviceConfiguration.isSendSubscriptionEvents() &&
                 !connectorStatus.getStatus().equals(previousConnectorStatus);
     }
 
@@ -659,7 +659,7 @@ public abstract class AConnectorClient {
     }
 
     public void sendSubscriptionEvents(String topic, String action) {
-        if (!serviceConfiguration.sendSubscriptionEvents) {
+        if (!serviceConfiguration.isSendSubscriptionEvents()) {
             return;
         }
 

@@ -230,18 +230,18 @@ public class BootstrapService {
         ServiceConfiguration serviceConfig = serviceConfigurationService.getServiceConfiguration(tenant);
         boolean requiresSave = false;
 
-        if (serviceConfig.inboundExternalIdCacheSize == null || serviceConfig.inboundExternalIdCacheSize == 0) {
-            serviceConfig.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
+        if (serviceConfig.getInboundExternalIdCacheSize() == null || serviceConfig.getInboundExternalIdCacheSize() == 0) {
+            serviceConfig.setInboundExternalIdCacheSize(inboundExternalIdCacheSize);
             requiresSave = true;
         }
 
-        if (serviceConfig.inboundExternalIdCacheRetention == null) {
-            serviceConfig.inboundExternalIdCacheRetention = 1;
+        if (serviceConfig.getInboundExternalIdCacheRetention() == null) {
+            serviceConfig.setInboundExternalIdCacheRetention (1);
             requiresSave = true;
         }
 
-        if (serviceConfig.inventoryCacheSize == null || serviceConfig.inventoryCacheSize == 0) {
-            serviceConfig.inventoryCacheSize = inventoryCacheSize;
+        if (serviceConfig.getInventoryCacheSize() == null || serviceConfig.getInventoryCacheSize() == 0) {
+            serviceConfig.setInventoryCacheSize(inventoryCacheSize);
             requiresSave = true;
         }
 
@@ -268,11 +268,11 @@ public class BootstrapService {
     }
 
     private void initializeCaches(String tenant, ServiceConfiguration serviceConfig) {
-        int cacheSizeInbound = Optional.ofNullable(serviceConfig.inboundExternalIdCacheSize)
+        int cacheSizeInbound = Optional.ofNullable(serviceConfig.getInboundExternalIdCacheSize())
                 .filter(size -> size != 0)
                 .orElse(inboundExternalIdCacheSize);
 
-        int cacheSizeInventory = Optional.ofNullable(serviceConfig.inventoryCacheSize)
+        int cacheSizeInventory = Optional.ofNullable(serviceConfig.getInventoryCacheSize())
                 .filter(size -> size != 0)
                 .orElse(inventoryCacheSize);
 
@@ -305,7 +305,7 @@ public class BootstrapService {
             if (connectTask != null)
                 connectTasks.add(connectTask);
 
-            if (ConnectorType.HTTP.equals(config.connectorType)) {
+            if (ConnectorType.HTTP.equals(config.getConnectorType())) {
                 httpConfig = config;
             }
         }
@@ -319,14 +319,14 @@ public class BootstrapService {
     private void createAndInitializeDefaultHttpConnector(String tenant, ServiceConfiguration serviceConfig)
             throws ConnectorRegistryException {
         ConnectorConfiguration httpConfig = new ConnectorConfiguration();
-        httpConfig.connectorType = ConnectorType.HTTP;
-        httpConfig.identifier = HttpClient.HTTP_CONNECTOR_IDENTIFIER;
-        httpConfig.enabled = true;
-        httpConfig.name = "Default HTTP Connector";
+        httpConfig.setConnectorType(ConnectorType.HTTP);
+        httpConfig.setIdentifier(HttpClient.HTTP_CONNECTOR_IDENTIFIER);
+        httpConfig.setEnabled(true);
+        httpConfig.setName("Default HTTP Connector");
 
         HttpClient initialHttpClient = new HttpClient();
         initialHttpClient.getConnectorSpecification().getProperties()
-                .forEach((key, prop) -> httpConfig.properties.put(key, prop.defaultValue));
+                .forEach((key, prop) -> httpConfig.getProperties().put(key, prop.defaultValue));
 
         try {
             connectorConfigurationService.saveConnectorConfiguration(httpConfig);

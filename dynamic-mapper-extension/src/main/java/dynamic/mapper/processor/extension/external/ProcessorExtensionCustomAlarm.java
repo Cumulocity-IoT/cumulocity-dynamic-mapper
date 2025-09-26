@@ -206,7 +206,7 @@ public class ProcessorExtensionCustomAlarm
             log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.getTargetAPI(),
                     context.getProcessingCacheSize());
         }
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     mapping.getTargetAPI(),
                     payloadTarget.jsonString(),

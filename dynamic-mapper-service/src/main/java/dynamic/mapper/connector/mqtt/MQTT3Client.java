@@ -164,13 +164,13 @@ public class MQTT3Client extends AConnectorClient {
         this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
-        this.connectorName = connectorConfiguration.name;
-        this.connectorIdentifier = connectorConfiguration.identifier;
-        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+        this.connectorName = connectorConfiguration.getName();
+        this.connectorIdentifier = connectorConfiguration.getIdentifier();
+        this.connectorId = new ConnectorId(connectorConfiguration.getName(), connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
-                connectorConfiguration.identifier);
-        // this.connectorType = connectorConfiguration.connectorType;
+        this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.getName(),
+                connectorConfiguration.getIdentifier());
+        // this.connectorType = connectorConfiguration.getConnectorType();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
@@ -320,7 +320,7 @@ public class MQTT3Client extends AConnectorClient {
                     // test if we closed the connection deliberately, otherwise we have to try to
                     // reconnect
                     connectionState.setFalse();
-                    if (connectorConfiguration.enabled) {
+                    if (connectorConfiguration.isEnabled()) {
                         try {
                             connectionLost("Disconnected from " + context.getSource().toString(), context.getCause());
                         } catch (InterruptedException e) {
@@ -545,7 +545,7 @@ public class MQTT3Client extends AConnectorClient {
                 .payload(payload.getBytes()).build();
         mqttClient.publish(mqttMessage);
 
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Published outbound message: {} for mapping: {} on topic: [{}], {}", tenant, payload,
                     context.getMapping().getName(), context.getResolvedPublishTopic(), connectorName);
         }

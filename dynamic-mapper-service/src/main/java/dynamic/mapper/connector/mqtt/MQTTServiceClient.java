@@ -124,12 +124,12 @@ public class MQTTServiceClient extends MQTT3Client {
         this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
-        this.connectorIdentifier = connectorConfiguration.identifier;
-        this.connectorName = connectorConfiguration.name;
-        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+        this.connectorIdentifier = connectorConfiguration.getIdentifier();
+        this.connectorName = connectorConfiguration.getName();
+        this.connectorId = new ConnectorId(connectorConfiguration.getName(), connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
-                connectorConfiguration.identifier);
+        this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.getName(),
+                connectorConfiguration.getIdentifier());
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();

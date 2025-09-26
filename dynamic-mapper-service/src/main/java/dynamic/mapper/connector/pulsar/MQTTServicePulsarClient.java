@@ -175,12 +175,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
         this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.connectorConfiguration = connectorConfiguration;
-        this.connectorName = connectorConfiguration.name;
-        this.connectorIdentifier = connectorConfiguration.identifier;
-        this.connectorId = new ConnectorId(connectorConfiguration.name, connectorConfiguration.identifier,
+        this.connectorName = connectorConfiguration.getName();
+        this.connectorIdentifier = connectorConfiguration.getIdentifier();
+        this.connectorId = new ConnectorId(connectorConfiguration.getName(), connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.name,
-                connectorConfiguration.identifier);
+        this.connectorStatus = ConnectorStatusEvent.unknown(connectorConfiguration.getName(),
+                connectorConfiguration.getIdentifier());
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
@@ -583,7 +583,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
 
         // Enhanced logging to show the N-2 topic mapping
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info(
                     "{} - Published to Cumulocity MQTT Service: QoS={}, originalTopic=[{}], pulsarTopic=[{}], mapping={}, connector={}",
                     tenant, qos, originalMqttTopic, towardsDeviceTopic, context.getMapping().getName(), connectorName);

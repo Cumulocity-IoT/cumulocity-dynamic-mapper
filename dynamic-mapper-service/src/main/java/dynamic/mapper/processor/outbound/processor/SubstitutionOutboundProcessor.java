@@ -118,7 +118,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             };
             payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
         }
-        if (serviceConfiguration.logPayload || mapping.getDebug()) {
+        if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
             String patchedPayloadTarget = payloadTarget.jsonString();
             log.info("{} - Patched payload: {}", tenant, patchedPayloadTarget);
         }
@@ -155,7 +155,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                     splitTopicInAsList[c.intValue()] = tl;
                     c.increment();
                 });
-                if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+                if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
                     log.info("{} - Resolved topic from {} to {}",
                             tenant, splitTopicInAsListOriginal, splitTopicInAsList);
                 }
@@ -215,7 +215,7 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
             log.warn("{} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.getTargetAPI(),
                     processingCache.size());
         }
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     mapping.getTargetAPI(),
                     payloadTarget.jsonString(),

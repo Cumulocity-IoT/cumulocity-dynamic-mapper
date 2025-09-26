@@ -125,7 +125,7 @@ public class MappingContextInboundProcessor extends BaseProcessor {
     private void logInboundMessageReceived(String tenant, Mapping mapping, String connectorIdentifier,
             ProcessingContext<?> context,
             ServiceConfiguration serviceConfiguration) {
-        if (serviceConfiguration.logPayload || mapping.getDebug()) {
+        if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
             Object pp = context.getPayload();
             String ppLog = null;
 

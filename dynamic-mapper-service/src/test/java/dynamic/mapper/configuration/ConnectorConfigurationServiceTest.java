@@ -176,7 +176,7 @@ class ConnectorConfigurationServiceTest {
         
         ConnectorConfiguration config = new ConnectorConfiguration();
         config.setIdentifier(TEST_IDENTIFIER);
-        config.enabled = false;
+        config.setEnabled(false);
 
         when(tenantOptionApi.getOption(any(OptionPK.class))).thenReturn(optionRepresentation);
         when(objectMapper.readValue(anyString(), eq(ConnectorConfiguration.class))).thenReturn(config);
@@ -189,7 +189,7 @@ class ConnectorConfigurationServiceTest {
 
         // Assert
         assertNotNull(result);
-        assertTrue(result.enabled);
+        assertTrue(result.isEnabled());
         verify(tenantOptionApi).save(any(OptionRepresentation.class));
     }
 

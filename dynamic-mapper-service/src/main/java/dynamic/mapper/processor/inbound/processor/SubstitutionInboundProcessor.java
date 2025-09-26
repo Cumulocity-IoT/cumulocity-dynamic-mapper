@@ -349,7 +349,7 @@ public class SubstitutionInboundProcessor extends BaseProcessor {
         }
         var newPredecessor = createDynamicMapperRequest(predecessor, payloadTarget.jsonString(), context, mapping);
         predecessor = newPredecessor;
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - Transformed message sent: API: {}, numberDevices: {}, message: {}", tenant,
                     context.getApi(),
                     payloadTarget.jsonString(),

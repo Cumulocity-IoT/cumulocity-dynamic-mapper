@@ -528,13 +528,13 @@ public class OperationController {
         String cacheId = parameters.get("cacheId");
         if ("INBOUND_ID_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
-                    .getServiceConfiguration(tenant).inboundExternalIdCacheSize;
+                    .getServiceConfiguration(tenant).getInboundExternalIdCacheSize();
             configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("INVENTORY_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
-                    .getServiceConfiguration(tenant).inventoryCacheSize;
+                    .getServiceConfiguration(tenant).getInventoryCacheSize();
             configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();

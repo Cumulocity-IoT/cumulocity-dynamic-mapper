@@ -66,7 +66,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
         Object payloadObject = context.getPayload();
 
         String payload = toPrettyJsonString(payloadObject);
-        if (serviceConfiguration.logPayload || mapping.getDebug()) {
+        if (serviceConfiguration.isLogPayload() || mapping.getDebug()) {
             log.info("{} - Processing payload: {}", tenant, payload);
         }
 
@@ -180,7 +180,7 @@ public class FlowProcessorInboundProcessor extends BaseProcessor  {
 
         context.setFlowResult(outputMessages);
 
-        if (context.getMapping().getDebug() || context.getServiceConfiguration().logPayload) {
+        if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info("{} - onMessage function returned {} complete messages", tenant, outputMessages.size());
         }
     }

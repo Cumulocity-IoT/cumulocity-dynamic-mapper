@@ -158,7 +158,7 @@ public class MonitoringController {
 			List<ConnectorConfiguration> configurationList = connectorConfigurationService.getConnectorConfigurations(
 					tenant);
 			for (ConnectorConfiguration conf : configurationList) {
-				connectorsStatus.put(conf.getIdentifier(), ConnectorStatusEvent.unknown(conf.name, conf.identifier));
+				connectorsStatus.put(conf.getIdentifier(), ConnectorStatusEvent.unknown(conf.getName(), conf.getIdentifier()));
 			}
 
 			// overwrite status with last remembered status of once enabled connectors
