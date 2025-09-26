@@ -27,7 +27,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.pulsar.client.api.ClientBuilder;
 import org.apache.pulsar.client.api.Consumer;
@@ -364,24 +366,66 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
      * Subscribe to the towardsPlatformTopic to receive inbound messages from MQTT
      * Service
      */
-    private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
-        if (consumer != null) {
-            log.warn("{} - Consumer already exists for towardsPlatformTopic, closing existing", tenant);
-            consumer.close();
-        }
+/**
+ * Subscribe to the towardsPlatformTopic to receive inbound messages from MQTT Service
+ */
+/**
+ * Subscribe to the towardsPlatformTopic to receive inbound messages from MQTT Service
+ */
+private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
+    if (consumer != null) {
+        log.warn("{} - Consumer already exists for towardsPlatformTopic, closing existing", tenant);
+        consumer.close();
+    }
 
-        String subscriptionName = getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest);
+    String subscriptionName = getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest);
 
+    try {
         consumer = pulsarClient.newConsumer()
                 .topic(towardsPlatformTopic)
                 .subscriptionName(subscriptionName)
-                // .subscriptionType(SubscriptionType.Shared)
+                .autoUpdatePartitions(false) // ← Add this to disable partition auto-discovery
                 .messageListener(pulsarCallback)
                 .subscribe();
 
         log.info("{} - Subscribed to towardsPlatformTopic: [{}] with subscription: [{}]",
                 tenant, towardsPlatformTopic, subscriptionName);
+                
+    } catch (PulsarClientException.FeatureNotSupportedException e) {
+        if (e.getMessage().contains("PIP-344")) {
+            log.warn("{} - Broker doesn't support PIP-344, falling back to async subscription for towardsPlatformTopic", tenant);
+            
+            try {
+                // Fallback: use async subscription
+                consumer = pulsarClient.newConsumer()
+                        .topic(towardsPlatformTopic)
+                        .subscriptionName(subscriptionName)
+                        .autoUpdatePartitions(false) // Disable partition auto-discovery
+                        .messageListener(pulsarCallback)
+                        .subscribeAsync()
+                        .get(30, TimeUnit.SECONDS);
+                
+                log.info("{} - Subscribed to towardsPlatformTopic via async fallback: [{}] with subscription: [{}]",
+                        tenant, towardsPlatformTopic, subscriptionName);
+                        
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt(); // Restore interrupt status
+                throw new PulsarClientException("Subscription was interrupted", ie);
+            } catch (ExecutionException ee) {
+                Throwable cause = ee.getCause();
+                if (cause instanceof PulsarClientException) {
+                    throw (PulsarClientException) cause;
+                } else {
+                    throw new PulsarClientException("Subscription failed", ee);
+                }
+            } catch (TimeoutException te) {
+                throw new PulsarClientException("Subscription timed out after 30 seconds", te);
+            }
+        } else {
+            throw e;
+        }
     }
+}
 
     /**
      * Create producer for towardsDeviceTopic for outbound messages to MQTT Service
