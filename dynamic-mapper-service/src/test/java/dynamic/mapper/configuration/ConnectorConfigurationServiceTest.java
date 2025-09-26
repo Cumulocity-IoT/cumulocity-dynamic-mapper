@@ -39,6 +39,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -75,12 +76,12 @@ class ConnectorConfigurationServiceTest {
     void setUp() throws Exception {
         // Create the component with the mocked dependencies
         configurationService = new ConnectorConfigurationService(tenantOptionApi);
-        
+
         // Use reflection to set the private subscriptionsService field
         Field subscriptionsServiceField = ConnectorConfigurationService.class.getDeclaredField("subscriptionsService");
         subscriptionsServiceField.setAccessible(true);
         subscriptionsServiceField.set(configurationService, subscriptionsService);
-        
+
         // Set ObjectMapper
         configurationService.setObjectMapper(objectMapper);
     }
@@ -91,14 +92,16 @@ class ConnectorConfigurationServiceTest {
         ConnectorConfiguration configuration = new ConnectorConfiguration();
         configuration.setIdentifier(TEST_IDENTIFIER);
         String jsonConfig = "{\"identifier\":\"test-identifier\"}";
-        
+
         when(objectMapper.writeValueAsString(configuration)).thenReturn(jsonConfig);
 
         // Act
         configurationService.saveConnectorConfiguration(configuration);
 
         // Assert
-        verify(tenantOptionApi).save(any(OptionRepresentation.class));
+        ArgumentCaptor<OptionRepresentation> captor = ArgumentCaptor.forClass(OptionRepresentation.class);
+        verify(tenantOptionApi).save(captor.capture());
+        assertEquals(jsonConfig, captor.getValue().getValue());
     }
 
     @Test
@@ -107,7 +110,7 @@ class ConnectorConfigurationServiceTest {
         ConnectorConfiguration expectedConfig = new ConnectorConfiguration();
         expectedConfig.setConnectorType(ConnectorType.MQTT);
         expectedConfig.setIdentifier(TEST_IDENTIFIER);
-        
+
         OptionRepresentation optionRepresentation = new OptionRepresentation();
         optionRepresentation.setValue("{\"identifier\":\"test-identifier\"}");
 
@@ -129,9 +132,8 @@ class ConnectorConfigurationServiceTest {
     void testGetConnectorConfigurations() throws Exception {
         // Arrange
         List<OptionRepresentation> options = Arrays.asList(
-            createOptionRepresentation("connection.configuration.1", "{\"identifier\":\"1\"}"),
-            createOptionRepresentation("connection.configuration.2", "{\"identifier\":\"2\"}")
-        );
+                createOptionRepresentation("connection.configuration.1", "{\"identifier\":\"1\"}"),
+                createOptionRepresentation("connection.configuration.2", "{\"identifier\":\"2\"}"));
 
         ConnectorConfiguration config1 = new ConnectorConfiguration();
         config1.setIdentifier("1");
@@ -139,7 +141,6 @@ class ConnectorConfigurationServiceTest {
         ConnectorConfiguration config2 = new ConnectorConfiguration();
         config2.setIdentifier("2");
         config2.setConnectorType(ConnectorType.MQTT);
-
 
         when(tenantOptionApi.getAllOptionsForCategory(OPTION_CATEGORY)).thenReturn(options);
         when(objectMapper.readValue(contains("1"), eq(ConnectorConfiguration.class))).thenReturn(config1);
@@ -173,7 +174,7 @@ class ConnectorConfigurationServiceTest {
         // Arrange
         OptionRepresentation optionRepresentation = new OptionRepresentation();
         optionRepresentation.setValue("{\"identifier\":\"test-identifier\",\"enabled\":false}");
-        
+
         ConnectorConfiguration config = new ConnectorConfiguration();
         config.setIdentifier(TEST_IDENTIFIER);
         config.setEnabled(false);
@@ -181,7 +182,7 @@ class ConnectorConfigurationServiceTest {
         when(tenantOptionApi.getOption(any(OptionPK.class))).thenReturn(optionRepresentation);
         when(objectMapper.readValue(anyString(), eq(ConnectorConfiguration.class))).thenReturn(config);
         when(objectMapper.writeValueAsString(any(ConnectorConfiguration.class)))
-            .thenReturn("{\"identifier\":\"test-identifier\",\"enabled\":true}");
+                .thenReturn("{\"identifier\":\"test-identifier\",\"enabled\":true}");
         when(subscriptionsService.getTenant()).thenReturn(TEST_TENANT);
 
         // Act
