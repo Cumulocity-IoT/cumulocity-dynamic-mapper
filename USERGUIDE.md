@@ -379,14 +379,14 @@ In the sample below, e.g. a warning is shown since the required property `source
 When you choose to define the substitutions in javascript code, see following screenshot, then the flow in the stepper is different.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_CodeBasedSubstitution.png"  style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_SubstitutionAsJavaScript.png"  style="width: 50%;" />
 </p>
 <br/>
 
 In step 4 of the mapping stepper 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_CodeBasedSubstitution.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SubstitutionAsJavaScript.png"  style="width: 70%;" />
 </p>
 <br/>
 
