@@ -27,9 +27,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.pulsar.client.api.ClientBuilder;
 import org.apache.pulsar.client.api.Consumer;
@@ -240,9 +238,65 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     public boolean initialize() {
         loadConfiguration();
-        log.info("{} - Phase 0: {} initialized , connectorType: {}, authenticationMethod: {}", tenant,
-                getConnectorType(),
-                getConnectorName());
+
+        // Create Pulsar client during initialization, not during connection
+        String serviceUrl;
+        if (additionalSubscriptionIdTest != null && additionalSubscriptionIdTest.length() > 0) {
+            serviceUrl = configurationRegistry.getMqttServicePulsarUrl();
+        } else {
+            serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
+        }
+
+        Boolean enableTls = (Boolean) connectorConfiguration.getProperties().getOrDefault("enableTls", false);
+        String authenticationMethod = (String) connectorConfiguration.getProperties()
+                .getOrDefault("authenticationMethod", "basic");
+        String authenticationParams = (String) connectorConfiguration.getProperties().get("authenticationParams");
+        Integer connectionTimeout = (Integer) connectorConfiguration.getProperties()
+                .getOrDefault("connectionTimeoutSeconds", DEFAULT_CONNECTION_TIMEOUT);
+        Integer operationTimeout = (Integer) connectorConfiguration.getProperties()
+                .getOrDefault("operationTimeoutSeconds", DEFAULT_OPERATION_TIMEOUT);
+        Integer keepAlive = (Integer) connectorConfiguration.getProperties()
+                .getOrDefault("keepAliveIntervalSeconds", DEFAULT_KEEP_ALIVE);
+
+        try {
+            String finalServiceUrl = adjustServiceUrlForTls(serviceUrl, enableTls);
+
+            ClientBuilder clientBuilder = PulsarClient.builder()
+                    .serviceUrl(finalServiceUrl)
+                    .connectionTimeout(connectionTimeout, TimeUnit.SECONDS)
+                    .operationTimeout(operationTimeout, TimeUnit.SECONDS)
+                    .keepAliveInterval(keepAlive, TimeUnit.SECONDS)
+                    .enableBusyWait(false)
+                    .maxNumberOfRejectedRequestPerConnection(0);
+
+            configureAuthentication(clientBuilder, authenticationMethod, authenticationParams);
+
+            try {
+                pulsarClient = clientBuilder.build();
+                log.info("{} - Pulsar client created successfully", tenant);
+            } catch (Exception e) {
+                if (containsPip344Error(e)) {
+                    log.error(
+                            "{} - Broker doesn't support PIP-344. Please upgrade your Pulsar broker to version 2.11.0 or later",
+                            tenant);
+                    return false; // Initialization failed - don't attempt to connect
+                } else {
+                    log.error("{} - Failed to create Pulsar client: ", tenant, e);
+                    return false;
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("{} - Error during Pulsar client initialization: ", tenant, e);
+            return false;
+        }
+
+        pulsarCallback = new MQTTServicePulsarCallback(tenant, configurationRegistry, dispatcher,
+                getConnectorIdentifier(), getConnectorName(), false);
+
+        log.info("{} - Phase 0: {} initialized, connectorType: {}, authenticationMethod: {}", tenant,
+                getConnectorType(), getConnectorName(), authenticationMethod);
+
         return true;
     }
 
@@ -257,175 +311,159 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         if (shouldConnect())
             updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
 
-        String serviceUrl;
-        if (additionalSubscriptionIdTest != null && additionalSubscriptionIdTest.length() > 0) {
-            // test against local pulsar broker
-            serviceUrl = configurationRegistry.getMqttServicePulsarUrl();
-        } else {
-            serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
+        // Client should already be created in initialize()
+        if (pulsarClient == null || pulsarClient.isClosed()) {
+            log.error("{} - Pulsar client not available - initialization may have failed", tenant);
+            updateConnectorStatusToFailed(new Exception("Pulsar client not initialized"));
+            sendConnectorLifecycle();
+            return;
         }
-        Boolean enableTls = (Boolean) connectorConfiguration.getProperties().getOrDefault("enableTls", false);
-        String authenticationMethod = (String) connectorConfiguration.getProperties()
-                .getOrDefault("authenticationMethod", "basic");
-        String authenticationParams = (String) connectorConfiguration.getProperties().get("authenticationParams");
-        Integer connectionTimeout = (Integer) connectorConfiguration.getProperties()
-                .getOrDefault("connectionTimeoutSeconds", DEFAULT_CONNECTION_TIMEOUT);
-        Integer operationTimeout = (Integer) connectorConfiguration.getProperties()
-                .getOrDefault("operationTimeoutSeconds", DEFAULT_OPERATION_TIMEOUT);
-        Integer keepAlive = (Integer) connectorConfiguration.getProperties()
-                .getOrDefault("keepAliveIntervalSeconds", DEFAULT_KEEP_ALIVE);
 
         String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
-
         towardsPlatformTopic = String.format("persistent://%s/%s/%s", tenant, namespace, PULSAR_TOWARDS_PLATFORM_TOPIC);
         towardsDeviceTopic = String.format("persistent://%s/%s/%s", tenant, namespace, PULSAR_TOWARDS_DEVICE_TOPIC);
 
-        try {
-            String finalServiceUrl = adjustServiceUrlForTls(serviceUrl, enableTls);
+        boolean successful = false;
+        while (!successful) {
+            if (Thread.currentThread().isInterrupted())
+                return;
+            loadConfiguration();
+            var firstRun = true;
+            var mappingOutboundCacheRebuild = false;
 
-            ClientBuilder clientBuilder = PulsarClient.builder()
-                    .serviceUrl(finalServiceUrl)
-                    .connectionTimeout(connectionTimeout, TimeUnit.SECONDS)
-                    .operationTimeout(operationTimeout, TimeUnit.SECONDS)
-                    .keepAliveInterval(keepAlive, TimeUnit.SECONDS);
-
-            configureAuthentication(clientBuilder, authenticationMethod, authenticationParams);
-            pulsarClient = clientBuilder.build();
-
-            pulsarCallback = new MQTTServicePulsarCallback(tenant, configurationRegistry, dispatcher,
-                    getConnectorIdentifier(), getConnectorName(), false);
-
-            boolean successful = false;
-            while (!successful) {
+            while (!isConnected() && shouldConnect()) {
                 if (Thread.currentThread().isInterrupted())
                     return;
-                loadConfiguration();
-                var firstRun = true;
-                var mappingOutboundCacheRebuild = false;
-
-                while (!isConnected() && shouldConnect()) {
-                    if (Thread.currentThread().isInterrupted())
-                        return;
-                    log.info("{} - Phase II: {} connecting, shouldConnect: {}, server: {}", tenant,
-                            getConnectorName(), shouldConnect(), serviceUrl);
-                    if (!firstRun) {
-                        try {
-                            Thread.sleep(WAIT_PERIOD_MS);
-                        } catch (InterruptedException e) {
-                            return;
-                        }
-                    }
+                log.info("{} - Phase II: {} connecting, shouldConnect: {}", tenant,
+                        getConnectorName(), shouldConnect());
+                if (!firstRun) {
                     try {
-                        connectionState.setTrue();
-                        log.info("{} - Phase III: {} connected, server: {}", tenant, getConnectorName(), serviceUrl);
-                        updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-
-                        // TODO IMPLEMENTATION: Subscribe to towardsPlatformTopic on connect
-                        subscribeToTowardsPlatformTopic();
-
-                        // Create producer for towardsDeviceTopic
-                        createTowardsDeviceProducer();
-
-                        List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant,
-                                connectorId);
-                        initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
-                        List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant,
-                                connectorId);
-                        mappingOutboundCacheRebuild = true;
-                        initializeSubscriptionsOutbound(updatedMappingsOutbound);
-
-                    } catch (Exception e) {
-                        if (e instanceof InterruptedException || e instanceof RuntimeException) {
-                            log.error("{} - Phase III: {} interrupted while connecting to server: {}, {}, {}, {}",
-                                    tenant, getConnectorName(), serviceUrl,
-                                    e.getMessage(), connectionState.booleanValue(), isConnected(), e);
-                            return;
-                        }
-                        log.error("{} - Phase III: {} failed to connect to server {}, {}, {}, {}", tenant,
-                                serviceUrl, e.getMessage(), connectionState.booleanValue(),
-                                isConnected(), e);
-                        updateConnectorStatusToFailed(e);
-                        sendConnectorLifecycle();
+                        Thread.sleep(WAIT_PERIOD_MS);
+                    } catch (InterruptedException e) {
+                        return;
                     }
-                    firstRun = false;
                 }
+                try {
+                    connectionState.setTrue();
+                    log.info("{} - Phase III: {} connected", tenant, getConnectorName());
+                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
 
-                if (!mappingOutboundCacheRebuild) {
-                    mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+                    subscribeToTowardsPlatformTopic();
+                    createTowardsDeviceProducer();
+
+                    List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant,
+                            connectorId);
+                    initializeSubscriptionsInbound(updatedMappingsInbound, true, true);
+                    List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant,
+                            connectorId);
+                    mappingOutboundCacheRebuild = true;
+                    initializeSubscriptionsOutbound(updatedMappingsOutbound);
+
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException || e instanceof RuntimeException) {
+                        log.error("{} - Phase III: {} interrupted while connecting: {}", tenant, getConnectorName(),
+                                e.getMessage(), e);
+                        return;
+                    }
+                    log.error("{} - Phase III: {} failed to connect: {}", tenant, getConnectorName(), e.getMessage(),
+                            e);
+                    updateConnectorStatusToFailed(e);
+                    sendConnectorLifecycle();
                 }
-                successful = true;
+                firstRun = false;
             }
-        } catch (Exception e) {
-            log.error("{} - Error creating Pulsar client: ", tenant, e);
-            updateConnectorStatusToFailed(e);
-            sendConnectorLifecycle();
+
+            if (!mappingOutboundCacheRebuild) {
+                mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            }
+            successful = true;
         }
+    }
+
+    private boolean containsPip344Error(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof PulsarClientException.FeatureNotSupportedException &&
+                    current.getMessage() != null &&
+                    current.getMessage().contains("PIP-344")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     /**
      * Subscribe to the towardsPlatformTopic to receive inbound messages from MQTT
      * Service
      */
-/**
- * Subscribe to the towardsPlatformTopic to receive inbound messages from MQTT Service
- */
-/**
- * Subscribe to the towardsPlatformTopic to receive inbound messages from MQTT Service
- */
-private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
-    if (consumer != null) {
-        log.warn("{} - Consumer already exists for towardsPlatformTopic, closing existing", tenant);
-        consumer.close();
-    }
 
-    String subscriptionName = getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest);
+    private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
+        if (consumer != null) {
+            log.warn("{} - Consumer already exists for towardsPlatformTopic, closing existing", tenant);
+            consumer.close();
+        }
 
-    try {
-        consumer = pulsarClient.newConsumer()
-                .topic(towardsPlatformTopic)
-                .subscriptionName(subscriptionName)
-                .autoUpdatePartitions(false) // ← Add this to disable partition auto-discovery
-                .messageListener(pulsarCallback)
-                .subscribe();
+        String subscriptionName = getSubscriptionName(this.connectorIdentifier, this.additionalSubscriptionIdTest);
 
-        log.info("{} - Subscribed to towardsPlatformTopic: [{}] with subscription: [{}]",
-                tenant, towardsPlatformTopic, subscriptionName);
-                
-    } catch (PulsarClientException.FeatureNotSupportedException e) {
-        if (e.getMessage().contains("PIP-344")) {
-            log.warn("{} - Broker doesn't support PIP-344, falling back to async subscription for towardsPlatformTopic", tenant);
-            
-            try {
-                // Fallback: use async subscription
-                consumer = pulsarClient.newConsumer()
-                        .topic(towardsPlatformTopic)
-                        .subscriptionName(subscriptionName)
-                        .autoUpdatePartitions(false) // Disable partition auto-discovery
-                        .messageListener(pulsarCallback)
-                        .subscribeAsync()
-                        .get(30, TimeUnit.SECONDS);
-                
-                log.info("{} - Subscribed to towardsPlatformTopic via async fallback: [{}] with subscription: [{}]",
-                        tenant, towardsPlatformTopic, subscriptionName);
-                        
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt(); // Restore interrupt status
-                throw new PulsarClientException("Subscription was interrupted", ie);
-            } catch (ExecutionException ee) {
-                Throwable cause = ee.getCause();
-                if (cause instanceof PulsarClientException) {
-                    throw (PulsarClientException) cause;
-                } else {
-                    throw new PulsarClientException("Subscription failed", ee);
-                }
-            } catch (TimeoutException te) {
-                throw new PulsarClientException("Subscription timed out after 30 seconds", te);
-            }
-        } else {
-            throw e;
+        // Try multiple subscription strategies
+        Exception lastException = null;
+
+        // Strategy 1: Standard subscription with partition discovery disabled
+        try {
+            consumer = pulsarClient.newConsumer()
+                    .topic(towardsPlatformTopic)
+                    .subscriptionName(subscriptionName)
+                    .autoUpdatePartitions(false)
+                    .messageListener(pulsarCallback)
+                    .subscribe();
+
+            log.info("{} - Subscribed to towardsPlatformTopic: [{}] with subscription: [{}]",
+                    tenant, towardsPlatformTopic, subscriptionName);
+            return; // Success
+
+        } catch (PulsarClientException.FeatureNotSupportedException e) {
+            lastException = e;
+            log.warn("{} - Standard subscription failed (PIP-344 not supported), trying async approach", tenant);
+        }
+
+        // Strategy 2: Async subscription (for older brokers)
+        try {
+            consumer = pulsarClient.newConsumer()
+                    .topic(towardsPlatformTopic)
+                    .subscriptionName(subscriptionName)
+                    .autoUpdatePartitions(false)
+                    .messageListener(pulsarCallback)
+                    .subscribeAsync()
+                    .get(30, TimeUnit.SECONDS);
+
+            log.info("{} - Subscribed to towardsPlatformTopic via async: [{}] with subscription: [{}]",
+                    tenant, towardsPlatformTopic, subscriptionName);
+            return; // Success
+
+        } catch (Exception e) {
+            lastException = e;
+            log.warn("{} - Async subscription also failed, trying basic subscription", tenant);
+        }
+
+        // Strategy 3: Basic subscription without auto-partition settings
+        try {
+            consumer = pulsarClient.newConsumer()
+                    .topic(towardsPlatformTopic)
+                    .subscriptionName(subscriptionName)
+                    .messageListener(pulsarCallback)
+                    .subscribeAsync()
+                    .get(30, TimeUnit.SECONDS);
+
+            log.info("{} - Subscribed to towardsPlatformTopic via basic async: [{}] with subscription: [{}]",
+                    tenant, towardsPlatformTopic, subscriptionName);
+
+        } catch (Exception e) {
+            log.error("{} - All subscription strategies failed for towardsPlatformTopic", tenant);
+            throw new PulsarClientException(
+                    "Failed to subscribe after trying multiple strategies. Last error: " + e.getMessage(), e);
         }
     }
-}
 
     /**
      * Create producer for towardsDeviceTopic for outbound messages to MQTT Service
@@ -440,7 +478,7 @@ private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
         // Construct full Pulsar topic format
         producer = pulsarClient.newProducer()
                 .topic(towardsDeviceTopic)
-                .sendTimeout(30, TimeUnit.SECONDS)
+                // .autoUpdatePartitions(false)
                 .create();
 
         log.info("{} - Created producer for towardsDeviceTopic: [{}]", tenant, towardsDeviceTopic);
@@ -549,7 +587,7 @@ private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
         String payload = currentRequest.getRequest();
         String topic = context.getResolvedPublishTopic();
 
-        Qos qos =  Qos.AT_LEAST_ONCE ; // context.getQos(); // Get QoS from context
+        Qos qos = Qos.AT_LEAST_ONCE; // context.getQos(); // Get QoS from context
 
         try {
             // Check if client is still valid before creating producer
@@ -603,8 +641,9 @@ private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
             // Fire and forget with topic property
             producer.newMessage()
                     .value(payload.getBytes())
-                    .property(PULSAR_PROPERTY_CLIENT_ID, "")
-                    .property(PULSAR_PROPERTY_TOPIC, originalMqttTopic) // Store original MQTT topic
+                    .property(PULSAR_PROPERTY_TOPIC, originalMqttTopic)
+                    .key(originalMqttTopic)
+                    //.property(PULSAR_PROPERTY_CLIENT_ID, context.getSourceId())
                     // DO NOT REMOVE deviceToClient feature currently disabled
                     // .property(PULSAR_PROPERTY_CLIENT,
                     // configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
@@ -618,8 +657,9 @@ private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
             // Wait for acknowledgment with topic property
             producer.newMessage()
                     .value(payload.getBytes())
-                    .property(PULSAR_PROPERTY_CLIENT_ID, "")
-                    .property(PULSAR_PROPERTY_TOPIC, originalMqttTopic) // Store original MQTT topic
+                    .property(PULSAR_PROPERTY_TOPIC, originalMqttTopic)
+                    .key(originalMqttTopic)
+                    //.property(PULSAR_PROPERTY_CLIENT_ID, context.getSourceId())
                     // DO NOT REMOVE deviceToClient feature currently disabled
                     // .property(PULSAR_PROPERTY_CLIENT,
                     // configurationRegistry.resolveDeviceToClient(tenant, context.getSourceId()))
@@ -629,8 +669,9 @@ private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
         // Enhanced logging to show the N-2 topic mapping
         if (context.getMapping().getDebug() || context.getServiceConfiguration().isLogPayload()) {
             log.info(
-                    "{} - Published to Cumulocity MQTT Service: QoS={}, originalTopic=[{}], pulsarTopic=[{}], mapping={}, connector={}",
-                    tenant, qos, originalMqttTopic, towardsDeviceTopic, context.getMapping().getName(), connectorName);
+                    "{} - Published to Cumulocity MQTT Service: QoS={}, originalTopic=[{}], pulsarTopic=[{}], mapping={}, sourceId={}, connector={}",
+                    tenant, qos, originalMqttTopic, towardsDeviceTopic, context.getMapping().getName(),
+                    context.getSourceId(), connectorName);
         }
     }
 

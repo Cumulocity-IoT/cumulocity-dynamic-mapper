@@ -690,11 +690,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         log.error("{} - Not existing API!", tenant);
                     }
                 } catch (JsonProcessingException e) {
-                    log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
+                    log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload, e.getMessage());
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
                     // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
-                    log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
+                    log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s.getMessage());
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
                     // error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload +
                     // "/" + s);
