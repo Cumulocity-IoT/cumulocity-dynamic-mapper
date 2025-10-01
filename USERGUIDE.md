@@ -370,7 +370,7 @@ To avoid inconsistent JSON being sent to the Cumulocity API the defined target t
 In the sample below, e.g. a warning is shown since the required property `source.id` is missing in the payload.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SchemaValidation_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SchemaValidation_Annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -590,7 +590,7 @@ The configuration of the microservice can be changed using the following UI:
 When you choose the mapping type `Extension Source` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_ProtobufMessage_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_ProtobufMessage_Annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 

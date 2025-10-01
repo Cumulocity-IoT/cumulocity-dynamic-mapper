@@ -1184,7 +1184,7 @@ export type AlarmStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'CLEARED';
 export type AlarmSeverity = 'CRITICAL' | 'MAJOR' | 'MINOR' | 'WARNING';
 
 Tools:
--evaluate_jsonata_expression - Function that expect a sourceJSON as string and expression as string. It will execute the expression applied on the proviced sourceJSON and return the output.
+-evaluate_jsonata_expression - Function that expect a sourceJSON as string and expression as string. It will execute the expression applied on the provided sourceJSON and return the output.
 
 Rules:
 - Never create substitution for literal values of the target template (JSON document).
