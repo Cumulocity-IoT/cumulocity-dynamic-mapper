@@ -249,6 +249,7 @@
 						<include>dynamic/mapper/processor/extension/ProcessorExtensionTarget.*</include>
 						<include>dynamic/mapper/processor/inbound/BasePayloadProcessorInbound.*</include>
 						<include>dynamic/mapper/core/C8YAgent.*</include>
+						<include>dynamic/mapper/core/InventoryEnrichmentClient.*</include>
 						<include>dynamic/mapper/processor/extension/ProcessorExtensionOutbound.*</include>
 						<include>dynamic/mapper/processor/ProcessingException.*</include>
 						<include>dynamic/mapper/configuration/ServiceConfiguration.*</include>
