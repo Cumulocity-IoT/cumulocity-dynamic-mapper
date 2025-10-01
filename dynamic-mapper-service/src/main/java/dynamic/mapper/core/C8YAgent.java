@@ -133,7 +133,7 @@ import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
 
 @Slf4j
 @Component
-public class C8YAgent implements ImportBeanDefinitionRegistrar {
+public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichmentClient {
 
     ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 

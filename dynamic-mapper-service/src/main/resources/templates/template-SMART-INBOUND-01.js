@@ -18,6 +18,10 @@ function onMessage(inputMsg, context) {
     context.logMessage("Payload Raw:" + msg.getPayload());
     context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
 
+    // lookup device for enrichment
+    var device = context.lookupDevice(payload.get('deviceId'));
+    context.logMessage("Device" + device);
+
     return [{
         cumulocityType: "measurement",
         action: "create",

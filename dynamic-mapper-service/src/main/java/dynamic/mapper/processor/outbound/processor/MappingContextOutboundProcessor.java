@@ -30,6 +30,7 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
@@ -70,7 +71,8 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
         String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
 
         // Prepare GraalVM context if code exists
-        if (mapping.getCode() != null && TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
+        if (mapping.getCode() != null
+                && TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())) {
             try {
                 // contextSemaphore.acquire();
                 var graalEngine = configurationRegistry.getGraalEngine(message.getTenant());
@@ -93,7 +95,9 @@ public class MappingContextOutboundProcessor extends BaseProcessor {
                 // .get(TemplateType.SMART.name()).getCode());
                 processingContext.setGraalContext(graalContext);
                 processingContext.setFlowState(new HashMap<String, Object>());
-                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant));
+                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant,
+                        (InventoryEnrichmentClient) configurationRegistry.getC8yAgent()));
+
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, processingContext);
                 return;

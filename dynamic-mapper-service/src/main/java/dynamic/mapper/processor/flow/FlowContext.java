@@ -58,4 +58,12 @@ public interface FlowContext {
      * @return A Value containing the asset properties as a JS object.
      */
     Value lookupDTMAssetProperties(String assetId);
+
+    /**
+     * Lookup Inventory Device properties
+     * 
+     * @param deviceId The device ID to lookup.
+     * @return A Value containing the device properties as a JS object.
+     */
+    Value lookupDevice(String deviceId);
 }

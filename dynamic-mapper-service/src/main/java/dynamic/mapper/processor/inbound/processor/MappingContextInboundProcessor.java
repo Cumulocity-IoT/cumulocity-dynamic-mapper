@@ -11,6 +11,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
@@ -75,7 +76,7 @@ public class MappingContextInboundProcessor extends BaseProcessor {
                 //         .get(TemplateType.SMART.name()).getCode());
                 processingContext.setGraalContext(graalContext);
                 processingContext.setFlowState(new HashMap<String, Object>());
-                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant));
+                processingContext.setFlowContext(new SimpleFlowContext(graalContext, tenant, (InventoryEnrichmentClient) configurationRegistry.getC8yAgent()));
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, processingContext);
                 return;

@@ -6,6 +6,7 @@ import java.util.Map;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
+import dynamic.mapper.core.InventoryEnrichmentClient;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -13,57 +14,59 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class SimpleFlowContext implements FlowContext {
-    
+
     private final Map<String, Object> state;
     private final Context graalContext;
     private final String tenant;
-    
-    public SimpleFlowContext(Context graalContext, String tenant) {
+    private final InventoryEnrichmentClient inventoryEnrichmentClient;
+
+    public SimpleFlowContext(Context graalContext, String tenant, InventoryEnrichmentClient inventoryEnrichmentClient) {
         this.state = new HashMap<>();
         this.graalContext = graalContext;
         this.tenant = tenant != null ? tenant : "unknown";
+        this.inventoryEnrichmentClient = inventoryEnrichmentClient;
     }
-    
+
     @Override
     public void setState(String key, Value value) {
         if (key == null) {
             log.warn("{} - Cannot set state with null key", tenant);
             return;
         }
-        
+
         // Convert Value to Java object for safe storage
         Object javaValue = convertValueToJavaObject(value);
         state.put(key, javaValue);
-        
+
         log.debug("{} - Flow state set: {}={}", tenant, key, javaValue);
     }
-    
+
     @Override
     public Value getState(String key) {
         if (key == null || graalContext == null) {
             return null;
         }
-        
+
         Object javaValue = state.get(key);
         if (javaValue == null) {
             return null;
         }
-        
+
         // Convert back to GraalJS Value
         return graalContext.asValue(javaValue);
     }
-    
+
     @Override
     public Value getConfig() {
         if (graalContext == null) {
             return null;
         }
-        
+
         // Create a basic configuration
         Map<String, Object> config = new HashMap<>();
         config.put("tenant", tenant);
         config.put("timestamp", System.currentTimeMillis());
-        
+
         // Add logger
         Map<String, Object> logger = new HashMap<>();
         logger.put("info", new LogFunction("info"));
@@ -71,41 +74,41 @@ public class SimpleFlowContext implements FlowContext {
         logger.put("warn", new LogFunction("warn"));
         logger.put("error", new LogFunction("error"));
         config.put("logger", logger);
-        
+
         return graalContext.asValue(config);
     }
-    
+
     @Override
     public void logMessage(Value msg) {
         if (msg == null) {
             log.info("{} - JS Log: null", tenant);
             return;
         }
-        
+
         if (msg.isString()) {
             log.info("{} - JS Log: {}", tenant, msg.asString());
         } else {
             log.info("{} - JS Log: {}", tenant, msg.toString());
         }
     }
-    
+
     @Override
     public Value lookupDTMAssetProperties(String assetId) {
         if (graalContext == null) {
             return null;
         }
-        
+
         log.debug("{} - DTM asset lookup requested for: {}", tenant, assetId);
-        
+
         // Simple placeholder implementation
         Map<String, Object> properties = new HashMap<>();
         properties.put("assetId", assetId);
         properties.put("found", false);
         properties.put("message", "DTM lookup not implemented");
-        
+
         return graalContext.asValue(properties);
     }
-    
+
     /**
      * Convert GraalJS Value to Java object for safe storage
      */
@@ -144,17 +147,17 @@ public class SimpleFlowContext implements FlowContext {
             return value.toString();
         }
     }
-    
+
     /**
      * Helper class for JavaScript-callable logging functions
      */
     private class LogFunction {
         private final String level;
-        
+
         public LogFunction(String level) {
             this.level = level;
         }
-        
+
         public void apply(Object... args) {
             StringBuilder message = new StringBuilder();
             for (Object arg : args) {
@@ -163,7 +166,7 @@ public class SimpleFlowContext implements FlowContext {
                 }
                 message.append(arg != null ? arg.toString() : "null");
             }
-            
+
             switch (level) {
                 case "info":
                     log.info("{} - JS: {}", tenant, message.toString());
@@ -189,12 +192,12 @@ public class SimpleFlowContext implements FlowContext {
         if (graalContext == null) {
             return null;
         }
-        
+
         Object javaValue = state;
         if (javaValue == null) {
             return null;
         }
-        
+
         // Convert back to GraalJS Value
         return graalContext.asValue(javaValue);
     }
@@ -204,13 +207,19 @@ public class SimpleFlowContext implements FlowContext {
         if (graalContext == null) {
             return null;
         }
-        
+
         Object javaValue = state.keySet();
         if (javaValue == null) {
             return null;
         }
-        
+
         // Convert back to GraalJS Value
+        return graalContext.asValue(javaValue);
+    }
+
+    @Override
+    public Value lookupDevice(String deviceId) {
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId);
         return graalContext.asValue(javaValue);
     }
 }
