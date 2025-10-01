@@ -65,5 +65,14 @@ public interface FlowContext {
      * @param deviceId The device ID to lookup.
      * @return A Value containing the device properties as a JS object.
      */
-    Value lookupDevice(String deviceId);
+    Value lookupDeviceByDeviceId(String deviceId);
+
+    /**
+     * Lookup Inventory Device properties by external id
+     * 
+     * @param externalId The externalId Id to lookup.
+     * @param type       The externalId Id type to use.
+     * @return A Value containing the device properties as a JS object.
+     */
+    Value lookupDeviceByExternalId(String externalId, String type);
 }

@@ -1211,18 +1211,28 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return 0;
     }
 
-    public Map<String, Object> getMOFromInventoryCache(String tenant, String deviceId) {
-        Map<String, Object> result = getInventoryCache(tenant).getMOBySource(deviceId);
+    public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, String externalId, String type) {
+        ID identity = new ID(type, externalId);
+        ExternalIDRepresentation sourceId = this.resolveExternalId2GlobalId(tenant, identity, null);
+        if (sourceId != null) {
+            return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue());
+        }
+        return null;
+    }
+
+    public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId) {
+        InventoryCache inventoryCache = getInventoryCache(tenant);
+        Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
         if (result != null) {
             return result;
         }
 
         // Create new managed object cache entry
         final Map<String, Object> newMO = new HashMap<>();
-        getInventoryCache(tenant).putMOforSource(deviceId, newMO);
+        inventoryCache.putMOforSource(sourceId, newMO);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        ManagedObjectRepresentation device = getManagedObjectForId(tenant, deviceId);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);
         Map<String, Object> attrs = device.getAttrs();
 
         // Process each fragment
@@ -1231,7 +1241,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
             // Handle special cases
             if ("id".equals(frag)) {
-                newMO.put(frag, deviceId);
+                newMO.put(frag, sourceId);
                 return; // using return in forEach as continue
             }
             if ("name".equals(frag)) {

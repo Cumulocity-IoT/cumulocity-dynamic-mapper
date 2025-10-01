@@ -16,11 +16,14 @@ function onMessage(inputMsg, context) {
 
     context.logMessage("Context" + context.getStateAll());
     context.logMessage("Payload Raw:" + msg.getPayload());
-    context.logMessage("Payload messageId" +  msg.getPayload().get('messageId'));
+    context.logMessage("Payload messageId" +  msg.getPayload().get("messageId"));
 
     // lookup device for enrichment
-    var device = context.lookupDevice(payload.get('deviceId'));
-    context.logMessage("Device" + device);
+    var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
+    context.logMessage("Device (by device id): " + deviceByDeviceId);
+
+    var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );
+    context.logMessage("Device (by external id): " + deviceByExternalId);
 
     return [{
         cumulocityType: "measurement",
@@ -37,6 +40,6 @@ function onMessage(inputMsg, context) {
             }
         },
 
-        externalSource: [{"type":"c8y_Serial", "externalId": payload.get('clientId')}]
+        externalSource: [{"type":"c8y_Serial", "externalId": payload.get("clientId")}]
     }];
 }

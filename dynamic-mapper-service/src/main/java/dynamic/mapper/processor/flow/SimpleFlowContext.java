@@ -218,8 +218,14 @@ public class SimpleFlowContext implements FlowContext {
     }
 
     @Override
-    public Value lookupDevice(String deviceId) {
+    public Value lookupDeviceByDeviceId(String deviceId) {
         Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCache(tenant, deviceId);
+        return graalContext.asValue(javaValue);
+    }
+
+    @Override
+    public Value lookupDeviceByExternalId(String externalId, String type) {
+        Object javaValue = inventoryEnrichmentClient.getMOFromInventoryCacheByExternalId(tenant, externalId, type);
         return graalContext.asValue(javaValue);
     }
 }
