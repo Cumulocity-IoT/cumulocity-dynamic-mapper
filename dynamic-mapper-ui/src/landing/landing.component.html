@@ -341,11 +341,28 @@
         <b>Transformation Type</b> when
         creating the mapping.
       </div>
+      <div class="p-b-8 text-16">
+        The <b>Smart Function</b> allows to enrich the payload with inventory data from the device e.g.: <br /> <br />
+        <code>
+              &nbsp;&nbsp;&nbsp;&nbsp;// lookup device for enrichment <br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));<br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;context.logMessage("Device (by device id): " + deviceByDeviceId);<br/>
+              <br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );<br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;context.logMessage("Device (by external id): " + deviceByExternalId);<br/>
+        </code>
+      </div>
+      <div class="p-b-8 text-16">
+        <span class="text-primary">Note:</span>
+        Only device fragments configured in <b>Configuration > Service Configuration >  Function > Fragments from inventory to cache</b> can be referenced. <br/>
+        And have to be defined in this list of fragments.
+      </div>
       <br />
       <img width="70%" class="m-l-48 m-b-48"
         src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png"
         alt="JavaScript substitution" />
-      <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining complete transformation using
+      <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining complete transformation
+        using
         JavaScript.</p>
       <div class="p-b-8"></div>
     </div>
