@@ -91,6 +91,10 @@ export default {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
       },
+            {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Substitution_Outbound.png',
+        to: 'image/Dynamic_Mapper_Mapping_Substitution_Outbound.png'
+      },
       {
         from: '../LICENSE',
         to: 'LICENSE.txt'

@@ -18,7 +18,7 @@
   ~  @authors Christof Strack, Stefan Witschel
   ~
   -->
-<c8y-title>{{ 'Getting started Dynamic Mapper' | translate }}</c8y-title>
+<c8y-title>{{ 'Getting started: Dynamic Mapper' | translate }}</c8y-title>
 
 <a id="top"></a>
 <div class="text-right m-b-16">
@@ -41,10 +41,15 @@
           translate }}</a></li>
       <li><a (click)="scrollToElement('define-mapping')" style="cursor: pointer;">{{ 'Defining a mapping' | translate
           }}</a></li>
+      <li><a (click)="scrollToElement('define-subscription-for-outbound')" style="cursor: pointer;">{{ 'Defining a
+          subscription for outbound mapping' | translate
+          }}</a></li>
       <li><a (click)="scrollToElement('jsonata-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
           using JSONata' | translate }}</a></li>
       <li><a (click)="scrollToElement('javascript-substitution')" style="cursor: pointer;">{{ 'Defining a substitution
           using JavaScript' | translate }}</a></li>
+      <li><a (click)="scrollToElement('javascript-smart-function')" style="cursor: pointer;">{{ 'Defining the payload
+          transformation using a Smart Function (JavaScript)' | translate }}</a></li>
       <li><a (click)="scrollToElement('unknown-payload')" style="cursor: pointer;">{{ 'Getting started without knowing
           your source payload' | translate }}</a></li>
       <li><a (click)="scrollToElement('reliability-settings')" style="cursor: pointer;">{{ 'Using reliability settings
@@ -149,7 +154,7 @@
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center text-muted">-</td>
             <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong><br><small class="text-muted">(JSON)</small></td>
+            <td class="text-center"><strong>X</strong><br></td>
             <td>JSON, Hex, Protobuf, Extension</td>
           </tr>
           <tr class="table-light">
@@ -157,7 +162,7 @@
             <td class="text-center text-muted">-</td>
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong><br><small class="text-muted">(JSON)</small></td>
+            <td class="text-center"><strong>X</strong><br></td>
             <td>JSON, Hex</td>
           </tr>
           <tr>
@@ -166,7 +171,7 @@
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong><br><small class="text-muted">(JSON)</small></td>
+            <td class="text-center"><strong>X</strong><br></td>
             <td>JSON, Hex, Protobuf, Extension</td>
           </tr>
           <tr>
@@ -175,7 +180,15 @@
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong><br><small class="text-muted">(JSON)</small></td>
+            <td class="text-center"><strong>X</strong><br></td>
+            <td>JSON, Hex, Protobuf, Extension</td>
+          </tr>
+          <tr>
+            <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong></td>
+            <td class="text-center"><strong>X</strong><br></td>
             <td>JSON, Hex, Protobuf, Extension</td>
           </tr>
           <tr class="table-light">
@@ -183,7 +196,7 @@
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong><br><small class="text-muted">(JSON)</small></td>
+            <td class="text-center"><strong>X</strong><br></td>
             <td>JSON, Hex, Protobuf, Extension</td>
           </tr>
           <tr>
@@ -191,7 +204,7 @@
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
             <td class="text-center"><strong>X</strong></td>
-            <td class="text-center text-muted">-</td>
+            <td class="text-center"><strong>X</strong><br></td>
             <td>JSON, Hex, Protobuf, Extension</td>
           </tr>
         </tbody>
@@ -245,381 +258,478 @@
       alt="Substitution stepper" />
     <div class="p-b-8"></div>
 
-    <div class="card-header" id="jsonata-substitution">
+    <div class="card-header" id="define-subscription-for-outbound">
       <h3>
-        {{ 'Defining a substitution using JSONata' | translate }}
+        {{ 'Defining a subscription for outbound mapping' | translate }}
       </h3>
     </div>
     <div class="card-block">
       <div class="p-b-8 text-16">
-        A substitution is a rule that copies content from the source payload (usually your custom JSON payload) to the
-        target payload (Cumulocity JSON payload).<br />
-        When defining substitutions, templates for the source and target payloads are used.<br />
-        At runtime, these rules are applied to the actual payload received from your broker. To define a substitution:
+        When defining an outbound mapping the <b>Dynamic Mapper backend </b> needs to be triggered when a some data for
+        a device
+        is updated.<br />
+        Ths only happens when the <b>Dynamic Mapper backend </b> creates a subscription for the device.<br />
+        An outbound mapping is processed only if all of the following conditions apply:<br />
+        <ol class="text-16">
+          <li>
+            A subscription for this device exists
+          </li>
+          <li>
+            If a inventory filter is defined for the mapping, e.g. <code> type == "pressure_sensor"</code>, it must
+            evaluate to <code>true</code>
+          </li>
+          <li>
+            The mapping must be enabled (activated) and a connector must the assigned to the mapping
+          </li>
+          <li>
+            If an execution filter for the mapping is defined, e.g. <code> temperature > 95</code>, it must evaluate to
+            <code>true</code>
+          </li>
+        </ol>
+        <p class="p-b-8 text-16">
+          The following screen offers two ways to define subscriptions:<br />
+        </p>
+        <ol class="text-16">
+          <li>
+            <b>Subscriptions static</b>: Specify device groups. When a device group is added subscriptions for all
+            assigned <br />
+            devices are created. When a device is added/removed from a chosen group the subscription is created/deleted
+            <br />
+            (dynamic). The filter applies to child assets and child devices.
+          </li>
+          <li>
+            <b>Subscriptions dynamic</b>: Specify device groups. When a device group is added subscriptions for all
+            assigned devices are created. <br />
+            When a device is added/removed from a chosen group the subscription is created/deleted (dynamic). <br />
+            The filter applies to child assets and child devices. <br />
+            Another variant is to configure a list of device types. If a device of the configured device types is
+            created an subscription is automatically created.
+          </li>
+        </ol>
+        <br />
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Substitution_Outbound.png"
+          alt="Substitution mapping outbound" />
+      </div>
+
+      <div class="card-header" id="jsonata-substitution">
+        <h3>
+          {{ 'Defining a substitution using JSONata' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          A substitution is a rule that copies content from the source payload (usually your custom JSON payload) to the
+          target payload (Cumulocity JSON payload).<br />
+          When defining substitutions, templates for the source and target payloads are used.<br />
+          At runtime, these rules are applied to the actual payload received from your broker. To define a substitution:
+        </div>
+        <br />
+        <ol class="p-b-8 text-16">
+          <li>
+            Select a node in the source payload (e.g., <code>_TOPIC_LEVEL_[1]</code>).
+          </li>
+          <li>
+            Select a node in the target payload (e.g., <code>source.id</code>).
+          </li>
+          <li>Press <b>Add substitution</b>.</li>
+          <li>The substitution is added to the table of existing substitutions.</li>
+        </ol>
+        <p class="p-b-8 text-16">
+          At runtime, this substitution copies the value at <code>_TOPIC_LEVEL_[1]</code> to <code>source.id</code> in
+          the
+          target payload.<br />
+        </p>
+        <br />
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
+          alt="Substitution annotation" />
+        <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
+          JSONata.</p>
+      </div>
+
+
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          For more advanced mapping rules, e.g. extracting parts of a string for a name (40404-psid-device100-w2w2)
+          expressions in JSONata can be used.<br />
+          To use this option you have to toggle the button **Toggle expert mode **.<br />
+        </div>
+        <br />
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png"
+          alt="Defining Substitutions in  ExpertMode" />
+        <p class="image-description"><b>Description:</b> Screenshot showing the definition of substitutions in
+          ExpertMode
+          using
+          JSONata.</p>
+      </div>
+
+      <div class="p-b-8"></div>
+      <div class="card-header" id="javascript-substitution">
+        <h3>
+          {{ 'Defining a substitution using JavaScript' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          In step 4, you can define substitutions directly in the editor using JavaScript syntax.<br />
+          At runtime, the JavaScript code is evaluated and copies the value to the target payload path.
+        </div>
+        <div class="p-b-8 text-16">
+          <span class="text-primary">Note:</span>
+          The JavaScript editor is only available if you select <code>Define substitutions as JavaScript</code> when
+          creating the mapping.
+        </div>
+        <br />
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png"
+          alt="JavaScript substitution" />
+        <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
+          JavaScript.</p>
+        <div class="p-b-8"></div>
+      </div>
+
+
+      <div class="p-b-8"></div>
+      <div class="card-header" id="javascript-smart-function">
+        <h3>
+          {{ 'Defining the payload transformation using a Smart Function (JavaScript)' | translate }}
+        </h3>
+      </div>
+      <div class="card-block">
+        <div class="p-b-8 text-16">
+          When you select <b>Smart Function</b> as the <b>Transformation Type</b> in the modal dialog, you can define
+          the
+          entire payload directly in the editor using JavaScript syntax, rather than just substitutions. At runtime,
+          this
+          JavaScript code is evaluated and copies the value to the target payload path. This gives you the freedom to
+          see
+          the payload exactly as it is sent to the Cumulocity backend.
+        </div>
+        <br />
+        <div class="p-b-8 text-16">
+          <span class="text-primary">Note:</span>
+          The JavaScript editor for Smart Function is only available if you select the <b>Smart Function</b> as a
+          <b>Transformation Type</b> when
+          creating the mapping.
+        </div>
+        <div class="p-b-8 text-16">
+          The <b>Smart Function</b> allows to enrich the payload with inventory data from the device e.g.: <br /> <br />
+          <pre><code>&nbsp;&nbsp;&nbsp;&nbsp;// lookup device for enrichment
+&nbsp;&nbsp;&nbsp;&nbsp;var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));
+&nbsp;&nbsp;&nbsp;&nbsp;context.logMessage("Device (by device id): " + deviceByDeviceId);
+
+&nbsp;&nbsp;&nbsp;&nbsp;var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );
+&nbsp;&nbsp;&nbsp;&nbsp;context.logMessage("Device (by external id): " + deviceByExternalId);</code></pre>
+        </div>
+        <div class="p-b-8 text-16">
+          <span class="text-primary">Note:</span>
+          Only device fragments configured in <b>Configuration > Service Configuration > Function > Fragments from
+            inventory to cache</b> can be referenced. <br />
+          And have to be defined in this list of fragments.
+        </div>
+        <br />
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png"
+          alt="JavaScript substitution" />
+        <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining complete transformation
+          using
+          JavaScript.</p>
+        <div class="p-b-8"></div>
+      </div>
+    </div>
+
+    <div class="card-header" id="unknown-payload">
+      <h3>
+        {{ 'Getting started without knowing your source payload' | translate }}
+      </h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        If you don't know the device payload, first capture and analyze incoming data.<br />
+        This process, called snooping, records messages that can serve as source templates for future mappings.<br />
+        To enable snooping for a mapping, select <b>Enable snooping</b> when choosing a mapping type.<br />
+        Start by clicking <b>Add mapping</b> (Mapping -> Inbound Mapping -> Action Add mapping).<br /><br />
+        The stepper guides you through these steps:
+      </div>
+      <ol class="text-16">
+        <li>
+          Add or select an existing connector for your mapping (messages are snooped/recorded).
+        </li>
+        <li>
+          Define general settings, such as the topic name for this mapping.
+        </li>
+      </ol>
+      <br>
+      <div>
+        <img width="30%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"
+          alt="Snooping modal" />
+        <p class="image-description"><b>Description:</b> Modal dialog to create a mapping in snooping mode.</p>
       </div>
       <br />
-      <ol class="p-b-8 text-16">
-        <li>
-          Select a node in the source payload (e.g., <code>_TOPIC_LEVEL_[1]</code>).
-        </li>
-        <li>
-          Select a node in the target payload (e.g., <code>source.id</code>).
-        </li>
-        <li>Press <b>Add substitution</b>.</li>
-        <li>The substitution is added to the table of existing substitutions.</li>
-      </ol>
+      <br />
+      <p>The following screenshot shows a mapping that uses snoop and for which the process already and snooped messages
+        arrived.</p>
+      <div>
+        <img width="70%" class="m-l-48 m-b-48"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png"
+          alt="Snooping stepper" />
+      </div>
+      <p class="image-description"><b>Description:</b> Animation showing the steps for defining a mapping in snooping
+        mode.</p>
+    </div>
+
+    <div class="card-header" id="reliability-settings">
+      <h3>
+        {{ 'Using reliability settings in mappings' | translate }}
+      </h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        You can set a QoS (Quality of Service) level for a mapping. The table below shows the effect of QoS when
+        processing mappings, depending on the connector (message source):
+      </div>
+      <ul class="p-b-8 text-16">
+        <li><strong>HTTP Connector</strong>: Only supports QoS 0 (immediate response, no guarantees).</li>
+        <li><strong>MQTT</strong>: Supports all QoS levels (0-2) with varying acknowledgment behaviors.</li>
+        <li><strong>WebHook</strong>: Primarily outbound, with conditional acknowledgments based on QoS.</li>
+        <li><strong>Apache Pulsar</strong>: TODO DEFINE</li>
+        <li><strong>Cumulocity MQTT Service ( device isolation )</strong>: TODO DEFINE</li>
+        <li><strong>Kafka</strong>: Limited to QoS 0 for outbound operations.</li>
+      </ul>
       <p class="p-b-8 text-16">
-        At runtime, this substitution copies the value at <code>_TOPIC_LEVEL_[1]</code> to <code>source.id</code> in the
-        target payload.<br />
+        Higher QoS levels (1-2) provide better delivery guarantees, but are not supported by all connectors. MQTT offers
+        the most complete QoS support.
       </p>
       <br />
-      <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic_Annotated.png"
-        alt="Substitution annotation" />
-      <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
-        JSONata.</p>
-    </div>
+      <div class="table-responsive table-width-80">
+        <table class="table ">
+          <thead class="thead-light">
+            <tr>
+              <th>Connector</th>
+              <th>QoS</th>
+              <th>Inbound</th>
+              <th>Outbound</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Http Connector group - grey background -->
+            <tr class="table-light">
+              <td rowspan="3" class="align-middle"><strong>Http Connector</strong></td>
+              <td class="text-center">0</td>
+              <td>Process asynchronous, send response directly after receiving message</td>
+              <td class="text-muted">not relevant</td>
+            </tr>
+            <tr class="table-light">
+              <td class="text-center">1</td>
+              <td class="text-muted">not supported</td>
+              <td class="text-muted">not relevant</td>
+            </tr>
+            <tr class="table-light">
+              <td class="text-center">2</td>
+              <td class="text-muted">not supported</td>
+              <td class="text-muted">not relevant</td>
+            </tr>
 
+            <!-- MQTT group - white background -->
+            <tr>
+              <td rowspan="3" class="align-middle"><strong>MQTT</strong></td>
+              <td class="text-center">0</td>
+              <td>ACKs are sent to broker directly after message received</td>
+              <td>Received as QoS 1 at Notification 2.0 but published as QoS 0</td>
+            </tr>
+            <tr>
+              <td class="text-center">1</td>
+              <td>ACKs are sent only when the message is successfully processed at C8Y</td>
+              <td>ACKs are sent only to Notification 2.0 when the message is successfully published to broker, published
+                as QoS 1</td>
+            </tr>
+            <tr>
+              <td class="text-center">2</td>
+              <td>Currently handled as QoS 1, no logic to check for de-duplication</td>
+              <td>Handled as QoS 1, published as QoS 2</td>
+            </tr>
 
-    <div class="card-block">
-      <div class="p-b-8 text-16">
-        For more advanced mapping rules, e.g. extracting parts of a string for a name (40404-psid-device100-w2w2)
-        expressions in JSONata can be used.<br />
-        To use this option you have to toggle the button **Toggle expert mode **.<br />
+            <!-- WebHook group - grey background -->
+            <tr class="table-light">
+              <td rowspan="3" class="align-middle"><strong>WebHook</strong></td>
+              <td class="text-center">0</td>
+              <td class="text-muted">not relevant</td>
+              <td>Received as QoS 1, sending ack directly after receiving message</td>
+            </tr>
+            <tr class="table-light">
+              <td class="text-center">1</td>
+              <td class="text-muted">not relevant</td>
+              <td>Received as QoS 1, sending ack only when request was successful</td>
+            </tr>
+            <tr class="table-light">
+              <td class="text-center">2</td>
+              <td class="text-muted">not relevant</td>
+              <td>Received as QoS 1, sending ack only when request was successful</td>
+            </tr>
+
+            <!-- Cumulocity MQTT Service  group - grey background -->
+            <tr class="table-light">
+              <td rowspan="3" class="align-middle"><strong>Cumulocity MQTT Service ( device isolation )</strong></td>
+              <td class="text-center">0</td>
+              <td class="text-muted">not relevant</td>
+              <td>Received as QoS 1, sending ack directly after receiving message</td>
+            </tr>
+            <tr class="table-light">
+              <td class="text-center">1</td>
+              <td class="text-muted">not relevant</td>
+              <td>Received as QoS 1, sending ack only when request was successful</td>
+            </tr>
+            <tr class="table-light">
+              <td class="text-center">2</td>
+              <td class="text-muted">not supported</td>
+              <td class="text-muted">not supported</td>
+            </tr>
+
+            <!-- Apache Pulsar group - white background -->
+            <tr>
+              <td rowspan="3" class="align-middle"><strong>Apache Pulsar</strong></td>
+              <td class="text-center">0</td>
+              <td class="text-muted">not relevant</td>
+              <td>No acknowledgment (similar to MQTT QoS 0)</td>
+            </tr>
+            <tr>
+              <td class="text-center">1</td>
+              <td class="text-muted">not relevant</td>
+              <td class="text-muted">not supported</td>
+            </tr>
+            <tr>
+              <td class="text-center">2</td>
+              <td class="text-muted">not relevant</td>
+              <td class="text-muted">not supported</td>
+            </tr>
+
+            <!-- Kafka group - white background -->
+            <tr>
+              <td rowspan="3" class="align-middle"><strong>Kafka</strong></td>
+              <td class="text-center">0</td>
+              <td class="text-muted">not relevant</td>
+              <td>No acknowledgment (similar to MQTT QoS 0)</td>
+            </tr>
+            <tr>
+              <td class="text-center">1</td>
+              <td class="text-muted">not relevant</td>
+              <td class="text-muted">not supported</td>
+            </tr>
+            <tr>
+              <td class="text-center">2</td>
+              <td class="text-muted">not relevant</td>
+              <td class="text-muted">not supported</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <br />
-      <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png"
-        alt="Defining Substitutions in  ExpertMode" />
-      <p class="image-description"><b>Description:</b> Screenshot showing the definition of substitutions in ExpertMode
-        using
-        JSONata.</p>
     </div>
 
-    <div class="p-b-8"></div>
-    <div class="card-header" id="javascript-substitution">
+    <div class="card-header" id="access-control">
       <h3>
-        {{ 'Defining a substitution using JavaScript' | translate }}
+        {{ 'Managing permissions for Dynamic Mapper features' | translate }}
       </h3>
     </div>
     <div class="card-block">
       <div class="p-b-8 text-16">
-        In step 4, you can define substitutions directly in the editor using JavaScript syntax.<br />
-        At runtime, the JavaScript code is evaluated and copies the value to the target payload path.
+        Dynamic Mapper uses role-based access control. The table below shows the permissions for each role:
       </div>
-      <div class="p-b-8 text-16">
-        <span class="text-primary">Note:</span>
-        The JavaScript editor is only available if you select <code>Define substitutions as JavaScript</code> when
-        creating the mapping.
+      <ul class="p-b-8 text-16">
+        <li><strong>No role</strong>: Read-only access to mappings, connectors, and service configuration.</li>
+        <li><strong>Create role</strong>: All read permissions plus full mapping management (create, edit, delete,
+          activate/deactivate, snoop/debug/filter).</li>
+        <li><strong>Admin role</strong>: All <strong>Create role</strong> permissions plus connector management and
+          service configuration editing.</li>
+      </ul>
+      <p class="text-16">Key points:</p>
+      <ul class="p-b-8 text-16">
+        <li>Only users with <strong>Create role</strong> or higher can modify mappings.</li>
+        <li>Only users with <strong>Admin role</strong> can manage connectors or edit service configuration.</li>
+        <li>All roles can read mappings, connectors, and service configuration.</li>
+      </ul>
+
+      <div class="table-responsive table-width-80">
+        <table class="table _table-striped">
+          <thead class="thead-light">
+            <tr>
+              <th style="width: 40%;">Dynamic Mapper Feature</th>
+              <th class="text-center" style="width: 20%;">No role</th>
+              <th class="text-center" style="width: 20%;">Create</th>
+              <th class="text-center" style="width: 20%;">Admin</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Mapping Read</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr class="table-light">
+              <td><strong>Mapping Create/Edit</strong></td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Mapping Delete</strong></td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr class="table-light">
+              <td><strong>Mapping Activate/Deactivate</strong></td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Mapping Snoop/Debug/Filter</strong></td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr class="table-light">
+              <td><strong>Connector Read</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Connector Create/Edit</strong></td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr class="table-light">
+              <td><strong>Connector Delete</strong></td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Connector Activate/Deactivate</strong></td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr class="table-light">
+              <td><strong>Service Configuration Read</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Service Configuration Edit</strong></td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center text-muted">-</td>
+              <td class="text-center"><strong>X</strong></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <br />
-      <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png"
-        alt="JavaScript substitution" />
-      <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining substitutions using
-        JavaScript.</p>
-      <div class="p-b-8"></div>
-    </div>
-
-
-    <div class="p-b-8"></div>
-    <div class="card-header" id="javascript-substitution">
-      <h3>
-        {{ 'Defining the payload transformation using a Smart Function ( JavaScript)' | translate }}
-      </h3>
-    </div>
-    <div class="card-block">
-      <div class="p-b-8 text-16">
-        When you select <b>Smart Function</b> as the <b>Transformation Type</b> in the modal dialog, you can define the
-        entire payload directly in the editor using JavaScript syntax, rather than just substitutions. At runtime, this
-        JavaScript code is evaluated and copies the value to the target payload path. This gives you the freedom to see
-        the payload exactly as it is sent to the Cumulocity backend.
-      </div>
-      <div class="p-b-8 text-16">
-        <span class="text-primary">Note:</span>
-        The JavaScript editor for Smart Function is only available if you select the <b>Smart Function</b> as a
-        <b>Transformation Type</b> when
-        creating the mapping.
-      </div>
-      <div class="p-b-8 text-16">
-        The <b>Smart Function</b> allows to enrich the payload with inventory data from the device e.g.: <br /> <br />
-        <code>
-              &nbsp;&nbsp;&nbsp;&nbsp;// lookup device for enrichment <br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;var deviceByDeviceId = context.lookupDeviceByDeviceId(payload.get("deviceId"));<br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;context.logMessage("Device (by device id): " + deviceByDeviceId);<br/>
-              <br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;var deviceByExternalId = context.lookupDeviceByExternalId(payload.get("clientId"), "c8y_Serial" );<br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;context.logMessage("Device (by external id): " + deviceByExternalId);<br/>
-        </code>
-      </div>
-      <div class="p-b-8 text-16">
-        <span class="text-primary">Note:</span>
-        Only device fragments configured in <b>Configuration > Service Configuration >  Function > Fragments from inventory to cache</b> can be referenced. <br/>
-        And have to be defined in this list of fragments.
-      </div>
-      <br />
-      <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png"
-        alt="JavaScript substitution" />
-      <p class="image-description"><b>Description:</b> Screenshot showing step 4 for defining complete transformation
-        using
-        JavaScript.</p>
-      <div class="p-b-8"></div>
     </div>
   </div>
-
-  <div class="card-header" id="unknown-payload">
-    <h3>
-      {{ 'Getting started without knowing your source payload' | translate }}
-    </h3>
-  </div>
-  <div class="card-block">
-    <div class="p-b-8 text-16">
-      If you don't know the device payload, first capture and analyze incoming data.<br />
-      This process, called snooping, records messages that can serve as source templates for future mappings.<br />
-      To enable snooping for a mapping, select <b>Enable snooping</b> when choosing a mapping type.<br />
-      Start by clicking <b>Add mapping</b> (Mapping -> Inbound Mapping -> Action Add mapping).<br /><br />
-      The stepper guides you through these steps:
-    </div>
-    <ol class="text-16">
-      <li>
-        Add or select an existing connector for your mapping (messages are snooped/recorded).
-      </li>
-      <li>
-        Define general settings, such as the topic name for this mapping.
-      </li>
-    </ol>
-    <br>
-    <div>
-      <img width="30%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"
-        alt="Snooping modal" />
-      <p class="image-description"><b>Description:</b> Modal dialog to create a mapping in snooping mode.</p>
-    </div>
-    <br />
-    <br />
-    <p>The following screenshot shows a mapping that uses snoop and for which the process already and snooped messages
-      arrived.</p>
-    <div>
-      <img width="70%" class="m-l-48 m-b-48"
-        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png"
-        alt="Snooping stepper" />
-    </div>
-    <p class="image-description"><b>Description:</b> Animation showing the steps for defining a mapping in snooping
-      mode.</p>
-  </div>
-
-  <div class="card-header" id="reliability-settings">
-    <h3>
-      {{ 'Using reliability settings in mappings' | translate }}
-    </h3>
-  </div>
-  <div class="card-block">
-    <div class="p-b-8 text-16">
-      You can set a QoS (Quality of Service) level for a mapping. The table below shows the effect of QoS when
-      processing mappings, depending on the connector (message source):
-    </div>
-    <ul class="p-b-8 text-16">
-      <li><strong>HTTP Connector</strong>: Only supports QoS 0 (immediate response, no guarantees).</li>
-      <li><strong>MQTT</strong>: Supports all QoS levels (0-2) with varying acknowledgment behaviors.</li>
-      <li><strong>WebHook</strong>: Primarily outbound, with conditional acknowledgments based on QoS.</li>
-      <li><strong>Kafka</strong>: Limited to QoS 0 for outbound operations.</li>
-    </ul>
-    <p class="p-b-8 text-16">
-      Higher QoS levels (1-2) provide better delivery guarantees, but are not supported by all connectors. MQTT offers
-      the most complete QoS support.
-    </p>
-    <br />
-    <div class="table-responsive table-width-80">
-      <table class="table ">
-        <thead class="thead-light">
-          <tr>
-            <th>Connector</th>
-            <th>QoS</th>
-            <th>Inbound</th>
-            <th>Outbound</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Http Connector group - grey background -->
-          <tr class="table-light">
-            <td rowspan="3" class="align-middle"><strong>Http Connector</strong></td>
-            <td class="text-center">0</td>
-            <td>Process asynchronous, send response directly after receiving message</td>
-            <td class="text-muted">not relevant</td>
-          </tr>
-          <tr class="table-light">
-            <td class="text-center">1</td>
-            <td class="text-muted">not supported</td>
-            <td class="text-muted">not relevant</td>
-          </tr>
-          <tr class="table-light">
-            <td class="text-center">2</td>
-            <td class="text-muted">not supported</td>
-            <td class="text-muted">not relevant</td>
-          </tr>
-
-          <!-- MQTT group - white background -->
-          <tr>
-            <td rowspan="3" class="align-middle"><strong>MQTT</strong></td>
-            <td class="text-center">0</td>
-            <td>ACKs are sent to broker directly after message received</td>
-            <td>Received as QoS 1 at Notification 2.0 but published as QoS 0</td>
-          </tr>
-          <tr>
-            <td class="text-center">1</td>
-            <td>ACKs are sent only when the message is successfully processed at C8Y</td>
-            <td>ACKs are sent only to Notification 2.0 when the message is successfully published to broker, published
-              as QoS 1</td>
-          </tr>
-          <tr>
-            <td class="text-center">2</td>
-            <td>Currently handled as QoS 1, no logic to check for de-duplication</td>
-            <td>Handled as QoS 1, published as QoS 2</td>
-          </tr>
-
-          <!-- WebHook group - grey background -->
-          <tr class="table-light">
-            <td rowspan="3" class="align-middle"><strong>WebHook</strong></td>
-            <td class="text-center">0</td>
-            <td class="text-muted">not relevant</td>
-            <td>Received as QoS 1, sending ack directly after receiving message</td>
-          </tr>
-          <tr class="table-light">
-            <td class="text-center">1</td>
-            <td class="text-muted">not relevant</td>
-            <td>Received as QoS 1, sending ack only when request was successful</td>
-          </tr>
-          <tr class="table-light">
-            <td class="text-center">2</td>
-            <td class="text-muted">not relevant</td>
-            <td>Received as QoS 1, sending ack only when request was successful</td>
-          </tr>
-
-          <!-- Kafka group - white background -->
-          <tr>
-            <td rowspan="3" class="align-middle"><strong>Kafka</strong></td>
-            <td class="text-center">0</td>
-            <td class="text-muted">not relevant</td>
-            <td>No acknowledgment (similar to MQTT QoS 0)</td>
-          </tr>
-          <tr>
-            <td class="text-center">1</td>
-            <td class="text-muted">not relevant</td>
-            <td class="text-muted">not supported</td>
-          </tr>
-          <tr>
-            <td class="text-center">2</td>
-            <td class="text-muted">not relevant</td>
-            <td class="text-muted">not supported</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="card-header" id="access-control">
-    <h3>
-      {{ 'Managing permissions for Dynamic Mapper features' | translate }}
-    </h3>
-  </div>
-  <div class="card-block">
-    <div class="p-b-8 text-16">
-      Dynamic Mapper uses role-based access control. The table below shows the permissions for each role:
-    </div>
-    <ul class="p-b-8 text-16">
-      <li><strong>No role</strong>: Read-only access to mappings, connectors, and service configuration.</li>
-      <li><strong>Create role</strong>: All read permissions plus full mapping management (create, edit, delete,
-        activate/deactivate, snoop/debug/filter).</li>
-      <li><strong>Admin role</strong>: All <strong>Create role</strong> permissions plus connector management and
-        service configuration editing.</li>
-    </ul>
-    <p class="text-16">Key points:</p>
-    <ul class="p-b-8 text-16">
-      <li>Only users with <strong>Create role</strong> or higher can modify mappings.</li>
-      <li>Only users with <strong>Admin role</strong> can manage connectors or edit service configuration.</li>
-      <li>All roles can read mappings, connectors, and service configuration.</li>
-    </ul>
-
-    <div class="table-responsive table-width-80">
-      <table class="table _table-striped">
-        <thead class="thead-light">
-          <tr>
-            <th style="width: 40%;">Dynamic Mapper Feature</th>
-            <th class="text-center" style="width: 20%;">No role</th>
-            <th class="text-center" style="width: 20%;">Create</th>
-            <th class="text-center" style="width: 20%;">Admin</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Mapping Read</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr class="table-light">
-            <td><strong>Mapping Create/Edit</strong></td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr>
-            <td><strong>Mapping Delete</strong></td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr class="table-light">
-            <td><strong>Mapping Activate/Deactivate</strong></td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr>
-            <td><strong>Mapping Snoop/Debug/Filter</strong></td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr class="table-light">
-            <td><strong>Connector Read</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr>
-            <td><strong>Connector Create/Edit</strong></td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr class="table-light">
-            <td><strong>Connector Delete</strong></td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr>
-            <td><strong>Connector Activate/Deactivate</strong></td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr class="table-light">
-            <td><strong>Service Configuration Read</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-          <tr>
-            <td><strong>Service Configuration Edit</strong></td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center text-muted">-</td>
-            <td class="text-center"><strong>X</strong></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
