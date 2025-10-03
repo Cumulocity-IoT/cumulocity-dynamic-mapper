@@ -279,6 +279,9 @@ public class BootstrapService {
         c8YAgent.initializeInboundExternalIdCache(tenant, cacheSizeInbound);
         c8YAgent.initializeInventoryCache(tenant, cacheSizeInventory);
 
+        // to test cache eviction
+        //c8YAgent.initializeInventoryCache(tenant, 1);
+
         cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
         cacheInventoryRetentionStartMap.put(tenant, Instant.now());
     }

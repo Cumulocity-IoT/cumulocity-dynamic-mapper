@@ -1145,9 +1145,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         InventoryCache inventoryCache = new InventoryCache(inventoryCacheSize, tenant);
         // Set up eviction listener
         inventoryCache.setEvictionListener(evictedSourceId -> {
-            ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
-            moRep.setId(new GId(evictedSourceId));
-            configurationRegistry.getNotificationSubscriber().unsubscribeMOForInventoryCacheUpdates(moRep);
+            subscriptionsService.runForTenant(tenant, () -> {
+                ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
+                moRep.setId(new GId(evictedSourceId));
+                configurationRegistry.getNotificationSubscriber().unsubscribeMOForInventoryCacheUpdates(moRep);
+            });
         });
         inventoryCaches.put(tenant, inventoryCache);
     }
@@ -1289,8 +1291,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         mor.setId(new GId(sourceId));
 
         // register for updates
-        subscriptionsService.callForTenant(tenant, () -> {
-            return configurationRegistry.getNotificationSubscriber()
+        subscriptionsService.runForTenant(tenant, () -> {
+             configurationRegistry.getNotificationSubscriber()
                     .subscribeMOForInventoryCacheUpdates(mor);
         });
 
