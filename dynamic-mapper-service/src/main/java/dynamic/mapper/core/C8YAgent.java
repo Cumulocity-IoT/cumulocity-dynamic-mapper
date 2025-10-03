@@ -694,7 +694,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
                     // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
-                    log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s.getMessage());
+                    log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload,
+                            s.getMessage());
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
                     // error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload +
                     // "/" + s);
@@ -1141,7 +1142,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
         log.info("{} - Initialize inventoryCache {}", tenant, inventoryCacheSize);
-        inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
+        InventoryCache inventoryCache = new InventoryCache(inventoryCacheSize, tenant);
+        // Set up eviction listener
+        inventoryCache.setEvictionListener(evictedSourceId -> {
+            ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
+            moRep.setId(new GId(evictedSourceId));
+            configurationRegistry.getNotificationSubscriber().unsubscribeMOForInventoryCacheUpdates(moRep);
+        });
+        inventoryCaches.put(tenant, inventoryCache);
     }
 
     public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {
@@ -1196,8 +1204,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             // FIXME Recreating the cache creates a new instance of InventoryCache
             // which causes issues with Metering
             if (recreate) {
+                // this is required to unregister all subscriptions for inventory updates
+                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates();
                 inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
             } else {
+                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates();
                 inventoryCache.clearCache();
             }
         }
@@ -1220,6 +1231,50 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return null;
     }
 
+    public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates) {
+        InventoryCache inventoryCache = getInventoryCache(tenant);
+
+        // Create new managed object cache entry
+        final Map<String, Object> newMO = new HashMap<>();
+        inventoryCache.putMO(sourceId, newMO);
+
+        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);
+        Map<String, Object> attrs = device.getAttrs();
+
+        // Process each fragment
+        serviceConfiguration.getInventoryFragmentsToCache().forEach(frag -> {
+            frag = frag.trim();
+
+            // Handle special cases
+            if ("id".equals(frag)) {
+                newMO.put(frag, sourceId);
+                return; // using return in forEach as continue
+            }
+            if ("name".equals(frag)) {
+                newMO.put(frag, device.getName());
+                return;
+            }
+            if ("owner".equals(frag)) {
+                newMO.put(frag, device.getOwner());
+                return;
+            }
+
+            if ("type".equals(frag)) {
+                newMO.put(frag, device.getType());
+                return;
+            }
+
+            // Handle nested attributes
+            Object value = resolveNestedAttribute(attrs, frag);
+            if (value != null) {
+                newMO.put(frag, value);
+            }
+        });
+
+        return newMO;
+    }
+
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId) {
         InventoryCache inventoryCache = getInventoryCache(tenant);
         Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
@@ -1229,7 +1284,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
         // Create new managed object cache entry
         final Map<String, Object> newMO = new HashMap<>();
-        inventoryCache.putMOforSource(sourceId, newMO);
+        inventoryCache.putMO(sourceId, newMO);
+        ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+        mor.setId(new GId(sourceId));
+
+        // register for updates
+        subscriptionsService.callForTenant(tenant, () -> {
+            return configurationRegistry.getNotificationSubscriber()
+                    .subscribeMOForInventoryCacheUpdates(mor);
+        });
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);

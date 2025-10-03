@@ -78,6 +78,8 @@ public class NotificationSubscriber {
     private static final String DEVICE_SUBSCRIPTION = "DynamicMapperDeviceSubscription";
     private static final String MANAGEMENT_SUBSCRIBER = "DynamicMapperManagementSubscriber";
     private static final String MANAGEMENT_SUBSCRIPTION = "DynamicMapperManagementSubscription";
+    private static final String CACHE_INVENTORY_SUBSCRIBER = "DynamicMapperCacheInventorySubscriber";
+    private static final String CACHE_INVENTORY_SUBSCRIPTION = "DynamicMapperCacheInventorySubscription";
     private static final int MAX_RECURSION_DEPTH = 10;
     private static final int CONNECTION_TIMEOUT_SECONDS = 30;
 
@@ -115,10 +117,12 @@ public class NotificationSubscriber {
     private final Map<String, Map<String, CustomWebSocketClient>> deviceClients = new ConcurrentHashMap<>();
     private final Map<String, CustomWebSocketClient> managementClients = new ConcurrentHashMap<>();
     private final Map<String, NotificationCallback> managementCallbacks = new ConcurrentHashMap<>();
+    private final Map<String, NotificationCallback> cacheInventoryCallbacks = new ConcurrentHashMap<>();
     private final Map<String, Integer> deviceWSStatusCodes = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Mqtt3Client>> activePushConnections = new ConcurrentHashMap<>();
     private final Map<String, Map<String, String>> deviceTokens = new ConcurrentHashMap<>();
     private final Map<String, String> managementTokens = new ConcurrentHashMap<>();
+    private final Map<String, String> cacheInboundTokens = new ConcurrentHashMap<>();
 
     // Thread-safe executor services
     private volatile ScheduledExecutorService reconnectExecutor;
@@ -267,6 +271,9 @@ public class NotificationSubscriber {
         NotificationCallback managementCallback = managementCallbacks.computeIfAbsent(tenant,
                 k -> new ManagementSubscriptionClient(configurationRegistry, tenant));
 
+        NotificationCallback cacheInventoryCallback = cacheInventoryCallbacks.computeIfAbsent(tenant,
+                k -> new CacheInventorySubscriptionClient(configurationRegistry, tenant));
+
         try {
             List<NotificationSubscriptionRepresentation> managementSubs = getNotificationSubscriptionForDeviceGroup(
                     null, null).get(30, TimeUnit.SECONDS);
@@ -278,6 +285,9 @@ public class NotificationSubscriber {
 
             // Create management connection
             createManagementConnection(tenant, managementCallback);
+
+            // Create cache inventory connection
+            createCacheInventoryConnection(tenant, cacheInventoryCallback);
 
         } catch (InterruptedException e) {
             log.error("{} - Interrupted while initializing management client", tenant);
@@ -322,6 +332,22 @@ public class NotificationSubscriber {
         if (client != null) {
             managementClients.put(tenant, client);
             log.info("{} - Created management connection", tenant);
+        }
+    }
+
+    private void createCacheInventoryConnection(String tenant, NotificationCallback callback)
+            throws URISyntaxException {
+        String tokenSeed = CACHE_INVENTORY_SUBSCRIBER + additionalSubscriptionIdTest;
+        String token = createToken(CACHE_INVENTORY_SUBSCRIPTION, tokenSeed);
+        ConnectorId connectorId = new ConnectorId(
+                CacheInventorySubscriptionClient.CONNECTOR_NAME,
+                CacheInventorySubscriptionClient.CONNECTOR_ID);
+
+        cacheInboundTokens.put(tenant, token);
+        CustomWebSocketClient client = connect(token, callback, connectorId);
+        if (client != null) {
+            managementClients.put(tenant, client);
+            log.info("{} - Created cache inbound connection", tenant);
         }
     }
 
@@ -469,6 +495,103 @@ public class NotificationSubscriber {
                 throw new RuntimeException("Failed to create group subscription: " + e.getMessage(), e);
             }
         }));
+    }
+
+    public Future<NotificationSubscriptionRepresentation> subscribeMOForInventoryCacheUpdates(
+            ManagedObjectRepresentation mor) {
+
+        if (!isValidManagedObject(mor)) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("ManagedObject cannot be null"));
+        }
+
+        String tenant = subscriptionsService.getTenant();
+        if (tenant == null) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Tenant cannot be determined"));
+        }
+
+        log.info("{} - Creating subscription for inventory cache updates {} ({})", tenant, mor.getName(),
+                mor.getId().getValue());
+
+        return virtualThreadPool.submit(() -> subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(mor, API.INVENTORY,
+                        CACHE_INVENTORY_SUBSCRIPTION);
+                log.info("{} - Successfully created subscription for inventory cache updates for {}", tenant,
+                        mor.getId().getValue());
+                return nsr;
+            } catch (Exception e) {
+                log.error("{} - Error creating subscription for inventory cache updates for {}: {}",
+                        tenant, mor.getId().getValue(), e.getMessage(), e);
+                throw new RuntimeException(
+                        "Failed to create subscription for inventory cache updates: " + e.getMessage(), e);
+            }
+        }));
+    }
+
+    public boolean unsubscribeMOForInventoryCacheUpdates(ManagedObjectRepresentation mor) {
+        String tenant = subscriptionsService.getTenant();
+        if (tenant == null) {
+            throw new IllegalArgumentException("Tenant cannot be determined");
+        }
+
+        return subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                // Get existing subscription for MO
+                Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                        .getSubscriptionsByFilter(
+                                new NotificationSubscriptionFilter()
+                                        .bySource(mor.getId())
+                                        .byContext("mo"))
+                        .get().allPages().iterator();
+                while (subIt.hasNext()) {
+                    NotificationSubscriptionRepresentation nsr = subIt.next();
+                    if (CACHE_INVENTORY_SUBSCRIPTION.equals(nsr.getSubscription())) {
+                        subscriptionAPI.delete(nsr);
+                        return true;
+                    }
+                }
+
+                return false;
+            } catch (Exception e) {
+                log.error("{} - Error unsubscribing MO from inventory cache updates (removing subscription): {}",
+                        tenant, e.getMessage(), e);
+                throw new RuntimeException(
+                        "Failed to unsubscribing MO from inventory cache updates (removing subscription): "
+                                + e.getMessage(),
+                        e);
+            }
+        });
+    }
+
+    public void unsubscribeAllMOForInventoryCacheUpdates() {
+        String tenant = subscriptionsService.getTenant();
+        if (tenant == null) {
+            throw new IllegalArgumentException("Tenant cannot be determined");
+        }
+
+        subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                // Get existing subscription for MO
+                Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                        .getSubscriptionsByFilter(
+                                new NotificationSubscriptionFilter()
+                                        .bySubscription(CACHE_INVENTORY_SUBSCRIPTION))
+                        .get().allPages().iterator();
+                while (subIt.hasNext()) {
+                    NotificationSubscriptionRepresentation nsr = subIt.next();
+                    subscriptionAPI.delete(nsr);
+                }
+
+                return true;
+            } catch (Exception e) {
+                log.error("{} - Error unsubscribing all MOs from inventory cache updates (removing subscription): {}",
+                        tenant, e.getMessage(), e);
+                throw new RuntimeException(
+                        "Failed to unsubscribing all MOs from inventory cache updates (removing subscription): "
+                                + e.getMessage(),
+                        e);
+            }
+        });
     }
 
     private NotificationSubscriptionRepresentation createSubscriptionByMO(

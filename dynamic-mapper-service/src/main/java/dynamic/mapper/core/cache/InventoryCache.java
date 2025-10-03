@@ -29,60 +29,62 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import java.util.function.Consumer;
+
 public class InventoryCache {
 
-	//private final LRUMap<ID, ExternalIDRepresentation> cache;
-	private final Map<String, Map<String,Object>> cache;
+    private final Map<String, Map<String, Object>> cache;
+    private Gauge cacheSizeGauge = null;
+    
+    // Listener for eviction events
+    private Consumer<String> evictionListener;
 
-	private Gauge cacheSizeGauge = null;
+    public InventoryCache(int cacheSize, String tenant) {
+        this.cache = Collections.synchronizedMap(new LinkedHashMap<String, Map<String, Object>>() {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, Map<String, Object>> eldest) {
+                boolean shouldRemove = size() > cacheSize;
+                if (shouldRemove && evictionListener != null) {
+                    // Notify listener about eviction
+                    evictionListener.accept(eldest.getKey());
+                }
+                return shouldRemove;
+            }
+        });
+        
+        Tags tag = Tags.of("tenant", tenant);
+        this.cacheSizeGauge = Gauge.builder("dynmapper_inbound_inventory_cache_size", this.cache, Map::size)
+                .tags(tag)
+                .register(Metrics.globalRegistry);
+    }
 
-	// Constructor with default cache size
-	public InventoryCache(String tenant) {
-		this(1000, tenant); // Default size of 1000
-	}
+    /**
+     * Set a listener to be notified when entries are evicted
+     */
+    public void setEvictionListener(Consumer<String> listener) {
+        this.evictionListener = listener;
+    }
 
-	// Constructor with custom cache size
-	public InventoryCache(int cacheSize,  String tenant) {
-		//Making it thread-safe
-		this.cache = Collections.synchronizedMap(new LinkedHashMap<String, Map<String,Object>>() {
-			//Removing oldest entries
-			@Override
-			protected boolean removeEldestEntry(Map.Entry<String, Map<String,Object>> eldest) {
-				return size() > cacheSize;
-			}
-		});
-		Tags tag = Tags.of("tenant", tenant);
-		this.cacheSizeGauge = Gauge.builder("dynmapper_inbound_inventory_cache_size", this.cache, Map::size)
-				.tags(tag)
-				.register(Metrics.globalRegistry);
-	}
+    public void putMO(String sourceId, Map<String, Object> mo) {
+        cache.put(sourceId, mo);
+    }
 
-	public Gauge getCacheSizeGauge() {
-		return cacheSizeGauge;
-	}
+    public Gauge getCacheSizeGauge() {
+        return cacheSizeGauge;
+    }
 
-	// Method to get mo by source id
-	public Map<String,Object> getMOBySource(String key) {
-		return cache.get(key);
-	}
+    public Map<String, Object> getMOBySource(String key) {
+        return cache.get(key);
+    }
+    public void removeMO(String sourceId) {
+        cache.remove(sourceId);
+    }
 
-	// Method to put a new entry in the cache
-	public void putMOforSource(String sourceId, Map<String,Object> mo) {
-		cache.put(sourceId, mo);
-	}
+    public void clearCache() {
+        cache.clear();
+    }
 
-	// Method to remove an entry from the cache
-	public void removeMOforSource(String sourceId) {
-		cache.remove(sourceId);
-	}
-
-	// Method to clear the entire cache
-	public void clearCache() {
-		cache.clear();
-	}
-
-	// Method to get the current size of the cache
-	public int getCacheSize() {
-		return cache.size();
-	}
+    public int getCacheSize() {
+        return cache.size();
+    }
 }
