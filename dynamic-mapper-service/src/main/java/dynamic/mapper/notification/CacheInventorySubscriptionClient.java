@@ -21,9 +21,6 @@
 
 package dynamic.mapper.notification;
 
-import static com.dashjoin.jsonata.Jsonata.jsonata;
-
-import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.model.ProcessingResult;
@@ -36,124 +33,69 @@ import java.util.*;
 
 @Slf4j
 /**
- * CacheInventorySubscriptionClient handles notifications for management
- * subscriptions.
- * A CacheInventorySubscriptionClient is created per tenant and manages device
- * group updates and device type subscriptions.
- * It processes device group updates and device type subscriptions based on
- * incoming notifications.
- * It uses a virtual thread pool for asynchronous processing and maintains a
- * cache of groups.
+ * Handles inventory cache update notifications.
+ * Processes UPDATE operations to keep the local inventory cache synchronized.
  */
 public class CacheInventorySubscriptionClient implements NotificationCallback {
 
     public static final String CONNECTOR_NAME = "CACHE_INVENTORY_SUBSCRIPTION_CONNECTOR";
     public static final String CONNECTOR_ID = "CACHE_INVENTORY_SUBSCRIPTION_ID";
 
-    private String tenant;
-
-    // Thread-safe cache with cleanup mechanism
-    // < groupID, group>
-
-    private C8YAgent c8yAgent;
-
-    /**
-     * 
-     * @param configurationRegistry
-     * @param tenant
-     */
+    private final String tenant;
+    private final C8YAgent c8yAgent;
 
     public CacheInventorySubscriptionClient(ConfigurationRegistry configurationRegistry, String tenant) {
         this.tenant = tenant;
         this.c8yAgent = configurationRegistry.getC8yAgent();
-
         log.info("{} - CacheInventorySubscriptionClient initialized", tenant);
     }
 
     @Override
     public void onOpen(URI serverUri) {
-        log.info("{} - Phase IV: Notification 2.0 connected over WebSocket, managing subscriptions inventory update",
-                tenant);
+        log.info("{} - Inventory cache update WebSocket connected", tenant);
     }
 
     @Override
     public ProcessingResult<?> onNotification(Notification notification) {
-        Qos consolidatedQos = Qos.AT_LEAST_ONCE;
-        ProcessingResult<?> result = ProcessingResult.builder()
-                .consolidatedQos(consolidatedQos)
+        if (!"UPDATE".equals(notification.getOperation())) {
+            log.debug("{} - Ignoring non-UPDATE notification", tenant);
+            return ProcessingResult.builder()
+                .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .build();
-
-        String notificationTenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
+        }
 
         try {
-            String operation = notification.getOperation();
-             if ("UPDATE".equals(operation)) {
-                handleUpdateNotification(notification, notificationTenant);
-            } else {
-                log.debug("{} - Ignoring notification with operation: {}", notificationTenant, operation);
+            String notificationTenant = NotificationHelper.extractTenant(
+                notification.getNotificationHeaders(), tenant);
+            
+            Map<String, Object> update = NotificationHelper.parsePayload(notification.getMessage());
+            String sourceId = NotificationHelper.extractSourceId(update, notification.getApi());
+            
+            if (sourceId != null) {
+                c8yAgent.updateMOInInventoryCache(notificationTenant, sourceId, update);
+                log.debug("{} - Updated inventory cache for MO: {}", notificationTenant, sourceId);
             }
+            
+            return ProcessingResult.builder()
+                .consolidatedQos(Qos.AT_LEAST_ONCE)
+                .build();
+                
         } catch (Exception e) {
-            log.error("{} - Error processing notification: {}", notificationTenant, e.getMessage(), e);
-            result = ProcessingResult.builder()
-                    .error(e)
-                    .build();
-        }
-
-        return result;
-    }
-
-    private void handleUpdateNotification(Notification notification, String notificationTenant) {
-        Map<String, Object> update = parsePayload(notification.getMessage());
-        String sourceId = extractSourceId(update, notification.getApi());
-        c8yAgent.updateMOInInventoryCache(notificationTenant, sourceId, update);
-        log.debug("{} - Handling UPDATE notification for: {}", notificationTenant, sourceId);
-
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parsePayload(String payload) {
-        try {
-            return (Map<String, Object>) Json.parseJson(payload);
-        } catch (Exception e) {
-            log.warn("Failed to parse notification payload: {}", e.getMessage());
-            return new HashMap<>();
-        }
-    }
-
-    private String extractSourceId(Map<String, Object> parsedPayload, dynamic.mapper.model.API api) {
-        try {
-            var expression = jsonata(api.identifier);
-            Object result = expression.evaluate(parsedPayload);
-            return result instanceof String ? (String) result : null;
-        } catch (Exception e) {
-            log.warn("Could not extract source.id from payload: {}", e.getMessage());
-            return null;
+            log.error("{} - Error processing inventory cache update: {}", tenant, e.getMessage(), e);
+            return ProcessingResult.builder()
+                .consolidatedQos(Qos.AT_LEAST_ONCE)
+                .error(e)
+                .build();
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        log.error("{} - WebSocket error occurred: {}", tenant, t.getMessage(), t);
+        log.error("{} - WebSocket error: {}", tenant, t.getMessage(), t);
     }
 
     @Override
     public void onClose(int statusCode, String reason) {
-        log.info("{} - WebSocket connection closed with status {} and reason: {}",
-                tenant, statusCode, reason);
+        log.info("{} - WebSocket closed: status={}, reason={}", tenant, statusCode, reason);
     }
-
-    public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
-        if (notificationHeaders == null || notificationHeaders.isEmpty()) {
-            log.warn("No notification headers provided");
-            return tenant; // fallback to instance tenant
-        }
-
-        try {
-            return notificationHeaders.get(0).split("/")[1];
-        } catch (Exception e) {
-            log.warn("Failed to extract tenant from headers: {}", e.getMessage());
-            return tenant; // fallback to instance tenant
-        }
-    }
-
 }

@@ -505,8 +505,8 @@ public class ConfigurationController {
                         }
                         // Optionally add error handling in a separate thread if needed
                     }
-                    configurationRegistry.getNotificationSubscriber().initializeDeviceClient();
-                    configurationRegistry.getNotificationSubscriber().initializeManagementClient();
+                    configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
+                    configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
                 }
             }
 

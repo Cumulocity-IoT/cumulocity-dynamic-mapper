@@ -119,58 +119,130 @@ public class BootstrapService {
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
     }
 
-    @PreDestroy
-    public void destroy() {
-        log.info("Shutting down mapper...");
-        subscriptionsService.runForEachTenant(() -> {
-            try {
-                connectorRegistry.unregisterAllClientsForTenant(subscriptionsService.getTenant());
-            } catch (ConnectorRegistryException e) {
-                throw new RuntimeException(e);
-            }
-            configurationRegistry.getNotificationSubscriber().disconnect(subscriptionsService.getTenant());
-        });
-    }
-
-    @EventListener
-    public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
-        String tenant = event.getTenant();
-        log.info("{} - Microservice unsubscribed", tenant);
-
+@PreDestroy
+public void destroy() {
+    log.info("Shutting down mapper...");
+    subscriptionsService.runForEachTenant(() -> {
+        String tenant = subscriptionsService.getTenant();
         try {
-            cleanTenantResources(tenant);
-        } catch (Exception e) {
-            log.error("{} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
+            log.info("{} - Cleaning up tenant resources", tenant);
+            
+            // Disconnect notification subscriber
+            configurationRegistry.getNotificationSubscriber().disconnect(tenant);
+            
+            // Unregister all connector clients
+            connectorRegistry.unregisterAllClientsForTenant(tenant);
+            
+            log.info("{} - Successfully cleaned up tenant resources", tenant);
+        } catch (ConnectorRegistryException e) {
+            log.error("{} - Error during shutdown: {}", tenant, e.getMessage(), e);
+            throw new RuntimeException(e);
         }
+    });
+    
+    log.info("Mapper shutdown completed");
+}
+
+@EventListener
+public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
+    String tenant = event.getTenant();
+    log.info("{} - Microservice unsubscribed", tenant);
+
+    try {
+        cleanTenantResources(tenant);
+    } catch (Exception e) {
+        log.error("{} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
+    }
+}
+
+private void cleanTenantResources(String tenant) throws ConnectorRegistryException {
+    log.info("{} - Starting tenant resource cleanup", tenant);
+    
+    NotificationSubscriber subscriber = configurationRegistry.getNotificationSubscriber();
+    
+    try {
+        // Disconnect all notification connections
+        subscriber.disconnect(tenant);
+        log.debug("{} - Disconnected notification subscriber", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error disconnecting subscriber: {}", tenant, e.getMessage(), e);
+    }
+    
+    try {
+        // Unsubscribe device tokens
+        subscriber.unsubscribeDeviceSubscriber(tenant);
+        log.debug("{} - Unsubscribed device subscriber", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error unsubscribing device subscriber: {}", tenant, e.getMessage(), e);
+    }
+    
+    try {
+        // Unsubscribe device group tokens
+        subscriber.unsubscribeDeviceGroupSubscriber(tenant);
+        log.debug("{} - Unsubscribed device group subscriber", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error unsubscribing device group subscriber: {}", tenant, e.getMessage(), e);
     }
 
-    private void cleanTenantResources(String tenant) throws ConnectorRegistryException {
-        NotificationSubscriber subscriber = configurationRegistry.getNotificationSubscriber();
-        subscriber.disconnect(tenant);
-        subscriber.unsubscribeDeviceSubscriber(tenant);
-        subscriber.unsubscribeDeviceGroupSubscriber(tenant);
-
+    try {
+        // Unregister all connector clients
         connectorRegistry.unregisterAllClientsForTenant(tenant);
+        log.debug("{} - Unregistered all connector clients", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error unregistering clients: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
         // Clean up configurations
         configurationRegistry.removeServiceConfiguration(tenant);
+        log.debug("{} - Removed service configuration", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing service configuration: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
         // DO NOT REMOVE deviceToClient feature currently disabled
         // configurationRegistry.clearCacheDeviceToClient(tenant);
 
         configurationRegistry.removeMapperServiceRepresentation(tenant);
         configurationRegistry.removeGraalsResources(tenant);
         configurationRegistry.removeMicroserviceCredentials(tenant);
+        log.debug("{} - Removed configuration registry resources", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing configuration registry resources: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
         extensionInboundRegistry.deleteExtensions(tenant);
+        log.debug("{} - Deleted extensions", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error deleting extensions: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
         mappingService.removeResources(tenant);
+        log.debug("{} - Removed mapping service resources", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing mapping service resources: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
         connectorRegistry.removeResources(tenant);
+        log.debug("{} - Removed connector registry resources", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing connector registry resources: {}", tenant, e.getMessage(), e);
+    }
 
+    try {
         c8YAgent.removeInboundExternalIdCache(tenant);
         c8YAgent.removeInventoryCache(tenant);
+        log.debug("{} - Removed C8Y agent caches", tenant);
+    } catch (Exception e) {
+        log.error("{} - Error removing C8Y agent caches: {}", tenant, e.getMessage(), e);
     }
+
+    log.info("{} - Completed tenant resource cleanup", tenant);
+}
 
     @EventListener
     public void subscribeTenant(MicroserviceSubscriptionAddedEvent event) {
@@ -230,13 +302,14 @@ public class BootstrapService {
         ServiceConfiguration serviceConfig = serviceConfigurationService.getServiceConfiguration(tenant);
         boolean requiresSave = false;
 
-        if (serviceConfig.getInboundExternalIdCacheSize() == null || serviceConfig.getInboundExternalIdCacheSize() == 0) {
+        if (serviceConfig.getInboundExternalIdCacheSize() == null
+                || serviceConfig.getInboundExternalIdCacheSize() == 0) {
             serviceConfig.setInboundExternalIdCacheSize(inboundExternalIdCacheSize);
             requiresSave = true;
         }
 
         if (serviceConfig.getInboundExternalIdCacheRetention() == null) {
-            serviceConfig.setInboundExternalIdCacheRetention (1);
+            serviceConfig.setInboundExternalIdCacheRetention(1);
             requiresSave = true;
         }
 
@@ -277,10 +350,10 @@ public class BootstrapService {
                 .orElse(inventoryCacheSize);
 
         c8YAgent.initializeInboundExternalIdCache(tenant, cacheSizeInbound);
-        c8YAgent.initializeInventoryCache(tenant, cacheSizeInventory);
-
+        
         // to test cache eviction
-        //c8YAgent.initializeInventoryCache(tenant, 1);
+        // c8YAgent.initializeInventoryCache(tenant, 1);
+        c8YAgent.initializeInventoryCache(tenant, cacheSizeInventory);
 
         cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
         cacheInventoryRetentionStartMap.put(tenant, Instant.now());
@@ -372,8 +445,8 @@ public class BootstrapService {
         if (!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
             disableOutboundMapping(tenant, serviceConfig);
         } else {
-            configurationRegistry.getNotificationSubscriber().initializeDeviceClient();
-            configurationRegistry.getNotificationSubscriber().initializeManagementClient();
+            configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
+            configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
         }
     }
 

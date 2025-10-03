@@ -255,7 +255,7 @@ public class NotificationSubscriptionController {
 
         try {
             NotificationSubscriptionResponse response = configurationRegistry
-                    .getNotificationSubscriber().updateSubscriptionByType(request.getTypes());
+                    .getNotificationSubscriber().updateSubscriptionByType(tenant, request.getTypes());
             log.info("{} - Successfully updated type subscription", tenant);
             return ResponseEntity.ok(response);
         } catch (Exception e) {

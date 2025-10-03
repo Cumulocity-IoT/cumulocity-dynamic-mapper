@@ -1145,11 +1145,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         InventoryCache inventoryCache = new InventoryCache(inventoryCacheSize, tenant);
         // Set up eviction listener
         inventoryCache.setEvictionListener(evictedSourceId -> {
-            subscriptionsService.runForTenant(tenant, () -> {
-                ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
-                moRep.setId(new GId(evictedSourceId));
-                configurationRegistry.getNotificationSubscriber().unsubscribeMOForInventoryCacheUpdates(moRep);
-            });
+            ManagedObjectRepresentation moRep = new ManagedObjectRepresentation();
+            moRep.setId(new GId(evictedSourceId));
+            configurationRegistry.getNotificationSubscriber().unsubscribeMOForInventoryCacheUpdates(tenant, moRep);
         });
         inventoryCaches.put(tenant, inventoryCache);
     }
@@ -1207,10 +1205,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             // which causes issues with Metering
             if (recreate) {
                 // this is required to unregister all subscriptions for inventory updates
-                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates();
+                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
                 inventoryCaches.put(tenant, new InventoryCache(inventoryCacheSize, tenant));
             } else {
-                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates();
+                configurationRegistry.getNotificationSubscriber().unsubscribeAllMOForInventoryCacheUpdates(tenant);
                 inventoryCache.clearCache();
             }
         }
@@ -1291,10 +1289,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         mor.setId(new GId(sourceId));
 
         // register for updates
-        subscriptionsService.runForTenant(tenant, () -> {
-             configurationRegistry.getNotificationSubscriber()
-                    .subscribeMOForInventoryCacheUpdates(mor);
-        });
+        configurationRegistry.getNotificationSubscriber()
+                .subscribeMOForInventoryCacheUpdates(tenant, mor);
 
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         ManagedObjectRepresentation device = getManagedObjectForId(tenant, sourceId);
