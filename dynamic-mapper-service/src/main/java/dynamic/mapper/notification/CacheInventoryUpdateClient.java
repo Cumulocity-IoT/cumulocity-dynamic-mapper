@@ -36,7 +36,7 @@ import java.util.*;
  * Handles inventory cache update notifications.
  * Processes UPDATE operations to keep the local inventory cache synchronized.
  */
-public class CacheInventorySubscriptionClient implements NotificationCallback {
+public class CacheInventoryUpdateClient implements NotificationCallback {
 
     public static final String CONNECTOR_NAME = "CACHE_INVENTORY_SUBSCRIPTION_CONNECTOR";
     public static final String CONNECTOR_ID = "CACHE_INVENTORY_SUBSCRIPTION_ID";
@@ -44,7 +44,7 @@ public class CacheInventorySubscriptionClient implements NotificationCallback {
     private final String tenant;
     private final C8YAgent c8yAgent;
 
-    public CacheInventorySubscriptionClient(ConfigurationRegistry configurationRegistry, String tenant) {
+    public CacheInventoryUpdateClient(ConfigurationRegistry configurationRegistry, String tenant) {
         this.tenant = tenant;
         this.c8yAgent = configurationRegistry.getC8yAgent();
         log.info("{} - CacheInventorySubscriptionClient initialized", tenant);

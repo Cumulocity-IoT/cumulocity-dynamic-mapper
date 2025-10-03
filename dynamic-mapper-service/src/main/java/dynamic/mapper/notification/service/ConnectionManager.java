@@ -29,7 +29,7 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
-import dynamic.mapper.notification.CacheInventorySubscriptionClient;
+import dynamic.mapper.notification.CacheInventoryUpdateClient;
 import dynamic.mapper.notification.ManagementSubscriptionClient;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
 import dynamic.mapper.notification.websocket.NotificationCallback;
@@ -134,7 +134,7 @@ public class ConnectionManager {
                 k -> new ManagementSubscriptionClient(configurationRegistry, tenant));
 
         NotificationCallback cacheInventoryCallback = cacheInventoryCallbacks.computeIfAbsent(tenant,
-                k -> new CacheInventorySubscriptionClient(configurationRegistry, tenant));
+                k -> new CacheInventoryUpdateClient(configurationRegistry, tenant));
 
         try {
             List<NotificationSubscriptionRepresentation> managementSubs = queryService
@@ -388,8 +388,8 @@ public class ConnectionManager {
         tokenManager.storeCacheInventoryToken(tenant, token);
 
         ConnectorId connectorId = new ConnectorId(
-                CacheInventorySubscriptionClient.CONNECTOR_NAME,
-                CacheInventorySubscriptionClient.CONNECTOR_ID);
+                CacheInventoryUpdateClient.CONNECTOR_NAME,
+                CacheInventoryUpdateClient.CONNECTOR_ID);
 
         CustomWebSocketClient client = connect(tenant, token, callback, connectorId);
         if (client != null) {
