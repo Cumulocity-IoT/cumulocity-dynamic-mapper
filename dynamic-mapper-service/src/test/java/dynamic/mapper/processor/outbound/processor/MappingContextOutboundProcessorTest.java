@@ -51,6 +51,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
+import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.SimpleFlowContext;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
@@ -385,174 +386,116 @@ class MappingContextOutboundProcessorTest {
         log.info("✅ Null processing context handling test passed");
     }
 
-    @Test
-    void testProcessWithSubstitutionAsCode() throws Exception {
-        // Given - Substitution as code transformation
-        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
-        mapping.setCode("function transform(input) { return input; }");
+@Test
+void testAllowedHostClasses() throws Exception {
+    // Given - Smart function that will create GraalVM context
+    // NOTE: GraalVM Engine cannot be properly mocked due to internal state requirements
+    // This test verifies that the processor correctly handles GraalVM setup errors
+    mapping.setTransformationType(TransformationType.SMART_FUNCTION);
+    mapping.setCode("function onMessage(message) { return message; }");
 
-        // Mock the GraalVM Context properly
-        Context mockContext = mock(Context.class);
-        Context.Builder mockBuilder = mock(Context.Builder.class);
+    // The mocked engine will cause GraalVM context creation to fail
+    when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
-        // Setup the context builder chain
-        when(mockBuilder.engine(any(Engine.class))).thenReturn(mockBuilder);
-        when(mockBuilder.allowHostAccess(any(HostAccess.class))).thenReturn(mockBuilder);
-        when(mockBuilder.allowHostClassLookup(any())).thenReturn(mockBuilder);
-        when(mockBuilder.build()).thenReturn(mockContext);
+    // When
+    processor.process(exchange);
 
-        // Use reflection to inject a mock context builder or make the processor use our
-        // mock
-        // Since we can't easily mock Context.newBuilder() static method, let's make the
-        // test
-        // handle the case where GraalVM setup might fail
+    // Then - Verify configuration registry was called (GraalVM setup attempted)
+    verify(configurationRegistry).getGraalEngine(TEST_TENANT);
 
-        try {
-            // When
-            processor.process(exchange);
+    // In test environment, GraalVM setup will fail with mocked Engine
+    assertTrue(mappingStatus.errors >= 1L,
+        "Should have recorded GraalVM setup error");
 
-            // Then - If GraalVM setup succeeds
-            assertTrue(mappingStatus.messagesReceived >= 1L || mappingStatus.errors >= 1L,
-                    "Should either increment messages received or handle GraalVM error");
+    // Verify error handling - use any() without class specification
+    verify(processingContext).addError(any());
+    verify(mappingService).increaseAndHandleFailureCount(
+        eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
 
-            if (mappingStatus.errors == 0) {
-                assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
-                // Only verify these if no errors occurred
-                verify(configurationRegistry).getGraalEngine(TEST_TENANT);
-            } else {
-                // If GraalVM setup failed, verify error handling
-                verify(processingContext).addError(any());
-                verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-            }
+    log.info("✅ Host classes configuration test passed");
+    log.info("   - GraalVM Engine mock limitation handled correctly");
+    log.info("   - Error handling verified: {} errors recorded", mappingStatus.errors);
+}
 
-        } catch (Exception e) {
-            // If exception occurs, verify it's handled as expected
-            log.info("GraalVM setup failed as expected in test environment: {}", e.getMessage());
-            assertTrue(true, "GraalVM setup failure is expected in test environment");
-        }
+@Test
+void testProcessWithSubstitutionAsCode() throws Exception {
+    // Given - Substitution as code transformation
+    mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
+    mapping.setCode("function transform(input) { return input; }");
 
-        log.info("✅ Substitution as code test passed (handled GraalVM setup)");
-    }
+    // GraalVM Engine mock will cause context creation to fail
+    when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
-    @Test
-    void testProcessWithSmartFunction() throws Exception {
-        // Given - Smart function transformation
-        mapping.setTransformationType(TransformationType.SMART_FUNCTION);
-        mapping.setCode("function onMessage(message) { return message; }");
+    // When
+    processor.process(exchange); // line 430
 
-        try {
-            // When
-            processor.process(exchange);
+    // Then - Verify error handling for GraalVM setup failure
+    verify(configurationRegistry).getGraalEngine(TEST_TENANT);
 
-            // Then - Handle both success and GraalVM failure scenarios
-            assertTrue(mappingStatus.messagesReceived >= 1L || mappingStatus.errors >= 1L,
-                    "Should either process successfully or handle GraalVM error");
+    assertTrue(mappingStatus.errors >= 1L,
+        "Should have recorded GraalVM setup error");
 
-            if (mappingStatus.errors == 0) {
-                assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
-                verify(configurationRegistry).getGraalEngine(TEST_TENANT);
-            } else {
-                verify(processingContext).addError(any());
-                verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-            }
+    verify(processingContext).addError(any());
+    verify(mappingService).increaseAndHandleFailureCount(
+        eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
 
-        } catch (Exception e) {
-            log.info("GraalVM setup failed as expected in test environment: {}", e.getMessage());
-            assertTrue(true, "GraalVM setup failure is expected in test environment");
-        }
+    log.info("✅ Substitution as code test passed (handled GraalVM setup error)");
+}
 
-        log.info("✅ Smart function test passed (handled GraalVM setup)");
-    }
+@Test
+void testProcessWithSmartFunction() throws Exception {
+    // Given - Smart function transformation
+    mapping.setTransformationType(TransformationType.SMART_FUNCTION);
+    mapping.setCode("function onMessage(message) { return message; }");
 
-    @Test
-    void testGraalVMContextCreationError() throws Exception {
-        // Given - GraalVM engine throws exception
-        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
-        mapping.setCode("function transform(input) { return input; }");
+    // GraalVM Engine mock will cause context creation to fail
+    when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
-        // Force an exception from the configuration registry
-        when(configurationRegistry.getGraalEngine(TEST_TENANT))
-                .thenThrow(new RuntimeException("GraalVM setup failed"));
+    // When
+    processor.process(exchange);
 
-        // When
-        processor.process(exchange);
+    // Then - Verify error handling
+    verify(configurationRegistry).getGraalEngine(TEST_TENANT);
 
-        // Then - Should handle the error gracefully
-        assertEquals(1L, mappingStatus.errors, "Should increment error count");
-        verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-        verify(processingContext).addError(any());
+    assertTrue(mappingStatus.errors >= 1L,
+        "Should have recorded GraalVM setup error");
 
-        // Messages received should be 0 because processing failed
-        assertEquals(0L, mappingStatus.messagesReceived, "Should not increment messages received on error");
+    verify(processingContext).addError(any());
+    verify(mappingService).increaseAndHandleFailureCount(
+        eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
 
-        log.info("✅ GraalVM error handling test passed");
-    }
+    log.info("✅ Smart function test passed (handled GraalVM setup error)");
+}
 
-    @Test
-    void testGraalContextBuilderReuse() throws Exception {
-        // Given - Multiple calls with code-based transformations
-        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
-        mapping.setCode("function transform(input) { return input; }");
+@Test
+void testCompleteOutboundFlowWithGraalVMHandling() throws Exception {
+    // Given - Smart function transformation that will trigger GraalVM setup
+    mapping.setTransformationType(TransformationType.SMART_FUNCTION);
+    mapping.setCode("function onMessage(message, context) { return {transformed: message}; }");
+    mapping.setDebug(true);
+    when(serviceConfiguration.isLogPayload()).thenReturn(true);
 
-        // When - Process multiple times, expecting GraalVM setup to potentially fail
-        try {
-            processor.process(exchange);
+    // GraalVM Engine mock will cause context creation to fail
+    when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
-            // Reset counters for second call
-            long firstCallMessages = mappingStatus.messagesReceived;
-            long firstCallErrors = mappingStatus.errors;
-            mappingStatus.messagesReceived = 0L;
-            mappingStatus.errors = 0L;
+    // When
+    processor.process(exchange);
 
-            processor.process(exchange);
+    // Then - Verify GraalVM setup was attempted and error was handled
+    verify(configurationRegistry).getGraalEngine(TEST_TENANT);
 
-            // Then - Should have consistent behavior across calls
-            if (firstCallErrors == 0) {
-                // If first call succeeded, second should too
-                assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received on second call");
-            } else {
-                // If first call failed, second should also fail consistently
-                assertEquals(1L, mappingStatus.errors, "Should consistently fail on GraalVM setup");
-            }
+    assertTrue(mappingStatus.errors >= 1L,
+        "Should have recorded GraalVM setup error");
 
-        } catch (Exception e) {
-            log.info("GraalVM setup consistently fails in test environment: {}", e.getMessage());
-            assertTrue(true, "Consistent GraalVM failure is expected");
-        }
+    verify(processingContext).addError(any());
+    verify(mappingService).increaseAndHandleFailureCount(
+        eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
 
-        log.info("✅ GraalContext builder reuse test passed");
-    }
-
-    @Test
-    void testAllowedHostClasses() throws Exception {
-        // Given - Smart function that will create GraalVM context
-        mapping.setTransformationType(TransformationType.SMART_FUNCTION);
-        mapping.setCode("function onMessage(message) { return message; }");
-
-        try {
-            // When
-            processor.process(exchange);
-
-            // Then - Verify configuration registry was called (GraalVM setup attempted)
-            verify(configurationRegistry).getGraalEngine(TEST_TENANT);
-
-            // Only verify context setup if no errors occurred
-            if (mappingStatus.errors == 0) {
-                verify(processingContext).setGraalContext(any(Context.class));
-                verify(configurationRegistry).getHostAccess();
-            } else {
-                // If GraalVM setup failed, verify error handling
-                verify(processingContext).addError(any());
-            }
-
-        } catch (Exception e) {
-            log.info("GraalVM setup failed in test environment: {}", e.getMessage());
-            // Still verify that the setup was attempted
-            verify(configurationRegistry).getGraalEngine(TEST_TENANT);
-        }
-
-        log.info("✅ Host classes configuration test passed");
-    }
+    log.info("✅ GraalVM handling test passed");
+    log.info("   - GraalVM setup attempted");
+    log.info("   - Error properly handled and recorded");
+    log.info("   - Errors: {}", mappingStatus.errors);
+}
 
     // Add a test that specifically tests the non-code path to ensure basic
     // functionality works
@@ -635,41 +578,60 @@ class MappingContextOutboundProcessorTest {
         log.info("   - Messages received: {}", mappingStatus.messagesReceived);
     }
 
-    // Add a separate test specifically for GraalVM scenarios
     @Test
-    void testCompleteOutboundFlowWithGraalVMHandling() throws Exception {
-        // Given - Smart function transformation that will trigger GraalVM setup
-        mapping.setTransformationType(TransformationType.SMART_FUNCTION);
-        mapping.setCode("function onMessage(message, context) { return {transformed: message}; }");
-        mapping.setDebug(true);
-        when(serviceConfiguration.isLogPayload()).thenReturn(true);
+    void testGraalVMContextCreationError() throws Exception {
+        // Given - GraalVM engine throws exception
+        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
+        mapping.setCode("function transform(input) { return input; }");
+
+        // Force an exception from the configuration registry
+        when(configurationRegistry.getGraalEngine(TEST_TENANT))
+                .thenThrow(new RuntimeException("GraalVM setup failed"));
 
         // When
         processor.process(exchange);
 
-        // Then - Should handle GraalVM setup attempt (likely to fail in test
-        // environment)
-        assertTrue(mappingStatus.messagesReceived >= 1L || mappingStatus.errors >= 1L,
-                "Should either process successfully or handle GraalVM error");
+        // Then - Should handle the error gracefully
+        assertEquals(1L, mappingStatus.errors, "Should increment error count");
+        verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
+        verify(processingContext).addError(any());
 
-        // Verify GraalVM setup was attempted
-        verify(configurationRegistry).getGraalEngine(TEST_TENANT);
+        // Messages received should be 0 because processing failed
+        assertEquals(0L, mappingStatus.messagesReceived, "Should not increment messages received on error");
 
-        if (mappingStatus.errors == 0) {
-            // If GraalVM setup succeeded (unlikely in test environment)
-            assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
-            verify(processingContext).setGraalContext(any(Context.class));
-            verify(processingContext).setFlowState(any(HashMap.class));
-            verify(processingContext).setFlowContext(any(SimpleFlowContext.class));
-            log.info("GraalVM setup unexpectedly succeeded in test environment");
-        } else {
-            // If GraalVM setup failed (expected in test environment)
-            assertEquals(1L, mappingStatus.errors, "Should have recorded GraalVM setup error");
-            verify(processingContext).addError(any());
-            verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-            log.info("GraalVM setup failed as expected in test environment");
-        }
-
-        log.info("✅ GraalVM handling test passed");
+        log.info("✅ GraalVM error handling test passed");
     }
+
+    @Test
+    void testGraalContextBuilderReuse() throws Exception {
+        // Given - Multiple calls with code-based transformations
+        mapping.setTransformationType(TransformationType.SUBSTITUTION_AS_CODE);
+        mapping.setCode("function transform(input) { return input; }");
+
+        // GraalVM Engine mock will cause context creation to fail
+        when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+
+        // When - Process twice
+        processor.process(exchange);
+
+        long firstCallErrors = mappingStatus.errors;
+        assertTrue(firstCallErrors >= 1L, "First call should fail with mocked Engine");
+
+        // Reset counters for second call
+        mappingStatus.messagesReceived = 0L;
+        mappingStatus.errors = 0L;
+
+        processor.process(exchange);
+
+        // Then - Should consistently fail with mocked Engine
+        assertTrue(mappingStatus.errors >= 1L,
+                "Second call should also fail with mocked Engine");
+
+        // Should call getGraalEngine twice (once per process call)
+        verify(configurationRegistry, times(2)).getGraalEngine(TEST_TENANT);
+
+        log.info("✅ GraalContext builder reuse test passed");
+        log.info("   - Consistent error handling across multiple calls");
+    }
+
 }

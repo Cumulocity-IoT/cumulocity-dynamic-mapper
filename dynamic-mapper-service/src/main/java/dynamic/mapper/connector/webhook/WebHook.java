@@ -61,9 +61,11 @@ import java.util.*;
 
 /**
  * WebHook Connector Client.
- * Sends outbound messages to a configured REST endpoint via HTTP POST/PUT/PATCH/DELETE.
+ * Sends outbound messages to a configured REST endpoint via HTTP
+ * POST/PUT/PATCH/DELETE.
  * Supports Basic and Bearer authentication.
- * Can be configured for internal Cumulocity communication or external endpoints.
+ * Can be configured for internal Cumulocity communication or external
+ * endpoints.
  */
 @Slf4j
 public class WebHook extends AConnectorClient {
@@ -83,19 +85,19 @@ public class WebHook extends AConnectorClient {
         this.singleton = false;
         this.supportsMessageContext = true; // Supports context for HTTP methods
         this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE);
-        this.connectorSpecification = createWebHookSpecification();
+        this.connectorSpecification = createConnectorSpecification();
     }
 
     /**
      * Full constructor with dependencies
      */
     public WebHook(ConfigurationRegistry configurationRegistry,
-                  ConnectorConfiguration connectorConfiguration,
-                  CamelDispatcherInbound dispatcher,
-                  String additionalSubscriptionIdTest,
-                  String tenant) {
+            ConnectorConfiguration connectorConfiguration,
+            CamelDispatcherInbound dispatcher,
+            String additionalSubscriptionIdTest,
+            String tenant) {
         this();
-        
+
         this.configurationRegistry = configurationRegistry;
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.getName();
@@ -109,7 +111,7 @@ public class WebHook extends AConnectorClient {
                 connectorConfiguration.getIdentifier());
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        
+
         // Initialize dependencies from registry
         this.mappingService = configurationRegistry.getMappingService();
         this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
@@ -119,91 +121,12 @@ public class WebHook extends AConnectorClient {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
-        
+
         // Configure for Cumulocity internal if needed
         configureCumulocityInternal();
-        
+
         // Initialize managers
         initializeManagers();
-    }
-
-    /**
-     * Create WebHook connector specification
-     */
-    private ConnectorSpecification createWebHookSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
-        
-        ConnectorPropertyCondition basicAuthCondition = new ConnectorPropertyCondition(
-                "authentication", new String[]{"Basic"});
-        ConnectorPropertyCondition bearerAuthCondition = new ConnectorPropertyCondition(
-                "authentication", new String[]{"Bearer"});
-        ConnectorPropertyCondition cumulocityInternalCondition = new ConnectorPropertyCondition(
-                "cumulocityInternal", new String[]{"false"});
-        
-        configProps.put("baseUrl",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, cumulocityInternalCondition));
-        
-        configProps.put("authentication",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, false, null,
-                        Map.of("Basic", "Basic", "Bearer", "Bearer"),
-                        cumulocityInternalCondition));
-        
-        configProps.put("user",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, basicAuthCondition));
-        
-        configProps.put("password",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
-                        false, false, null, null, basicAuthCondition));
-        
-        configProps.put("token",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, bearerAuthCondition));
-        
-        configProps.put("headerAccept",
-                new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, "application/json", null, cumulocityInternalCondition));
-        
-        configProps.put("baseUrlHealthEndpoint",
-                new ConnectorProperty("health endpoint for GET request", false, 6,
-                        ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
-                        cumulocityInternalCondition));
-        
-        configProps.put("cumulocityInternal",
-                new ConnectorProperty(
-                        "When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.",
-                        false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null, null));
-        
-        configProps.put("headers",
-                new ConnectorProperty("Define additional headers", false, 8,
-                        ConnectorPropertyType.MAP_PROPERTY, false, false,
-                        new HashMap<String, String>(), null, cumulocityInternalCondition));
-        
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, false, null, null));
-        
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, true, null, null));
-        
-        String name = "Webhook";
-        String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. " +
-                "The publishTopic is appended to the REST endpoint. " +
-                "In case the endpoint does not end with a trailing / and the publishTopic does not start with a / it is automatically added. " +
-                "The health endpoint is tested with a GET request. " +
-                "Supports POST, PUT, PATCH, and DELETE methods.";
-        
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.WEB_HOOK,
-                false,
-                configProps,
-                true, // supportsMessageContext
-                supportedDirections());
     }
 
     /**
@@ -212,35 +135,35 @@ public class WebHook extends AConnectorClient {
     private void configureCumulocityInternal() {
         Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("cumulocityInternal", false);
-        
+
         log.info("{} - Connector {} - Cumulocity internal: {}", tenant, connectorName, cumulocityInternal);
-        
+
         if (cumulocityInternal) {
             MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
             String user = String.format("%s/%s", tenant, msc.getUsername());
-            
+
             Map<String, ConnectorProperty> props = connectorSpecification.getProperties();
-            
+
             props.put("user",
                     new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY,
                             true, true, user, null, null));
-            
+
             props.put("password",
                     new ConnectorProperty(null, true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
                             true, true, msc.getPassword(), null, null));
-            
+
             props.put("authentication",
                     new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY,
                             true, true, "Basic", null, null));
-            
+
             props.put("baseUrl",
                     new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
                             true, true, "http://cumulocity:8111", null, null));
-            
+
             props.put("headerAccept",
                     new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY,
                             true, true, "application/json", null, null));
-            
+
             props.put("baseUrlHealthEndpoint",
                     new ConnectorProperty("health endpoint for GET request", false, 6,
                             ConnectorPropertyType.STRING_PROPERTY, true, true,
@@ -251,18 +174,18 @@ public class WebHook extends AConnectorClient {
     @Override
     public boolean initialize() {
         loadConfiguration();
-        
+
         try {
             baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("baseUrl", null);
             if (baseUrl == null) {
                 throw new ConnectorException("baseUrl is required but not configured");
             }
-            
+
             baseUrlEndsWithSlash = baseUrl.endsWith("/");
-            
+
             log.info("{} - WebHook connector initialized, baseUrl: {}", tenant, baseUrl);
             return true;
-            
+
         } catch (Exception e) {
             log.error("{} - Error initializing WebHook connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
@@ -273,42 +196,42 @@ public class WebHook extends AConnectorClient {
     @Override
     public void connect() {
         log.info("{} - Connecting WebHook connector: {}", tenant, connectorName);
-        
+
         if (isConnected()) {
             log.debug("{} - Already connected, disconnecting first", tenant);
             disconnect();
         }
-        
+
         if (!shouldConnect()) {
             log.info("{} - Connector disabled or invalid configuration", tenant);
             return;
         }
-        
+
         try {
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
-            
+
             // Build WebClient
             webhookClient = buildWebClient();
-            
+
             // Test health endpoint if configured
             String healthEndpoint = (String) connectorConfiguration.getProperties()
                     .get("baseUrlHealthEndpoint");
-            
+
             if (!StringUtils.isEmpty(healthEndpoint)) {
                 log.info("{} - Testing health endpoint: {}", tenant, healthEndpoint);
                 checkHealth().block();
                 log.info("{} - Health check passed", tenant);
             }
-            
+
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
-            
+
             // Initialize outbound subscriptions
             List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
             initializeSubscriptionsOutbound(outboundMappings);
-            
+
             log.info("{} - WebHook connector connected successfully", tenant);
-            
+
         } catch (Exception e) {
             log.error("{} - Error connecting WebHook connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
@@ -328,11 +251,11 @@ public class WebHook extends AConnectorClient {
                 .getOrDefault("headerAccept", "application/json");
         @SuppressWarnings("unchecked")
         Map<String, String> headers = (Map<String, String>) connectorConfiguration.getProperties().get("headers");
-        
+
         WebClient.Builder builder = WebClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("Accept", headerAccept);
-        
+
         // Add authentication
         if ("Basic".equalsIgnoreCase(authentication) && !StringUtils.isEmpty(user) && !StringUtils.isEmpty(password)) {
             String credentials = Base64.getEncoder()
@@ -343,7 +266,7 @@ public class WebHook extends AConnectorClient {
             builder.defaultHeader("Authorization", "Bearer " + token);
             log.debug("{} - Using Bearer authentication", tenant);
         }
-        
+
         // Add custom headers
         if (headers != null && !headers.isEmpty()) {
             headers.forEach((key, value) -> {
@@ -353,7 +276,7 @@ public class WebHook extends AConnectorClient {
             });
             log.debug("{} - Added {} custom headers", tenant, headers.size());
         }
-        
+
         return builder.build();
     }
 
@@ -363,9 +286,9 @@ public class WebHook extends AConnectorClient {
     public Mono<ResponseEntity<String>> checkHealth() {
         String healthEndpoint = (String) connectorConfiguration.getProperties()
                 .getOrDefault("baseUrlHealthEndpoint", null);
-        
+
         log.info("{} - Checking health of webHook endpoint: {}", tenant, healthEndpoint);
-        
+
         return webhookClient.get()
                 .uri(healthEndpoint)
                 .retrieve()
@@ -396,23 +319,23 @@ public class WebHook extends AConnectorClient {
             log.debug("{} - Already disconnected", tenant);
             return;
         }
-        
+
         log.info("{} - Disconnecting WebHook connector", tenant);
         connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
-        
+
         try {
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
-            
+
             // Rebuild caches
             List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
             List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
-            
+
             initializeSubscriptionsInbound(inboundMappings, true, true);
             initializeSubscriptionsOutbound(outboundMappings);
-            
+
             log.info("{} - WebHook connector disconnected", tenant);
-            
+
         } catch (Exception e) {
             log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
         }
@@ -434,34 +357,34 @@ public class WebHook extends AConnectorClient {
             log.error("{} - WebClient is not initialized", tenant);
             return;
         }
-        
+
         DynamicMapperRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         String contextPath = context.getResolvedPublishTopic();
         RequestMethod method = currentRequest.getMethod();
-        
+
         // Build full path
         String fullPath = buildFullPath(contextPath);
-        
+
         log.debug("{} - Publishing to path: {}, method: {}", tenant, fullPath, method);
-        
+
         try {
             Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload);
-            
+
             ResponseEntity<String> response = responseEntity.block();
-            
+
             if (response != null && response.getStatusCode().is2xxSuccessful()) {
                 if (context.getMapping().getDebug() || serviceConfiguration.isLogPayload()) {
                     log.info("{} - Published message successfully: path: {}, method: {}, mapping: {}",
                             tenant, fullPath, method, context.getMapping().getName());
                 }
             } else {
-                String error = String.format("Failed to publish: status %s", 
+                String error = String.format("Failed to publish: status %s",
                         response != null ? response.getStatusCode() : "unknown");
                 log.error("{} - {}", tenant, error);
                 context.addError(new ProcessingException(error));
             }
-            
+
         } catch (Exception e) {
             String error = String.format("Error publishing to %s: %s", fullPath, e.getMessage());
             log.error("{} - {}", tenant, error, e);
@@ -541,7 +464,7 @@ public class WebHook extends AConnectorClient {
     private Mono<ResponseEntity<String>> executePatch(String path, String payload) {
         Boolean cumulocityInternal = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("cumulocityInternal", false);
-        
+
         if (cumulocityInternal) {
             // For Cumulocity internal, do GET + merge + PUT
             return patchObject(path, payload);
@@ -571,7 +494,7 @@ public class WebHook extends AConnectorClient {
                 .flatMap(existingResponse -> {
                     try {
                         String mergedPayload = mergeJsonObjects(existingResponse.getBody(), payload);
-                        
+
                         return webhookClient.put()
                                 .uri(path)
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -601,14 +524,14 @@ public class WebHook extends AConnectorClient {
      */
     public JsonNode mergeNodes(JsonNode existingNode, JsonNode updateNode) {
         ObjectNode result = objectMapper.createObjectNode();
-        
+
         updateNode.fields().forEachRemaining(field -> {
             String fieldName = field.getKey();
             JsonNode fieldValue = field.getValue();
-            
+
             if (existingNode.has(fieldName)) {
                 JsonNode existingValue = existingNode.get(fieldName);
-                
+
                 if (existingValue.isObject() && fieldValue.isObject()) {
                     result.set(fieldName, deepMergeObjects(existingValue, fieldValue));
                 } else {
@@ -618,7 +541,7 @@ public class WebHook extends AConnectorClient {
                 result.set(fieldName, fieldValue);
             }
         });
-        
+
         return result;
     }
 
@@ -627,30 +550,30 @@ public class WebHook extends AConnectorClient {
      */
     private JsonNode deepMergeObjects(JsonNode existingObj, JsonNode updateObj) {
         ObjectNode result = objectMapper.createObjectNode();
-        
+
         // Copy all existing fields
-        existingObj.fields().forEachRemaining(field -> 
-                result.set(field.getKey(), field.getValue()));
-        
+        existingObj.fields().forEachRemaining(field -> result.set(field.getKey(), field.getValue()));
+
         // Update with new fields
         updateObj.fields().forEachRemaining(field -> {
             String fieldName = field.getKey();
             JsonNode fieldValue = field.getValue();
-            
+
             if (result.has(fieldName) && result.get(fieldName).isObject() && fieldValue.isObject()) {
                 result.set(fieldName, deepMergeObjects(result.get(fieldName), fieldValue));
             } else {
                 result.set(fieldName, fieldValue);
             }
         });
-        
+
         return result;
     }
 
     /**
      * Handle client errors (4xx)
      */
-    private Mono<Throwable> handleClientError(org.springframework.web.reactive.function.client.ClientResponse response) {
+    private Mono<Throwable> handleClientError(
+            org.springframework.web.reactive.function.client.ClientResponse response) {
         String error = "Client error: " + response.statusCode();
         log.error("{} - {}", tenant, error);
         return Mono.error(new ProcessingException(error, response.statusCode().value()));
@@ -659,7 +582,8 @@ public class WebHook extends AConnectorClient {
     /**
      * Handle server errors (5xx)
      */
-    private Mono<Throwable> handleServerError(org.springframework.web.reactive.function.client.ClientResponse response) {
+    private Mono<Throwable> handleServerError(
+            org.springframework.web.reactive.function.client.ClientResponse response) {
         String error = "Server error: " + response.statusCode();
         log.error("{} - {}", tenant, error);
         return Mono.error(new ProcessingException(error, response.statusCode().value()));
@@ -670,23 +594,23 @@ public class WebHook extends AConnectorClient {
         if (configuration == null) {
             return false;
         }
-        
+
         Boolean cumulocityInternal = (Boolean) configuration.getProperties()
                 .getOrDefault("cumulocityInternal", false);
-        
+
         if (cumulocityInternal) {
             MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
             if (msc == null || StringUtils.isEmpty(msc.getUsername()) || StringUtils.isEmpty(msc.getPassword())) {
                 return false;
             }
         }
-        
+
         // Validate authentication
         String authentication = (String) configuration.getProperties().get("authentication");
         String user = (String) configuration.getProperties().get("user");
         String password = (String) configuration.getProperties().get("password");
         String token = (String) configuration.getProperties().get("token");
-        
+
         if ("Basic".equalsIgnoreCase(authentication)) {
             if (StringUtils.isEmpty(user) || StringUtils.isEmpty(password)) {
                 return false;
@@ -696,14 +620,14 @@ public class WebHook extends AConnectorClient {
                 return false;
             }
         }
-        
+
         // Check required properties
         for (Map.Entry<String, ConnectorProperty> entry : connectorSpecification.getProperties().entrySet()) {
             if (entry.getValue().getRequired() && configuration.getProperties().get(entry.getKey()) == null) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -733,8 +657,7 @@ public class WebHook extends AConnectorClient {
             try {
                 checkHealth().subscribe(
                         response -> log.debug("{} - Health check passed", tenant),
-                        error -> log.warn("{} - Health check failed: {}", tenant, error.getMessage())
-                );
+                        error -> log.warn("{} - Health check failed: {}", tenant, error.getMessage()));
             } catch (Exception e) {
                 log.warn("{} - Error during health check: {}", tenant, e.getMessage());
             }
@@ -755,4 +678,86 @@ public class WebHook extends AConnectorClient {
     public String getConnectorName() {
         return connectorName;
     }
+
+    /**
+     * Create WebHook connector specification
+     */
+    private ConnectorSpecification createConnectorSpecification() {
+        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+
+        ConnectorPropertyCondition basicAuthCondition = new ConnectorPropertyCondition(
+                "authentication", new String[] { "Basic" });
+        ConnectorPropertyCondition bearerAuthCondition = new ConnectorPropertyCondition(
+                "authentication", new String[] { "Bearer" });
+        ConnectorPropertyCondition cumulocityInternalCondition = new ConnectorPropertyCondition(
+                "cumulocityInternal", new String[] { "false" });
+
+        configProps.put("baseUrl",
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
+                        false, false, null, null, cumulocityInternalCondition));
+
+        configProps.put("authentication",
+                new ConnectorProperty(null, false, 1, ConnectorPropertyType.OPTION_PROPERTY,
+                        false, false, null,
+                        Map.of("Basic", "Basic", "Bearer", "Bearer"),
+                        cumulocityInternalCondition));
+
+        configProps.put("user",
+                new ConnectorProperty(null, false, 2, ConnectorPropertyType.STRING_PROPERTY,
+                        false, false, null, null, basicAuthCondition));
+
+        configProps.put("password",
+                new ConnectorProperty(null, false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
+                        false, false, null, null, basicAuthCondition));
+
+        configProps.put("token",
+                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
+                        false, false, null, null, bearerAuthCondition));
+
+        configProps.put("headerAccept",
+                new ConnectorProperty(null, false, 5, ConnectorPropertyType.STRING_PROPERTY,
+                        false, false, "application/json", null, cumulocityInternalCondition));
+
+        configProps.put("baseUrlHealthEndpoint",
+                new ConnectorProperty("health endpoint for GET request", false, 6,
+                        ConnectorPropertyType.STRING_PROPERTY, false, false, null, null,
+                        cumulocityInternalCondition));
+
+        configProps.put("cumulocityInternal",
+                new ConnectorProperty(
+                        "When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.",
+                        false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null, null));
+
+        configProps.put("headers",
+                new ConnectorProperty("Define additional headers", false, 8,
+                        ConnectorPropertyType.MAP_PROPERTY, false, false,
+                        new HashMap<String, String>(), null, cumulocityInternalCondition));
+
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        true, false, false, null, null));
+
+        configProps.put("supportsWildcardInTopicOutbound",
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        true, false, true, null, null));
+
+        String name = "Webhook";
+        String description = "Webhook to send outbound messages to the configured REST endpoint as POST in JSON format. "
+                +
+                "The publishTopic is appended to the REST endpoint. " +
+                "In case the endpoint does not end with a trailing / and the publishTopic does not start with a / it is automatically added. "
+                +
+                "The health endpoint is tested with a GET request. " +
+                "Supports POST, PUT, PATCH, and DELETE methods.";
+
+        return new ConnectorSpecification(
+                name,
+                description,
+                ConnectorType.WEB_HOOK,
+                false,
+                configProps,
+                true, // supportsMessageContext
+                supportedDirections());
+    }
+
 }

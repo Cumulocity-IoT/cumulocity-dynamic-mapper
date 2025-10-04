@@ -97,19 +97,19 @@ public class PulsarConnectorClient extends AConnectorClient {
         this.connectorType = ConnectorType.PULSAR;
         this.singleton = false;
         this.supportedQOS = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE, Qos.EXACTLY_ONCE);
-        this.connectorSpecification = createPulsarSpecification();
+        this.connectorSpecification = createConnectorSpecification();
     }
 
     /**
      * Full constructor with dependencies
      */
     public PulsarConnectorClient(ConfigurationRegistry configurationRegistry,
-                                 ConnectorConfiguration connectorConfiguration,
-                                 CamelDispatcherInbound dispatcher,
-                                 String additionalSubscriptionIdTest,
-                                 String tenant) {
+            ConnectorConfiguration connectorConfiguration,
+            CamelDispatcherInbound dispatcher,
+            String additionalSubscriptionIdTest,
+            String tenant) {
         this();
-        
+
         this.configurationRegistry = configurationRegistry;
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.getName();
@@ -123,7 +123,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 connectorConfiguration.getIdentifier());
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        
+
         // Initialize dependencies from registry
         this.mappingService = configurationRegistry.getMappingService();
         this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
@@ -133,126 +133,26 @@ public class PulsarConnectorClient extends AConnectorClient {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
-        
+
         // Initialize managers
         initializeManagers();
-    }
-
-    /**
-     * Create Pulsar connector specification
-     */
-    private ConnectorSpecification createPulsarSpecification() {
-        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
-        
-        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("enableTls", new String[]{"true"});
-        ConnectorPropertyCondition certCondition = new ConnectorPropertyCondition(
-                "useSelfSignedCertificate", new String[]{"true"});
-        ConnectorPropertyCondition authCondition = new ConnectorPropertyCondition(
-                "authenticationMethod", new String[]{"token", "oauth2", "tls", "basic"});
-        
-        configProps.put("serviceUrl",
-                new ConnectorProperty(
-                        "This can be in the format: pulsar://localhost:6650 for non-TLS or pulsar+ssl://localhost:6651 for TLS",
-                        true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        "pulsar://localhost:6650", null, null));
-        
-        configProps.put("enableTls",
-                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        false, false, false, null, null));
-        
-        configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        false, false, false, null, tlsCondition));
-        
-        configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, certCondition));
-        
-        configProps.put("nameCertificate",
-                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, null, null, certCondition));
-        
-        configProps.put("authenticationMethod",
-                new ConnectorProperty(null, false, 5, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, false, "none",
-                        Map.of("none", "None", "token", "Token", "oauth2", "OAuth2", 
-                               "tls", "TLS", "basic", "Basic"),
-                        null));
-        
-        configProps.put("authenticationParams",
-                new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
-                        false, false, null, null, authCondition));
-        
-        configProps.put("connectionTimeoutSeconds",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.NUMERIC_PROPERTY,
-                        false, false, DEFAULT_CONNECTION_TIMEOUT, null, null));
-        
-        configProps.put("operationTimeoutSeconds",
-                new ConnectorProperty(null, false, 8, ConnectorPropertyType.NUMERIC_PROPERTY,
-                        false, false, DEFAULT_OPERATION_TIMEOUT, null, null));
-        
-        configProps.put("keepAliveIntervalSeconds",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.NUMERIC_PROPERTY,
-                        false, false, DEFAULT_KEEP_ALIVE, null, null));
-        
-        configProps.put("subscriptionType",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.OPTION_PROPERTY,
-                        false, false, "Shared",
-                        Map.of("Exclusive", "Exclusive", "Shared", "Shared", 
-                               "Failover", "Failover", "Key_Shared", "Key Shared"),
-                        null));
-        
-        configProps.put("subscriptionName",
-                new ConnectorProperty(
-                        "Controls how Pulsar subscription names are generated",
-                        false, 11, ConnectorPropertyType.STRING_PROPERTY, false, false,
-                        null, null, null));
-        
-        configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, true, null, null));
-        
-        configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY,
-                        true, false, false, null, null));
-        
-        configProps.put("pulsarTenant",
-                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, "public", null, null));
-        
-        configProps.put("pulsarNamespace",
-                new ConnectorProperty(null, false, 15, ConnectorPropertyType.STRING_PROPERTY,
-                        false, false, "default", null, null));
-        
-        String name = "Apache Pulsar";
-        String description = "Connector for connecting to Apache Pulsar message broker. " +
-                "Supports QoS levels, wildcards, and MQTT-style topic format conversion.";
-        
-        return new ConnectorSpecification(
-                name,
-                description,
-                ConnectorType.PULSAR,
-                false,
-                configProps,
-                false,
-                supportedDirections());
     }
 
     @Override
     public boolean initialize() {
         loadConfiguration();
-        
+
         try {
             Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                     .getOrDefault("useSelfSignedCertificate", false);
-            
+
             if (useSelfSignedCertificate) {
                 initializeSslContext();
             }
-            
+
             log.info("{} - Pulsar connector initialized successfully", tenant);
             return true;
-            
+
         } catch (Exception e) {
             log.error("{} - Error initializing Pulsar connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
@@ -267,55 +167,55 @@ public class PulsarConnectorClient extends AConnectorClient {
         String nameCertificate = (String) connectorConfiguration.getProperties().get("nameCertificate");
         String fingerprint = (String) connectorConfiguration.getProperties()
                 .get("fingerprintSelfSignedCertificate");
-        
+
         if (nameCertificate == null || fingerprint == null) {
             throw new ConnectorException(
                     "Required properties nameCertificate and fingerprint are not set");
         }
-        
+
         cert = c8yAgent.loadCertificateByName(nameCertificate, fingerprint, tenant, connectorName);
         if (cert == null) {
             throw new ConnectorException(
-                    String.format("Certificate %s with fingerprint %s not found", 
+                    String.format("Certificate %s with fingerprint %s not found",
                             nameCertificate, fingerprint));
         }
-        
+
         KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
         trustStore.load(null, null);
         trustStore.setCertificateEntry("Custom CA",
                 (X509Certificate) CertificateFactory.getInstance("X509")
                         .generateCertificate(new ByteArrayInputStream(
                                 cert.getCertInPemFormat().getBytes(StandardCharsets.UTF_8))));
-        
+
         TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         tmf.init(trustStore);
-        
+
         sslContext = SSLContext.getInstance("TLSv1.2");
         sslContext.init(null, tmf.getTrustManagers(), null);
-        
+
         log.debug("{} - SSL context initialized", tenant);
     }
 
     @Override
     public void connect() {
         log.info("{} - Connecting Pulsar connector: {}", tenant, connectorName);
-        
+
         if (isConnected()) {
             log.debug("{} - Already connected, disconnecting first", tenant);
             disconnect();
         }
-        
+
         if (!shouldConnect()) {
             log.info("{} - Connector disabled or invalid configuration", tenant);
             return;
         }
-        
+
         try {
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
-            
+
             // Build Pulsar client
             pulsarClient = buildPulsarClient();
-            
+
             // Create callback
             pulsarCallback = new PulsarCallback(
                     tenant,
@@ -324,19 +224,19 @@ public class PulsarConnectorClient extends AConnectorClient {
                     connectorIdentifier,
                     connectorName,
                     false);
-            
+
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
-            
+
             // Initialize subscriptions
             List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
             List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
-            
+
             initializeSubscriptionsInbound(inboundMappings, true, true);
             initializeSubscriptionsOutbound(outboundMappings);
-            
+
             log.info("{} - Pulsar connector connected successfully", tenant);
-            
+
         } catch (Exception e) {
             log.error("{} - Error connecting Pulsar connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
@@ -350,7 +250,8 @@ public class PulsarConnectorClient extends AConnectorClient {
     private PulsarClient buildPulsarClient() throws PulsarClientException {
         String serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
         Boolean enableTls = (Boolean) connectorConfiguration.getProperties().getOrDefault("enableTls", false);
-        String authMethod = (String) connectorConfiguration.getProperties().getOrDefault("authenticationMethod", "none");
+        String authMethod = (String) connectorConfiguration.getProperties().getOrDefault("authenticationMethod",
+                "none");
         String authParams = (String) connectorConfiguration.getProperties().get("authenticationParams");
         Integer connectionTimeout = (Integer) connectorConfiguration.getProperties()
                 .getOrDefault("connectionTimeoutSeconds", DEFAULT_CONNECTION_TIMEOUT);
@@ -358,24 +259,24 @@ public class PulsarConnectorClient extends AConnectorClient {
                 .getOrDefault("operationTimeoutSeconds", DEFAULT_OPERATION_TIMEOUT);
         Integer keepAlive = (Integer) connectorConfiguration.getProperties()
                 .getOrDefault("keepAliveIntervalSeconds", DEFAULT_KEEP_ALIVE);
-        
+
         // Adjust service URL for TLS
         String finalServiceUrl = adjustServiceUrlForTls(serviceUrl, enableTls);
-        
+
         ClientBuilder clientBuilder = PulsarClient.builder()
                 .serviceUrl(finalServiceUrl)
                 .connectionTimeout(connectionTimeout, TimeUnit.SECONDS)
                 .operationTimeout(operationTimeout, TimeUnit.SECONDS)
                 .keepAliveInterval(keepAlive, TimeUnit.SECONDS);
-        
+
         // Configure TLS
         if (isUsingTls(finalServiceUrl)) {
             configureTls(clientBuilder);
         }
-        
+
         // Configure authentication
         configureAuthentication(clientBuilder, authMethod, authParams);
-        
+
         return clientBuilder.build();
     }
 
@@ -408,7 +309,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     private void configureTls(ClientBuilder clientBuilder) throws PulsarClientException {
         Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
-        
+
         if (useSelfSignedCertificate && cert != null) {
             try {
                 Path certFile = writeCertificateToTempFile(cert.getCertInPemFormat());
@@ -472,15 +373,15 @@ public class PulsarConnectorClient extends AConnectorClient {
         if (!isConnected() || consumers.containsKey(topic)) {
             return;
         }
-        
+
         log.debug("{} - Subscribing to topic: [{}], QoS: {}", tenant, topic, qos);
-        
+
         try {
             String subscriptionName = buildSubscriptionName(topic);
             SubscriptionType subscriptionType = determineSubscriptionType(qos);
-            
+
             Consumer<byte[]> consumer;
-            
+
             if (containsMqttWildcards(topic)) {
                 // Handle wildcard subscription
                 String pulsarPattern = translateMqttTopicToPulsarRegex(topic);
@@ -504,10 +405,10 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .subscribe();
                 log.info("{} - Subscribed to topic: [{}] (MQTT: [{}])", tenant, pulsarTopic, topic);
             }
-            
+
             consumers.put(topic, consumer);
             sendSubscriptionEvents(topic, "Subscribed");
-            
+
         } catch (PulsarClientException e) {
             throw new ConnectorException("Failed to subscribe to topic: " + topic, e);
         }
@@ -516,7 +417,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     @Override
     protected void unsubscribe(String topic) throws Exception {
         log.debug("{} - Unsubscribing from topic: [{}]", tenant, topic);
-        
+
         Consumer<byte[]> consumer = consumers.remove(topic);
         if (consumer != null) {
             consumer.close();
@@ -531,10 +432,10 @@ public class PulsarConnectorClient extends AConnectorClient {
             log.debug("{} - Already disconnected", tenant);
             return;
         }
-        
+
         log.info("{} - Disconnecting Pulsar connector", tenant);
         connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
-        
+
         try {
             // Close consumers
             consumers.values().forEach(consumer -> {
@@ -545,7 +446,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 }
             });
             consumers.clear();
-            
+
             // Close producers
             producers.values().forEach(producer -> {
                 try {
@@ -555,24 +456,24 @@ public class PulsarConnectorClient extends AConnectorClient {
                 }
             });
             producers.clear();
-            
+
             // Close client
             if (pulsarClient != null && !pulsarClient.isClosed()) {
                 pulsarClient.close();
             }
-            
+
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
-            
+
             // Rebuild caches
             List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
             List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
-            
+
             initializeSubscriptionsInbound(inboundMappings, true, true);
             initializeSubscriptionsOutbound(outboundMappings);
-            
+
             log.info("{} - Pulsar connector disconnected", tenant);
-            
+
         } catch (Exception e) {
             log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
         }
@@ -585,9 +486,9 @@ public class PulsarConnectorClient extends AConnectorClient {
 
     @Override
     public boolean isConnected() {
-        return connectionStateManager.isConnected() && 
-               pulsarClient != null && 
-               !pulsarClient.isClosed();
+        return connectionStateManager.isConnected() &&
+                pulsarClient != null &&
+                !pulsarClient.isClosed();
     }
 
     @Override
@@ -597,21 +498,21 @@ public class PulsarConnectorClient extends AConnectorClient {
             reconnect();
             return;
         }
-        
+
         DynamicMapperRequest request = context.getCurrentRequest();
         String payload = request.getRequest();
         String topic = context.getResolvedPublishTopic();
         Qos qos = context.getQos();
-        
+
         try {
             Producer<byte[]> producer = getOrCreateProducer(topic, qos);
-            
+
             if (producer != null && producer.isConnected()) {
                 sendMessageWithQos(producer, payload, qos, context);
             } else {
                 log.error("{} - No connected producer for topic: {}", tenant, topic);
             }
-            
+
         } catch (Exception e) {
             log.error("{} - Error publishing to topic: {}", tenant, topic, e);
             context.addError(new dynamic.mapper.processor.ProcessingException(
@@ -624,7 +525,7 @@ public class PulsarConnectorClient extends AConnectorClient {
      */
     private Producer<byte[]> getOrCreateProducer(String topic, Qos qos) throws PulsarClientException {
         Producer<byte[]> producer = producers.get(topic);
-        
+
         if (producer == null || !producer.isConnected()) {
             if (producer != null) {
                 producers.remove(topic);
@@ -634,13 +535,13 @@ public class PulsarConnectorClient extends AConnectorClient {
                     log.debug("{} - Error closing disconnected producer: {}", tenant, e.getMessage());
                 }
             }
-            
+
             producer = createProducerWithRetry(topic, qos);
             if (producer != null) {
                 producers.put(topic, producer);
             }
         }
-        
+
         return producer;
     }
 
@@ -651,10 +552,10 @@ public class PulsarConnectorClient extends AConnectorClient {
         for (int attempt = 1; attempt <= MAX_PRODUCER_CREATE_RETRIES; attempt++) {
             try {
                 String pulsarTopic = ensurePulsarTopicFormat(topic);
-                
+
                 ProducerBuilder<byte[]> builder = pulsarClient.newProducer()
                         .topic(pulsarTopic);
-                
+
                 // Configure based on QoS
                 switch (qos) {
                     case AT_MOST_ONCE:
@@ -665,7 +566,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                         builder.sendTimeout(30, TimeUnit.SECONDS);
                         break;
                 }
-                
+
                 try {
                     return builder.create();
                 } catch (PulsarClientException.FeatureNotSupportedException e) {
@@ -675,7 +576,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                     }
                     throw e;
                 }
-                
+
             } catch (Exception e) {
                 if (attempt == MAX_PRODUCER_CREATE_RETRIES) {
                     if (e instanceof PulsarClientException) {
@@ -683,7 +584,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                     }
                     throw new PulsarClientException(e);
                 }
-                
+
                 try {
                     Thread.sleep(PRODUCER_CREATE_RETRY_DELAY_MS * attempt);
                 } catch (InterruptedException ie) {
@@ -692,7 +593,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 }
             }
         }
-        
+
         throw new PulsarClientException("Failed to create producer after " + MAX_PRODUCER_CREATE_RETRIES + " attempts");
     }
 
@@ -701,13 +602,13 @@ public class PulsarConnectorClient extends AConnectorClient {
      */
     private void sendMessageWithQos(Producer<byte[]> producer, String payload, Qos qos, ProcessingContext<?> context)
             throws PulsarClientException {
-        
+
         byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
-        
+
         if (qos == Qos.AT_MOST_ONCE) {
             // Fire and forget
             producer.sendAsync(payloadBytes).exceptionally(throwable -> {
-                log.debug("{} - AT_MOST_ONCE send failed (expected): {}", 
+                log.debug("{} - AT_MOST_ONCE send failed (expected): {}",
                         tenant, throwable.getMessage());
                 return null;
             });
@@ -715,7 +616,7 @@ public class PulsarConnectorClient extends AConnectorClient {
             // Wait for acknowledgment
             producer.send(payloadBytes);
         }
-        
+
         if (context.getMapping().getDebug() || serviceConfiguration.isLogPayload()) {
             log.info("{} - Published message with QoS {}: topic: [{}], mapping: {}",
                     tenant, qos, context.getResolvedPublishTopic(), context.getMapping().getName());
@@ -727,24 +628,24 @@ public class PulsarConnectorClient extends AConnectorClient {
         if (configuration == null) {
             return false;
         }
-        
+
         Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
-        
+
         if (useSelfSignedCertificate) {
             if (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null ||
-                configuration.getProperties().get("nameCertificate") == null) {
+                    configuration.getProperties().get("nameCertificate") == null) {
                 return false;
             }
         }
-        
+
         // Check required properties
         for (Map.Entry<String, ConnectorProperty> entry : connectorSpecification.getProperties().entrySet()) {
             if (entry.getValue().getRequired() && configuration.getProperties().get(entry.getKey()) == null) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -829,8 +730,8 @@ public class PulsarConnectorClient extends AConnectorClient {
      */
     private String sanitizeTopicForSubscriptionName(String topic) {
         return topic.replace("/", "-")
-                   .replace("+", "wildcard")
-                   .replace("#", "multilevel");
+                .replace("+", "wildcard")
+                .replace("#", "multilevel");
     }
 
     /**
@@ -841,7 +742,7 @@ public class PulsarConnectorClient extends AConnectorClient {
         if (configured != null && !configured.isEmpty()) {
             return SubscriptionType.valueOf(configured);
         }
-        
+
         switch (qos) {
             case EXACTLY_ONCE:
                 return SubscriptionType.Exclusive;
@@ -873,13 +774,13 @@ public class PulsarConnectorClient extends AConnectorClient {
         if (mqttTopic == null || mqttTopic.isEmpty()) {
             return mqttTopic;
         }
-        
+
         validateMqttWildcards(mqttTopic);
         String escaped = escapeRegexCharacters(mqttTopic);
         String pulsarRegex = escaped
                 .replace("+", "[^/]+")
                 .replace("#", ".*");
-        
+
         return ensurePulsarTopicFormat(pulsarRegex);
     }
 
@@ -896,7 +797,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 throw new IllegalArgumentException("MQTT wildcard '#' must be preceded by '/'");
             }
         }
-        
+
         for (int i = 0; i < mqttTopic.length(); i++) {
             if (mqttTopic.charAt(i) == '+') {
                 boolean validPosition = true;
@@ -917,7 +818,7 @@ public class PulsarConnectorClient extends AConnectorClient {
      * Escape regex characters
      */
     private String escapeRegexCharacters(String input) {
-        String[] regexSpecialChars = {"\\", "^", "$", ".", "|", "?", "*", "(", ")", "[", "]", "{"};
+        String[] regexSpecialChars = { "\\", "^", "$", ".", "|", "?", "*", "(", ")", "[", "]", "{" };
         String result = input;
         for (String specialChar : regexSpecialChars) {
             result = result.replace(specialChar, "\\" + specialChar);
@@ -932,11 +833,11 @@ public class PulsarConnectorClient extends AConnectorClient {
         if (topicPattern.startsWith("persistent://") || topicPattern.startsWith("non-persistent://")) {
             return topicPattern;
         }
-        
+
         String pulsarTopicName = convertMqttTopicToPulsarTopicName(topicPattern);
         String pulsarTenant = (String) connectorConfiguration.getProperties().getOrDefault("pulsarTenant", "public");
         String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
-        
+
         return String.format("persistent://%s/%s/%s", pulsarTenant, namespace, pulsarTopicName);
     }
 
@@ -947,20 +848,120 @@ public class PulsarConnectorClient extends AConnectorClient {
         if (mqttTopic == null || mqttTopic.isEmpty()) {
             return "default-topic";
         }
-        
+
         String pulsarTopic = mqttTopic
                 .replace("/", "-")
                 .replace(" ", "_")
                 .replaceAll("[^a-zA-Z0-9._-]", "_")
                 .replaceAll("^[._-]+|[._-]+$", "");
-        
+
         if (pulsarTopic.isEmpty()) {
             pulsarTopic = "default-topic";
         }
-        
+
         log.debug("{} - Converted MQTT topic '{}' to Pulsar topic '{}'", tenant, mqttTopic, pulsarTopic);
-        
+
         return pulsarTopic;
+    }
+
+    /**
+     * Create Pulsar connector specification
+     */
+    private ConnectorSpecification createConnectorSpecification() {
+        Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
+
+        ConnectorPropertyCondition tlsCondition = new ConnectorPropertyCondition("enableTls", new String[] { "true" });
+        ConnectorPropertyCondition certCondition = new ConnectorPropertyCondition(
+                "useSelfSignedCertificate", new String[] { "true" });
+        ConnectorPropertyCondition authCondition = new ConnectorPropertyCondition(
+                "authenticationMethod", new String[] { "token", "oauth2", "tls", "basic" });
+
+        configProps.put("serviceUrl",
+                new ConnectorProperty(
+                        "This can be in the format: pulsar://localhost:6650 for non-TLS or pulsar+ssl://localhost:6651 for TLS",
+                        true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                        "pulsar://localhost:6650", null, null));
+
+        configProps.put("enableTls",
+                new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        false, false, false, null, null));
+
+        configProps.put("useSelfSignedCertificate",
+                new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        false, false, false, null, tlsCondition));
+
+        configProps.put("fingerprintSelfSignedCertificate",
+                new ConnectorProperty(null, false, 3, ConnectorPropertyType.STRING_PROPERTY,
+                        false, false, null, null, certCondition));
+
+        configProps.put("nameCertificate",
+                new ConnectorProperty(null, false, 4, ConnectorPropertyType.STRING_PROPERTY,
+                        false, false, null, null, certCondition));
+
+        configProps.put("authenticationMethod",
+                new ConnectorProperty(null, false, 5, ConnectorPropertyType.OPTION_PROPERTY,
+                        false, false, "none",
+                        Map.of("none", "None", "token", "Token", "oauth2", "OAuth2",
+                                "tls", "TLS", "basic", "Basic"),
+                        null));
+
+        configProps.put("authenticationParams",
+                new ConnectorProperty(null, false, 6, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
+                        false, false, null, null, authCondition));
+
+        configProps.put("connectionTimeoutSeconds",
+                new ConnectorProperty(null, false, 7, ConnectorPropertyType.NUMERIC_PROPERTY,
+                        false, false, DEFAULT_CONNECTION_TIMEOUT, null, null));
+
+        configProps.put("operationTimeoutSeconds",
+                new ConnectorProperty(null, false, 8, ConnectorPropertyType.NUMERIC_PROPERTY,
+                        false, false, DEFAULT_OPERATION_TIMEOUT, null, null));
+
+        configProps.put("keepAliveIntervalSeconds",
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.NUMERIC_PROPERTY,
+                        false, false, DEFAULT_KEEP_ALIVE, null, null));
+
+        configProps.put("subscriptionType",
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.OPTION_PROPERTY,
+                        false, false, "Shared",
+                        Map.of("Exclusive", "Exclusive", "Shared", "Shared",
+                                "Failover", "Failover", "Key_Shared", "Key Shared"),
+                        null));
+
+        configProps.put("subscriptionName",
+                new ConnectorProperty(
+                        "Controls how Pulsar subscription names are generated",
+                        false, 11, ConnectorPropertyType.STRING_PROPERTY, false, false,
+                        null, null, null));
+
+        configProps.put("supportsWildcardInTopicInbound",
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        true, false, true, null, null));
+
+        configProps.put("supportsWildcardInTopicOutbound",
+                new ConnectorProperty(null, false, 13, ConnectorPropertyType.BOOLEAN_PROPERTY,
+                        true, false, false, null, null));
+
+        configProps.put("pulsarTenant",
+                new ConnectorProperty(null, false, 14, ConnectorPropertyType.STRING_PROPERTY,
+                        false, false, "public", null, null));
+
+        configProps.put("pulsarNamespace",
+                new ConnectorProperty(null, false, 15, ConnectorPropertyType.STRING_PROPERTY,
+                        false, false, "default", null, null));
+
+        String name = "Apache Pulsar";
+        String description = "Connector for connecting to Apache Pulsar message broker. " +
+                "Supports QoS levels, wildcards, and MQTT-style topic format conversion.";
+
+        return new ConnectorSpecification(
+                name,
+                description,
+                ConnectorType.PULSAR,
+                false,
+                configProps,
+                false,
+                supportedDirections());
     }
 
     /**
@@ -984,7 +985,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                     log.warn("Failed to acknowledge AT_MOST_ONCE message: {}", e.getMessage());
                 }
             }
-            
+
             delegate.received(consumer, message);
         }
     }

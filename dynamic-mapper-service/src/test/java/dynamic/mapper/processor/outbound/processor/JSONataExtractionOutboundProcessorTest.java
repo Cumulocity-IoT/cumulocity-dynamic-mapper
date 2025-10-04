@@ -380,45 +380,11 @@ class JSONataExtractionOutboundProcessorTest {
     }
 
     @Test
-    void testExtractFromSourceErrorHandling() throws Exception {
-        // Given - Create invalid substitution path
-        Substitution[] substitutions = new Substitution[] {
-                Substitution.builder()
-                        .pathSource("invalid.path.that.does.not.exist")
-                        .pathTarget("testTarget")
-                        .repairStrategy(RepairStrategy.DEFAULT)
-                        .expandArray(false)
-                        .build()
-        };
-        mapping.setSubstitutions(substitutions);
-
-        // When
-        processor.process(exchange);
-
-        // Then - Should handle gracefully (null values are processed normally)
-        Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
-        assertTrue(processingCache.containsKey("testTarget"),
-                "Should still create entry for invalid path");
-
-        // The value might be null, which is acceptable behavior
-        List<SubstituteValue> values = processingCache.get("testTarget");
-        assertNotNull(values, "Should have values list even if extraction failed");
-
-        log.info("✅ Error handling test passed - gracefully handled invalid path");
-    }
-
-    @Test
-    void testExtractFromSourceWithProcessingException() throws Exception {
-        // Given - Create a scenario that causes an actual exception in the substitution
-        // processing
-        // Set the payload to null, which should cause issues during processing
-        processingContext.setPayload(null);
-
-        // Or alternatively, create substitutions with extremely complex expressions
-        // that might fail
+    void testExtractFromSourceWithInvalidJSONataExpression() throws Exception {
+        // Given - Create substitutions with syntactically invalid JSONata
         Substitution[] problematicSubstitutions = new Substitution[] {
                 Substitution.builder()
-                        .pathSource("$eval('throw new Error(\"Forced error\")')")
+                        .pathSource("$invalid syntax that will fail to parse}") // Invalid JSONata
                         .pathTarget("testTarget")
                         .repairStrategy(RepairStrategy.DEFAULT)
                         .expandArray(false)
@@ -426,20 +392,125 @@ class JSONataExtractionOutboundProcessorTest {
         };
         mapping.setSubstitutions(problematicSubstitutions);
 
-        // When
-        processor.process(exchange);
+        // When - Should not throw exception, errors should be handled gracefully
+        assertDoesNotThrow(() -> processor.process(exchange),
+                "Processor should handle invalid JSONata expression gracefully");
 
-        // Then - Check if error handling was triggered (it might not be if the
-        // processor handles nulls gracefully)
-        // Let's be more flexible in our assertions
-        if (mappingStatus.errors > 0) {
-            verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), any(Mapping.class),
-                    any(MappingStatus.class));
-            assertFalse(processingContext.getErrors().isEmpty(), "Should have recorded error");
-            log.info("✅ Processing exception handling test passed - exception was thrown");
-        } else {
-            log.info("✅ Processing exception handling test passed - processor handled edge case gracefully");
+        // Then - Check error handling
+        Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
+
+        // The processor handles the error gracefully by:
+        // 1. Logging the error (as seen in console output)
+        // 2. Adding a null/empty entry to the processing cache
+        // 3. Continuing processing without throwing exception
+
+        assertTrue(processingCache.containsKey("testTarget"),
+                "Should have entry for testTarget even with invalid JSONata");
+
+        List<SubstituteValue> values = processingCache.get("testTarget");
+        assertNotNull(values, "Should have values list");
+
+        // The value will be null since the expression failed to evaluate
+        if (!values.isEmpty()) {
+            SubstituteValue value = values.get(0);
+            assertNull(value.getValue(),
+                    "Value should be null for invalid JSONata expression");
         }
+
+        log.info("✅ Invalid JSONata expression test passed - error was handled gracefully");
+        log.info("   - Processing cache size: {}", processingCache.size());
+        log.info("   - Error was logged but processing continued");
+    }
+
+    @Test
+    void testExtractFromSourceErrorHandling() throws Exception {
+        // Test 1: Invalid JSONata syntax
+        log.info("Testing invalid JSONata syntax...");
+        Substitution[] invalidSyntax = new Substitution[] {
+                Substitution.builder()
+                        .pathSource("$invalid syntax that will fail}")
+                        .pathTarget("invalidSyntax")
+                        .repairStrategy(RepairStrategy.DEFAULT)
+                        .expandArray(false)
+                        .build()
+        };
+        mapping.setSubstitutions(invalidSyntax);
+
+        // Clear any previous errors
+        processingContext.getErrors().clear();
+        processingContext.getProcessingCache().clear();
+
+        assertDoesNotThrow(() -> processor.process(exchange),
+                "Should handle invalid JSONata syntax gracefully");
+
+        // The processor logs the error but doesn't add it to
+        // processingContext.getErrors()
+        // Instead, it adds a null value to the processing cache
+        assertTrue(processingContext.getProcessingCache().containsKey("invalidSyntax"),
+                "Should have entry in processing cache even for invalid syntax");
+
+        log.info("   ✓ Invalid syntax handled gracefully (error logged, null value in cache)");
+
+        // Test 2: Missing path (most common real-world scenario)
+        log.info("Testing missing path...");
+        processingContext.getErrors().clear();
+        processingContext.getProcessingCache().clear();
+
+        Substitution[] missingPath = new Substitution[] {
+                Substitution.builder()
+                        .pathSource("nonexistent.path")
+                        .pathTarget("missingPath")
+                        .repairStrategy(RepairStrategy.DEFAULT)
+                        .expandArray(false)
+                        .build()
+        };
+        mapping.setSubstitutions(missingPath);
+
+        assertDoesNotThrow(() -> processor.process(exchange),
+                "Should handle missing path gracefully");
+
+        assertTrue(processingContext.getProcessingCache().containsKey("missingPath"),
+                "Should have entry for missing path");
+
+        List<SubstituteValue> values = processingContext.getProcessingCache().get("missingPath");
+        if (!values.isEmpty()) {
+            assertNull(values.get(0).getValue(),
+                    "Value should be null for missing path");
+        }
+
+        log.info("   ✓ Missing path handled gracefully");
+
+        log.info("✅ Error handling test passed - all scenarios handled correctly");
+    }
+
+    @Test
+    void testExtractFromSourceWithNullPayload() throws Exception {
+        // Given - Set payload to null to test error handling
+        processingContext.setPayload(null);
+
+        // Keep simple substitutions
+        Substitution[] substitutions = new Substitution[] {
+                Substitution.builder()
+                        .pathSource("reason")
+                        .pathTarget("testTarget")
+                        .repairStrategy(RepairStrategy.DEFAULT)
+                        .expandArray(false)
+                        .build()
+        };
+        mapping.setSubstitutions(substitutions);
+
+        // When - Should handle gracefully without throwing exception
+        assertDoesNotThrow(() -> processor.process(exchange),
+                "Should handle null payload gracefully");
+
+        // Then - Verify that processing handled the null payload
+        Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
+
+        // The processor should either skip processing or handle it gracefully
+        // Either way, it shouldn't crash
+        log.info("✅ Null payload test passed - no exception thrown");
+        log.info("   - Processing cache size: {}", processingCache.size());
+        log.info("   - Errors recorded: {}", processingContext.getErrors().size());
     }
 
     @Test
@@ -619,4 +690,42 @@ class JSONataExtractionOutboundProcessorTest {
             return createEventPayload(); // Fallback to simple payload
         }
     }
+
+    @Test
+    void testExtractFromSourceWithMissingPath() throws Exception {
+        // Given - Create substitutions with a path that doesn't exist in the payload
+        Substitution[] substitutions = new Substitution[] {
+                Substitution.builder()
+                        .pathSource("nonexistent.deeply.nested.path")
+                        .pathTarget("testTarget")
+                        .repairStrategy(RepairStrategy.DEFAULT)
+                        .expandArray(false)
+                        .build()
+        };
+        mapping.setSubstitutions(substitutions);
+
+        // When
+        processor.process(exchange);
+
+        // Then - The processor should handle the missing path gracefully
+        Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
+
+        // Should have created an entry for the target
+        assertTrue(processingCache.containsKey("testTarget"),
+                "Should have entry for testTarget even with missing source path");
+
+        List<SubstituteValue> values = processingCache.get("testTarget");
+        assertNotNull(values, "Should have values list");
+
+        // The value will be null since the path doesn't exist
+        if (!values.isEmpty()) {
+            SubstituteValue value = values.get(0);
+            assertNull(value.getValue(),
+                    "Value should be null for non-existent path");
+            log.info("✅ Missing path test passed - null value recorded for non-existent path");
+        } else {
+            log.info("✅ Missing path test passed - empty values list for non-existent path");
+        }
+    }
+
 }
