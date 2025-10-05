@@ -255,6 +255,7 @@ class MQTT3ClientTest {
         lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         // Use a valid (but self-signed) certificate for testing
+        // typos:disable-next-line
         String validCertPem = "-----BEGIN CERTIFICATE-----\n" +
                 "MIIDXTCCAkWgAwIBAgIJAKHHCgVZU2T9MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV\n" +
                 "BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX\n" +
