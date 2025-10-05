@@ -10,4 +10,4 @@ ser = "ser"
 bais = "bais"
 
 [files]
-extend-exclude = ["**/mappings**.json", "**/*Mappings**.json"]
+extend-exclude = ["**/MQTT3ClientTest.java","**/mappings**.json", "**/*Mappings**.json"]
