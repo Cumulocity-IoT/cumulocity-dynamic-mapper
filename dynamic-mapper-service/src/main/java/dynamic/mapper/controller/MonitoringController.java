@@ -196,7 +196,7 @@ public class MonitoringController {
                 // log.info("{} - Stage 3: No active clients found, skipping", tenant);
             }
 
-            logCurrentStatuses(tenant, "Final Status", connectorsStatus);
+            // logCurrentStatuses(tenant, "Final Status", connectorsStatus);
 
             log.info("{} - Connector status collection complete: returning {} statuses",
                     tenant, connectorsStatus.size());

@@ -400,27 +400,6 @@ public class MQTT3Client extends AConnectorClient {
         }
     }
 
-    private void initializeSubscriptionsAfterConnect() {
-        try {
-            // Rebuild caches
-            mappingService.rebuildMappingCaches(tenant, connectorId);
-            List<Mapping> outboundMappings = new ArrayList<>(
-                    mappingService.getCacheOutboundMappings(tenant).values());
-            List<Mapping> inboundMappings = new ArrayList<>(
-                    mappingService.getCacheInboundMappings(tenant).values());
-
-            // Initialize subscriptions
-            initializeSubscriptionsInbound(inboundMappings, true, cleanSession);
-            initializeSubscriptionsOutbound(outboundMappings);
-
-            log.info("{} - Initialized {} inbound and {} outbound mappings",
-                    tenant, inboundMappings.size(), outboundMappings.size());
-
-        } catch (Exception e) {
-            log.error("{} - Error initializing subscriptions: {}", tenant, e.getMessage(), e);
-        }
-    }
-
     @Override
     protected void subscribe(String topic, Qos qos) throws ConnectorException {
         if (!isConnected()) {

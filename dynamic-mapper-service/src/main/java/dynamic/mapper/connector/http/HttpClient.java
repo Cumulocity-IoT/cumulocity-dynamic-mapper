@@ -153,7 +153,7 @@ public class HttpClient extends AConnectorClient {
 
             // Initialize subscriptions
             List<Mapping> inboundMappings = mappingService.getMappings(tenant, Direction.INBOUND);
-            initializeSubscriptionsInbound(inboundMappings, true, true);
+            initializeSubscriptionsInbound(inboundMappings, true);
 
             log.info("{} - HTTP connector connected, endpoint: {}", tenant, path);
 
@@ -192,10 +192,6 @@ public class HttpClient extends AConnectorClient {
 
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
-
-            // Rebuild caches
-            List<Mapping> inboundMappings = mappingService.getMappings(tenant, Direction.INBOUND);
-            initializeSubscriptionsInbound(inboundMappings, true, true);
 
             log.info("{} - HTTP connector disconnected, endpoint: {}", tenant, path);
 

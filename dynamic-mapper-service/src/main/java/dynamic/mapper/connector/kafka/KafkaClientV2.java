@@ -336,15 +336,10 @@ public class KafkaClientV2 extends AConnectorClient {
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
-            // Initialize subscriptions
-            mappingService.rebuildMappingCaches(tenant, connectorId);
-            List<Mapping> outboundMappings = new ArrayList<>(
-                    mappingService.getCacheOutboundMappings(tenant).values());
-            List<Mapping> inboundMappings = new ArrayList<>(
-                    mappingService.getCacheInboundMappings(tenant).values());
-
-            initializeSubscriptionsInbound(inboundMappings, true, true);
-            initializeSubscriptionsOutbound(outboundMappings);
+            // Initialize subscriptions after successful connection
+            if (isConnected()) {
+                initializeSubscriptionsAfterConnect();
+            }
 
             log.info("{} - Kafka connector connected successfully", tenant);
 
@@ -674,16 +669,6 @@ public class KafkaClientV2 extends AConnectorClient {
 
         connectionStateManager.setConnected(false);
         connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
-
-        // Rebuild caches
-        mappingService.rebuildMappingCaches(tenant, connectorId);
-        List<Mapping> outboundMappings = new ArrayList<>(
-                mappingService.getCacheOutboundMappings(tenant).values());
-        List<Mapping> inboundMappings = new ArrayList<>(
-                mappingService.getCacheInboundMappings(tenant).values());
-
-        initializeSubscriptionsInbound(inboundMappings, true, true);
-        initializeSubscriptionsOutbound(outboundMappings);
 
         log.info("{} - Kafka connector disconnected", tenant);
     }

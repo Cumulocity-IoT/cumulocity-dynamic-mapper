@@ -312,6 +312,23 @@ public abstract class AConnectorClient {
         }
     }
 
+    public void initializeSubscriptionsAfterConnect() {
+
+        // Rebuild caches
+        mappingService.rebuildMappingCaches(tenant, connectorId);
+        List<Mapping> outboundMappings = new ArrayList<>(
+                mappingService.getCacheOutboundMappings(tenant).values());
+        List<Mapping> inboundMappings = new ArrayList<>(
+                mappingService.getCacheInboundMappings(tenant).values());
+
+        // Initialize subscriptions
+        initializeSubscriptionsInbound(inboundMappings, true);
+        initializeSubscriptionsOutbound(outboundMappings);
+
+        log.info("{} - Initialized {} inbound and {} outbound mappings",
+                tenant, inboundMappings.size(), outboundMappings.size());
+    }
+
     /**
      * Perform housekeeping tasks - can be overridden
      */
@@ -337,7 +354,7 @@ public abstract class AConnectorClient {
     /**
      * Initialize subscriptions for inbound mappings
      */
-    public void initializeSubscriptionsInbound(List<Mapping> mappings, boolean reset, boolean cleanSession) {
+    public void initializeSubscriptionsInbound(List<Mapping> mappings, boolean reset) {
         mappingSubscriptionManager.updateSubscriptions(
                 mappings,
                 reset,

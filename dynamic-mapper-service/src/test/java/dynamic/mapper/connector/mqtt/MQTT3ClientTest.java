@@ -33,7 +33,6 @@ import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -108,59 +107,60 @@ class MQTT3ClientTest {
         objectMapper = new ObjectMapper();
 
         // Setup configuration registry
-        lenient().when(configurationRegistry.getMappingService()).thenReturn(mappingService);
-        lenient().when(configurationRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
-        lenient().when(configurationRegistry.getConnectorConfigurationService())
+        when(configurationRegistry.getMappingService()).thenReturn(mappingService);
+        when(configurationRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
+        when(configurationRegistry.getConnectorConfigurationService())
                 .thenReturn(connectorConfigurationService);
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        lenient().when(configurationRegistry.getVirtualThreadPool())
+        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(configurationRegistry.getVirtualThreadPool())
                 .thenReturn(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
-        lenient().when(configurationRegistry.getObjectMapper()).thenReturn(objectMapper);
-        lenient().when(configurationRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
-        lenient().when(configurationRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
+        when(configurationRegistry.getObjectMapper()).thenReturn(objectMapper);
+        when(configurationRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
+        when(configurationRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
 
         // Setup connector configuration COMPLETELY before any test
-        lenient().when(connectorConfiguration.getName()).thenReturn(TEST_CONNECTOR_NAME);
-        lenient().when(connectorConfiguration.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
-        lenient().when(connectorConfiguration.isEnabled()).thenReturn(true);
-        lenient().when(connectorConfiguration.getProperties()).thenReturn(createDefaultProperties());
+        when(connectorConfiguration.getName()).thenReturn(TEST_CONNECTOR_NAME);
+        when(connectorConfiguration.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
+        when(connectorConfiguration.isEnabled()).thenReturn(true);
+        when(connectorConfiguration.getProperties()).thenReturn(createDefaultProperties());
 
         // THIS IS THE KEY - stub copyPredefinedValues to do NOTHING
-        lenient().doNothing().when(connectorConfiguration).copyPredefinedValues(any());
+        doNothing().when(connectorConfiguration).copyPredefinedValues(any());
+
+        // THIS IS THE KEY FIX - Mock the service to return your mock configuration
+        when(connectorConfigurationService.getConnectorConfiguration(
+                eq(TEST_CONNECTOR_IDENTIFIER),
+                eq(TEST_TENANT)))
+                .thenReturn(connectorConfiguration);
+
+        // Also mock for any string arguments (when identifier might not match exactly)
+        when(connectorConfigurationService.getConnectorConfiguration(
+                anyString(),
+                anyString()))
+                .thenReturn(connectorConfiguration);
+
+        // Mock copyPredefinedValues to do nothing
+        doNothing().when(connectorConfiguration).copyPredefinedValues(any(ConnectorSpecification.class));
+
+        // Mock getCleanedConfig
+        when(connectorConfiguration.getCleanedConfig(any(ConnectorSpecification.class)))
+                .thenReturn(connectorConfiguration);
 
         // Also stub getCleanedConfig
-        lenient().when(connectorConfiguration.getCleanedConfig(any())).thenReturn(connectorConfiguration);
+        when(connectorConfiguration.getCleanedConfig(any())).thenReturn(connectorConfiguration);
 
         // Setup service configuration
-        lenient().when(serviceConfiguration.isLogPayload()).thenReturn(false);
-        lenient().when(serviceConfiguration.isSendSubscriptionEvents()).thenReturn(false);
-        lenient().when(serviceConfiguration.isSendConnectorLifecycle()).thenReturn(false);
+        when(serviceConfiguration.isLogPayload()).thenReturn(false);
+        when(serviceConfiguration.isSendSubscriptionEvents()).thenReturn(false);
+        when(serviceConfiguration.isSendConnectorLifecycle()).thenReturn(false);
 
         // Setup connector registry
-        lenient().when(connectorRegistry.getConnectorStatusMap(anyString())).thenReturn(new HashMap<>());
+        when(connectorRegistry.getConnectorStatusMap(anyString())).thenReturn(new HashMap<>());
 
         // Setup mapping service for cache operations
-        lenient().when(mappingService.getCacheOutboundMappings(anyString())).thenReturn(new HashMap<>());
-        lenient().when(mappingService.getCacheInboundMappings(anyString())).thenReturn(new HashMap<>());
-        lenient().when(mappingService.getCacheMappingInbound(anyString())).thenReturn(new HashMap<>());
-    }
-
-    /**
-     * Helper method to setup connector configuration mock with given properties
-     * This must use lenient() to work across all tests
-     */
-    private void setupConnectorConfigurationMock(ConnectorConfiguration config, Map<String, Object> properties) {
-        lenient().when(config.getName()).thenReturn(TEST_CONNECTOR_NAME);
-        lenient().when(config.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
-        lenient().when(config.isEnabled()).thenReturn(true);
-        lenient().when(config.getProperties()).thenReturn(properties);
-
-        // Mock copyPredefinedValues to do nothing (this is the key fix)
-        lenient().doNothing().when(config).copyPredefinedValues(any(ConnectorSpecification.class));
-
-        // Mock getCleanedConfig if needed
-        lenient().when(config.getCleanedConfig(any(ConnectorSpecification.class)))
-                .thenReturn(config);
+        when(mappingService.getCacheOutboundMappings(anyString())).thenReturn(new HashMap<>());
+        when(mappingService.getCacheInboundMappings(anyString())).thenReturn(new HashMap<>());
+        when(mappingService.getCacheMappingInbound(anyString())).thenReturn(new HashMap<>());
     }
 
     private Map<String, Object> createDefaultProperties() {
@@ -219,7 +219,6 @@ class MQTT3ClientTest {
     }
 
     @Test
-    @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
     void testInitializeSuccess() {
         // Given
         mqtt3Client = new MQTT3Client(
@@ -243,8 +242,6 @@ class MQTT3ClientTest {
     }
 
     @Test
-    // @Disabled("Temporarily disabled due to mocking issues with
-    // copyPredefinedValues")
     void testInitializeWithSelfSignedCertificate() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
@@ -252,8 +249,8 @@ class MQTT3ClientTest {
         properties.put("nameCertificate", "test-cert");
         properties.put("fingerprintSelfSignedCertificate", "AA:BB:CC:DD");
 
-        // Update the mock with new properties BEFORE creating the client
-        lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
+        // // Update the mock with new properties BEFORE creating the client
+        when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         // Use a valid (but self-signed) certificate for testing
         String validCertPem = "-----BEGIN CERTIFICATE-----\n" +
@@ -278,7 +275,7 @@ class MQTT3ClientTest {
                 "AA:BB:CC:DD",
                 validCertPem);
 
-        lenient().when(c8yAgent.loadCertificateByName(
+        when(c8yAgent.loadCertificateByName(
                 eq("test-cert"),
                 eq("AA:BB:CC:DD"),
                 eq(TEST_TENANT),
@@ -311,7 +308,6 @@ class MQTT3ClientTest {
     }
 
     @Test
-    @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
     void testInitializeWithMissingCertificate() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
@@ -320,9 +316,9 @@ class MQTT3ClientTest {
         properties.put("fingerprintSelfSignedCertificate", "AA:BB:CC:DD");
 
         // Update the mock with new properties BEFORE creating the client
-        lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
+        when(connectorConfiguration.getProperties()).thenReturn(properties);
 
-        lenient().when(c8yAgent.loadCertificateByName(any(), any(), any(), any())).thenReturn(null);
+        when(c8yAgent.loadCertificateByName(any(), any(), any(), any())).thenReturn(null);
 
         mqtt3Client = new MQTT3Client(
                 configurationRegistry,
@@ -342,7 +338,6 @@ class MQTT3ClientTest {
     }
 
     @Test
-    @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
     void testWebSocketConfiguration() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
@@ -350,7 +345,7 @@ class MQTT3ClientTest {
         properties.put("serverPath", "/mqtt");
 
         // Update the mock with new properties BEFORE creating the client
-        lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
+        when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         mqtt3Client = new MQTT3Client(
                 configurationRegistry,
@@ -370,15 +365,14 @@ class MQTT3ClientTest {
     }
 
     @Test
-    @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
     void testCleanSessionDefault() {
         // Given - cleanSession not explicitly set
         Map<String, Object> properties = createDefaultProperties();
         properties.remove("cleanSession");
 
         // Update the mock with new properties BEFORE creating the client
-        lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
-        lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
+        when(connectorConfiguration.getProperties()).thenReturn(properties);
+        when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         mqtt3Client = new MQTT3Client(
                 configurationRegistry,
@@ -475,9 +469,9 @@ class MQTT3ClientTest {
 
         // Create a separate mock for this test to avoid interfering with the main mock
         ConnectorConfiguration invalidConfig = mock(ConnectorConfiguration.class);
-        lenient().when(invalidConfig.getName()).thenReturn(TEST_CONNECTOR_NAME);
-        lenient().when(invalidConfig.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
-        lenient().when(invalidConfig.getProperties()).thenReturn(properties);
+        when(invalidConfig.getName()).thenReturn(TEST_CONNECTOR_NAME);
+        when(invalidConfig.getIdentifier()).thenReturn(TEST_CONNECTOR_IDENTIFIER);
+        when(invalidConfig.getProperties()).thenReturn(properties);
 
         mqtt3Client = new MQTT3Client(
                 configurationRegistry,
@@ -515,8 +509,8 @@ class MQTT3ClientTest {
         ProcessingContext<?> context = createTestProcessingContext();
 
         // Mock MQTT client state
-        lenient().when(mqttClient.getState()).thenReturn(mock(com.hivemq.client.mqtt.MqttClientState.class));
-        lenient().when(mqttClient.getState().isConnected()).thenReturn(true);
+        when(mqttClient.getState()).thenReturn(mock(com.hivemq.client.mqtt.MqttClientState.class));
+        when(mqttClient.getState().isConnected()).thenReturn(true);
 
         // When
         mqtt3Client.publishMEAO(context);
@@ -624,8 +618,8 @@ class MQTT3ClientTest {
         setConnectedState(mqtt3Client, true);
 
         com.hivemq.client.mqtt.MqttClientState mockState = mock(com.hivemq.client.mqtt.MqttClientState.class);
-        lenient().when(mqttClient.getState()).thenReturn(mockState);
-        lenient().when(mockState.isConnected()).thenReturn(true);
+        when(mqttClient.getState()).thenReturn(mockState);
+        when(mockState.isConnected()).thenReturn(true);
 
         // When
         mqtt3Client.disconnect();
@@ -673,8 +667,8 @@ class MQTT3ClientTest {
         setConnectedState(mqtt3Client, true);
 
         com.hivemq.client.mqtt.MqttClientState mockState = mock(com.hivemq.client.mqtt.MqttClientState.class);
-        lenient().when(mqttClient.getState()).thenReturn(mockState);
-        lenient().when(mockState.isConnected()).thenReturn(true);
+        when(mqttClient.getState()).thenReturn(mockState);
+        when(mockState.isConnected()).thenReturn(true);
 
         // When
         mqtt3Client.close();
@@ -727,11 +721,11 @@ class MQTT3ClientTest {
         mapping.setIdentifier("test-mapping");
         mapping.setDebug(false);
 
-        lenient().when(context.getCurrentRequest()).thenReturn(request);
-        lenient().when(context.getResolvedPublishTopic()).thenReturn("test/topic");
-        lenient().when(context.getQos()).thenReturn(Qos.AT_LEAST_ONCE);
-        lenient().when(context.getMapping()).thenReturn(mapping);
-        lenient().when(context.getServiceConfiguration()).thenReturn(serviceConfiguration);
+        when(context.getCurrentRequest()).thenReturn(request);
+        when(context.getResolvedPublishTopic()).thenReturn("test/topic");
+        when(context.getQos()).thenReturn(Qos.AT_LEAST_ONCE);
+        when(context.getMapping()).thenReturn(mapping);
+        when(context.getServiceConfiguration()).thenReturn(serviceConfiguration);
 
         return context;
     }

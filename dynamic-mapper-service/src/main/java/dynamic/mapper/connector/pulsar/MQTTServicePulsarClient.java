@@ -295,15 +295,10 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             log.info("{} - MQTT Service Pulsar connector connected successfully (consumer: {}, producer: {})",
                     tenant, consumerConnected, producerConnected);
 
-            // Initialize subscriptions AFTER confirming connection
-            mappingService.rebuildMappingCaches(tenant, connectorId);
-            List<Mapping> outboundMappings = new ArrayList<>(
-                    mappingService.getCacheOutboundMappings(tenant).values());
-            List<Mapping> inboundMappings = new ArrayList<>(
-                    mappingService.getCacheInboundMappings(tenant).values());
-
-            initializeSubscriptionsInbound(inboundMappings, true, true);
-            initializeSubscriptionsOutbound(outboundMappings);
+            // Initialize subscriptions after successful connection
+            if (isConnected()) {
+                initializeSubscriptionsAfterConnect();
+            }
 
         } catch (Exception e) {
             log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage(), e);
@@ -482,16 +477,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
-
-            // Rebuild caches
-            mappingService.rebuildMappingCaches(tenant, connectorId);
-            List<Mapping> outboundMappings = new ArrayList<>(
-                    mappingService.getCacheOutboundMappings(tenant).values());
-            List<Mapping> inboundMappings = new ArrayList<>(
-                    mappingService.getCacheInboundMappings(tenant).values());
-
-            initializeSubscriptionsInbound(inboundMappings, true, true);
-            initializeSubscriptionsOutbound(outboundMappings);
 
             log.info("{} - MQTT Service Pulsar connector disconnected", tenant);
 

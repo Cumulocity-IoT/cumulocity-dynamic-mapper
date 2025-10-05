@@ -335,10 +335,7 @@ public class WebHook extends AConnectorClient {
             mappingService.rebuildMappingCaches(tenant, connectorId);
             List<Mapping> outboundMappings = new ArrayList<>(
                     mappingService.getCacheOutboundMappings(tenant).values());
-            List<Mapping> inboundMappings = new ArrayList<>(
-                    mappingService.getCacheInboundMappings(tenant).values());
 
-            initializeSubscriptionsInbound(inboundMappings, true, true);
             initializeSubscriptionsOutbound(outboundMappings);
 
             log.info("{} - WebHook connector disconnected", tenant);
@@ -532,9 +529,10 @@ public class WebHook extends AConnectorClient {
     public JsonNode mergeNodes(JsonNode existingNode, JsonNode updateNode) {
         ObjectNode result = objectMapper.createObjectNode();
 
-        updateNode.fields().forEachRemaining(field -> {
-            String fieldName = field.getKey();
-            JsonNode fieldValue = field.getValue();
+        Iterator<String> fieldNames = updateNode.fieldNames();
+        while (fieldNames.hasNext()) {
+            String fieldName = fieldNames.next();
+            JsonNode fieldValue = updateNode.get(fieldName);
 
             if (existingNode.has(fieldName)) {
                 JsonNode existingValue = existingNode.get(fieldName);
@@ -547,7 +545,7 @@ public class WebHook extends AConnectorClient {
             } else {
                 result.set(fieldName, fieldValue);
             }
-        });
+        }
 
         return result;
     }
@@ -559,19 +557,24 @@ public class WebHook extends AConnectorClient {
         ObjectNode result = objectMapper.createObjectNode();
 
         // Copy all existing fields
-        existingObj.fields().forEachRemaining(field -> result.set(field.getKey(), field.getValue()));
+        Iterator<String> existingFieldNames = existingObj.fieldNames();
+        while (existingFieldNames.hasNext()) {
+            String fieldName = existingFieldNames.next();
+            result.set(fieldName, existingObj.get(fieldName));
+        }
 
         // Update with new fields
-        updateObj.fields().forEachRemaining(field -> {
-            String fieldName = field.getKey();
-            JsonNode fieldValue = field.getValue();
+        Iterator<String> updateFieldNames = updateObj.fieldNames();
+        while (updateFieldNames.hasNext()) {
+            String fieldName = updateFieldNames.next();
+            JsonNode fieldValue = updateObj.get(fieldName);
 
             if (result.has(fieldName) && result.get(fieldName).isObject() && fieldValue.isObject()) {
                 result.set(fieldName, deepMergeObjects(result.get(fieldName), fieldValue));
             } else {
                 result.set(fieldName, fieldValue);
             }
-        });
+        }
 
         return result;
     }
