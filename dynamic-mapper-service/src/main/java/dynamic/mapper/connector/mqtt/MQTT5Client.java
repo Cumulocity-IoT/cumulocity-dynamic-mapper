@@ -44,9 +44,9 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
-import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
@@ -79,6 +79,13 @@ public class MQTT5Client extends AConnectorClient {
     private Certificate cert;
     private Boolean cleanStart = true;
 
+    // Synchronization objects
+    private final Object connectionLock = new Object();
+    private final Object disconnectionLock = new Object();
+    private volatile boolean isConnecting = false;
+    private volatile boolean isDisconnecting = false;
+    private volatile boolean intentionalDisconnect = false;
+
     @Getter
     private final List<Qos> supportedQOS = Arrays.asList(
             Qos.AT_MOST_ONCE,
@@ -98,6 +105,8 @@ public class MQTT5Client extends AConnectorClient {
      * Full constructor with dependencies
      */
     public MQTT5Client(ConfigurationRegistry configurationRegistry,
+            ConnectorRegistry connectorRegistry,
+
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
@@ -105,6 +114,7 @@ public class MQTT5Client extends AConnectorClient {
         this();
 
         this.configurationRegistry = configurationRegistry;
+        this.connectorRegistry = connectorRegistry;
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.getName();
         this.connectorIdentifier = connectorConfiguration.getIdentifier();
@@ -112,9 +122,6 @@ public class MQTT5Client extends AConnectorClient {
                 connectorConfiguration.getName(),
                 connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier());
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 
@@ -145,6 +152,9 @@ public class MQTT5Client extends AConnectorClient {
             }
 
             log.info("{} - MQTT5 Connector {} initialized successfully", tenant, connectorName);
+            if (isConfigValid(connectorConfiguration)) {
+                connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
+            }
             return true;
 
         } catch (Exception e) {
@@ -195,20 +205,34 @@ public class MQTT5Client extends AConnectorClient {
 
     @Override
     public void connect() {
-        log.info("{} - Connecting MQTT5 client: {}", tenant, connectorName);
+        synchronized (connectionLock) {
+            if (isConnecting) {
+                log.debug("{} - Connection attempt already in progress", tenant);
+                return;
+            }
 
-        if (isConnected()) {
-            log.debug("{} - Already connected, disconnecting first", tenant);
-            disconnect();
-        }
+            if (isDisconnecting) {
+                log.debug("{} - Disconnect in progress, cannot connect", tenant);
+                return;
+            }
 
-        if (!shouldConnect()) {
-            log.info("{} - Connector disabled or invalid configuration", tenant);
-            return;
+            if (isConnected()) {
+                log.debug("{} - Already connected", tenant);
+                return;
+            }
+
+            isConnecting = true;
         }
 
         try {
-            // Build MQTT5 client
+            log.info("{} - Connecting MQTT5 client: {}", tenant, connectorName);
+
+            if (!shouldConnect()) {
+                log.info("{} - Connector disabled or invalid configuration", tenant);
+                return;
+            }
+
+            // Build MQTT client
             mqttClient = buildMqtt5Client();
 
             // Create callback
@@ -218,7 +242,7 @@ public class MQTT5Client extends AConnectorClient {
                     dispatcher,
                     connectorIdentifier,
                     connectorName,
-                    false); // manual acknowledgement
+                    false);
 
             // Connect with retry logic
             connectWithRetry();
@@ -231,6 +255,10 @@ public class MQTT5Client extends AConnectorClient {
         } catch (Exception e) {
             log.error("{} - Error connecting MQTT5 client: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
+        } finally {
+            synchronized (connectionLock) {
+                isConnecting = false;
+            }
         }
     }
 
@@ -283,16 +311,40 @@ public class MQTT5Client extends AConnectorClient {
             log.debug("{} - Using WebSocket with path: {}", tenant, serverPath);
         }
 
-        // Add listeners
+        // Add listeners with proper synchronization
         return builder
                 .addDisconnectedListener(context -> {
+                    boolean wasConnected = connectionStateManager.isConnected();
                     connectionStateManager.setConnected(false);
-                    if (connectorConfiguration.isEnabled()) {
-                        try {
-                            connectionLost("Disconnected from broker", context.getCause());
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
+
+                    // Check flags with proper synchronization
+                    boolean shouldReconnect;
+                    synchronized (disconnectionLock) {
+                        shouldReconnect = !intentionalDisconnect &&
+                                !isDisconnecting &&
+                                connectorConfiguration.isEnabled() &&
+                                wasConnected;
+                    }
+
+                    if (shouldReconnect) {
+                        log.warn("{} - Unexpected disconnection, attempting to reconnect", tenant);
+                        // Schedule reconnection in a separate thread to avoid blocking
+                        virtualThreadPool.submit(() -> {
+                            try {
+                                Thread.sleep(5000); // Wait before reconnecting
+                                connect();
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                log.debug("{} - Reconnection interrupted", tenant);
+                            } catch (Exception e) {
+                                log.error("{} - Error during reconnection", tenant, e);
+                            }
+                        });
+                    } else {
+                        log.debug(
+                                "{} - Intentional disconnect or not reconnecting (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
+                                tenant, intentionalDisconnect, isDisconnecting,
+                                connectorConfiguration.isEnabled(), wasConnected);
                     }
                 })
                 .addConnectedListener(context -> {
@@ -360,8 +412,11 @@ public class MQTT5Client extends AConnectorClient {
     private void initializeSubscriptionsAfterConnect() {
         try {
             // Rebuild caches
-            List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
-            List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            mappingService.rebuildMappingCaches(tenant, connectorId);
+            List<Mapping> outboundMappings = new ArrayList<>(
+                    mappingService.getCacheOutboundMappings(tenant).values());
+            List<Mapping> inboundMappings = new ArrayList<>(
+                    mappingService.getCacheInboundMappings(tenant).values());
 
             // Initialize subscriptions
             initializeSubscriptionsInbound(inboundMappings, true, cleanStart);
@@ -475,53 +530,97 @@ public class MQTT5Client extends AConnectorClient {
 
     @Override
     public void disconnect() {
-        if (!isConnected()) {
-            log.debug("{} - Already disconnected", tenant);
-            return;
+        synchronized (disconnectionLock) {
+            if (isDisconnecting) {
+                log.debug("{} - Disconnect already in progress", tenant);
+                return;
+            }
+
+            if (!isConnected() && mqttClient != null && !mqttClient.getState().isConnected()) {
+                log.debug("{} - Already disconnected", tenant);
+                return;
+            }
+
+            isDisconnecting = true;
+            intentionalDisconnect = true;
         }
 
-        log.info("{} - Disconnecting MQTT5 client", tenant);
-        connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
-
         try {
+            log.info("{} - Disconnecting MQTT5 client", tenant);
+            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
+
             // Unsubscribe from all topics
-            if (subscriptionManager != null) {
-                subscriptionManager.getSubscriptionCounts().keySet().forEach(topic -> {
-                    try {
-                        mqttClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter(topic).build());
-                    } catch (Exception e) {
-                        log.warn("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
+            if (mappingSubscriptionManager != null && mqttClient != null) {
+                try {
+                    if (mqttClient.getState().isConnected()) {
+                        mappingSubscriptionManager.getSubscriptionCounts().keySet().forEach(topic -> {
+                            try {
+                                mqttClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter(topic).build());
+                                log.debug("{} - Unsubscribed from topic: [{}]", tenant, topic);
+                            } catch (Exception e) {
+                                log.debug("{} - Error unsubscribing from topic: [{}] (may already be unsubscribed)",
+                                        tenant, topic);
+                            }
+                        });
                     }
-                });
+                } catch (Exception e) {
+                    log.debug("{} - Error during unsubscribe phase: {}", tenant, e.getMessage());
+                }
             }
 
             // Disconnect client
-            if (mqttClient != null && mqttClient.getState().isConnected()) {
-                mqttClient.disconnect();
+            if (mqttClient != null) {
+                try {
+                    if (mqttClient.getState().isConnected()) {
+                        mqttClient.disconnect();
+                        log.info("{} - MQTT5 client disconnected successfully", tenant);
+                    } else {
+                        log.debug("{} - MQTT5 client was not connected, skipping disconnect", tenant);
+                    }
+                } catch (Exception e) {
+                    log.debug("{} - Error disconnecting MQTT5 client (may already be disconnected): {}",
+                            tenant, e.getMessage());
+                }
             }
 
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
-            // Reinitialize subscriptions (cleared state)
-            if (subscriptionManager != null) {
-                subscriptionManager.clear();
+            // Clear subscriptions
+            if (mappingSubscriptionManager != null) {
+                mappingSubscriptionManager.clear();
             }
 
-            log.info("{} - MQTT5 client disconnected", tenant);
+            log.info("{} - MQTT5 client disconnect completed", tenant);
 
         } catch (Exception e) {
-            log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
+            log.error("{} - Error during disconnect: {}", tenant, e.getMessage());
+            // Still mark as disconnected even if there was an error
+            connectionStateManager.setConnected(false);
+            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
+        } finally {
+            synchronized (disconnectionLock) {
+                isDisconnecting = false;
+                intentionalDisconnect = false;
+            }
         }
     }
 
     @Override
     public void close() {
+        log.info("{} - Closing MQTT5 client", tenant);
         disconnect();
-        if (mqttClient != null) {
-            // Any additional cleanup
-            mqttClient = null;
+
+        synchronized (disconnectionLock) {
+            if (mqttClient != null) {
+                mqttClient = null;
+            }
+            if (mqttCallback != null) {
+                mqttCallback = null;
+            }
         }
+
+        log.info("{} - MQTT5 client closed", tenant);
     }
 
     @Override
@@ -612,8 +711,7 @@ public class MQTT5Client extends AConnectorClient {
     protected void connectorSpecificHousekeeping(String tenant) {
         // MQTT5-specific housekeeping tasks
         if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect()) {
-            log.warn("{} - MQTT5 client disconnected unexpectedly, reconnecting...", tenant);
-            reconnect();
+            log.warn("{} - MQTT5 client is disconnected (state will be handled by connection manager)", tenant);
         }
     }
 

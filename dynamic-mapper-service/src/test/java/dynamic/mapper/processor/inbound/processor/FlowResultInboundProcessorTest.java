@@ -59,11 +59,13 @@ import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.flow.CumulocityMessage;
 import dynamic.mapper.processor.flow.CumulocitySource;
 import dynamic.mapper.processor.flow.ExternalSource;
+import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.resolver.MappingResolverService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -88,6 +90,9 @@ class FlowResultInboundProcessorTest {
 
     @Mock
     private ServiceConfiguration serviceConfiguration;
+
+    @Mock
+    private MappingResolverService mappingResolverService;
 
     private FlowResultInboundProcessor processor;
 
@@ -147,10 +152,10 @@ class FlowResultInboundProcessorTest {
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
         GId deviceGId = new GId(TEST_DEVICE_ID);
         mockDevice.setId(deviceGId);
-        
+
         ExternalIDRepresentation mockExternalIdRep = new ExternalIDRepresentation();
         mockExternalIdRep.setManagedObject(mockDevice);
-        
+
         when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class)))
                 .thenReturn(mockExternalIdRep);
     }
@@ -209,11 +214,11 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.isIgnoreFurtherProcessing(), 
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
-        assertFalse(processingContext.getRequests().isEmpty(), 
+        assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created C8Y requests");
-        assertEquals(1, processingContext.getRequests().size(), 
+        assertEquals(1, processingContext.getRequests().size(),
                 "Should have created one request");
 
         DynamicMapperRequest request = processingContext.getRequests().get(0);
@@ -222,7 +227,7 @@ class FlowResultInboundProcessorTest {
         assertEquals(TEST_DEVICE_ID, request.getSourceId(), "Should have correct source ID");
 
         verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(processingContext));
-        
+
         log.info("✅ Single CumulocityMessage processing test passed");
     }
 
@@ -238,14 +243,14 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.isIgnoreFurtherProcessing(), 
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
-        assertEquals(2, processingContext.getRequests().size(), 
+        assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests");
 
         DynamicMapperRequest measurementRequest = processingContext.getRequests().get(0);
         assertEquals(API.MEASUREMENT, measurementRequest.getApi(), "First request should be MEASUREMENT");
-        
+
         DynamicMapperRequest eventRequest = processingContext.getRequests().get(1);
         assertEquals(API.EVENT, eventRequest.getApi(), "Second request should be EVENT");
 
@@ -259,22 +264,22 @@ class FlowResultInboundProcessorTest {
         cumulocityMsg.setCumulocityType("measurement");
         cumulocityMsg.setAction("create");
         cumulocityMsg.setPayload(createMeasurementPayload());
-        
+
         // Set internal source
         CumulocitySource internalSource = new CumulocitySource("internal-device-123");
         cumulocityMsg.setInternalSource(internalSource);
-        
+
         processingContext.setFlowResult(cumulocityMsg);
 
         // When
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.getRequests().isEmpty(), 
+        assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created C8Y requests");
-        
+
         DynamicMapperRequest request = processingContext.getRequests().get(0);
-        assertEquals("internal-device-123", request.getSourceId(), 
+        assertEquals("internal-device-123", request.getSourceId(),
                 "Should use internal source ID");
 
         log.info("✅ Internal source processing test passed");
@@ -282,7 +287,8 @@ class FlowResultInboundProcessorTest {
 
     @Test
     void testProcessWithCreateNonExistingDevice() throws Exception {
-        // Given - Mapping with createNonExistingDevice enabled and external source that doesn't exist
+        // Given - Mapping with createNonExistingDevice enabled and external source that
+        // doesn't exist
         mapping.setCreateNonExistingDevice(true);
         when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class)))
                 .thenReturn(null); // Simulate device not found
@@ -294,9 +300,9 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should still process (create implicit device logic would be called)
-        assertFalse(processingContext.getRequests().isEmpty(), 
+        assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created C8Y requests even with non-existing device");
-        
+
         log.info("✅ Create non-existing device test passed");
     }
 
@@ -305,10 +311,13 @@ class FlowResultInboundProcessorTest {
         // Given - Mapping with inventory filter
         mapping.setFilterInventory("has(c8y_IsDevice)");
         mapping.setCreateNonExistingDevice(false);
-        
+
         // Mock inventory filter evaluation
-        when(mappingService.evaluateInventoryFilter(anyString(), anyString(), anyString(), anyString()))
-                .thenReturn(false);
+        when(mappingResolverService.evaluateInventoryFilter(
+                anyString(), // tenant
+                any(Mapping.class), // mapping
+                any(C8YMessage.class) // message
+        )).thenReturn(false);
 
         CumulocityMessage cumulocityMsg = createCumulocityMessage();
         processingContext.setFlowResult(cumulocityMsg);
@@ -318,7 +327,7 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(), 
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing when inventory filter fails");
 
         log.info("✅ Inventory filter test passed");
@@ -333,9 +342,9 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(), 
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for null flow result");
-        assertTrue(processingContext.getRequests().isEmpty(), 
+        assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
 
         log.info("✅ Null flow result test passed");
@@ -350,9 +359,9 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(), 
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty flow result");
-        assertTrue(processingContext.getRequests().isEmpty(), 
+        assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
 
         log.info("✅ Empty flow result test passed");
@@ -370,9 +379,9 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.isIgnoreFurtherProcessing(), 
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing when no CumulocityMessages");
-        assertTrue(processingContext.getRequests().isEmpty(), 
+        assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
 
         log.info("✅ Non-CumulocityMessage test passed");
@@ -386,7 +395,7 @@ class FlowResultInboundProcessorTest {
         cumulocityMsg.setAction("create");
         cumulocityMsg.setPayload(createMeasurementPayload());
         cumulocityMsg.setExternalSource(createExternalSourceList());
-        
+
         processingContext.setFlowResult(cumulocityMsg);
 
         // When
@@ -416,12 +425,12 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then - Verify hierarchical structure was set
-        assertTrue(capturedPayload.containsKey("source"), 
+        assertTrue(capturedPayload.containsKey("source"),
                 "Should have source in payload");
-        
+
         @SuppressWarnings("unchecked")
         Map<String, Object> sourceMap = (Map<String, Object>) capturedPayload.get("source");
-        assertEquals(TEST_DEVICE_ID, sourceMap.get("id"), 
+        assertEquals(TEST_DEVICE_ID, sourceMap.get("id"),
                 "Should have set device ID in source.id");
 
         log.info("✅ Hierarchical value setting test passed");
@@ -434,22 +443,22 @@ class FlowResultInboundProcessorTest {
         cumulocityMsg.setCumulocityType("measurement");
         cumulocityMsg.setAction("create");
         cumulocityMsg.setPayload(createMeasurementPayload());
-        
+
         // Set external source as Map
         Map<String, Object> externalSourceMap = new HashMap<>();
         externalSourceMap.put("type", TEST_EXTERNAL_ID_TYPE);
         externalSourceMap.put("externalId", TEST_EXTERNAL_ID);
         cumulocityMsg.setExternalSource(externalSourceMap);
-        
+
         processingContext.setFlowResult(cumulocityMsg);
 
         // When
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.getRequests().isEmpty(), 
+        assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have processed Map-based external source");
-        
+
         verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(processingContext));
 
         log.info("✅ External source conversion test passed");
@@ -466,11 +475,11 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.getRequests().isEmpty(), 
+        assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created C8Y requests");
-        
+
         DynamicMapperRequest request = processingContext.getRequests().get(0);
-        assertEquals(RequestMethod.PUT, request.getMethod(), 
+        assertEquals(RequestMethod.PUT, request.getMethod(),
                 "Should use PUT method for update action");
 
         log.info("✅ Update action test passed");
@@ -483,16 +492,16 @@ class FlowResultInboundProcessorTest {
         flowResult.add(createCumulocityMessage()); // Measurement
         flowResult.add(createAlarmCumulocityMessage()); // Alarm
         flowResult.add("ignored non-cumulocity message"); // Should be ignored
-        
+
         processingContext.setFlowResult(flowResult);
 
         // When
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.isIgnoreFurtherProcessing(), 
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
-        assertEquals(2, processingContext.getRequests().size(), 
+        assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests (ignoring non-CumulocityMessage)");
 
         // Verify different API types
@@ -500,11 +509,11 @@ class FlowResultInboundProcessorTest {
                 .anyMatch(r -> r.getApi() == API.MEASUREMENT);
         boolean hasAlarm = processingContext.getRequests().stream()
                 .anyMatch(r -> r.getApi() == API.ALARM);
-        
+
         assertTrue(hasMeasurement, "Should have measurement request");
         assertTrue(hasAlarm, "Should have alarm request");
 
-        log.info("✅ Complete flow processing test passed: {} requests generated", 
+        log.info("✅ Complete flow processing test passed: {} requests generated",
                 processingContext.getRequests().size());
     }
 
@@ -541,14 +550,14 @@ class FlowResultInboundProcessorTest {
         Map<String, Object> payload = new HashMap<>();
         payload.put("time", "2024-03-19T13:30:18.619Z");
         payload.put("type", "c8y_TemperatureMeasurement");
-        
+
         Map<String, Object> measurement = new HashMap<>();
         Map<String, Object> temperature = new HashMap<>();
         temperature.put("value", 25.5);
         temperature.put("unit", "°C");
         measurement.put("T", temperature);
         payload.put("c8y_TemperatureMeasurement", measurement);
-        
+
         return payload;
     }
 
@@ -574,7 +583,7 @@ class FlowResultInboundProcessorTest {
         ExternalSource externalSource = new ExternalSource();
         externalSource.setType(TEST_EXTERNAL_ID_TYPE);
         externalSource.setExternalId(TEST_EXTERNAL_ID);
-        
+
         List<ExternalSource> sources = new ArrayList<>();
         sources.add(externalSource);
         return sources;

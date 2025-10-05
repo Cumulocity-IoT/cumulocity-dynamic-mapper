@@ -47,7 +47,7 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
-
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
@@ -113,11 +113,14 @@ public class ConfigurationRegistry {
     @Getter
     String mqttServicePulsarUrl;
 
-    
     @Autowired
     public void setC8yAgent(C8YAgent c8yAgent) {
         this.c8yAgent = c8yAgent;
     }
+
+    @Autowired
+    @Getter
+    private ConnectorRegistry connectorRegistry;
 
     @Getter
     private NotificationSubscriber notificationSubscriber;
@@ -195,11 +198,11 @@ public class ConfigurationRegistry {
                 String version = ((String) connectorConfiguration.getProperties().getOrDefault("version",
                         AConnectorClient.MQTT_VERSION_3_1_1));
                 if (AConnectorClient.MQTT_VERSION_3_1_1.equals(version)) {
-                    connectorClient = new MQTT3Client(this, connectorConfiguration,
+                    connectorClient = new MQTT3Client(this, connectorRegistry, connectorConfiguration,
                             null,
                             additionalSubscriptionIdTest, tenant);
                 } else {
-                    connectorClient = new MQTT5Client(this, connectorConfiguration,
+                    connectorClient = new MQTT5Client(this, connectorRegistry, connectorConfiguration,
                             null,
                             additionalSubscriptionIdTest, tenant);
                 }
@@ -208,15 +211,15 @@ public class ConfigurationRegistry {
                 break;
 
             case CUMULOCITY_MQTT_SERVICE:
-                connectorClient = new MQTTServiceClient(this, connectorConfiguration,
+                connectorClient = new MQTTServiceClient(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - MQTTService Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
-      
+
             case KAFKA:
-                connectorClient = new KafkaClientV2(this, connectorConfiguration,
+                connectorClient = new KafkaClientV2(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - Kafka Connector V2 created, identifier: {}", tenant,
@@ -224,7 +227,7 @@ public class ConfigurationRegistry {
                 break;
 
             case HTTP:
-                connectorClient = new HttpClient(this, connectorConfiguration,
+                connectorClient = new HttpClient(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - HTTP Connector created, identifier: {}", tenant,
@@ -232,7 +235,7 @@ public class ConfigurationRegistry {
                 break;
 
             case WEB_HOOK:
-                connectorClient = new WebHook(this, connectorConfiguration,
+                connectorClient = new WebHook(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - WebHook Connector created, identifier: {}", tenant,
@@ -240,7 +243,7 @@ public class ConfigurationRegistry {
                 break;
 
             case PULSAR:
-                connectorClient = new PulsarConnectorClient(this, connectorConfiguration,
+                connectorClient = new PulsarConnectorClient(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - Pulsar Connector created, identifier: {}", tenant,
@@ -248,7 +251,7 @@ public class ConfigurationRegistry {
                 break;
 
             case CUMULOCITY_MQTT_SERVICE_PULSAR:
-                connectorClient = new MQTTServicePulsarClient(this, connectorConfiguration,
+                connectorClient = new MQTTServicePulsarClient(this, connectorRegistry, connectorConfiguration,
                         null,
                         additionalSubscriptionIdTest, tenant);
                 log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,

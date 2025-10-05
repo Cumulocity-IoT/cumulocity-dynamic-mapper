@@ -58,12 +58,14 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
+import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
+import dynamic.mapper.service.resolver.MappingResolverService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -88,6 +90,9 @@ class SubstitutionInboundProcessorTest {
 
     @Mock
     private ObjectMapper objectMapper;
+
+    @Mock
+    private MappingResolverService mappingResolverService;
 
     private SubstitutionInboundProcessor processor;
 
@@ -128,17 +133,21 @@ class SubstitutionInboundProcessorTest {
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
         GId deviceGId = new GId(TEST_DEVICE_ID);
         mockDevice.setId(deviceGId);
-        
+
         // Create ExternalIDRepresentation
         ExternalIDRepresentation mockExternalIdRep = new ExternalIDRepresentation();
         mockExternalIdRep.setManagedObject(mockDevice);
-        
+
         // Setup the mock
         when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class)))
                 .thenReturn(mockExternalIdRep);
 
         // Mock inventory filter
-        when(mappingService.evaluateInventoryFilter(anyString(), anyString(), anyString(), anyString())).thenReturn(true);
+        lenient().when(mappingResolverService.evaluateInventoryFilter(
+                anyString(), // tenant
+                any(Mapping.class), // mapping
+                any(C8YMessage.class) // message
+        )).thenReturn(true);
     }
 
     private void injectDependencies() throws Exception {
@@ -199,18 +208,20 @@ class SubstitutionInboundProcessorTest {
 
         // Populate processing cache as if extraction already occurred
         Map<String, List<SubstituteValue>> processingCache = context.getProcessingCache();
-        
+
         // Add device identifier
-        processingCache.put("_IDENTITY_.externalId", 
-            List.of(new SubstituteValue(TEST_EXTERNAL_ID, SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
-        
+        processingCache.put("_IDENTITY_.externalId",
+                List.of(new SubstituteValue(TEST_EXTERNAL_ID, SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT,
+                        false)));
+
         // Add timestamp
-        processingCache.put("time", 
-            List.of(new SubstituteValue("2024-06-18T13:20:45.000Z", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
-        
+        processingCache.put("time",
+                List.of(new SubstituteValue("2024-06-18T13:20:45.000Z", SubstituteValue.TYPE.TEXTUAL,
+                        RepairStrategy.DEFAULT, false)));
+
         // Add temperature measurement
-        processingCache.put("c8y_TemperatureMeasurement.T.value", 
-            List.of(new SubstituteValue(25.5, SubstituteValue.TYPE.NUMBER, RepairStrategy.DEFAULT, false)));
+        processingCache.put("c8y_TemperatureMeasurement.T.value",
+                List.of(new SubstituteValue(25.5, SubstituteValue.TYPE.NUMBER, RepairStrategy.DEFAULT, false)));
 
         return context;
     }
@@ -231,14 +242,14 @@ class SubstitutionInboundProcessorTest {
                         .repairStrategy(RepairStrategy.DEFAULT)
                         .expandArray(false)
                         .build(),
-                        
+
                 Substitution.builder()
                         .pathSource("ts")
                         .pathTarget("time")
                         .repairStrategy(RepairStrategy.DEFAULT)
                         .expandArray(false)
                         .build(),
-                        
+
                 Substitution.builder()
                         .pathSource("temperature")
                         .pathTarget("c8y_TemperatureMeasurement.T.value")
@@ -266,7 +277,8 @@ class SubstitutionInboundProcessorTest {
 
         // Then
         verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class));
-        // Don't assert specific state since the processor might handle errors internally
+        // Don't assert specific state since the processor might handle errors
+        // internally
         log.info("External ID resolution test completed");
     }
 
@@ -301,12 +313,15 @@ class SubstitutionInboundProcessorTest {
     void testProcessWithContextDataSubstitutions() throws Exception {
         // Add more context data to processing cache
         Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
-        cache.put("_CONTEXT_DATA_.processingMode", 
-            List.of(new SubstituteValue("PERSISTENT", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
-        cache.put("_CONTEXT_DATA_.deviceName", 
-            List.of(new SubstituteValue("Temperature Sensor", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
-        cache.put("_CONTEXT_DATA_.deviceType", 
-            List.of(new SubstituteValue("c8y_TemperatureSensor", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
+        cache.put("_CONTEXT_DATA_.processingMode",
+                List.of(new SubstituteValue("PERSISTENT", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT,
+                        false)));
+        cache.put("_CONTEXT_DATA_.deviceName",
+                List.of(new SubstituteValue("Temperature Sensor", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT,
+                        false)));
+        cache.put("_CONTEXT_DATA_.deviceType",
+                List.of(new SubstituteValue("c8y_TemperatureSensor", SubstituteValue.TYPE.TEXTUAL,
+                        RepairStrategy.DEFAULT, false)));
 
         // When
         processor.process(exchange);
@@ -321,12 +336,14 @@ class SubstitutionInboundProcessorTest {
     void testProcessWithAttachmentData() throws Exception {
         // Add attachment data to processing cache
         Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
-        cache.put("_CONTEXT_DATA_.attachment_Name", 
-            List.of(new SubstituteValue("sensor-data.csv", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
-        cache.put("_CONTEXT_DATA_.attachment_Type", 
-            List.of(new SubstituteValue("text/csv", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
-        cache.put("_CONTEXT_DATA_.attachment_Data", 
-            List.of(new SubstituteValue("base64encodeddata", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
+        cache.put("_CONTEXT_DATA_.attachment_Name",
+                List.of(new SubstituteValue("sensor-data.csv", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT,
+                        false)));
+        cache.put("_CONTEXT_DATA_.attachment_Type",
+                List.of(new SubstituteValue("text/csv", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
+        cache.put("_CONTEXT_DATA_.attachment_Data",
+                List.of(new SubstituteValue("base64encodeddata", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT,
+                        false)));
 
         // When
         processor.process(exchange);
@@ -342,12 +359,13 @@ class SubstitutionInboundProcessorTest {
     void testProcessWithMapContextData() throws Exception {
         // Test _CONTEXT_DATA_ with API override
         Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
-        
+
         // Add context data entries
-        cache.put("_CONTEXT_DATA_.api", 
-            List.of(new SubstituteValue("EVENT", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
-        cache.put("_CONTEXT_DATA_.deviceName", 
-            List.of(new SubstituteValue("Smart Sensor", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
+        cache.put("_CONTEXT_DATA_.api",
+                List.of(new SubstituteValue("EVENT", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
+        cache.put("_CONTEXT_DATA_.deviceName",
+                List.of(new SubstituteValue("Smart Sensor", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT,
+                        false)));
 
         // When
         processor.process(exchange);
@@ -362,14 +380,19 @@ class SubstitutionInboundProcessorTest {
         // Given
         mapping.setFilterInventory("has(c8y_IsDevice)");
         mapping.setCreateNonExistingDevice(false);
-        
+
         // Mock the inventory filter to return false
-        when(mappingService.evaluateInventoryFilter(anyString(), anyString(), anyString(), anyString())).thenReturn(false);
+        when(mappingResolverService.evaluateInventoryFilter(
+                anyString(), // tenant
+                any(Mapping.class), // mapping
+                any(C8YMessage.class) // message
+        )).thenReturn(true);
 
         // When
         processor.process(exchange);
 
-        // Then - Processing should complete (filter evaluation happens but doesn't stop processing in this context)
+        // Then - Processing should complete (filter evaluation happens but doesn't stop
+        // processing in this context)
         log.info("Inventory filter test completed");
     }
 
@@ -395,7 +418,7 @@ class SubstitutionInboundProcessorTest {
                 .payload(createTestPayload())
                 .api(API.MEASUREMENT) // Still set API to avoid NPE
                 .build();
-        
+
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(emptyContext);
 
         // When
@@ -410,14 +433,12 @@ class SubstitutionInboundProcessorTest {
         // Add multiple device entries to simulate array expansion
         Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
         cache.put("_IDENTITY_.externalId", List.of(
-            new SubstituteValue("device1", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false),
-            new SubstituteValue("device2", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)
-        ));
-        
+                new SubstituteValue("device1", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false),
+                new SubstituteValue("device2", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
+
         cache.put("c8y_TemperatureMeasurement.T.value", List.of(
-            new SubstituteValue(20.5, SubstituteValue.TYPE.NUMBER, RepairStrategy.DEFAULT, false),
-            new SubstituteValue(22.1, SubstituteValue.TYPE.NUMBER, RepairStrategy.DEFAULT, false)
-        ));
+                new SubstituteValue(20.5, SubstituteValue.TYPE.NUMBER, RepairStrategy.DEFAULT, false),
+                new SubstituteValue(22.1, SubstituteValue.TYPE.NUMBER, RepairStrategy.DEFAULT, false)));
 
         // When
         processor.process(exchange);
@@ -437,12 +458,12 @@ class SubstitutionInboundProcessorTest {
                 .api(API.MEASUREMENT) // Set API to avoid NPE
                 .build();
         // Don't populate cache to cause validation issues
-        
+
         when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(problematicContext);
 
         // When
         processor.process(exchange);
-        
+
         // Then - Should handle gracefully
         log.info("Exception handling test completed");
     }
@@ -461,7 +482,7 @@ class SubstitutionInboundProcessorTest {
         // Given - Clear any API overrides in context data
         Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
         cache.remove("_CONTEXT_DATA_.api"); // Remove any API override
-        
+
         // Set mapping to use EVENT API
         mapping.setTargetAPI(API.EVENT);
         // Also set it in the context to avoid NPE

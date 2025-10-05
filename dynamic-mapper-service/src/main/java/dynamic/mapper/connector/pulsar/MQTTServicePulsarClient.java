@@ -30,9 +30,9 @@ import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
-import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
@@ -101,6 +101,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
      * Full constructor with dependencies
      */
     public MQTTServicePulsarClient(ConfigurationRegistry configurationRegistry,
+            ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
@@ -108,6 +109,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         this();
 
         this.configurationRegistry = configurationRegistry;
+        this.connectorRegistry = connectorRegistry;
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.getName();
         this.connectorIdentifier = connectorConfiguration.getIdentifier();
@@ -115,9 +117,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 connectorConfiguration.getName(),
                 connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier());
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 
@@ -209,6 +208,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             try {
                 pulsarClient = clientBuilder.build();
                 log.info("{} - MQTT Service Pulsar client created successfully", tenant);
+                if (isConfigValid(connectorConfiguration)) {
+                    connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
+                }
             } catch (Exception e) {
                 if (containsPip344Error(e)) {
                     log.error("{} - Broker doesn't support PIP-344. Please upgrade Pulsar broker to 2.11.0+", tenant);
@@ -252,8 +254,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         log.info("{} - Connecting MQTT Service Pulsar connector: {}", tenant, connectorName);
 
         if (isConnected()) {
-            log.debug("{} - Already connected, disconnecting first", tenant);
-            disconnect();
+            log.debug("{} - Already connected", tenant);
+            return;
         }
 
         if (!shouldConnect()) {
@@ -276,22 +278,60 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             // Create producer for device topic (outbound)
             createTowardsDeviceProducer();
 
+            // Verify connection
+            boolean consumerConnected = platformConsumer != null && platformConsumer.isConnected();
+            boolean producerConnected = deviceProducer != null && deviceProducer.isConnected();
+
+            if (!consumerConnected || !producerConnected) {
+                throw new ConnectorException(
+                        String.format("Connection incomplete - consumer: %s, producer: %s",
+                                consumerConnected, producerConnected));
+            }
+
+            // Now set connected state
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
-            // Initialize subscriptions
-            List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
-            List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            log.info("{} - MQTT Service Pulsar connector connected successfully (consumer: {}, producer: {})",
+                    tenant, consumerConnected, producerConnected);
+
+            // Initialize subscriptions AFTER confirming connection
+            mappingService.rebuildMappingCaches(tenant, connectorId);
+            List<Mapping> outboundMappings = new ArrayList<>(
+                    mappingService.getCacheOutboundMappings(tenant).values());
+            List<Mapping> inboundMappings = new ArrayList<>(
+                    mappingService.getCacheInboundMappings(tenant).values());
 
             initializeSubscriptionsInbound(inboundMappings, true, true);
             initializeSubscriptionsOutbound(outboundMappings);
-
-            log.info("{} - MQTT Service Pulsar connector connected successfully", tenant);
 
         } catch (Exception e) {
             log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
             connectionStateManager.setConnected(false);
+
+            // Cleanup on failure
+            cleanupOnConnectionFailure();
+        }
+    }
+
+    private void cleanupOnConnectionFailure() {
+        if (platformConsumer != null) {
+            try {
+                platformConsumer.close();
+            } catch (Exception e) {
+                log.debug("{} - Error closing consumer during cleanup", tenant);
+            }
+            platformConsumer = null;
+        }
+
+        if (deviceProducer != null) {
+            try {
+                deviceProducer.close();
+            } catch (Exception e) {
+                log.debug("{} - Error closing producer during cleanup", tenant);
+            }
+            deviceProducer = null;
         }
     }
 
@@ -444,8 +484,11 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
             // Rebuild caches
-            List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
-            List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            mappingService.rebuildMappingCaches(tenant, connectorId);
+            List<Mapping> outboundMappings = new ArrayList<>(
+                    mappingService.getCacheOutboundMappings(tenant).values());
+            List<Mapping> inboundMappings = new ArrayList<>(
+                    mappingService.getCacheInboundMappings(tenant).values());
 
             initializeSubscriptionsInbound(inboundMappings, true, true);
             initializeSubscriptionsOutbound(outboundMappings);
@@ -457,7 +500,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
     }
 
-        /**
+    /**
      * Adjust service URL for TLS
      */
     private String adjustServiceUrlForTls(String originalUrl, Boolean enableTls) {
@@ -521,9 +564,18 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     @Override
     public boolean isConnected() {
-        return connectionStateManager.isConnected() &&
-                pulsarClient != null &&
-                !pulsarClient.isClosed();
+        boolean clientConnected = pulsarClient != null && !pulsarClient.isClosed();
+        boolean consumerConnected = platformConsumer != null && platformConsumer.isConnected();
+        boolean producerConnected = deviceProducer != null && deviceProducer.isConnected();
+
+        boolean fullyConnected = clientConnected && consumerConnected && producerConnected;
+
+        // Sync connection state with manager
+        if (fullyConnected != connectionStateManager.isConnected()) {
+            connectionStateManager.setConnected(fullyConnected);
+        }
+
+        return fullyConnected;
     }
 
     @Override
@@ -652,7 +704,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         return false;
     }
 
-        /**
+    /**
      * Create MQTT Service Pulsar specification
      */
     private ConnectorSpecification createConnectorSpecification() {

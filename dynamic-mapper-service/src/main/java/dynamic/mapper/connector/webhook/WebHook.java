@@ -33,9 +33,9 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
-import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
@@ -92,6 +92,7 @@ public class WebHook extends AConnectorClient {
      * Full constructor with dependencies
      */
     public WebHook(ConfigurationRegistry configurationRegistry,
+            ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
@@ -99,6 +100,7 @@ public class WebHook extends AConnectorClient {
         this();
 
         this.configurationRegistry = configurationRegistry;
+        this.connectorRegistry = connectorRegistry;
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.getName();
         this.connectorIdentifier = connectorConfiguration.getIdentifier();
@@ -106,9 +108,6 @@ public class WebHook extends AConnectorClient {
                 connectorConfiguration.getName(),
                 connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier());
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 
@@ -184,6 +183,9 @@ public class WebHook extends AConnectorClient {
             baseUrlEndsWithSlash = baseUrl.endsWith("/");
 
             log.info("{} - WebHook connector initialized, baseUrl: {}", tenant, baseUrl);
+            if (isConfigValid(connectorConfiguration)) {
+                connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
+            }
             return true;
 
         } catch (Exception e) {
@@ -227,7 +229,9 @@ public class WebHook extends AConnectorClient {
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
             // Initialize outbound subscriptions
-            List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            mappingService.rebuildMappingCaches(tenant, connectorId);
+            List<Mapping> outboundMappings = new ArrayList<>(
+                    mappingService.getCacheOutboundMappings(tenant).values());
             initializeSubscriptionsOutbound(outboundMappings);
 
             log.info("{} - WebHook connector connected successfully", tenant);
@@ -328,8 +332,11 @@ public class WebHook extends AConnectorClient {
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
             // Rebuild caches
-            List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
-            List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            mappingService.rebuildMappingCaches(tenant, connectorId);
+            List<Mapping> outboundMappings = new ArrayList<>(
+                    mappingService.getCacheOutboundMappings(tenant).values());
+            List<Mapping> inboundMappings = new ArrayList<>(
+                    mappingService.getCacheInboundMappings(tenant).values());
 
             initializeSubscriptionsInbound(inboundMappings, true, true);
             initializeSubscriptionsOutbound(outboundMappings);

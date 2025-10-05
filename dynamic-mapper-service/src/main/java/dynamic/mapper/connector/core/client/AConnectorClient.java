@@ -28,6 +28,7 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
@@ -107,11 +108,6 @@ public abstract class AConnectorClient {
     @Setter
     protected boolean singleton;
 
-    // Status
-    @Getter
-    @Setter
-    protected ConnectorStatusEvent connectorStatus;
-
     // Configuration
     @Getter
     @Setter
@@ -130,6 +126,8 @@ public abstract class AConnectorClient {
     @Getter
     protected ConfigurationRegistry configurationRegistry;
     @Getter
+    protected ConnectorRegistry connectorRegistry;
+    @Getter
     protected ExecutorService virtualThreadPool;
     @Getter
     protected MappingService mappingService;
@@ -144,7 +142,8 @@ public abstract class AConnectorClient {
     protected GenericMessageCallback dispatcher;
 
     // Managers
-    protected SubscriptionManager subscriptionManager;
+    protected MappingSubscriptionManager mappingSubscriptionManager;
+    @Getter
     protected ConnectionStateManager connectionStateManager;
 
     // Lifecycle tasks
@@ -185,10 +184,10 @@ public abstract class AConnectorClient {
      * Initialize managers
      */
     protected void initializeManagers() {
-        this.subscriptionManager = new SubscriptionManager(
+        this.mappingSubscriptionManager = new MappingSubscriptionManager(
                 tenant,
                 connectorName,
-                new SubscriptionManager.SubscriptionCallback() {
+                new MappingSubscriptionManager.SubscriptionCallback() {
                     @Override
                     public void subscribe(String topic, Qos qos) throws ConnectorException {
                         AConnectorClient.this.subscribe(topic, qos);
@@ -204,7 +203,7 @@ public abstract class AConnectorClient {
                 tenant,
                 connectorName,
                 connectorIdentifier,
-                this::sendConnectorLifecycle);
+                this::sendConnectorLifecycle, connectorRegistry);
 
         this.housekeepingExecutor = Executors.newScheduledThreadPool(1, r -> {
             Thread t = new Thread(r, "housekeeping-" + connectorIdentifier);
@@ -225,6 +224,10 @@ public abstract class AConnectorClient {
                             boolean success = initialize();
                             if (!success) {
                                 throw new ConnectorException("Initialization failed");
+                            }
+                            // Add this: Set status to CONFIGURED after successful initialization
+                            if (isConfigValid(connectorConfiguration)) {
+                                connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
                             }
                         } catch (Exception e) {
                             log.error("{} - Initialization failed: {}", tenant, e.getMessage(), e);
@@ -313,8 +316,11 @@ public abstract class AConnectorClient {
      * Perform housekeeping tasks - can be overridden
      */
     protected void performHousekeeping() {
-        // Update connector status if needed
-        if (ConnectorStatus.DISCONNECTED.equals(connectionStateManager.getCurrentStatus()) &&
+        ConnectorStatus currentStatus = connectionStateManager.getCurrentStatus();
+
+        // Update connector status if needed - check for UNKNOWN or DISCONNECTED
+        if ((ConnectorStatus.UNKNOWN.equals(currentStatus) ||
+                ConnectorStatus.DISCONNECTED.equals(currentStatus)) &&
                 isConfigValid(connectorConfiguration)) {
             connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
         }
@@ -332,7 +338,7 @@ public abstract class AConnectorClient {
      * Initialize subscriptions for inbound mappings
      */
     public void initializeSubscriptionsInbound(List<Mapping> mappings, boolean reset, boolean cleanSession) {
-        subscriptionManager.updateSubscriptions(
+        mappingSubscriptionManager.updateSubscriptions(
                 mappings,
                 reset,
                 isConnected(),
@@ -351,11 +357,11 @@ public abstract class AConnectorClient {
         mappings.stream()
                 .filter(Mapping::getActive)
                 .filter(this::isMappingValidForDeployment)
-                .forEach(mapping -> subscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping));
+                .forEach(mapping -> mappingSubscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping));
 
         log.info("{} - Initialized {} outbound mappings for connector: {}",
                 tenant,
-                subscriptionManager.getOutboundMappingCount(),
+                mappingSubscriptionManager.getOutboundMappingCount(),
                 connectorName);
     }
 
@@ -405,9 +411,9 @@ public abstract class AConnectorClient {
 
         if (mapping.getActive()) {
             // Add or update subscription
-            subscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping);
+            mappingSubscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping);
 
-            MutableInt count = subscriptionManager.getSubscriptionCounts()
+            MutableInt count = mappingSubscriptionManager.getSubscriptionCounts()
                     .computeIfAbsent(topic, k -> new MutableInt(0));
 
             if (create || count.intValue() == 0) {
@@ -424,14 +430,14 @@ public abstract class AConnectorClient {
 
         } else if (activationChanged) {
             // Remove subscription
-            MutableInt count = subscriptionManager.getSubscriptionCounts().get(topic);
+            MutableInt count = mappingSubscriptionManager.getSubscriptionCounts().get(topic);
             if (count != null) {
                 count.decrement();
 
                 if (count.intValue() <= 0) {
                     try {
                         unsubscribe(topic);
-                        subscriptionManager.getSubscriptionCounts().remove(topic);
+                        mappingSubscriptionManager.getSubscriptionCounts().remove(topic);
                         log.info("{} - Unsubscribed from topic: [{}] for mapping: {}",
                                 tenant, topic, mapping.getIdentifier());
                     } catch (Exception e) {
@@ -439,7 +445,7 @@ public abstract class AConnectorClient {
                     }
                 }
             }
-            subscriptionManager.removeOutboundMapping(mapping.getIdentifier());
+            mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier());
         }
     }
 
@@ -451,10 +457,10 @@ public abstract class AConnectorClient {
         boolean isDeployed = isDeployedInConnector(mapping);
 
         if (mapping.getActive() && isDeployed) {
-            subscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping);
+            mappingSubscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping);
             log.debug("{} - Added outbound mapping: {}", tenant, mapping.getIdentifier());
         } else {
-            subscriptionManager.removeOutboundMapping(mapping.getIdentifier());
+            mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier());
             log.debug("{} - Removed outbound mapping: {}", tenant, mapping.getIdentifier());
         }
     }
@@ -474,14 +480,14 @@ public abstract class AConnectorClient {
     private void deleteInboundSubscription(Mapping mapping) {
         String topic = mapping.getMappingTopic();
 
-        if (subscriptionManager.getSubscriptionCounts().containsKey(topic) && isConnected()) {
-            MutableInt count = subscriptionManager.getSubscriptionCounts().get(topic);
+        if (mappingSubscriptionManager.getSubscriptionCounts().containsKey(topic) && isConnected()) {
+            MutableInt count = mappingSubscriptionManager.getSubscriptionCounts().get(topic);
             count.decrement();
 
             if (count.intValue() <= 0) {
                 try {
                     unsubscribe(topic);
-                    subscriptionManager.getSubscriptionCounts().remove(topic);
+                    mappingSubscriptionManager.getSubscriptionCounts().remove(topic);
                     log.info("{} - Unsubscribed from topic: [{}] after mapping deletion", tenant, topic);
                 } catch (Exception e) {
                     log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
@@ -489,12 +495,12 @@ public abstract class AConnectorClient {
             }
         }
 
-        subscriptionManager.removeOutboundMapping(mapping.getIdentifier());
+        mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier());
         log.info("{} - Deleted inbound subscription for mapping: {}", tenant, mapping.getIdentifier());
     }
 
     private void deleteOutboundSubscription(Mapping mapping) {
-        subscriptionManager.removeOutboundMapping(mapping.getIdentifier());
+        mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier());
         log.info("{} - Deleted outbound subscription for mapping: {}", tenant, mapping.getIdentifier());
     }
 
@@ -502,14 +508,14 @@ public abstract class AConnectorClient {
      * Get subscription counts per topic for inbound mappings
      */
     public Map<String, MutableInt> getCountSubscriptionsPerTopicInbound() {
-        return subscriptionManager.getSubscriptionCounts();
+        return mappingSubscriptionManager.getSubscriptionCounts();
     }
 
     /**
      * Get read-only view of subscription counts (for external use)
      */
     public Map<String, MutableInt> getCountSubscriptionsPerTopicInboundView() {
-        return subscriptionManager.getSubscriptionCounts();
+        return mappingSubscriptionManager.getSubscriptionCounts();
     }
 
     /**
@@ -568,14 +574,14 @@ public abstract class AConnectorClient {
      * Check if inbound mapping is deployed
      */
     public boolean isMappingInboundDeployed(String identifier) {
-        return subscriptionManager.getDeployedMappingsInbound().containsKey(identifier);
+        return mappingSubscriptionManager.getDeployedMappingsInbound().containsKey(identifier);
     }
 
     /**
      * Check if outbound mapping is deployed
      */
     public boolean isMappingOutboundDeployed(String identifier) {
-        return subscriptionManager.getDeployedMappingsOutbound().containsKey(identifier);
+        return mappingSubscriptionManager.getDeployedMappingsOutbound().containsKey(identifier);
     }
 
     /**
@@ -587,12 +593,12 @@ public abstract class AConnectorClient {
 
         // Collect inbound mappings
         List<String> inboundMappingIds = new ArrayList<>(
-                subscriptionManager.getDeployedMappingsInbound().keySet());
+                mappingSubscriptionManager.getDeployedMappingsInbound().keySet());
         updateDeploymentMap(inboundMappingIds, mappingsDeployed, cleanedConfiguration);
 
         // Collect outbound mappings
         List<String> outboundMappingIds = new ArrayList<>(
-                subscriptionManager.getDeployedMappingsOutbound().keySet());
+                mappingSubscriptionManager.getDeployedMappingsOutbound().keySet());
         updateDeploymentMap(outboundMappingIds, mappingsDeployed, cleanedConfiguration);
     }
 
@@ -663,8 +669,13 @@ public abstract class AConnectorClient {
     /**
      * Load configuration
      */
-    protected void loadConfiguration() {
-        // Implementation here
+    public void loadConfiguration() {
+        connectorConfiguration = connectorConfigurationService
+                .getConnectorConfiguration(getConnectorIdentifier(), tenant);
+        connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
+
+        serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+        configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
     }
 
     /**
@@ -677,8 +688,33 @@ public abstract class AConnectorClient {
     /**
      * Send connector lifecycle event
      */
-    protected void sendConnectorLifecycle(ConnectorStatusEvent status) {
-        // Implementation here - send to C8Y
+    public void sendConnectorLifecycle(ConnectorStatusEvent status) {
+        if (serviceConfiguration.isSendConnectorLifecycle()) {
+            Map<String, String> statusMap = createStatusMap(status);
+            String message = "Connector status: " + status;
+            c8yAgent.createOperationEvent(
+                    message,
+                    LoggingEventType.STATUS_CONNECTOR_EVENT_TYPE,
+                    DateTime.now(),
+                    tenant,
+                    statusMap);
+        }
+    }
+
+    private Map<String, String> createStatusMap(ConnectorStatusEvent status) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String date = dateFormat.format(new Date());
+        String message = status.getMessage();
+        if ("".equals(status.getMessage())) {
+            message = "Connector status: " + status.status;
+        }
+
+        return Map.ofEntries(
+                entry("status", status.getStatus().name()),
+                entry("message", message),
+                entry("connectorName", getConnectorName()),
+                entry("connectorIdentifier", getConnectorIdentifier()),
+                entry("date", date));
     }
 
     /**
@@ -721,8 +757,8 @@ public abstract class AConnectorClient {
      */
     public void cleanup() {
         stopHousekeepingAndClose();
-        if (subscriptionManager != null) {
-            subscriptionManager.clear();
+        if (mappingSubscriptionManager != null) {
+            mappingSubscriptionManager.clear();
         }
     }
 

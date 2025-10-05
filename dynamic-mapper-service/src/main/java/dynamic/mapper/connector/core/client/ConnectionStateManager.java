@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.core.client;
 
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConnectorStatus;
 import dynamic.mapper.core.ConnectorStatusEvent;
 import lombok.Getter;
@@ -40,6 +41,7 @@ public class ConnectionStateManager {
     
     private final String tenant;
     private final String connectorName;
+    private final String connectorIdentifier;
     private final MutableBoolean connectionState = new MutableBoolean(false);
     
     @Getter
@@ -48,14 +50,19 @@ public class ConnectionStateManager {
     private ConnectorStatus previousStatus = ConnectorStatus.UNKNOWN;
     
     private final Consumer<ConnectorStatusEvent> statusChangeCallback;
+
+    private ConnectorRegistry connectorRegistry;
     
     public ConnectionStateManager(String tenant, 
                                  String connectorName,
                                  String connectorIdentifier,
-                                 Consumer<ConnectorStatusEvent> statusChangeCallback) {
+                                 Consumer<ConnectorStatusEvent> statusChangeCallback,
+                                 ConnectorRegistry connectorRegistry) {
         this.tenant = tenant;
         this.connectorName = connectorName;
+        this.connectorIdentifier = connectorIdentifier;
         this.statusChangeCallback = statusChangeCallback;
+        this.connectorRegistry = connectorRegistry;
         this.connectorStatus = new AtomicReference<>(
             ConnectorStatusEvent.unknown(connectorName, connectorIdentifier));
     }
@@ -83,6 +90,7 @@ public class ConnectionStateManager {
     public void updateStatus(ConnectorStatus status, boolean clearMessage, boolean sendEvent) {
         ConnectorStatusEvent currentStatus = connectorStatus.get();
         currentStatus.updateStatus(status, clearMessage);
+        connectorRegistry.getConnectorStatusMap(tenant).put(connectorIdentifier, currentStatus);
         
         if (sendEvent && !status.equals(previousStatus)) {
             previousStatus = status;

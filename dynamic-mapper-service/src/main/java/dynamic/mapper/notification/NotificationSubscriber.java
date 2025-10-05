@@ -51,7 +51,7 @@ public class NotificationSubscriber {
     private SubscriptionManager subscriptionManager;
 
     @Autowired
-    private ConnectionManager connectionManager;
+    private NotificationConnectionManager connectionManager;
 
     @Autowired
     private MqttPushManager mqttPushManager;

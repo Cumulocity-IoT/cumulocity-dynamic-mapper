@@ -43,7 +43,6 @@ import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.InventoryEnrichmentClient;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.springframework.web.bind.annotation.RequestMethod;

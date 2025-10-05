@@ -30,9 +30,9 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
-import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
@@ -104,6 +104,7 @@ public class PulsarConnectorClient extends AConnectorClient {
      * Full constructor with dependencies
      */
     public PulsarConnectorClient(ConfigurationRegistry configurationRegistry,
+            ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
@@ -111,6 +112,8 @@ public class PulsarConnectorClient extends AConnectorClient {
         this();
 
         this.configurationRegistry = configurationRegistry;
+        this.connectorRegistry = connectorRegistry;
+
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.getName();
         this.connectorIdentifier = connectorConfiguration.getIdentifier();
@@ -118,9 +121,6 @@ public class PulsarConnectorClient extends AConnectorClient {
                 connectorConfiguration.getName(),
                 connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier());
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 
@@ -151,6 +151,9 @@ public class PulsarConnectorClient extends AConnectorClient {
             }
 
             log.info("{} - Pulsar connector initialized successfully", tenant);
+            if (isConfigValid(connectorConfiguration)) {
+                connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
+            }
             return true;
 
         } catch (Exception e) {
@@ -229,8 +232,11 @@ public class PulsarConnectorClient extends AConnectorClient {
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
             // Initialize subscriptions
-            List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
-            List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            mappingService.rebuildMappingCaches(tenant, connectorId);
+            List<Mapping> outboundMappings = new ArrayList<>(
+                    mappingService.getCacheOutboundMappings(tenant).values());
+            List<Mapping> inboundMappings = new ArrayList<>(
+                    mappingService.getCacheInboundMappings(tenant).values());
 
             initializeSubscriptionsInbound(inboundMappings, true, true);
             initializeSubscriptionsOutbound(outboundMappings);
@@ -466,8 +472,11 @@ public class PulsarConnectorClient extends AConnectorClient {
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
             // Rebuild caches
-            List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
-            List<Mapping> outboundMappings = mappingService.rebuildMappingOutboundCache(tenant, connectorId);
+            mappingService.rebuildMappingCaches(tenant, connectorId);
+            List<Mapping> outboundMappings = new ArrayList<>(
+                    mappingService.getCacheOutboundMappings(tenant).values());
+            List<Mapping> inboundMappings = new ArrayList<>(
+                    mappingService.getCacheInboundMappings(tenant).values());
 
             initializeSubscriptionsInbound(inboundMappings, true, true);
             initializeSubscriptionsOutbound(outboundMappings);

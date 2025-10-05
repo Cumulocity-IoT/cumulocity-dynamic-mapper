@@ -21,6 +21,7 @@
 
 package dynamic.mapper.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,8 @@ import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.service.deployment.DeploymentMapService;
+import dynamic.mapper.service.status.MappingStatusService;
 import dynamic.mapper.model.Mapping;
 
 import io.swagger.v3.oas.annotations.Parameter;
@@ -107,6 +110,12 @@ public class OperationController {
 
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
+
+    @Autowired
+    private DeploymentMapService deploymentMapService;
+
+    @Autowired
+    private MappingStatusService mappingStatusService;
 
     private ObjectMapper objectMapper;
 
@@ -379,14 +388,19 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
-        List<Mapping> updatedMappingsInbound = mappingService.rebuildMappingInboundCache(tenant,
-                ConnectorId.INTERNAL);
-        List<Mapping> updatedMappingsOutbound = mappingService.rebuildMappingOutboundCache(tenant,
-                ConnectorId.INTERNAL);
+        // Rebuild all caches at once
+        mappingService.rebuildMappingCaches(tenant, ConnectorId.INTERNAL);
 
+        // Get the updated mappings from cache
+        List<Mapping> updatedMappingsInbound = new ArrayList<>(
+                mappingService.getCacheMappingInbound(tenant).values());
+        List<Mapping> updatedMappingsOutbound = new ArrayList<>(
+                mappingService.getCacheOutboundMappings(tenant).values());
+
+        // Update connector subscriptions
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {
-            // we always start with a cleanSession in case we reload the mappings
+            // We always start with a cleanSession in case we reload the mappings
             client.initializeSubscriptionsInbound(updatedMappingsInbound, false, true);
             updatedMappingsOutbound.forEach(mapping -> client.updateSubscriptionForOutbound(mapping, false, false));
         });
@@ -395,7 +409,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleResetDeploymentMap(String tenant) throws Exception {
-        mappingService.initializeDeploymentMap(tenant, true);
+        deploymentMapService.initializeTenantDeploymentMap(tenant, true);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -452,7 +466,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleResetStatusMapping(String tenant) throws Exception {
-        mappingService.initializeMappingStatus(tenant, true);
+        mappingStatusService.initializeTenantStatus(tenant, true);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

@@ -30,9 +30,9 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.ConnectorStatus;
-import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
@@ -53,13 +53,13 @@ import java.util.*;
  */
 @Slf4j
 public class HttpClient extends AConnectorClient {
-    
+
     // Constants
     public static final String HTTP_CONNECTOR_PATH = "httpConnector";
     public static final String HTTP_CONNECTOR_IDENTIFIER = "HTTP_CONNECTOR_IDENTIFIER";
     public static final String HTTP_CONNECTOR_ABSOLUTE_PATH = "/httpConnector";
     public static final String PROPERTY_CUTOFF_LEADING_SLASH = "cutOffLeadingSlash";
-    
+
     @Getter
     protected List<Qos> supportedQOS;
 
@@ -77,13 +77,15 @@ public class HttpClient extends AConnectorClient {
      * Full constructor with dependencies
      */
     public HttpClient(ConfigurationRegistry configurationRegistry,
-                     ConnectorConfiguration connectorConfiguration,
-                     CamelDispatcherInbound dispatcher,
-                     String additionalSubscriptionIdTest,
-                     String tenant) {
+            ConnectorRegistry connectorRegistry,
+            ConnectorConfiguration connectorConfiguration,
+            CamelDispatcherInbound dispatcher,
+            String additionalSubscriptionIdTest,
+            String tenant) {
         this();
-        
+
         this.configurationRegistry = configurationRegistry;
+        this.connectorRegistry = connectorRegistry;
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.getName();
         this.connectorIdentifier = connectorConfiguration.getIdentifier();
@@ -91,12 +93,9 @@ public class HttpClient extends AConnectorClient {
                 connectorConfiguration.getName(),
                 connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier());
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        
+
         // Initialize dependencies from registry
         this.mappingService = configurationRegistry.getMappingService();
         this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
@@ -106,7 +105,7 @@ public class HttpClient extends AConnectorClient {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
-        
+
         // Initialize managers
         initializeManagers();
     }
@@ -114,10 +113,13 @@ public class HttpClient extends AConnectorClient {
     @Override
     public boolean initialize() {
         loadConfiguration();
-        
+
         try {
             String path = getHttpPath();
             log.info("{} - HTTP connector initialized, endpoint: {}", tenant, path);
+            if (isConfigValid(connectorConfiguration)) {
+                connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
+            }
             return true;
         } catch (Exception e) {
             log.error("{} - Error initializing HTTP connector: {}", tenant, e.getMessage(), e);
@@ -129,32 +131,32 @@ public class HttpClient extends AConnectorClient {
     @Override
     public void connect() {
         log.info("{} - Connecting HTTP connector: {}", tenant, connectorName);
-        
+
         if (isConnected()) {
             log.debug("{} - Already connected, disconnecting first", tenant);
             disconnect();
         }
-        
+
         if (!shouldConnect()) {
             log.info("{} - Connector disabled or invalid configuration", tenant);
             return;
         }
-        
+
         try {
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
-            
+
             String path = getHttpPath();
-            
+
             // HTTP connector is always "connected" - it's a passive receiver
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
-            
+
             // Initialize subscriptions
-            List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
+            List<Mapping> inboundMappings = mappingService.getMappings(tenant, Direction.INBOUND);
             initializeSubscriptionsInbound(inboundMappings, true, true);
-            
+
             log.info("{} - HTTP connector connected, endpoint: {}", tenant, path);
-            
+
         } catch (Exception e) {
             log.error("{} - Error connecting HTTP connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
@@ -181,22 +183,22 @@ public class HttpClient extends AConnectorClient {
             log.debug("{} - Already disconnected", tenant);
             return;
         }
-        
+
         log.info("{} - Disconnecting HTTP connector", tenant);
         connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
-        
+
         try {
             String path = getHttpPath();
-            
+
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
-            
+
             // Rebuild caches
-            List<Mapping> inboundMappings = mappingService.rebuildMappingInboundCache(tenant, connectorId);
+            List<Mapping> inboundMappings = mappingService.getMappings(tenant, Direction.INBOUND);
             initializeSubscriptionsInbound(inboundMappings, true, true);
-            
+
             log.info("{} - HTTP connector disconnected, endpoint: {}", tenant, path);
-            
+
         } catch (Exception e) {
             log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
         }
@@ -278,15 +280,15 @@ public class HttpClient extends AConnectorClient {
             log.error("{} - Dispatcher is not initialized, cannot process message", tenant);
             return;
         }
-        
+
         try {
             if (log.isDebugEnabled()) {
-                log.debug("{} - Received HTTP message on topic: [{}]", 
+                log.debug("{} - Received HTTP message on topic: [{}]",
                         tenant, message.getTopic());
             }
-            
+
             dispatcher.onMessage(message);
-            
+
         } catch (Exception e) {
             log.error("{} - Error processing HTTP message on topic: [{}]",
                     tenant, message.getTopic(), e);
@@ -297,15 +299,15 @@ public class HttpClient extends AConnectorClient {
      * Get the HTTP endpoint path from configuration
      */
     private String getHttpPath() {
-        Object pathValue = connectorConfiguration != null && 
-                          connectorConfiguration.getProperties() != null
-                ? connectorConfiguration.getProperties().get("path")
-                : null;
-        
+        Object pathValue = connectorConfiguration != null &&
+                connectorConfiguration.getProperties() != null
+                        ? connectorConfiguration.getProperties().get("path")
+                        : null;
+
         if (pathValue != null) {
             return pathValue.toString();
         }
-        
+
         // Fallback to default from specification
         return connectorSpecification.getProperties().get("path").getDefaultValue().toString();
     }
@@ -314,15 +316,15 @@ public class HttpClient extends AConnectorClient {
      * Check if leading slash should be cut off from topic path
      */
     public boolean shouldCutOffLeadingSlash() {
-        Object cutOffValue = connectorConfiguration != null && 
-                            connectorConfiguration.getProperties() != null
-                ? connectorConfiguration.getProperties().get(PROPERTY_CUTOFF_LEADING_SLASH)
-                : null;
-        
+        Object cutOffValue = connectorConfiguration != null &&
+                connectorConfiguration.getProperties() != null
+                        ? connectorConfiguration.getProperties().get(PROPERTY_CUTOFF_LEADING_SLASH)
+                        : null;
+
         if (cutOffValue != null) {
             return Boolean.parseBoolean(cutOffValue.toString());
         }
-        
+
         // Default to true
         return true;
     }
@@ -338,15 +340,15 @@ public class HttpClient extends AConnectorClient {
         if (path == null || path.isEmpty()) {
             return "";
         }
-        
+
         String topic = path;
-        
+
         if (shouldCutOffLeadingSlash() && topic.startsWith("/")) {
             topic = topic.substring(1);
         }
-        
+
         log.debug("{} - Converted HTTP path '{}' to topic '{}'", tenant, path, topic);
-        
+
         return topic;
     }
 
@@ -355,34 +357,35 @@ public class HttpClient extends AConnectorClient {
      */
     private ConnectorSpecification createConnectorSpecification() {
         Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
-        
+
         String httpPath = "/service/dynamic-mapper-service/" + HTTP_CONNECTOR_PATH;
-        
+
         configProps.put("path",
                 new ConnectorProperty(null, false, 0, ConnectorPropertyType.STRING_PROPERTY,
                         true, false, httpPath, null, null));
-        
+
         configProps.put("supportsWildcardInTopicInbound",
                 new ConnectorProperty(null, false, 1, ConnectorPropertyType.BOOLEAN_PROPERTY,
                         true, false, true, null, null));
-        
+
         configProps.put("supportsWildcardInTopicOutbound",
                 new ConnectorProperty(null, false, 2, ConnectorPropertyType.BOOLEAN_PROPERTY,
                         true, false, false, null, null));
-        
+
         configProps.put(PROPERTY_CUTOFF_LEADING_SLASH,
                 new ConnectorProperty(null, false, 3, ConnectorPropertyType.BOOLEAN_PROPERTY,
                         false, false, true, null, null));
-        
+
         String name = "HTTP Endpoint";
         String description = "HTTP Endpoint to receive custom payload in the body.\n" +
                 "The sub path following '.../dynamic-mapper-service/httpConnector/' is used as '<MAPPING_TOPIC>', " +
-                "e.g. a json payload sent to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapper-service/httpConnector/temp/berlin_01' " +
+                "e.g. a json payload sent to 'https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapper-service/httpConnector/temp/berlin_01' "
+                +
                 "will be resolved to a mapping with mapping topic: 'temp/berlin_01'.\n" +
                 "The message must be sent in a POST request.\n" +
                 "NOTE: The leading '/' is cut off from the sub path automatically. This can be configured with the '" +
                 PROPERTY_CUTOFF_LEADING_SLASH + "' property.";
-        
+
         return new ConnectorSpecification(
                 name,
                 description,

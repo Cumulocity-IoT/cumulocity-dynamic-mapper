@@ -52,7 +52,7 @@ import java.util.concurrent.*;
  */
 @Slf4j
 @Service
-public class ConnectionManager {
+public class NotificationConnectionManager {
 
     private static final String WEBSOCKET_PATH = "/notification2/consumer/?token=";
     private static final String DEVICE_SUBSCRIBER = "DynamicMapperDeviceSubscriber";

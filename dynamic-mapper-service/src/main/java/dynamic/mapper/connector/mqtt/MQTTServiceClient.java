@@ -27,10 +27,9 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.core.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
@@ -60,21 +59,25 @@ public class MQTTServiceClient extends MQTT3Client {
      * Full constructor with dependencies
      */
     public MQTTServiceClient(ConfigurationRegistry configurationRegistry,
-                            ConnectorConfiguration connectorConfiguration,
-                            CamelDispatcherInbound dispatcher,
-                            String additionalSubscriptionIdTest,
-                            String tenant) {
+            ConnectorRegistry connectorRegistry,
+
+            ConnectorConfiguration connectorConfiguration,
+            CamelDispatcherInbound dispatcher,
+            String additionalSubscriptionIdTest,
+            String tenant) {
         this();
-        
+
         // Initialize from parent
         this.configurationRegistry = configurationRegistry;
+        this.connectorRegistry = connectorRegistry;
+
         this.mappingService = configurationRegistry.getMappingService();
         this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
         this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
-        
+
         // Set configuration
         this.connectorConfiguration = connectorConfiguration;
         this.connectorIdentifier = connectorConfiguration.getIdentifier();
@@ -83,24 +86,20 @@ public class MQTTServiceClient extends MQTT3Client {
                 connectorConfiguration.getName(),
                 connectorConfiguration.getIdentifier(),
                 connectorType);
-        this.connectorStatus = ConnectorStatusEvent.unknown(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier());
-        
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
-        
+
         // Configure C8Y MQTT Service specific settings
         configureCumulocityMqttService(configurationRegistry, tenant);
-        
+
         // Override supported QoS - C8Y MQTT Service doesn't support EXACTLY_ONCE
         setSupportedQOS(Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE));
-        
+
         // Initialize managers
         initializeManagers();
-        
+
         log.info("{} - MQTTServiceClient initialized for Cumulocity MQTT Service", tenant);
     }
 
@@ -114,44 +113,44 @@ public class MQTTServiceClient extends MQTT3Client {
             String user = String.format("%s/%s", tenant, msc.getUsername());
             String password = msc.getPassword();
             String clientId = getClientId(this.connectorIdentifier, this.additionalSubscriptionIdTest);
-            
+
             // Parse MQTT service URL
             URI uri = new URI(configurationRegistry.getMqttServiceUrl());
             String protocol = uri.getScheme() + "://";
             String mqttHost = uri.getHost();
             int mqttPort = uri.getPort();
-            
+
             // Update specification with predefined values
             Map<String, ConnectorProperty> props = getConnectorSpecification().getProperties();
-            
+
             props.put("protocol",
-                    new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY, 
+                    new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
                             true, true, protocol, null, null));
-            
+
             props.put("mqttHost",
-                    new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY, 
+                    new ConnectorProperty(null, true, 1, ConnectorPropertyType.STRING_PROPERTY,
                             true, true, mqttHost, null, null));
-            
+
             props.put("mqttPort",
-                    new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, 
+                    new ConnectorProperty(null, true, 2, ConnectorPropertyType.NUMERIC_PROPERTY,
                             true, true, mqttPort, null, null));
-            
+
             props.put("user",
-                    new ConnectorProperty(null, true, 3, ConnectorPropertyType.STRING_PROPERTY, 
+                    new ConnectorProperty(null, true, 3, ConnectorPropertyType.STRING_PROPERTY,
                             true, true, user, null, null));
-            
+
             props.put("password",
-                    new ConnectorProperty(null, true, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, 
+                    new ConnectorProperty(null, true, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
                             true, true, password, null, null));
-            
+
             props.put("clientId",
-                    new ConnectorProperty(null, true, 5, ConnectorPropertyType.ID_STRING_PROPERTY, 
+                    new ConnectorProperty(null, true, 5, ConnectorPropertyType.ID_STRING_PROPERTY,
                             true, true, clientId, null, null));
-            
+
             log.info("{} - Configured Cumulocity MQTT Service: {}:{}", tenant, mqttHost, mqttPort);
-            
+
         } catch (Exception e) {
-            log.error("{} - Error configuring Cumulocity MQTT Service, using defaults: {}", 
+            log.error("{} - Error configuring Cumulocity MQTT Service, using defaults: {}",
                     tenant, e.getMessage(), e);
         }
     }
@@ -161,16 +160,16 @@ public class MQTTServiceClient extends MQTT3Client {
      */
     private ConnectorSpecification createCumulocityMqttServiceSpecification() {
         Map<String, ConnectorProperty> configProps = new LinkedHashMap<>();
-        
+
         configProps.put("version",
-                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY, 
+                new ConnectorProperty(null, true, 0, ConnectorPropertyType.OPTION_PROPERTY,
                         true, false, MQTT_VERSION_3_1_1,
-                        Map.of(MQTT_VERSION_3_1_1, MQTT_VERSION_3_1_1, 
-                               MQTT_VERSION_5_0, MQTT_VERSION_5_0),
+                        Map.of(MQTT_VERSION_3_1_1, MQTT_VERSION_3_1_1,
+                                MQTT_VERSION_5_0, MQTT_VERSION_5_0),
                         null));
-        
+
         configProps.put("protocol",
-                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY, 
+                new ConnectorProperty(null, true, 1, ConnectorPropertyType.OPTION_PROPERTY,
                         true, true, MQTT_PROTOCOL_MQTT,
                         Map.of(
                                 MQTT_PROTOCOL_MQTT, MQTT_PROTOCOL_MQTT,
@@ -178,56 +177,56 @@ public class MQTTServiceClient extends MQTT3Client {
                                 MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WS,
                                 MQTT_PROTOCOL_WSS, MQTT_PROTOCOL_WSS),
                         null));
-        
+
         configProps.put("mqttHost",
-                new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY, 
+                new ConnectorProperty(null, true, 2, ConnectorPropertyType.STRING_PROPERTY,
                         true, true, "c8y-mqtt-service", null, null));
-        
+
         configProps.put("mqttPort",
-                new ConnectorProperty(null, true, 3, ConnectorPropertyType.NUMERIC_PROPERTY, 
+                new ConnectorProperty(null, true, 3, ConnectorPropertyType.NUMERIC_PROPERTY,
                         true, true, 2883, null, null));
-        
+
         configProps.put("user",
-                new ConnectorProperty(null, true, 4, ConnectorPropertyType.STRING_PROPERTY, 
+                new ConnectorProperty(null, true, 4, ConnectorPropertyType.STRING_PROPERTY,
                         true, true, null, null, null));
-        
+
         configProps.put("password",
-                new ConnectorProperty(null, true, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, 
+                new ConnectorProperty(null, true, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
                         true, true, null, null, null));
-        
+
         configProps.put("clientId",
-                new ConnectorProperty(null, true, 6, ConnectorPropertyType.ID_STRING_PROPERTY, 
+                new ConnectorProperty(null, true, 6, ConnectorPropertyType.ID_STRING_PROPERTY,
                         true, true, null, null, null));
-        
+
         configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(null, false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY, 
+                new ConnectorProperty(null, false, 7, ConnectorPropertyType.BOOLEAN_PROPERTY,
                         true, true, false, null, null));
-        
+
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY, 
+                new ConnectorProperty(null, false, 8, ConnectorPropertyType.STRING_PROPERTY,
                         true, true, null, null, null));
-        
+
         configProps.put("nameCertificate",
-                new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY, 
+                new ConnectorProperty(null, false, 9, ConnectorPropertyType.STRING_PROPERTY,
                         true, true, null, null, null));
-        
+
         configProps.put("supportsWildcardInTopicInbound",
-                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY, 
+                new ConnectorProperty(null, false, 10, ConnectorPropertyType.BOOLEAN_PROPERTY,
                         true, false, false, null, null));
-        
+
         configProps.put("supportsWildcardInTopicOutbound",
-                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY, 
+                new ConnectorProperty(null, false, 11, ConnectorPropertyType.BOOLEAN_PROPERTY,
                         true, false, false, null, null));
-        
+
         configProps.put("cleanSession",
-                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY, 
+                new ConnectorProperty(null, false, 12, ConnectorPropertyType.BOOLEAN_PROPERTY,
                         true, false, true, null, null));
-        
+
         String name = "Cumulocity MQTT Service - (Tenant Isolation)";
         String description = "Connector for connecting to Cumulocity MQTT Service. " +
                 "The MQTT Service does not support wildcards, i.e. '+', '#'. " +
                 "The QoS 'exactly once' is reduced to 'at least once'.";
-        
+
         return new ConnectorSpecification(
                 name,
                 description,
@@ -278,7 +277,7 @@ public class MQTTServiceClient extends MQTT3Client {
     protected void connectorSpecificHousekeeping(String tenant) {
         // Call parent housekeeping
         super.connectorSpecificHousekeeping(tenant);
-        
+
         // Add any Cumulocity MQTT Service specific housekeeping here
         // Currently, standard MQTT3 housekeeping is sufficient
     }
@@ -287,13 +286,13 @@ public class MQTTServiceClient extends MQTT3Client {
     public boolean initialize() {
         // Use parent initialization
         boolean success = super.initialize();
-        
+
         if (success) {
             log.info("{} - Cumulocity MQTT Service connector initialized successfully", tenant);
         } else {
             log.error("{} - Cumulocity MQTT Service connector initialization failed", tenant);
         }
-        
+
         return success;
     }
 }

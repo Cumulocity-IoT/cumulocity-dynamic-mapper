@@ -27,7 +27,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.*;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.messaging.notifications.*;
-import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.util.Utils;
@@ -57,7 +56,7 @@ public class SubscriptionManager {
     private MicroserviceSubscriptionsService subscriptionsService;
 
     @Autowired
-    private ConnectionManager connectionManager;
+    private NotificationConnectionManager connectionManager;
 
     @Autowired
     private MqttPushManager mqttPushManager;

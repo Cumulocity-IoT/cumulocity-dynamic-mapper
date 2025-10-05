@@ -155,7 +155,6 @@ public class ConnectorRegistry {
                 client.stopHousekeepingAndClose();
 
                 // store last connector status for monitoring
-                connectorStatusMaps.get(tenant).put(identifier, client.getConnectorStatus());
                 connectorMap.remove(identifier);
             } else {
                 log.warn("{} - Client {} is not registered", tenant, identifier);

@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Thread-safe subscription tracking and lifecycle management.
  */
 @Slf4j
-public class SubscriptionManager {
+public class MappingSubscriptionManager {
 
     private final String tenant;
     private final String connectorName;
@@ -51,10 +51,11 @@ public class SubscriptionManager {
 
     public interface SubscriptionCallback {
         void subscribe(String topic, Qos qos) throws ConnectorException;
+
         void unsubscribe(String topic) throws Exception;
     }
 
-    public SubscriptionManager(String tenant, String connectorName, SubscriptionCallback callback) {
+    public MappingSubscriptionManager(String tenant, String connectorName, SubscriptionCallback callback) {
         this.tenant = tenant;
         this.connectorName = connectorName;
         this.subscriptionCallback = callback;
@@ -204,7 +205,7 @@ public class SubscriptionManager {
      */
     public void updateOutboundMappings(List<Mapping> updatedMappings, MappingValidator validator) {
         deployedMappingsOutbound.clear();
-        
+
         updatedMappings.stream()
                 .filter(Mapping::getActive)
                 .filter(validator::isValid)
@@ -212,7 +213,7 @@ public class SubscriptionManager {
                     deployedMappingsOutbound.put(mapping.getIdentifier(), mapping);
                     log.debug("{} - Deployed outbound mapping: {}", tenant, mapping.getIdentifier());
                 });
-        
+
         log.info("{} - Updated outbound mappings for connector: {}, active mappings: {}",
                 tenant, connectorName, deployedMappingsOutbound.size());
     }
@@ -220,9 +221,16 @@ public class SubscriptionManager {
     // ===== Read-only Access Methods =====
 
     /**
-     * Get subscription counts (read-only view)
+     * Get subscription counts (modifiable)
      */
     public Map<String, MutableInt> getSubscriptionCounts() {
+        return subscriptionCounts;
+    }
+
+    /**
+     * Get subscription counts (read-only view)
+     */
+    public Map<String, MutableInt> getSubscriptionCountsView() {
         return Collections.unmodifiableMap(subscriptionCounts);
     }
 
