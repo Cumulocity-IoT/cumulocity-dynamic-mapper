@@ -219,7 +219,7 @@ class MQTT3ClientTest {
     }
 
     @Test
-        @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
+    @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
     void testInitializeSuccess() {
         // Given
         mqtt3Client = new MQTT3Client(
@@ -243,7 +243,8 @@ class MQTT3ClientTest {
     }
 
     @Test
-        @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
+    // @Disabled("Temporarily disabled due to mocking issues with
+    // copyPredefinedValues")
     void testInitializeWithSelfSignedCertificate() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
@@ -255,7 +256,7 @@ class MQTT3ClientTest {
         lenient().when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         // Use a valid (but self-signed) certificate for testing
-        // typos:disable-next-line
+        // typos:disable
         String validCertPem = "-----BEGIN CERTIFICATE-----\n" +
                 "MIIDXTCCAkWgAwIBAgIJAKHHCgVZU2T9MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV\n" +
                 "BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX\n" +
@@ -273,6 +274,7 @@ class MQTT3ClientTest {
                 "Z7YzXqPOPOZGQqNKQhN9VqNKQhMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQUF\n" +
                 "AAOCAQEAYHLJ\n" +
                 "-----END CERTIFICATE-----";
+        // typos:enable
 
         AConnectorClient.Certificate mockCert = new AConnectorClient.Certificate(
                 "AA:BB:CC:DD",
@@ -311,7 +313,7 @@ class MQTT3ClientTest {
     }
 
     @Test
-        @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
+    @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
     void testInitializeWithMissingCertificate() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
@@ -342,7 +344,7 @@ class MQTT3ClientTest {
     }
 
     @Test
-        @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
+    @Disabled("Temporarily disabled due to mocking issues with copyPredefinedValues")
     void testWebSocketConfiguration() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
