@@ -686,7 +686,7 @@ public abstract class AConnectorClient {
     /**
      * Load configuration
      */
-    public void loadConfiguration() {
+    protected void loadConfiguration() {
         connectorConfiguration = connectorConfigurationService
                 .getConnectorConfiguration(getConnectorIdentifier(), tenant);
         connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
