@@ -116,7 +116,11 @@ public abstract class BaseProcessorOutbound<T> {
         Set<String> pathTargets = processingCache.keySet();
 
         int predecessor = -1;
-        DocumentContext payloadTarget = JsonPath.parse(mapping.targetTemplate);
+        String targetTemplate = mapping.getTargetTemplate();
+        if(mapping.getTargetTemplate().startsWith("[")) {
+            targetTemplate = "{ \"TempArray\": " + mapping.getTargetTemplate() + "}";
+        }
+        DocumentContext payloadTarget = JsonPath.parse(targetTemplate);
         /*
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
@@ -147,6 +151,8 @@ public abstract class BaseProcessorOutbound<T> {
             if (processingCache.get(pathTarget).size() > 0) {
                 substitute = processingCache.get(pathTarget).get(0).clone();
             }
+            if(pathTarget.startsWith("["))
+                pathTarget = "$.TempArray" + pathTarget;
             SubstituteValue.substituteValueInPayload(substitute, payloadTarget, pathTarget);
         }
         /*
@@ -211,6 +217,10 @@ public abstract class BaseProcessorOutbound<T> {
                 }
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
+            }
+            // remove TempArray if present
+            if(mapping.getTargetTemplate().startsWith("[")) {
+                payloadTarget = JsonPath.parse(payloadTarget.read("TempArray").toString());
             }
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor, method, deviceSource, mapping.externalIdType,
