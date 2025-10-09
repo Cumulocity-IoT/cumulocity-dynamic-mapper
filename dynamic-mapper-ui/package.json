@@ -1,6 +1,6 @@
 {
   "name": "dynamic-mapper",
-  "version": "6.0.2,
+  "version": "6.0.2",
   "author": "christof.strack@cumulocity.com, stefan.witschel@cumulocity.com",
   "description": "Cumulocity Dynamic Mapper UI to map data from any data source to Cumulocity and vice-versa in a zero-code/low-code way. When using an AI Provider code and mappings can be generated.",
   "repository": {
