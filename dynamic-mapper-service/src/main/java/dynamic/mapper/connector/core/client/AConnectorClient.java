@@ -626,7 +626,14 @@ public abstract class AConnectorClient {
             DeploymentMapEntry mappingDeployed = mappingsDeployed.computeIfAbsent(
                     mappingIdentifier,
                     k -> new DeploymentMapEntry(mappingIdentifier));
-            mappingDeployed.getConnectors().add(cleanedConfiguration);
+
+            // Check if connector with same identifier already exists
+            boolean exists = mappingDeployed.getConnectors().stream()
+                    .anyMatch(c -> c.getIdentifier().equals(cleanedConfiguration.getIdentifier()));
+
+            if (!exists) {
+                mappingDeployed.getConnectors().add(cleanedConfiguration);
+            }
         });
     }
 
