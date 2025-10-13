@@ -30,8 +30,31 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages subscription state for a connector.
- * Thread-safe subscription tracking and lifecycle management.
+ * Manages the active/applied mappings for a specific connector instance.
+ * 
+ * <p>This class determines which mappings are <strong>currently applied</strong> on a connector
+ * by evaluating three conditions:
+ * <ol>
+ *   <li>The mapping must be <strong>active</strong> (enabled)</li>
+ *   <li>The mapping must be <strong>deployed to this connector</strong> (configured in deployment map)</li>
+ *   <li>The mapping must be <strong>compatible</strong> with the connector's capabilities 
+ *       (e.g., wildcard support, validated via {@link MappingValidator})</li>
+ * </ol>
+ * 
+ * <p>For <strong>inbound mappings</strong> (device → platform), this class also manages the actual
+ * MQTT topic subscriptions, ensuring that:
+ * <ul>
+ *   <li>Topics are only subscribed to when at least one mapping needs them</li>
+ *   <li>Reference counting prevents premature unsubscription when multiple mappings share a topic</li>
+ *   <li>QoS levels are properly maintained (using the highest QoS among mappings for a topic)</li>
+ * </ul>
+ * 
+ * <p>For <strong>outbound mappings</strong> (platform → device), this class tracks which mappings
+ * are applied, but no subscription management is needed.
+ * 
+ * <p><strong>Thread-safety:</strong> All operations are thread-safe using {@link ConcurrentHashMap}.
+ * 
+ * @see dynamic.mapper.service.deployment.DeploymentMapService
  */
 @Slf4j
 public class MappingSubscriptionManager {
@@ -39,38 +62,66 @@ public class MappingSubscriptionManager {
     private final String tenant;
     private final String connectorName;
 
-    // Track subscription counts per topic
+    // Track reference count per subscribed topic (for shared subscriptions)
     private final Map<String, MutableInt> subscriptionCounts = new ConcurrentHashMap<>();
 
-    // Track effective mappings
-    // keeps track if a specific mapping is effective in this connector:
-    // a) is it active,
-    // b) does it comply with the capabilities of the connector, i.e. supports
-    // c) it is configured /deployed to this connector)
-    // wildcards
-    // structure < identifier, mapping >
+    // Track mappings that are currently applied on this connector
+    // Structure: <mapping identifier, mapping>
     private final Map<String, Mapping> effectiveMappingsInbound = new ConcurrentHashMap<>();
     private final Map<String, Mapping> effectiveMappingsOutbound = new ConcurrentHashMap<>();
 
-    // Callbacks for actual subscribe/unsubscribe operations
+    // Callback interface for actual connector subscribe/unsubscribe operations
     private final SubscriptionCallback subscriptionCallback;
 
+    /**
+     * Callback interface for connector-specific subscription operations.
+     * Implementations handle the actual protocol-level subscribe/unsubscribe.
+     */
     public interface SubscriptionCallback {
+        /**
+         * Subscribe to a topic with specified QoS level
+         * 
+         * @param topic the topic to subscribe to
+         * @param qos the quality of service level
+         * @throws ConnectorException if subscription fails
+         */
         void subscribe(String topic, Qos qos) throws ConnectorException;
 
+        /**
+         * Unsubscribe from a topic
+         * 
+         * @param topic the topic to unsubscribe from
+         * @throws ConnectorException if unsubscription fails
+         */
         void unsubscribe(String topic) throws ConnectorException;
     }
 
+    /**
+     * Creates a new mapping subscription manager for a connector.
+     * 
+     * @param tenant the tenant identifier
+     * @param connectorName the name of the connector
+     * @param callback the callback for actual subscription operations
+     */
     public MappingSubscriptionManager(String tenant, String connectorName, SubscriptionCallback callback) {
         this.tenant = tenant;
         this.connectorName = connectorName;
         this.subscriptionCallback = callback;
     }
 
+    // ===== Inbound Subscription Management =====
+
     /**
-     * Add or update a subscription for a topic
+     * Adds (or increments) a subscription for an inbound mapping.
+     * 
+     * <p>If this is the first mapping for the topic, performs the actual subscription.
+     * Otherwise, increments the reference count. The mapping is marked as applied/effective.
+     * 
+     * @param mapping the mapping to activate
+     * @param qos the quality of service level for the subscription
+     * @throws ConnectorException if the subscription operation fails
      */
-    public void addSubscription(Mapping mapping, Qos qos) throws ConnectorException {
+    public void addSubscriptionInbound(Mapping mapping, Qos qos) throws ConnectorException {
         
         String topic = mapping.getMappingTopic();
         MutableInt count = subscriptionCounts.computeIfAbsent(topic, k -> new MutableInt(0));
@@ -91,9 +142,15 @@ public class MappingSubscriptionManager {
     }
 
     /**
-     * Remove a subscription for a topic
+     * Removes (or decrements) a subscription for an inbound mapping.
+     * 
+     * <p>Decrements the reference count for the topic. If no mappings remain for the topic,
+     * performs the actual unsubscription. The mapping is removed from the applied/effective set.
+     * 
+     * @param mapping the mapping to deactivate
+     * @throws ConnectorException if the unsubscription operation fails
      */
-    public void removeSubscription(Mapping mapping) throws ConnectorException {
+    public void removeSubscriptionInbound(Mapping mapping) throws ConnectorException {
         String topic = mapping.getMappingTopic();
         MutableInt count = subscriptionCounts.get(topic);
         if (count == null) {
@@ -115,7 +172,21 @@ public class MappingSubscriptionManager {
     }
 
     /**
-     * Update all subscriptions based on new mapping list
+     * Synchronizes inbound subscriptions with a new list of mappings.
+     * 
+     * <p>Evaluates which mappings should be applied based on:
+     * <ul>
+     *   <li>Mapping active status</li>
+     *   <li>Validation by the provided {@link MappingValidator} (checks deployment and compatibility)</li>
+     * </ul>
+     * 
+     * <p>Automatically subscribes to new topics and unsubscribes from topics no longer needed.
+     * For topics with multiple mappings, uses the highest QoS level among them.
+     * 
+     * @param updatedMappings the complete list of mappings to evaluate
+     * @param reset if true, clears all existing subscriptions before applying new ones
+     * @param isConnected whether the connector is currently connected (no-op if false)
+     * @param validator validates if a mapping should be applied (checks deployment + compatibility)
      */
     public void updateSubscriptionsInbound(List<Mapping> updatedMappings,
             boolean reset,
@@ -134,7 +205,7 @@ public class MappingSubscriptionManager {
         Map<String, MutableInt> newSubscriptions = new HashMap<>();
         Map<String, Qos> topicQosMap = new HashMap<>();
 
-        // Build new subscription state
+        // Build new subscription state from active, valid, deployed mappings
         updatedMappings.stream()
                 .filter(Mapping::getActive)
                 .filter(validator::isValid)
@@ -143,17 +214,17 @@ public class MappingSubscriptionManager {
                     newSubscriptions.computeIfAbsent(topic, k -> new MutableInt(0)).increment();
                     effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
 
-                    // Track max QoS per topic
+                    // Track max QoS per topic (use highest QoS among all mappings for that topic)
                     Qos currentQos = topicQosMap.getOrDefault(topic, Qos.AT_MOST_ONCE);
                     if (mapping.getQos().ordinal() > currentQos.ordinal()) {
                         topicQosMap.put(topic, mapping.getQos());
                     }
                 });
 
-        // Remove old subscriptions
+        // Remove subscriptions for topics no longer needed
         unsubscribeUnusedTopics(newSubscriptions);
 
-        // Add new subscriptions
+        // Add subscriptions for new topics
         subscribeToNewTopics(newSubscriptions, topicQosMap);
 
         subscriptionCounts.putAll(newSubscriptions);
@@ -162,6 +233,9 @@ public class MappingSubscriptionManager {
                 tenant, connectorName, subscriptionCounts.size());
     }
 
+    /**
+     * Unsubscribes from topics that are no longer needed.
+     */
     private void unsubscribeUnusedTopics(Map<String, MutableInt> newSubscriptions) {
         subscriptionCounts.keySet().stream()
                 .filter(topic -> !newSubscriptions.containsKey(topic))
@@ -175,6 +249,9 @@ public class MappingSubscriptionManager {
                 });
     }
 
+    /**
+     * Subscribes to new topics that weren't previously subscribed.
+     */
     private void subscribeToNewTopics(Map<String, MutableInt> newSubscriptions,
             Map<String, Qos> topicQosMap) {
         newSubscriptions.keySet().stream()
@@ -193,26 +270,43 @@ public class MappingSubscriptionManager {
     // ===== Outbound Mapping Management =====
 
     /**
-     * Add or update an outbound mapping
+     * Marks an outbound mapping as applied/effective on this connector.
+     * 
+     * <p>No actual subscription is performed for outbound mappings; this only tracks
+     * which mappings should be used when processing platform → device messages.
+     * 
+     * @param identifier the unique mapping identifier
+     * @param mapping the mapping to apply
      */
-    public void addOutboundMapping(String identifier, Mapping mapping) {
+    public void addSubscriptionOutbound(String identifier, Mapping mapping) {
         effectiveMappingsOutbound.put(identifier, mapping);
         log.debug("{} - Added outbound mapping: {}", tenant, identifier);
     }
 
     /**
-     * Remove an outbound mapping
+     * Removes an outbound mapping from the applied/effective set.
+     * 
+     * @param identifier the unique mapping identifier
      */
-    public void removeOutboundMapping(String identifier) {
+    public void removeSubscriptionOutbound(String identifier) {
         if (effectiveMappingsOutbound.remove(identifier) != null) {
             log.debug("{} - Removed outbound mapping: {}", tenant, identifier);
         }
     }
 
     /**
-     * Update all outbound mappings based on new mapping list
+     * Synchronizes outbound mappings with a new list of mappings.
+     * 
+     * <p>Evaluates which mappings should be applied based on:
+     * <ul>
+     *   <li>Mapping active status</li>
+     *   <li>Validation by the provided {@link MappingValidator} (checks deployment and compatibility)</li>
+     * </ul>
+     * 
+     * @param updatedMappings the complete list of mappings to evaluate
+     * @param validator validates if a mapping should be applied (checks deployment + compatibility)
      */
-    public void updateOutboundMappings(List<Mapping> updatedMappings, MappingValidator validator) {
+    public void updateSubscriptionsOutbound(List<Mapping> updatedMappings, MappingValidator validator) {
         effectiveMappingsOutbound.clear();
 
         updatedMappings.stream()
@@ -230,84 +324,97 @@ public class MappingSubscriptionManager {
     // ===== Read-only Access Methods =====
 
     /**
-     * Get subscription counts (modifiable)
+     * Gets the subscription reference counts per topic.
+     * 
+     * <p><strong>Warning:</strong> Returns mutable map. Use {@link #getSubscriptionCountsView()}
+     * for read-only access.
+     * 
+     * @return mutable map of topic → reference count
+     * @deprecated Use {@link #getSubscriptionCountsView()} for safer read-only access
      */
     public Map<String, MutableInt> getSubscriptionCounts() {
         return subscriptionCounts;
     }
 
     /**
-     * Get subscription counts (read-only view)
+     * Gets an unmodifiable view of subscription reference counts per topic.
+     * 
+     * @return read-only map of topic → reference count
      */
     public Map<String, MutableInt> getSubscriptionCountsView() {
         return Collections.unmodifiableMap(subscriptionCounts);
     }
 
     /**
-     * Get effective inbound mappings (read-only view)
+     * Gets all currently applied inbound mappings.
+     * 
+     * @return read-only map of mapping identifier → mapping
      */
     public Map<String, Mapping> getEffectiveMappingsInbound() {
         return Collections.unmodifiableMap(effectiveMappingsInbound);
     }
 
     /**
-     * Get effective outbound mappings (read-only view)
+     * Gets all currently applied outbound mappings.
+     * 
+     * @return read-only map of mapping identifier → mapping
      */
     public Map<String, Mapping> getEffectiveMappingsOutbound() {
         return Collections.unmodifiableMap(effectiveMappingsOutbound);
     }
 
     /**
-     * Check if inbound mapping is effective
+     * Checks if an inbound mapping is currently applied on this connector.
+     * 
+     * @param identifier the unique mapping identifier
+     * @return true if the mapping is active, deployed, compatible, and subscribed
      */
     public boolean isMappingInboundEffective(String identifier) {
         return effectiveMappingsInbound.containsKey(identifier);
     }
 
     /**
-     * Check if outbound mapping is effective
+     * Checks if an outbound mapping is currently applied on this connector.
+     * 
+     * @param identifier the unique mapping identifier
+     * @return true if the mapping is active, deployed, and compatible
      */
     public boolean isMappingOutboundEffective(String identifier) {
         return effectiveMappingsOutbound.containsKey(identifier);
     }
 
     /**
-     * Get inbound mapping by identifier
-     */
-    public Mapping getInboundMapping(String identifier) {
-        return effectiveMappingsInbound.get(identifier);
-    }
-
-    /**
-     * Get outbound mapping by identifier
-     */
-    public Mapping getOutboundMapping(String identifier) {
-        return effectiveMappingsOutbound.get(identifier);
-    }
-
-    /**
-     * Get count of active subscriptions
+     * Gets the count of active topic subscriptions.
+     * 
+     * @return number of unique topics currently subscribed
      */
     public int getSubscriptionCount() {
         return subscriptionCounts.size();
     }
 
     /**
-     * Get count of effective inbound mappings
+     * Gets the count of applied inbound mappings.
+     * 
+     * @return number of inbound mappings currently effective
      */
-    public int getInboundMappingCount() {
+    public int getEffectiveInboundMappingCount() {
         return effectiveMappingsInbound.size();
     }
 
     /**
-     * Get count of effective outbound mappings
+     * Gets the count of applied outbound mappings.
+     * 
+     * @return number of outbound mappings currently effective
      */
-    public int getOutboundMappingCount() {
+    public int getEffectiveOutboundMappingCount() {
         return effectiveMappingsOutbound.size();
     }
 
     /**
-     * Clear all subscriptions and mappings
+     * Clears all subscriptions and mappings.
+     * 
+     * <p><strong>Warning:</strong> This does not perform actual unsubscription operations.
+     * It only clears the internal state. Typically called during connector shutdown.
      */
     public void clear() {
         subscriptionCounts.clear();
@@ -316,8 +423,23 @@ public class MappingSubscriptionManager {
         log.debug("{} - Cleared all subscriptions and mappings for connector: {}", tenant, connectorName);
     }
 
+    /**
+     * Functional interface for validating if a mapping should be applied on a connector.
+     * 
+     * <p>Implementations typically check:
+     * <ul>
+     *   <li>Whether the mapping is deployed to the connector</li>
+     *   <li>Whether the mapping is compatible with connector capabilities (e.g., wildcard support)</li>
+     * </ul>
+     */
     @FunctionalInterface
     public interface MappingValidator {
+        /**
+         * Validates if a mapping should be applied.
+         * 
+         * @param mapping the mapping to validate
+         * @return true if the mapping should be applied; false otherwise
+         */
         boolean isValid(Mapping mapping);
     }
 }

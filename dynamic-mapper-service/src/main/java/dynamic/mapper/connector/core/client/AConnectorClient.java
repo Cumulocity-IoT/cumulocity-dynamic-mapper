@@ -385,11 +385,11 @@ public abstract class AConnectorClient {
                 .filter(Mapping::getActive)
                 .filter(this::isMappingValidForDeployment)
                 .filter(this::isDeployedInConnector)
-                .forEach(mapping -> mappingSubscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping));
+                .forEach(mapping -> mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(), mapping));
 
         log.info("{} - Initialized {} outbound mappings for connector: {}",
                 tenant,
-                mappingSubscriptionManager.getOutboundMappingCount(),
+                mappingSubscriptionManager.getEffectiveOutboundMappingCount(),
                 connectorName);
     }
 
@@ -437,9 +437,9 @@ public abstract class AConnectorClient {
             throws ConnectorException {
         boolean isDeployed = isDeployedInConnector(mapping);
         if (mapping.getActive() && isDeployed) {
-            mappingSubscriptionManager.addSubscription(mapping, mapping.getQos());
+            mappingSubscriptionManager.addSubscriptionInbound(mapping, mapping.getQos());
         } else if (activationChanged) {
-            mappingSubscriptionManager.removeSubscription(mapping);
+            mappingSubscriptionManager.removeSubscriptionInbound(mapping);
         }
     }
 
@@ -451,10 +451,10 @@ public abstract class AConnectorClient {
         boolean isDeployed = isDeployedInConnector(mapping);
 
         if (mapping.getActive() && isDeployed) {
-            mappingSubscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping);
+            mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(), mapping);
             log.debug("{} - Added outbound mapping: {}", tenant, mapping.getIdentifier());
         } else {
-            mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier());
+            mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
             log.debug("{} - Removed outbound mapping: {}", tenant, mapping.getIdentifier());
         }
     }
@@ -489,12 +489,12 @@ public abstract class AConnectorClient {
             }
         }
 
-        mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier());
+        mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
         log.info("{} - Deleted inbound subscription for mapping: {}", tenant, mapping.getIdentifier());
     }
 
     private void deleteOutboundSubscription(Mapping mapping) {
-        mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier());
+        mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
         log.info("{} - Deleted outbound subscription for mapping: {}", tenant, mapping.getIdentifier());
     }
 

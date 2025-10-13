@@ -210,13 +210,13 @@ Also you can decide if you want to start with snooping messages on specific topi
 
 #### Connector selection
 
-As a next step you need to create or select the connectors the mapping should be effective for.
+As a next step you need to create or select the connectors the mapping should be deployed to.
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Connector_Select.png"  style="width: 80%;" />
 </p>
 
-Make sure to select at least one connector before you proceed to the next step. You can select multiple connectors if your mapping should be effective for them.
+Make sure to select at least one connector before you proceed to the next step. You can select multiple connectors if your mapping should be deployed to all of them.
 For creating a new connector please review the [connector configuration guide](#connector-configuration-to-broker)
 
 #### Define topic properties
