@@ -378,7 +378,7 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     @Override
-    protected void unsubscribe(String topic) throws Exception {
+    protected void unsubscribe(String topic) throws ConnectorException {
         log.debug("{} - Unsubscribing from Kafka topic: [{}]", tenant, topic);
 
         // Cancel consumer task

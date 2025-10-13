@@ -416,12 +416,17 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     @Override
-    protected void unsubscribe(String topic) throws Exception {
+    protected void unsubscribe(String topic) throws ConnectorException {
         log.debug("{} - Unsubscribing from topic: [{}]", tenant, topic);
 
         Consumer<byte[]> consumer = consumers.remove(topic);
         if (consumer != null) {
-            consumer.close();
+            try {
+                consumer.close();
+            } catch (PulsarClientException e) {
+                throw new ConnectorException(
+                        String.format("%s - Failed to unsubscribe from topic: %s", tenant, topic), e);
+            }
             log.info("{} - Unsubscribed from topic: [{}]", tenant, topic);
             sendSubscriptionEvents(topic, "Unsubscribed");
         }

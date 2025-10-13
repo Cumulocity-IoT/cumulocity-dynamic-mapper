@@ -43,6 +43,11 @@ public class MappingSubscriptionManager {
     private final Map<String, MutableInt> subscriptionCounts = new ConcurrentHashMap<>();
 
     // Track deployed mappings
+    // keeps track if a specific mapping is deployed in this connector:
+    // a) is it active,
+    // b) does it comply with the capabilities of the connector, i.e. supports
+    // wildcards
+    // structure < identifier, mapping >
     private final Map<String, Mapping> deployedMappingsInbound = new ConcurrentHashMap<>();
     private final Map<String, Mapping> deployedMappingsOutbound = new ConcurrentHashMap<>();
 
@@ -52,7 +57,7 @@ public class MappingSubscriptionManager {
     public interface SubscriptionCallback {
         void subscribe(String topic, Qos qos) throws ConnectorException;
 
-        void unsubscribe(String topic) throws Exception;
+        void unsubscribe(String topic) throws ConnectorException;
     }
 
     public MappingSubscriptionManager(String tenant, String connectorName, SubscriptionCallback callback) {
@@ -64,7 +69,8 @@ public class MappingSubscriptionManager {
     /**
      * Add or update a subscription for a topic
      */
-    public void addSubscription(String topic, Mapping mapping, Qos qos) throws ConnectorException {
+    public void addSubscription(Mapping mapping, Qos qos) throws ConnectorException {
+        String topic = mapping.getMappingTopic();
         MutableInt count = subscriptionCounts.computeIfAbsent(topic, k -> new MutableInt(0));
 
         boolean isNewSubscription = count.intValue() == 0;
@@ -85,7 +91,8 @@ public class MappingSubscriptionManager {
     /**
      * Remove a subscription for a topic
      */
-    public void removeSubscription(String topic, String mappingIdentifier) throws Exception {
+    public void removeSubscription(Mapping mapping) throws ConnectorException {
+        String topic = mapping.getMappingTopic();
         MutableInt count = subscriptionCounts.get(topic);
         if (count == null) {
             log.warn("{} - Attempted to remove non-existent subscription for topic: [{}]", tenant, topic);
@@ -93,7 +100,7 @@ public class MappingSubscriptionManager {
         }
 
         count.decrement();
-        deployedMappingsInbound.remove(mappingIdentifier);
+        deployedMappingsInbound.remove(mapping.getIdentifier());
 
         if (count.intValue() <= 0) {
             subscriptionCounts.remove(topic);

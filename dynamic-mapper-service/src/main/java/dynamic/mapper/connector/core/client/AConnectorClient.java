@@ -194,7 +194,7 @@ public abstract class AConnectorClient {
                     }
 
                     @Override
-                    public void unsubscribe(String topic) throws Exception {
+                    public void unsubscribe(String topic) throws ConnectorException {
                         AConnectorClient.this.unsubscribe(topic);
                     }
                 });
@@ -428,41 +428,43 @@ public abstract class AConnectorClient {
 
         if (mapping.getActive()) {
             // Add or update subscription
-            mappingSubscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping);
+            // mappingSubscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping); TODO VERIFY
 
-            MutableInt count = mappingSubscriptionManager.getSubscriptionCounts()
-                    .computeIfAbsent(topic, k -> new MutableInt(0));
+            // MutableInt count = mappingSubscriptionManager.getSubscriptionCounts()
+            //         .computeIfAbsent(topic, k -> new MutableInt(0));
 
-            if (create || count.intValue() == 0) {
-                try {
-                    subscribe(topic, mapping.getQos());
-                    log.info("{} - Subscribed to topic: [{}], QoS: {} for mapping: {}",
-                            tenant, topic, mapping.getQos(), mapping.getIdentifier());
-                } catch (ConnectorException e) {
-                    log.error("{} - Error subscribing to topic: [{}]", tenant, topic, e);
-                    throw e;
-                }
-            }
-            count.increment();
+            // if (create || count.intValue() == 0) {
+            //     try {
+            //         subscribe(topic, mapping.getQos());
+            //         log.info("{} - Subscribed to topic: [{}], QoS: {} for mapping: {}",
+            //                 tenant, topic, mapping.getQos(), mapping.getIdentifier());
+            //     } catch (ConnectorException e) {
+            //         log.error("{} - Error subscribing to topic: [{}]", tenant, topic, e);
+            //         throw e;
+            //     }
+            // }
+            // count.increment();
+            mappingSubscriptionManager.addSubscription(mapping, mapping.getQos());
 
         } else if (activationChanged) {
             // Remove subscription
-            MutableInt count = mappingSubscriptionManager.getSubscriptionCounts().get(topic);
-            if (count != null) {
-                count.decrement();
+            // MutableInt count = mappingSubscriptionManager.getSubscriptionCounts().get(topic);
+            // if (count != null) {
+            //     count.decrement();
 
-                if (count.intValue() <= 0) {
-                    try {
-                        unsubscribe(topic);
-                        mappingSubscriptionManager.getSubscriptionCounts().remove(topic);
-                        log.info("{} - Unsubscribed from topic: [{}] for mapping: {}",
-                                tenant, topic, mapping.getIdentifier());
-                    } catch (Exception e) {
-                        log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
-                    }
-                }
-            }
-            mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier());
+            //     if (count.intValue() <= 0) {
+            //         try {
+            //             unsubscribe(topic);
+            //             mappingSubscriptionManager.getSubscriptionCounts().remove(topic);
+            //             log.info("{} - Unsubscribed from topic: [{}] for mapping: {}",
+            //                     tenant, topic, mapping.getIdentifier());
+            //         } catch (Exception e) {
+            //             log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
+            //         }
+            //     }
+            // }
+            // mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier()); TODO VERIFY
+            mappingSubscriptionManager.removeSubscription(mapping);
         }
     }
 
@@ -681,7 +683,7 @@ public abstract class AConnectorClient {
     /**
      * Abstract unsubscribe method to be implemented by subclasses
      */
-    protected abstract void unsubscribe(String topic) throws Exception;
+    protected abstract void unsubscribe(String topic) throws ConnectorException;
 
     /**
      * Check if connector is connected

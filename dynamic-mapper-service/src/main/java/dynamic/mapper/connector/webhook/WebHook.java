@@ -313,7 +313,7 @@ public class WebHook extends AConnectorClient {
     }
 
     @Override
-    protected void unsubscribe(String topic) throws Exception {
+    protected void unsubscribe(String topic) throws ConnectorException {
         throw new NotSupportedException("WebHook does not support inbound mappings");
     }
 
