@@ -344,7 +344,14 @@ public abstract class AConnectorClient {
 
         // Delegate to subclass-specific housekeeping
         connectorSpecificHousekeeping(tenant);
+
+        mappingService.cleanDirtyMappings(tenant);
+        mappingService.sendMappingStatus(tenant);
+
+        monitorSubscriptions();
     }
+
+
 
     /**
      * Connector-specific housekeeping - to be implemented by subclasses

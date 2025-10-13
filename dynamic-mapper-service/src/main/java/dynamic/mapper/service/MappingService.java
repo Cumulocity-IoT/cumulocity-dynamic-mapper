@@ -492,7 +492,7 @@ public class MappingService {
     /**
      * Persists all dirty mappings
      */
-    public void cleanDirtyMappings(String tenant) throws Exception {
+    public void cleanDirtyMappings(String tenant) {
         Set<Mapping> dirty = getDirtySet(tenant);
 
         if (dirty.isEmpty()) {

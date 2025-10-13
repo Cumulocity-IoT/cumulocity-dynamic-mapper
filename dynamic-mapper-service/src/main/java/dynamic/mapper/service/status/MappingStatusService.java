@@ -21,6 +21,7 @@
 
 package dynamic.mapper.service.status;
 
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
@@ -49,6 +50,7 @@ public class MappingStatusService {
     private final InventoryApi inventoryApi;
     private final ConfigurationRegistry configurationRegistry;
     private final MappingCacheManager cacheManager;
+    private final MicroserviceSubscriptionsService subscriptionsService;
 
     // Structure: <Tenant, <MappingIdentifier, MappingStatus>>
     private final Map<String, Map<String, MappingStatus>> mappingStatuses = new ConcurrentHashMap<>();
@@ -63,8 +65,8 @@ public class MappingStatusService {
         MapperServiceRepresentation serviceRep = configurationRegistry.getMapperServiceRepresentation(tenant);
 
         if (serviceRep.getMappingStatus() != null && !reset) {
-            log.debug("{} - Initializing status with {} existing entries", 
-                tenant, serviceRep.getMappingStatus().size());
+            log.debug("{} - Initializing status with {} existing entries",
+                    tenant, serviceRep.getMappingStatus().size());
 
             Map<String, MappingStatus> statusMap = new ConcurrentHashMap<>();
             serviceRep.getMappingStatus().forEach(status -> {
@@ -82,7 +84,7 @@ public class MappingStatusService {
         // Ensure unspecified mapping status exists
         ensureUnspecifiedStatus(tenant);
         initialized.put(tenant, true);
-        
+
         log.info("{} - Status tracking initialized", tenant);
     }
 
@@ -100,18 +102,17 @@ public class MappingStatusService {
      */
     public MappingStatus getOrCreateStatus(String tenant, Mapping mapping) {
         Map<String, MappingStatus> tenantStatuses = getStatusMap(tenant);
-        
+
         return tenantStatuses.computeIfAbsent(mapping.getIdentifier(), key -> {
             log.debug("{} - Creating new status for mapping: {}", tenant, mapping.getIdentifier());
             return new MappingStatus(
-                mapping.getId(),
-                mapping.getName(),
-                mapping.getIdentifier(),
-                mapping.getDirection(),
-                mapping.getMappingTopic(),
-                mapping.getPublishTopic(),
-                0, 0, 0, 0, 0, null
-            );
+                    mapping.getId(),
+                    mapping.getName(),
+                    mapping.getIdentifier(),
+                    mapping.getDirection(),
+                    mapping.getMappingTopic(),
+                    mapping.getPublishTopic(),
+                    0, 0, 0, 0, 0, null);
         });
     }
 
@@ -135,7 +136,7 @@ public class MappingStatusService {
      */
     public void incrementFailureCount(String tenant, Mapping mapping, MappingStatus status) {
         status.currentFailureCount++;
-        
+
         if (shouldDeactivateMapping(mapping, status)) {
             handleFailureThresholdExceeded(tenant, mapping, status);
         }
@@ -172,7 +173,7 @@ public class MappingStatusService {
 
             updateInventoryWithStatuses(tenant, statusArray);
             log.debug("{} - Sent {} statuses to inventory", tenant, statusArray.length);
-            
+
         } catch (Exception e) {
             log.error("{} - Failed to send status to inventory", tenant, e);
         }
@@ -186,19 +187,17 @@ public class MappingStatusService {
         String date = dateFormat.format(new Date());
 
         Map<String, String> eventData = Map.of(
-            "message", message,
-            "id", mo.getId().getValue(),
-            "date", date
-        );
+                "message", message,
+                "id", mo.getId().getValue(),
+                "date", date);
 
         configurationRegistry.getC8yAgent().createOperationEvent(
-            message,
-            LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE,
-            DateTime.now(),
-            tenant,
-            eventData
-        );
-        
+                message,
+                LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                eventData);
+
         log.warn("{} - Mapping loading error sent for MO {}", tenant, mo.getId().getValue());
     }
 
@@ -212,9 +211,8 @@ public class MappingStatusService {
         Map<String, MappingStatus> statusMap = getStatusMap(tenant);
         if (!statusMap.containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
             statusMap.put(
-                MappingStatus.UNSPECIFIED_MAPPING_STATUS.identifier,
-                MappingStatus.UNSPECIFIED_MAPPING_STATUS
-            );
+                    MappingStatus.UNSPECIFIED_MAPPING_STATUS.identifier,
+                    MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
     }
 
@@ -224,38 +222,36 @@ public class MappingStatusService {
     }
 
     private boolean shouldDeactivateMapping(Mapping mapping, MappingStatus status) {
-        return mapping.getMaxFailureCount() > 0 && 
-               status.currentFailureCount >= mapping.getMaxFailureCount();
+        return mapping.getMaxFailureCount() > 0 &&
+                status.currentFailureCount >= mapping.getMaxFailureCount();
     }
 
     private void handleFailureThresholdExceeded(String tenant, Mapping mapping, MappingStatus status) {
         String message = String.format(
-            "Tenant %s - Mapping %s deactivated due to exceeded failure count: %d",
-            tenant, mapping.getId(), status.getCurrentFailureCount()
-        );
-        
+                "Tenant %s - Mapping %s deactivated due to exceeded failure count: %d",
+                tenant, mapping.getId(), status.getCurrentFailureCount());
+
         log.warn(message);
-        
+
         configurationRegistry.getC8yAgent().createOperationEvent(
-            message,
-            LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE,
-            DateTime.now(),
-            tenant,
-            null
-        );
+                message,
+                LoggingEventType.STATUS_MAPPING_FAILURE_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                null);
     }
 
     private MappingStatus[] buildStatusArray(String tenant, Map<String, MappingStatus> statusMap) {
         return statusMap.values().stream()
-            .filter(status -> shouldIncludeStatus(tenant, status))
-            .peek(status -> enrichStatusWithName(tenant, status))
-            .toArray(MappingStatus[]::new);
+                .filter(status -> shouldIncludeStatus(tenant, status))
+                .peek(status -> enrichStatusWithName(tenant, status))
+                .toArray(MappingStatus[]::new);
     }
 
     private boolean shouldIncludeStatus(String tenant, MappingStatus status) {
         return "UNSPECIFIED".equals(status.id) ||
-               cacheManager.containsInboundMapping(tenant, status.id) ||
-               cacheManager.containsOutboundMapping(tenant, status.id);
+                cacheManager.containsInboundMapping(tenant, status.id) ||
+                cacheManager.containsOutboundMapping(tenant, status.id);
     }
 
     private void enrichStatusWithName(String tenant, MappingStatus status) {
@@ -263,14 +259,14 @@ public class MappingStatusService {
             status.name = "Unspecified";
         } else {
             cacheManager.getInboundMapping(tenant, status.id)
-                .or(() -> cacheManager.getOutboundMapping(tenant, status.id))
-                .ifPresent(mapping -> status.name = mapping.getName());
+                    .or(() -> cacheManager.getOutboundMapping(tenant, status.id))
+                    .ifPresent(mapping -> status.name = mapping.getName());
         }
     }
 
     private void updateInventoryWithStatuses(String tenant, MappingStatus[] statuses) {
         MapperServiceRepresentation serviceRep = configurationRegistry.getMapperServiceRepresentation(tenant);
-        
+
         Map<String, Object> fragment = new ConcurrentHashMap<>();
         fragment.put(MapperServiceRepresentation.MAPPING_FRAGMENT, statuses);
 
@@ -278,6 +274,8 @@ public class MappingStatusService {
         updateMor.setId(GId.asGId(serviceRep.getId()));
         updateMor.setAttrs(fragment);
 
-        inventoryApi.update(updateMor);
+        subscriptionsService.runForTenant(tenant, () -> {
+            inventoryApi.update(updateMor);
+        });
     }
 }
