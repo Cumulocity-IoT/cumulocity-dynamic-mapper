@@ -223,6 +223,8 @@ public class WebHook extends AConnectorClient {
                 log.info("{} - Testing health endpoint: {}", tenant, healthEndpoint);
                 checkHealth().block();
                 log.info("{} - Health check passed", tenant);
+            } else {
+                log.warn("{} - No health endpoint configured for WebHook connector {}, skipping health check and assuming connection is valid", tenant, connectorName);
             }
 
             connectionStateManager.setConnected(true);
