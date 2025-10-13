@@ -171,7 +171,7 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
-    protected void unsubscribe(String topic) throws Exception {
+    protected void unsubscribe(String topic) throws ConnectorException {
         // HTTP is passive - just remove from tracking
         log.debug("{} - Unsubscribed from HTTP topic: [{}]", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribed");

@@ -126,29 +126,31 @@ public class MonitoringController {
         Map<String, ConnectorStatusEvent> connectorsStatus = new ConcurrentHashMap<>();
         String tenant = contextService.getContext().getTenant();
 
-        log.info("{} - Starting to collect connector statuses", tenant);
+        // log.info("{} - Starting to collect connector statuses", tenant);
 
         try {
             // Stage 1: Initialize list with all known connectors as UNKNOWN
             List<ConnectorConfiguration> configurationList = connectorConfigurationService
                     .getConnectorConfigurations(tenant);
-            //log.info("{} - Stage 1: Found {} connector configurations", tenant, configurationList.size());
+            // log.info("{} - Stage 1: Found {} connector configurations", tenant,
+            // configurationList.size());
 
             for (ConnectorConfiguration conf : configurationList) {
                 ConnectorStatusEvent unknownStatus = ConnectorStatusEvent.unknown(conf.getName(), conf.getIdentifier());
                 connectorsStatus.put(conf.getIdentifier(), unknownStatus);
-                // log.info("{} - Stage 1: Initialized connector [{}] ({}) with status: UNKNOWN",
-                //         tenant, conf.getName(), conf.getIdentifier());
+                // log.info("{} - Stage 1: Initialized connector [{}] ({}) with status:
+                // UNKNOWN",
+                // tenant, conf.getName(), conf.getIdentifier());
             }
 
             // log.info("{} - Stage 1 complete: {} connectors initialized as UNKNOWN",
-            //         tenant, connectorsStatus.size());
+            // tenant, connectorsStatus.size());
             // logCurrentStatuses(tenant, "After Stage 1", connectorsStatus);
 
             // Stage 2: Overwrite with last remembered status from registry
             Map<String, ConnectorStatusEvent> registryStatusMap = connectorRegistry.getConnectorStatusMap(tenant);
-            log.info("{} - Stage 2: Found {} statuses in registry status map",
-                    tenant, registryStatusMap != null ? registryStatusMap.size() : 0);
+            // log.info("{} - Stage 2: Found {} statuses in registry status map",
+            // tenant, registryStatusMap != null ? registryStatusMap.size() : 0);
 
             if (registryStatusMap != null && !registryStatusMap.isEmpty()) {
                 for (Map.Entry<String, ConnectorStatusEvent> entry : registryStatusMap.entrySet()) {
@@ -157,49 +159,50 @@ public class MonitoringController {
                     connectorsStatus.put(entry.getKey(), newStatus);
 
                     // log.info("{} - Stage 2: Updated connector [{}] ({}) from {} to {}",
-                    //         tenant,
-                    //         newStatus.getConnectorName(),
-                    //         entry.getKey(),
-                    //         oldStatus != null ? oldStatus.getStatus() : "null",
-                    //         newStatus.getStatus());
+                    // tenant,
+                    // newStatus.getConnectorName(),
+                    // entry.getKey(),
+                    // oldStatus != null ? oldStatus.getStatus() : "null",
+                    // newStatus.getStatus());
                 }
-                log.info("{} - Stage 2 complete: Updated {} connectors from registry",
-                        tenant, registryStatusMap.size());
+                // log.info("{} - Stage 2 complete: Updated {} connectors from registry",
+                // tenant, registryStatusMap.size());
             } else {
-                log.info("{} - Stage 2: No statuses found in registry, skipping", tenant);
+                // log.info("{} - Stage 2: No statuses found in registry, skipping", tenant);
             }
 
             // logCurrentStatuses(tenant, "After Stage 2", connectorsStatus);
 
             // Stage 3: Overwrite with status of currently active connectors
             Map<String, AConnectorClient> activeClients = connectorRegistry.getClientsForTenant(tenant);
-            log.info("{} - Stage 3: Found {} active connector clients",
-                    tenant, activeClients != null ? activeClients.size() : 0);
+            // log.info("{} - Stage 3: Found {} active connector clients",
+            //         tenant, activeClients != null ? activeClients.size() : 0);
 
             if (activeClients != null && !activeClients.isEmpty()) {
                 for (Map.Entry<String, AConnectorClient> entry : activeClients.entrySet()) {
                     AConnectorClient client = entry.getValue();
-                    // ConnectorStatusEvent oldStatus = connectorsStatus.get(client.getConnectorIdentifier());
+                    // ConnectorStatusEvent oldStatus =
+                    // connectorsStatus.get(client.getConnectorIdentifier());
                     ConnectorStatusEvent newStatus = client.getConnectionStateManager().getConnectorStatus().get();
                     connectorsStatus.put(client.getConnectorIdentifier(), newStatus);
 
                     // log.info("{} - Stage 3: Updated active connector [{}] ({}) from {} to {}",
-                    //         tenant,
-                    //         client.getConnectorName(),
-                    //         client.getConnectorIdentifier(),
-                    //         oldStatus != null ? oldStatus.getStatus() : "null",
-                    //         newStatus.getStatus());
+                    // tenant,
+                    // client.getConnectorName(),
+                    // client.getConnectorIdentifier(),
+                    // oldStatus != null ? oldStatus.getStatus() : "null",
+                    // newStatus.getStatus());
                 }
                 // log.info("{} - Stage 3 complete: Updated {} active connectors",
-                        // tenant, activeClients.size());
+                // tenant, activeClients.size());
             } else {
                 // log.info("{} - Stage 3: No active clients found, skipping", tenant);
             }
 
             // logCurrentStatuses(tenant, "Final Status", connectorsStatus);
 
-            log.info("{} - Connector status collection complete: returning {} statuses",
-                    tenant, connectorsStatus.size());
+            // log.info("{} - Connector status collection complete: returning {} statuses",
+            //        tenant, connectorsStatus.size());
 
             return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);
 

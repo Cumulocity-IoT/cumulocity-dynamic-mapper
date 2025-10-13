@@ -429,7 +429,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     @Override
-    protected void unsubscribe(String topic) throws Exception {
+    protected void unsubscribe(String topic) throws ConnectorException {
         // MQTT Service handles unsubscriptions via platform topic
         log.debug("{} - MQTT Service unsubscription for topic: [{}] - handled by platform topic", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribed");

@@ -435,7 +435,7 @@ public class MQTT3Client extends AConnectorClient {
     }
 
     @Override
-    protected void unsubscribe(String topic) throws Exception {
+    protected void unsubscribe(String topic) throws ConnectorException {
         if (!isConnected()) {
             log.warn("{} - Cannot unsubscribe: not connected", tenant);
             return;

@@ -44,7 +44,7 @@ public class DeploymentMapService {
         } else {
             deploymentMaps.put(tenant, new ConcurrentHashMap<>());
         }
-        
+        persistDeploymentMap(tenant);
         log.info("{} - Deployment map initialized", tenant);
     }
 

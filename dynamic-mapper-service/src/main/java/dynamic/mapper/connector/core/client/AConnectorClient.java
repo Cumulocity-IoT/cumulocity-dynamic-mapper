@@ -194,7 +194,7 @@ public abstract class AConnectorClient {
                     }
 
                     @Override
-                    public void unsubscribe(String topic) throws Exception {
+                    public void unsubscribe(String topic) throws ConnectorException {
                         AConnectorClient.this.unsubscribe(topic);
                     }
                 });
@@ -355,8 +355,11 @@ public abstract class AConnectorClient {
      * Initialize subscriptions for inbound mappings
      */
     public void initializeSubscriptionsInbound(List<Mapping> mappings, boolean reset) {
-        mappingSubscriptionManager.updateSubscriptions(
-                mappings,
+        List<Mapping> mappingsEffective = mappings.stream()
+                .filter(this::isDeployedInConnector)
+                .toList();
+        mappingSubscriptionManager.updateSubscriptionsInbound(
+                mappingsEffective,
                 reset,
                 isConnected(),
                 this::isMappingValidForDeployment);
@@ -374,6 +377,7 @@ public abstract class AConnectorClient {
         mappings.stream()
                 .filter(Mapping::getActive)
                 .filter(this::isMappingValidForDeployment)
+                .filter(this::isDeployedInConnector)
                 .forEach(mapping -> mappingSubscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping));
 
         log.info("{} - Initialized {} outbound mappings for connector: {}",
@@ -385,6 +389,8 @@ public abstract class AConnectorClient {
     /**
      * Update subscription for inbound mapping
      * Called when a mapping is created, updated, or its activation state changes
+     * returns true if successful, false if connector is not connected or mapping is
+     * invalid
      */
     public boolean updateSubscriptionForInbound(Mapping mapping, Boolean create, Boolean activationChanged) {
         boolean result = true;
@@ -399,9 +405,7 @@ public abstract class AConnectorClient {
         boolean isDeactivation = activationChanged && !mapping.getActive();
 
         if (!isMappingValidForDeployment(mapping) && !isDeactivation) {
-            List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
-            boolean isDeployed = deploymentMapEntry != null &&
-                    deploymentMapEntry.contains(getConnectorIdentifier());
+            boolean isDeployed = isDeployedInConnector(mapping);
 
             if (isDeployed) {
                 log.warn("{} - Mapping {} contains unsupported wildcards",
@@ -424,45 +428,11 @@ public abstract class AConnectorClient {
 
     private void handleSubscriptionUpdateInbound(Mapping mapping, Boolean create, Boolean activationChanged)
             throws ConnectorException {
-        String topic = mapping.getMappingTopic();
-
-        if (mapping.getActive()) {
-            // Add or update subscription
-            mappingSubscriptionManager.addOutboundMapping(mapping.getIdentifier(), mapping);
-
-            MutableInt count = mappingSubscriptionManager.getSubscriptionCounts()
-                    .computeIfAbsent(topic, k -> new MutableInt(0));
-
-            if (create || count.intValue() == 0) {
-                try {
-                    subscribe(topic, mapping.getQos());
-                    log.info("{} - Subscribed to topic: [{}], QoS: {} for mapping: {}",
-                            tenant, topic, mapping.getQos(), mapping.getIdentifier());
-                } catch (ConnectorException e) {
-                    log.error("{} - Error subscribing to topic: [{}]", tenant, topic, e);
-                    throw e;
-                }
-            }
-            count.increment();
-
+        boolean isDeployed = isDeployedInConnector(mapping);
+        if (mapping.getActive() && isDeployed) {
+            mappingSubscriptionManager.addSubscription(mapping, mapping.getQos());
         } else if (activationChanged) {
-            // Remove subscription
-            MutableInt count = mappingSubscriptionManager.getSubscriptionCounts().get(topic);
-            if (count != null) {
-                count.decrement();
-
-                if (count.intValue() <= 0) {
-                    try {
-                        unsubscribe(topic);
-                        mappingSubscriptionManager.getSubscriptionCounts().remove(topic);
-                        log.info("{} - Unsubscribed from topic: [{}] for mapping: {}",
-                                tenant, topic, mapping.getIdentifier());
-                    } catch (Exception e) {
-                        log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
-                    }
-                }
-            }
-            mappingSubscriptionManager.removeOutboundMapping(mapping.getIdentifier());
+            mappingSubscriptionManager.removeSubscription(mapping);
         }
     }
 
@@ -591,14 +561,14 @@ public abstract class AConnectorClient {
      * Check if inbound mapping is deployed
      */
     public boolean isMappingInboundDeployed(String identifier) {
-        return mappingSubscriptionManager.getDeployedMappingsInbound().containsKey(identifier);
+        return mappingSubscriptionManager.getEffectiveMappingsInbound().containsKey(identifier);
     }
 
     /**
      * Check if outbound mapping is deployed
      */
     public boolean isMappingOutboundDeployed(String identifier) {
-        return mappingSubscriptionManager.getDeployedMappingsOutbound().containsKey(identifier);
+        return mappingSubscriptionManager.getEffectiveMappingsOutbound().containsKey(identifier);
     }
 
     /**
@@ -610,12 +580,12 @@ public abstract class AConnectorClient {
 
         // Collect inbound mappings
         List<String> inboundMappingIds = new ArrayList<>(
-                mappingSubscriptionManager.getDeployedMappingsInbound().keySet());
+                mappingSubscriptionManager.getEffectiveMappingsInbound().keySet());
         updateDeploymentMap(inboundMappingIds, mappingsDeployed, cleanedConfiguration);
 
         // Collect outbound mappings
         List<String> outboundMappingIds = new ArrayList<>(
-                mappingSubscriptionManager.getDeployedMappingsOutbound().keySet());
+                mappingSubscriptionManager.getEffectiveMappingsOutbound().keySet());
         updateDeploymentMap(outboundMappingIds, mappingsDeployed, cleanedConfiguration);
     }
 
@@ -626,7 +596,14 @@ public abstract class AConnectorClient {
             DeploymentMapEntry mappingDeployed = mappingsDeployed.computeIfAbsent(
                     mappingIdentifier,
                     k -> new DeploymentMapEntry(mappingIdentifier));
-            mappingDeployed.getConnectors().add(cleanedConfiguration);
+
+            // Check if connector with same identifier already exists
+            boolean exists = mappingDeployed.getConnectors().stream()
+                    .anyMatch(c -> c.getIdentifier().equals(cleanedConfiguration.getIdentifier()));
+
+            if (!exists) {
+                mappingDeployed.getConnectors().add(cleanedConfiguration);
+            }
         });
     }
 
@@ -674,7 +651,7 @@ public abstract class AConnectorClient {
     /**
      * Abstract unsubscribe method to be implemented by subclasses
      */
-    protected abstract void unsubscribe(String topic) throws Exception;
+    protected abstract void unsubscribe(String topic) throws ConnectorException;
 
     /**
      * Check if connector is connected

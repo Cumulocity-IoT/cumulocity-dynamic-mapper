@@ -165,7 +165,7 @@ public class ConfigurationController {
     public ResponseEntity<List<ConnectorSpecification>> getConnectorSpecifications() {
         String tenant = contextService.getContext().getTenant();
         List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
-        log.info("{} - Get connector specifications", tenant);
+        log.debug("{} - Get connector specifications", tenant);
         Map<ConnectorType, ConnectorSpecification> spec = connectorRegistry
                 .getConnectorSpecifications();
         // Iterate over all connectors
@@ -434,7 +434,7 @@ public class ConfigurationController {
     @GetMapping(value = "/service", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
         String tenant = contextService.getContext().getTenant();
-        log.info("{} - Get service configuration", tenant);
+        // log.info("{} - Get service configuration", tenant);
 
         try {
             final ServiceConfiguration configuration = serviceConfigurationService.getServiceConfiguration(tenant);

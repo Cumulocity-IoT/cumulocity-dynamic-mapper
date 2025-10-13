@@ -434,7 +434,6 @@ public class OperationController {
                     ConnectorConfiguration conf = client.getConnectorConfiguration();
                     failed.put(conf.getIdentifier(), conf.getName());
                 }
-                ;
             } else {
                 client.updateSubscriptionForOutbound(updatedMapping, false, true);
             }

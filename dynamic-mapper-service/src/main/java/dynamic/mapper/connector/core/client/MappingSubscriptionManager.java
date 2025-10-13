@@ -42,9 +42,15 @@ public class MappingSubscriptionManager {
     // Track subscription counts per topic
     private final Map<String, MutableInt> subscriptionCounts = new ConcurrentHashMap<>();
 
-    // Track deployed mappings
-    private final Map<String, Mapping> deployedMappingsInbound = new ConcurrentHashMap<>();
-    private final Map<String, Mapping> deployedMappingsOutbound = new ConcurrentHashMap<>();
+    // Track effective mappings
+    // keeps track if a specific mapping is effective in this connector:
+    // a) is it active,
+    // b) does it comply with the capabilities of the connector, i.e. supports
+    // c) it is configured /deployed to this connector)
+    // wildcards
+    // structure < identifier, mapping >
+    private final Map<String, Mapping> effectiveMappingsInbound = new ConcurrentHashMap<>();
+    private final Map<String, Mapping> effectiveMappingsOutbound = new ConcurrentHashMap<>();
 
     // Callbacks for actual subscribe/unsubscribe operations
     private final SubscriptionCallback subscriptionCallback;
@@ -52,7 +58,7 @@ public class MappingSubscriptionManager {
     public interface SubscriptionCallback {
         void subscribe(String topic, Qos qos) throws ConnectorException;
 
-        void unsubscribe(String topic) throws Exception;
+        void unsubscribe(String topic) throws ConnectorException;
     }
 
     public MappingSubscriptionManager(String tenant, String connectorName, SubscriptionCallback callback) {
@@ -64,13 +70,15 @@ public class MappingSubscriptionManager {
     /**
      * Add or update a subscription for a topic
      */
-    public void addSubscription(String topic, Mapping mapping, Qos qos) throws ConnectorException {
+    public void addSubscription(Mapping mapping, Qos qos) throws ConnectorException {
+        
+        String topic = mapping.getMappingTopic();
         MutableInt count = subscriptionCounts.computeIfAbsent(topic, k -> new MutableInt(0));
 
         boolean isNewSubscription = count.intValue() == 0;
         count.increment();
 
-        deployedMappingsInbound.put(mapping.getIdentifier(), mapping);
+        effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
 
         if (isNewSubscription) {
             subscriptionCallback.subscribe(topic, qos);
@@ -85,7 +93,8 @@ public class MappingSubscriptionManager {
     /**
      * Remove a subscription for a topic
      */
-    public void removeSubscription(String topic, String mappingIdentifier) throws Exception {
+    public void removeSubscription(Mapping mapping) throws ConnectorException {
+        String topic = mapping.getMappingTopic();
         MutableInt count = subscriptionCounts.get(topic);
         if (count == null) {
             log.warn("{} - Attempted to remove non-existent subscription for topic: [{}]", tenant, topic);
@@ -93,7 +102,7 @@ public class MappingSubscriptionManager {
         }
 
         count.decrement();
-        deployedMappingsInbound.remove(mappingIdentifier);
+        effectiveMappingsInbound.remove(mapping.getIdentifier());
 
         if (count.intValue() <= 0) {
             subscriptionCounts.remove(topic);
@@ -108,7 +117,7 @@ public class MappingSubscriptionManager {
     /**
      * Update all subscriptions based on new mapping list
      */
-    public void updateSubscriptions(List<Mapping> updatedMappings,
+    public void updateSubscriptionsInbound(List<Mapping> updatedMappings,
             boolean reset,
             boolean isConnected,
             MappingValidator validator) {
@@ -119,7 +128,7 @@ public class MappingSubscriptionManager {
 
         if (reset) {
             subscriptionCounts.clear();
-            deployedMappingsInbound.clear();
+            effectiveMappingsInbound.clear();
         }
 
         Map<String, MutableInt> newSubscriptions = new HashMap<>();
@@ -132,7 +141,7 @@ public class MappingSubscriptionManager {
                 .forEach(mapping -> {
                     String topic = mapping.getMappingTopic();
                     newSubscriptions.computeIfAbsent(topic, k -> new MutableInt(0)).increment();
-                    deployedMappingsInbound.put(mapping.getIdentifier(), mapping);
+                    effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
 
                     // Track max QoS per topic
                     Qos currentQos = topicQosMap.getOrDefault(topic, Qos.AT_MOST_ONCE);
@@ -187,7 +196,7 @@ public class MappingSubscriptionManager {
      * Add or update an outbound mapping
      */
     public void addOutboundMapping(String identifier, Mapping mapping) {
-        deployedMappingsOutbound.put(identifier, mapping);
+        effectiveMappingsOutbound.put(identifier, mapping);
         log.debug("{} - Added outbound mapping: {}", tenant, identifier);
     }
 
@@ -195,7 +204,7 @@ public class MappingSubscriptionManager {
      * Remove an outbound mapping
      */
     public void removeOutboundMapping(String identifier) {
-        if (deployedMappingsOutbound.remove(identifier) != null) {
+        if (effectiveMappingsOutbound.remove(identifier) != null) {
             log.debug("{} - Removed outbound mapping: {}", tenant, identifier);
         }
     }
@@ -204,18 +213,18 @@ public class MappingSubscriptionManager {
      * Update all outbound mappings based on new mapping list
      */
     public void updateOutboundMappings(List<Mapping> updatedMappings, MappingValidator validator) {
-        deployedMappingsOutbound.clear();
+        effectiveMappingsOutbound.clear();
 
         updatedMappings.stream()
                 .filter(Mapping::getActive)
                 .filter(validator::isValid)
                 .forEach(mapping -> {
-                    deployedMappingsOutbound.put(mapping.getIdentifier(), mapping);
+                    effectiveMappingsOutbound.put(mapping.getIdentifier(), mapping);
                     log.debug("{} - Deployed outbound mapping: {}", tenant, mapping.getIdentifier());
                 });
 
         log.info("{} - Updated outbound mappings for connector: {}, active mappings: {}",
-                tenant, connectorName, deployedMappingsOutbound.size());
+                tenant, connectorName, effectiveMappingsOutbound.size());
     }
 
     // ===== Read-only Access Methods =====
@@ -235,45 +244,45 @@ public class MappingSubscriptionManager {
     }
 
     /**
-     * Get deployed inbound mappings (read-only view)
+     * Get effective inbound mappings (read-only view)
      */
-    public Map<String, Mapping> getDeployedMappingsInbound() {
-        return Collections.unmodifiableMap(deployedMappingsInbound);
+    public Map<String, Mapping> getEffectiveMappingsInbound() {
+        return Collections.unmodifiableMap(effectiveMappingsInbound);
     }
 
     /**
-     * Get deployed outbound mappings (read-only view)
+     * Get effective outbound mappings (read-only view)
      */
-    public Map<String, Mapping> getDeployedMappingsOutbound() {
-        return Collections.unmodifiableMap(deployedMappingsOutbound);
+    public Map<String, Mapping> getEffectiveMappingsOutbound() {
+        return Collections.unmodifiableMap(effectiveMappingsOutbound);
     }
 
     /**
-     * Check if inbound mapping is deployed
+     * Check if inbound mapping is effective
      */
-    public boolean isMappingInboundDeployed(String identifier) {
-        return deployedMappingsInbound.containsKey(identifier);
+    public boolean isMappingInboundEffective(String identifier) {
+        return effectiveMappingsInbound.containsKey(identifier);
     }
 
     /**
-     * Check if outbound mapping is deployed
+     * Check if outbound mapping is effective
      */
-    public boolean isMappingOutboundDeployed(String identifier) {
-        return deployedMappingsOutbound.containsKey(identifier);
+    public boolean isMappingOutboundEffective(String identifier) {
+        return effectiveMappingsOutbound.containsKey(identifier);
     }
 
     /**
      * Get inbound mapping by identifier
      */
     public Mapping getInboundMapping(String identifier) {
-        return deployedMappingsInbound.get(identifier);
+        return effectiveMappingsInbound.get(identifier);
     }
 
     /**
      * Get outbound mapping by identifier
      */
     public Mapping getOutboundMapping(String identifier) {
-        return deployedMappingsOutbound.get(identifier);
+        return effectiveMappingsOutbound.get(identifier);
     }
 
     /**
@@ -284,17 +293,17 @@ public class MappingSubscriptionManager {
     }
 
     /**
-     * Get count of deployed inbound mappings
+     * Get count of effective inbound mappings
      */
     public int getInboundMappingCount() {
-        return deployedMappingsInbound.size();
+        return effectiveMappingsInbound.size();
     }
 
     /**
-     * Get count of deployed outbound mappings
+     * Get count of effective outbound mappings
      */
     public int getOutboundMappingCount() {
-        return deployedMappingsOutbound.size();
+        return effectiveMappingsOutbound.size();
     }
 
     /**
@@ -302,8 +311,8 @@ public class MappingSubscriptionManager {
      */
     public void clear() {
         subscriptionCounts.clear();
-        deployedMappingsInbound.clear();
-        deployedMappingsOutbound.clear();
+        effectiveMappingsInbound.clear();
+        effectiveMappingsOutbound.clear();
         log.debug("{} - Cleared all subscriptions and mappings for connector: {}", tenant, connectorName);
     }
 
