@@ -205,10 +205,6 @@ public class SubstitutionOutboundProcessor extends BaseProcessor {
                 // remove TOKEN_CONTEXT_DATA
                 payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
             }
-            // remove TempArray if present
-            if(mapping.getTargetTemplate().startsWith("[")) {
-                payloadTarget = JsonPath.parse(payloadTarget.read("TempArray").toString());
-            }
             var newPredecessor = context.addRequest(
                     DynamicMapperRequest.builder()
                             .predecessor(predecessor)

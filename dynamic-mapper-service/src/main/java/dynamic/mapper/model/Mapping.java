@@ -45,6 +45,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -403,7 +404,10 @@ public class Mapping implements Serializable {
         if (!mapping.getMappingType().equals(MappingType.EXTENSION_SOURCE)
                 && !mapping.getMappingType().equals(MappingType.PROTOBUF_INTERNAL)) {
             try {
-                new JSONObject(mapping.targetTemplate);
+                if(mapping.targetTemplate.startsWith("{"))
+                    new JSONObject(mapping.targetTemplate);
+                if(mapping.targetTemplate.startsWith("["))
+                    new JSONArray(mapping.targetTemplate);
             } catch (JSONException e) {
                 result.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
             }
