@@ -96,17 +96,18 @@ public class GroupCacheManager {
     }
 
     private void cleanupExpiredEntries() {
-        LocalDateTime expiredBefore = LocalDateTime.now().minusHours(24);
+        // disabled as this breaks functionality to detect changes in group membership
+        //LocalDateTime expiredBefore = LocalDateTime.now().minusHours(24);
         int removedCount = 0;
         
-        Iterator<Map.Entry<String, CachedGroup>> iterator = groupCache.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<String, CachedGroup> entry = iterator.next();
-            if (entry.getValue().getLastUpdated().isBefore(expiredBefore)) {
-                iterator.remove();
-                removedCount++;
-            }
-        }
+        // Iterator<Map.Entry<String, CachedGroup>> iterator = groupCache.entrySet().iterator();
+        // while (iterator.hasNext()) {
+        //     Map.Entry<String, CachedGroup> entry = iterator.next();
+        //     if (entry.getValue().getLastUpdated().isBefore(expiredBefore)) {
+        //         iterator.remove();
+        //         removedCount++;
+        //     }
+        // }
         
         if (removedCount > 0) {
             log.info("{} - Cleaned up {} expired cache entries", tenant, removedCount);
