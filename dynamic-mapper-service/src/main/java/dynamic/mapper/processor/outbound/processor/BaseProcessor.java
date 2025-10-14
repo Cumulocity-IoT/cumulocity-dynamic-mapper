@@ -73,6 +73,6 @@ public abstract class BaseProcessor implements Processor {
                         mapping.getSupportsMessageContext())
                 .qos(mapping.getQos())
                 .serviceConfiguration(serviceConfiguration)
-                .api(mapping.getTargetAPI()).build();
+                .api(message.getApi()).build();
     }
 }

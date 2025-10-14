@@ -327,6 +327,7 @@ public class FlowResultOutboundProcessor extends BaseProcessor {
                     .sourceId(sourceId) // Device/source identifier
                     .externalIdType(mapping.getExternalIdType()) // External ID type from mapping
                     .externalId(context.getExternalId())
+                    .api(context.getApi())
                     .request(payloadJson) // JSON payload
                     .build();
 

@@ -65,7 +65,7 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         try {
             enrichPayload(context);
         } catch (Exception e) {
-            String errorMessage = String.format("%s - Error in EnrichmentOutboundProcessor for mapping: {}", tenant,
+            String errorMessage = String.format("%s - Error in EnrichmentOutboundProcessor for mapping: %s", tenant,
                     mapping.getName());
             log.error(errorMessage, e);
             MappingStatus mappingStatus = mappingService
@@ -96,20 +96,6 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
         identityFragment.put("c8ySourceId", sourceId.toString());
         identityFragment.put("externalIdType", mapping.getExternalIdType());
 
-        if (mapping.getUseExternalId() && !("").equals(mapping.getExternalIdType())) {
-            ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
-                    new GId(sourceId.toString()), mapping.getExternalIdType(),
-                    context);
-            if (externalId == null) {
-                if (context.isSendPayload()) {
-                    throw new RuntimeException(String.format("External id %s for type %s not found!",
-                            sourceId.toString(), mapping.getExternalIdType()));
-                }
-            } else {
-                identityFragment.put("externalId", externalId.getExternalId());
-            }
-        }
-
         // Add topic levels to FlowContext if available
         FlowContext flowContext = context.getFlowContext();
         if (flowContext != null && context.getGraalContext() != null
@@ -127,6 +113,21 @@ public class EnrichmentOutboundProcessor extends BaseProcessor {
                         tenant);
             }
         }
+        
+        if (mapping.getUseExternalId() && !("").equals(mapping.getExternalIdType())) {
+            ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
+                    new GId(sourceId.toString()), mapping.getExternalIdType(),
+                    context);
+            if (externalId == null) {
+                if (context.isSendPayload()) {
+                    throw new RuntimeException(String.format("External id %s for type %s not found!",
+                            sourceId.toString(), mapping.getExternalIdType()));
+                }
+            } else {
+                identityFragment.put("externalId", externalId.getExternalId());
+            }
+        }
+
     }
 
     /**

@@ -135,7 +135,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                         // No errors found, acknowledge the message
                         if (notification.getAckHeader() != null) {
                             log.info(
-                                    "{} - END: Sending manual ack for message on connector InternalWebSocket (notification 2.0), API: {} api, QoS: {}",
+                                    "{} - END: Sending manual ack for message on connector InternalWebSocket (notification 2.0), API: {}, QoS: {}",
                                     tenant, notification.getApi(), mappingQos);
                             send(notification.getAckHeader()); // ack message
                         } else {
@@ -145,7 +145,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                         // Errors found but not a server error, acknowledge the message
                         if (notification.getAckHeader() != null) {
                             log.info(
-                                    "{} - END: Sending manual ack for message on connector InternalWebSocket (notification 2.0), API: {} api, QoS: {}, connector InternalWebSocket",
+                                    "{} - END: Sending manual ack for message on connector InternalWebSocket (notification 2.0), API: {}, QoS: {}, connector InternalWebSocket",
                                     tenant, notification.getApi(), mappingQos);
                             send(notification.getAckHeader()); // ack message
                         } else {

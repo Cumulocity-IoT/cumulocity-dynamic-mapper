@@ -161,7 +161,6 @@ public class CamelDispatcherOutbound implements NotificationCallback {
 
         // Log incoming message if configured
         if (serviceConfiguration.isLogPayload()) {
-            String payload = c8yMessage.getPayload();
             log.info("{} - PROCESSING: C8Y message, API: {}, device: {}. connector: {}, message id: {}",
                     tenant,
                     c8yMessage.getApi(), c8yMessage.getSourceId(),
