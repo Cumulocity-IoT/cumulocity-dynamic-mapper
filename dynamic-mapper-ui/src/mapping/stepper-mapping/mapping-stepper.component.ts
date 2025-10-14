@@ -165,6 +165,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   substitutionFormlyFields: FormlyFieldConfig[];
   filterFormlyFields: FormlyFieldConfig[];
   filterModel: any = {};
+  selectedPathFilterFilterMapping: any;
   substitutionModel: any = {};
   propertyFormly: FormGroup = new FormGroup({});
   codeFormly: FormGroup = new FormGroup({});
@@ -682,7 +683,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
     this.substitutionModel = { ...this.substitutionModel };
 
-     // Trigger resize after content change
+    // Trigger resize after content change
     setTimeout(() => this.manualResize('substitutionModelSourceExpression'), 0);
 
   }
@@ -752,7 +753,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
     this.substitutionModel = { ...this.substitutionModel };
 
-         // Trigger resize after content change
+    // Trigger resize after content change
     setTimeout(() => this.manualResize('substitutionModelTargetExpression'), 0);
   }
 
@@ -783,10 +784,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onSelectedPathFilterMappingChanged(path: string): Promise<void> {
-    this.filterModel.filterMapping = path;
+    this.selectedPathFilterFilterMapping = path;
+    // this.filterModel.filterMapping = path;
     //console.log("Select: "+path);
 
-    this.updateFilterExpressionResult(path);
+    // this.updateFilterExpressionResult(path);
+  }
+
+  async onOverwriteFilterMapping(): Promise<void> {
+    this.filterModel.filterMapping = this.selectedPathFilterFilterMapping;
+    //console.log("Select: "+path);
+
+    this.updateFilterExpressionResult(this.selectedPathFilterFilterMapping);
   }
 
   async onSelectedPathTargetChanged(path: string): Promise<void> {
@@ -1339,7 +1348,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onCreateCodeTemplate(): Promise<void> {
-    const templateType = `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}` as TemplateType ;
+    const templateType = `${this.stepperConfiguration.direction.toString()}_${this.mapping?.transformationType.toString()}` as TemplateType;
     const initialState = {
       action: 'CREATE',
       codeTemplate: { name: `New code template - ${templateType}`, templateType }
@@ -1355,7 +1364,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         // const templateType = this.stepperConfiguration.direction == Direction.INBOUND ? TemplateType.INBOUND : TemplateType.OUTBOUND;
         const response = await this.sharedService.createCodeTemplate({
           id, name: codeTemplate.name, description: codeTemplate.description,
-          templateType, direction:this.stepperConfiguration.direction, code, internal: false, readonly: false, defaultTemplate: false
+          templateType, direction: this.stepperConfiguration.direction, code, internal: false, readonly: false, defaultTemplate: false
         });
         this.codeTemplates = await this.sharedService.getCodeTemplates();
         if (response.status >= 200 && response.status < 300) {
